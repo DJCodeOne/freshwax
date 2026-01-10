@@ -166,8 +166,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Calculate fees for payout purposes (deducted from artist share)
     const freshWaxFee = itemTotal * 0.01;
-    const stripeFee = (validatedTotal * 0.014) + 0.20;
-    const serviceFees = freshWaxFee + stripeFee;
+    const paymentProcessingFee = (validatedTotal * 0.014) + 0.20; // PayPal processing fee
+    const serviceFees = freshWaxFee + paymentProcessingFee;
 
     console.log('[PayPal] Validated totals - Subtotal:', itemTotal, 'Total:', validatedTotal, '(fees deducted from payout:', serviceFees.toFixed(2), ')');
 
@@ -312,7 +312,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           subtotal: itemTotal,
           shipping: shipping,
           freshWaxFee: freshWaxFee,
-          stripeFee: stripeFee,
+          paymentProcessingFee: paymentProcessingFee,
           serviceFees: serviceFees,
           total: validatedTotal
         },

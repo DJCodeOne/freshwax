@@ -1427,8 +1427,15 @@ async function processArtistPayments(params: {
         console.log('[Stripe Webhook] Could not find artist:', artistId);
       }
 
-      // Calculate artist share (100% of item price - fees are added on top for customer)
+      // Calculate artist share - deduct Fresh Wax fee and payment processing fee
+      // This matches the PayPal flow where fees come out of artist share
       const itemTotal = (item.price || 0) * (item.quantity || 1);
+
+      // 1% Fresh Wax platform fee
+      const freshWaxFee = itemTotal * 0.01;
+      // Stripe fee: 1.4% + £0.20 (split fixed fee across all items in order)
+      const stripeFee = (itemTotal * 0.014) + (0.20 / items.length);
+      const artistShare = itemTotal - freshWaxFee - stripeFee;
 
       // Group by artist
       if (!artistPayments[artistId]) {
@@ -1444,7 +1451,7 @@ async function processArtistPayments(params: {
         };
       }
 
-      artistPayments[artistId].amount += itemTotal;
+      artistPayments[artistId].amount += artistShare;
       artistPayments[artistId].items.push(item.name || item.title || 'Item');
     }
 

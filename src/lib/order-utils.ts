@@ -1015,10 +1015,12 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
 function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: any[]): string {
   const digitalTotal = digitalItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
   const subtotal = order.totals?.subtotal || digitalTotal;
-  const freshWaxFee = order.totals?.freshWaxFee || (subtotal * 0.01);
-  const baseAmount = subtotal + (order.totals?.shipping || 0) + freshWaxFee;
-  const stripeFee = order.totals?.stripeFee || (((baseAmount * 0.014) + 0.20) / 0.986);
-  const customerPaid = order.totals?.total || (subtotal + freshWaxFee + stripeFee);
+  // Calculate fees that are deducted from artist share
+  const freshWaxFee = digitalTotal * 0.01; // 1% Fresh Wax fee on these items
+  const processingFee = (digitalTotal * 0.014) + (0.20 / Math.max(1, digitalItems.length)); // Processing fee split
+  // Artist net earnings = gross - fees
+  const artistNetEarnings = digitalTotal - freshWaxFee - processingFee;
+  const customerPaid = order.totals?.total || subtotal;
 
   let itemsHtml = '';
   for (const item of digitalItems) {
@@ -1059,16 +1061,17 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
     itemsHtml +
     '<tr style="background: #dc2626;">' +
     '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
-    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + digitalTotal.toFixed(2) + '</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + artistNetEarnings.toFixed(2) + '</td>' +
     '</tr></table></td></tr>' +
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + digitalTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + artistNetEarnings.toFixed(2) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Item Price:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + digitalTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-£' + processingFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Fee (1%):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-£' + freshWaxFee.toFixed(2) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
     '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">£' + customerPaid.toFixed(2) + '</td></tr>' +
     '</table></div></td></tr>' +
@@ -1083,10 +1086,12 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
 function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[]): string {
   const merchTotal = merchItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
   const subtotal = order.totals?.subtotal || merchTotal;
-  const freshWaxFee = order.totals?.freshWaxFee || (subtotal * 0.01);
-  const baseAmount = subtotal + (order.totals?.shipping || 0) + freshWaxFee;
-  const stripeFee = order.totals?.stripeFee || (((baseAmount * 0.014) + 0.20) / 0.986);
-  const customerPaid = order.totals?.total || (subtotal + freshWaxFee + stripeFee);
+  // Calculate fees deducted from supplier share (5% for merch)
+  const freshWaxFee = merchTotal * 0.05; // 5% Fresh Wax fee for merch
+  const processingFee = (merchTotal * 0.014) + (0.20 / Math.max(1, merchItems.length)); // Processing fee split
+  // Supplier net earnings = gross - fees
+  const supplierNetEarnings = merchTotal - freshWaxFee - processingFee;
+  const customerPaid = order.totals?.total || subtotal;
 
   let itemsHtml = '';
   for (const item of merchItems) {
@@ -1141,17 +1146,18 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     itemsHtml +
     '<tr style="background: #dc2626;">' +
     '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
-    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + merchTotal.toFixed(2) + '</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + supplierNetEarnings.toFixed(2) + '</td>' +
     '</tr></table></td></tr>' +
     shippingHtml +
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + merchTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + supplierNetEarnings.toFixed(2) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Item Price:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + merchTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee:</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-£' + processingFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Fee (5%):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">-£' + freshWaxFee.toFixed(2) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
     '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">£' + customerPaid.toFixed(2) + '</td></tr>' +
     '</table></div></td></tr>' +
