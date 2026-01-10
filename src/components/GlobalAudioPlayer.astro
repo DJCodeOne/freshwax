@@ -13,11 +13,15 @@
   transition:persist="mini-player"
 >
   <div class="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t-2 border-red-600 shadow-2xl backdrop-blur-sm">
-    <!-- Progress bar (clickable) -->
-    <div id="mini-progress-container" class="h-1 bg-gray-700 cursor-pointer group relative overflow-hidden">
+    <!-- Progress bar (clickable + draggable) -->
+    <div id="mini-progress-container" class="h-2 bg-gray-700 cursor-pointer group relative overflow-visible hover:h-3 transition-all duration-150">
       <div class="absolute inset-0 bg-gradient-to-r from-red-600/20 to-red-500/20 animate-pulse"></div>
-      <div id="mini-progress-bar" class="h-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 transition-all duration-100 relative z-10 shadow-lg shadow-red-500/50" style="width: 0%">
+      <div id="mini-progress-bar" class="h-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 relative z-10 shadow-lg shadow-red-500/50 pointer-events-none" style="width: 0%">
         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+        <!-- Draggable seek handle -->
+        <div id="mini-progress-handle" class="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-4 h-4 bg-red-500 rounded-full shadow-lg shadow-red-500/70 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-auto hover:scale-125 hover:bg-red-400">
+          <div class="absolute inset-1 bg-white rounded-full opacity-30"></div>
+        </div>
       </div>
     </div>
     
@@ -229,12 +233,33 @@
   #mini-player.visible {
     transform: translateY(0);
   }
-  
+
   /* Ensure mini-player sits at absolute bottom with no gap */
   #mini-player {
     bottom: 0 !important;
     margin-bottom: 0 !important;
     padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Progress bar handle - always visible when playing */
+  #mini-player.playing #mini-progress-handle {
+    opacity: 0.7;
+  }
+
+  #mini-player.playing #mini-progress-container:hover #mini-progress-handle,
+  #mini-progress-container:active #mini-progress-handle {
+    opacity: 1;
+    transform: translate(50%, -50%) scale(1.2);
+  }
+
+  /* Smoother progress bar transition when not dragging */
+  #mini-progress-bar {
+    transition: width 0.1s linear;
+  }
+
+  /* Disable transition during drag for instant feedback */
+  #mini-progress-bar.dragging {
+    transition: none;
   }
 </style>
 
@@ -584,21 +609,77 @@
         };
       }
 
-      // === PROGRESS SEEK ===
+      // === PROGRESS SEEK (Click + Drag) ===
       if (miniProgressContainer) {
-        miniProgressContainer.onclick = function(e) {
+        var isDragging = false;
+        var progressHandle = document.getElementById('mini-progress-handle');
+
+        function seekToPosition(clientX) {
           if (!globalAudio.duration) return;
-          
-          // Stop any preview clips first
+          var rect = miniProgressContainer.getBoundingClientRect();
+          var progress = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+          globalAudio.currentTime = progress * globalAudio.duration;
+        }
+
+        function stopPreviewsIfNeeded() {
           if (window.AudioManager) {
             window.AudioManager.stopAllTracklistPreviews();
             window.AudioManager.shouldResumeAfterPreview = false;
           }
-          
-          var rect = miniProgressContainer.getBoundingClientRect();
-          var progress = (e.clientX - rect.left) / rect.width;
-          globalAudio.currentTime = progress * globalAudio.duration;
-        };
+        }
+
+        // Click to seek
+        miniProgressContainer.addEventListener('click', function(e) {
+          if (isDragging) return; // Don't seek on drag end
+          stopPreviewsIfNeeded();
+          seekToPosition(e.clientX);
+        });
+
+        // Drag to seek
+        function startDrag(e) {
+          if (!globalAudio.duration) return;
+          isDragging = true;
+          stopPreviewsIfNeeded();
+          document.body.style.cursor = 'grabbing';
+          document.body.style.userSelect = 'none';
+
+          // Show handle while dragging and disable transition
+          if (progressHandle) progressHandle.style.opacity = '1';
+          var progressBar = document.getElementById('mini-progress-bar');
+          if (progressBar) progressBar.classList.add('dragging');
+
+          // Get initial position
+          var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          seekToPosition(clientX);
+        }
+
+        function onDrag(e) {
+          if (!isDragging) return;
+          e.preventDefault();
+          var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          seekToPosition(clientX);
+        }
+
+        function stopDrag() {
+          if (!isDragging) return;
+          isDragging = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+
+          // Re-enable transition after drag
+          var progressBar = document.getElementById('mini-progress-bar');
+          if (progressBar) progressBar.classList.remove('dragging');
+        }
+
+        // Mouse events
+        miniProgressContainer.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', onDrag);
+        document.addEventListener('mouseup', stopDrag);
+
+        // Touch events for mobile
+        miniProgressContainer.addEventListener('touchstart', startDrag, { passive: false });
+        document.addEventListener('touchmove', onDrag, { passive: false });
+        document.addEventListener('touchend', stopDrag);
       }
 
       // === CLOSE BUTTON ===
