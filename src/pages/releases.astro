@@ -183,9 +183,15 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
         e.preventDefault();
         const targetId = link.getAttribute('href').substring(1);
         const targetElement = document.getElementById(targetId);
-        
+
         if (targetElement) {
-          targetElement.scrollIntoView({ 
+          // Immediately highlight clicked link
+          document.querySelectorAll('.label-nav-link').forEach(l => {
+            l.classList.remove('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+          });
+          link.classList.add('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+
+          targetElement.scrollIntoView({
             behavior: 'smooth',
             block: 'start'
           });

@@ -1,0 +1,145 @@
+---
+// src/pages/newsletter.astro
+// Public newsletter signup page
+
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Newsletter" description="Subscribe to the Fresh Wax newsletter for new releases, exclusive offers, and store updates.">
+  <Header />
+
+  <main class="min-h-screen bg-black pt-24 pb-16">
+    <div class="max-w-2xl mx-auto px-4">
+
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-red-600 to-red-800 rounded-2xl mb-6">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black text-white mb-4">Stay Fresh</h1>
+        <p class="text-xl text-gray-400">
+          Subscribe to our newsletter for the latest jungle & drum and bass releases, exclusive offers, and store updates.
+        </p>
+      </div>
+
+      <!-- Signup Form -->
+      <div class="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-8 md:p-10">
+        <form id="newsletter-signup-form" class="space-y-6">
+          <div>
+            <label for="signup-name" class="block text-sm font-semibold text-gray-300 mb-2">Name (optional)</label>
+            <input
+              type="text"
+              id="signup-name"
+              placeholder="Your name"
+              class="w-full px-4 py-3 bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors rounded-lg"
+            />
+          </div>
+          <div>
+            <label for="signup-email" class="block text-sm font-semibold text-gray-300 mb-2">Email address *</label>
+            <input
+              type="email"
+              id="signup-email"
+              placeholder="your@email.com"
+              required
+              class="w-full px-4 py-3 bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors rounded-lg"
+            />
+          </div>
+          <button
+            type="submit"
+            id="signup-btn"
+            class="w-full px-6 py-4 bg-red-600 text-white font-bold text-lg hover:bg-red-700 transition-colors rounded-lg"
+          >
+            Subscribe to Newsletter
+          </button>
+        </form>
+        <p id="signup-message" class="mt-4 text-center hidden"></p>
+
+        <p class="mt-6 text-center text-sm text-gray-500">
+          We respect your privacy. Unsubscribe at any time.
+        </p>
+      </div>
+
+      <!-- What you'll get -->
+      <div class="mt-12 grid md:grid-cols-3 gap-6">
+        <div class="text-center p-6">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-gray-800 rounded-xl mb-4">
+            <span class="text-2xl">🎵</span>
+          </div>
+          <h3 class="text-white font-bold mb-2">New Releases</h3>
+          <p class="text-gray-400 text-sm">Be the first to hear about fresh jungle and D&B drops</p>
+        </div>
+        <div class="text-center p-6">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-gray-800 rounded-xl mb-4">
+            <span class="text-2xl">🎁</span>
+          </div>
+          <h3 class="text-white font-bold mb-2">Exclusive Offers</h3>
+          <p class="text-gray-400 text-sm">Subscriber-only discounts and early access</p>
+        </div>
+        <div class="text-center p-6">
+          <div class="inline-flex items-center justify-center w-12 h-12 bg-gray-800 rounded-xl mb-4">
+            <span class="text-2xl">📻</span>
+          </div>
+          <h3 class="text-white font-bold mb-2">Live Events</h3>
+          <p class="text-gray-400 text-sm">Updates on streams, shows, and community events</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('newsletter-signup-form');
+    const nameInput = document.getElementById('signup-name') as HTMLInputElement;
+    const emailInput = document.getElementById('signup-email') as HTMLInputElement;
+    const btn = document.getElementById('signup-btn') as HTMLButtonElement;
+    const message = document.getElementById('signup-message') as HTMLParagraphElement;
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email = emailInput?.value?.trim();
+      const name = nameInput?.value?.trim();
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Subscribing...';
+      message.classList.add('hidden');
+
+      try {
+        const response = await fetch('/api/newsletter/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, name, source: 'newsletter-page' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          message.textContent = data.message || 'Successfully subscribed! Check your email for confirmation.';
+          message.className = 'mt-4 text-center text-green-500 font-semibold';
+          message.classList.remove('hidden');
+          form.reset();
+        } else {
+          message.textContent = data.error || 'Failed to subscribe. Please try again.';
+          message.className = 'mt-4 text-center text-red-500';
+          message.classList.remove('hidden');
+        }
+      } catch (err) {
+        message.textContent = 'Something went wrong. Please try again.';
+        message.className = 'mt-4 text-center text-red-500';
+        message.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Subscribe to Newsletter';
+      }
+    });
+  });
+</script>
