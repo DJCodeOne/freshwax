@@ -31,6 +31,19 @@ try {
   console.error('Error fetching orders:', e);
 }
 
+// Fetch releases to get actual prices (for free download detection)
+const releasesPriceMap: Record<string, number> = {};
+try {
+  const releases = await queryCollection('releases', { limit: 500 });
+  releases.forEach((r: any) => {
+    if (r.id) {
+      releasesPriceMap[r.id] = r.price ?? 0;
+    }
+  });
+} catch (e) {
+  console.error('Error fetching releases:', e);
+}
+
 // Price correction: £2.25 was charged but should show as £2.00 (fees were added on top instead of taken off)
 const correctItemPrice = (price: number) => (price === 2.25 ? 2.00 : price);
 
@@ -40,12 +53,19 @@ function calculateMetrics(ordersSubset) {
     // Sum items with price correction applied
     if (o.items && Array.isArray(o.items)) {
       const itemsTotal = o.items.reduce((itemSum, item) => {
-        // item.price should be unit price, item.total might be line total
-        // If item.price exists, use it * quantity
-        // If only item.total exists, use it directly (it's already the line total)
+        // For releases, use actual release price (free releases = £0)
+        const isRelease = (item.type === 'release' || item.type === 'digital' || item.releaseId) &&
+                          item.type !== 'merch' && !item.isPhysical && !item.isMerch;
+
         let lineTotal = 0;
-        if (item.price !== undefined && item.price !== null) {
-          lineTotal = correctItemPrice(item.price) * (item.quantity || 1);
+        const qty = item.quantity || 1;
+        const actualReleasePrice = (isRelease && item.releaseId) ? (releasesPriceMap[item.releaseId] ?? null) : null;
+
+        // Use actual release price for releases (shows £0 for free downloads)
+        if (isRelease && actualReleasePrice !== null) {
+          lineTotal = correctItemPrice(actualReleasePrice) * qty;
+        } else if (item.price !== undefined && item.price !== null) {
+          lineTotal = correctItemPrice(item.price) * qty;
         } else if (item.total !== undefined && item.total !== null) {
           lineTotal = correctItemPrice(item.total); // Already includes quantity
         }
@@ -135,14 +155,22 @@ function calcGrowth(current, previous) {
 const revenueGrowth = calcGrowth(thisMonth.revenue, lastMonth.revenue);
 const ordersGrowth = calcGrowth(thisMonth.orders, lastMonth.orders);
 
-// Top selling releases (exclude merch)
+// Top selling releases (exclude merch, exclude free downloads from list)
 const releaseSales = {};
 orders.forEach(order => {
   (order.items || []).forEach(item => {
     // Only include actual releases, not merch
     const isRelease = (item.type === 'release' || item.type === 'digital' || item.releaseId) &&
                       item.type !== 'merch' && !item.isPhysical && !item.isMerch;
-    if (isRelease) {
+
+    // Get actual release price from releases collection
+    const releaseId = item.releaseId;
+    const actualReleasePrice = releaseId ? (releasesPriceMap[releaseId] ?? null) : null;
+
+    // If release is currently free (price = 0), exclude from top selling
+    const isFreeRelease = actualReleasePrice === 0 || item.isFree === true;
+
+    if (isRelease && !isFreeRelease) {
       const key = item.releaseId || item.title || 'Unknown';
       if (!releaseSales[key]) {
         releaseSales[key] = {
@@ -154,9 +182,11 @@ orders.forEach(order => {
         };
       }
       const qty = item.quantity || 1;
-      // item.price = unit price, item.total = line total (already includes quantity)
+      // Use actual release price (what the release is worth)
       let lineTotal = 0;
-      if (item.price !== undefined && item.price !== null) {
+      if (actualReleasePrice !== null) {
+        lineTotal = correctItemPrice(actualReleasePrice) * qty;
+      } else if (item.price !== undefined && item.price !== null) {
         lineTotal = correctItemPrice(item.price) * qty;
       } else if (item.total !== undefined && item.total !== null) {
         lineTotal = correctItemPrice(item.total);
