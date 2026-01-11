@@ -84,17 +84,49 @@ const recentOrders = await queryCollection('orders', {
   limit: 100
 });
 
-// Find orders needing payouts - orders that have pending payouts with status 'pending'
+// Fetch artists to map artistId -> artistName
+const artists = await queryCollection('artists', { limit: 200 });
+const artistMap: Record<string, string> = {};
+for (const artist of artists) {
+  artistMap[artist.id] = artist.artistName || artist.name || 'Unknown';
+}
+
+// Fetch releases to map releaseId -> artistId
+const releases = await queryCollection('releases', { limit: 500 });
+const releaseArtistMap: Record<string, string> = {};
+for (const release of releases) {
+  const artistId = release.artistId || release.userId;
+  if (artistId && artistMap[artistId]) {
+    releaseArtistMap[release.id] = artistMap[artistId];
+  }
+}
+
+// Find orders needing payouts
 const orderIdsWithPendingPayouts = new Set(Object.keys(orderArtistMap));
 const paidOrderIds = new Set(completedPayouts.map(p => p.orderId));
 
-// Get orders that have pending payouts awaiting manual processing
+// Get orders that need payouts - either have pending payout records OR are unpaid digital orders
 const ordersNeedingPayouts = recentOrders.filter(order => {
-  // Must have a pending payout record
-  if (!orderIdsWithPendingPayouts.has(order.id)) return false;
-  // Skip if already marked as paid in completedPayouts
+  // Skip if already marked as paid
   if (paidOrderIds.has(order.id)) return false;
-  return true;
+
+  // Include if has a pending payout record
+  if (orderIdsWithPendingPayouts.has(order.id)) return true;
+
+  // Also include older orders that don't have payout records yet
+  // Skip test mode and free download orders
+  if (order.paymentMethod === 'test_mode' || order.paymentMethod === 'free_download') return false;
+  // Skip orders with zero total
+  if (order.totals?.total === 0 || order.total === 0) return false;
+  // Skip if no items
+  if (!order.items || order.items.length === 0) return false;
+  // Skip if payment not completed
+  if (order.paymentStatus !== 'completed' && order.status !== 'completed' && order.orderStatus !== 'completed') return false;
+  // Check if has digital items (which need artist payouts)
+  const hasDigitalItems = order.items.some(item =>
+    item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type
+  );
+  return hasDigitalItems;
 });
 
 // Stats
@@ -107,8 +139,15 @@ const pendingPayoutTotal = pendingPayouts.reduce((sum, p) => sum + (p.amount || 
 // Only count real payouts (exclude test mode)
 const realPayouts = completedPayouts.filter(p => !p.isTestMode);
 const completedPayoutTotal = realPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
-// Calculate total from actual pending payout records
-const ordersNeedingPayoutTotal = manualPendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+// Calculate total - from payout records + estimate from orders without records
+const pendingPayoutRecordsTotal = manualPendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+const ordersWithoutRecordsTotal = ordersNeedingPayouts
+  .filter(o => !orderIdsWithPendingPayouts.has(o.id))
+  .reduce((sum, o) => {
+    const itemTotal = (o.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
+    return sum + itemTotal;
+  }, 0);
+const ordersNeedingPayoutTotal = pendingPayoutRecordsTotal + ordersWithoutRecordsTotal;
 
 const stats = [
   { label: 'Orders Need Payout', value: ordersNeedingPayouts.length, type: ordersNeedingPayouts.length > 0 ? 'warning' : 'default', detail: `~£${ordersNeedingPayoutTotal.toFixed(2)}` },
@@ -206,9 +245,22 @@ export const prerender = false;
                 const itemTotal = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
                 // Get artist info from pending payouts map (this is the actual payee)
                 const artistInfo = orderArtistMap[order.id] || [];
-                const artistNames = artistInfo.length > 0
-                  ? artistInfo.map(a => a.artistName).join(', ')
-                  : 'No payout record';
+                let artistNames = '';
+                if (artistInfo.length > 0) {
+                  artistNames = artistInfo.map(a => a.artistName).join(', ');
+                } else {
+                  // Fallback - look up artist from release
+                  artistNames = [...new Set((order.items || []).map(i => {
+                    // First try to get from releaseId -> artist lookup
+                    const releaseId = i.releaseId || i.productId || i.id;
+                    if (releaseId && releaseArtistMap[releaseId]) {
+                      return releaseArtistMap[releaseId];
+                    }
+                    // Fallback to downloads data
+                    if (i.downloads?.artistName) return i.downloads.artistName;
+                    return null;
+                  }).filter(Boolean))].join(', ') || 'Unknown';
+                }
                 return (
                   <tr data-order-id={order.id}>
                     <td class="cell-secondary">{formatDate(order.createdAt)}</td>
