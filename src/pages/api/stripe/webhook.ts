@@ -1481,7 +1481,8 @@ function getCountryName(code: string): string {
   return countryMap[code] || code;
 }
 
-// Process artist payments via Stripe Connect
+// Process artist payments - creates pending payouts for manual review
+// NOTE: Automatic payouts disabled - all payouts are manual for now
 async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
@@ -1490,8 +1491,7 @@ async function processArtistPayments(params: {
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, artistShippingBreakdown, stripeSecretKey, env } = params;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+  const { orderId, orderNumber, items, artistShippingBreakdown, env } = params;
 
   try {
     // Group items by artist (using releaseId to look up artist)
@@ -1499,9 +1499,6 @@ async function processArtistPayments(params: {
       artistId: string;
       artistName: string;
       artistEmail: string;
-      stripeConnectId: string | null;
-      paypalEmail?: string | null;
-      payoutMethod?: string | null;
       amount: number;
       shippingAmount?: number;
       items: string[];
@@ -1512,28 +1509,22 @@ async function processArtistPayments(params: {
 
     for (const item of items) {
       // Skip merch items - they go to suppliers, not artists
-      // Vinyl and digital sales go to artists
       if (item.type === 'merch') continue;
 
-      // Get release data to find artist
       const releaseId = item.releaseId || item.id;
       if (!releaseId) continue;
 
       let release = releaseCache[releaseId];
       if (!release) {
         release = await getDocument('releases', releaseId);
-        if (release) {
-          releaseCache[releaseId] = release;
-        }
+        if (release) releaseCache[releaseId] = release;
       }
 
       if (!release) continue;
 
-      // Get artist data - prefer artistId from cart item, fallback to release
       const artistId = item.artistId || release.artistId || release.userId;
       if (!artistId) continue;
 
-      // Look up artist document for stripeConnectId
       let artist = null;
       try {
         artist = await getDocument('artists', artistId);
@@ -1541,8 +1532,6 @@ async function processArtistPayments(params: {
         console.log('[Stripe Webhook] Could not find artist:', artistId);
       }
 
-      // Calculate artist share - deduct Fresh Wax fee and payment processing fee
-      // This matches the PayPal flow where fees come out of artist share
       const itemTotal = (item.price || 0) * (item.quantity || 1);
 
       // 1% Fresh Wax platform fee
@@ -1551,15 +1540,11 @@ async function processArtistPayments(params: {
       const stripeFee = (itemTotal * 0.014) + (0.20 / items.length);
       const artistShare = itemTotal - freshWaxFee - stripeFee;
 
-      // Group by artist
       if (!artistPayments[artistId]) {
         artistPayments[artistId] = {
           artistId,
           artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
           artistEmail: artist?.email || release.artistEmail || '',
-          stripeConnectId: artist?.stripeConnectId || null,
-          paypalEmail: artist?.paypalEmail || null,
-          payoutMethod: artist?.payoutMethod || null, // 'stripe' | 'paypal' | null
           amount: 0,
           items: []
         };
@@ -1581,237 +1566,47 @@ async function processArtistPayments(params: {
       }
     }
 
-    console.log('[Stripe Webhook] Artist payments to process:', Object.keys(artistPayments).length);
-
-    // Process each artist payment
-    const paypalConfig = getPayPalConfig(env);
+    console.log('[Stripe Webhook] Artist pending payouts to create:', Object.keys(artistPayments).length);
 
     for (const artistId of Object.keys(artistPayments)) {
       const payment = artistPayments[artistId];
-
       if (payment.amount <= 0) continue;
 
-      console.log('[Stripe Webhook] Processing payment for', payment.artistName, ':', payment.amount, 'GBP');
+      console.log('[Stripe Webhook] Creating pending payout for', payment.artistName, ':', payment.amount.toFixed(2), 'GBP');
 
-      // Check preferred payout method
-      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
-      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+      const itemAmount = payment.amount - (payment.shippingAmount || 0);
 
-      if (usePayPal) {
-        // PayPal payout
-        console.log('[Stripe Webhook] Using PayPal for', payment.artistName);
-        try {
-          const paypalResult = await createPayPalPayout(paypalConfig!, {
-            email: payment.paypalEmail!,
-            amount: payment.amount,
-            currency: 'GBP',
-            note: `Fresh Wax payout for order #${orderNumber}`,
-            reference: `${orderId}-${payment.artistId}`
-          });
+      // Always create pending payout for manual processing
+      await addDocument('pendingPayouts', {
+        artistId: payment.artistId,
+        artistName: payment.artistName,
+        artistEmail: payment.artistEmail,
+        orderId,
+        orderNumber,
+        amount: payment.amount,
+        itemAmount: itemAmount,
+        shippingAmount: payment.shippingAmount || 0,
+        currency: 'gbp',
+        status: 'pending',
+        customerPaymentMethod: 'stripe',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
 
-          if (paypalResult.success) {
-            // Record successful payout (itemAmount + shippingAmount = total amount)
-            const itemAmount = payment.amount - (payment.shippingAmount || 0);
-            await addDocument('payouts', {
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              artistEmail: payment.artistEmail,
-              paypalEmail: payment.paypalEmail,
-              paypalBatchId: paypalResult.batchId,
-              paypalPayoutItemId: paypalResult.payoutItemId,
-              payoutMethod: 'paypal',
-              orderId,
-              orderNumber,
-              amount: payment.amount,
-              itemAmount: itemAmount,
-              shippingAmount: payment.shippingAmount || 0,
-              currency: 'gbp',
-              status: 'completed',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              completedAt: new Date().toISOString()
-            });
-
-            // Update artist's total earnings
-            const artist = await getDocument('artists', payment.artistId);
-            if (artist) {
-              await updateDocument('artists', payment.artistId, {
-                totalEarnings: (artist.totalEarnings || 0) + payment.amount,
-                lastPayoutAt: new Date().toISOString()
-              });
-            }
-
-            console.log('[Stripe Webhook] ✓ PayPal payout created:', paypalResult.batchId, 'for', payment.artistName);
-
-            // Send payout completed email
-            if (payment.artistEmail) {
-              sendPayoutCompletedEmail(
-                payment.artistEmail,
-                payment.artistName,
-                payment.amount,
-                orderNumber,
-                env
-              ).catch(err => console.error('[Stripe Webhook] Failed to send payout email:', err));
-            }
-          } else {
-            throw new Error(paypalResult.error || 'PayPal payout failed');
-          }
-
-        } catch (paypalError: any) {
-          console.error('[Stripe Webhook] PayPal payout failed for', payment.artistName, ':', paypalError.message);
-
-          // Store as pending for retry
-          const itemAmountPending = payment.amount - (payment.shippingAmount || 0);
-          await addDocument('pendingPayouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            artistEmail: payment.artistEmail,
-            paypalEmail: payment.paypalEmail,
-            payoutMethod: 'paypal',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            itemAmount: itemAmountPending,
-            shippingAmount: payment.shippingAmount || 0,
-            currency: 'gbp',
-            status: 'retry_pending',
-            failureReason: paypalError.message,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-
-      } else if (useStripe) {
-        // Stripe Connect transfer
-        try {
-          const transfer = await stripe.transfers.create({
-            amount: Math.round(payment.amount * 100), // Convert to pence
-            currency: 'gbp',
-            destination: payment.stripeConnectId!,
-            transfer_group: orderId,
-            metadata: {
-              orderId,
-              orderNumber,
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              platform: 'freshwax'
-            }
-          });
-
-          // Record successful payout (itemAmount + shippingAmount = total amount)
-          const stripeItemAmount = payment.amount - (payment.shippingAmount || 0);
-          await addDocument('payouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            artistEmail: payment.artistEmail,
-            stripeConnectId: payment.stripeConnectId,
-            stripeTransferId: transfer.id,
-            payoutMethod: 'stripe',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            itemAmount: stripeItemAmount,
-            shippingAmount: payment.shippingAmount || 0,
-            currency: 'gbp',
-            status: 'completed',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
-
-          // Update artist's total earnings
-          const artist = await getDocument('artists', payment.artistId);
-          if (artist) {
-            await updateDocument('artists', payment.artistId, {
-              totalEarnings: (artist.totalEarnings || 0) + payment.amount,
-              lastPayoutAt: new Date().toISOString()
-            });
-          }
-
-          console.log('[Stripe Webhook] ✓ Stripe transfer created:', transfer.id, 'for', payment.artistName);
-
-          // Send payout completed email notification
-          if (payment.artistEmail) {
-            sendPayoutCompletedEmail(
-              payment.artistEmail,
-              payment.artistName,
-              payment.amount,
-              orderNumber,
-              env
-            ).catch(err => console.error('[Stripe Webhook] Failed to send payout email:', err));
-          }
-
-        } catch (transferError: any) {
-          console.error('[Stripe Webhook] Stripe transfer failed for', payment.artistName, ':', transferError.message);
-
-          // Store as pending for retry
-          const stripeFailedItemAmount = payment.amount - (payment.shippingAmount || 0);
-          await addDocument('pendingPayouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            artistEmail: payment.artistEmail,
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            itemAmount: stripeFailedItemAmount,
-            shippingAmount: payment.shippingAmount || 0,
-            currency: 'gbp',
-            status: 'retry_pending',
-            failureReason: transferError.message,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } else {
-        // Artist not connected - store as pending
-        console.log('[Stripe Webhook] Artist', payment.artistName, 'not connected - storing pending payout');
-
-        const pendingItemAmount = payment.amount - (payment.shippingAmount || 0);
-        const pendingPayoutResult = await addDocument('pendingPayouts', {
-          artistId: payment.artistId,
-          artistName: payment.artistName,
-          artistEmail: payment.artistEmail,
-          orderId,
-          orderNumber,
-          amount: payment.amount,
-          itemAmount: pendingItemAmount,
-          shippingAmount: payment.shippingAmount || 0,
-          currency: 'gbp',
-          status: 'awaiting_connect',
-          notificationSent: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-
-        // Update artist's pending balance
+      // Update artist's pending balance
+      try {
         const artist = await getDocument('artists', payment.artistId);
         if (artist) {
           await updateDocument('artists', payment.artistId, {
-            pendingBalance: (artist.pendingBalance || 0) + payment.amount
+            pendingBalance: (artist.pendingBalance || 0) + payment.amount,
+            updatedAt: new Date().toISOString()
           });
         }
-
-        // Send email notification about pending earnings
-        if (payment.artistEmail) {
-          const emailResult = await sendPendingEarningsEmail(
-            payment.artistEmail,
-            payment.artistName,
-            payment.amount,
-            env
-          );
-
-          // Update pending payout with notification status
-          if (emailResult.success && pendingPayoutResult.id) {
-            await updateDocument('pendingPayouts', pendingPayoutResult.id, {
-              notificationSent: true,
-              notificationSentAt: new Date().toISOString()
-            });
-            console.log('[Stripe Webhook] ✓ Pending earnings email sent to', payment.artistEmail);
-          } else if (pendingPayoutResult.id) {
-            console.log('[Stripe Webhook] Email not sent:', emailResult.error);
-          }
-        }
+      } catch (e) {
+        console.log('[Stripe Webhook] Could not update artist pending balance');
       }
+
+      console.log('[Stripe Webhook] ✓ Pending payout created for', payment.artistName);
     }
 
   } catch (error: any) {

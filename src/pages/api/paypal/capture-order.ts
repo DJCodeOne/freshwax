@@ -335,7 +335,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// Process artist payments via Stripe Connect or PayPal
+// Process artist payments - creates pending payouts for manual review
+// NOTE: Automatic payouts disabled - all payouts are manual for now
 async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
@@ -343,12 +344,7 @@ async function processArtistPayments(params: {
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
-
-  // Import PayPal payout functions
-  const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
-  const paypalConfig = getPayPalConfig(env);
+  const { orderId, orderNumber, items } = params;
 
   try {
     // Group items by artist
@@ -356,9 +352,6 @@ async function processArtistPayments(params: {
       artistId: string;
       artistName: string;
       artistEmail: string;
-      stripeConnectId: string | null;
-      paypalEmail: string | null;
-      payoutMethod: string | null;
       amount: number;
       items: string[];
     }> = {};
@@ -404,9 +397,6 @@ async function processArtistPayments(params: {
           artistId,
           artistName: artist?.artistName || release.artistName || release.artist || 'Unknown Artist',
           artistEmail: artist?.email || release.artistEmail || '',
-          stripeConnectId: artist?.stripeConnectId || null,
-          paypalEmail: artist?.paypalEmail || null,
-          payoutMethod: artist?.payoutMethod || null,
           amount: 0,
           items: []
         };
@@ -416,190 +406,43 @@ async function processArtistPayments(params: {
       artistPayments[artistId].items.push(item.name || item.title || 'Item');
     }
 
-    console.log('[PayPal] Artist payments to process:', Object.keys(artistPayments).length);
+    console.log('[PayPal] Artist pending payouts to create:', Object.keys(artistPayments).length);
 
     for (const artistId of Object.keys(artistPayments)) {
       const payment = artistPayments[artistId];
       if (payment.amount <= 0) continue;
 
-      console.log('[PayPal] Processing payment for', payment.artistName, ':', payment.amount, 'GBP');
+      console.log('[PayPal] Creating pending payout for', payment.artistName, ':', payment.amount.toFixed(2), 'GBP');
 
-      // Determine payout method - respect artist preference
-      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && paypalConfig;
-      const useStripe = payment.payoutMethod === 'stripe' && payment.stripeConnectId;
-      // If no preference set, default to whatever is available (Stripe first)
-      const defaultToStripe = !payment.payoutMethod && payment.stripeConnectId;
-      const defaultToPayPal = !payment.payoutMethod && !payment.stripeConnectId && payment.paypalEmail && paypalConfig;
+      // Always create pending payout for manual processing
+      await addDocument('pendingPayouts', {
+        artistId: payment.artistId,
+        artistName: payment.artistName,
+        artistEmail: payment.artistEmail,
+        orderId,
+        orderNumber,
+        amount: payment.amount,
+        currency: 'gbp',
+        status: 'pending',
+        customerPaymentMethod: 'paypal',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
 
-      if (usePayPal || defaultToPayPal) {
-        // Pay via PayPal - deduct 2% payout fee from artist share
-        const paypalPayoutFee = payment.amount * 0.02;
-        const paypalAmount = payment.amount - paypalPayoutFee;
-
-        console.log('[PayPal] Paying', payment.artistName, '£' + paypalAmount.toFixed(2), 'via PayPal (2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
-
-        try {
-          const paypalResult = await createPayout(paypalConfig!, {
-            email: payment.paypalEmail!,
-            amount: paypalAmount,
-            currency: 'GBP',
-            note: `Fresh Wax payout for order ${orderNumber}`,
-            reference: `${orderId}-${payment.artistId}`
-          });
-
-          if (paypalResult.success) {
-            await addDocument('payouts', {
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              artistEmail: payment.artistEmail,
-              paypalEmail: payment.paypalEmail,
-              paypalBatchId: paypalResult.batchId,
-              paypalPayoutItemId: paypalResult.payoutItemId,
-              orderId,
-              orderNumber,
-              amount: paypalAmount,
-              paypalPayoutFee: paypalPayoutFee,
-              currency: 'gbp',
-              status: 'completed',
-              payoutMethod: 'paypal',
-              customerPaymentMethod: 'paypal',
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              completedAt: new Date().toISOString()
-            });
-
-            const artist = await getDocument('artists', payment.artistId);
-            if (artist) {
-              await updateDocument('artists', payment.artistId, {
-                totalEarnings: (artist.totalEarnings || 0) + paypalAmount,
-                lastPayoutAt: new Date().toISOString()
-              });
-            }
-
-            console.log('[PayPal] ✓ PayPal payout created:', paypalResult.batchId);
-          } else {
-            throw new Error(paypalResult.error || 'PayPal payout failed');
-          }
-
-        } catch (paypalError: any) {
-          console.error('[PayPal] PayPal payout failed:', paypalError.message);
-
-          await addDocument('pendingPayouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            artistEmail: payment.artistEmail,
-            paypalEmail: payment.paypalEmail,
-            orderId,
-            orderNumber,
-            amount: paypalAmount,
-            paypalPayoutFee: paypalPayoutFee,
-            currency: 'gbp',
-            status: 'retry_pending',
-            failureReason: paypalError.message,
-            payoutMethod: 'paypal',
-            customerPaymentMethod: 'paypal',
-            createdAt: new Date().toISOString(),
+      // Update artist's pending balance
+      try {
+        const artist = await getDocument('artists', payment.artistId);
+        if (artist) {
+          await updateDocument('artists', payment.artistId, {
+            pendingBalance: (artist.pendingBalance || 0) + payment.amount,
             updatedAt: new Date().toISOString()
           });
         }
-
-      } else if (useStripe || defaultToStripe) {
-        // Pay via Stripe Connect
-        try {
-          const transfer = await stripe.transfers.create({
-            amount: Math.round(payment.amount * 100),
-            currency: 'gbp',
-            destination: payment.stripeConnectId!,
-            transfer_group: orderId,
-            metadata: {
-              orderId,
-              orderNumber,
-              artistId: payment.artistId,
-              artistName: payment.artistName,
-              platform: 'freshwax',
-              customerPaymentMethod: 'paypal'
-            }
-          });
-
-          await addDocument('payouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            artistEmail: payment.artistEmail,
-            stripeConnectId: payment.stripeConnectId,
-            stripeTransferId: transfer.id,
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'completed',
-            payoutMethod: 'stripe',
-            customerPaymentMethod: 'paypal',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
-
-          const artist = await getDocument('artists', payment.artistId);
-          if (artist) {
-            await updateDocument('artists', payment.artistId, {
-              totalEarnings: (artist.totalEarnings || 0) + payment.amount,
-              lastPayoutAt: new Date().toISOString()
-            });
-          }
-
-          console.log('[PayPal] ✓ Stripe transfer created:', transfer.id);
-
-        } catch (transferError: any) {
-          console.error('[PayPal] Stripe transfer failed:', transferError.message);
-
-          await addDocument('pendingPayouts', {
-            artistId: payment.artistId,
-            artistName: payment.artistName,
-            artistEmail: payment.artistEmail,
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'retry_pending',
-            failureReason: transferError.message,
-            payoutMethod: 'stripe',
-            customerPaymentMethod: 'paypal',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } else {
-        // Artist not connected to any payout method - store as pending
-        console.log('[PayPal] Artist', payment.artistName, 'not connected - storing pending');
-
-        await addDocument('pendingPayouts', {
-          artistId: payment.artistId,
-          artistName: payment.artistName,
-          artistEmail: payment.artistEmail,
-          orderId,
-          orderNumber,
-          amount: payment.amount,
-          currency: 'gbp',
-          status: 'awaiting_connect',
-          notificationSent: false,
-          customerPaymentMethod: 'paypal',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-
-        // Update artist's pending balance
-        try {
-          const artist = await getDocument('artists', payment.artistId);
-          if (artist) {
-            await updateDocument('artists', payment.artistId, {
-              pendingBalance: (artist.pendingBalance || 0) + payment.amount,
-              updatedAt: new Date().toISOString()
-            });
-          }
-        } catch (e) {
-          console.log('[PayPal] Could not update artist pending balance');
-        }
+      } catch (e) {
+        console.log('[PayPal] Could not update artist pending balance');
       }
+
+      console.log('[PayPal] ✓ Pending payout created for', payment.artistName);
     }
   } catch (error) {
     console.error('[PayPal] processArtistPayments error:', error);
