@@ -35,7 +35,7 @@ const refunds = await queryCollection('refunds', {
   limit: 50
 });
 
-// Fetch failed/pending payouts
+// Fetch failed/pending payouts (for the Pending tab)
 const pendingPayouts = await queryCollection('pendingPayouts', {
   filters: [
     { field: 'status', op: 'IN', value: ['retry_pending', 'awaiting_connect', 'processing'] }
@@ -43,6 +43,29 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
   orderBy: { field: 'createdAt', direction: 'DESCENDING' },
   limit: 50
 });
+
+// Fetch all pending payouts with status 'pending' (for manual review)
+const manualPendingPayouts = await queryCollection('pendingPayouts', {
+  filters: [
+    { field: 'status', op: 'EQUAL', value: 'pending' }
+  ],
+  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+  limit: 100
+});
+
+// Create a map of orderId -> artist info for quick lookup
+const orderArtistMap: Record<string, { artistName: string; artistEmail: string; amount: number }[]> = {};
+for (const payout of manualPendingPayouts) {
+  if (!payout.orderId) continue;
+  if (!orderArtistMap[payout.orderId]) {
+    orderArtistMap[payout.orderId] = [];
+  }
+  orderArtistMap[payout.orderId].push({
+    artistName: payout.artistName || 'Unknown',
+    artistEmail: payout.artistEmail || '',
+    amount: payout.amount || 0
+  });
+}
 
 // Fetch completed payouts using service account auth (payouts collection requires auth)
 let completedPayouts: Record<string, any>[] = [];
@@ -61,24 +84,17 @@ const recentOrders = await queryCollection('orders', {
   limit: 100
 });
 
-// Find orders needing payouts (orders without corresponding payout records)
+// Find orders needing payouts - orders that have pending payouts with status 'pending'
+const orderIdsWithPendingPayouts = new Set(Object.keys(orderArtistMap));
 const paidOrderIds = new Set(completedPayouts.map(p => p.orderId));
+
+// Get orders that have pending payouts awaiting manual processing
 const ordersNeedingPayouts = recentOrders.filter(order => {
-  // Skip test mode and free download orders - no real money involved
-  if (order.paymentMethod === 'test_mode' || order.paymentMethod === 'free_download') return false;
-  // Skip orders with zero total
-  if (order.totals?.total === 0 || order.total === 0) return false;
-  // Skip if already paid
+  // Must have a pending payout record
+  if (!orderIdsWithPendingPayouts.has(order.id)) return false;
+  // Skip if already marked as paid in completedPayouts
   if (paidOrderIds.has(order.id)) return false;
-  // Skip if no items
-  if (!order.items || order.items.length === 0) return false;
-  // Skip if payment not completed
-  if (order.paymentStatus !== 'completed' && order.status !== 'completed' && order.orderStatus !== 'completed') return false;
-  // Check if has digital items (which need artist payouts)
-  const hasDigitalItems = order.items.some(item =>
-    item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type
-  );
-  return hasDigitalItems;
+  return true;
 });
 
 // Stats
@@ -91,10 +107,8 @@ const pendingPayoutTotal = pendingPayouts.reduce((sum, p) => sum + (p.amount || 
 // Only count real payouts (exclude test mode)
 const realPayouts = completedPayouts.filter(p => !p.isTestMode);
 const completedPayoutTotal = realPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
-const ordersNeedingPayoutTotal = ordersNeedingPayouts.reduce((sum, o) => {
-  const itemTotal = (o.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
-  return sum + itemTotal;
-}, 0);
+// Calculate total from actual pending payout records
+const ordersNeedingPayoutTotal = manualPendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
 
 const stats = [
   { label: 'Orders Need Payout', value: ordersNeedingPayouts.length, type: ordersNeedingPayouts.length > 0 ? 'warning' : 'default', detail: `~£${ordersNeedingPayoutTotal.toFixed(2)}` },
@@ -190,7 +204,11 @@ export const prerender = false;
             ) : (
               ordersNeedingPayouts.map(order => {
                 const itemTotal = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
-                const artistNames = [...new Set((order.items || []).map(i => i.artist || 'Unknown').filter(Boolean))].join(', ');
+                // Get artist info from pending payouts map (this is the actual payee)
+                const artistInfo = orderArtistMap[order.id] || [];
+                const artistNames = artistInfo.length > 0
+                  ? artistInfo.map(a => a.artistName).join(', ')
+                  : 'No payout record';
                 return (
                   <tr data-order-id={order.id}>
                     <td class="cell-secondary">{formatDate(order.createdAt)}</td>
