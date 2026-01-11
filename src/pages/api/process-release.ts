@@ -369,6 +369,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       catalogNumber: metadata.labelCode || '',
       labelCode: metadata.labelCode || '',
       releaseDate: metadata.releaseDate || now,
+      originalReleaseDate: metadata.copyrightYear ? `${metadata.copyrightYear}-01-01` : (metadata.releaseDate || now),
       description: metadata.releaseDescription || metadata.notes || '',
       releaseDescription: metadata.releaseDescription || '',
       masteredBy: metadata.masteredBy || '',
