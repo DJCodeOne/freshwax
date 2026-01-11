@@ -403,6 +403,32 @@ const productsJson = JSON.stringify(products);
             </div>
           </div>
 
+          <!-- Payment Method Selection -->
+          <div id="gcPaymentSection" class="gc-payment-section hidden">
+            <h4 style="margin: 1rem 0 0.75rem; font-size: 0.9rem; color: #666;">Payment Method</h4>
+            <div class="gc-payment-methods">
+              <label class="gc-payment-option">
+                <input type="radio" name="gcPaymentMethod" value="stripe" checked />
+                <span class="gc-payment-label">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                  Card
+                </span>
+              </label>
+              <label class="gc-payment-option">
+                <input type="radio" name="gcPaymentMethod" value="paypal" />
+                <span class="gc-payment-label">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="#003087">
+                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
+                  </svg>
+                  PayPal
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div id="gcPurchaseLoginPrompt" class="gc-login-prompt">
             <p>Please <a href="/login">sign in</a> to purchase a gift card.</p>
           </div>
@@ -926,7 +952,6 @@ const productsJson = JSON.stringify(products);
     if (!gcCurrentUser || gcSelectedAmount < 5) return;
 
     const errorEl = document.getElementById('gcPurchaseError');
-    const successEl = document.getElementById('gcPurchaseSuccess');
     const btn = document.getElementById('gcPurchaseBtn');
     const btnText = btn.querySelector('.gc-btn-text');
     const btnLoading = btn.querySelector('.gc-btn-loading');
@@ -935,6 +960,7 @@ const productsJson = JSON.stringify(products);
     const recipientName = document.getElementById('gcRecipientName')?.value.trim() || '';
     const recipientEmail = document.getElementById('gcRecipientEmail')?.value.trim() || '';
     const message = document.getElementById('gcGiftMessage')?.value.trim() || '';
+    const paymentMethod = document.querySelector('input[name="gcPaymentMethod"]:checked')?.value || 'stripe';
 
     if (recipientType === 'gift' && !recipientEmail) {
       errorEl.textContent = 'Please enter recipient email';
@@ -947,37 +973,56 @@ const productsJson = JSON.stringify(products);
     btnText.classList.add('hidden');
     btnLoading.classList.remove('hidden');
 
-    try {
-      const response = await fetch('/api/giftcards/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: gcSelectedAmount,
-          buyerUserId: gcCurrentUser.uid,
-          buyerEmail: gcCurrentUser.email,
-          buyerName: gcCurrentUser.displayName || '',
-          recipientType,
-          recipientName: recipientType === 'self' ? (gcCurrentUser.displayName || '') : recipientName,
-          recipientEmail: recipientType === 'gift' ? recipientEmail : gcCurrentUser.email,
-          message
-        })
-      });
-      const result = await response.json();
+    const purchaseData = {
+      amount: gcSelectedAmount,
+      buyerUserId: gcCurrentUser.uid,
+      buyerEmail: gcCurrentUser.email,
+      buyerName: gcCurrentUser.displayName || '',
+      recipientType,
+      recipientName: recipientType === 'self' ? (gcCurrentUser.displayName || '') : recipientName,
+      recipientEmail: recipientType === 'gift' ? recipientEmail : gcCurrentUser.email,
+      message
+    };
 
-      if (result.success) {
-        document.querySelector('.gc-recipient-section')?.classList.add('hidden');
-        document.getElementById('gcPurchaseActions')?.classList.add('hidden');
-        successEl.classList.remove('hidden');
-        document.getElementById('gcSuccessMessage').textContent =
-          recipientType === 'gift'
-            ? `Gift card sent to ${recipientEmail}!`
-            : `Gift card code sent to ${gcCurrentUser.email}!`;
+    try {
+      if (paymentMethod === 'stripe') {
+        // Create Stripe checkout session
+        const response = await fetch('/api/giftcards/create-stripe-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(purchaseData)
+        });
+        const result = await response.json();
+
+        if (result.success && result.checkoutUrl) {
+          // Redirect to Stripe checkout
+          window.location.href = result.checkoutUrl;
+        } else {
+          errorEl.textContent = result.error || 'Failed to create checkout session';
+          errorEl.style.display = 'block';
+          btn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoading.classList.add('hidden');
+        }
       } else {
-        errorEl.textContent = result.error || 'Purchase failed';
-        errorEl.style.display = 'block';
-        btn.disabled = false;
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
+        // Create PayPal order
+        const response = await fetch('/api/giftcards/create-paypal-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(purchaseData)
+        });
+        const result = await response.json();
+
+        if (result.success && result.approvalUrl) {
+          // Redirect to PayPal approval
+          window.location.href = result.approvalUrl;
+        } else {
+          errorEl.textContent = result.error || 'Failed to create PayPal order';
+          errorEl.style.display = 'block';
+          btn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoading.classList.add('hidden');
+        }
       }
     } catch (err) {
       errorEl.textContent = 'Something went wrong';
@@ -1008,6 +1053,7 @@ const productsJson = JSON.stringify(products);
       document.getElementById('gcRedeemForm')?.classList.remove('hidden');
       document.getElementById('gcPurchaseLoginPrompt')?.classList.add('hidden');
       document.getElementById('gcPurchaseActions')?.classList.remove('hidden');
+      document.getElementById('gcPaymentSection')?.classList.remove('hidden');
       document.getElementById('gcSelfEmail').textContent = user.email || '-';
       loadGcBalance(user.uid);
     } else {
@@ -1015,6 +1061,7 @@ const productsJson = JSON.stringify(products);
       document.getElementById('gcRedeemForm')?.classList.add('hidden');
       document.getElementById('gcPurchaseLoginPrompt')?.classList.remove('hidden');
       document.getElementById('gcPurchaseActions')?.classList.add('hidden');
+      document.getElementById('gcPaymentSection')?.classList.add('hidden');
       document.getElementById('gcBalanceDisplay')?.classList.add('hidden');
     }
   }

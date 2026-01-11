@@ -8,6 +8,7 @@ import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocum
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { redeemReferralCode } from '../../../lib/referral-codes';
+import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 
 export const prerender = false;
 
@@ -888,6 +889,65 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const metadata = session.metadata || {};
       console.log('[Stripe Webhook] Metadata keys:', Object.keys(metadata).join(', '));
       console.log('[Stripe Webhook] Metadata:', JSON.stringify(metadata, null, 2));
+
+      // Handle gift card purchases
+      if (metadata.type === 'giftcard') {
+        console.log('[Stripe Webhook] 🎁 Processing gift card purchase...');
+
+        const paymentIntentId = session.payment_intent;
+
+        // Idempotency check for gift cards
+        if (paymentIntentId) {
+          try {
+            const existingCards = await queryCollection('giftCards', {
+              filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
+              limit: 1
+            });
+
+            if (existingCards.length > 0) {
+              console.log('[Stripe Webhook] ⚠️ Gift card already exists for this payment:', existingCards[0].code);
+              return new Response(JSON.stringify({
+                received: true,
+                message: 'Gift card already created',
+                code: existingCards[0].code
+              }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            }
+          } catch (checkErr) {
+            console.error('[Stripe Webhook] Gift card idempotency check failed:', checkErr);
+          }
+        }
+
+        // Create the gift card
+        const result = await createGiftCardAfterPayment({
+          amount: parseInt(metadata.amount),
+          buyerUserId: metadata.buyerUserId,
+          buyerEmail: metadata.buyerEmail,
+          buyerName: metadata.buyerName || '',
+          recipientType: metadata.recipientType as 'gift' | 'self',
+          recipientName: metadata.recipientName || '',
+          recipientEmail: metadata.recipientEmail,
+          message: metadata.message || '',
+          paymentIntentId: paymentIntentId as string
+        }, {
+          queryCollection,
+          addDocument,
+          updateDocument,
+          getDocument
+        });
+
+        if (result.success) {
+          console.log('[Stripe Webhook] ✓ Gift card created:', result.giftCard?.code);
+          console.log('[Stripe Webhook] ✓ Email sent:', result.emailSent);
+        } else {
+          console.error('[Stripe Webhook] ❌ Failed to create gift card:', result.error);
+        }
+
+        return new Response(JSON.stringify({
+          received: true,
+          giftCard: result.success,
+          code: result.giftCard?.code
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
 
       // Skip if no customer email (not a valid order)
       if (!metadata.customer_email) {

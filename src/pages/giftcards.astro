@@ -179,10 +179,36 @@ const faqs = [
           </div>
         </div>
         
+        <!-- Payment Method Selection -->
+        <div id="paymentMethodSection" class="payment-method-section hidden">
+          <h4>Payment Method</h4>
+          <div class="payment-methods">
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="stripe" checked />
+              <span class="payment-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+                Card
+              </span>
+            </label>
+            <label class="payment-option">
+              <input type="radio" name="paymentMethod" value="paypal" />
+              <span class="payment-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#003087">
+                  <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/>
+                </svg>
+                PayPal
+              </span>
+            </label>
+          </div>
+        </div>
+
         <div id="purchaseLoginPrompt" class="purchase-login-prompt">
           <p>Please <a href="/login" id="purchaseSignInLink">sign in</a> or <a href="/register" id="purchaseRegisterLink">create an account</a> to purchase a gift card.</p>
         </div>
-        
+
         <div id="purchaseActions" class="purchase-actions hidden">
           <button id="purchaseBtn" class="purchase-btn" disabled>
             <span class="btn-text">Select an amount</span>
@@ -191,7 +217,7 @@ const faqs = [
               Processing...
             </span>
           </button>
-          <p class="payment-note">Secure payment powered by Stripe</p>
+          <p class="payment-note">Secure payment via Stripe or PayPal</p>
         </div>
         
         <p id="purchaseError" class="purchase-error"></p>
@@ -477,15 +503,17 @@ const faqs = [
     const redeemFormEl = document.getElementById('redeemForm');
     const purchaseLoginPrompt = document.getElementById('purchaseLoginPrompt');
     const purchaseActions = document.getElementById('purchaseActions');
+    const paymentMethodSection = document.getElementById('paymentMethodSection');
     const selfEmailDisplay = document.getElementById('selfEmailDisplay');
     const selfNameDisplay = document.getElementById('selfNameDisplay');
-    
+
     if (user) {
       // User is logged in - hide login prompts, show forms
       loginPrompt?.classList.add('hidden');
       redeemFormEl?.classList.remove('hidden');
       purchaseLoginPrompt?.classList.add('hidden');
       purchaseActions?.classList.remove('hidden');
+      paymentMethodSection?.classList.remove('hidden');
       loadBalance(user.uid);
       
       // Fetch user name
@@ -507,6 +535,7 @@ const faqs = [
       redeemFormEl?.classList.add('hidden');
       purchaseLoginPrompt?.classList.remove('hidden');
       purchaseActions?.classList.add('hidden');
+      paymentMethodSection?.classList.add('hidden');
       document.getElementById('balanceDisplay')?.classList.add('hidden');
       document.getElementById('myPurchasedCards')?.classList.add('hidden');
       
@@ -710,58 +739,63 @@ const faqs = [
     btnLoading.classList.remove('hidden');
     
     // Use user's name for self purchase
-    const finalRecipientName = recipientType === 'self' 
+    const finalRecipientName = recipientType === 'self'
       ? (currentUserName || currentUser.displayName || currentUser.email?.split('@')[0] || '')
       : recipientName;
-    
+
+    // Get selected payment method
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked')?.value || 'stripe';
+
+    const purchaseData = {
+      amount: selectedAmount,
+      buyerUserId: currentUser.uid,
+      buyerEmail: currentUser.email,
+      buyerName: currentUserName || currentUser.displayName || '',
+      recipientType,
+      recipientName: finalRecipientName,
+      recipientEmail: recipientType === 'gift' ? recipientEmail : currentUser.email,
+      message
+    };
+
     try {
-      const response = await fetch('/api/giftcards/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: selectedAmount,
-          buyerUserId: currentUser.uid,
-          buyerEmail: currentUser.email,
-          buyerName: currentUserName || currentUser.displayName || '',
-          recipientType,
-          recipientName: finalRecipientName,
-          recipientEmail: recipientType === 'gift' ? recipientEmail : currentUser.email,
-          message
-        })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Hide purchase form, show success
-        document.querySelector('.recipient-section')?.classList.add('hidden');
-        document.querySelector('.purchase-actions')?.classList.add('hidden');
-        
-        successEl.classList.remove('hidden');
-        
-        // Update success display
-        document.getElementById('purchasedAmount').textContent = `£${selectedAmount}`;
-        document.getElementById('purchasedDate').textContent = new Date().toLocaleDateString('en-GB');
-        document.getElementById('purchasedExpiry').textContent = result.giftCard.expiresAt 
-          ? new Date(result.giftCard.expiresAt).toLocaleDateString('en-GB')
-          : '1 year from redemption';
-        
-        if (recipientType === 'gift') {
-          document.getElementById('successMessage').textContent = 
-            `Gift card sent to ${recipientEmail}.`;
+      if (paymentMethod === 'stripe') {
+        // Create Stripe checkout session
+        const response = await fetch('/api/giftcards/create-stripe-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(purchaseData)
+        });
+        const result = await response.json();
+
+        if (result.success && result.checkoutUrl) {
+          // Redirect to Stripe checkout
+          window.location.href = result.checkoutUrl;
         } else {
-          document.getElementById('successMessage').textContent = 
-            `Gift card code sent to ${currentUser.email}.`;
+          errorEl.textContent = result.error || 'Failed to create checkout session';
+          errorEl.style.display = 'block';
+          purchaseBtn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoading.classList.add('hidden');
         }
-        
-        // Reload purchased cards list
-        loadPurchasedCards();
       } else {
-        errorEl.textContent = result.error || 'Failed to purchase gift card';
-        errorEl.style.display = 'block';
-        purchaseBtn.disabled = false;
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
+        // Create PayPal order
+        const response = await fetch('/api/giftcards/create-paypal-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(purchaseData)
+        });
+        const result = await response.json();
+
+        if (result.success && result.approvalUrl) {
+          // Redirect to PayPal approval
+          window.location.href = result.approvalUrl;
+        } else {
+          errorEl.textContent = result.error || 'Failed to create PayPal order';
+          errorEl.style.display = 'block';
+          purchaseBtn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoading.classList.add('hidden');
+        }
       }
     } catch (error) {
       console.error('Purchase error:', error);

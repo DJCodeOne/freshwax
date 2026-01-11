@@ -1,0 +1,175 @@
+---
+// src/pages/giftcards/success.astro
+// Handles gift card payment success redirect
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export const prerender = false;
+
+// Get session ID from URL (Stripe) or paypalOrderId (PayPal)
+const sessionId = Astro.url.searchParams.get('session_id');
+const paypalOrderId = Astro.url.searchParams.get('token'); // PayPal uses 'token' param
+---
+
+<Layout title="Gift Card Processing" noindex={true}>
+  <Header />
+
+  <main style="padding: 4rem 1.5rem; min-height: 60vh; display: flex; align-items: center; justify-content: center;">
+    <div style="max-width: 500px; width: 100%; text-align: center;">
+      <div id="loading-state">
+        <div style="width: 80px; height: 80px; border: 4px solid #e5e7eb; border-top-color: #dc2626; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem;"></div>
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #111827; margin-bottom: 0.5rem;">Processing Gift Card...</h1>
+        <p style="color: #6b7280; font-size: 1rem;">Please wait while we create your gift card.</p>
+      </div>
+
+      <div id="success-state" style="display: none;">
+        <div style="width: 80px; height: 80px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </div>
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #16a34a; margin-bottom: 0.5rem;">Gift Card Created!</h1>
+        <p id="success-message" style="color: #6b7280; font-size: 1rem; margin-bottom: 1.5rem;">The gift card has been emailed to the recipient.</p>
+        <a href="/giftcards" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">View Gift Cards</a>
+      </div>
+
+      <div id="error-state" style="display: none;">
+        <div style="width: 80px; height: 80px; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="3">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4m0 4h.01"/>
+          </svg>
+        </div>
+        <h1 style="font-family: 'Inter', sans-serif; font-size: 1.75rem; font-weight: 700; color: #dc2626; margin-bottom: 0.5rem;">Something Went Wrong</h1>
+        <p id="error-message" style="color: #6b7280; font-size: 1rem; margin-bottom: 1.5rem;">We couldn't complete your gift card purchase.</p>
+        <a href="/giftcards" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600;">Try Again</a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+
+  <style>
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</Layout>
+
+<script define:vars={{ sessionId, paypalOrderId }}>
+  async function processGiftCard() {
+    const loadingState = document.getElementById('loading-state');
+    const successState = document.getElementById('success-state');
+    const errorState = document.getElementById('error-state');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+
+    // Handle PayPal return
+    if (paypalOrderId) {
+      console.log('[giftcard-success] PayPal order:', paypalOrderId);
+
+      try {
+        const response = await fetch('/api/giftcards/capture-paypal-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paypalOrderId })
+        });
+
+        const result = await response.json();
+        console.log('[giftcard-success] PayPal capture result:', result);
+
+        if (result.success) {
+          loadingState.style.display = 'none';
+          successState.style.display = 'block';
+          if (result.giftCard?.recipientEmail) {
+            successMessage.textContent = `Gift card emailed to ${result.giftCard.recipientEmail}`;
+          }
+          return;
+        } else {
+          loadingState.style.display = 'none';
+          errorState.style.display = 'block';
+          errorMessage.textContent = result.error || 'Failed to create gift card';
+          return;
+        }
+      } catch (error) {
+        console.error('[giftcard-success] PayPal error:', error);
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+        errorMessage.textContent = 'An error occurred processing your payment.';
+        return;
+      }
+    }
+
+    // Handle Stripe return
+    if (!sessionId) {
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+      errorMessage.textContent = 'No payment session found.';
+      return;
+    }
+
+    console.log('[giftcard-success] Stripe session:', sessionId);
+
+    // Poll for gift card creation (webhook may take a moment)
+    const maxRetries = 5;
+    const baseDelay = 2000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const delay = attempt === 1 ? baseDelay : baseDelay * Math.pow(1.5, attempt - 1);
+        console.log(`[giftcard-success] Attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+
+        const response = await fetch(`/api/giftcards/verify-session?session_id=${sessionId}`);
+        const result = await response.json();
+        console.log('[giftcard-success] Verify result:', result);
+
+        if (result.success && result.giftCard) {
+          loadingState.style.display = 'none';
+          successState.style.display = 'block';
+          if (result.giftCard.recipientEmail) {
+            successMessage.textContent = `Gift card emailed to ${result.giftCard.recipientEmail}`;
+          }
+          return;
+        }
+
+        if (result.paymentStatus === 'paid') {
+          // Payment successful, webhook might still be processing
+          if (attempt < maxRetries) {
+            console.log('[giftcard-success] Payment OK, waiting for webhook...');
+            continue;
+          }
+
+          // Last attempt - show success anyway
+          loadingState.style.display = 'none';
+          successState.style.display = 'block';
+          successMessage.textContent = 'Gift card is being created. Check your email shortly.';
+          return;
+        }
+
+        if (result.error === 'Payment not completed' && attempt < maxRetries) {
+          continue;
+        }
+
+        // Payment failed
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+        errorMessage.textContent = result.error || 'Payment verification failed';
+        return;
+
+      } catch (error) {
+        console.error(`[giftcard-success] Error (attempt ${attempt}):`, error);
+        if (attempt === maxRetries) {
+          loadingState.style.display = 'none';
+          errorState.style.display = 'block';
+          errorMessage.textContent = 'Unable to verify payment. Check your email for the gift card.';
+          return;
+        }
+      }
+    }
+  }
+
+  // Start processing
+  processGiftCard();
+</script>

@@ -872,3 +872,47 @@
   margin: 0;
   color: #888;
 }
+
+/* Gift Card Payment Method Selection */
+.gc-payment-section {
+  margin: 1.5rem 0;
+}
+.gc-payment-section.hidden {
+  display: none;
+}
+.gc-payment-methods {
+  display: flex;
+  gap: 0.75rem;
+}
+.gc-payment-option {
+  flex: 1;
+  cursor: pointer;
+}
+.gc-payment-option input {
+  display: none;
+}
+.gc-payment-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #222;
+  border: 2px solid #444;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.gc-payment-option:hover .gc-payment-label {
+  border-color: #666;
+  background: #2a2a2a;
+}
+.gc-payment-option input:checked + .gc-payment-label {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+.gc-payment-label svg {
+  flex-shrink: 0;
+}

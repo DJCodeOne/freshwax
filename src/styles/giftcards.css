@@ -951,3 +951,59 @@
       font-size: 0.65rem;
     }
   }
+
+  /* Payment Method Selection */
+  .gc-payment-section,
+  .payment-method-section {
+    margin: 1.5rem 0;
+  }
+
+  .gc-payment-methods,
+  .payment-methods {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .gc-payment-option,
+  .payment-option {
+    flex: 1;
+    cursor: pointer;
+  }
+
+  .gc-payment-option input,
+  .payment-option input {
+    display: none;
+  }
+
+  .gc-payment-label,
+  .payment-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1rem;
+    background: #222;
+    border: 2px solid #444;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .gc-payment-option:hover .gc-payment-label,
+  .payment-option:hover .payment-label {
+    border-color: #666;
+    background: #2a2a2a;
+  }
+
+  .gc-payment-option input:checked + .gc-payment-label,
+  .payment-option input:checked + .payment-label {
+    background: #dc2626;
+    border-color: #dc2626;
+  }
+
+  .gc-payment-label svg,
+  .payment-label svg {
+    flex-shrink: 0;
+  }

@@ -1,9 +1,11 @@
 // src/pages/api/giftcards/purchase.ts
-// Purchase a gift card and email the code to recipient
+// Admin-only endpoint to create promotional/complimentary gift cards
+// For customer purchases, use create-stripe-session.ts or create-paypal-order.ts
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { requireAdminAuth } from '../../../lib/admin';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -245,6 +247,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
+
+    // SECURITY: Require admin authentication
+    // This endpoint is for promotional/complimentary gift cards only
+    // Customer purchases must go through Stripe or PayPal payment flow
+    const authError = requireAdminAuth(request, locals, data);
+    if (authError) {
+      return authError;
+    }
     const {
       amount,
       buyerUserId,
