@@ -1,6 +1,7 @@
 // src/pages/api/approve-release.js
 // Approves or rejects pending releases in Firebase
-import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest.js';
+import { getDocument, updateDocument, initFirebaseEnv, invalidateReleasesCache } from '../../lib/firebase-rest.js';
+import { d1UpsertRelease } from '../../lib/d1-catalog.ts';
 
 export const prerender = false;
 
@@ -95,6 +96,22 @@ export async function POST({ request, locals }) {
     } catch (error) {
       log.error('[approve-release] Warning: Could not update master list:', error.message);
     }
+
+    // Sync to D1 for immediate visibility
+    const db = env?.DB;
+    if (db) {
+      try {
+        const updatedRelease = { ...releaseData, ...updateData };
+        await d1UpsertRelease(db, releaseId, updatedRelease);
+        log.info('[approve-release] D1 synced');
+      } catch (d1Error) {
+        log.error('[approve-release] Warning: D1 sync failed:', d1Error.message);
+      }
+    }
+
+    // Invalidate cache to ensure fresh data
+    invalidateReleasesCache();
+    log.info('[approve-release] Cache invalidated');
 
     log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
 

@@ -7,6 +7,10 @@ import { queryCollection } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
+// Get admin key for authenticated API calls
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
 let releases: any[] = [];
 let errorMessage = '';
 
@@ -235,7 +239,7 @@ const formatCurrency = (amount) => {
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline>
+    <script define:vars={{ adminKey }}>
       // Filter functionality
       const filterTabs = document.querySelectorAll('.filter-tab');
       const formatFilter = document.getElementById('formatFilter');
@@ -286,7 +290,7 @@ const formatCurrency = (amount) => {
           try {
             const response = await fetch('/api/approve-release', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
               body: JSON.stringify({ releaseId: id, action: 'approve' })
             });
             
@@ -358,7 +362,7 @@ const formatCurrency = (amount) => {
         try {
           const response = await fetch('/api/delete-release', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
             body: JSON.stringify({ releaseId: id })
           });
 
