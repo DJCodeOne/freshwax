@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { addDocument, getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { setDocument, getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 
 export const prerender = false;
@@ -238,7 +238,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hours
       };
 
-      await addDocument('pendingPayPalOrders', pendingOrderData, paypalOrder.id);
+      await setDocument('pendingPayPalOrders', paypalOrder.id, pendingOrderData);
       console.log('[PayPal Plus] Stored pending order:', paypalOrder.id);
     } catch (storeErr) {
       console.error('[PayPal Plus] Failed to store pending order:', storeErr);

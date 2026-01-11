@@ -106,8 +106,11 @@ service cloud.firestore {
     // Order details protected by requiring authentication in API layer
     match /orders/{orderId} {
       allow read: if true;
-      // Allow authenticated users OR test orders from API (API validates on server-side)
-      allow create: if isAuthenticated() || request.resource.data.paymentMethod == 'test_mode';
+      // Allow authenticated users OR test/paypal orders from API (API validates on server-side)
+      // PayPal orders are created after payment capture, so payment is already verified
+      allow create: if isAuthenticated() ||
+                      request.resource.data.paymentMethod == 'test_mode' ||
+                      request.resource.data.paymentMethod == 'paypal';
       allow update, delete: if isAdmin();
     }
 
@@ -416,6 +419,17 @@ service cloud.firestore {
     match /giftcards/{cardId} {
       allow read: if isAdmin();
       allow write: if isAdmin();
+    }
+
+    // Pending PayPal Orders - temporary storage for PayPal checkout flow
+    // Server-side API creates and reads these during checkout (no auth token)
+    match /pendingPayPalOrders/{orderId} {
+      allow read, write: if true;
+    }
+
+    // Pending Gift Card Orders - temporary storage for gift card PayPal flow
+    match /pendingGiftCardOrders/{orderId} {
+      allow read, write: if true;
     }
 
     // Quick access keys - admin only

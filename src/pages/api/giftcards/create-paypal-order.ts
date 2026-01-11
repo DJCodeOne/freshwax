@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -191,7 +191,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hour expiry
       };
 
-      await addDocument('pendingGiftCardOrders', pendingOrder, paypalResult.id);
+      await setDocument('pendingGiftCardOrders', paypalResult.id, pendingOrder);
       console.log('[GiftCard PayPal] Stored pending order:', paypalResult.id);
     } catch (storeErr) {
       console.error('[GiftCard PayPal] Failed to store pending order:', storeErr);

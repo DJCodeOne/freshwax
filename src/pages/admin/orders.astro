@@ -13,16 +13,25 @@ const allOrders = await queryCollection('orders', {
 });
 
 const orders = await Promise.all(allOrders.map(async (data: any) => {
-  // Get customer info if available
+  // Get customer info - check nested customer object first, then top-level fields
   let customerName = 'Guest';
-  let customerEmail = data.email || '';
-  let customerPhone = data.phone || '';
-  let customerAddress = data.shippingAddress || data.address || null;
+  let customerEmail = data.email || data.customer?.email || '';
+  let customerPhone = data.phone || data.customer?.phone || '';
+  let customerAddress = data.shippingAddress || data.shipping || data.address || null;
   let billingAddress = data.billingAddress || null;
 
-  if (data.customerId || data.userId) {
+  // Use customer name from order if available
+  if (data.customer?.firstName || data.customer?.lastName) {
+    customerName = `${data.customer.firstName || ''} ${data.customer.lastName || ''}`.trim() || 'Customer';
+    customerEmail = data.customer.email || customerEmail;
+    customerPhone = data.customer.phone || customerPhone;
+  }
+
+  // Fallback: fetch from users collection if we have a userId
+  const userId = data.customerId || data.userId || data.customer?.userId;
+  if (customerName === 'Guest' && userId) {
     try {
-      const customer = await getDocument('users', data.customerId || data.userId);
+      const customer = await getDocument('users', userId);
       if (customer) {
         customerName = customer.fullName || customer.name || customer.displayName || 'Customer';
         customerEmail = customer.email || customerEmail;

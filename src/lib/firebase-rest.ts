@@ -329,9 +329,13 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
   // Include API key for authenticated reads
   const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || import.meta.env.PUBLIC_FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK;
 
+  // Use dynamic project ID to match setDocument behavior
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID') || PROJECT_ID;
+  const baseUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents`;
+
   const url = apiKey
-    ? `${FIRESTORE_BASE}/${collection}/${docId}?key=${apiKey}`
-    : `${FIRESTORE_BASE}/${collection}/${docId}`;
+    ? `${baseUrl}/${collection}/${docId}?key=${apiKey}`
+    : `${baseUrl}/${collection}/${docId}`;
   
   const fetchPromise = (async () => {
     try {
