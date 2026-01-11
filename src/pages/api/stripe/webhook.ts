@@ -1126,7 +1126,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             subtotal: parseFloat(metadata.subtotal) || (session.amount_total / 100),
             shipping: parseFloat(metadata.shipping) || 0,
             serviceFees: parseFloat(metadata.serviceFees) || 0,
-            total: session.amount_total / 100
+            total: session.amount_total / 100,
+            appliedCredit: parseFloat(metadata.appliedCredit) || 0,
+            amountPaid: session.amount_total / 100
           },
           hasPhysicalItems: metadata.hasPhysicalItems === 'true',
           paymentMethod: 'stripe',
@@ -1190,6 +1192,55 @@ export const POST: APIRoute = async ({ request, locals }) => {
           stripeSecretKey,
           env
         });
+      }
+
+      // Deduct applied credit from user's balance
+      const appliedCredit = parseFloat(metadata.appliedCredit) || 0;
+      const userId = metadata.customer_userId;
+      if (appliedCredit > 0 && userId) {
+        console.log('[Stripe Webhook] 💳 Deducting applied credit:', appliedCredit, 'from user:', userId);
+        try {
+          const creditData = await getDocument('userCredits', userId);
+          if (creditData && creditData.balance >= appliedCredit) {
+            const newBalance = creditData.balance - appliedCredit;
+            const now = new Date().toISOString();
+
+            // Create transaction record
+            const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const transaction = {
+              id: transactionId,
+              type: 'purchase',
+              amount: -appliedCredit,
+              description: `Applied to order ${result.orderNumber || result.orderId}`,
+              orderId: result.orderId,
+              orderNumber: result.orderNumber,
+              createdAt: now,
+              balanceAfter: newBalance
+            };
+
+            const existingTransactions = creditData.transactions || [];
+            existingTransactions.push(transaction);
+
+            await updateDocument('userCredits', userId, {
+              balance: newBalance,
+              lastUpdated: now,
+              transactions: existingTransactions
+            });
+
+            // Also update user document
+            await updateDocument('users', userId, {
+              creditBalance: newBalance,
+              creditUpdatedAt: now
+            });
+
+            console.log('[Stripe Webhook] ✅ Credit deducted, new balance:', newBalance);
+          } else {
+            console.warn('[Stripe Webhook] ⚠️ Insufficient credit balance for deduction');
+          }
+        } catch (creditErr) {
+          console.error('[Stripe Webhook] ❌ Failed to deduct credit:', creditErr);
+          // Don't fail the order, just log the error
+        }
       }
 
       console.log('[Stripe Webhook] ========== WEBHOOK COMPLETE ==========');

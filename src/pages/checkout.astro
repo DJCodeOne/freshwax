@@ -60,6 +60,12 @@ export const prerender = false;
   let currentUser = null;
   let customerData = null;
   let cart = [];
+
+  // Credit balance state
+  let creditBalance = 0;
+  let creditExpiry = null;
+  let appliedCredit = 0;
+  let creditLoaded = false;
   
   function getCustomerIdFromCookie() {
     const cookies = document.cookie.split(';');
@@ -94,7 +100,109 @@ export const prerender = false;
     }
     return cart;
   }
-  
+
+  // Load user's credit balance
+  async function loadCreditBalance() {
+    if (!currentUser) {
+      creditBalance = 0;
+      creditExpiry = null;
+      creditLoaded = true;
+      return;
+    }
+
+    try {
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch('/api/giftcards/balance', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          creditBalance = data.balance || 0;
+          // Find the earliest expiry from transactions
+          if (data.transactions && data.transactions.length > 0) {
+            const activeTransactions = data.transactions.filter(t =>
+              t.expiresAt && new Date(t.expiresAt) > new Date()
+            );
+            if (activeTransactions.length > 0) {
+              creditExpiry = activeTransactions.reduce((earliest, t) => {
+                const expiry = new Date(t.expiresAt);
+                return !earliest || expiry < earliest ? expiry : earliest;
+              }, null);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[Checkout] Failed to load credit balance:', e);
+    }
+    creditLoaded = true;
+  }
+
+  // Apply credit to order
+  function toggleApplyCredit(apply) {
+    const { total } = calculateTotals();
+    if (apply && creditBalance > 0) {
+      // Apply up to the order total or full balance, whichever is less
+      appliedCredit = Math.min(creditBalance, total);
+    } else {
+      appliedCredit = 0;
+    }
+    updateCreditDisplay();
+  }
+
+  // Update credit display in UI
+  function updateCreditDisplay() {
+    const { subtotal, shipping, total } = calculateTotals();
+    const finalTotal = Math.max(0, total - appliedCredit);
+
+    // Update applied credit row
+    const creditRow = document.getElementById('appliedCreditRow');
+    if (creditRow) {
+      if (appliedCredit > 0) {
+        creditRow.style.display = 'flex';
+        document.getElementById('appliedCreditAmount').textContent = `-£${appliedCredit.toFixed(2)}`;
+      } else {
+        creditRow.style.display = 'none';
+      }
+    }
+
+    // Update final total
+    const totalDisplay = document.getElementById('orderTotal');
+    if (totalDisplay) {
+      totalDisplay.textContent = `£${finalTotal.toFixed(2)}`;
+    }
+
+    // Update payment button text
+    updatePaymentButtonText(finalTotal);
+  }
+
+  // Update payment button text with new total
+  function updatePaymentButtonText(finalTotal) {
+    const stripeBtn = document.getElementById('stripePayButton');
+    const paypalBtn = document.getElementById('customPaypalBtn');
+    const freeSection = document.getElementById('freeOrderSection');
+    const paymentSection = document.getElementById('paymentMethodSection');
+
+    if (finalTotal === 0) {
+      // Free order - hide payment methods, show free order button
+      if (paymentSection) paymentSection.style.display = 'none';
+      if (freeSection) freeSection.style.display = 'block';
+    } else {
+      // Paid order
+      if (paymentSection) paymentSection.style.display = 'block';
+      if (freeSection) freeSection.style.display = 'none';
+      if (stripeBtn) {
+        stripeBtn.querySelector('span').textContent = `PAY WITH CARD — £${finalTotal.toFixed(2)}`;
+      }
+      if (paypalBtn) {
+        const priceSpan = paypalBtn.querySelector('.paypal-price');
+        if (priceSpan) priceSpan.textContent = `£${finalTotal.toFixed(2)}`;
+      }
+    }
+  }
+
   // Check for duplicate audio purchases via API
   async function checkDuplicatePurchases(userId) {
     if (!userId) return { duplicates: [], ownedReleases: [] };
@@ -346,11 +454,36 @@ export const prerender = false;
                 <span style="font-size: 1.125rem; color: #6b7280;">Shipping</span>
                 <span style="font-size: 1.25rem; font-weight: 600; color: #16a34a;">${hasPhysicalItems ? (shipping === 0 ? 'FREE' : '£' + shipping.toFixed(2)) : 'Digital'}</span>
               </div>
+              <div id="appliedCreditRow" style="display: none; justify-content: space-between; align-items: center;">
+                <span style="font-size: 1.125rem; color: #22c55e;">Credit Applied</span>
+                <span id="appliedCreditAmount" style="font-size: 1.25rem; font-weight: 600; color: #22c55e;">-£0.00</span>
+              </div>
               <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1rem; margin-top: 0.625rem; border-top: 2px solid #dc2626;">
                 <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.04em; color: #111827;">TOTAL</span>
-                <span style="font-size: 1.875rem; font-weight: 700; color: #dc2626;">£${total.toFixed(2)}</span>
+                <span id="orderTotal" style="font-size: 1.875rem; font-weight: 700; color: #dc2626;">£${total.toFixed(2)}</span>
               </div>
             </div>
+
+            <!-- Credit Balance Section -->
+            ${creditBalance > 0 ? `
+            <div id="creditSection" style="margin-top: 1rem; padding: 1rem 1.25rem; background: linear-gradient(to bottom, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                  <span style="font-size: 1rem; font-weight: 600; color: #166534;">Available Credit</span>
+                </div>
+                <span style="font-size: 1.25rem; font-weight: 700; color: #22c55e;">£${creditBalance.toFixed(2)}</span>
+              </div>
+              ${creditExpiry ? `<p style="font-size: 0.8125rem; color: #6b7280; margin: 0 0 0.75rem 0;">Expires: ${creditExpiry.toLocaleDateString('en-GB')}</p>` : ''}
+              <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; user-select: none;">
+                <input type="checkbox" id="applyCreditCheckbox" onchange="toggleApplyCredit(this.checked)" style="width: 1.25rem; height: 1.25rem; accent-color: #22c55e; cursor: pointer;">
+                <span style="font-size: 0.9375rem; color: #374151;">Apply £${Math.min(creditBalance, total).toFixed(2)} credit to this order</span>
+              </label>
+            </div>
+            ` : ''}
           </div>
         </div>
         
@@ -593,6 +726,9 @@ export const prerender = false;
     // Make payment method selection available globally
     window.selectPaymentMethod = selectPaymentMethod;
 
+    // Make credit toggle available globally
+    window.toggleApplyCredit = toggleApplyCredit;
+
     document.getElementById('checkoutForm').addEventListener('submit', handleSubmit);
 
     // Initialize PayPal buttons when PayPal is selected
@@ -668,6 +804,14 @@ export const prerender = false;
       const form = document.getElementById('checkoutForm');
       const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
 
+      // Check if credit covers entire order - route to free order flow
+      const finalTotal = Math.max(0, total - appliedCredit);
+      if (finalTotal === 0) {
+        // Submit form to use free order flow
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
+        return;
+      }
+
       // Validate form
       if (!form.checkValidity()) {
         form.reportValidity();
@@ -709,6 +853,7 @@ export const prerender = false;
         })),
         totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
         hasPhysicalItems,
+        appliedCredit: appliedCredit || 0,
         returnUrl: window.location.origin + '/api/paypal/capture-redirect'
       };
 
@@ -947,8 +1092,9 @@ export const prerender = false;
     submitBtn.style.color = '#999';
     errorMsg.style.display = 'none';
 
-    // Check if this is a free order
-    const isFreeOrder = total === 0;
+    // Check if this is a free order (including when credit covers entire amount)
+    const finalTotal = Math.max(0, total - appliedCredit);
+    const isFreeOrder = finalTotal === 0;
 
     if (isFreeOrder) {
       submitBtn.textContent = 'PROCESSING...';
@@ -1014,7 +1160,8 @@ export const prerender = false;
         title: item.title || null
       })),
       totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
-      hasPhysicalItems
+      hasPhysicalItems,
+      appliedCredit: appliedCredit || 0
     };
 
     try {
@@ -1145,11 +1292,14 @@ export const prerender = false;
       }
       
       customerData = await loadCustomerData(userId);
-      
+
       // Load cart and check for duplicates
       loadCart();
       const { duplicates } = await checkDuplicatePurchases(userId);
       duplicatePurchases = duplicates;
+
+      // Load credit balance for checkout
+      await loadCreditBalance();
     } else {
       // No user at all - redirect to login
       window.location.href = '/login?redirect=/checkout';

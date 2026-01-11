@@ -185,13 +185,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Get applied credit from order data
+    const appliedCredit = orderData.appliedCredit || 0;
+
     // Create order in Firebase using shared utility
     const result = await createOrder({
       orderData: {
         customer: orderData.customer,
         shipping: orderData.shipping,
         items: orderData.items,
-        totals: orderData.totals,
+        totals: {
+          ...orderData.totals,
+          appliedCredit,
+          amountPaid: capturedAmount
+        },
         hasPhysicalItems: orderData.hasPhysicalItems,
         paymentMethod: 'paypal',
         paypalOrderId: paypalOrderId
@@ -253,6 +260,54 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       } catch (sellerErr) {
         console.error('[PayPal] Crate seller payment processing error:', sellerErr);
+      }
+    }
+
+    // Deduct applied credit from user's balance
+    const userId = orderData.customer?.userId;
+    if (appliedCredit > 0 && userId) {
+      console.log('[PayPal] Deducting applied credit:', appliedCredit, 'from user:', userId);
+      try {
+        const creditData = await getDocument('userCredits', userId);
+        if (creditData && creditData.balance >= appliedCredit) {
+          const newBalance = creditData.balance - appliedCredit;
+          const now = new Date().toISOString();
+
+          // Create transaction record
+          const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const transaction = {
+            id: transactionId,
+            type: 'purchase',
+            amount: -appliedCredit,
+            description: `Applied to order ${result.orderNumber || result.orderId}`,
+            orderId: result.orderId,
+            orderNumber: result.orderNumber,
+            createdAt: now,
+            balanceAfter: newBalance
+          };
+
+          const existingTransactions = creditData.transactions || [];
+          existingTransactions.push(transaction);
+
+          await updateDocument('userCredits', userId, {
+            balance: newBalance,
+            lastUpdated: now,
+            transactions: existingTransactions
+          });
+
+          // Also update user document
+          await updateDocument('users', userId, {
+            creditBalance: newBalance,
+            creditUpdatedAt: now
+          });
+
+          console.log('[PayPal] Credit deducted, new balance:', newBalance);
+        } else {
+          console.warn('[PayPal] Insufficient credit balance for deduction');
+        }
+      } catch (creditErr) {
+        console.error('[PayPal] Failed to deduct credit:', creditErr);
+        // Don't fail the order, just log the error
       }
     }
 

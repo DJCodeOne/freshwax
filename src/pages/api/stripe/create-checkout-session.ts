@@ -304,6 +304,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Note: Service fees are NOT added as line items anymore (Bandcamp-style)
     // Fees are deducted from artist payout instead of being charged to customer
 
+    // Get applied credit from order data
+    const appliedCredit = orderData.appliedCredit || 0;
+
     // Prepare metadata - store order data for webhook
     // Stripe metadata has 500 char limit per value, so we'll compress
     // IMPORTANT: Use validated values, not client-submitted values
@@ -318,6 +321,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       shipping: String(validatedShipping),
       serviceFees: String(validatedServiceFees),
       total: String(validatedTotal),
+      appliedCredit: String(appliedCredit),
       // Items will be stored as compressed JSON
       items_count: String(validatedItems.length)
     };
@@ -365,11 +369,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
             freshWaxFee: freshWaxFee,
             stripeFee: stripeFee,
             serviceFees: validatedServiceFees,
-            total: validatedTotal
+            total: validatedTotal,
+            appliedCredit: appliedCredit
           },
           hasPhysicalItems: hasPhysicalItems,
           hasMerchItems: hasMerchItems,
           hasVinylItems: hasVinylItems,
+          appliedCredit: appliedCredit,
           artistShippingBreakdown: Object.keys(artistShippingBreakdown).length > 0 ? artistShippingBreakdown : null,
           createdAt: new Date().toISOString(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hour expiry
