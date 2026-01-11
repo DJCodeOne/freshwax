@@ -173,6 +173,7 @@ export const prerender = false;
               <th>Date</th>
               <th>Order</th>
               <th>Customer</th>
+              <th>Artist</th>
               <th>Items</th>
               <th>Total</th>
               <th>Payment</th>
@@ -182,7 +183,7 @@ export const prerender = false;
           <tbody>
             {ordersNeedingPayouts.length === 0 ? (
               <tr>
-                <td colspan="7" class="text-center text-muted" style="padding: 3rem;">
+                <td colspan="8" class="text-center text-muted" style="padding: 3rem;">
                   All orders have been paid out!
                 </td>
               </tr>
@@ -205,8 +206,10 @@ export const prerender = false;
                       </div>
                     </td>
                     <td>
+                      <span class="font-bold" style="color: #dc2626;">{artistNames || 'Unknown'}</span>
+                    </td>
+                    <td>
                       <div style="font-size: 0.875rem;">{(order.items || []).length} item(s)</div>
-                      <div style="font-size: 0.75rem; color: #666;">{artistNames}</div>
                     </td>
                     <td class="font-bold">{formatCurrency(itemTotal)}</td>
                     <td>
