@@ -40,8 +40,16 @@ function calculateMetrics(ordersSubset) {
     // Sum items with price correction applied
     if (o.items && Array.isArray(o.items)) {
       const itemsTotal = o.items.reduce((itemSum, item) => {
-        const itemPrice = correctItemPrice(item.price || item.total || 0) * (item.quantity || 1);
-        return itemSum + itemPrice;
+        // item.price should be unit price, item.total might be line total
+        // If item.price exists, use it * quantity
+        // If only item.total exists, use it directly (it's already the line total)
+        let lineTotal = 0;
+        if (item.price !== undefined && item.price !== null) {
+          lineTotal = correctItemPrice(item.price) * (item.quantity || 1);
+        } else if (item.total !== undefined && item.total !== null) {
+          lineTotal = correctItemPrice(item.total); // Already includes quantity
+        }
+        return itemSum + lineTotal;
       }, 0);
       return sum + itemsTotal;
     }
@@ -146,9 +154,15 @@ orders.forEach(order => {
         };
       }
       const qty = item.quantity || 1;
-      const price = correctItemPrice(item.price || item.total || 0);
+      // item.price = unit price, item.total = line total (already includes quantity)
+      let lineTotal = 0;
+      if (item.price !== undefined && item.price !== null) {
+        lineTotal = correctItemPrice(item.price) * qty;
+      } else if (item.total !== undefined && item.total !== null) {
+        lineTotal = correctItemPrice(item.total);
+      }
       releaseSales[key].sales += qty;
-      releaseSales[key].revenue += price * qty;
+      releaseSales[key].revenue += lineTotal;
     }
   });
 });
@@ -162,7 +176,7 @@ const merchSales = {};
 orders.forEach(order => {
   (order.items || []).forEach(item => {
     // Include merch and physical items, exclude releases
-    const isMerch = item.type === 'merch' || item.isPhysical || item.isMerch || 
+    const isMerch = item.type === 'merch' || item.isPhysical || item.isMerch ||
                     (item.productId && item.type !== 'release' && item.type !== 'digital' && !item.releaseId);
     if (isMerch) {
       const key = item.productId || item.title || 'Unknown';
@@ -175,9 +189,15 @@ orders.forEach(order => {
         };
       }
       const qty = item.quantity || 1;
-      const price = item.price || item.total || 0;
+      // item.price = unit price, item.total = line total (already includes quantity)
+      let lineTotal = 0;
+      if (item.price !== undefined && item.price !== null) {
+        lineTotal = item.price * qty;
+      } else if (item.total !== undefined && item.total !== null) {
+        lineTotal = item.total;
+      }
       merchSales[key].sales += qty;
-      merchSales[key].revenue += price * qty;
+      merchSales[key].revenue += lineTotal;
     }
   });
 });

@@ -1068,7 +1068,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
               .map((item: any, index: number) => ({
                 id: `stripe_item_${index}`,
                 name: item.description || 'Item',
-                price: item.amount_total / 100,
+                // Use unit_amount if available, otherwise calculate from amount_total / quantity
+                price: item.price?.unit_amount
+                  ? item.price.unit_amount / 100
+                  : (item.amount_total / 100) / (item.quantity || 1),
                 quantity: item.quantity,
                 type: 'digital' // Default type
               }));
