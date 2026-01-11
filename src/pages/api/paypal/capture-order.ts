@@ -586,6 +586,19 @@ async function processArtistPayments(params: {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
+
+        // Update artist's pending balance
+        try {
+          const artist = await getDocument('artists', payment.artistId);
+          if (artist) {
+            await updateDocument('artists', payment.artistId, {
+              pendingBalance: (artist.pendingBalance || 0) + payment.amount,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        } catch (e) {
+          console.log('[PayPal] Could not update artist pending balance');
+        }
       }
     }
   } catch (error) {
