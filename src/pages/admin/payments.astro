@@ -198,8 +198,10 @@ export const prerender = false;
                     </td>
                     <td>
                       <div class="item-info">
-                        <h4 style="font-size: 0.875rem;">{order.customer?.firstName} {order.customer?.lastName}</h4>
-                        <p style="font-size: 0.75rem;">{order.customer?.email}</p>
+                        <h4 style="font-size: 0.875rem;">{order.customer?.firstName && order.customer?.lastName
+                          ? `${order.customer.firstName} ${order.customer.lastName}`
+                          : order.customer?.name || order.customerName || 'Customer'}</h4>
+                        <p style="font-size: 0.75rem;">{order.customer?.email || order.email || ''}</p>
                       </div>
                     </td>
                     <td>
