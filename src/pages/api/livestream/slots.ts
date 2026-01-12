@@ -754,6 +754,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       invalidateCache();
 
+      // Sync early start to D1 (non-blocking)
+      syncSlotToD1(db, upcomingSlot.id, {
+        ...upcomingSlot,
+        id: upcomingSlot.id,
+        startTime: newStartTime.toISOString(),
+        streamKey: newStreamKey,
+        rtmpUrl: buildRtmpUrl(newStreamKey),
+        hlsUrl: buildHlsUrl(newStreamKey),
+        earlyStart: true
+      });
+
       return new Response(JSON.stringify({
         success: true,
         message: 'Booking extended to start now',
@@ -811,6 +822,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       invalidateCache();
 
+      // Sync cancellation to D1 (non-blocking)
+      syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt: nowISO });
+
       return new Response(JSON.stringify({ success: true, message: 'Slot cancelled' }), {
         status: 200, headers: { 'Content-Type': 'application/json' }
       });
@@ -862,6 +876,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         endedAt: nowISO,
         updatedAt: nowISO
       });
+
+      // Sync status change to D1 (non-blocking)
+      syncSlotStatusToD1(db, targetSlotId, 'completed', { endedAt: nowISO });
 
       // Record streaming time for usage tracking
       try {
@@ -1166,6 +1183,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await setDocument('livestreamSlots', slotId, newSlot, idToken);
         invalidateCache();
 
+        // Sync to D1 (non-blocking)
+        syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+
         // Broadcast via Pusher for instant client updates
         await broadcastLiveStatus('stream-started', {
           djId,
@@ -1254,6 +1274,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await updateDocument('livestreamSlots', slotId, updates, idToken);
       invalidateCache();
+
+      // Sync updates to D1 (non-blocking)
+      syncSlotToD1(db, slotId, { ...slot, ...updates, id: slotId });
 
       // If the slot is live, broadcast the update for real-time UI updates
       if (slot.status === 'live') {
@@ -1416,13 +1439,19 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    const cancelledAt = new Date().toISOString();
     await updateDocument('livestreamSlots', slotId, {
       status: 'cancelled',
-      cancelledAt: new Date().toISOString(),
+      cancelledAt,
       cancelledByAdmin: adminCancel || false
     });
 
     invalidateCache();
+
+    // Sync cancellation to D1 (non-blocking)
+    const env = (locals as any)?.runtime?.env;
+    const db = env?.DB;
+    syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt });
 
     return new Response(JSON.stringify({ success: true, message: 'Slot cancelled' }), {
       status: 200, headers: { 'Content-Type': 'application/json' }
