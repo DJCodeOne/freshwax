@@ -3,7 +3,25 @@
 // Sales Ledger - Source of truth for all transactions
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
+
+// Get environment variables
+const env = Astro.locals?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+// Build service account key
+const serviceAccountKey = clientEmail && privateKey ? JSON.stringify({
+  type: 'service_account',
+  project_id: projectId,
+  private_key_id: 'auto',
+  private_key: privateKey.replace(/\\n/g, '\n'),
+  client_email: clientEmail,
+  client_id: '',
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+  token_uri: 'https://oauth2.googleapis.com/token'
+}) : null;
 
 // Get date ranges
 const now = new Date();
@@ -22,10 +40,12 @@ let totals = {
 };
 
 try {
-  ledgerEntries = await queryCollection('salesLedger', {
-    orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-    limit: 2000
-  });
+  if (serviceAccountKey) {
+    ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+      orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+      limit: 2000
+    });
+  }
 
   // Calculate totals
   ledgerEntries.forEach((entry: any) => {
