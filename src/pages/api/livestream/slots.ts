@@ -305,11 +305,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const cacheKey = `${startDate}-${endDate}-${djId || 'all'}`;
     let slots = forceRefresh ? null : getFromCache(cacheKey);
     const now = new Date();
+    const skipD1 = url.searchParams.get('fresh') === '1';
 
-    // Try D1 first for scheduled slots (FREE and fast)
-    let allSlots = db ? await d1GetScheduledSlots(db, startDate) : [];
+    // Try D1 first for scheduled slots (FREE and fast), unless fresh=1 is set
+    let allSlots = (db && !skipD1) ? await d1GetScheduledSlots(db, startDate) : [];
 
-    // Only fall back to Firebase if D1 is empty
+    // Fall back to Firebase if D1 is empty or bypassed
     if (allSlots.length === 0) {
       allSlots = await queryCollection('livestreamSlots', {
         skipCache: true,

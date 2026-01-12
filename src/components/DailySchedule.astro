@@ -1331,7 +1331,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         endDate.setHours(8, 0, 0, 0);
 
         const response = await fetch(
-          `/api/livestream/slots?start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`
+          `/api/livestream/slots?start=${startDate.toISOString()}&end=${endDate.toISOString()}&fresh=1&_t=${Date.now()}`
         );
         
         const data = await response.json();
