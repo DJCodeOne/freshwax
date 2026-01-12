@@ -39,6 +39,17 @@ let totals = {
   thisYear: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 }
 };
 
+// PayPal balance tracking (using actual values)
+let paypalBalance = {
+  actualGross: 0,      // Total received from customers
+  actualFees: 0,       // PayPal transaction fees
+  actualNet: 0,        // Net deposited to account
+  artistPayouts: 0,    // Total paid to artists
+  payoutFees: 0,       // Fees to send payouts
+  pendingPayouts: 0,   // Pending artist payouts
+  currentBalance: 0    // What should be in PayPal now
+};
+
 try {
   if (serviceAccountKey) {
     ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
@@ -56,44 +67,67 @@ try {
     const paypalFee = entry.paypalFee || 0;
     const fwFee = entry.freshWaxFee || 0;
 
+    // Use actual values for PayPal balance (fall back to adjusted if no actual)
+    const actualGross = entry.actualGrossTotal ?? entry.grossTotal ?? 0;
+    const actualPaypalFee = entry.actualPaypalFee ?? entry.paypalFee ?? 0;
+    const actualNet = entry.actualNetRevenue ?? entry.netRevenue ?? 0;
+
+    // PayPal balance (only for PayPal transactions)
+    if (entry.paymentMethod === 'paypal') {
+      paypalBalance.actualGross += actualGross;
+      paypalBalance.actualFees += actualPaypalFee;
+      paypalBalance.actualNet += actualNet;
+
+      // Track payouts
+      if (entry.artistPayoutStatus === 'paid') {
+        paypalBalance.artistPayouts += entry.artistPayout || 0;
+        paypalBalance.payoutFees += entry.artistPayoutFee || 0;
+      } else if (entry.artistPayoutStatus === 'pending') {
+        paypalBalance.pendingPayouts += entry.artistPayout || 0;
+      }
+    }
+
     // All time
     totals.allTime.orders++;
-    totals.allTime.gross += gross;
-    totals.allTime.net += net;
+    totals.allTime.gross += actualGross;
+    totals.allTime.net += actualNet;
     totals.allTime.stripeFees += stripeFee;
-    totals.allTime.paypalFees += paypalFee;
+    totals.allTime.paypalFees += actualPaypalFee;
     totals.allTime.fwFees += fwFee;
 
     // This month
     if (timestamp >= startOfMonth) {
       totals.thisMonth.orders++;
-      totals.thisMonth.gross += gross;
-      totals.thisMonth.net += net;
+      totals.thisMonth.gross += actualGross;
+      totals.thisMonth.net += actualNet;
       totals.thisMonth.stripeFees += stripeFee;
-      totals.thisMonth.paypalFees += paypalFee;
+      totals.thisMonth.paypalFees += actualPaypalFee;
       totals.thisMonth.fwFees += fwFee;
     }
 
     // Last month
     if (timestamp >= startOfLastMonth && timestamp <= endOfLastMonth) {
       totals.lastMonth.orders++;
-      totals.lastMonth.gross += gross;
-      totals.lastMonth.net += net;
+      totals.lastMonth.gross += actualGross;
+      totals.lastMonth.net += actualNet;
       totals.lastMonth.stripeFees += stripeFee;
-      totals.lastMonth.paypalFees += paypalFee;
+      totals.lastMonth.paypalFees += actualPaypalFee;
       totals.lastMonth.fwFees += fwFee;
     }
 
     // This year
     if (timestamp >= startOfYear) {
       totals.thisYear.orders++;
-      totals.thisYear.gross += gross;
-      totals.thisYear.net += net;
+      totals.thisYear.gross += actualGross;
+      totals.thisYear.net += actualNet;
       totals.thisYear.stripeFees += stripeFee;
-      totals.thisYear.paypalFees += paypalFee;
+      totals.thisYear.paypalFees += actualPaypalFee;
       totals.thisYear.fwFees += fwFee;
     }
   });
+
+  // Calculate current PayPal balance
+  paypalBalance.currentBalance = paypalBalance.actualNet - paypalBalance.artistPayouts - paypalBalance.payoutFees;
 } catch (e) {
   console.error('Error fetching ledger:', e);
 }
@@ -126,6 +160,54 @@ export const prerender = false;
       Migrate Orders
     </button>
   </Fragment>
+
+  <!-- PayPal Account Balance -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>PayPal Account</h2>
+    </div>
+    <div class="card-body">
+      <div class="stats-grid cols-4" style="margin-bottom: 0;">
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Total Received</div>
+          <div class="stat-value">{formatCurrency(paypalBalance.actualGross)}</div>
+          <div class="stat-detail">From customers</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">PayPal Fees</div>
+          <div class="stat-value" style="color: var(--text-muted);">-{formatCurrency(paypalBalance.actualFees)}</div>
+          <div class="stat-detail">Transaction fees</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Net Deposited</div>
+          <div class="stat-value">{formatCurrency(paypalBalance.actualNet)}</div>
+          <div class="stat-detail">After PP fees</div>
+        </div>
+        <div class="stat-card success" style="border-color: var(--accent-green);">
+          <div class="stat-label">Current Balance</div>
+          <div class="stat-value" style="color: var(--accent-green);">{formatCurrency(paypalBalance.currentBalance)}</div>
+          <div class="stat-detail">In PayPal now</div>
+        </div>
+      </div>
+      <div class="stats-grid cols-3" style="margin-top: 1rem; margin-bottom: 0;">
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Artist Payouts</div>
+          <div class="stat-value" style="color: var(--text-muted);">-{formatCurrency(paypalBalance.artistPayouts)}</div>
+          <div class="stat-detail">Paid to artists</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Payout Fees</div>
+          <div class="stat-value" style="color: var(--text-muted);">-{formatCurrency(paypalBalance.payoutFees)}</div>
+          <div class="stat-detail">PP send fees</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--accent-yellow);">
+          <div class="stat-label">Pending Payouts</div>
+          <div class="stat-value" style="color: var(--accent-yellow);">{formatCurrency(paypalBalance.pendingPayouts)}</div>
+          <div class="stat-detail">Owed to artists</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Summary Stats -->
   <div class="stats-grid cols-4 mb-4">
