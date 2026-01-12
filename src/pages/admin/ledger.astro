@@ -194,16 +194,25 @@ export const prerender = false;
                 <th>Date</th>
                 <th>Order</th>
                 <th>Customer</th>
-                <th class="text-right">Gross</th>
-                <th class="text-right">Fees</th>
-                <th class="text-right">Net</th>
+                <th class="text-right">Actual Gross</th>
+                <th class="text-right">Actual Fees</th>
+                <th class="text-right">Actual Net</th>
+                <th class="text-right">Adj. Gross</th>
+                <th class="text-right">Adj. Fees</th>
+                <th class="text-right">Adj. Net</th>
                 <th class="text-center">Method</th>
-                <th class="text-center">Items</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
-              {ledgerEntries.slice(0, 100).map((entry: any) => (
-                <tr>
+              {ledgerEntries.slice(0, 100).map((entry: any) => {
+                const hasActual = entry.actualGrossTotal !== undefined;
+                const actualGross = hasActual ? entry.actualGrossTotal : entry.grossTotal;
+                const actualFees = hasActual ? (entry.actualPaypalFee || 0) + (entry.actualStripeFee || 0) : entry.totalFees;
+                const actualNet = hasActual ? entry.actualNetRevenue : entry.netRevenue;
+                const isAdjusted = hasActual && (actualGross !== entry.grossTotal || actualNet !== entry.netRevenue);
+                return (
+                <tr class={isAdjusted ? 'adjusted-row' : ''}>
                   <td style="white-space: nowrap; font-size: 0.75rem;">
                     {formatDate(entry.timestamp)}
                   </td>
@@ -212,13 +221,22 @@ export const prerender = false;
                       {entry.orderNumber || entry.orderId?.slice(0, 8)}
                     </a>
                   </td>
-                  <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                  <td style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; font-size: 0.75rem;">
                     {entry.customerEmail}
+                  </td>
+                  <td class="text-right" style="color: var(--text-muted);">
+                    {formatCurrency(actualGross)}
+                  </td>
+                  <td class="text-right" style="color: var(--text-muted); font-size: 0.8rem;">
+                    {formatCurrency(actualFees)}
+                  </td>
+                  <td class="text-right" style="color: var(--text-muted);">
+                    {formatCurrency(actualNet)}
                   </td>
                   <td class="text-right font-bold">
                     {formatCurrency(entry.grossTotal)}
                   </td>
-                  <td class="text-right" style="color: var(--text-muted); font-size: 0.8rem;">
+                  <td class="text-right" style="font-size: 0.8rem;">
                     {formatCurrency(entry.totalFees)}
                   </td>
                   <td class="text-right" style="color: var(--accent-green);">
@@ -229,9 +247,11 @@ export const prerender = false;
                       {entry.paymentMethod}
                     </span>
                   </td>
-                  <td class="text-center">{entry.itemCount}</td>
+                  <td style="font-size: 0.7rem; max-width: 150px; color: var(--text-muted);">
+                    {entry.adjustmentNote || '-'}
+                  </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
           {ledgerEntries.length > 100 && (
@@ -272,6 +292,12 @@ export const prerender = false;
   }
   .link:hover {
     text-decoration: underline;
+  }
+  .adjusted-row {
+    background: rgba(234, 179, 8, 0.1);
+  }
+  .adjusted-row td {
+    border-top: 1px solid rgba(234, 179, 8, 0.3);
   }
 </style>
 
