@@ -567,8 +567,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       if (conflicts.length > 0) {
-        console.log('[CONFLICT DEBUG] CONFLICT FOUND with:', conflicts[0].djName, conflicts[0].id);
-        return new Response(JSON.stringify({ success: false, error: `Time conflicts with ${conflicts[0].djName}'s booking` }), {
+        const c = conflicts[0];
+        console.log('[CONFLICT DEBUG] CONFLICT FOUND with:', c.djName, c.id);
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Time conflicts with ${c.djName}'s booking`,
+          debug: {
+            yourRequest: { start: slotStart.toISOString(), end: slotEnd.toISOString() },
+            conflictsWith: { start: c.startTime, end: c.endTime, id: c.id, status: c.status }
+          }
+        }), {
           status: 400, headers: { 'Content-Type': 'application/json' }
         });
       }
