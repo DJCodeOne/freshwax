@@ -1,11 +1,12 @@
 // src/pages/api/livestream/slots.ts
-// DJ livestream schedule - uses Firebase REST API
+// DJ livestream schedule - uses Firebase REST API + D1 sync
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
 import { initKVCache, kvDelete } from '../../../lib/kv-cache';
+import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 
 // Helper to initialize services
 function initServices(locals: any) {
@@ -44,6 +45,26 @@ function initServices(locals: any) {
 
   // Initialize KV cache for invalidation
   initKVCache(env);
+}
+
+// Helper to sync slot to D1 (non-blocking, fire-and-forget)
+async function syncSlotToD1(db: any, slotId: string, slotData: any): Promise<void> {
+  if (!db) return;
+  try {
+    await d1UpsertSlot(db, slotId, slotData);
+  } catch (e) {
+    console.error('[D1] Error syncing slot (non-critical):', e);
+  }
+}
+
+// Helper to update slot status in D1 (non-blocking)
+async function syncSlotStatusToD1(db: any, slotId: string, status: string, extraData?: any): Promise<void> {
+  if (!db) return;
+  try {
+    await d1UpdateSlotStatus(db, slotId, status, extraData);
+  } catch (e) {
+    console.error('[D1] Error updating slot status (non-critical):', e);
+  }
 }
 
 const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
@@ -116,6 +137,9 @@ function generateId(): string {
 export const GET: APIRoute = async ({ request, locals }) => {
   console.log('[DEBUG] slots.ts GET called');
 
+  const env = (locals as any)?.runtime?.env;
+  const db = env?.DB; // D1 database binding
+
   try {
     initServices(locals);
   } catch (initError: any) {
@@ -186,13 +210,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
     }
 
-    // Current live stream
+    // Current live stream - use D1 first (FREE reads)
     if (action === 'currentLive') {
-      const slots = await queryCollection('livestreamSlots', {
-        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-        limit: 1,
-        skipCache: true
-      });
+      // Try D1 first
+      let slots = db ? await d1GetLiveSlots(db) : [];
+
+      // Fallback to Firebase if D1 empty
+      if (slots.length === 0) {
+        slots = await queryCollection('livestreamSlots', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+          limit: 1,
+          skipCache: true
+        });
+      }
 
       if (slots.length === 0) {
         return new Response(JSON.stringify({ success: true, isLive: false, currentStream: null }), {
@@ -221,7 +251,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Can go live after current DJ
+    // Can go live after current DJ - use D1 first
     if (action === 'canGoLiveAfter' && djId) {
       if (!settings.allowGoLiveAfter) {
         return new Response(JSON.stringify({ success: true, canGoLiveAfter: false, reason: 'Feature disabled' }), {
@@ -229,11 +259,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      const liveSlots = await queryCollection('livestreamSlots', {
-        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-        limit: 1,
-        skipCache: true
-      });
+      // Try D1 first
+      let liveSlots = db ? await d1GetLiveSlots(db) : [];
+
+      // Fallback to Firebase if D1 empty
+      if (liveSlots.length === 0) {
+        liveSlots = await queryCollection('livestreamSlots', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+          limit: 1,
+          skipCache: true
+        });
+      }
 
       if (liveSlots.length === 0) {
         return new Response(JSON.stringify({ success: true, canGoLiveAfter: false, reason: 'No active stream' }), {
@@ -265,59 +301,83 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Default: Get schedule
+    // Default: Get schedule - use D1 first (FREE reads)
     const cacheKey = `${startDate}-${endDate}-${djId || 'all'}`;
     let slots = forceRefresh ? null : getFromCache(cacheKey);
     const now = new Date();
 
-    // Always fetch fresh data to check for expired live slots
-    const allSlots = await queryCollection('livestreamSlots', {
-      skipCache: true,
-      limit: 200  // Max 200 slots to prevent runaway
-    });
+    // Try D1 first for scheduled slots (FREE and fast)
+    let allSlots = db ? await d1GetScheduledSlots(db, startDate) : [];
 
-    // Auto-end expired live slots (unless DJ has consecutive booking) - runs on EVERY request
-    const liveSlots = allSlots.filter((s: any) => s.status === 'live');
-    for (const liveSlot of liveSlots) {
-      const slotEnd = new Date(liveSlot.endTime);
-      if (now > slotEnd) {
-        // Check if DJ has a consecutive booking starting at/around their end time
-        const hasConsecutive = allSlots.some((s: any) => {
-          if (s.id === liveSlot.id || s.djId !== liveSlot.djId) return false;
-          if (!['scheduled', 'in_lobby', 'queued'].includes(s.status)) return false;
-          const nextStart = new Date(s.startTime);
-          // Allow 5 minute grace between consecutive slots
-          return Math.abs(nextStart.getTime() - slotEnd.getTime()) <= 5 * 60 * 1000;
-        });
+    // Only fall back to Firebase if D1 is empty
+    if (allSlots.length === 0) {
+      allSlots = await queryCollection('livestreamSlots', {
+        skipCache: true,
+        limit: 200
+      });
+    }
 
-        if (!hasConsecutive) {
-          // Auto-end this slot
-          console.log(`[slots] Auto-ending expired slot ${liveSlot.id} for ${liveSlot.djName}`);
-          try {
-            await updateDocument('livestreamSlots', liveSlot.id, {
-              status: 'completed',
-              endedAt: now.toISOString(),
-              updatedAt: now.toISOString(),
-              autoEnded: true,
-              autoEndReason: 'slot_time_expired'
-            });
-            // Update local allSlots data
-            liveSlot.status = 'completed';
-            // Broadcast end via Pusher
-            const env = locals?.runtime?.env;
-            await broadcastLiveStatus('stream-ended', {
-              djId: liveSlot.djId,
-              djName: liveSlot.djName,
-              slotId: liveSlot.id,
-              reason: 'time_expired'
-            }, env);
-            // Invalidate cache since we changed data
-            invalidateCache();
-          } catch (autoEndError) {
-            console.error('[slots] Failed to auto-end slot:', autoEndError);
+    // Check D1 for live slots to see if auto-end check is needed
+    const d1LiveSlots = db ? await d1GetLiveSlots(db) : [];
+
+    // Only check Firebase for auto-end if D1 shows live slots OR randomly (10% of requests for safety)
+    const shouldCheckAutoEnd = d1LiveSlots.length > 0 || Math.random() < 0.1;
+
+    if (shouldCheckAutoEnd) {
+      // Get live slots from Firebase for accurate auto-end check
+      const firebaseLiveSlots = await queryCollection('livestreamSlots', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+        limit: 5,
+        skipCache: true
+      });
+
+      // Auto-end expired live slots
+      for (const liveSlot of firebaseLiveSlots) {
+        const slotEnd = new Date(liveSlot.endTime);
+        if (now > slotEnd) {
+          // Check if DJ has a consecutive booking
+          const djSlots = await queryCollection('livestreamSlots', {
+            filters: [{ field: 'djId', op: 'EQUAL', value: liveSlot.djId }],
+            limit: 10
+          });
+
+          const hasConsecutive = djSlots.some((s: any) => {
+            if (s.id === liveSlot.id) return false;
+            if (!['scheduled', 'in_lobby', 'queued'].includes(s.status)) return false;
+            const nextStart = new Date(s.startTime);
+            return Math.abs(nextStart.getTime() - slotEnd.getTime()) <= 5 * 60 * 1000;
+          });
+
+          if (!hasConsecutive) {
+            console.log(`[slots] Auto-ending expired slot ${liveSlot.id} for ${liveSlot.djName}`);
+            try {
+              await updateDocument('livestreamSlots', liveSlot.id, {
+                status: 'completed',
+                endedAt: now.toISOString(),
+                updatedAt: now.toISOString(),
+                autoEnded: true,
+                autoEndReason: 'slot_time_expired'
+              });
+
+              // Sync to D1
+              syncSlotStatusToD1(db, liveSlot.id, 'completed', {
+                endedAt: now.toISOString(),
+                autoEnded: true
+              });
+
+              // Broadcast end via Pusher
+              await broadcastLiveStatus('stream-ended', {
+                djId: liveSlot.djId,
+                djName: liveSlot.djName,
+                slotId: liveSlot.id,
+                reason: 'time_expired'
+              }, env);
+
+              invalidateCache();
+            } catch (autoEndError) {
+              console.error('[slots] Failed to auto-end slot:', autoEndError);
+            }
           }
-        } else {
-          console.log(`[slots] ${liveSlot.djName} has consecutive booking, not auto-ending`);
         }
       }
     }
@@ -357,6 +417,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   initServices(locals);
   const env = locals?.runtime?.env;
+  const db = env?.DB; // D1 database binding for sync
   try {
     const data = await request.json();
     const { action } = data;
@@ -514,6 +575,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await setDocument('livestreamSlots', slotId, newSlot, idToken);
       invalidateCache();
 
+      // Sync to D1 (non-blocking)
+      syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
+
       console.log('[livestream/slots] Booking saved successfully:', slotId);
 
       return new Response(JSON.stringify({
@@ -584,6 +648,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('livestreamSlots', slotId, newSlot, idToken);
       invalidateCache();
+
+      // Sync to D1 (non-blocking)
+      syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
 
       // Broadcast via Pusher for instant client updates
       await broadcastLiveStatus('stream-started', {
@@ -1290,6 +1357,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('livestreamSlots', relaySlotId, newSlot, idToken);
       invalidateCache();
+
+      // Sync to D1 (non-blocking)
+      syncSlotToD1(db, relaySlotId, { id: relaySlotId, ...newSlot });
 
       // Broadcast via Pusher for instant client updates
       await broadcastLiveStatus('stream-started', {

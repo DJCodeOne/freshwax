@@ -1,5 +1,5 @@
 // src/lib/d1-catalog.ts
-// D1 database operations for releases, DJ mixes, and merch
+// D1 database operations for releases, DJ mixes, merch, and livestream slots
 // Used for dual-write (Firebase + D1) and D1-first reads
 
 // =============================================
@@ -673,5 +673,217 @@ export async function d1BulkUpsertRatings(db: D1Database, releaseId: string, rat
   } catch (e) {
     console.error('[D1] Error bulk upserting ratings:', e);
     return false;
+  }
+}
+
+// =============================================
+// LIVESTREAM SLOTS
+// =============================================
+
+export interface D1LivestreamSlot {
+  id: string;
+  dj_id: string | null;
+  dj_name: string;
+  title: string | null;
+  genre: string | null;
+  status: string;
+  start_time: string;
+  end_time: string;
+  stream_key: string | null;
+  hls_url: string | null;
+  is_relay: number;
+  relay_station_id: string | null;
+  data: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Convert Firebase slot document to D1 row
+export function slotToD1Row(id: string, doc: any): Partial<D1LivestreamSlot> {
+  return {
+    id,
+    dj_id: doc.djId || doc.userId || null,
+    dj_name: doc.djName || doc.displayName || 'Unknown DJ',
+    title: doc.title || null,
+    genre: doc.genre || null,
+    status: doc.status || 'scheduled',
+    start_time: doc.startTime || doc.start_time || new Date().toISOString(),
+    end_time: doc.endTime || doc.end_time || new Date().toISOString(),
+    stream_key: doc.streamKey || null,
+    hls_url: doc.hlsUrl || null,
+    is_relay: doc.isRelay ? 1 : 0,
+    relay_station_id: doc.relayStationId || null,
+    data: JSON.stringify(doc),
+    updated_at: new Date().toISOString()
+  };
+}
+
+// Convert D1 row back to slot document
+export function d1RowToSlot(row: D1LivestreamSlot): any {
+  try {
+    const doc = JSON.parse(row.data);
+    doc.id = row.id;
+    return doc;
+  } catch (e) {
+    console.error('[D1] Error parsing slot data:', e);
+    return null;
+  }
+}
+
+// Get all live slots (status = 'live')
+export async function d1GetLiveSlots(db: D1Database): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT data FROM livestream_slots WHERE status = 'live' ORDER BY start_time ASC`
+    ).all();
+
+    return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting live slots:', e);
+    return [];
+  }
+}
+
+// Get scheduled slots (for today/upcoming)
+export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Promise<any[]> {
+  try {
+    const now = fromTime || new Date().toISOString();
+    const { results } = await db.prepare(
+      `SELECT data FROM livestream_slots
+       WHERE status IN ('scheduled', 'in_lobby', 'live')
+       AND end_time > ?
+       ORDER BY start_time ASC
+       LIMIT 50`
+    ).bind(now).all();
+
+    return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting scheduled slots:', e);
+    return [];
+  }
+}
+
+// Get slot by ID
+export async function d1GetSlotById(db: D1Database, id: string): Promise<any | null> {
+  try {
+    const row = await db.prepare(
+      `SELECT data FROM livestream_slots WHERE id = ?`
+    ).bind(id).first();
+
+    return row ? d1RowToSlot(row) : null;
+  } catch (e) {
+    console.error('[D1] Error getting slot:', e);
+    return null;
+  }
+}
+
+// Get slots by DJ
+export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT data FROM livestream_slots WHERE dj_id = ? ORDER BY start_time DESC LIMIT 20`
+    ).bind(djId).all();
+
+    return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting slots by DJ:', e);
+    return [];
+  }
+}
+
+// Upsert a slot
+export async function d1UpsertSlot(db: D1Database, id: string, doc: any): Promise<boolean> {
+  try {
+    const row = slotToD1Row(id, doc);
+
+    await db.prepare(`
+      INSERT INTO livestream_slots (id, dj_id, dj_name, title, genre, status, start_time, end_time,
+        stream_key, hls_url, is_relay, relay_station_id, data, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        dj_id = excluded.dj_id,
+        dj_name = excluded.dj_name,
+        title = excluded.title,
+        genre = excluded.genre,
+        status = excluded.status,
+        start_time = excluded.start_time,
+        end_time = excluded.end_time,
+        stream_key = excluded.stream_key,
+        hls_url = excluded.hls_url,
+        is_relay = excluded.is_relay,
+        relay_station_id = excluded.relay_station_id,
+        data = excluded.data,
+        updated_at = excluded.updated_at
+    `).bind(
+      row.id, row.dj_id, row.dj_name, row.title, row.genre, row.status, row.start_time, row.end_time,
+      row.stream_key, row.hls_url, row.is_relay, row.relay_station_id, row.data, row.updated_at
+    ).run();
+
+    console.log('[D1] Upserted slot:', id, row.status);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error upserting slot:', e);
+    return false;
+  }
+}
+
+// Update slot status only (quick update)
+export async function d1UpdateSlotStatus(db: D1Database, id: string, status: string, extraData?: any): Promise<boolean> {
+  try {
+    // First get the current data
+    const row = await db.prepare(`SELECT data FROM livestream_slots WHERE id = ?`).bind(id).first();
+    if (!row) {
+      console.log('[D1] Slot not found for status update:', id);
+      return false;
+    }
+
+    const doc = JSON.parse((row as any).data);
+    doc.status = status;
+    if (extraData) {
+      Object.assign(doc, extraData);
+    }
+
+    await db.prepare(`
+      UPDATE livestream_slots
+      SET status = ?, data = ?, updated_at = ?
+      WHERE id = ?
+    `).bind(status, JSON.stringify(doc), new Date().toISOString(), id).run();
+
+    console.log('[D1] Updated slot status:', id, status);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error updating slot status:', e);
+    return false;
+  }
+}
+
+// Delete a slot
+export async function d1DeleteSlot(db: D1Database, id: string): Promise<boolean> {
+  try {
+    await db.prepare(`DELETE FROM livestream_slots WHERE id = ?`).bind(id).run();
+    console.log('[D1] Deleted slot:', id);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error deleting slot:', e);
+    return false;
+  }
+}
+
+// Clean up old slots (ended more than 24 hours ago)
+export async function d1CleanupOldSlots(db: D1Database): Promise<number> {
+  try {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const result = await db.prepare(`
+      DELETE FROM livestream_slots WHERE status IN ('ended', 'cancelled') AND end_time < ?
+    `).bind(cutoff).run();
+
+    const deleted = result.meta?.changes || 0;
+    if (deleted > 0) {
+      console.log('[D1] Cleaned up', deleted, 'old slots');
+    }
+    return deleted;
+  } catch (e) {
+    console.error('[D1] Error cleaning up slots:', e);
+    return 0;
   }
 }

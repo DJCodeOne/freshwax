@@ -189,3 +189,35 @@ CREATE TABLE IF NOT EXISTS user_ratings (
 CREATE INDEX IF NOT EXISTS idx_user_ratings_release ON user_ratings(release_id);
 CREATE INDEX IF NOT EXISTS idx_user_ratings_user ON user_ratings(user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_ratings_unique ON user_ratings(release_id, user_id);
+
+-- =============================================
+-- LIVESTREAM SLOTS (migrated from Firebase)
+-- For fast status checks without Firebase reads
+-- =============================================
+CREATE TABLE IF NOT EXISTS livestream_slots (
+  id TEXT PRIMARY KEY,
+  -- Key searchable fields
+  dj_id TEXT,
+  dj_name TEXT NOT NULL,
+  title TEXT,
+  genre TEXT,
+  status TEXT DEFAULT 'scheduled',  -- scheduled, in_lobby, live, ended, cancelled
+  -- Timing
+  start_time TEXT NOT NULL,
+  end_time TEXT NOT NULL,
+  -- Stream info
+  stream_key TEXT,
+  hls_url TEXT,
+  is_relay INTEGER DEFAULT 0,
+  relay_station_id TEXT,
+  -- Full document as JSON
+  data TEXT NOT NULL,
+  -- Timestamps
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_slots_status ON livestream_slots(status);
+CREATE INDEX IF NOT EXISTS idx_slots_dj ON livestream_slots(dj_id);
+CREATE INDEX IF NOT EXISTS idx_slots_start ON livestream_slots(start_time);
+CREATE INDEX IF NOT EXISTS idx_slots_end ON livestream_slots(end_time);

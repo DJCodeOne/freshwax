@@ -1,9 +1,10 @@
 // src/pages/api/livestream/status.ts
-// Check if any stream is currently live - uses Firebase REST API
+// Check if any stream is currently live - D1 first, Firebase fallback
 // NOW USES CLOUDFLARE CACHE API (FREE & UNLIMITED) instead of KV
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
+import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
 
 // Cache TTLs in seconds
 // Pusher handles real-time updates, so polling can be slower
@@ -59,6 +60,8 @@ function jsonResponse(data: any, status: number, maxAge: number = 10): Response 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Red5 env for HLS URL building
   const env = (locals as any)?.runtime?.env;
+  const db = env?.DB; // D1 database binding
+
   initRed5Env({
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
   });
@@ -80,8 +83,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      // Check livestreamSlots first (slot-based streams)
-      let streamDoc = await getDocument('livestreamSlots', streamId);
+      // Try D1 first (FREE reads)
+      let streamDoc = db ? await d1GetSlotById(db, streamId) : null;
+
+      if (!streamDoc) {
+        // Fall back to Firebase
+        streamDoc = await getDocument('livestreamSlots', streamId);
+      }
 
       if (!streamDoc) {
         // Fall back to legacy livestreams collection
@@ -117,13 +125,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Check livestreamSlots for slots with status='live' (new slot-based system)
-    // Cache is OK here since Pusher handles real-time updates
-    const liveSlots = await queryCollection('livestreamSlots', {
-      filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-      limit: 5,
-      cacheTime: 30000 // 30 second cache - Pusher handles real-time updates
-    });
+    // Try D1 first for live slots (FREE reads)
+    let liveSlots = db ? await d1GetLiveSlots(db) : [];
+
+    // Fall back to Firebase if D1 returns nothing
+    if (liveSlots.length === 0) {
+      liveSlots = await queryCollection('livestreamSlots', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+        limit: 5,
+        cacheTime: 30000 // 30 second cache - Pusher handles real-time updates
+      });
+    }
 
     // Convert slots to stream format for the player
     // SECURITY: Do NOT expose streamKey in public response - it would allow stream hijacking
@@ -174,12 +186,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Check for scheduled streams
       const now = new Date().toISOString();
 
-      // Check scheduled slots
-      const scheduledSlots = await queryCollection('livestreamSlots', {
-        filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
-        limit: 10,
-        cacheTime: 300000 // 5 minute cache - scheduled streams don't change often
-      });
+      // Try D1 first for scheduled slots (FREE reads)
+      let scheduledSlots = db ? await d1GetScheduledSlots(db, now) : [];
+
+      // Fall back to Firebase if D1 returns nothing
+      if (scheduledSlots.length === 0) {
+        scheduledSlots = await queryCollection('livestreamSlots', {
+          filters: [{ field: 'status', op: 'EQUAL', value: 'scheduled' }],
+          limit: 10,
+          cacheTime: 300000 // 5 minute cache - scheduled streams don't change often
+        });
+      }
 
       const scheduled = scheduledSlots
         .filter(s => s.startTime && s.startTime > now)
