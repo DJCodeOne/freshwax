@@ -412,6 +412,19 @@ export const prerender = false;
                                 <span style="font-size: 0.75rem;">{style.icon}</span>
                                 <span style={`color: ${style.color}; font-weight: 600; flex: 1;`}>{payee.name}</span>
                                 <span style={`color: #16a34a; font-weight: 700;`}>{formatCurrency(payee.amount)}</span>
+                                <button
+                                  class="btn btn-primary btn-xs trigger-payee-btn"
+                                  style="padding: 0.15rem 0.5rem; font-size: 0.7rem; margin-left: 0.25rem;"
+                                  data-order-id={order.id}
+                                  data-order-number={order.orderNumber}
+                                  data-payee-type={payee.type}
+                                  data-payee-id={payee.id}
+                                  data-payee-name={payee.name}
+                                  data-payee-email={payee.email}
+                                  data-payee-amount={payee.amount}
+                                >
+                                  💸 Pay
+                                </button>
                               </div>
                             );
                           })}
@@ -441,21 +454,14 @@ export const prerender = false;
                     <td>
                       <span class="badge badge-info">{order.paymentMethod || 'unknown'}</span>
                     </td>
-                    <td class="text-right" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                      <button
-                        class="btn btn-primary btn-sm trigger-payout-btn"
-                        data-order-id={order.id}
-                        data-order-number={order.orderNumber}
-                      >
-                        💸 Pay Artist
-                      </button>
+                    <td class="text-right">
                       <button
                         class="btn btn-outline btn-sm mark-paid-btn"
                         data-order-id={order.id}
                         data-order-number={order.orderNumber}
-                        title="Mark as already paid (manual payout)"
+                        title="Mark all payees as paid"
                       >
-                        ✓ Paid
+                        ✓ All Paid
                       </button>
                     </td>
                   </tr>
@@ -1080,7 +1086,88 @@ export const prerender = false;
 
       window.retryPayout = retryPayout;
 
-      // Trigger payout for an order
+      // Trigger payout for individual payee
+      document.querySelectorAll('.trigger-payee-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          triggerPayeePayout(
+            btn.dataset.orderId,
+            btn.dataset.orderNumber,
+            btn.dataset.payeeType,
+            btn.dataset.payeeId,
+            btn.dataset.payeeName,
+            btn.dataset.payeeEmail,
+            parseFloat(btn.dataset.payeeAmount),
+            btn
+          );
+        });
+      });
+
+      async function triggerPayeePayout(orderId, orderNumber, payeeType, payeeId, payeeName, payeeEmail, amount, btn) {
+        const typeLabel = payeeType === 'artist' ? 'Artist' : payeeType === 'supplier' ? 'Supplier' : 'Seller';
+        if (!confirm(`Pay ${payeeName} (${typeLabel})?\n\nAmount: £${amount.toFixed(2)}\nEmail: ${payeeEmail}\nOrder: ${orderNumber}`)) return;
+
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '⏳...';
+
+        try {
+          let adminKey = localStorage.getItem('adminKey');
+          if (!adminKey) {
+            adminKey = prompt('Enter admin key:');
+            if (!adminKey) {
+              btn.disabled = false;
+              btn.innerHTML = originalText;
+              return;
+            }
+            localStorage.setItem('adminKey', adminKey);
+          }
+
+          const response = await fetch('/api/admin/trigger-payout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId,
+              adminKey,
+              payeeType,
+              payeeId,
+              payeeName,
+              payeeEmail,
+              amount
+            })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            btn.innerHTML = '✓ Paid';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            btn.style.background = '#16a34a';
+            btn.style.borderColor = '#16a34a';
+            showToast(`Paid £${amount.toFixed(2)} to ${payeeName}`);
+
+            // Remove just this payee row after short delay
+            setTimeout(() => {
+              const payeeRow = btn.closest('div[style*="background"]');
+              if (payeeRow) {
+                payeeRow.style.opacity = '0.5';
+                payeeRow.style.textDecoration = 'line-through';
+              }
+            }, 1000);
+          } else {
+            showToast(result.error || 'Payout failed', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+          }
+        } catch (error) {
+          console.error(error);
+          showToast('Failed to trigger payout', 'error');
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+
+      // Trigger payout for an order (legacy - kept for backwards compatibility)
       document.querySelectorAll('.trigger-payout-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           triggerPayout(btn.dataset.orderId, btn.dataset.orderNumber, btn);

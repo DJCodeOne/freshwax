@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       FIREBASE_API_KEY: apiKey,
     });
 
-    const { orderId, artistId } = bodyData;
+    const { orderId, artistId, payeeType, payeeId, payeeName, payeeEmail, amount } = bodyData;
 
     if (!orderId) {
       return new Response(JSON.stringify({ error: 'orderId required' }), {
@@ -58,6 +58,128 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get PayPal config
     const paypalConfig = getPayPalConfig(env);
+
+    // Handle individual payee payment (new method)
+    if (payeeType && payeeEmail && amount) {
+      console.log('[admin] Individual payee payment:', payeeType, payeeName, '£' + amount.toFixed(2));
+
+      // Deduct 2% PayPal payout fee
+      const paypalPayoutFee = amount * 0.02;
+      const paypalAmount = amount - paypalPayoutFee;
+
+      if (!paypalConfig) {
+        return new Response(JSON.stringify({ error: 'PayPal not configured' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      try {
+        const payoutResult = await createPayout(paypalConfig, {
+          email: payeeEmail,
+          amount: paypalAmount,
+          currency: 'GBP',
+          note: `Fresh Wax ${payeeType} payout for order ${order.orderNumber}`,
+          reference: `${orderId}-${payeeType}-${payeeId}`
+        });
+
+        if (payoutResult.success) {
+          // Record the payout
+          await addDocument('payouts', {
+            payeeType,
+            payeeId,
+            payeeName,
+            paypalEmail: payeeEmail,
+            paypalBatchId: payoutResult.batchId,
+            paypalPayoutItemId: payoutResult.payoutItemId,
+            orderId,
+            orderNumber: order.orderNumber,
+            amount: paypalAmount,
+            paypalPayoutFee: paypalPayoutFee,
+            currency: 'gbp',
+            status: 'completed',
+            payoutMethod: 'paypal',
+            triggeredBy: 'admin',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            completedAt: new Date().toISOString()
+          });
+
+          // Update pending payout status based on type
+          const pendingCollection = payeeType === 'artist' ? 'pendingPayouts' :
+                                    payeeType === 'supplier' ? 'pendingSupplierPayouts' :
+                                    'pendingSellerPayouts';
+
+          // Try to find and update the pending payout record
+          try {
+            const { saQueryCollection, saUpdateDocument } = await import('../../../lib/firebase-service-account');
+            const serviceAccountKey = JSON.stringify({
+              type: 'service_account',
+              project_id: projectId,
+              private_key_id: 'auto',
+              private_key: (env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY)?.replace(/\\n/g, '\n'),
+              client_email: env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL,
+              client_id: '',
+              auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+              token_uri: 'https://oauth2.googleapis.com/token'
+            });
+
+            const idField = payeeType === 'artist' ? 'artistId' :
+                           payeeType === 'supplier' ? 'supplierId' : 'sellerId';
+
+            const pendingRecords = await saQueryCollection(serviceAccountKey, projectId, pendingCollection, {
+              filters: [
+                { field: 'orderId', op: 'EQUAL', value: orderId },
+                { field: idField, op: 'EQUAL', value: payeeId }
+              ],
+              limit: 1
+            });
+
+            if (pendingRecords.length > 0) {
+              await saUpdateDocument(serviceAccountKey, projectId, pendingCollection, pendingRecords[0].id, {
+                status: 'paid',
+                paidAt: new Date().toISOString(),
+                paypalBatchId: payoutResult.batchId
+              });
+              console.log('[admin] Updated pending payout record:', pendingRecords[0].id);
+            }
+          } catch (updateErr) {
+            console.log('[admin] Could not update pending payout record:', updateErr);
+          }
+
+          console.log('[admin] ✓ PayPal payout successful:', payoutResult.batchId);
+
+          return new Response(JSON.stringify({
+            success: true,
+            payee: payeeName,
+            amount: paypalAmount,
+            batchId: payoutResult.batchId
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } else {
+          return new Response(JSON.stringify({
+            success: false,
+            error: payoutResult.error || 'PayPal payout failed'
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (err: any) {
+        console.error('[admin] PayPal payout error:', err);
+        return new Response(JSON.stringify({
+          success: false,
+          error: err.message || 'PayPal payout error'
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // Legacy: full order payout (existing behavior)
 
     // Get Stripe config
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
