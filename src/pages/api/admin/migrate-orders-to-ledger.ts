@@ -3,7 +3,7 @@
 // Run via: GET /api/admin/migrate-orders-to-ledger?confirm=yes
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
+import { initFirebaseEnv } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { initAdminEnv } from '../../../lib/admin';
 
@@ -48,18 +48,55 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (!serviceAccountKey) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'FIREBASE_SERVICE_ACCOUNT_KEY not configured'
+        error: 'FIREBASE_SERVICE_ACCOUNT_KEY not configured',
+        hint: 'Add the service account JSON as FIREBASE_SERVICE_ACCOUNT_KEY in Cloudflare environment variables'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Fetch all orders
-    const orders = await queryCollection('orders', {
-      orderBy: { field: 'createdAt', direction: 'ASCENDING' },
-      limit: 5000
-    });
+    // Validate service account key format
+    try {
+      const parsed = JSON.parse(serviceAccountKey);
+      if (!parsed.client_email || !parsed.private_key) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid service account key format',
+          hint: 'The key should be a JSON object with client_email and private_key fields'
+        }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (e) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to parse service account key as JSON',
+        hint: 'Make sure the key is valid JSON (check for escaped characters)'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Fetch all orders using service account
+    let orders: any[] = [];
+    try {
+      orders = await saQueryCollection(serviceAccountKey, projectId, 'orders', {
+        orderBy: { field: 'createdAt', direction: 'ASCENDING' },
+        limit: 5000
+      });
+    } catch (orderErr) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Failed to fetch orders: ' + (orderErr instanceof Error ? orderErr.message : 'Unknown error'),
+        hint: 'Check that the service account has Firestore access'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     console.log(`[Migration] Found ${orders.length} orders`);
 
