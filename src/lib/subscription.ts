@@ -11,9 +11,10 @@ export type SubscriptionTier = typeof SUBSCRIPTION_TIERS[keyof typeof SUBSCRIPTI
 export const TIER_LIMITS = {
   [SUBSCRIPTION_TIERS.FREE]: {
     mixUploadsPerWeek: 2,
-    streamHoursPerDay: 2, // Can be split into 2x1 hour slots or run concurrently
+    streamHoursPerDay: 2, // Both tiers get 2 hours per day
     maxConcurrentSlots: 2,
     canBookLongEvents: false,
+    maxAdvanceBookingDays: 7, // Standard: 1 week in advance
     playlistTrackLimit: 100, // Max tracks in personal playlist
     skipsPerDay: 0, // Standard users cannot skip tracks
     name: 'Standard',
@@ -21,9 +22,10 @@ export const TIER_LIMITS = {
   },
   [SUBSCRIPTION_TIERS.PRO]: {
     mixUploadsPerWeek: 5,
-    streamHoursPerDay: 2, // Base limit, Plus can book long events up to 24 hours
+    streamHoursPerDay: 2, // Both tiers get 2 hours per day
     maxConcurrentSlots: 2,
-    canBookLongEvents: true, // Can book multiple slots for day-long events up to 24 hours
+    canBookLongEvents: true, // Can request long events 24+ hours with approval
+    maxAdvanceBookingDays: 30, // Plus: 1 month in advance
     playlistTrackLimit: 1000, // Max tracks in personal playlist
     skipsPerDay: 3, // Plus users can !skip up to 3 times per day
     name: 'Plus',
@@ -226,13 +228,13 @@ export function getTierBenefits(tier: SubscriptionTier): string[] {
   return [
     `${limits.mixUploadsPerWeek} DJ mix uploads per week`,
     `${limits.streamHoursPerDay} hours live streaming per day`,
-    'Long duration events up to 24 hours',
-    'Book multiple slots for day-long events',
+    'Can split into 2x1 hour slots',
+    'Long duration events (24+ hours with approval)',
+    'Book slots up to 1 month in advance',
     `${limits.playlistTrackLimit.toLocaleString()} tracks in cloud playlist`,
     'Playlist syncs across all devices',
     `!skip command (${limits.skipsPerDay} per day)`,
     'Record live stream button',
     'Gold crown on chat avatar',
-    'Book slots up to 1 month in advance',
   ];
 }

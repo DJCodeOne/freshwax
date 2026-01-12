@@ -484,7 +484,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const usageDoc = await getDocument('userUsage', djId);
         const userDoc = await getDocument('users', djId);
         const subscription = userDoc?.subscription || { tier: 'free' };
-        const isPro = subscription.tier === 'pro' && subscription.expiresAt && new Date(subscription.expiresAt) > now;
+        // Tier value is 'pro' in database, displayed as "Plus" to users
+        const isPlus = subscription.tier === 'pro' && subscription.expiresAt && new Date(subscription.expiresAt) > now;
+
+        // Check advance booking limit: Standard = 7 days, Plus = 30 days
+        const maxAdvanceDays = isPlus ? 30 : 7;
+        const maxBookingDate = new Date(now.getTime() + maxAdvanceDays * 24 * 60 * 60 * 1000);
+        if (slotStart > maxBookingDate) {
+          const upgradeMsg = !isPlus ? ' Go Plus to book up to 1 month in advance.' : '';
+          return new Response(JSON.stringify({
+            success: false,
+            error: `Cannot book more than ${maxAdvanceDays} days in advance.${upgradeMsg}`,
+            needsUpgrade: !isPlus
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
 
         // Get the date of the booking to check for approved events
         const bookingDate = slotStart.toISOString().split('T')[0];
@@ -492,7 +505,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // Check for approved event requests for this date
         let approvedEventHours = 0;
-        if (isPro) {
+        if (isPlus) {
           try {
             const eventRequests = await queryCollection('event-requests', {
               filters: [
@@ -510,8 +523,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        // Base limits: Pro = 2 hours, Free = 1 hour. Plus any approved event hours.
-        const baseMinutes = isPro ? 120 : 60;
+        // Both tiers get 2 hours/day base. Plus can request extended hours for long events.
+        const baseMinutes = 120; // 2 hours for everyone
         const maxMinutes = baseMinutes + (approvedEventHours * 60);
 
         const minutesToday = (usageDoc?.dayDate === today ? usageDoc.streamMinutesToday : 0) || 0;
@@ -519,14 +532,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (minutesToday + duration > maxMinutes) {
           const hoursUsed = Math.floor(minutesToday / 60);
           const hoursLimit = maxMinutes / 60;
-          const upgradeMsg = !isPro
-            ? ' Upgrade to Pro for 2 hours per day.'
-            : (approvedEventHours === 0 ? ' Request extended hours for events.' : '');
+          const upgradeMsg = !isPlus && approvedEventHours === 0
+            ? ' Go Plus to request extended hours for long events.'
+            : (isPlus && approvedEventHours === 0 ? ' Request extended hours for events.' : '');
           return new Response(JSON.stringify({
             success: false,
             error: `You've used ${hoursUsed} of your ${hoursLimit} hour${hoursLimit > 1 ? 's' : ''} today.${upgradeMsg}`,
-            needsUpgrade: !isPro,
-            canRequestEvent: isPro && approvedEventHours === 0
+            needsUpgrade: !isPlus,
+            canRequestEvent: isPlus && approvedEventHours === 0
           }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
       } catch (limitError) {

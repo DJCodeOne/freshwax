@@ -1323,12 +1323,16 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
     async function loadBookings() {
       try {
-        const startDate = new Date(currentDate);
-        startDate.setHours(START_HOUR, 0, 0, 0);
-        
-        const endDate = new Date(currentDate);
-        endDate.setDate(endDate.getDate() + 1);
-        endDate.setHours(8, 0, 0, 0);
+        // Fetch full 24-hour day (00:00 to 24:00) since grid shows all hours
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const day = currentDate.getDate();
+
+        // Use UTC dates to match booking times stored as UTC ISO strings
+        const startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+        const endDate = new Date(Date.UTC(year, month, day + 1, 0, 0, 0, 0));
+
+        console.log('[loadBookings] Fetching range:', startDate.toISOString(), 'to', endDate.toISOString());
 
         const response = await fetch(
           `/api/livestream/slots?start=${startDate.toISOString()}&end=${endDate.toISOString()}&fresh=1&_t=${Date.now()}`
@@ -1336,7 +1340,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         
         const data = await response.json();
         bookings = data.success ? (data.slots || []) : [];
-        
+
+        console.log('[loadBookings] Loaded', bookings.length, 'bookings:',
+          bookings.map(b => ({ id: b.id, djName: b.djName, start: b.startTime, status: b.status })));
+
         // Check if bookings are disabled (admin)
         if (scheduleMode === 'admin' && data.bookingsDisabled !== undefined) {
           bookingsDisabled = data.bookingsDisabled;
@@ -1512,13 +1519,25 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     function findBookingForSlot(slotTime) {
       const slotStart = slotTime.getTime();
       const slotEnd = slotStart + 60 * 60 * 1000;
-      
-      return bookings.find(booking => {
+
+      const found = bookings.find(booking => {
         if (booking.status === 'cancelled') return false;
         const bookingStart = new Date(booking.startTime).getTime();
         const bookingEnd = new Date(booking.endTime).getTime();
-        return slotStart >= bookingStart && slotStart < bookingEnd;
+        const match = slotStart >= bookingStart && slotStart < bookingEnd;
+
+        // Debug: log comparison for scheduled bookings
+        if (booking.status === 'scheduled') {
+          console.log('[findBooking] Checking slot:', slotTime.toISOString(),
+            'against booking:', booking.startTime, '-', booking.endTime,
+            'match:', match,
+            'slotStart:', slotStart, 'bookingStart:', bookingStart, 'bookingEnd:', bookingEnd);
+        }
+
+        return match;
       });
+
+      return found;
     }
 
     function toggleSlotSelection(hour, date) {
