@@ -42,43 +42,32 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.log('[Migration] Dry run:', dryRun);
 
     // Get service account for Firebase writes
-    const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT_KEY || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+    const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
-    if (!serviceAccountKey) {
+    if (!clientEmail || !privateKey) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'FIREBASE_SERVICE_ACCOUNT_KEY not configured',
-        hint: 'Add the service account JSON as FIREBASE_SERVICE_ACCOUNT_KEY in Cloudflare environment variables'
+        error: 'Firebase service account not configured',
+        hint: 'FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY must be set'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Validate service account key format
-    try {
-      const parsed = JSON.parse(serviceAccountKey);
-      if (!parsed.client_email || !parsed.private_key) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid service account key format',
-          hint: 'The key should be a JSON object with client_email and private_key fields'
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    } catch (e) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to parse service account key as JSON',
-        hint: 'Make sure the key is valid JSON (check for escaped characters)'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Build service account key JSON from individual parts
+    const serviceAccountKey = JSON.stringify({
+      type: 'service_account',
+      project_id: projectId,
+      private_key_id: 'auto',
+      private_key: privateKey.replace(/\\n/g, '\n'),
+      client_email: clientEmail,
+      client_id: '',
+      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: 'https://oauth2.googleapis.com/token'
+    });
 
     // Fetch all orders using service account
     let orders: any[] = [];
