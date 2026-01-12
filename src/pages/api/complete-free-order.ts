@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { createOrder } from '../../lib/order-utils';
 import { initFirebaseEnv, getDocument, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { recordSale } from '../../lib/sales-ledger';
 
 export const prerender = false;
 
@@ -101,6 +102,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (result.success) {
+      // Record to sales ledger (even for free/credit orders for accurate tracking)
+      try {
+        await recordSale({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          customerId: orderData.customer?.userId || null,
+          customerEmail: orderData.customer?.email || '',
+          subtotal: totals.subtotal || 0,
+          shipping: totals.shipping || 0,
+          grossTotal: originalTotal,
+          paymentMethod: appliedCredit > 0 ? 'giftcard' : 'free',
+          paymentId: null,
+          items: orderData.items || [],
+          hasPhysical: orderData.hasPhysicalItems || false,
+          hasDigital: (orderData.items || []).some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track')
+        });
+        console.log('[FreeOrder] Sale recorded to ledger');
+      } catch (ledgerErr) {
+        console.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
+      }
+
       // If credit was applied, deduct it from user's balance
       if (appliedCredit > 0 && orderData.customer?.userId) {
         try {

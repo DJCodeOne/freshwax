@@ -9,6 +9,7 @@ import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
+import { recordSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;
 
@@ -1163,6 +1164,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] ✅ ORDER CREATED SUCCESSFULLY');
       console.log('[Stripe Webhook] Order Number:', result.orderNumber);
       console.log('[Stripe Webhook] Order ID:', result.orderId);
+
+      // Record to sales ledger (source of truth for analytics)
+      try {
+        const subtotal = parseFloat(metadata.subtotal) || (session.amount_total / 100);
+        const shippingAmount = parseFloat(metadata.shipping) || 0;
+        const serviceFees = parseFloat(metadata.serviceFees) || 0;
+        const freshWaxFee = parseFloat(metadata.freshWaxFee) || 0;
+        // Estimate Stripe fee: 1.5% + £0.20 for UK cards (average)
+        const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.015 + 0.20);
+
+        await recordSale({
+          orderId: result.orderId,
+          orderNumber: result.orderNumber || '',
+          customerId: metadata.customer_userId || null,
+          customerEmail: metadata.customer_email,
+          subtotal,
+          shipping: shippingAmount,
+          grossTotal: session.amount_total / 100,
+          stripeFee: Math.round(stripeFee * 100) / 100,
+          freshWaxFee,
+          paymentMethod: 'stripe',
+          paymentId: session.payment_intent as string,
+          items,
+          hasPhysical: metadata.hasPhysicalItems === 'true',
+          hasDigital: items.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track')
+        });
+        console.log('[Stripe Webhook] ✅ Sale recorded to ledger');
+      } catch (ledgerErr) {
+        console.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
+        // Don't fail the order, ledger is supplementary
+      }
 
       // Process artist payments via Stripe Connect
       if (result.orderId && stripeSecretKey) {

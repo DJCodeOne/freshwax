@@ -13,12 +13,16 @@ const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
 // Fetch all orders for analytics via REST API
+// Use higher limit to ensure we get all orders for accurate analytics
 let orders: any[] = [];
+let totalOrdersFetched = 0;
 try {
   const allOrders = await queryCollection('orders', {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-    limit: 500
+    limit: 2000  // Increased limit to capture all orders
   });
+
+  totalOrdersFetched = allOrders.length;
 
   orders = allOrders.map((data: any) => ({
     ...data,
@@ -27,6 +31,8 @@ try {
     o.status !== 'cancelled' &&
     o.paymentMethod !== 'test_mode'  // Exclude test orders from analytics
   );
+
+  console.log(`[analytics] Fetched ${totalOrdersFetched} orders, ${orders.length} after filtering`);
 } catch (e) {
   console.error('Error fetching orders:', e);
 }
@@ -50,7 +56,16 @@ const correctItemPrice = (price: number) => (price === 2.25 ? 2.00 : price);
 // Calculate metrics
 function calculateMetrics(ordersSubset) {
   const revenue = ordersSubset.reduce((sum, o) => {
-    // Sum items with price correction applied
+    // PREFER order totals (what was actually charged) over item summing
+    // This is more accurate as it reflects actual payments received
+    let orderTotal = o.totals?.subtotal || o.totals?.total || o.total || o.orderTotal || o.grandTotal || o.amount || 0;
+
+    // If we have a valid order total, use it (prefer subtotal as it excludes fees)
+    if (orderTotal > 0) {
+      return sum + orderTotal;
+    }
+
+    // Fallback: Sum items if no order total available
     if (o.items && Array.isArray(o.items)) {
       const itemsTotal = o.items.reduce((itemSum, item) => {
         // For releases, use actual release price (free releases = £0)
@@ -74,9 +89,7 @@ function calculateMetrics(ordersSubset) {
       return sum + itemsTotal;
     }
 
-    // Fallback to order total fields (may include uncorrected prices for legacy orders)
-    let orderTotal = o.totals?.total || o.total || o.orderTotal || o.grandTotal || o.amount || 0;
-    return sum + orderTotal;
+    return sum;
   }, 0);
 
   // Calculate fees split by platform
@@ -270,6 +283,9 @@ export const prerender = false;
 
 <AdminLayout title="Analytics" activeNav="analytics">
   <Fragment slot="actions">
+    <a href="/admin/ledger" class="btn btn-primary">
+      📒 Sales Ledger
+    </a>
     <button class="btn btn-outline" onclick="window.print()">
       🖨️ Print Report
     </button>

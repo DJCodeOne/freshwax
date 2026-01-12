@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { recordSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;
 
@@ -219,6 +220,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     console.log('[PayPal] Order created:', result.orderNumber);
+
+    // Record to sales ledger (source of truth for analytics)
+    try {
+      const subtotal = orderData.totals?.subtotal || capturedAmount;
+      const shippingAmount = orderData.totals?.shipping || 0;
+      const freshWaxFee = orderData.totals?.freshWaxFee || 0;
+      // PayPal fee: approximately 2.9% + £0.30
+      const paypalFee = (capturedAmount * 0.029) + 0.30;
+
+      await recordSale({
+        orderId: result.orderId,
+        orderNumber: result.orderNumber || '',
+        customerId: orderData.customer?.userId || null,
+        customerEmail: orderData.customer?.email || '',
+        subtotal,
+        shipping: shippingAmount,
+        grossTotal: capturedAmount,
+        paypalFee: Math.round(paypalFee * 100) / 100,
+        freshWaxFee,
+        paymentMethod: 'paypal',
+        paymentId: paypalOrderId,
+        items: orderData.items || [],
+        hasPhysical: orderData.hasPhysicalItems,
+        hasDigital: (orderData.items || []).some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track')
+      });
+      console.log('[PayPal] Sale recorded to ledger');
+    } catch (ledgerErr) {
+      console.error('[PayPal] Failed to record to ledger:', ledgerErr);
+      // Don't fail the order, ledger is supplementary
+    }
 
     // Process artist payments via Stripe Connect (same as Stripe webhook)
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;

@@ -1,0 +1,300 @@
+---
+// src/pages/admin/ledger.astro
+// Sales Ledger - Source of truth for all transactions
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { queryCollection } from '../../lib/firebase-rest';
+
+// Get date ranges
+const now = new Date();
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+// Fetch ledger entries
+let ledgerEntries: any[] = [];
+let totals = {
+  allTime: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 },
+  thisMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 },
+  lastMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 },
+  thisYear: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 }
+};
+
+try {
+  ledgerEntries = await queryCollection('salesLedger', {
+    orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+    limit: 2000
+  });
+
+  // Calculate totals
+  ledgerEntries.forEach((entry: any) => {
+    const timestamp = new Date(entry.timestamp);
+    const gross = entry.grossTotal || 0;
+    const net = entry.netRevenue || 0;
+    const stripeFee = entry.stripeFee || 0;
+    const paypalFee = entry.paypalFee || 0;
+    const fwFee = entry.freshWaxFee || 0;
+
+    // All time
+    totals.allTime.orders++;
+    totals.allTime.gross += gross;
+    totals.allTime.net += net;
+    totals.allTime.stripeFees += stripeFee;
+    totals.allTime.paypalFees += paypalFee;
+    totals.allTime.fwFees += fwFee;
+
+    // This month
+    if (timestamp >= startOfMonth) {
+      totals.thisMonth.orders++;
+      totals.thisMonth.gross += gross;
+      totals.thisMonth.net += net;
+      totals.thisMonth.stripeFees += stripeFee;
+      totals.thisMonth.paypalFees += paypalFee;
+      totals.thisMonth.fwFees += fwFee;
+    }
+
+    // Last month
+    if (timestamp >= startOfLastMonth && timestamp <= endOfLastMonth) {
+      totals.lastMonth.orders++;
+      totals.lastMonth.gross += gross;
+      totals.lastMonth.net += net;
+      totals.lastMonth.stripeFees += stripeFee;
+      totals.lastMonth.paypalFees += paypalFee;
+      totals.lastMonth.fwFees += fwFee;
+    }
+
+    // This year
+    if (timestamp >= startOfYear) {
+      totals.thisYear.orders++;
+      totals.thisYear.gross += gross;
+      totals.thisYear.net += net;
+      totals.thisYear.stripeFees += stripeFee;
+      totals.thisYear.paypalFees += paypalFee;
+      totals.thisYear.fwFees += fwFee;
+    }
+  });
+} catch (e) {
+  console.error('Error fetching ledger:', e);
+}
+
+// Format currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
+};
+
+// Format date
+const formatDate = (dateStr: string) => {
+  return new Date(dateStr).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+export const prerender = false;
+---
+
+<AdminLayout title="Sales Ledger" activeNav="analytics">
+  <Fragment slot="actions">
+    <a href="/admin/analytics" class="btn btn-outline">
+      Back to Analytics
+    </a>
+    <button class="btn btn-primary" id="migrateBtn">
+      Migrate Orders
+    </button>
+  </Fragment>
+
+  <!-- Summary Stats -->
+  <div class="stats-grid cols-4 mb-4">
+    <div class="stat-card">
+      <div class="stat-label">This Month</div>
+      <div class="stat-value">{formatCurrency(totals.thisMonth.gross)}</div>
+      <div class="stat-detail">{totals.thisMonth.orders} orders | Net: {formatCurrency(totals.thisMonth.net)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Last Month</div>
+      <div class="stat-value">{formatCurrency(totals.lastMonth.gross)}</div>
+      <div class="stat-detail">{totals.lastMonth.orders} orders | Net: {formatCurrency(totals.lastMonth.net)}</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-label">Year to Date</div>
+      <div class="stat-value">{formatCurrency(totals.thisYear.gross)}</div>
+      <div class="stat-detail">{totals.thisYear.orders} orders | Net: {formatCurrency(totals.thisYear.net)}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">All Time</div>
+      <div class="stat-value">{formatCurrency(totals.allTime.gross)}</div>
+      <div class="stat-detail">{totals.allTime.orders} orders | Net: {formatCurrency(totals.allTime.net)}</div>
+    </div>
+  </div>
+
+  <!-- Fee Breakdown -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>Fee Breakdown (All Time)</h2>
+    </div>
+    <div class="card-body">
+      <div class="stats-grid cols-3" style="margin-bottom: 0;">
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">Stripe Fees</div>
+          <div class="stat-value">{formatCurrency(totals.allTime.stripeFees)}</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--border-light);">
+          <div class="stat-label">PayPal Fees</div>
+          <div class="stat-value">{formatCurrency(totals.allTime.paypalFees)}</div>
+        </div>
+        <div class="stat-card" style="border-color: var(--accent-red);">
+          <div class="stat-label">Fresh Wax Revenue</div>
+          <div class="stat-value" style="color: var(--accent-red);">{formatCurrency(totals.allTime.fwFees)}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ledger Entries Table -->
+  <div class="card">
+    <div class="card-header">
+      <h2>Ledger Entries ({ledgerEntries.length})</h2>
+    </div>
+    <div class="card-body">
+      {ledgerEntries.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-state-icon">📒</div>
+          <div class="empty-state-title">No ledger entries yet</div>
+          <p class="empty-state-text">Click "Migrate Orders" to import existing orders, or new orders will be added automatically.</p>
+        </div>
+      ) : (
+        <div class="table-wrapper" style="max-height: 600px; overflow-y: auto;">
+          <table class="data-table">
+            <thead style="position: sticky; top: 0; background: var(--bg-card);">
+              <tr>
+                <th>Date</th>
+                <th>Order</th>
+                <th>Customer</th>
+                <th class="text-right">Gross</th>
+                <th class="text-right">Fees</th>
+                <th class="text-right">Net</th>
+                <th class="text-center">Method</th>
+                <th class="text-center">Items</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ledgerEntries.slice(0, 100).map((entry: any) => (
+                <tr>
+                  <td style="white-space: nowrap; font-size: 0.75rem;">
+                    {formatDate(entry.timestamp)}
+                  </td>
+                  <td>
+                    <a href={`/admin/orders?search=${entry.orderNumber}`} class="link">
+                      {entry.orderNumber || entry.orderId?.slice(0, 8)}
+                    </a>
+                  </td>
+                  <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">
+                    {entry.customerEmail}
+                  </td>
+                  <td class="text-right font-bold">
+                    {formatCurrency(entry.grossTotal)}
+                  </td>
+                  <td class="text-right" style="color: var(--text-muted); font-size: 0.8rem;">
+                    {formatCurrency(entry.totalFees)}
+                  </td>
+                  <td class="text-right" style="color: var(--accent-green);">
+                    {formatCurrency(entry.netRevenue)}
+                  </td>
+                  <td class="text-center">
+                    <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-warning' : 'badge-default'}`}>
+                      {entry.paymentMethod}
+                    </span>
+                  </td>
+                  <td class="text-center">{entry.itemCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {ledgerEntries.length > 100 && (
+            <p style="padding: 1rem; text-align: center; color: var(--text-muted);">
+              Showing 100 of {ledgerEntries.length} entries
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .badge-info {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+  }
+  .badge-warning {
+    background: rgba(234, 179, 8, 0.2);
+    color: #eab308;
+  }
+  .badge-default {
+    background: rgba(107, 114, 128, 0.2);
+    color: #6b7280;
+  }
+  .link {
+    color: var(--accent-red);
+    text-decoration: none;
+  }
+  .link:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('migrateBtn') as HTMLButtonElement;
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      if (!confirm('This will migrate all existing orders to the sales ledger. Continue?')) {
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Migrating...';
+
+      try {
+        // First do a dry run
+        const dryRunRes = await fetch('/api/admin/migrate-orders-to-ledger?confirm=yes&dryRun=yes');
+        const dryRun = await dryRunRes.json();
+
+        if (!confirm(`Dry run complete:\n- Would migrate: ${dryRun.results?.migrated || 0} orders\n- Skipped (already in ledger): ${dryRun.results?.skipped || 0}\n- Cancelled orders: ${dryRun.results?.cancelled || 0}\n\nProceed with actual migration?`)) {
+          btn.disabled = false;
+          btn.textContent = 'Migrate Orders';
+          return;
+        }
+
+        // Run actual migration
+        const res = await fetch('/api/admin/migrate-orders-to-ledger?confirm=yes');
+        const data = await res.json();
+
+        if (data.success) {
+          alert(`Migration complete!\n- Migrated: ${data.results?.migrated || 0}\n- Skipped: ${data.results?.skipped || 0}\n- Errors: ${data.results?.errors || 0}`);
+          window.location.reload();
+        } else {
+          alert('Migration failed: ' + (data.error || 'Unknown error'));
+        }
+      } catch (err) {
+        alert('Migration error: ' + (err instanceof Error ? err.message : 'Unknown'));
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Migrate Orders';
+      }
+    });
+  });
+</script>
