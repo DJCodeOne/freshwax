@@ -1166,6 +1166,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
 
     // Initialize
     function init() {
+      selectedSlots = []; // Clear any stale selections
       setupNavigation();
       setupModeSpecificHandlers();
       loadAndRender();
@@ -1181,6 +1182,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
     function setupModeSpecificHandlers() {
       if (scheduleMode === 'booking') {
         container.querySelector('.cancel-btn')?.addEventListener('click', () => {
+          clearSelection(); // Clear selection when cancelling
           window.closeScheduleModal?.();
         });
         container.querySelector('.clear-btn')?.addEventListener('click', clearSelection);
@@ -1657,7 +1659,8 @@ const { mode, id = 'dailySchedule' } = Astro.props;
           }
         }
 
-        // Success - close modal and refresh
+        // Success - clear selection, close modal and refresh
+        selectedSlots = [];
         alert('Booking confirmed! Your slot has been reserved.');
         window.closeScheduleModal?.();
 

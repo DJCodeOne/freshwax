@@ -535,33 +535,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Check for conflicts - limit to prevent runaway
       const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
-
-      console.log('[DEBUG] Conflict check - new slot:', {
-        slotStart: slotStart.toISOString(),
-        slotEnd: slotEnd.toISOString(),
-        duration
-      });
-
       const conflicts = existingSlots.filter(slot => {
         if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) return false;
         const existingStart = new Date(slot.startTime);
         const existingEnd = new Date(slot.endTime);
-        const isConflict = slotStart < existingEnd && slotEnd > existingStart;
-
-        console.log('[DEBUG] Checking against:', {
-          djName: slot.djName,
-          existingStart: existingStart.toISOString(),
-          existingEnd: existingEnd.toISOString(),
-          'slotStart < existingEnd': slotStart < existingEnd,
-          'slotEnd > existingStart': slotEnd > existingStart,
-          isConflict
-        });
-
-        return isConflict;
+        return slotStart < existingEnd && slotEnd > existingStart;
       });
 
       if (conflicts.length > 0) {
-        console.log('[DEBUG] Conflict found with:', conflicts[0].djName);
         return new Response(JSON.stringify({ success: false, error: `Time conflicts with ${conflicts[0].djName}'s booking` }), {
           status: 400, headers: { 'Content-Type': 'application/json' }
         });
