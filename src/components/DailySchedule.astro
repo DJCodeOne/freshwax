@@ -1609,11 +1609,19 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         for (const slot of sortedSlots) {
           // Parse the date string properly
           const [year, month, day] = slot.date.split('-').map(Number);
-          const startTime = new Date(year, month - 1, day, slot.hour, 0, 0, 0);
+
+          // DEBUG: Log the raw slot data
+          console.log('[DailySchedule] Raw slot:', slot);
+          console.log('[DailySchedule] Parsed date parts:', { year, month, day, hour: slot.hour });
+
+          // Create date in UTC to avoid timezone issues
+          // slot.hour is the UTC hour (grid shows UTC times)
+          const startTime = new Date(Date.UTC(year, month - 1, day, slot.hour, 0, 0, 0));
 
           console.log('[DailySchedule] Creating booking:', {
             slot,
-            startTime: startTime.toISOString(),
+            startTimeLocal: new Date(year, month - 1, day, slot.hour, 0, 0, 0).toString(),
+            startTimeUTC: startTime.toISOString(),
             djId: currentUserId,
             djName: userDisplayName
           });
