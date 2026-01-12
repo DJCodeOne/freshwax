@@ -73,7 +73,7 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
                 <div class="text-sm font-bold text-white truncate group-hover:text-white transition-colors">
                   {label}
                 </div>
-                <div class="text-xs text-gray-400 mt-0.5">
+                <div class="text-xs text-gray-300 mt-0.5">
                   {releasesByLabel[label].length} release{releasesByLabel[label].length !== 1 ? 's' : ''}
                 </div>
               </div>
@@ -187,9 +187,9 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
         if (targetElement) {
           // Immediately highlight clicked link
           document.querySelectorAll('.label-nav-link').forEach(l => {
-            l.classList.remove('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+            l.classList.remove('bg-gradient-to-r', 'from-orange-700', 'to-orange-800', 'border-white', 'shadow-lg');
           });
-          link.classList.add('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+          link.classList.add('bg-gradient-to-r', 'from-orange-700', 'to-orange-800', 'border-white', 'shadow-lg');
 
           targetElement.scrollIntoView({
             behavior: 'smooth',
@@ -210,12 +210,12 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           document.querySelectorAll('.label-nav-link').forEach(link => {
-            link.classList.remove('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+            link.classList.remove('bg-gradient-to-r', 'from-orange-700', 'to-orange-800', 'border-white', 'shadow-lg');
           });
           
           const activeLink = document.querySelector(`[data-label-id="${entry.target.id}"]`);
           if (activeLink) {
-            activeLink.classList.add('bg-gradient-to-r', 'from-red-600', 'to-red-700', 'border-white', 'shadow-lg');
+            activeLink.classList.add('bg-gradient-to-r', 'from-orange-700', 'to-orange-800', 'border-white', 'shadow-lg');
             
             activeLink.scrollIntoView({ 
               behavior: 'smooth',
