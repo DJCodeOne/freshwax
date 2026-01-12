@@ -535,14 +535,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Check for conflicts - limit to prevent runaway
       const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
+
+      console.log('[CONFLICT DEBUG] New booking request:', {
+        startTime: slotStart.toISOString(),
+        endTime: slotEnd.toISOString(),
+        duration
+      });
+
       const conflicts = existingSlots.filter(slot => {
-        if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) return false;
+        if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
+          console.log('[CONFLICT DEBUG] Skipping slot (wrong status):', slot.id, slot.status);
+          return false;
+        }
         const existingStart = new Date(slot.startTime);
         const existingEnd = new Date(slot.endTime);
-        return slotStart < existingEnd && slotEnd > existingStart;
+        const check1 = slotStart < existingEnd;
+        const check2 = slotEnd > existingStart;
+        const isConflict = check1 && check2;
+
+        console.log('[CONFLICT DEBUG] Checking:', {
+          slotId: slot.id,
+          djName: slot.djName,
+          existing: `${existingStart.toISOString()} - ${existingEnd.toISOString()}`,
+          new: `${slotStart.toISOString()} - ${slotEnd.toISOString()}`,
+          'newStart < existingEnd': check1,
+          'newEnd > existingStart': check2,
+          isConflict
+        });
+
+        return isConflict;
       });
 
       if (conflicts.length > 0) {
+        console.log('[CONFLICT DEBUG] CONFLICT FOUND with:', conflicts[0].djName, conflicts[0].id);
         return new Response(JSON.stringify({ success: false, error: `Time conflicts with ${conflicts[0].djName}'s booking` }), {
           status: 400, headers: { 'Content-Type': 'application/json' }
         });
