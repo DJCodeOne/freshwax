@@ -1166,11 +1166,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Process artist payments via Stripe Connect
       if (result.orderId && stripeSecretKey) {
+        // Calculate total item count for fair fee splitting across all item types
+        const totalItemCount = items.length;
+
+        // Calculate order subtotal for processing fee calculation
+        const orderSubtotal = items.reduce((sum: number, item: any) => {
+          return sum + ((item.price || 0) * (item.quantity || 1));
+        }, 0);
+
         console.log('[Stripe Webhook] 💰 Processing artist payments...');
         await processArtistPayments({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items,
+          totalItemCount,
+          orderSubtotal,
           artistShippingBreakdown, // Include shipping fees for artists who ship vinyl
           stripeSecretKey,
           env
@@ -1182,6 +1192,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items,
+          totalItemCount,
+          orderSubtotal,
           stripeSecretKey,
           env
         });
@@ -1192,6 +1204,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items,
+          totalItemCount,
+          orderSubtotal,
           stripeSecretKey,
           env
         });
@@ -1487,11 +1501,13 @@ async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  totalItemCount: number;
+  orderSubtotal: number;
   artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, artistShippingBreakdown, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, artistShippingBreakdown, env } = params;
 
   try {
     // Group items by artist (using releaseId to look up artist)
@@ -1536,9 +1552,10 @@ async function processArtistPayments(params: {
 
       // 1% Fresh Wax platform fee
       const freshWaxFee = itemTotal * 0.01;
-      // Stripe fee: 1.4% + £0.20 (split fixed fee across all items in order)
-      const stripeFee = (itemTotal * 0.014) + (0.20 / items.length);
-      const artistShare = itemTotal - freshWaxFee - stripeFee;
+      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
+      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      const artistShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       if (!artistPayments[artistId]) {
         artistPayments[artistId] = {
@@ -1620,10 +1637,12 @@ async function processSupplierPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  totalItemCount: number;
+  orderSubtotal: number;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -1685,10 +1704,14 @@ async function processSupplierPayments(params: {
 
       if (!supplier) continue;
 
-      // Calculate supplier share
-      // Supplier gets their cost price per item, platform keeps the margin
-      const supplierPrice = product.supplierCost || product.costPrice || (item.price * 0.7); // Default 70% to supplier
-      const itemTotal = supplierPrice * (item.quantity || 1);
+      // Calculate supplier share (same structure as releases/vinyl, but 5% Fresh Wax fee)
+      const itemPrice = item.price || 0;
+      const itemTotal = itemPrice * (item.quantity || 1);
+      const freshWaxFee = itemTotal * 0.05; // 5% for merch
+      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
+      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      const supplierShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       // Group by supplier
       if (!supplierPayments[supplierId]) {
@@ -1704,7 +1727,7 @@ async function processSupplierPayments(params: {
         };
       }
 
-      supplierPayments[supplierId].amount += itemTotal;
+      supplierPayments[supplierId].amount += supplierShare;
       supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
     }
 
@@ -1896,10 +1919,12 @@ async function processVinylCrateSellerPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  totalItemCount: number;
+  orderSubtotal: number;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -1965,12 +1990,15 @@ async function processVinylCrateSellerPayments(params: {
 
       if (!seller) continue;
 
-      // Calculate seller share
-      // Platform takes 15% commission on crate sales
-      const platformFeePercent = 0.15;
+      // Calculate seller share (same structure as releases)
+      // 1% Fresh Wax fee + payment processor fees
       const itemPrice = item.price || 0;
-      const sellerShare = itemPrice * (1 - platformFeePercent);
-      const itemTotal = sellerShare * (item.quantity || 1);
+      const itemTotal = itemPrice * (item.quantity || 1);
+      const freshWaxFee = itemTotal * 0.01;
+      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
+      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      const sellerShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       // Group by seller
       if (!sellerPayments[sellerId]) {
@@ -1986,7 +2014,7 @@ async function processVinylCrateSellerPayments(params: {
         };
       }
 
-      sellerPayments[sellerId].amount += itemTotal;
+      sellerPayments[sellerId].amount += sellerShare;
       sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
     }
 

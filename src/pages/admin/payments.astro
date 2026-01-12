@@ -45,27 +45,127 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
 });
 
 // Fetch all pending payouts with status 'pending' (for manual review)
-const manualPendingPayouts = await queryCollection('pendingPayouts', {
-  filters: [
-    { field: 'status', op: 'EQUAL', value: 'pending' }
-  ],
-  orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-  limit: 100
-});
+// Use service account auth to ensure we can read the pendingPayouts collection
+let manualPendingPayouts: Record<string, any>[] = [];
+try {
+  manualPendingPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
+    filters: [
+      { field: 'status', op: 'EQUAL', value: 'pending' }
+    ],
+    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+    limit: 100
+  });
+  console.log('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
+} catch (err) {
+  console.error('[payments] Error fetching manualPendingPayouts:', err);
+}
 
-// Create a map of orderId -> artist info for quick lookup
-const orderArtistMap: Record<string, { artistName: string; artistEmail: string; amount: number }[]> = {};
+// Fetch pending supplier payouts
+let pendingSupplierPayouts: Record<string, any>[] = [];
+try {
+  pendingSupplierPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingSupplierPayouts', {
+    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+    limit: 100
+  });
+  console.log('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
+} catch (err) {
+  // Collection might not exist yet
+  console.log('[payments] No pending supplier payouts collection');
+}
+
+// Fetch pending seller payouts (vinyl crate)
+let pendingSellerPayouts: Record<string, any>[] = [];
+try {
+  pendingSellerPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingSellerPayouts', {
+    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+    limit: 100
+  });
+  console.log('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
+} catch (err) {
+  // Collection might not exist yet
+  console.log('[payments] No pending seller payouts collection');
+}
+
+// Define payee type for unified tracking
+type PayeeInfo = {
+  type: 'artist' | 'supplier' | 'seller';
+  id: string;
+  name: string;
+  email: string;
+  amount: number;
+  items?: string[];
+  status?: string;
+};
+
+// Create a unified map of orderId -> payees (all types)
+const orderPayeesMap: Record<string, PayeeInfo[]> = {};
+const seenPayouts = new Set<string>();
+
+// Add artist payouts
 for (const payout of manualPendingPayouts) {
   if (!payout.orderId) continue;
-  if (!orderArtistMap[payout.orderId]) {
-    orderArtistMap[payout.orderId] = [];
+  const uniqueKey = `artist_${payout.orderId}_${payout.artistId || payout.artistEmail}`;
+  if (seenPayouts.has(uniqueKey)) continue;
+  seenPayouts.add(uniqueKey);
+
+  if (!orderPayeesMap[payout.orderId]) {
+    orderPayeesMap[payout.orderId] = [];
   }
-  orderArtistMap[payout.orderId].push({
-    artistName: payout.artistName || 'Unknown',
-    artistEmail: payout.artistEmail || '',
-    amount: payout.amount || 0
+  orderPayeesMap[payout.orderId].push({
+    type: 'artist',
+    id: payout.artistId || '',
+    name: payout.artistName || 'Unknown Artist',
+    email: payout.artistEmail || '',
+    amount: payout.amount || 0,
+    items: payout.items,
+    status: payout.status
   });
 }
+
+// Add supplier payouts
+for (const payout of pendingSupplierPayouts) {
+  if (!payout.orderId) continue;
+  const uniqueKey = `supplier_${payout.orderId}_${payout.supplierId || payout.supplierEmail}`;
+  if (seenPayouts.has(uniqueKey)) continue;
+  seenPayouts.add(uniqueKey);
+
+  if (!orderPayeesMap[payout.orderId]) {
+    orderPayeesMap[payout.orderId] = [];
+  }
+  orderPayeesMap[payout.orderId].push({
+    type: 'supplier',
+    id: payout.supplierId || '',
+    name: payout.supplierName || 'Unknown Supplier',
+    email: payout.supplierEmail || '',
+    amount: payout.amount || 0,
+    items: payout.items,
+    status: payout.status
+  });
+}
+
+// Add seller payouts (vinyl crate)
+for (const payout of pendingSellerPayouts) {
+  if (!payout.orderId) continue;
+  const uniqueKey = `seller_${payout.orderId}_${payout.sellerId || payout.sellerEmail}`;
+  if (seenPayouts.has(uniqueKey)) continue;
+  seenPayouts.add(uniqueKey);
+
+  if (!orderPayeesMap[payout.orderId]) {
+    orderPayeesMap[payout.orderId] = [];
+  }
+  orderPayeesMap[payout.orderId].push({
+    type: 'seller',
+    id: payout.sellerId || '',
+    name: payout.sellerName || 'Unknown Seller',
+    email: payout.sellerEmail || '',
+    amount: payout.amount || 0,
+    items: payout.items,
+    status: payout.status
+  });
+}
+
+// Legacy: keep orderArtistMap for backwards compatibility
+const orderArtistMap = orderPayeesMap;
 
 // Fetch completed payouts using service account auth (payouts collection requires auth)
 let completedPayouts: Record<string, any>[] = [];
@@ -105,12 +205,12 @@ for (const release of releases) {
 const orderIdsWithPendingPayouts = new Set(Object.keys(orderArtistMap));
 const paidOrderIds = new Set(completedPayouts.map(p => p.orderId));
 
-// Get orders that need payouts - either have pending payout records OR are unpaid digital orders
+// Get orders that need payouts - either have pending payout records OR are unpaid orders with payable items
 const ordersNeedingPayouts = recentOrders.filter(order => {
   // Skip if already marked as paid
   if (paidOrderIds.has(order.id)) return false;
 
-  // Include if has a pending payout record
+  // Include if has a pending payout record (any type: artist, supplier, seller)
   if (orderIdsWithPendingPayouts.has(order.id)) return true;
 
   // Also include older orders that don't have payout records yet
@@ -122,11 +222,12 @@ const ordersNeedingPayouts = recentOrders.filter(order => {
   if (!order.items || order.items.length === 0) return false;
   // Skip if payment not completed
   if (order.paymentStatus !== 'completed' && order.status !== 'completed' && order.orderStatus !== 'completed') return false;
-  // Check if has digital items (which need artist payouts)
-  const hasDigitalItems = order.items.some(item =>
-    item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type
+  // Check if has items that need payouts (digital, merch, or crate)
+  const hasPayableItems = order.items.some(item =>
+    item.type === 'digital' || item.type === 'release' || item.type === 'track' || !item.type ||
+    item.type === 'merch' || item.type === 'crate' || item.type === 'vinyl-crate'
   );
-  return hasDigitalItems;
+  return hasPayableItems;
 });
 
 // Stats
@@ -139,8 +240,11 @@ const pendingPayoutTotal = pendingPayouts.reduce((sum, p) => sum + (p.amount || 
 // Only count real payouts (exclude test mode)
 const realPayouts = completedPayouts.filter(p => !p.isTestMode);
 const completedPayoutTotal = realPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
-// Calculate total - from payout records + estimate from orders without records
-const pendingPayoutRecordsTotal = manualPendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+// Calculate total from all pending payout types
+const pendingArtistTotal = manualPendingPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+const pendingSupplierTotal = pendingSupplierPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+const pendingSellerTotal = pendingSellerPayouts.reduce((sum, p) => sum + (p.amount || 0), 0);
+const pendingPayoutRecordsTotal = pendingArtistTotal + pendingSupplierTotal + pendingSellerTotal;
 const ordersWithoutRecordsTotal = ordersNeedingPayouts
   .filter(o => !orderIdsWithPendingPayouts.has(o.id))
   .reduce((sum, o) => {
@@ -226,9 +330,9 @@ export const prerender = false;
               <th>Date</th>
               <th>Order</th>
               <th>Customer</th>
-              <th>Artist</th>
-              <th>Items</th>
+              <th>To Pay</th>
               <th>Total</th>
+              <th>Fees</th>
               <th>Payment</th>
               <th class="text-right">Actions</th>
             </tr>
@@ -243,24 +347,45 @@ export const prerender = false;
             ) : (
               ordersNeedingPayouts.map(order => {
                 const itemTotal = (order.items || []).reduce((s, i) => s + ((i.price || 0) * (i.quantity || 1)), 0);
-                // Get artist info from pending payouts map (this is the actual payee)
-                const artistInfo = orderArtistMap[order.id] || [];
-                let artistNames = '';
-                if (artistInfo.length > 0) {
-                  artistNames = artistInfo.map(a => a.artistName).join(', ');
-                } else {
-                  // Fallback - look up artist from release
-                  artistNames = [...new Set((order.items || []).map(i => {
-                    // First try to get from releaseId -> artist lookup
+                // Get all payees from unified map
+                const payees = (orderPayeesMap[order.id] || []) as PayeeInfo[];
+                const totalPayoutAmount = payees.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+                // If no payees in map, try fallback lookup for digital items
+                let fallbackPayees: PayeeInfo[] = [];
+                if (payees.length === 0) {
+                  for (const i of (order.items || [])) {
                     const releaseId = i.releaseId || i.productId || i.id;
-                    if (releaseId && releaseArtistMap[releaseId]) {
-                      return releaseArtistMap[releaseId];
+                    let foundName = releaseArtistMap[releaseId];
+                    if (!foundName && i.artistId && artistMap[i.artistId]) {
+                      foundName = artistMap[i.artistId];
                     }
-                    // Fallback to downloads data
-                    if (i.downloads?.artistName) return i.downloads.artistName;
-                    return null;
-                  }).filter(Boolean))].join(', ') || 'Unknown';
+                    if (!foundName && i.downloads?.artistName) {
+                      foundName = i.downloads.artistName;
+                    }
+                    if (foundName && !fallbackPayees.find(p => p.name === foundName)) {
+                      const itemPrice = (i.price || 0) * (i.quantity || 1);
+                      const estimated = itemPrice * 0.81;
+                      fallbackPayees.push({
+                        type: i.type === 'merch' ? 'supplier' : i.type === 'crate' ? 'seller' : 'artist',
+                        id: i.artistId || '',
+                        name: foundName,
+                        email: '',
+                        amount: estimated
+                      });
+                    }
+                  }
                 }
+                const allPayees = payees.length > 0 ? payees : fallbackPayees;
+                const displayPayoutTotal = payees.length > 0 ? totalPayoutAmount : fallbackPayees.reduce((s, p) => s + p.amount, 0);
+
+                // Type colors and icons
+                const typeStyles = {
+                  artist: { color: '#dc2626', bg: '#fef2f2', icon: '🎵' },
+                  supplier: { color: '#2563eb', bg: '#eff6ff', icon: '👕' },
+                  seller: { color: '#7c3aed', bg: '#f5f3ff', icon: '📦' }
+                };
+
                 return (
                   <tr data-order-id={order.id}>
                     <td class="cell-secondary">{formatDate(order.createdAt)}</td>
@@ -276,12 +401,43 @@ export const prerender = false;
                       </div>
                     </td>
                     <td>
-                      <span class="font-bold" style="color: #dc2626;">{artistNames || 'Unknown'}</span>
-                    </td>
-                    <td>
-                      <div style="font-size: 0.875rem;">{(order.items || []).length} item(s)</div>
+                      {allPayees.length === 0 ? (
+                        <span style="color: #dc2626; font-size: 0.875rem;">Unknown</span>
+                      ) : (
+                        <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                          {allPayees.map(payee => {
+                            const style = typeStyles[payee.type];
+                            return (
+                              <div style={`display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.5rem; background: ${style.bg}; border-radius: 4px; font-size: 0.8rem;`}>
+                                <span style="font-size: 0.75rem;">{style.icon}</span>
+                                <span style={`color: ${style.color}; font-weight: 600; flex: 1;`}>{payee.name}</span>
+                                <span style={`color: #16a34a; font-weight: 700;`}>{formatCurrency(payee.amount)}</span>
+                              </div>
+                            );
+                          })}
+                          {allPayees.length > 1 && (
+                            <div style="display: flex; justify-content: flex-end; padding-top: 0.25rem; border-top: 1px dashed #e5e5e5; margin-top: 0.25rem;">
+                              <span style="font-size: 0.75rem; color: #666;">Total:</span>
+                              <span style="font-size: 0.875rem; font-weight: 700; color: #16a34a; margin-left: 0.5rem;">{formatCurrency(displayPayoutTotal)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     <td class="font-bold">{formatCurrency(itemTotal)}</td>
+                    <td>
+                      {(() => {
+                        // Calculate fees - use order.totals if available, otherwise calculate
+                        const freshWaxFee = order.totals?.freshWaxFee ?? (itemTotal * 0.01);
+                        const processingFee = order.totals?.paymentProcessingFee ?? (itemTotal - displayPayoutTotal - freshWaxFee);
+                        return (
+                          <div style="font-size: 0.75rem; line-height: 1.4;">
+                            <div style="color: #666;">FW: {formatCurrency(freshWaxFee)}</div>
+                            <div style="color: #666;">{order.paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}: {formatCurrency(processingFee > 0 ? processingFee : 0)}</div>
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td>
                       <span class="badge badge-info">{order.paymentMethod || 'unknown'}</span>
                     </td>

@@ -148,11 +148,21 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     // Process artist payments via Stripe Connect (same as capture-order.ts)
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
     if (stripeSecretKey && result.orderId) {
+      // Calculate total item count for fair fee splitting across all item types
+      const totalItemCount = (pendingOrder.items || []).length;
+
+      // Calculate order subtotal for processing fee calculation
+      const orderSubtotal = (pendingOrder.items || []).reduce((sum: number, item: any) => {
+        return sum + ((item.price || 0) * (item.quantity || 1));
+      }, 0);
+
       try {
         await processArtistPayments({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items: pendingOrder.items,
+          totalItemCount,
+          orderSubtotal,
           stripeSecretKey,
           env
         });
@@ -166,6 +176,8 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items: pendingOrder.items,
+          totalItemCount,
+          orderSubtotal,
           stripeSecretKey,
           env
         });
@@ -179,6 +191,8 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           items: pendingOrder.items,
+          totalItemCount,
+          orderSubtotal,
           stripeSecretKey,
           env
         });
@@ -247,10 +261,12 @@ async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  totalItemCount: number;
+  orderSubtotal: number;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal } = params;
 
   try {
     // Group items by artist
@@ -294,9 +310,10 @@ async function processArtistPayments(params: {
       // Artist sets full price, fees deducted from that
       // 1% Fresh Wax fee
       const freshWaxFee = itemTotal * 0.01;
-      // PayPal fee: 1.4% + £0.20 (split fixed fee across items)
-      const paypalFee = (itemTotal * 0.014) + (0.20 / items.length);
-      const artistShare = itemTotal - freshWaxFee - paypalFee;
+      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
+      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      const artistShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       if (!artistPayments[artistId]) {
         artistPayments[artistId] = {
@@ -361,10 +378,12 @@ async function processMerchSupplierPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  totalItemCount: number;
+  orderSubtotal: number;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
@@ -420,8 +439,10 @@ async function processMerchSupplierPayments(params: {
       const itemPrice = item.price || 0;
       const itemTotal = itemPrice * (item.quantity || 1);
       const freshWaxFee = itemTotal * 0.05;
-      const paypalFee = (itemTotal * 0.014) + (0.20 / merchItems.length);
-      const supplierShare = itemTotal - freshWaxFee - paypalFee;
+      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
+      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      const supplierShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       if (!supplierPayments[supplierId]) {
         supplierPayments[supplierId] = {
@@ -609,10 +630,12 @@ async function processVinylCrateSellerPayments(params: {
   orderId: string;
   orderNumber: string;
   items: any[];
+  totalItemCount: number;
+  orderSubtotal: number;
   stripeSecretKey: string;
   env: any;
 }) {
-  const { orderId, orderNumber, items, stripeSecretKey, env } = params;
+  const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   const { createPayout, getPayPalConfig } = await import('../../../lib/paypal-payouts');
@@ -673,8 +696,10 @@ async function processVinylCrateSellerPayments(params: {
       const itemPrice = item.price || 0;
       const itemTotal = itemPrice * (item.quantity || 1);
       const freshWaxFee = itemTotal * 0.01;
-      const paypalFee = (itemTotal * 0.014) + (0.20 / crateItems.length);
-      const sellerShare = itemTotal - freshWaxFee - paypalFee;
+      // Processing fee: total order fee (1.4% + £0.20) split equally among all sellers
+      const totalProcessingFee = (orderSubtotal * 0.014) + 0.20;
+      const processingFeePerSeller = totalProcessingFee / totalItemCount;
+      const sellerShare = itemTotal - freshWaxFee - processingFeePerSeller;
 
       if (!sellerPayments[sellerId]) {
         sellerPayments[sellerId] = {
