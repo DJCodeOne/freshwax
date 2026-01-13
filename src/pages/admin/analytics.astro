@@ -1,9 +1,28 @@
 ---
 // /src/pages/admin/analytics.astro
 // Fresh Wax Analytics Dashboard - Unified Admin Design
+// Revenue/fees data from salesLedger (source of truth)
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
+
+// Get environment for service account
+const env = Astro.locals?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+const serviceAccountKey = clientEmail && privateKey ? JSON.stringify({
+  type: 'service_account',
+  project_id: projectId,
+  private_key_id: 'auto',
+  private_key: privateKey.replace(/\\n/g, '\n'),
+  client_email: clientEmail,
+  client_id: '',
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+  token_uri: 'https://oauth2.googleapis.com/token'
+}) : null;
 
 // Get date ranges
 const now = new Date();
@@ -12,27 +31,31 @@ const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-// Fetch all orders for analytics via REST API
-// Use higher limit to ensure we get all orders for accurate analytics
+// Fetch ledger entries (source of truth for revenue)
+let ledgerEntries: any[] = [];
+try {
+  if (serviceAccountKey) {
+    ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+      orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+      limit: 2000
+    });
+  }
+  console.log(`[analytics] Fetched ${ledgerEntries.length} ledger entries`);
+} catch (e) {
+  console.error('Error fetching ledger:', e);
+}
+
+// Also fetch orders for top sellers (uses items data)
 let orders: any[] = [];
-let totalOrdersFetched = 0;
 try {
   const allOrders = await queryCollection('orders', {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-    limit: 2000  // Increased limit to capture all orders
+    limit: 500
   });
-
-  totalOrdersFetched = allOrders.length;
-
-  orders = allOrders.map((data: any) => ({
-    ...data,
-    createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt || Date.now())
-  })).filter((o: any) =>
+  orders = allOrders.filter((o: any) =>
     o.status !== 'cancelled' &&
-    o.paymentMethod !== 'test_mode'  // Exclude test orders from analytics
+    o.paymentMethod !== 'test_mode'
   );
-
-  console.log(`[analytics] Fetched ${totalOrdersFetched} orders, ${orders.length} after filtering`);
 } catch (e) {
   console.error('Error fetching orders:', e);
 }
@@ -50,93 +73,23 @@ try {
   console.error('Error fetching releases:', e);
 }
 
-// Price correction: £2.25 was charged but should show as £2.00 (fees were added on top instead of taken off)
-const correctItemPrice = (price: number) => (price === 2.25 ? 2.00 : price);
-
-// Calculate metrics
-function calculateMetrics(ordersSubset) {
-  const revenue = ordersSubset.reduce((sum, o) => {
-    // PREFER order totals (what was actually charged) over item summing
-    // This is more accurate as it reflects actual payments received
-    let orderTotal = o.totals?.subtotal || o.totals?.total || o.total || o.orderTotal || o.grandTotal || o.amount || 0;
-
-    // If we have a valid order total, use it (prefer subtotal as it excludes fees)
-    if (orderTotal > 0) {
-      return sum + orderTotal;
-    }
-
-    // Fallback: Sum items if no order total available
-    if (o.items && Array.isArray(o.items)) {
-      const itemsTotal = o.items.reduce((itemSum, item) => {
-        // For releases, use actual release price (free releases = £0)
-        const isRelease = (item.type === 'release' || item.type === 'digital' || item.releaseId) &&
-                          item.type !== 'merch' && !item.isPhysical && !item.isMerch;
-
-        let lineTotal = 0;
-        const qty = item.quantity || 1;
-        const actualReleasePrice = (isRelease && item.releaseId) ? (releasesPriceMap[item.releaseId] ?? null) : null;
-
-        // Use actual release price for releases (shows £0 for free downloads)
-        if (isRelease && actualReleasePrice !== null) {
-          lineTotal = correctItemPrice(actualReleasePrice) * qty;
-        } else if (item.price !== undefined && item.price !== null) {
-          lineTotal = correctItemPrice(item.price) * qty;
-        } else if (item.total !== undefined && item.total !== null) {
-          lineTotal = correctItemPrice(item.total); // Already includes quantity
-        }
-        return itemSum + lineTotal;
-      }, 0);
-      return sum + itemsTotal;
-    }
-
-    return sum;
-  }, 0);
-
-  // Calculate fees split by platform
+// Calculate metrics from LEDGER (source of truth)
+function calculateMetricsFromLedger(entries: any[]) {
+  let revenue = 0;
   let stripeFees = 0;
   let paypalFees = 0;
   let freshWaxFees = 0;
 
-  ordersSubset.forEach(o => {
-    const freshWaxFee = o.totals?.freshWaxFee || 0;
-    const serviceFees = o.totals?.serviceFees || 0;
-    const isPayPal = o.paymentMethod === 'paypal' || o.paymentMethod === 'paypal_manual';
-
-    // Fresh Wax fee is always separate
-    freshWaxFees += freshWaxFee;
-
-    // Get processing fee
-    // - If paymentProcessingFee or stripeFee exists, use it
-    // - Otherwise calculate from serviceFees - freshWaxFee
-    let processingFee = o.totals?.paymentProcessingFee || o.totals?.stripeFee || 0;
-    if (!processingFee && serviceFees && freshWaxFee) {
-      // serviceFees = freshWaxFee + processingFee, so processingFee = serviceFees - freshWaxFee
-      processingFee = serviceFees - freshWaxFee;
-    }
-
-    // Processing fee goes to either Stripe or PayPal based on payment method
-    if (isPayPal) {
-      paypalFees += processingFee;
-    } else {
-      stripeFees += processingFee;
-    }
-
-    // Handle legacy orders with only serviceFees (no freshWaxFee breakdown)
-    if (!freshWaxFee && !processingFee && serviceFees) {
-      // Estimate: ~8% is Fresh Wax (1% of subtotal), rest is processing
-      const estimatedFreshWax = serviceFees * 0.08;
-      const estimatedProcessing = serviceFees * 0.92;
-      freshWaxFees += estimatedFreshWax;
-      if (isPayPal) {
-        paypalFees += estimatedProcessing;
-      } else {
-        stripeFees += estimatedProcessing;
-      }
-    }
+  entries.forEach(entry => {
+    // Use actual values from ledger
+    revenue += entry.actualGrossTotal ?? entry.grossTotal ?? 0;
+    stripeFees += entry.stripeFee ?? 0;
+    paypalFees += entry.actualPaypalFee ?? entry.paypalFee ?? 0;
+    freshWaxFees += entry.freshWaxFee ?? 0;
   });
 
   const totalFees = stripeFees + paypalFees + freshWaxFees;
-  const avgOrder = ordersSubset.length > 0 ? revenue / ordersSubset.length : 0;
+  const avgOrder = entries.length > 0 ? revenue / entries.length : 0;
 
   return {
     revenue,
@@ -144,20 +97,23 @@ function calculateMetrics(ordersSubset) {
     stripeFees,
     paypalFees,
     freshWaxFees,
-    orders: ordersSubset.length,
+    orders: entries.length,
     avgOrder
   };
 }
 
-// Filter orders by date range
-const thisMonthOrders = orders.filter(o => o.createdAt >= startOfMonth);
-const lastMonthOrders = orders.filter(o => o.createdAt >= startOfLastMonth && o.createdAt <= endOfLastMonth);
-const thisYearOrders = orders.filter(o => o.createdAt >= startOfYear);
+// Filter ledger entries by date range
+const thisMonthLedger = ledgerEntries.filter(e => new Date(e.timestamp) >= startOfMonth);
+const lastMonthLedger = ledgerEntries.filter(e => {
+  const ts = new Date(e.timestamp);
+  return ts >= startOfLastMonth && ts <= endOfLastMonth;
+});
+const thisYearLedger = ledgerEntries.filter(e => new Date(e.timestamp) >= startOfYear);
 
-const thisMonth = calculateMetrics(thisMonthOrders);
-const lastMonth = calculateMetrics(lastMonthOrders);
-const thisYear = calculateMetrics(thisYearOrders);
-const allTime = calculateMetrics(orders);
+const thisMonth = calculateMetricsFromLedger(thisMonthLedger);
+const lastMonth = calculateMetricsFromLedger(lastMonthLedger);
+const thisYear = calculateMetricsFromLedger(thisYearLedger);
+const allTime = calculateMetricsFromLedger(ledgerEntries);
 
 // Calculate growth percentages
 function calcGrowth(current, previous) {
