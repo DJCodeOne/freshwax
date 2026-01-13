@@ -1,22 +1,46 @@
 ---
 // /src/pages/artist/payouts.astro
 // Artist Payouts Dashboard - View earnings and payout history
+// Source of truth: salesLedger collection
 
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;
 let payouts: any[] = [];
 let pendingPayouts: any[] = [];
+let ledgerEntries: any[] = [];
 let summary = {
   totalEarnings: 0,
   pendingBalance: 0,
   thisMonthEarnings: 0,
-  stripeConnected: false
+  stripeConnected: false,
+  paidOut: 0
 };
+
+// Get service account credentials
+const env = (Astro.locals as any)?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+let serviceAccountKey: string | null = null;
+if (clientEmail && privateKey) {
+  serviceAccountKey = JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
 
 if (partnerId) {
   try {
@@ -24,7 +48,59 @@ if (partnerId) {
     if (partnerDoc) {
       partner = { id: partnerId, ...partnerDoc };
 
-      // Fetch payouts
+      // Query salesLedger for this artist's earnings (source of truth)
+      if (serviceAccountKey) {
+        try {
+          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+            limit: 500
+          });
+
+          // Filter entries where this artist is the submitter (person to be paid)
+          ledgerEntries = allLedgerEntries.filter((e: any) =>
+            e.submitterId === partnerId ||
+            e.artistId === partnerId ||
+            e.artistName === partnerDoc.artistName
+          );
+
+          // Calculate earnings from ledger
+          let totalEarned = 0;
+          let totalPaid = 0;
+          let thisMonthEarned = 0;
+
+          const now = new Date();
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+          ledgerEntries.forEach((entry: any) => {
+            const artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
+            totalEarned += artistPayout;
+
+            if (entry.artistPayoutStatus === 'paid') {
+              totalPaid += entry.artistPayoutPaid || artistPayout;
+            }
+
+            // This month earnings
+            const entryDate = new Date(entry.timestamp);
+            if (entryDate >= monthStart) {
+              thisMonthEarned += artistPayout;
+            }
+          });
+
+          summary.totalEarnings = totalEarned;
+          summary.paidOut = totalPaid;
+          summary.pendingBalance = totalEarned - totalPaid;
+          summary.thisMonthEarnings = thisMonthEarned;
+        } catch (ledgerErr) {
+          console.error('Error fetching ledger entries:', ledgerErr);
+          // Fall back to partner.totalEarnings
+          summary.totalEarnings = partnerDoc.totalEarnings || 0;
+        }
+      } else {
+        // Fallback if no service account
+        summary.totalEarnings = partnerDoc.totalEarnings || 0;
+      }
+
+      // Fetch payouts history (for display)
       payouts = await queryCollection('payouts', {
         filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
         orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
@@ -40,24 +116,14 @@ if (partnerId) {
         orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
       });
 
-      // Calculate summary
-      summary.totalEarnings = partner.totalEarnings || 0;
-      summary.pendingBalance = pendingPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
       summary.stripeConnected = !!partner.stripeConnectId && partner.stripeConnectStatus === 'active';
-
-      // This month earnings
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      summary.thisMonthEarnings = payouts
-        .filter((p: any) => new Date(p.createdAt) >= monthStart && p.status === 'completed')
-        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
     }
   } catch (e) {
     console.error('Error fetching payout data:', e);
   }
 }
 
-// Calculate monthly earnings for the last 6 months
+// Calculate monthly earnings for the last 6 months (from ledger entries)
 const monthlyEarnings: { month: string; year: number; earnings: number; count: number }[] = [];
 const now = new Date();
 for (let i = 0; i < 6; i++) {
@@ -65,18 +131,21 @@ for (let i = 0; i < 6; i++) {
   const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
   const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
 
-  const monthPayouts = payouts.filter((p: any) => {
-    const payoutDate = new Date(p.createdAt);
-    return payoutDate >= monthStart && payoutDate <= monthEnd && p.status === 'completed';
+  // Use ledger entries as source of truth
+  const monthLedgerEntries = ledgerEntries.filter((e: any) => {
+    const entryDate = new Date(e.timestamp);
+    return entryDate >= monthStart && entryDate <= monthEnd;
   });
 
-  const earnings = monthPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+  const earnings = monthLedgerEntries.reduce((sum: number, e: any) => {
+    return sum + (e.artistPayout || e.actualArtistPayout || 0);
+  }, 0);
 
   monthlyEarnings.push({
     month: targetDate.toLocaleDateString('en-GB', { month: 'short' }),
     year: targetDate.getFullYear(),
     earnings: earnings,
-    count: monthPayouts.length
+    count: monthLedgerEntries.length
   });
 }
 
@@ -164,11 +233,11 @@ export const prerender = false;
               </div>
             </div>
 
-            <div class="summary-card month">
-              <div class="card-icon">📅</div>
+            <div class="summary-card paid">
+              <div class="card-icon">✓</div>
               <div class="card-content">
-                <div class="card-value">{formatPrice(summary.thisMonthEarnings)}</div>
-                <div class="card-label">This Month</div>
+                <div class="card-value">{formatPrice(summary.paidOut)}</div>
+                <div class="card-label">Paid Out</div>
               </div>
             </div>
 
@@ -176,21 +245,21 @@ export const prerender = false;
               <div class="card-icon">⏳</div>
               <div class="card-content">
                 <div class="card-value">{formatPrice(summary.pendingBalance)}</div>
-                <div class="card-label">Pending</div>
+                <div class="card-label">Awaiting Payout</div>
               </div>
             </div>
 
-            <div class="summary-card status">
-              <div class="card-icon">{summary.stripeConnected ? '✓' : '⚠️'}</div>
+            <div class="summary-card month">
+              <div class="card-icon">📅</div>
               <div class="card-content">
-                <div class="card-value">{summary.stripeConnected ? 'Active' : 'Setup Required'}</div>
-                <div class="card-label">Stripe Status</div>
+                <div class="card-value">{formatPrice(summary.thisMonthEarnings)}</div>
+                <div class="card-label">This Month</div>
               </div>
             </div>
           </div>
 
           <!-- Monthly Earnings Chart -->
-          {payouts.length > 0 && (
+          {ledgerEntries.length > 0 && (
             <section class="earnings-chart-section">
               <h2>Earnings Overview</h2>
               <p class="section-desc">Your earnings over the last 6 months</p>
@@ -512,6 +581,11 @@ export const prerender = false;
   .summary-card.total {
     border-color: #22c55e;
     background: linear-gradient(to bottom, rgba(22, 163, 74, 0.1), #111827);
+  }
+
+  .summary-card.paid {
+    border-color: #10b981;
+    background: linear-gradient(to bottom, rgba(16, 185, 129, 0.1), #111827);
   }
 
   .summary-card.month {

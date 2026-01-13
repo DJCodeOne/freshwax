@@ -1,23 +1,50 @@
 ---
 // /src/pages/artist/release-stats.astro
 // Release Analytics - Sales, plays, and performance tracking
+// Source of truth: salesLedger collection
 
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
-let partner = null;
+let partner: any = null;
 let releases: any[] = [];
+let ledgerEntries: any[] = [];
 let totals = {
   releases: 0,
   liveReleases: 0,
   pendingReleases: 0,
   plays: 0,
   sales: 0,
-  revenue: 0
+  revenue: 0,
+  earnings: 0
 };
+
+// Get service account credentials
+const env = (Astro.locals as any)?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+let serviceAccountKey: string | null = null;
+if (clientEmail && privateKey) {
+  serviceAccountKey = JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
+
+// Build a map of release sales from ledger
+const releaseSalesMap = new Map<string, { sales: number; revenue: number; earnings: number }>();
 
 if (partnerId) {
   try {
@@ -50,24 +77,74 @@ if (partnerId) {
       }
 
       releases = Array.from(releaseMap.values());
+      const releaseIds = releases.map(r => r.id);
 
-      // Calculate totals
+      // Query salesLedger for accurate sales data (source of truth)
+      if (serviceAccountKey && releaseIds.length > 0) {
+        try {
+          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+            limit: 1000
+          });
+
+          // Filter entries that contain this artist's releases
+          allLedgerEntries.forEach((entry: any) => {
+            const artistItems = (entry.items || []).filter((item: any) =>
+              (item.type === 'release' || item.type === 'track') && releaseIds.includes(item.id)
+            );
+
+            if (artistItems.length > 0) {
+              ledgerEntries.push(entry);
+
+              // Aggregate sales by release ID
+              artistItems.forEach((item: any) => {
+                const existing = releaseSalesMap.get(item.id) || { sales: 0, revenue: 0, earnings: 0 };
+                existing.sales += item.quantity || 1;
+                existing.revenue += item.lineTotal || item.unitPrice || 0;
+                releaseSalesMap.set(item.id, existing);
+              });
+
+              // Add artist payout to totals
+              totals.earnings += entry.artistPayout || entry.actualArtistPayout || 0;
+            }
+          });
+        } catch (ledgerErr) {
+          console.error('Error fetching ledger entries:', ledgerErr);
+        }
+      }
+
+      // Calculate totals using ledger data where available
       releases.forEach(release => {
         totals.plays += release.stats?.plays || release.plays || 0;
-        totals.sales += release.stats?.downloads || release.sales || 0;
-        totals.revenue += (release.stats?.downloads || release.sales || 0) * (release.pricePerSale || release.price || 0);
-        
+
+        // Use ledger data if available, otherwise fall back to release stats
+        const ledgerData = releaseSalesMap.get(release.id);
+        if (ledgerData) {
+          totals.sales += ledgerData.sales;
+          totals.revenue += ledgerData.revenue;
+          // Store ledger sales on the release for display
+          release.ledgerSales = ledgerData.sales;
+          release.ledgerRevenue = ledgerData.revenue;
+        } else {
+          totals.sales += release.stats?.downloads || release.sales || 0;
+          totals.revenue += (release.stats?.downloads || release.sales || 0) * (release.pricePerSale || release.price || 0);
+        }
+
         if (release.status === 'live') {
           totals.liveReleases++;
         } else {
           totals.pendingReleases++;
         }
       });
-      
+
       totals.releases = releases.length;
-      
+
       // Sort by sales descending (best sellers first)
-      releases.sort((a, b) => (b.stats?.downloads || b.sales || 0) - (a.stats?.downloads || a.sales || 0));
+      releases.sort((a, b) => {
+        const aSales = a.ledgerSales ?? a.stats?.downloads ?? a.sales ?? 0;
+        const bSales = b.ledgerSales ?? b.stats?.downloads ?? b.sales ?? 0;
+        return bSales - aSales;
+      });
     }
   } catch (e) {
     console.error('Error fetching release stats:', e);
@@ -185,7 +262,7 @@ export const prerender = false;
                   
                   <div class="release-stats-grid">
                     <div class="stat-item">
-                      <span class="stat-value">{formatNumber(release.stats?.downloads || release.sales || 0)}</span>
+                      <span class="stat-value">{formatNumber(release.ledgerSales ?? release.stats?.downloads ?? release.sales ?? 0)}</span>
                       <span class="stat-label">Sales</span>
                     </div>
                     <div class="stat-item">
@@ -197,7 +274,7 @@ export const prerender = false;
                       <span class="stat-label">Price</span>
                     </div>
                     <div class="stat-item highlight">
-                      <span class="stat-value">{formatPrice((release.stats?.downloads || release.sales || 0) * (release.pricePerSale || release.price || 0))}</span>
+                      <span class="stat-value">{formatPrice(release.ledgerRevenue ?? ((release.stats?.downloads || release.sales || 0) * (release.pricePerSale || release.price || 0)))}</span>
                       <span class="stat-label">Revenue</span>
                     </div>
                   </div>

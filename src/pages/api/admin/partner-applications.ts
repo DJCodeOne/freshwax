@@ -73,25 +73,71 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const applications = await queryCollection('partnerApplications', {
-      filters: [
-        { field: 'status', op: 'EQUAL', value: 'pending' }
-      ],
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-      limit: 50
-    });
+    // Query both collections - pendingRoleRequests (from registration) and partnerApplications (legacy)
+    const [roleRequests, legacyApplications] = await Promise.all([
+      queryCollection('pendingRoleRequests', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'pending' }
+        ],
+        orderBy: { field: 'requestedAt', direction: 'DESCENDING' },
+        limit: 50
+      }).catch(() => []),
+      queryCollection('partnerApplications', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'pending' }
+        ],
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 50
+      }).catch(() => [])
+    ]);
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      applications 
+    // Normalize role requests to match expected format
+    const normalizedRoleRequests = roleRequests.map((req: any) => ({
+      id: req.id,
+      userId: req.userId || req.uid,
+      email: req.email,
+      name: req.displayName || req.artistName || req.businessName || req.storeName,
+      artistName: req.artistName,
+      businessName: req.businessName,
+      storeName: req.storeName,
+      type: req.roleType, // 'artist', 'merchSeller', 'vinylSeller'
+      partnerType: req.roleType,
+      bio: req.bio,
+      description: req.description,
+      links: req.links,
+      website: req.website,
+      location: req.location,
+      discogsUrl: req.discogsUrl,
+      status: req.status,
+      createdAt: req.requestedAt || req.createdAt,
+      source: 'pendingRoleRequests'
+    }));
+
+    // Mark legacy applications with source
+    const normalizedLegacy = legacyApplications.map((app: any) => ({
+      ...app,
+      source: 'partnerApplications'
+    }));
+
+    // Combine and sort by date
+    const allApplications = [...normalizedRoleRequests, ...normalizedLegacy]
+      .sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+
+    return new Response(JSON.stringify({
+      success: true,
+      applications: allApplications
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error('Error fetching partner applications:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
+    return new Response(JSON.stringify({
+      success: false,
       error: 'Failed to fetch applications',
       applications: []
     }), {
@@ -109,27 +155,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const { action, applicationId } = body;
+    const { action, applicationId, source } = body;
 
     if (!applicationId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Application ID required' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Application ID required'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const application = await getDocument('partnerApplications', applicationId);
+    // Try to find in pendingRoleRequests first, then partnerApplications
+    let application = await getDocument('pendingRoleRequests', applicationId);
+    let collectionName = 'pendingRoleRequests';
+
     if (!application) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Application not found' 
+      application = await getDocument('partnerApplications', applicationId);
+      collectionName = 'partnerApplications';
+    }
+
+    if (!application) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Application not found'
       }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Normalize field names from pendingRoleRequests format
+    if (collectionName === 'pendingRoleRequests') {
+      application = {
+        ...application,
+        userId: application.userId || application.uid,
+        partnerType: application.roleType,
+        type: application.roleType,
+        artistName: application.artistName || application.displayName,
+        businessName: application.businessName || application.storeName,
+        createdAt: application.requestedAt || application.createdAt
+      };
     }
 
     if (action === 'approve') {
@@ -149,8 +216,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (partnerType === 'dj') {
           newRoles.dj = true;
         }
-        if (partnerType === 'merchSupplier' || partnerType === 'merch') {
+        if (partnerType === 'merchSupplier' || partnerType === 'merch' || partnerType === 'merchSeller') {
           newRoles.merchSupplier = true;
+        }
+        if (partnerType === 'vinylSeller') {
+          newRoles.vinylSeller = true;
         }
 
         // Update user document with role and approval status
@@ -184,27 +254,59 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Update application status
-      await firestoreWrite('PATCH', `partnerApplications/${applicationId}`, {
+      // Update application status in the correct collection
+      await firestoreWrite('PATCH', `${collectionName}/${applicationId}`, {
         ...application,
         status: 'approved',
         processedAt: new Date().toISOString()
       });
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Application approved' 
+      // Also update the user's pendingRoles if this came from pendingRoleRequests
+      if (collectionName === 'pendingRoleRequests' && application.userId) {
+        const userData = await getDocument('users', application.userId);
+        if (userData?.pendingRoles?.[application.roleType]) {
+          const updatedPendingRoles = { ...userData.pendingRoles };
+          updatedPendingRoles[application.roleType] = {
+            ...updatedPendingRoles[application.roleType],
+            status: 'approved',
+            approvedAt: new Date().toISOString()
+          };
+          await firestoreWrite('PATCH', `users/${application.userId}`, {
+            pendingRoles: updatedPendingRoles
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: 'Application approved'
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
 
     } else if (action === 'deny') {
-      await firestoreWrite('PATCH', `partnerApplications/${applicationId}`, {
+      await firestoreWrite('PATCH', `${collectionName}/${applicationId}`, {
         ...application,
         status: 'denied',
         processedAt: new Date().toISOString()
       });
+
+      // Also update the user's pendingRoles if this came from pendingRoleRequests
+      if (collectionName === 'pendingRoleRequests' && application.userId) {
+        const userData = await getDocument('users', application.userId);
+        if (userData?.pendingRoles?.[application.roleType]) {
+          const updatedPendingRoles = { ...userData.pendingRoles };
+          updatedPendingRoles[application.roleType] = {
+            ...updatedPendingRoles[application.roleType],
+            status: 'denied',
+            deniedAt: new Date().toISOString()
+          };
+          await firestoreWrite('PATCH', `users/${application.userId}`, {
+            pendingRoles: updatedPendingRoles
+          });
+        }
+      }
 
       return new Response(JSON.stringify({ 
         success: true, 

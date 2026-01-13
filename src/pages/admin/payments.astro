@@ -184,6 +184,25 @@ const recentOrders = await queryCollection('orders', {
   limit: 100
 });
 
+// Query salesLedger for accurate fee and payout data (source of truth)
+let ledgerEntries: Record<string, any>[] = [];
+const ledgerByOrderId: Record<string, any> = {};
+try {
+  ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+    orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+    limit: 500
+  });
+  // Index by orderId for quick lookups
+  for (const entry of ledgerEntries) {
+    if (entry.orderId) {
+      ledgerByOrderId[entry.orderId] = entry;
+    }
+  }
+  console.log('[payments] Loaded', ledgerEntries.length, 'ledger entries');
+} catch (err) {
+  console.error('[payments] Error fetching ledger:', err);
+}
+
 // Fetch artists to map artistId -> artistName
 const artists = await queryCollection('artists', { limit: 200 });
 const artistMap: Record<string, string> = {};
@@ -440,13 +459,17 @@ export const prerender = false;
                     <td class="font-bold">{formatCurrency(itemTotal)}</td>
                     <td>
                       {(() => {
-                        // Calculate fees - use order.totals if available, otherwise calculate
-                        const freshWaxFee = order.totals?.freshWaxFee ?? (itemTotal * 0.01);
-                        const processingFee = order.totals?.paymentProcessingFee ?? (itemTotal - displayPayoutTotal - freshWaxFee);
+                        // Use ledger data if available (source of truth)
+                        const ledger = ledgerByOrderId[order.id];
+                        const freshWaxFee = ledger?.freshWaxFee ?? order.totals?.freshWaxFee ?? (itemTotal * 0.01);
+                        const stripeFee = ledger?.stripeFee ?? order.totals?.stripeFee ?? 0;
+                        const paypalFee = ledger?.actualPaypalFee ?? ledger?.paypalFee ?? order.totals?.paypalFee ?? 0;
+                        const processingFee = order.paymentMethod === 'paypal' ? paypalFee : stripeFee;
                         return (
                           <div style="font-size: 0.75rem; line-height: 1.4;">
                             <div style="color: #666;">FW: {formatCurrency(freshWaxFee)}</div>
-                            <div style="color: #666;">{order.paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}: {formatCurrency(processingFee > 0 ? processingFee : 0)}</div>
+                            <div style="color: #666;">{order.paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'}: {formatCurrency(processingFee)}</div>
+                            {ledger && <div style="color: #16a34a; font-size: 0.65rem;">✓ Ledger</div>}
                           </div>
                         );
                       })()}

@@ -8,7 +8,24 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 import { getAdminUids } from '../../lib/admin';
+
+// Service account for ledger queries
+const env = Astro.locals?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+const serviceAccountKey = clientEmail && privateKey ? JSON.stringify({
+  type: 'service_account',
+  project_id: projectId,
+  private_key_id: 'auto',
+  private_key: privateKey.replace(/\\n/g, '\n'),
+  client_email: clientEmail,
+  client_id: '',
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+  token_uri: 'https://oauth2.googleapis.com/token'
+}) : null;
 
 // Check for partnerId cookie first, then fall back to userId or customerId
 let partnerId = Astro.cookies.get('partnerId')?.value || '';
@@ -57,10 +74,46 @@ if (partnerId) {
       partner = { id: partnerId, ...partnerDoc };
       console.log('[Partner Dashboard] Found in artists:', partner.artistName);
 
-      // Fetch earnings stats
-      stats.totalEarnings = partnerDoc.totalEarnings || 0;
-      stats.pendingBalance = partnerDoc.pendingBalance || 0;
+      // Fetch earnings from salesLedger (source of truth)
       stats.stripeConnected = !!partnerDoc.stripeConnectId && partnerDoc.stripeConnectStatus === 'active';
+
+      // Query ledger for this artist's earnings
+      if (serviceAccountKey) {
+        try {
+          const ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            limit: 500
+          });
+          // Filter for entries where this artist is the submitter/recipient
+          const artistEntries = ledgerEntries.filter((e: any) =>
+            e.artistId === partnerId ||
+            e.submitterId === partnerId ||
+            e.artistName === partnerDoc.artistName
+          );
+
+          // Calculate earnings from ledger
+          let totalPaid = 0;
+          let pendingAmount = 0;
+          artistEntries.forEach((entry: any) => {
+            if (entry.artistPayoutStatus === 'paid') {
+              totalPaid += entry.artistPayoutNet || entry.artistPayout || 0;
+            } else if (entry.artistPayoutStatus === 'pending') {
+              pendingAmount += entry.artistPayout || 0;
+            }
+          });
+
+          stats.totalEarnings = totalPaid;
+          stats.pendingBalance = pendingAmount;
+        } catch (e) {
+          console.error('[Partner Dashboard] Error fetching ledger:', e);
+          // Fallback to stored values
+          stats.totalEarnings = partnerDoc.totalEarnings || 0;
+          stats.pendingBalance = partnerDoc.pendingBalance || 0;
+        }
+      } else {
+        // Fallback if no service account
+        stats.totalEarnings = partnerDoc.totalEarnings || 0;
+        stats.pendingBalance = partnerDoc.pendingBalance || 0;
+      }
     } else {
       // Fallback: check users collection for partner info
       const userData = await getDocument('users', partnerId);

@@ -2,16 +2,38 @@
 // /src/pages/artist/merch-analytics.astro
 // Merch Supplier Analytics Dashboard (Read Only)
 // For partners with isMerchSupplier role to view sales trends and insights
+// Source of truth: salesLedger collection
 
 export const prerender = false;
 
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 
 // Get partner from session
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;
 let orders: any[] = [];
 let products: any[] = [];
+
+// Get service account credentials
+const env = (Astro.locals as any)?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+let serviceAccountKey: string | null = null;
+if (clientEmail && privateKey) {
+  serviceAccountKey = JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
 
 if (partnerId) {
   try {
@@ -53,15 +75,42 @@ if (partnerId) {
       const productIds = merchProducts.map(p => p.id);
       products = merchProducts;
 
-      // Fetch orders containing this supplier's products
-      if (productIds.length > 0) {
-        // Query orders (REST API doesn't support != so we filter client-side)
+      // Query salesLedger for merch orders (source of truth)
+      if (serviceAccountKey && productIds.length > 0) {
+        try {
+          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+            limit: 500
+          });
+
+          // Filter entries that contain merch items from this supplier
+          allLedgerEntries.forEach((entry: any) => {
+            const merchItems = (entry.items || []).filter((item: any) =>
+              item.type === 'merch' && (productIds.includes(item.id) || item.supplierId === partnerId)
+            );
+
+            if (merchItems.length > 0) {
+              orders.push({
+                id: entry.orderId || entry.id,
+                createdAt: new Date(entry.timestamp),
+                status: entry.orderStatus || 'completed',
+                items: merchItems,
+                total: merchItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice * item.quantity || 0), 0)
+              });
+            }
+          });
+        } catch (ledgerErr) {
+          console.error('Error fetching ledger entries:', ledgerErr);
+        }
+      }
+
+      // Fallback: If no ledger data, use orders collection
+      if (orders.length === 0 && productIds.length > 0) {
         const allOrders = await queryCollection('orders', {
           orderBy: { field: 'createdAt', direction: 'DESCENDING' },
           limit: 500
         });
 
-        // Filter orders to only include items from this supplier
         allOrders.filter(order => order.status !== 'cancelled').forEach(order => {
           const supplierItems = (order.items || []).filter((item: any) =>
             productIds.includes(item.productId) || item.supplierId === partnerId

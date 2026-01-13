@@ -454,11 +454,41 @@ const firebaseConfig = {
           // Use consolidated API endpoint (single call instead of multiple Firebase reads)
           const profileResponse = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
           const profile = await profileResponse.json();
-          
+
           console.log('[Login] User profile response:', profile);
           console.log('[Login] User UID:', user.uid);
           console.log('[Login] isAdmin:', profile.isAdmin);
-          
+
+          // If user doesn't exist in Firestore, create them (handles orphaned Auth accounts)
+          if (!profile.success || profile.error === 'User not found') {
+            console.log('[Login] User not found in Firestore, creating document...');
+            const userData = {
+              email: user.email,
+              displayName: user.displayName || user.email.split('@')[0],
+              fullName: user.displayName || '',
+              roles: {
+                customer: true,
+                dj: true,
+                artist: false,
+                merchSupplier: false,
+                vinylSeller: false,
+                admin: false
+              },
+              permissions: {
+                canBuy: true,
+                canComment: true,
+                canRate: true
+              },
+              approved: false,
+              suspended: false,
+              createdAt: serverTimestamp(),
+              registeredAt: serverTimestamp(),
+              syncedFromAuth: true
+            };
+            await setDoc(doc(db, 'users', user.uid), userData);
+            console.log('[Login] Created missing user document');
+          }
+
           // Cache the profile in sessionStorage for future use
           if (profile.success) {
             try {
