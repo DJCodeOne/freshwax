@@ -24,12 +24,12 @@ for (const release of allReleases) {
   releasesByLabel[label].push(release);
 }
 
-// Sort each label's releases by date
+// Sort each label's releases by catalog/label code
 for (const label of Object.keys(releasesByLabel)) {
   releasesByLabel[label].sort((a, b) => {
-    const dateA = new Date(a.releaseDate || 0).getTime();
-    const dateB = new Date(b.releaseDate || 0).getTime();
-    return dateB - dateA;
+    const codeA = a.catalogNumber || a.labelCode || '';
+    const codeB = b.catalogNumber || b.labelCode || '';
+    return codeA.localeCompare(codeB);
   });
 }
 

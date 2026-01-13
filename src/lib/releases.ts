@@ -294,9 +294,9 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
 
     Object.keys(releasesByLabel).forEach(label => {
       releasesByLabel[label].sort((a, b) => {
-        const dateA = new Date(a.releaseDate || 0).getTime();
-        const dateB = new Date(b.releaseDate || 0).getTime();
-        return dateB - dateA;
+        const codeA = a.catalogNumber || a.labelCode || '';
+        const codeB = b.catalogNumber || b.labelCode || '';
+        return codeA.localeCompare(codeB);
       });
     });
 
@@ -378,7 +378,11 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
     const filtered = allCached.filter((release: any) => {
       const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
       return releaseLabel.toLowerCase() === labelName.toLowerCase();
-    }).sort((a: any, b: any) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+    }).sort((a: any, b: any) => {
+      const codeA = a.catalogNumber || a.labelCode || '';
+      const codeB = b.catalogNumber || b.labelCode || '';
+      return codeA.localeCompare(codeB);
+    });
 
     log.info(`[getReleasesByLabel] Found ${filtered.length} releases for "${labelName}" from cache`);
     setCache(cacheKey, filtered, CACHE_TTL.BY_LABEL);
@@ -423,7 +427,11 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
     }
 
     const releases = Array.from(releaseMap.values());
-    releases.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+    releases.sort((a, b) => {
+      const codeA = a.catalogNumber || a.labelCode || '';
+      const codeB = b.catalogNumber || b.labelCode || '';
+      return codeA.localeCompare(codeB);
+    });
 
     log.info(`[getReleasesByLabel] Found ${releases.length} releases for "${labelName}"`);
 

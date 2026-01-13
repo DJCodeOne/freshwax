@@ -38,11 +38,11 @@ if (partnerId) {
 
       releases = Array.from(releaseMap.values());
 
-      // Sort by createdAt descending
+      // Sort by catalog/label code (e.g., ULR001, ULR002)
       releases.sort((a, b) => {
-        const dateA = a.createdAt || a.uploadedAt || '';
-        const dateB = b.createdAt || b.uploadedAt || '';
-        return String(dateB).localeCompare(String(dateA));
+        const codeA = a.catalogNumber || a.labelCode || '';
+        const codeB = b.catalogNumber || b.labelCode || '';
+        return String(codeA).localeCompare(String(codeB));
       });
     }
   } catch (e) {

@@ -527,11 +527,11 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
     });
   }
 
-  // Sort by releaseDate client-side
+  // Sort by catalog/label code
   releases.sort((a, b) => {
-    const dateA = new Date(a.releaseDate || 0).getTime();
-    const dateB = new Date(b.releaseDate || 0).getTime();
-    return dateB - dateA;
+    const codeA = a.catalogNumber || a.labelCode || '';
+    const codeB = b.catalogNumber || b.labelCode || '';
+    return codeA.localeCompare(codeB);
   });
 
   setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
