@@ -167,43 +167,32 @@ export const prerender = false;
       <h2>PayPal Account</h2>
     </div>
     <div class="card-body">
-      <div class="stats-grid cols-4" style="margin-bottom: 0;">
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">Total Received</div>
-          <div class="stat-value">{formatCurrency(paypalBalance.actualGross)}</div>
-          <div class="stat-detail">From customers</div>
-        </div>
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">PayPal Fees</div>
-          <div class="stat-value" style="color: var(--text-muted);">-{formatCurrency(paypalBalance.actualFees)}</div>
-          <div class="stat-detail">Transaction fees</div>
-        </div>
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">Net Deposited</div>
-          <div class="stat-value">{formatCurrency(paypalBalance.actualNet)}</div>
-          <div class="stat-detail">After PP fees</div>
-        </div>
-        <div class="stat-card success" style="border-color: var(--accent-green);">
-          <div class="stat-label">Current Balance</div>
-          <div class="stat-value" style="color: var(--accent-green);">{formatCurrency(paypalBalance.currentBalance)}</div>
-          <div class="stat-detail">In PayPal now</div>
-        </div>
-      </div>
-      <div class="stats-grid cols-3" style="margin-top: 1rem; margin-bottom: 0;">
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">Artist Payouts</div>
-          <div class="stat-value" style="color: var(--text-muted);">-{formatCurrency(paypalBalance.artistPayouts)}</div>
-          <div class="stat-detail">Paid to artists</div>
-        </div>
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">Payout Fees</div>
-          <div class="stat-value" style="color: var(--text-muted);">-{formatCurrency(paypalBalance.payoutFees)}</div>
-          <div class="stat-detail">PP send fees</div>
-        </div>
-        <div class="stat-card" style="border-color: var(--accent-yellow);">
-          <div class="stat-label">Pending Payouts</div>
-          <div class="stat-value" style="color: var(--accent-yellow);">{formatCurrency(paypalBalance.pendingPayouts)}</div>
-          <div class="stat-detail">Owed to artists</div>
+      <div class="ledger-summary">
+        <div class="ledger-row">
+          <div class="ledger-item">
+            <span class="ledger-label">Received</span>
+            <span class="ledger-value">{formatCurrency(paypalBalance.actualGross)}</span>
+          </div>
+          <div class="ledger-item">
+            <span class="ledger-label">PP Fees</span>
+            <span class="ledger-value muted">-{formatCurrency(paypalBalance.actualFees)}</span>
+          </div>
+          <div class="ledger-item">
+            <span class="ledger-label">Net</span>
+            <span class="ledger-value">{formatCurrency(paypalBalance.actualNet)}</span>
+          </div>
+          <div class="ledger-item">
+            <span class="ledger-label">Paid Out</span>
+            <span class="ledger-value muted">-{formatCurrency(paypalBalance.artistPayouts + paypalBalance.payoutFees)}</span>
+          </div>
+          <div class="ledger-item highlight-green">
+            <span class="ledger-label">Balance</span>
+            <span class="ledger-value">{formatCurrency(paypalBalance.currentBalance)}</span>
+          </div>
+          <div class="ledger-item highlight-yellow">
+            <span class="ledger-label">Pending</span>
+            <span class="ledger-value">{formatCurrency(paypalBalance.pendingPayouts)}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -211,46 +200,46 @@ export const prerender = false;
 
   <!-- Summary Stats -->
   <div class="stats-grid cols-4 mb-4">
-    <div class="stat-card">
+    <div class="stat-card compact">
       <div class="stat-label">This Month</div>
       <div class="stat-value">{formatCurrency(totals.thisMonth.gross)}</div>
       <div class="stat-detail">{totals.thisMonth.orders} orders | Net: {formatCurrency(totals.thisMonth.net)}</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card compact">
       <div class="stat-label">Last Month</div>
       <div class="stat-value">{formatCurrency(totals.lastMonth.gross)}</div>
       <div class="stat-detail">{totals.lastMonth.orders} orders | Net: {formatCurrency(totals.lastMonth.net)}</div>
     </div>
-    <div class="stat-card success">
+    <div class="stat-card compact success">
       <div class="stat-label">Year to Date</div>
       <div class="stat-value">{formatCurrency(totals.thisYear.gross)}</div>
       <div class="stat-detail">{totals.thisYear.orders} orders | Net: {formatCurrency(totals.thisYear.net)}</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card compact">
       <div class="stat-label">All Time</div>
       <div class="stat-value">{formatCurrency(totals.allTime.gross)}</div>
       <div class="stat-detail">{totals.allTime.orders} orders | Net: {formatCurrency(totals.allTime.net)}</div>
     </div>
   </div>
 
-  <!-- Fee Breakdown -->
+  <!-- Fee Breakdown - Compact -->
   <div class="card mb-4">
-    <div class="card-header">
-      <h2>Fee Breakdown (All Time)</h2>
+    <div class="card-header" style="padding: 0.75rem 1rem;">
+      <h2 style="font-size: 0.9rem;">Fee Breakdown (All Time)</h2>
     </div>
-    <div class="card-body">
-      <div class="stats-grid cols-3" style="margin-bottom: 0;">
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">Stripe Fees</div>
-          <div class="stat-value">{formatCurrency(totals.allTime.stripeFees)}</div>
+    <div class="card-body" style="padding: 0.75rem 1rem;">
+      <div class="ledger-row">
+        <div class="ledger-item">
+          <span class="ledger-label">Stripe</span>
+          <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.stripeFees)}</span>
         </div>
-        <div class="stat-card" style="border-color: var(--border-light);">
-          <div class="stat-label">PayPal Fees</div>
-          <div class="stat-value">{formatCurrency(totals.allTime.paypalFees)}</div>
+        <div class="ledger-item">
+          <span class="ledger-label">PayPal</span>
+          <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.paypalFees)}</span>
         </div>
-        <div class="stat-card" style="border-color: var(--accent-red);">
-          <div class="stat-label">Fresh Wax Revenue</div>
-          <div class="stat-value" style="color: var(--accent-red);">{formatCurrency(totals.allTime.fwFees)}</div>
+        <div class="ledger-item highlight-red">
+          <span class="ledger-label">FW Revenue</span>
+          <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.fwFees)}</span>
         </div>
       </div>
     </div>
@@ -347,6 +336,67 @@ export const prerender = false;
 </AdminLayout>
 
 <style>
+  /* Ledger summary row */
+  .ledger-summary {
+    padding: 0.5rem 0;
+  }
+  .ledger-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: center;
+  }
+  .ledger-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    background: var(--bg-darker, rgba(0,0,0,0.2));
+  }
+  .ledger-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .ledger-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  .ledger-value.muted {
+    color: var(--text-muted);
+  }
+  .ledger-item.highlight-green {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+  }
+  .ledger-item.highlight-green .ledger-value {
+    color: #22c55e;
+  }
+  .ledger-item.highlight-yellow {
+    background: rgba(234, 179, 8, 0.15);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+  }
+  .ledger-item.highlight-yellow .ledger-value {
+    color: #eab308;
+  }
+  .ledger-item.highlight-red {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .ledger-item.highlight-red .ledger-value {
+    color: #ef4444;
+  }
+
+  /* Compact stat cards */
+  .stat-card.compact {
+    padding: 0.75rem 1rem;
+  }
+  .stat-card.compact .stat-value {
+    font-size: 1.25rem;
+  }
+
   .badge {
     display: inline-block;
     padding: 0.2rem 0.5rem;
