@@ -43,6 +43,7 @@ interface Props {
   recordLabel?: string;
   copyrightHolder?: string;
   labelCode?: string;
+  catalogNumber?: string;
   genre?: string;
   coverArtUrl?: string;
   additionalArtwork?: string[];
@@ -106,6 +107,7 @@ const {
   recordLabel = '',
   copyrightHolder = '',
   labelCode = '',
+  catalogNumber = '',
   genre = '',
   coverArtUrl = '/place-holder.webp',
   additionalArtwork = [],
@@ -132,6 +134,9 @@ const {
 
 // Use whichever label field is available
 const displayLabel = labelName || recordLabel || copyrightHolder || '';
+
+// Use catalogNumber if available, fallback to labelCode
+const displayCatalogNumber = catalogNumber || labelCode || '';
 
 // Handle nested pricing structure - use explicit checks for 0 values
 const finalDigitalPrice = pricing?.digital !== undefined && pricing?.digital !== null
@@ -377,12 +382,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
         </div>
         
         <div class="flex items-center gap-2 text-base text-gray-300 mb-4">
-          {labelCode && (
-            <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{labelCode}</span>
+          {displayCatalogNumber && (
+            <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{displayCatalogNumber}</span>
           )}
           {genre && (
             <>
-              {labelCode && <span class="text-gray-400">•</span>}
+              {displayCatalogNumber && <span class="text-gray-400">•</span>}
               <span class="text-sm px-2 py-1 bg-gray-700 text-white rounded font-medium">{genre}</span>
             </>
           )}
