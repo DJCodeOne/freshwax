@@ -34,6 +34,7 @@ const {
   releaseName = 'Untitled Release',
   labelName = '',
   labelCode = '',
+  catalogNumber = '',
   genre = '',
   coverArtUrl = '/place-holder.webp',
   additionalArtwork = [],
@@ -380,10 +381,10 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                     <p class="text-sm md:text-base text-white font-bold">{displayGenre}</p>
                   </div>
                 )}
-                {labelCode && (
+                {(catalogNumber || labelCode) && (
                   <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
                     <p class="text-xs md:text-sm text-gray-300 uppercase font-black mb-1">Catalogue</p>
-                    <p class="text-sm md:text-base text-white font-bold">{labelCode}</p>
+                    <p class="text-sm md:text-base text-white font-bold">{catalogNumber || labelCode}</p>
                   </div>
                 )}
                 <div class="bg-gradient-to-r from-gray-700 to-gray-600 p-2 md:p-3 border-2 border-gray-500 shadow-lg rounded-lg">
