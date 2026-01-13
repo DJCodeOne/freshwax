@@ -574,7 +574,7 @@ const adminUids = getAdminUids();
           updateData['pendingRoles.artist.status'] = 'approved';
           updateData['pendingRoles.artist.approvedAt'] = serverTimestamp();
         } else if (roleType === 'merchSeller') {
-          updateData['roles.merchSeller'] = true;
+          updateData['roles.merchSupplier'] = true;  // Use standardized field name
           updateData['approved'] = true;
           updateData['partnerInfo.approved'] = true;
           updateData['pendingRoles.merchSeller.status'] = 'approved';

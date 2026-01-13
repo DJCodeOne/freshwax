@@ -9,7 +9,7 @@ import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
-import { recordSale } from '../../../lib/sales-ledger';
+import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;
 
@@ -1166,31 +1166,76 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] Order ID:', result.orderId);
 
       // Record to sales ledger (source of truth for analytics)
+      // Look up seller info for ALL items so multi-seller orders are handled correctly
       try {
-        const subtotal = parseFloat(metadata.subtotal) || (session.amount_total / 100);
         const shippingAmount = parseFloat(metadata.shipping) || 0;
         const serviceFees = parseFloat(metadata.serviceFees) || 0;
         const freshWaxFee = parseFloat(metadata.freshWaxFee) || 0;
         // Estimate Stripe fee: 1.5% + £0.20 for UK cards (average)
         const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.015 + 0.20);
 
-        await recordSale({
+        // Enrich items with seller info from release/product lookup
+        const enrichedItems = await Promise.all(items.map(async (item: any) => {
+          const releaseId = item.releaseId || item.productId || item.id;
+          let submitterId = null;
+          let submitterEmail = null;
+          let artistName = item.artist || item.artistName || null;
+
+          // Look up release to get submitter info
+          if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
+            try {
+              const release = await getDocument('releases', releaseId);
+              if (release) {
+                submitterId = release.submitterId || release.uploadedBy || release.userId || null;
+                submitterEmail = release.submitterEmail || release.metadata?.email || null;
+                artistName = release.artistName || release.artist || artistName;
+                console.log(`[Stripe Webhook] Item ${item.name}: seller=${submitterId}`);
+              }
+            } catch (lookupErr) {
+              console.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
+            }
+          }
+
+          // For merch items, look up the merch document for seller info
+          if (item.type === 'merch' && item.productId) {
+            try {
+              const merch = await getDocument('merch', item.productId);
+              if (merch) {
+                submitterId = merch.sellerId || merch.userId || merch.createdBy || null;
+                submitterEmail = merch.sellerEmail || null;
+                artistName = merch.sellerName || merch.brandName || artistName;
+                console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}`);
+              }
+            } catch (lookupErr) {
+              console.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
+            }
+          }
+
+          return {
+            ...item,
+            submitterId,
+            submitterEmail,
+            artistName
+          };
+        }));
+
+        // Use multi-seller recording to create per-seller ledger entries
+        await recordMultiSellerSale({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           customerId: metadata.customer_userId || null,
           customerEmail: metadata.customer_email,
-          subtotal,
-          shipping: shippingAmount,
           grossTotal: session.amount_total / 100,
+          shipping: shippingAmount,
           stripeFee: Math.round(stripeFee * 100) / 100,
           freshWaxFee,
           paymentMethod: 'stripe',
           paymentId: session.payment_intent as string,
-          items,
           hasPhysical: metadata.hasPhysicalItems === 'true',
-          hasDigital: items.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track')
+          hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+          items: enrichedItems
         });
-        console.log('[Stripe Webhook] ✅ Sale recorded to ledger');
+        console.log('[Stripe Webhook] ✅ Sale recorded to ledger (per-seller entries created)');
       } catch (ledgerErr) {
         console.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
         // Don't fail the order, ledger is supplementary

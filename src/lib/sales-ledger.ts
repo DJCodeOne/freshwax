@@ -19,6 +19,12 @@ export interface LedgerEntry {
   customerId: string | null;
   customerEmail: string;
 
+  // Artist/Submitter (for payout tracking)
+  artistId?: string | null;       // User ID of the artist to be paid
+  artistName?: string | null;     // Display name
+  submitterId?: string | null;    // User ID who submitted (usually same as artistId)
+  submitterEmail?: string | null; // Email for payout notifications
+
   // Revenue breakdown
   subtotal: number;      // Product/item total before fees
   shipping: number;      // Shipping cost
@@ -78,6 +84,11 @@ export async function recordSale(params: {
   items: any[];
   hasPhysical?: boolean;
   hasDigital?: boolean;
+  // Artist/submitter info for payout tracking
+  artistId?: string | null;
+  artistName?: string | null;
+  submitterId?: string | null;
+  submitterEmail?: string | null;
 }): Promise<{ success: boolean; ledgerId?: string; error?: string }> {
   try {
     const now = new Date();
@@ -109,7 +120,10 @@ export async function recordSale(params: {
       };
     });
 
-    const entry: LedgerEntry = {
+    // Calculate artist payout (net revenue after all fees)
+    const artistPayout = netRevenue;
+
+    const entry: LedgerEntry & { artistPayout?: number; artistPayoutStatus?: string } = {
       orderId: params.orderId,
       orderNumber: params.orderNumber,
       timestamp: now.toISOString(),
@@ -118,6 +132,12 @@ export async function recordSale(params: {
       day: now.getDate(),
       customerId: params.customerId || null,
       customerEmail: params.customerEmail,
+      // Artist/submitter info
+      artistId: params.artistId || null,
+      artistName: params.artistName || null,
+      submitterId: params.submitterId || null,
+      submitterEmail: params.submitterEmail || null,
+      // Revenue
       subtotal: params.subtotal,
       shipping: params.shipping || 0,
       discount: params.discount || 0,
@@ -127,6 +147,10 @@ export async function recordSale(params: {
       freshWaxFee,
       totalFees,
       netRevenue,
+      // Artist payout tracking
+      artistPayout,
+      artistPayoutStatus: 'pending',
+      // Payment info
       paymentMethod: params.paymentMethod,
       paymentId: params.paymentId || null,
       currency: params.currency || 'GBP',
@@ -189,6 +213,158 @@ export async function getLedgerEntries(options: {
   } catch (error) {
     console.error('[sales-ledger] Error fetching entries:', error);
     return [];
+  }
+}
+
+/**
+ * Record a multi-seller order to the sales ledger
+ * Creates separate ledger entries for each seller/artist
+ */
+export async function recordMultiSellerSale(params: {
+  orderId: string;
+  orderNumber: string;
+  customerId?: string | null;
+  customerEmail: string;
+  grossTotal: number;
+  shipping?: number;
+  stripeFee?: number;
+  paypalFee?: number;
+  freshWaxFee?: number;
+  paymentMethod: LedgerEntry['paymentMethod'];
+  paymentId?: string | null;
+  currency?: string;
+  hasPhysical?: boolean;
+  hasDigital?: boolean;
+  // Items with seller info - each item should have submitterId from release lookup
+  items: Array<{
+    id?: string;
+    releaseId?: string;
+    productId?: string;
+    name?: string;
+    title?: string;
+    type?: string;
+    price: number;
+    quantity?: number;
+    artist?: string;
+    artistName?: string;
+    submitterId?: string | null;
+    submitterEmail?: string | null;
+  }>;
+}): Promise<{ success: boolean; ledgerIds?: string[]; error?: string }> {
+  try {
+    const now = new Date();
+    const ledgerIds: string[] = [];
+
+    // Group items by seller (submitterId)
+    const sellerGroups: Map<string, typeof params.items> = new Map();
+    const unknownSellerItems: typeof params.items = [];
+
+    for (const item of params.items) {
+      const sellerId = item.submitterId;
+      if (sellerId) {
+        if (!sellerGroups.has(sellerId)) {
+          sellerGroups.set(sellerId, []);
+        }
+        sellerGroups.get(sellerId)!.push(item);
+      } else {
+        unknownSellerItems.push(item);
+      }
+    }
+
+    // Calculate order totals for proportional fee distribution
+    const orderSubtotal = params.items.reduce((sum, item) =>
+      sum + (item.price * (item.quantity || 1)), 0);
+    const totalFees = (params.stripeFee || 0) + (params.paypalFee || 0) + (params.freshWaxFee || 0);
+
+    // Create ledger entry for each seller
+    for (const [sellerId, sellerItems] of sellerGroups) {
+      // Calculate this seller's portion
+      const sellerSubtotal = sellerItems.reduce((sum, item) =>
+        sum + (item.price * (item.quantity || 1)), 0);
+      const sellerProportion = orderSubtotal > 0 ? sellerSubtotal / orderSubtotal : 0;
+
+      // Proportional fees
+      const sellerStripeFee = (params.stripeFee || 0) * sellerProportion;
+      const sellerPaypalFee = (params.paypalFee || 0) * sellerProportion;
+      const sellerFreshWaxFee = (params.freshWaxFee || 0) * sellerProportion;
+      const sellerTotalFees = sellerStripeFee + sellerPaypalFee + sellerFreshWaxFee;
+      const sellerNetRevenue = sellerSubtotal - sellerTotalFees;
+
+      // Get seller info from first item
+      const firstItem = sellerItems[0];
+      const artistName = firstItem.artist || firstItem.artistName || null;
+      const submitterEmail = firstItem.submitterEmail || null;
+
+      // Process items for summary
+      const itemsSummary = sellerItems.map(item => {
+        const type = item.type === 'merch' ? 'merch' :
+                     item.type === 'vinyl' ? 'vinyl' :
+                     item.type === 'track' ? 'track' :
+                     item.type === 'release' || item.type === 'digital' || item.releaseId ? 'release' : 'other';
+        return {
+          type: type as 'release' | 'track' | 'merch' | 'vinyl' | 'other',
+          id: item.releaseId || item.productId || item.id || '',
+          title: item.title || item.name || 'Unknown',
+          artist: item.artist || item.artistName || undefined,
+          quantity: item.quantity || 1,
+          unitPrice: item.price || 0,
+          lineTotal: (item.price || 0) * (item.quantity || 1)
+        };
+      });
+
+      const entry: LedgerEntry & { artistPayout: number; artistPayoutStatus: string } = {
+        orderId: params.orderId,
+        orderNumber: params.orderNumber,
+        timestamp: now.toISOString(),
+        year: now.getFullYear(),
+        month: now.getMonth() + 1,
+        day: now.getDate(),
+        customerId: params.customerId || null,
+        customerEmail: params.customerEmail,
+        // Seller info
+        artistId: sellerId,
+        artistName: artistName,
+        submitterId: sellerId,
+        submitterEmail: submitterEmail,
+        // Revenue (this seller's portion)
+        subtotal: sellerSubtotal,
+        shipping: 0, // Shipping handled separately or by platform
+        discount: 0,
+        grossTotal: sellerSubtotal, // Seller's gross is their item total
+        stripeFee: Math.round(sellerStripeFee * 100) / 100,
+        paypalFee: Math.round(sellerPaypalFee * 100) / 100,
+        freshWaxFee: Math.round(sellerFreshWaxFee * 100) / 100,
+        totalFees: Math.round(sellerTotalFees * 100) / 100,
+        netRevenue: Math.round(sellerNetRevenue * 100) / 100,
+        // Artist payout
+        artistPayout: Math.round(sellerNetRevenue * 100) / 100,
+        artistPayoutStatus: 'pending',
+        // Payment info
+        paymentMethod: params.paymentMethod,
+        paymentId: params.paymentId || null,
+        currency: params.currency || 'GBP',
+        itemCount: itemsSummary.length,
+        hasPhysical: itemsSummary.some(i => i.type === 'merch' || i.type === 'vinyl'),
+        hasDigital: itemsSummary.some(i => i.type === 'release' || i.type === 'track'),
+        items: itemsSummary
+      };
+
+      const result = await addDocument('salesLedger', entry);
+      ledgerIds.push(result.id);
+      console.log(`[sales-ledger] Recorded sale for seller ${sellerId}: ${params.orderNumber} - £${sellerSubtotal.toFixed(2)} (net: £${sellerNetRevenue.toFixed(2)})`);
+    }
+
+    // Handle items with unknown seller (platform keeps this revenue)
+    if (unknownSellerItems.length > 0) {
+      const unknownSubtotal = unknownSellerItems.reduce((sum, item) =>
+        sum + (item.price * (item.quantity || 1)), 0);
+      console.log(`[sales-ledger] ${unknownSellerItems.length} items with unknown seller (£${unknownSubtotal.toFixed(2)}) - platform revenue`);
+    }
+
+    return { success: true, ledgerIds };
+  } catch (error) {
+    console.error('[sales-ledger] Error recording multi-seller sale:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 

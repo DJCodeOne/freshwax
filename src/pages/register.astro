@@ -1033,10 +1033,11 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           updatedAt: serverTimestamp(),
           roles: {
             customer: true,
-            djEligible: false,
+            dj: true,  // All users get DJ lobby access by default
             artist: false,
-            merchSeller: false,
-            vinylSeller: false
+            merchSupplier: false,
+            vinylSeller: false,
+            admin: false
           },
           pendingRoles: {}
         };
@@ -1170,10 +1171,11 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           updatedAt: serverTimestamp(),
           roles: {
             customer: true,  // Auto-granted
-            djEligible: false,  // Must meet requirements
+            dj: true,  // All users get DJ lobby access by default
             artist: false,  // Requires approval
-            merchSeller: false,  // Requires approval
-            vinylSeller: false  // Requires approval
+            merchSupplier: false,  // Requires approval
+            vinylSeller: false,  // Requires approval
+            admin: false
           },
           pendingRoles: {}
         };

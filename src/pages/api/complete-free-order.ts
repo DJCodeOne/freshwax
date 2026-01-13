@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { createOrder } from '../../lib/order-utils';
 import { initFirebaseEnv, getDocument, updateDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { recordSale } from '../../lib/sales-ledger';
+import { recordMultiSellerSale } from '../../lib/sales-ledger';
 
 export const prerender = false;
 
@@ -103,22 +103,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (result.success) {
       // Record to sales ledger (even for free/credit orders for accurate tracking)
+      // Look up seller info for ALL items so multi-seller orders are handled correctly
       try {
-        await recordSale({
+        // Enrich items with seller info from release lookup
+        const enrichedItems = await Promise.all((orderData.items || []).map(async (item: any) => {
+          const releaseId = item.releaseId || item.productId || item.id;
+          let submitterId = null;
+          let submitterEmail = null;
+          let artistName = item.artist || item.artistName || null;
+
+          // Look up release to get submitter info
+          if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
+            try {
+              const release = await getDocument('releases', releaseId);
+              if (release) {
+                submitterId = release.submitterId || release.uploadedBy || release.userId || null;
+                submitterEmail = release.submitterEmail || release.metadata?.email || null;
+                artistName = release.artistName || release.artist || artistName;
+                console.log(`[FreeOrder] Item ${item.name}: seller=${submitterId}`);
+              }
+            } catch (lookupErr) {
+              console.error(`[FreeOrder] Failed to lookup release ${releaseId}:`, lookupErr);
+            }
+          }
+
+          return {
+            ...item,
+            submitterId,
+            submitterEmail,
+            artistName
+          };
+        }));
+
+        // Use multi-seller recording to create per-seller ledger entries
+        await recordMultiSellerSale({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           customerId: orderData.customer?.userId || null,
           customerEmail: orderData.customer?.email || '',
-          subtotal: totals.subtotal || 0,
-          shipping: totals.shipping || 0,
           grossTotal: originalTotal,
+          shipping: totals.shipping || 0,
           paymentMethod: appliedCredit > 0 ? 'giftcard' : 'free',
           paymentId: null,
-          items: orderData.items || [],
           hasPhysical: orderData.hasPhysicalItems || false,
-          hasDigital: (orderData.items || []).some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track')
+          hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+          items: enrichedItems
         });
-        console.log('[FreeOrder] Sale recorded to ledger');
+        console.log('[FreeOrder] Sale recorded to ledger (per-seller entries created)');
       } catch (ledgerErr) {
         console.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
       }

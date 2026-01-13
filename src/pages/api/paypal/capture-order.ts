@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
-import { recordSale } from '../../../lib/sales-ledger';
+import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;
 
@@ -222,30 +222,74 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log('[PayPal] Order created:', result.orderNumber);
 
     // Record to sales ledger (source of truth for analytics)
+    // Look up seller info for ALL items so multi-seller orders are handled correctly
     try {
-      const subtotal = orderData.totals?.subtotal || capturedAmount;
-      const shippingAmount = orderData.totals?.shipping || 0;
       const freshWaxFee = orderData.totals?.freshWaxFee || 0;
       // PayPal fee: approximately 2.9% + £0.30
       const paypalFee = (capturedAmount * 0.029) + 0.30;
 
-      await recordSale({
+      // Enrich items with seller info from release lookup
+      const enrichedItems = await Promise.all((orderData.items || []).map(async (item: any) => {
+        const releaseId = item.releaseId || item.productId || item.id;
+        let submitterId = null;
+        let submitterEmail = null;
+        let artistName = item.artist || item.artistName || null;
+
+        // Look up release to get submitter info
+        if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
+          try {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              submitterId = release.submitterId || release.uploadedBy || release.userId || null;
+              submitterEmail = release.submitterEmail || release.metadata?.email || null;
+              artistName = release.artistName || release.artist || artistName;
+              console.log(`[PayPal] Item ${item.name}: seller=${submitterId}`);
+            }
+          } catch (lookupErr) {
+            console.error(`[PayPal] Failed to lookup release ${releaseId}:`, lookupErr);
+          }
+        }
+
+        // For merch items, look up the merch document for seller info
+        if (item.type === 'merch' && item.productId) {
+          try {
+            const merch = await getDocument('merch', item.productId);
+            if (merch) {
+              submitterId = merch.sellerId || merch.userId || merch.createdBy || null;
+              submitterEmail = merch.sellerEmail || null;
+              artistName = merch.sellerName || merch.brandName || artistName;
+              console.log(`[PayPal] Merch ${item.name}: seller=${submitterId}`);
+            }
+          } catch (lookupErr) {
+            console.error(`[PayPal] Failed to lookup merch ${item.productId}:`, lookupErr);
+          }
+        }
+
+        return {
+          ...item,
+          submitterId,
+          submitterEmail,
+          artistName
+        };
+      }));
+
+      // Use multi-seller recording to create per-seller ledger entries
+      await recordMultiSellerSale({
         orderId: result.orderId,
         orderNumber: result.orderNumber || '',
         customerId: orderData.customer?.userId || null,
         customerEmail: orderData.customer?.email || '',
-        subtotal,
-        shipping: shippingAmount,
         grossTotal: capturedAmount,
+        shipping: orderData.totals?.shipping || 0,
         paypalFee: Math.round(paypalFee * 100) / 100,
         freshWaxFee,
         paymentMethod: 'paypal',
         paymentId: paypalOrderId,
-        items: orderData.items || [],
         hasPhysical: orderData.hasPhysicalItems,
-        hasDigital: (orderData.items || []).some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track')
+        hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+        items: enrichedItems
       });
-      console.log('[PayPal] Sale recorded to ledger');
+      console.log('[PayPal] Sale recorded to ledger (per-seller entries created)');
     } catch (ledgerErr) {
       console.error('[PayPal] Failed to record to ledger:', ledgerErr);
       // Don't fail the order, ledger is supplementary

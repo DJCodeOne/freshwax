@@ -182,31 +182,26 @@ if (partnerId) {
 
       // Fetch artist/label stats (only if approved)
       if (effectiveIsArtist && approved) {
-        // Query releases by multiple strategies for reliability
-        const artistEmail = partner.email;
+        // Query releases by user ID fields
         const releaseMap = new Map<string, any>();
 
-        // Strategy 1: Query by artistId (most reliable)
-        const byArtistId = await queryCollection('releases', {
-          filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }]
+        // Query by submitterId (primary - used for payouts)
+        const bySubmitterId = await queryCollection('releases', {
+          filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }]
         });
-        byArtistId.forEach(r => releaseMap.set(r.id, r));
+        bySubmitterId.forEach(r => releaseMap.set(r.id, r));
 
-        // Strategy 2: Query by userId (backup)
-        if (releaseMap.size === 0) {
-          const byUserId = await queryCollection('releases', {
-            filters: [{ field: 'userId', op: 'EQUAL', value: partnerId }]
-          });
-          byUserId.forEach(r => releaseMap.set(r.id, r));
-        }
+        // Query by uploadedBy (fallback)
+        const byUploadedBy = await queryCollection('releases', {
+          filters: [{ field: 'uploadedBy', op: 'EQUAL', value: partnerId }]
+        });
+        byUploadedBy.forEach(r => releaseMap.set(r.id, r));
 
-        // Strategy 3: Query by email (legacy uploads)
-        if (artistEmail && releaseMap.size === 0) {
-          const byEmail = await queryCollection('releases', {
-            filters: [{ field: 'email', op: 'EQUAL', value: artistEmail }]
-          });
-          byEmail.forEach(r => releaseMap.set(r.id, r));
-        }
+        // Query by userId (fallback)
+        const byUserId = await queryCollection('releases', {
+          filters: [{ field: 'userId', op: 'EQUAL', value: partnerId }]
+        });
+        byUserId.forEach(r => releaseMap.set(r.id, r));
 
         const releases = Array.from(releaseMap.values());
         stats.releases = releases.length;

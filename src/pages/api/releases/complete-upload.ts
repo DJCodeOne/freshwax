@@ -103,6 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       createdAt: existingRelease?.createdAt || new Date().toISOString(),
       processedAt: new Date().toISOString(),
       uploadedBy: uploadedBy || existingRelease?.uploadedBy || null,
+      submitterId: uploadedBy || existingRelease?.submitterId || existingRelease?.uploadedBy || null,
       // Metadata fields
       catalogNumber: metadata.catalogNumber || existingRelease?.catalogNumber || '',
       genre: metadata.genre || existingRelease?.genre || '',
