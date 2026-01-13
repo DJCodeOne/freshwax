@@ -85,9 +85,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Apply the update
+    // Apply the update - update the entire roles object to avoid nested field issues
+    const updatedRoles = { ...currentRoles, [role]: newValue };
     await saUpdateDocument(serviceAccountKey, projectId, 'users', userId, {
-      [`roles.${role}`]: newValue
+      roles: updatedRoles
     });
 
     return new Response(JSON.stringify({
