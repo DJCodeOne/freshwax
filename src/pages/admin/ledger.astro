@@ -279,7 +279,7 @@ export const prerender = false;
                 <th class="text-right">Actual Net</th>
                 <th class="text-right">Adj. Net</th>
                 <th class="text-center">Method</th>
-                <th>Artist</th>
+                <th>Pay To</th>
                 <th class="text-right">Payout</th>
                 <th class="text-center">Status</th>
                 <th>Notes</th>
@@ -317,7 +317,8 @@ export const prerender = false;
                     </span>
                   </td>
                   <td style="font-size: 0.8rem;">
-                    {entry.artistName || '-'}
+                    <div>{entry.submitterName || entry.artistName || '-'}</div>
+                    {entry.submitterEmail && <div style="font-size: 0.7rem; color: var(--text-muted);">{entry.submitterEmail}</div>}
                   </td>
                   <td class="text-right">
                     {entry.artistPayout ? formatCurrency(entry.artistPayout) : '-'}
