@@ -141,14 +141,30 @@ if (partnerId) {
         }
       }
 
-      // Fetch orders for display (recent orders table)
-      orders = await queryCollection('orders', {
-        filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
+      // Fetch orders - check both top-level artistId and items for this artist
+      const allRecentOrders = await queryCollection('orders', {
         orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-        limit: 50
+        limit: 200
       });
 
-      // Calculate order stats from orders
+      // Filter orders that contain items from this artist
+      const artistName = partnerDoc.artistName || partnerDoc.name || '';
+      orders = allRecentOrders.filter((order: any) => {
+        // Check top-level artistId
+        if (order.artistId === partnerId) return true;
+        // Check items array for this artist
+        if (order.items && Array.isArray(order.items)) {
+          return order.items.some((item: any) =>
+            item.artistId === partnerId ||
+            item.submitterId === partnerId ||
+            (artistName && item.artist === artistName) ||
+            (artistName && item.artistName === artistName)
+          );
+        }
+        return false;
+      });
+
+      // Calculate order stats from filtered orders
       orders.forEach(order => {
         orderStats.total++;
         const status = (order.status || 'pending').toLowerCase();
@@ -159,14 +175,39 @@ if (partnerId) {
         else if (status === 'cancelled') orderStats.cancelled++;
       });
 
-      // Recent activity from ledger entries (more accurate than orders)
-      activity = ledgerEntries.slice(0, 10).map(entry => ({
-        type: 'sale',
-        title: `${entry.type || 'Release'} sale`,
-        description: entry.releaseTitle || entry.productName || entry.title || 'Sale completed',
-        date: entry.timestamp,
-        amount: entry.artistPayout || entry.actualArtistPayout || 0
-      }));
+      // Recent activity - prefer ledger entries, fallback to orders
+      if (ledgerEntries.length > 0) {
+        activity = ledgerEntries.slice(0, 10).map(entry => ({
+          type: 'sale',
+          title: `${entry.type || 'Release'} sale`,
+          description: entry.releaseTitle || entry.productName || entry.title || 'Sale completed',
+          date: entry.timestamp,
+          amount: entry.artistPayout || entry.actualArtistPayout || 0
+        }));
+      } else if (orders.length > 0) {
+        // Fallback to orders if no ledger entries
+        activity = orders.slice(0, 10).map(order => {
+          // Find the item(s) for this artist
+          const artistItems = (order.items || []).filter((item: any) =>
+            item.artistId === partnerId ||
+            item.submitterId === partnerId ||
+            item.artist === artistName ||
+            item.artistName === artistName
+          );
+          const itemTitle = artistItems.length > 0
+            ? artistItems.map((i: any) => i.name || i.title).join(', ')
+            : 'Order';
+          const itemAmount = artistItems.reduce((sum: number, i: any) => sum + (i.price || i.total || 0), 0);
+
+          return {
+            type: 'order',
+            title: order.paymentMethod === 'free_download' ? 'Free download' : 'Sale',
+            description: itemTitle,
+            date: order.createdAt,
+            amount: itemAmount
+          };
+        });
+      }
     }
   } catch (e) {
     console.error('Error fetching account data:', e);
