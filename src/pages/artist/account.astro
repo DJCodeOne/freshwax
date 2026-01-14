@@ -238,6 +238,48 @@ export const prerender = false;
 
             <!-- Collapsible Content -->
             <div class="payment-content" id="payment-content">
+
+            <!-- Preferred Payment Method Selector -->
+            <div class="payment-method-selector">
+              <h3>Preferred Payout Method</h3>
+              <p class="selector-description">Choose how you'd like to receive your payouts</p>
+              <div class="method-options">
+                <label class={`method-option ${partner.stripeConnectStatus !== 'active' ? 'disabled' : ''}`}>
+                  <input type="radio" name="artistPayoutMethod" value="stripe"
+                    checked={partner.payoutMethod !== 'paypal'}
+                    disabled={partner.stripeConnectStatus !== 'active'} />
+                  <div class="method-content">
+                    <span class="method-icon">💳</span>
+                    <div class="method-info">
+                      <strong>Stripe</strong>
+                      <span class="method-detail">Free - 2-3 day transfers</span>
+                      <span class={`method-status ${partner.stripeConnectStatus === 'active' ? 'connected' : ''}`}>
+                        {partner.stripeConnectStatus === 'active' ? 'Connected' : 'Not connected'}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+                <label class={`method-option ${!partner.paypalEmail ? 'disabled' : ''}`}>
+                  <input type="radio" name="artistPayoutMethod" value="paypal"
+                    checked={partner.payoutMethod === 'paypal'}
+                    disabled={!partner.paypalEmail} />
+                  <div class="method-content">
+                    <span class="method-icon">🅿️</span>
+                    <div class="method-info">
+                      <strong>PayPal</strong>
+                      <span class="method-detail">+2% fee - Instant</span>
+                      <span class={`method-status ${partner.paypalEmail ? 'connected' : ''}`}>
+                        {partner.paypalEmail ? 'Connected' : 'Not connected'}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+              {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
+                <button id="save-artist-method-btn" class="btn btn-primary" style="margin-top: 1rem;">Save Preference</button>
+              )}
+            </div>
+
             <!-- Payout Method Tabs -->
             <div class="payout-tabs">
               <button class="payout-tab active" data-tab="stripe">
@@ -1691,6 +1733,113 @@ export const prerender = false;
     color: #22c55e;
   }
 
+  /* Payment Method Selector */
+  .payment-method-selector {
+    background: linear-gradient(to bottom, #1f1f1f, #171717);
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .payment-method-selector h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #fff;
+  }
+
+  .selector-description {
+    color: #a3a3a3;
+    font-size: 0.9rem;
+    margin: 0 0 1rem 0;
+  }
+
+  .method-options {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .method-option {
+    flex: 1;
+    cursor: pointer;
+  }
+
+  .method-option input {
+    display: none;
+  }
+
+  .method-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #0a0a0a;
+    border: 2px solid #333;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .method-option input:checked + .method-content {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .method-option:hover:not(.disabled) .method-content {
+    border-color: #555;
+  }
+
+  .method-icon {
+    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f1f1f;
+    border-radius: 8px;
+  }
+
+  .method-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .method-info strong {
+    color: #fff;
+    font-size: 1rem;
+  }
+
+  .method-detail {
+    color: #a3a3a3;
+    font-size: 0.8rem;
+  }
+
+  .method-status {
+    font-size: 0.75rem;
+    color: #ef4444;
+    font-weight: 500;
+  }
+
+  .method-status.connected {
+    color: #22c55e;
+  }
+
+  .method-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .method-option.disabled .method-content {
+    pointer-events: none;
+  }
+
+  @media (max-width: 600px) {
+    .method-options {
+      flex-direction: column;
+    }
+  }
+
   /* Payout Tabs */
   .payout-tabs {
     display: flex;
@@ -2336,7 +2485,7 @@ export const prerender = false;
     });
   });
 
-  // Set Preferred Payout Method
+  // Set Preferred Payout Method (from old buttons)
   const preferredBtns = document.querySelectorAll('.set-preferred-btn');
   preferredBtns.forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -2371,6 +2520,46 @@ export const prerender = false;
         btn.disabled = false;
       }
     });
+  });
+
+  // Save Payout Method from selector
+  const saveArtistMethodBtn = document.getElementById('save-artist-method-btn');
+  saveArtistMethodBtn?.addEventListener('click', async () => {
+    const selected = document.querySelector('input[name="artistPayoutMethod"]:checked')?.value;
+    if (!selected) {
+      alert('Please select a payment method');
+      return;
+    }
+
+    saveArtistMethodBtn.textContent = 'Saving...';
+    saveArtistMethodBtn.disabled = true;
+
+    try {
+      const response = await fetch('/api/paypal/set-payout-method', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          entityType: 'artist',
+          entityId: partnerId,
+          payoutMethod: selected
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        window.location.reload();
+      } else {
+        alert(result.error || 'Failed to set payout method');
+        saveArtistMethodBtn.textContent = 'Save Preference';
+        saveArtistMethodBtn.disabled = false;
+      }
+    } catch (e) {
+      console.error('Set payout method error:', e);
+      alert('Failed to update. Please try again.');
+      saveArtistMethodBtn.textContent = 'Save Preference';
+      saveArtistMethodBtn.disabled = false;
+    }
   });
 
   // Download Data
