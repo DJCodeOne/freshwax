@@ -1820,169 +1820,36 @@ async function processSupplierPayments(params: {
 
       console.log('[Stripe Webhook] Processing payment for supplier', payment.supplierName, ':', payment.amount.toFixed(2), 'GBP');
 
-      // Check preferred payout method
-      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && supplierPaypalConfig;
-      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+      // NOTE: Automatic payouts disabled - all supplier payouts are manual for now
+      // Always create pending payout for manual processing
+      console.log('[Stripe Webhook] Creating pending payout for supplier', payment.supplierName);
 
-      if (usePayPal) {
-        // PayPal payout for supplier
-        console.log('[Stripe Webhook] Using PayPal for supplier', payment.supplierName);
-        try {
-          const paypalResult = await createPayPalPayout(supplierPaypalConfig!, {
-            email: payment.paypalEmail!,
-            amount: payment.amount,
-            currency: 'GBP',
-            note: `Fresh Wax supplier payout for order #${orderNumber}`,
-            reference: `${orderId}-supplier-${payment.supplierId}`
-          });
+      await addDocument('pendingSupplierPayouts', {
+        supplierId: payment.supplierId,
+        supplierName: payment.supplierName,
+        supplierEmail: payment.supplierEmail,
+        paypalEmail: payment.paypalEmail,
+        stripeConnectId: payment.stripeConnectId,
+        payoutMethod: payment.payoutMethod,
+        orderId,
+        orderNumber,
+        amount: payment.amount,
+        currency: 'gbp',
+        status: 'pending',
+        items: payment.items,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
 
-          if (paypalResult.success) {
-            await addDocument('supplierPayouts', {
-              supplierId: payment.supplierId,
-              supplierName: payment.supplierName,
-              supplierEmail: payment.supplierEmail,
-              paypalEmail: payment.paypalEmail,
-              paypalBatchId: paypalResult.batchId,
-              payoutMethod: 'paypal',
-              orderId,
-              orderNumber,
-              amount: payment.amount,
-              currency: 'gbp',
-              status: 'completed',
-              items: payment.items,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              completedAt: new Date().toISOString()
-            });
-
-            const supplier = await getDocument('merch-suppliers', payment.supplierId);
-            if (supplier) {
-              await updateDocument('merch-suppliers', payment.supplierId, {
-                totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
-                lastPayoutAt: new Date().toISOString()
-              });
-            }
-
-            console.log('[Stripe Webhook] ✓ Supplier PayPal payout created:', paypalResult.batchId);
-          } else {
-            throw new Error(paypalResult.error || 'PayPal payout failed');
-          }
-
-        } catch (paypalError: any) {
-          console.error('[Stripe Webhook] Supplier PayPal payout failed:', paypalError.message);
-
-          await addDocument('pendingSupplierPayouts', {
-            supplierId: payment.supplierId,
-            supplierName: payment.supplierName,
-            supplierEmail: payment.supplierEmail,
-            paypalEmail: payment.paypalEmail,
-            payoutMethod: 'paypal',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'retry_pending',
-            items: payment.items,
-            failureReason: paypalError.message,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-
-      } else if (useStripe) {
-        // Stripe transfer for supplier
-        try {
-          const transfer = await stripe.transfers.create({
-            amount: Math.round(payment.amount * 100), // Convert to pence
-            currency: 'gbp',
-            destination: payment.stripeConnectId!,
-            transfer_group: orderId,
-            metadata: {
-              orderId,
-              orderNumber,
-              supplierId: payment.supplierId,
-              supplierName: payment.supplierName,
-              type: 'supplier',
-              platform: 'freshwax'
-            }
-          });
-
-          // Record successful payout
-          await addDocument('supplierPayouts', {
-            supplierId: payment.supplierId,
-            supplierName: payment.supplierName,
-            supplierEmail: payment.supplierEmail,
-            stripeConnectId: payment.stripeConnectId,
-            stripeTransferId: transfer.id,
-            payoutMethod: 'stripe',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'completed',
-            items: payment.items,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
-
-          // Update supplier's total earnings
-          const supplier = await getDocument('merch-suppliers', payment.supplierId);
-          if (supplier) {
-            await updateDocument('merch-suppliers', payment.supplierId, {
-              totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
-              lastPayoutAt: new Date().toISOString()
-            });
-          }
-
-          console.log('[Stripe Webhook] ✓ Supplier Stripe transfer created:', transfer.id, 'for', payment.supplierName);
-
-        } catch (transferError: any) {
-          console.error('[Stripe Webhook] Supplier Stripe transfer failed for', payment.supplierName, ':', transferError.message);
-
-          // Store as pending for retry
-          await addDocument('pendingSupplierPayouts', {
-            supplierId: payment.supplierId,
-            supplierName: payment.supplierName,
-            supplierEmail: payment.supplierEmail,
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'retry_pending',
-            items: payment.items,
-            failureReason: transferError.message,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } else {
-        // Supplier not connected - store as pending
-        console.log('[Stripe Webhook] Supplier', payment.supplierName, 'not connected - storing pending payout');
-
-        await addDocument('pendingSupplierPayouts', {
-          supplierId: payment.supplierId,
-          supplierName: payment.supplierName,
-          supplierEmail: payment.supplierEmail,
-          orderId,
-          orderNumber,
-          amount: payment.amount,
-          currency: 'gbp',
-          status: 'awaiting_connect',
-          items: payment.items,
-          notificationSent: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+      // Update supplier's pending balance
+      const supplier = await getDocument('merch-suppliers', payment.supplierId);
+      if (supplier) {
+        await updateDocument('merch-suppliers', payment.supplierId, {
+          pendingBalance: (supplier.pendingBalance || 0) + payment.amount
         });
-
-        // Update supplier's pending balance
-        const supplier = await getDocument('merch-suppliers', payment.supplierId);
-        if (supplier) {
-          await updateDocument('merch-suppliers', payment.supplierId, {
-            pendingBalance: (supplier.pendingBalance || 0) + payment.amount
-          });
-        }
       }
+
+      console.log('[Stripe Webhook] ✓ Pending supplier payout created for', payment.supplierName);
     }
 
   } catch (error: any) {
@@ -2107,169 +1974,36 @@ async function processVinylCrateSellerPayments(params: {
 
       console.log('[Stripe Webhook] Processing payment for seller', payment.sellerName, ':', payment.amount.toFixed(2), 'GBP');
 
-      // Check preferred payout method
-      const usePayPal = payment.payoutMethod === 'paypal' && payment.paypalEmail && sellerPaypalConfig;
-      const useStripe = payment.stripeConnectId && payment.payoutMethod !== 'paypal';
+      // NOTE: Automatic payouts disabled - all crate seller payouts are manual for now
+      // Always create pending payout for manual processing
+      console.log('[Stripe Webhook] Creating pending payout for crate seller', payment.sellerName);
 
-      if (usePayPal) {
-        // PayPal payout for crate seller
-        console.log('[Stripe Webhook] Using PayPal for crate seller', payment.sellerName);
-        try {
-          const paypalResult = await createPayPalPayout(sellerPaypalConfig!, {
-            email: payment.paypalEmail!,
-            amount: payment.amount,
-            currency: 'GBP',
-            note: `Fresh Wax vinyl sale payout for order #${orderNumber}`,
-            reference: `${orderId}-seller-${payment.sellerId}`
-          });
+      await addDocument('pendingCrateSellerPayouts', {
+        sellerId: payment.sellerId,
+        sellerName: payment.sellerName,
+        sellerEmail: payment.sellerEmail,
+        paypalEmail: payment.paypalEmail,
+        stripeConnectId: payment.stripeConnectId,
+        payoutMethod: payment.payoutMethod,
+        orderId,
+        orderNumber,
+        amount: payment.amount,
+        currency: 'gbp',
+        status: 'pending',
+        items: payment.items,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
 
-          if (paypalResult.success) {
-            await addDocument('crateSellerPayouts', {
-              sellerId: payment.sellerId,
-              sellerName: payment.sellerName,
-              sellerEmail: payment.sellerEmail,
-              paypalEmail: payment.paypalEmail,
-              paypalBatchId: paypalResult.batchId,
-              payoutMethod: 'paypal',
-              orderId,
-              orderNumber,
-              amount: payment.amount,
-              currency: 'gbp',
-              status: 'completed',
-              items: payment.items,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-              completedAt: new Date().toISOString()
-            });
-
-            const sellerUser = await getDocument('users', payment.sellerId);
-            if (sellerUser) {
-              await updateDocument('users', payment.sellerId, {
-                crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
-                lastCratePayoutAt: new Date().toISOString()
-              });
-            }
-
-            console.log('[Stripe Webhook] ✓ Crate seller PayPal payout created:', paypalResult.batchId);
-          } else {
-            throw new Error(paypalResult.error || 'PayPal payout failed');
-          }
-
-        } catch (paypalError: any) {
-          console.error('[Stripe Webhook] Crate seller PayPal payout failed:', paypalError.message);
-
-          await addDocument('pendingCrateSellerPayouts', {
-            sellerId: payment.sellerId,
-            sellerName: payment.sellerName,
-            sellerEmail: payment.sellerEmail,
-            paypalEmail: payment.paypalEmail,
-            payoutMethod: 'paypal',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'retry_pending',
-            items: payment.items,
-            failureReason: paypalError.message,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-
-      } else if (useStripe) {
-        // Stripe transfer for crate seller
-        try {
-          const transfer = await stripe.transfers.create({
-            amount: Math.round(payment.amount * 100), // Convert to pence
-            currency: 'gbp',
-            destination: payment.stripeConnectId!,
-            transfer_group: orderId,
-            metadata: {
-              orderId,
-              orderNumber,
-              sellerId: payment.sellerId,
-              sellerName: payment.sellerName,
-              type: 'vinyl_crate_seller',
-              platform: 'freshwax'
-            }
-          });
-
-          // Record successful payout
-          await addDocument('crateSellerPayouts', {
-            sellerId: payment.sellerId,
-            sellerName: payment.sellerName,
-            sellerEmail: payment.sellerEmail,
-            stripeConnectId: payment.stripeConnectId,
-            stripeTransferId: transfer.id,
-            payoutMethod: 'stripe',
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'completed',
-            items: payment.items,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            completedAt: new Date().toISOString()
-          });
-
-          // Update seller's total crate earnings
-          const sellerUser = await getDocument('users', payment.sellerId);
-          if (sellerUser) {
-            await updateDocument('users', payment.sellerId, {
-              crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
-              lastCratePayoutAt: new Date().toISOString()
-            });
-          }
-
-          console.log('[Stripe Webhook] ✓ Crate seller transfer created:', transfer.id, 'for', payment.sellerName);
-
-        } catch (transferError: any) {
-          console.error('[Stripe Webhook] Crate seller transfer failed for', payment.sellerName, ':', transferError.message);
-
-          // Store as pending for retry
-          await addDocument('pendingCrateSellerPayouts', {
-            sellerId: payment.sellerId,
-            sellerName: payment.sellerName,
-            sellerEmail: payment.sellerEmail,
-            orderId,
-            orderNumber,
-            amount: payment.amount,
-            currency: 'gbp',
-            status: 'retry_pending',
-            items: payment.items,
-            failureReason: transferError.message,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
-        }
-      } else {
-        // Seller not connected - store as pending
-        console.log('[Stripe Webhook] Crate seller', payment.sellerName, 'not connected - storing pending payout');
-
-        await addDocument('pendingCrateSellerPayouts', {
-          sellerId: payment.sellerId,
-          sellerName: payment.sellerName,
-          sellerEmail: payment.sellerEmail,
-          orderId,
-          orderNumber,
-          amount: payment.amount,
-          currency: 'gbp',
-          status: 'awaiting_connect',
-          items: payment.items,
-          notificationSent: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+      // Update seller's pending crate balance
+      const seller = await getDocument('users', payment.sellerId);
+      if (seller) {
+        await updateDocument('users', payment.sellerId, {
+          pendingCrateBalance: (seller.pendingCrateBalance || 0) + payment.amount
         });
-
-        // Update seller's pending crate balance
-        const seller = await getDocument('users', payment.sellerId);
-        if (seller) {
-          await updateDocument('users', payment.sellerId, {
-            pendingCrateBalance: (seller.pendingCrateBalance || 0) + payment.amount
-          });
-        }
       }
+
+      console.log('[Stripe Webhook] ✓ Pending crate seller payout created for', payment.sellerName);
     }
 
   } catch (error: any) {
