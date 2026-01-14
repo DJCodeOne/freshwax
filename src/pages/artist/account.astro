@@ -6,10 +6,12 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;
 let orders: any[] = [];
+let ledgerEntries: any[] = [];
 let orderStats = {
   total: 0,
   pending: 0,
@@ -20,15 +22,36 @@ let orderStats = {
 };
 let salesStats = {
   totalSales: 0,
-  totalRevenue: 0,
+  totalRevenue: 0,      // Gross revenue
+  totalEarnings: 0,     // Artist's actual earnings (after fees)
   releaseSales: 0,
   releaseRevenue: 0,
   merchSales: 0,
   merchRevenue: 0,
   totalPaidOut: 0,
-  totalFeesPaid: 0
+  pendingBalance: 0
 };
 let activity: any[] = [];
+
+// Service account config for salesLedger
+const env = (Astro.locals as any)?.runtime?.env;
+const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+let serviceAccountKey: string | null = null;
+if (clientEmail && privateKey) {
+  serviceAccountKey = JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
 
 if (partnerId) {
   try {
@@ -48,14 +71,60 @@ if (partnerId) {
         }
       }
 
-      // Fetch orders for this partner
+      // Fetch sales data from salesLedger (source of truth)
+      if (serviceAccountKey) {
+        try {
+          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+            limit: 500
+          });
+
+          // Filter entries for this artist
+          ledgerEntries = allLedgerEntries.filter((e: any) =>
+            e.submitterId === partnerId ||
+            e.artistId === partnerId ||
+            e.artistName === partnerDoc.artistName
+          );
+
+          // Calculate earnings from ledger
+          ledgerEntries.forEach((entry: any) => {
+            const artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
+            const grossAmount = entry.grossAmount || entry.total || artistPayout;
+
+            salesStats.totalRevenue += grossAmount;
+            salesStats.totalEarnings += artistPayout;
+            salesStats.totalSales++;
+
+            // Track by type
+            const type = entry.type || entry.productType || 'release';
+            if (type === 'release' || type === 'music' || type === 'digital') {
+              salesStats.releaseSales++;
+              salesStats.releaseRevenue += artistPayout;
+            } else if (type === 'merch' || type === 'merchandise' || type === 'vinyl') {
+              salesStats.merchSales++;
+              salesStats.merchRevenue += artistPayout;
+            }
+
+            // Track payout status
+            if (entry.artistPayoutStatus === 'paid') {
+              salesStats.totalPaidOut += entry.artistPayoutPaid || artistPayout;
+            }
+          });
+
+          salesStats.pendingBalance = salesStats.totalEarnings - salesStats.totalPaidOut;
+        } catch (ledgerErr) {
+          console.error('Error fetching ledger entries:', ledgerErr);
+        }
+      }
+
+      // Fetch orders for display (recent orders table)
       orders = await queryCollection('orders', {
         filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
         orderBy: { field: 'createdAt', direction: 'DESCENDING' },
         limit: 50
       });
 
-      // Calculate order stats
+      // Calculate order stats from orders
       orders.forEach(order => {
         orderStats.total++;
         const status = (order.status || 'pending').toLowerCase();
@@ -64,33 +133,15 @@ if (partnerId) {
         else if (status === 'shipped') orderStats.shipped++;
         else if (status === 'delivered') orderStats.delivered++;
         else if (status === 'cancelled') orderStats.cancelled++;
-
-        // Calculate sales
-        const orderTotal = order.total || order.amount || 0;
-        salesStats.totalRevenue += orderTotal;
-        salesStats.totalSales++;
-
-        if (order.type === 'release' || order.type === 'music') {
-          salesStats.releaseSales++;
-          salesStats.releaseRevenue += orderTotal;
-        } else if (order.type === 'merch' || order.type === 'merchandise') {
-          salesStats.merchSales++;
-          salesStats.merchRevenue += orderTotal;
-        }
       });
 
-      // Calculate payouts - artists get paid at checkout
-      // 70% goes to artist, 30% is fees (payment processing + Fresh Wax)
-      salesStats.totalPaidOut = salesStats.totalRevenue * 0.7;
-      salesStats.totalFeesPaid = salesStats.totalRevenue * 0.3;
-
-      // Recent activity (combine from various sources)
-      activity = orders.slice(0, 10).map(order => ({
-        type: 'order',
-        title: `New ${order.type || 'order'} sale`,
-        description: order.itemTitle || order.title || 'Order placed',
-        date: order.createdAt,
-        amount: order.total || order.amount
+      // Recent activity from ledger entries (more accurate than orders)
+      activity = ledgerEntries.slice(0, 10).map(entry => ({
+        type: 'sale',
+        title: `${entry.type || 'Release'} sale`,
+        description: entry.releaseTitle || entry.productName || entry.title || 'Sale completed',
+        date: entry.timestamp,
+        amount: entry.artistPayout || entry.actualArtistPayout || 0
       }));
     }
   } catch (e) {
@@ -511,7 +562,7 @@ export const prerender = false;
             <div class="section-header">
               <h2>💰 Sales Overview</h2>
             </div>
-            
+
             <div class="stats-grid">
               <div class="stat-card highlight">
                 <div class="stat-icon">🛒</div>
@@ -520,8 +571,8 @@ export const prerender = false;
               </div>
               <div class="stat-card green">
                 <div class="stat-icon">💷</div>
-                <div class="stat-value">{formatPrice(salesStats.totalRevenue)}</div>
-                <div class="stat-label">Total Revenue</div>
+                <div class="stat-value">{formatPrice(salesStats.totalEarnings)}</div>
+                <div class="stat-label">Total Earnings</div>
               </div>
               <div class="stat-card">
                 <div class="stat-icon">💿</div>
@@ -595,23 +646,23 @@ export const prerender = false;
             <div class="section-header">
               <h2>💳 Payouts</h2>
             </div>
-            
+
             <div class="payout-cards">
               <div class="payout-card paid">
                 <div class="payout-label">Total Paid Out</div>
                 <div class="payout-value">{formatPrice(salesStats.totalPaidOut)}</div>
-                <div class="payout-note">Your earnings after fees</div>
+                <div class="payout-note">Transferred to your account</div>
               </div>
-              <div class="payout-card fees">
-                <div class="payout-label">Total Fees Paid</div>
-                <div class="payout-value">{formatPrice(salesStats.totalFeesPaid)}</div>
-                <div class="payout-note">Payment processing + Website maintenance</div>
+              <div class={`payout-card ${salesStats.pendingBalance > 0 ? 'pending' : 'fees'}`}>
+                <div class="payout-label">Pending Balance</div>
+                <div class="payout-value">{formatPrice(salesStats.pendingBalance)}</div>
+                <div class="payout-note">{salesStats.pendingBalance > 0 ? 'Awaiting payout' : 'All caught up!'}</div>
               </div>
             </div>
-            
+
             <div class="payout-info">
-              <p>💡 You get paid instantly at checkout.</p>
-              <p>📧 Fees cover payment processing and website maintenance.</p>
+              <p>💡 Payouts are processed after each sale.</p>
+              <p>📊 <a href="/artist/payouts" style="color: #60a5fa;">View detailed payout history →</a></p>
             </div>
           </section>
 
@@ -1156,7 +1207,12 @@ export const prerender = false;
     background: linear-gradient(135deg, #f97316, #ea580c);
     color: #fff;
   }
-  
+
+  .payout-card.pending {
+    background: linear-gradient(135deg, #eab308, #ca8a04);
+    color: #fff;
+  }
+
   .payout-label {
     font-size: 0.875rem;
     font-weight: 600;
