@@ -397,11 +397,28 @@ export const prerender = false;
           </section>
 
           <!-- Vinyl Shipping Settings -->
-          <section class="account-section" id="vinyl-shipping-section">
-            <div class="section-header">
-              <h2>📦 Vinyl Shipping Rates</h2>
-              <p class="section-subtitle">Set your default shipping rates for vinyl releases. You can override these per-release.</p>
+          <section class={`account-section collapsible-section ${(partner.vinylShippingUK || partner.vinylShippingEU || partner.vinylShippingIntl) ? 'has-data' : ''}`} id="vinyl-shipping-section" data-collapsed={(partner.vinylShippingUK || partner.vinylShippingEU || partner.vinylShippingIntl) ? 'true' : 'false'}>
+            <div class="section-header clickable" id="shipping-section-toggle">
+              <div class="header-left">
+                <h2>📦 Vinyl Shipping Rates</h2>
+                {(partner.vinylShippingUK || partner.vinylShippingEU || partner.vinylShippingIntl) && (
+                  <span class="setup-complete-badge">✓ Set</span>
+                )}
+              </div>
+              <div class="header-right">
+                {(partner.vinylShippingUK || partner.vinylShippingEU || partner.vinylShippingIntl) && (
+                  <div class="shipping-summary-badge">
+                    UK: £{partner.vinylShippingUK?.toFixed(2) || '0.00'} | EU: £{partner.vinylShippingEU?.toFixed(2) || '0.00'} | Intl: £{partner.vinylShippingIntl?.toFixed(2) || '0.00'}
+                  </div>
+                )}
+                <button class="collapse-toggle" id="shipping-collapse-btn" aria-label="Toggle shipping section">
+                  <span class="collapse-icon">▼</span>
+                </button>
+              </div>
             </div>
+
+            <div class="section-content" id="shipping-content">
+            <p class="section-subtitle">Set your default shipping rates for vinyl releases. You can override these per-release.</p>
 
             <div class="shipping-settings-grid">
               <div class="shipping-card">
@@ -486,6 +503,7 @@ export const prerender = false;
                 <p>If a customer orders vinyl from multiple artists, they pay each artist's shipping separately (items ship from different locations).</p>
               </div>
             </div>
+            </div><!-- end section-content -->
           </section>
 
           <!-- Sales Overview -->
@@ -1346,22 +1364,61 @@ export const prerender = false;
     transition: transform 0.3s ease;
   }
 
-  .stripe-section[data-collapsed="true"] .collapse-icon {
+  .stripe-section[data-collapsed="true"] .collapse-icon,
+  .collapsible-section[data-collapsed="true"] .collapse-icon {
     transform: rotate(-90deg);
   }
 
-  .payment-content {
+  .payment-content,
+  .section-content {
     overflow: hidden;
     transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
     max-height: 800px;
     opacity: 1;
   }
 
-  .stripe-section[data-collapsed="true"] .payment-content {
+  .stripe-section[data-collapsed="true"] .payment-content,
+  .collapsible-section[data-collapsed="true"] .section-content {
     max-height: 0;
     opacity: 0;
     padding-top: 0;
     padding-bottom: 0;
+  }
+
+  /* Collapsible section header */
+  .collapsible-section .section-header.clickable {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .collapsible-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .collapsible-section .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .collapsible-section .header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .shipping-summary-badge {
+    background: linear-gradient(to bottom, #374151, #1f2937);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: #9ca3af;
+    border: 1px solid #4b5563;
+    font-family: monospace;
   }
 
   .stripe-connect-content {
@@ -2309,6 +2366,32 @@ export const prerender = false;
   paymentCollapseBtn?.addEventListener('click', (e) => {
     e.stopPropagation(); // Prevent double-toggle from header click
     togglePaymentSection();
+  });
+
+  // Shipping Section Toggle
+  const shippingSection = document.getElementById('vinyl-shipping-section');
+  const shippingToggle = document.getElementById('shipping-section-toggle');
+  const shippingCollapseBtn = document.getElementById('shipping-collapse-btn');
+
+  function toggleShippingSection() {
+    if (!shippingSection) return;
+    const isCollapsed = shippingSection.dataset.collapsed === 'true';
+    shippingSection.dataset.collapsed = isCollapsed ? 'false' : 'true';
+  }
+
+  // Click on header to toggle
+  shippingToggle?.addEventListener('click', (e) => {
+    // Don't toggle if clicking on a button inside the header (except the collapse btn)
+    if (e.target.closest('button') && !e.target.closest('.collapse-toggle')) {
+      return;
+    }
+    toggleShippingSection();
+  });
+
+  // Direct click on collapse button
+  shippingCollapseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent double-toggle from header click
+    toggleShippingSection();
   });
 
   // Stripe Connect - Start onboarding
