@@ -186,6 +186,70 @@ if (partnerId) {
         else if (status === 'shipped') orderStats.shipped++;
         else if (status === 'delivered') orderStats.delivered++;
         else if (status === 'cancelled') orderStats.cancelled++;
+
+        // Count free downloads in sales stats if not already in ledger
+        const orderTotal = order.totals?.total || order.total || 0;
+        const orderId = order.id;
+        const isInLedger = ledgerEntries.some((e: any) => e.orderId === orderId);
+
+        if (!isInLedger) {
+          salesStats.totalSales++;
+          // Count by type for this artist's items
+          const artistItems = (order.items || []).filter((item: any) => {
+            if (item.artistId === partnerId || item.submitterId === partnerId) return true;
+            const releaseId = item.releaseId || item.productId || item.id;
+            if (releaseId && artistReleaseIds.has(releaseId)) return true;
+            const itemArtist = (item.artist || item.artistName || '').toLowerCase();
+            const downloadArtist = (item.downloads?.artistName || '').toLowerCase();
+            return artistName && (itemArtist === artistName || downloadArtist === artistName);
+          });
+
+          artistItems.forEach((item: any) => {
+            const type = item.type || 'release';
+            if (type === 'release' || type === 'digital' || type === 'track') {
+              salesStats.releaseSales++;
+            } else if (type === 'merch' || type === 'merchandise' || type === 'vinyl') {
+              salesStats.merchSales++;
+            }
+          });
+        }
+      });
+
+      // Add orders from ledger that aren't already in the orders list
+      const orderIds = new Set(orders.map((o: any) => o.id));
+      for (const entry of ledgerEntries) {
+        if (entry.orderId && !orderIds.has(entry.orderId)) {
+          // Try to fetch this order
+          try {
+            const ledgerOrder = await getDocument('orders', entry.orderId);
+            if (ledgerOrder) {
+              orders.push({ id: entry.orderId, ...ledgerOrder });
+              orderIds.add(entry.orderId);
+            }
+          } catch (e) {
+            // Order might not exist, create a placeholder from ledger data
+            orders.push({
+              id: entry.orderId,
+              orderNumber: entry.orderNumber || entry.orderId,
+              createdAt: entry.timestamp,
+              customer: { email: entry.customerEmail, firstName: 'Customer', lastName: '' },
+              items: [{
+                name: entry.releaseTitle || entry.productName || entry.title || 'Sale',
+                type: entry.type || 'release'
+              }],
+              totals: { total: entry.grossTotal || entry.artistPayout || 0 },
+              status: entry.artistPayoutStatus === 'paid' ? 'completed' : 'pending',
+              paymentMethod: entry.paymentMethod || 'stripe'
+            });
+          }
+        }
+      }
+
+      // Sort orders by date
+      orders.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0);
+        const dateB = new Date(b.createdAt || 0);
+        return dateB.getTime() - dateA.getTime();
       });
 
       // Recent activity - prefer ledger entries, fallback to orders
