@@ -79,11 +79,11 @@ if (partnerId) {
             limit: 500
           });
 
-          // Filter entries for this artist
+          // Filter entries for this artist - strict matching by ID only
+          // Don't match by artist name as it can cause false positives
           ledgerEntries = allLedgerEntries.filter((e: any) =>
             e.submitterId === partnerId ||
-            e.artistId === partnerId ||
-            e.artistName === partnerDoc.artistName
+            e.artistId === partnerId
           );
 
           // Calculate earnings from ledger
