@@ -5,11 +5,28 @@
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 import '../../styles/admin/index.css';
 
 // Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
+// Service account config for collections that require auth
+const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+const serviceAccountKey = JSON.stringify({
+  type: 'service_account',
+  project_id: projectId,
+  private_key_id: 'auto',
+  private_key: privateKey?.replace(/\\n/g, '\n'),
+  client_email: clientEmail,
+  client_id: '',
+  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+  token_uri: 'https://oauth2.googleapis.com/token'
+});
 
 // Fetch all data using REST API with error handling
 let ordersData: any[] = [];
@@ -21,6 +38,8 @@ let livestreamsData: any[] = [];
 let bypassRequestsData: any[] = [];
 let payoutsData: any[] = [];
 let pendingPayoutsData: any[] = [];
+let pendingSupplierPayoutsData: any[] = [];
+let pendingSellerPayoutsData: any[] = [];
 let disputesData: any[] = [];
 let refundsData: any[] = [];
 
@@ -34,7 +53,10 @@ try {
     queryCollection('livestreams', { limit: 10 }),
     queryCollection('bypassRequests', { limit: 20 }),
     queryCollection('payouts', { limit: 200 }),
-    queryCollection('pendingPayouts', { limit: 100 }),
+    // Use service account auth for pending payouts collections
+    saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', { limit: 100 }),
+    saQueryCollection(serviceAccountKey, projectId, 'pendingSupplierPayouts', { limit: 100 }),
+    saQueryCollection(serviceAccountKey, projectId, 'pendingCrateSellerPayouts', { limit: 100 }),
     queryCollection('disputes', { limit: 50 }),
     queryCollection('refunds', { limit: 50 })
   ]);
@@ -48,8 +70,10 @@ try {
   bypassRequestsData = results[6].status === 'fulfilled' ? results[6].value.filter((r: any) => r.status === 'pending') : [];
   payoutsData = results[7].status === 'fulfilled' ? results[7].value : [];
   pendingPayoutsData = results[8].status === 'fulfilled' ? results[8].value : [];
-  disputesData = results[9].status === 'fulfilled' ? results[9].value : [];
-  refundsData = results[10].status === 'fulfilled' ? results[10].value : [];
+  pendingSupplierPayoutsData = results[9].status === 'fulfilled' ? results[9].value : [];
+  pendingSellerPayoutsData = results[10].status === 'fulfilled' ? results[10].value : [];
+  disputesData = results[11].status === 'fulfilled' ? results[11].value : [];
+  refundsData = results[12].status === 'fulfilled' ? results[12].value : [];
 } catch (error) {
   console.error('[Admin Dashboard] Error fetching data:', error);
 }
@@ -144,10 +168,21 @@ const totalArtistPayouts = payoutsData
   .filter(p => p.status === 'completed')
   .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-// Calculate pending payouts (awaiting artist onboarding)
-const totalPendingPayouts = pendingPayoutsData
+// Calculate pending payouts (all types: artist, supplier, seller)
+const pendingArtistAmount = pendingPayoutsData
   .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
   .reduce((sum, p) => sum + (p.amount || 0), 0);
+const pendingSupplierAmount = pendingSupplierPayoutsData
+  .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
+  .reduce((sum, p) => sum + (p.amount || 0), 0);
+const pendingSellerAmount = pendingSellerPayoutsData
+  .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
+  .reduce((sum, p) => sum + (p.amount || 0), 0);
+const totalPendingPayouts = pendingArtistAmount + pendingSupplierAmount + pendingSellerAmount;
+const totalPendingCount =
+  pendingPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length +
+  pendingSupplierPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length +
+  pendingSellerPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length;
 
 // Calculate refunds issued
 const totalRefunded = refundsData.reduce((sum, r) => sum + (r.amount || 0), 0);
@@ -232,8 +267,7 @@ if (openDisputes.length > 0) {
   alerts.push({ type: 'danger', icon: '⚠️', text: `${openDisputes.length} dispute${openDisputes.length !== 1 ? 's' : ''} need attention`, link: '/admin/payments' });
 }
 if (totalPendingPayouts > 0) {
-  const pendingCount = pendingPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length;
-  alerts.push({ type: 'warning', icon: '💳', text: `${formatCurrency(totalPendingPayouts)} in pending payouts (${pendingCount} artists)`, link: '/admin/payments' });
+  alerts.push({ type: 'warning', icon: '💳', text: `${formatCurrency(totalPendingPayouts)} in pending payouts (${totalPendingCount} payees)`, link: '/admin/payments' });
 }
 
 export const prerender = false;
@@ -344,7 +378,7 @@ export const prerender = false;
           <div class="earning-info">
             <span class="earning-label">Pending Payouts</span>
             <span class="earning-value">{formatCurrency(totalPendingPayouts)}</span>
-            <span class="earning-detail">{pendingPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length} awaiting setup</span>
+            <span class="earning-detail">{totalPendingCount} awaiting payout</span>
           </div>
         </div>
 
