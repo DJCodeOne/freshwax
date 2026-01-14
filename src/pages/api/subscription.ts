@@ -16,6 +16,7 @@ import {
   type UserUsage
 } from '../../lib/subscription';
 import { createReferralGiftCard } from '../../lib/giftcard';
+import { isAdmin, initAdminEnv } from '../../lib/admin';
 
 export const prerender = false;
 
@@ -31,6 +32,8 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  // Initialize admin config from runtime env
+  initAdminEnv(env);
 }
 
 // GET: Check subscription status and limits
@@ -95,6 +98,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Action: check if can upload mix
     if (action === 'canUploadMix') {
+      // Admin bypass - admins have unlimited uploads
+      const userIsAdmin = await isAdmin(userId);
+      if (userIsAdmin) {
+        return new Response(JSON.stringify({
+          success: true,
+          allowed: true,
+          remaining: Infinity,
+          tier: 'admin',
+          uploadsThisWeek: usage.mixUploadsThisWeek,
+          weeklyLimit: 'unlimited'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
       const result = canUploadMix(effectiveTier, usage);
       return new Response(JSON.stringify({
         success: true,
@@ -107,6 +123,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Action: check if can book stream slot
     if (action === 'canStream') {
+      // Admin bypass - admins have unlimited streaming
+      const userIsAdmin = await isAdmin(userId);
+      if (userIsAdmin) {
+        return new Response(JSON.stringify({
+          success: true,
+          allowed: true,
+          remainingMinutes: Infinity,
+          tier: 'admin',
+          minutesUsedToday: usage.streamMinutesToday,
+          dailyLimitMinutes: 'unlimited'
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
       const result = canBookStreamSlot(effectiveTier, usage);
       return new Response(JSON.stringify({
         success: true,
