@@ -148,18 +148,21 @@ if (partnerId) {
       });
 
       // Filter orders that contain items from this artist
-      const artistName = partnerDoc.artistName || partnerDoc.name || '';
+      const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
       orders = allRecentOrders.filter((order: any) => {
         // Check top-level artistId
         if (order.artistId === partnerId) return true;
         // Check items array for this artist
         if (order.items && Array.isArray(order.items)) {
-          return order.items.some((item: any) =>
-            item.artistId === partnerId ||
-            item.submitterId === partnerId ||
-            (artistName && item.artist === artistName) ||
-            (artistName && item.artistName === artistName)
-          );
+          return order.items.some((item: any) => {
+            // Check direct IDs
+            if (item.artistId === partnerId || item.submitterId === partnerId) return true;
+            // Check artist name fields (case-insensitive)
+            const itemArtist = (item.artist || item.artistName || '').toLowerCase();
+            const downloadArtist = (item.downloads?.artistName || '').toLowerCase();
+            if (artistName && (itemArtist === artistName || downloadArtist === artistName)) return true;
+            return false;
+          });
         }
         return false;
       });
@@ -188,12 +191,12 @@ if (partnerId) {
         // Fallback to orders if no ledger entries
         activity = orders.slice(0, 10).map(order => {
           // Find the item(s) for this artist
-          const artistItems = (order.items || []).filter((item: any) =>
-            item.artistId === partnerId ||
-            item.submitterId === partnerId ||
-            item.artist === artistName ||
-            item.artistName === artistName
-          );
+          const artistItems = (order.items || []).filter((item: any) => {
+            if (item.artistId === partnerId || item.submitterId === partnerId) return true;
+            const itemArtist = (item.artist || item.artistName || '').toLowerCase();
+            const downloadArtist = (item.downloads?.artistName || '').toLowerCase();
+            return artistName && (itemArtist === artistName || downloadArtist === artistName);
+          });
           const itemTitle = artistItems.length > 0
             ? artistItems.map((i: any) => i.name || i.title).join(', ')
             : 'Order';
