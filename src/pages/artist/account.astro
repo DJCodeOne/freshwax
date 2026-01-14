@@ -83,11 +83,13 @@ if (partnerId) {
       }
 
       // Fetch this artist's releases first (needed for matching)
-      // Check artistId field (more reliable than submittedBy which might be a name)
-      const artistReleases = await queryCollection('releases', {
-        filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
-        limit: 100
-      });
+      // Query all releases and filter client-side (more reliable than Firestore filters)
+      const allReleases = await queryCollection('releases', { limit: 500 });
+      const artistReleases = allReleases.filter((r: any) =>
+        r.artistId === partnerId ||
+        r.userId === partnerId ||
+        r.submittedBy === partnerId
+      );
       const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
       const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
 
