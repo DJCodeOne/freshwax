@@ -156,7 +156,13 @@
       "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track4_Joker.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track4_Joker.mp3\")",
       "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffmpeg.exe\" -i \"UL_Track5_Perfect.wav\" -codec:a libmp3lame -b:a 320k -y \"UL_Track5_Perfect.mp3\")",
       "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffprobe.exe\" -v quiet -show_entries format=duration -of csv=p=0 \"https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/02-jah-phantom.mp3\")",
-      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffprobe.exe\" -v quiet -show_entries format=duration -of csv=p=0 \"https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/03-kitano.mp3\")"
+      "Bash(\"C:\\\\ffmpeg\\\\bin\\\\ffprobe.exe\" -v quiet -show_entries format=duration -of csv=p=0 \"https://cdn.freshwax.co.uk/releases/skru_ultron-ep_FW-1767981893/03-kitano.mp3\")",
+      "Bash(ffmpeg:*)",
+      "Bash(ffprobe:*)",
+      "Bash(__NEW_LINE_fc48c175c156a39f__ echo \"\")",
+      "Bash(__NEW_LINE_00c6186ce91dc4d5__ echo \"\")",
+      "Bash(for id in code_one_FW-1765803666207 dj_bakkus_FW-1767896005916 marc_ofx_FW-1768141362174 skru_ultron-ep_FW-1767981893 srs_FW-1768141395772 underground_lair_recordings_FW-1767368892434)",
+      "Bash(npx astro:*)"
     ]
   }
 }

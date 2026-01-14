@@ -95,6 +95,9 @@ type PayeeInfo = {
   amount: number;
   items?: string[];
   status?: string;
+  payoutMethod?: string;
+  paypalEmail?: string;
+  stripeConnectId?: string;
 };
 
 // Create a unified map of orderId -> payees (all types)
@@ -118,7 +121,10 @@ for (const payout of manualPendingPayouts) {
     email: payout.artistEmail || '',
     amount: payout.amount || 0,
     items: payout.items,
-    status: payout.status
+    status: payout.status,
+    payoutMethod: payout.payoutMethod,
+    paypalEmail: payout.paypalEmail,
+    stripeConnectId: payout.stripeConnectId
   });
 }
 
@@ -139,7 +145,10 @@ for (const payout of pendingSupplierPayouts) {
     email: payout.supplierEmail || '',
     amount: payout.amount || 0,
     items: payout.items,
-    status: payout.status
+    status: payout.status,
+    payoutMethod: payout.payoutMethod,
+    paypalEmail: payout.paypalEmail,
+    stripeConnectId: payout.stripeConnectId
   });
 }
 
@@ -160,7 +169,10 @@ for (const payout of pendingSellerPayouts) {
     email: payout.sellerEmail || '',
     amount: payout.amount || 0,
     items: payout.items,
-    status: payout.status
+    status: payout.status,
+    payoutMethod: payout.payoutMethod,
+    paypalEmail: payout.paypalEmail,
+    stripeConnectId: payout.stripeConnectId
   });
 }
 
@@ -426,10 +438,18 @@ export const prerender = false;
                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                           {allPayees.map(payee => {
                             const style = typeStyles[payee.type];
+                            const methodBadge = payee.payoutMethod === 'paypal'
+                              ? { text: 'PayPal', color: '#0070ba', bg: '#e6f3ff' }
+                              : payee.payoutMethod === 'stripe' || payee.stripeConnectId
+                                ? { text: 'Stripe', color: '#635bff', bg: '#f0efff' }
+                                : payee.paypalEmail
+                                  ? { text: 'PayPal', color: '#0070ba', bg: '#e6f3ff' }
+                                  : { text: 'Not Set', color: '#9ca3af', bg: '#f3f4f6' };
                             return (
                               <div style={`display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.5rem; background: ${style.bg}; border-radius: 4px; font-size: 0.8rem;`}>
                                 <span style="font-size: 0.75rem;">{style.icon}</span>
                                 <span style={`color: ${style.color}; font-weight: 600; flex: 1;`}>{payee.name}</span>
+                                <span style={`background: ${methodBadge.bg}; color: ${methodBadge.color}; padding: 0.1rem 0.4rem; border-radius: 3px; font-size: 0.65rem; font-weight: 600;`}>{methodBadge.text}</span>
                                 <span style={`color: #16a34a; font-weight: 700;`}>{formatCurrency(payee.amount)}</span>
                                 <button
                                   class="btn btn-primary btn-xs trigger-payee-btn"
@@ -439,8 +459,10 @@ export const prerender = false;
                                   data-payee-type={payee.type}
                                   data-payee-id={payee.id}
                                   data-payee-name={payee.name}
-                                  data-payee-email={payee.email}
+                                  data-payee-email={payee.email || payee.paypalEmail}
                                   data-payee-amount={payee.amount}
+                                  data-payout-method={payee.payoutMethod}
+                                  data-stripe-connect-id={payee.stripeConnectId}
                                 >
                                   💸 Pay
                                 </button>
