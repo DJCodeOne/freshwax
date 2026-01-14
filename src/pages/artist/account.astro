@@ -2211,6 +2211,13 @@ export const prerender = false;
 
 <script type="module">
   function initArtistAccount() {
+    // Prevent multiple initializations
+    if (window._artistAccountInitialized) {
+      console.log('[ArtistAccount] Already initialized, skipping');
+      return;
+    }
+    window._artistAccountInitialized = true;
+
     console.log('[ArtistAccount] Initializing...');
     const partnerId = document.cookie.split('; ')
       .find(row => row.startsWith('partnerId='))
@@ -2665,7 +2672,6 @@ export const prerender = false;
   });
   } // end initArtistAccount
 
-  // Run on initial load and ViewTransitions navigation
+  // Run immediately - the flag prevents double initialization
   initArtistAccount();
-  document.addEventListener('astro:page-load', initArtistAccount);
 </script>
