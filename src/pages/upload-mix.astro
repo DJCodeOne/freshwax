@@ -1415,7 +1415,10 @@ Artist - Track Title
 
     // Check subscription limits
     try {
-      const limitCheck = await fetch(`/api/subscription?userId=${user.uid}&action=canUploadMix`);
+      const authToken = await user.getIdToken();
+      const limitCheck = await fetch(`/api/subscription?userId=${user.uid}&action=canUploadMix`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
       const limitResult = await limitCheck.json();
 
       if (!limitResult.allowed) {
@@ -1685,7 +1688,10 @@ Artist - Track Title
 
     // Check subscription limits before upload
     try {
-      const limitCheck = await fetch(`/api/subscription?userId=${user.uid}&action=canUploadMix`);
+      const authToken = await user.getIdToken();
+      const limitCheck = await fetch(`/api/subscription?userId=${user.uid}&action=canUploadMix`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
       const limitResult = await limitCheck.json();
 
       if (!limitResult.allowed) {
