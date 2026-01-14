@@ -115,6 +115,30 @@ if (partnerId) {
         } catch (ledgerErr) {
           console.error('Error fetching ledger entries:', ledgerErr);
         }
+
+        // Also check pendingPayouts collection for any pending payments
+        try {
+          const pendingPayoutsData = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
+            filters: [
+              { field: 'artistId', op: 'EQUAL', value: partnerId },
+              { field: 'status', op: 'EQUAL', value: 'pending' }
+            ],
+            limit: 100
+          });
+
+          // Add pending payouts to the balance if not already counted in ledger
+          pendingPayoutsData.forEach((payout: any) => {
+            const amount = payout.amount || 0;
+            // Only add if this seems like a new pending payout not in ledger
+            if (amount > 0 && !ledgerEntries.some((e: any) => e.orderId === payout.orderId)) {
+              salesStats.pendingBalance += amount;
+              salesStats.totalEarnings += amount;
+              salesStats.totalSales++;
+            }
+          });
+        } catch (pendingErr) {
+          console.error('Error fetching pending payouts:', pendingErr);
+        }
       }
 
       // Fetch orders for display (recent orders table)
