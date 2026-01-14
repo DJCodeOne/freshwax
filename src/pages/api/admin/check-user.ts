@@ -45,13 +45,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const isVinylSeller = roles.vinylSeller === true;
     const wouldBeInPartners = isArtist || isMerchSupplier || isVinylSeller;
 
+    // Also fetch usage data
+    const usageDoc = await getDocument('userUsage', user.id);
+
     return new Response(JSON.stringify({
       user: {
         id: user.id,
         email: user.email,
         displayName: user.displayName,
         roles: user.roles,
+        subscription: user.subscription || null,
+        isAdmin: user.isAdmin || false,
       },
+      usage: usageDoc || null,
       analysis: {
         isArtist,
         isMerchSupplier,
