@@ -141,6 +141,13 @@ if (partnerId) {
         }
       }
 
+      // Fetch this artist's releases to match by releaseId
+      const artistReleases = await queryCollection('releases', {
+        filters: [{ field: 'submittedBy', op: 'EQUAL', value: partnerId }],
+        limit: 100
+      });
+      const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
+
       // Fetch orders - check both top-level artistId and items for this artist
       const allRecentOrders = await queryCollection('orders', {
         orderBy: { field: 'createdAt', direction: 'DESCENDING' },
@@ -157,6 +164,9 @@ if (partnerId) {
           return order.items.some((item: any) => {
             // Check direct IDs
             if (item.artistId === partnerId || item.submitterId === partnerId) return true;
+            // Check if item's releaseId belongs to this artist
+            const releaseId = item.releaseId || item.productId || item.id;
+            if (releaseId && artistReleaseIds.has(releaseId)) return true;
             // Check artist name fields (case-insensitive)
             const itemArtist = (item.artist || item.artistName || '').toLowerCase();
             const downloadArtist = (item.downloads?.artistName || '').toLowerCase();
@@ -193,6 +203,8 @@ if (partnerId) {
           // Find the item(s) for this artist
           const artistItems = (order.items || []).filter((item: any) => {
             if (item.artistId === partnerId || item.submitterId === partnerId) return true;
+            const releaseId = item.releaseId || item.productId || item.id;
+            if (releaseId && artistReleaseIds.has(releaseId)) return true;
             const itemArtist = (item.artist || item.artistName || '').toLowerCase();
             const downloadArtist = (item.downloads?.artistName || '').toLowerCase();
             return artistName && (itemArtist === artistName || downloadArtist === artistName);
