@@ -107,19 +107,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Update with PayPal info using service account auth
-    await saUpdateDocument(serviceAccountKey, projectId, collection, docId, {
+    const updateData = {
       paypalEmail: paypalEmail.toLowerCase(),
       paypalLinkedAt: new Date().toISOString(),
       payoutMethod: 'paypal', // Set as preferred method
       updatedAt: new Date().toISOString()
-    });
+    };
 
-    console.log(`[PayPal] Linked PayPal for ${entityType}:`, docId, paypalEmail);
+    console.log(`[PayPal] Updating ${entityType} ${docId} with:`, JSON.stringify(updateData));
+
+    const updatedDoc = await saUpdateDocument(serviceAccountKey, projectId, collection, docId, updateData);
+
+    console.log(`[PayPal] Updated document response:`, JSON.stringify(updatedDoc));
 
     return new Response(JSON.stringify({
       success: true,
       message: 'PayPal account linked successfully',
-      paypalEmail: paypalEmail.toLowerCase()
+      paypalEmail: paypalEmail.toLowerCase(),
+      savedData: {
+        paypalEmail: updatedDoc.paypalEmail,
+        payoutMethod: updatedDoc.payoutMethod
+      }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: any) {

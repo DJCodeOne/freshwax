@@ -2430,8 +2430,10 @@ export const prerender = false;
       });
 
       const result = await response.json();
+      console.log('[ArtistAccount] PayPal link response:', result);
 
       if (result.success) {
+        console.log('[ArtistAccount] PayPal saved data:', result.savedData);
         window.location.reload();
       } else {
         alert(result.error || 'Failed to link PayPal');
