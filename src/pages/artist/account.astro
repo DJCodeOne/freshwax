@@ -71,6 +71,14 @@ if (partnerId) {
         }
       }
 
+      // Fetch this artist's releases first (needed for matching)
+      const artistReleases = await queryCollection('releases', {
+        filters: [{ field: 'submittedBy', op: 'EQUAL', value: partnerId }],
+        limit: 100
+      });
+      const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
+      const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
+
       // Fetch sales data from salesLedger (source of truth)
       if (serviceAccountKey) {
         try {
@@ -79,12 +87,22 @@ if (partnerId) {
             limit: 500
           });
 
-          // Filter entries for this artist - strict matching by ID only
-          // Don't match by artist name as it can cause false positives
-          ledgerEntries = allLedgerEntries.filter((e: any) =>
-            e.submitterId === partnerId ||
-            e.artistId === partnerId
-          );
+          // Filter entries for this artist
+          // Match by ID or by releaseId belonging to this artist
+          ledgerEntries = allLedgerEntries.filter((e: any) => {
+            // Direct ID match
+            if (e.submitterId === partnerId || e.artistId === partnerId) return true;
+            // Check if any item's releaseId belongs to this artist
+            if (e.items && Array.isArray(e.items)) {
+              return e.items.some((item: any) => {
+                const releaseId = item.id || item.releaseId;
+                return releaseId && artistReleaseIds.has(releaseId);
+              });
+            }
+            // Check top-level releaseId
+            if (e.releaseId && artistReleaseIds.has(e.releaseId)) return true;
+            return false;
+          });
 
           // Calculate earnings from ledger
           ledgerEntries.forEach((entry: any) => {
@@ -141,13 +159,6 @@ if (partnerId) {
         }
       }
 
-      // Fetch this artist's releases to match by releaseId
-      const artistReleases = await queryCollection('releases', {
-        filters: [{ field: 'submittedBy', op: 'EQUAL', value: partnerId }],
-        limit: 100
-      });
-      const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
-
       // Fetch orders - check both top-level artistId and items for this artist
       const allRecentOrders = await queryCollection('orders', {
         orderBy: { field: 'createdAt', direction: 'DESCENDING' },
@@ -155,7 +166,6 @@ if (partnerId) {
       });
 
       // Filter orders that contain items from this artist
-      const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
       orders = allRecentOrders.filter((order: any) => {
         // Check top-level artistId
         if (order.artistId === partnerId) return true;
