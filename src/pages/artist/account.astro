@@ -83,8 +83,9 @@ if (partnerId) {
       }
 
       // Fetch this artist's releases first (needed for matching)
+      // Check artistId field (more reliable than submittedBy which might be a name)
       const artistReleases = await queryCollection('releases', {
-        filters: [{ field: 'submittedBy', op: 'EQUAL', value: partnerId }],
+        filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
         limit: 100
       });
       const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
