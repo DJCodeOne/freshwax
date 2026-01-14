@@ -2283,14 +2283,25 @@ export const prerender = false;
     if (!paymentSection) return;
     const isCollapsed = paymentSection.dataset.collapsed === 'true';
     paymentSection.dataset.collapsed = isCollapsed ? 'false' : 'true';
+    console.log('[ArtistAccount] Payment section collapsed:', paymentSection.dataset.collapsed);
   }
 
-  // Click on header or button to toggle
+  // Click on header to toggle
   paymentToggle?.addEventListener('click', (e) => {
     // Only toggle if payment is complete (has the toggle button)
     if (paymentCollapseBtn && paymentSection?.classList.contains('payment-complete')) {
+      // Don't toggle if clicking on a button inside the header (except the collapse btn)
+      if (e.target.closest('button') && !e.target.closest('.collapse-toggle')) {
+        return;
+      }
       togglePaymentSection();
     }
+  });
+
+  // Direct click on collapse button
+  paymentCollapseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent double-toggle from header click
+    togglePaymentSection();
   });
 
   // Stripe Connect - Start onboarding
