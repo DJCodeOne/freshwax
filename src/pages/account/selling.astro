@@ -54,33 +54,35 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
           <h2>Payment Setup</h2>
           <div class="payout-method-indicator" id="payout-method-indicator"></div>
 
-          <!-- Preferred Payment Method Selector (shown when both connected) -->
-          <div id="payment-method-selector" class="payment-method-selector" style="display: none;">
+          <!-- Preferred Payment Method Selector -->
+          <div id="payment-method-selector" class="payment-method-selector">
             <h3>Preferred Payout Method</h3>
             <p class="selector-description">Choose how you'd like to receive your payouts</p>
             <div class="method-options">
               <label class="method-option" id="option-stripe">
-                <input type="radio" name="payoutMethod" value="stripe" />
+                <input type="radio" name="payoutMethod" value="stripe" disabled />
                 <div class="method-content">
                   <span class="method-icon">&#128179;</span>
                   <div class="method-info">
                     <strong>Stripe</strong>
                     <span class="method-detail">Free - 2-3 day transfers</span>
+                    <span class="method-status" id="stripe-status-text">Not connected</span>
                   </div>
                 </div>
               </label>
               <label class="method-option" id="option-paypal">
-                <input type="radio" name="payoutMethod" value="paypal" />
+                <input type="radio" name="payoutMethod" value="paypal" disabled />
                 <div class="method-content">
                   <span class="method-icon">P</span>
                   <div class="method-info">
                     <strong>PayPal</strong>
                     <span class="method-detail">+2% fee - Instant</span>
+                    <span class="method-status" id="paypal-status-text">Not connected</span>
                   </div>
                 </div>
               </label>
             </div>
-            <button id="save-method-btn" class="btn btn-primary" style="margin-top: 1rem;">Save Preference</button>
+            <button id="save-method-btn" class="btn btn-primary" style="margin-top: 1rem; display: none;">Save Preference</button>
           </div>
 
           <!-- Payout Method Tabs -->
@@ -245,16 +247,43 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
           if (paypalCheck) paypalCheck.style.display = 'inline';
         }
 
-        // Show payment method selector if both are connected
-        if (stripeData.status === 'active' && paypalData.paypalLinked) {
-          const selector = document.getElementById('payment-method-selector');
-          if (selector) {
-            selector.style.display = 'block';
-            // Set the current preference
-            const currentMethod = paypalData.payoutMethod || 'stripe';
-            const radio = document.querySelector(`input[name="payoutMethod"][value="${currentMethod}"]`);
-            if (radio) radio.checked = true;
-          }
+        // Update payment method selector based on connection status
+        const stripeRadio = document.querySelector('input[name="payoutMethod"][value="stripe"]');
+        const paypalRadio = document.querySelector('input[name="payoutMethod"][value="paypal"]');
+        const stripeStatusText = document.getElementById('stripe-status-text');
+        const paypalStatusText = document.getElementById('paypal-status-text');
+        const saveBtn = document.getElementById('save-method-btn');
+        const stripeOption = document.getElementById('option-stripe');
+        const paypalOption = document.getElementById('option-paypal');
+
+        // Enable/disable and update status for Stripe
+        if (stripeData.status === 'active') {
+          stripeRadio.disabled = false;
+          stripeStatusText.textContent = 'Connected';
+          stripeStatusText.classList.add('connected');
+          stripeOption.classList.remove('disabled');
+        } else {
+          stripeOption.classList.add('disabled');
+        }
+
+        // Enable/disable and update status for PayPal
+        if (paypalData.paypalLinked) {
+          paypalRadio.disabled = false;
+          paypalStatusText.textContent = 'Connected';
+          paypalStatusText.classList.add('connected');
+          paypalOption.classList.remove('disabled');
+        } else {
+          paypalOption.classList.add('disabled');
+        }
+
+        // Show save button if at least one method is connected
+        if (stripeData.status === 'active' || paypalData.paypalLinked) {
+          saveBtn.style.display = 'inline-block';
+
+          // Set the current preference
+          const currentMethod = paypalData.payoutMethod || (stripeData.status === 'active' ? 'stripe' : 'paypal');
+          const radio = document.querySelector(`input[name="payoutMethod"][value="${currentMethod}"]`);
+          if (radio && !radio.disabled) radio.checked = true;
         }
 
         // Update earnings
@@ -815,6 +844,25 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
   .method-detail {
     color: #a3a3a3;
     font-size: 0.8rem;
+  }
+
+  .method-status {
+    font-size: 0.75rem;
+    color: #ef4444;
+    font-weight: 500;
+  }
+
+  .method-status.connected {
+    color: #22c55e;
+  }
+
+  .method-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .method-option.disabled .method-content {
+    pointer-events: none;
   }
 
   @media (max-width: 600px) {
