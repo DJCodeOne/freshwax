@@ -33,6 +33,17 @@ let salesStats = {
 };
 let activity: any[] = [];
 
+// Debug info
+let debugInfo = {
+  partnerId: '',
+  artistName: '',
+  releaseIds: [] as string[],
+  ledgerCount: 0,
+  ledgerTotal: 0,
+  ordersCount: 0,
+  pendingPayoutsCount: 0
+};
+
 // Service account config for salesLedger
 const env = (Astro.locals as any)?.runtime?.env;
 const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -79,6 +90,11 @@ if (partnerId) {
       const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
       const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
 
+      // Populate debug info
+      debugInfo.partnerId = partnerId;
+      debugInfo.artistName = artistName;
+      debugInfo.releaseIds = Array.from(artistReleaseIds) as string[];
+
       // Fetch sales data from salesLedger (source of truth)
       if (serviceAccountKey) {
         try {
@@ -104,10 +120,14 @@ if (partnerId) {
             return false;
           });
 
+          // Update debug info
+          debugInfo.ledgerCount = ledgerEntries.length;
+
           // Calculate earnings from ledger
           ledgerEntries.forEach((entry: any) => {
             const artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
             const grossAmount = entry.grossAmount || entry.total || artistPayout;
+            debugInfo.ledgerTotal += artistPayout;
 
             salesStats.totalRevenue += grossAmount;
             salesStats.totalEarnings += artistPayout;
@@ -143,6 +163,9 @@ if (partnerId) {
             ],
             limit: 100
           });
+
+          // Update debug info
+          debugInfo.pendingPayoutsCount = pendingPayoutsData.length;
 
           // Add pending payouts to the balance if not already counted in ledger
           pendingPayoutsData.forEach((payout: any) => {
@@ -261,6 +284,9 @@ if (partnerId) {
         const dateB = new Date(b.createdAt || 0);
         return dateB.getTime() - dateA.getTime();
       });
+
+      // Update debug info
+      debugInfo.ordersCount = orders.length;
 
       // Recent activity - prefer ledger entries, fallback to orders
       if (ledgerEntries.length > 0) {
@@ -709,6 +735,21 @@ export const prerender = false;
               </div>
             </div>
             </div><!-- end section-content -->
+          </section>
+
+          <!-- Debug Info (temporary) -->
+          <section class="account-section" style="background: #1a1a2e; border: 1px solid #f59e0b;">
+            <div class="section-header">
+              <h2>🔧 Debug Info</h2>
+            </div>
+            <div style="font-family: monospace; font-size: 0.85rem; color: #9ca3af;">
+              <p><strong>Partner ID:</strong> {debugInfo.partnerId}</p>
+              <p><strong>Artist Name:</strong> {debugInfo.artistName || '(empty)'}</p>
+              <p><strong>Release IDs:</strong> {debugInfo.releaseIds.length > 0 ? debugInfo.releaseIds.join(', ') : '(none found)'}</p>
+              <p><strong>Ledger Entries Found:</strong> {debugInfo.ledgerCount} (total: £{debugInfo.ledgerTotal.toFixed(2)})</p>
+              <p><strong>Orders Found:</strong> {debugInfo.ordersCount}</p>
+              <p><strong>Pending Payouts:</strong> {debugInfo.pendingPayoutsCount}</p>
+            </div>
           </section>
 
           <!-- Sales Overview -->
