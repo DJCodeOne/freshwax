@@ -12,6 +12,7 @@ const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;
 let orders: any[] = [];
 let ledgerEntries: any[] = [];
+let artistReleaseIds: Set<string> = new Set();
 let orderStats = {
   total: 0,
   pending: 0,
@@ -40,8 +41,12 @@ let debugInfo = {
   releaseIds: [] as string[],
   ledgerCount: 0,
   ledgerTotal: 0,
+  ledgerDetails: [] as string[],
   ordersCount: 0,
-  pendingPayoutsCount: 0
+  pendingPayoutsCount: 0,
+  pendingPayoutsTotal: 0,
+  pendingPayoutsAdded: 0,
+  pendingPayoutsDetails: [] as string[]
 };
 
 // Service account config for salesLedger
@@ -90,7 +95,7 @@ if (partnerId) {
         r.userId === partnerId ||
         r.submittedBy === partnerId
       );
-      const artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
+      artistReleaseIds = new Set(artistReleases.map((r: any) => r.id));
       const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
 
       // Populate debug info
@@ -128,9 +133,29 @@ if (partnerId) {
 
           // Calculate earnings from ledger
           ledgerEntries.forEach((entry: any) => {
-            const artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
+            let artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
+
+            // If artistPayout is 0 but this looks like a paid order, calculate from items
+            // Only calculate if there's evidence of payment (has artistPayoutStatus field)
+            const hasPaidEvidence = entry.artistPayoutStatus !== undefined ||
+                                    entry.paymentIntentId !== undefined ||
+                                    entry.stripePaymentId !== undefined ||
+                                    (entry.grossTotal && entry.grossTotal > 0);
+
+            if (artistPayout === 0 && hasPaidEvidence && entry.items && Array.isArray(entry.items)) {
+              const artistItems = entry.items.filter((item: any) => {
+                const releaseId = item.id || item.releaseId;
+                return releaseId && artistReleaseIds.has(releaseId);
+              });
+              const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice || 0), 0);
+              if (itemsTotal > 0) {
+                artistPayout = itemsTotal * 0.7; // 70% artist share
+              }
+            }
+
             const grossAmount = entry.grossAmount || entry.total || artistPayout;
             debugInfo.ledgerTotal += artistPayout;
+            debugInfo.ledgerDetails.push(`${entry.orderId?.slice(0, 8) || 'no-id'}: £${artistPayout.toFixed(2)} (${entry.customerEmail || 'unknown'})`);
 
             salesStats.totalRevenue += grossAmount;
             salesStats.totalEarnings += artistPayout;
@@ -146,7 +171,7 @@ if (partnerId) {
               salesStats.merchRevenue += artistPayout;
             }
 
-            // Track payout status
+            // Track payout status - treat "not_applicable" as pending if there's an amount
             if (entry.artistPayoutStatus === 'paid') {
               salesStats.totalPaidOut += entry.artistPayoutPaid || artistPayout;
             }
@@ -170,14 +195,30 @@ if (partnerId) {
           // Update debug info
           debugInfo.pendingPayoutsCount = pendingPayoutsData.length;
 
-          // Add pending payouts to the balance if not already counted in ledger
+          // Add pending payouts to the balance
+          // Check if there's a ledger entry with actual payout for this order
           pendingPayoutsData.forEach((payout: any) => {
             const amount = payout.amount || 0;
-            // Only add if this seems like a new pending payout not in ledger
-            if (amount > 0 && !ledgerEntries.some((e: any) => e.orderId === payout.orderId)) {
-              salesStats.pendingBalance += amount;
-              salesStats.totalEarnings += amount;
-              salesStats.totalSales++;
+            debugInfo.pendingPayoutsTotal += amount;
+
+            if (amount > 0) {
+              // Check if there's already a ledger entry with non-zero payout for this order
+              const existingLedgerEntry = ledgerEntries.find((e: any) => e.orderId === payout.orderId);
+              const existingLedgerAmount = existingLedgerEntry?.artistPayout || existingLedgerEntry?.actualArtistPayout || 0;
+
+              // Only add if ledger doesn't already have this amount
+              if (!existingLedgerEntry || existingLedgerAmount === 0) {
+                salesStats.pendingBalance += amount;
+                salesStats.totalEarnings += amount;
+                debugInfo.pendingPayoutsAdded += amount;
+                debugInfo.pendingPayoutsDetails.push(`${payout.orderId?.slice(0, 8) || 'no-id'}: £${amount.toFixed(2)} (ADDED)`);
+                // Don't increment totalSales if order already counted
+                if (!existingLedgerEntry) {
+                  salesStats.totalSales++;
+                }
+              } else {
+                debugInfo.pendingPayoutsDetails.push(`${payout.orderId?.slice(0, 8) || 'no-id'}: £${amount.toFixed(2)} (skipped - ledger has £${existingLedgerAmount.toFixed(2)})`);
+              }
             }
           });
         } catch (pendingErr) {
@@ -213,15 +254,41 @@ if (partnerId) {
         return false;
       });
 
-      // Calculate order stats from filtered orders
+      // Calculate order stats from filtered orders (using ledger payout status)
       orders.forEach(order => {
         orderStats.total++;
-        const status = (order.status || 'pending').toLowerCase();
-        if (status === 'pending') orderStats.pending++;
-        else if (status === 'processed' || status === 'processing') orderStats.processed++;
-        else if (status === 'shipped') orderStats.shipped++;
-        else if (status === 'delivered') orderStats.delivered++;
-        else if (status === 'cancelled') orderStats.cancelled++;
+
+        // Check ledger entry to determine actual payout status
+        const ledgerEntry = ledgerEntries.find((e: any) => e.orderId === order.id);
+        let effectiveStatus = (order.status || 'pending').toLowerCase();
+
+        if (ledgerEntry) {
+          // Calculate artist amount to determine if this is a paid order
+          let artistAmount = ledgerEntry.artistPayout || ledgerEntry.actualArtistPayout || 0;
+          if (artistAmount === 0 && ledgerEntry.artistPayoutStatus !== undefined) {
+            const artistItems = (ledgerEntry.items || []).filter((item: any) => {
+              const releaseId = item.id || item.releaseId;
+              return releaseId && artistReleaseIds.has(releaseId);
+            });
+            const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice || 0), 0);
+            artistAmount = itemsTotal * 0.7;
+          }
+
+          // Determine status based on payout
+          if (ledgerEntry.artistPayoutStatus === 'paid') {
+            effectiveStatus = 'delivered'; // Use delivered for paid orders
+          } else if (artistAmount > 0) {
+            effectiveStatus = 'pending'; // Unpaid with amount = pending
+          } else {
+            effectiveStatus = 'delivered'; // Free downloads = completed
+          }
+        }
+
+        if (effectiveStatus === 'pending') orderStats.pending++;
+        else if (effectiveStatus === 'processed' || effectiveStatus === 'processing') orderStats.processed++;
+        else if (effectiveStatus === 'shipped') orderStats.shipped++;
+        else if (effectiveStatus === 'delivered' || effectiveStatus === 'completed') orderStats.delivered++;
+        else if (effectiveStatus === 'cancelled') orderStats.cancelled++;
 
         // Count free downloads in sales stats if not already in ledger
         const orderTotal = order.totals?.total || order.total || 0;
@@ -291,15 +358,47 @@ if (partnerId) {
       // Update debug info
       debugInfo.ordersCount = orders.length;
 
-      // Recent activity - prefer ledger entries, fallback to orders
+      // Recent activity - combine ledger entries with order details
       if (ledgerEntries.length > 0) {
-        activity = ledgerEntries.slice(0, 10).map(entry => ({
-          type: 'sale',
-          title: `${entry.type || 'Release'} sale`,
-          description: entry.releaseTitle || entry.productName || entry.title || 'Sale completed',
-          date: entry.timestamp,
-          amount: entry.artistPayout || entry.actualArtistPayout || 0
-        }));
+        activity = ledgerEntries.slice(0, 10).map(entry => {
+          // Calculate amount if not set
+          let amount = entry.artistPayout || entry.actualArtistPayout || 0;
+          if (amount === 0 && entry.artistPayoutStatus !== undefined && entry.items) {
+            const artistItems = (entry.items || []).filter((item: any) => {
+              const releaseId = item.id || item.releaseId;
+              return releaseId && artistReleaseIds.has(releaseId);
+            });
+            const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice || 0), 0);
+            amount = itemsTotal * 0.7;
+          }
+
+          // Get customer info
+          const customerEmail = entry.customerEmail || '';
+          const customerName = customerEmail.split('@')[0] || 'Customer';
+
+          // Determine status
+          let status = 'pending';
+          if (entry.artistPayoutStatus === 'paid') {
+            status = 'paid';
+          } else if (amount === 0) {
+            status = 'free';
+          }
+
+          // Get item title
+          const itemTitle = entry.releaseTitle || entry.productName || entry.title ||
+            (entry.items?.[0]?.title) || 'Sale';
+
+          return {
+            type: amount > 0 ? 'sale' : 'download',
+            title: itemTitle,
+            description: `Purchased by ${customerName}`,
+            orderNumber: entry.orderNumber || entry.orderId?.slice(-8).toUpperCase(),
+            customerEmail,
+            date: entry.timestamp,
+            amount,
+            status
+          };
+        });
       } else if (orders.length > 0) {
         // Fallback to orders if no ledger entries
         activity = orders.slice(0, 10).map(order => {
@@ -315,14 +414,23 @@ if (partnerId) {
           const itemTitle = artistItems.length > 0
             ? artistItems.map((i: any) => i.name || i.title).join(', ')
             : 'Order';
-          const itemAmount = artistItems.reduce((sum: number, i: any) => sum + (i.price || i.total || 0), 0);
+          const itemAmount = artistItems.reduce((sum: number, i: any) => sum + (i.price || i.total || 0), 0) * 0.7;
+
+          // Get customer info
+          const customerEmail = order.customer?.email || order.buyerEmail || '';
+          const customerName = order.customer?.firstName ||
+            order.customer?.name ||
+            customerEmail.split('@')[0] || 'Customer';
 
           return {
-            type: 'order',
-            title: order.paymentMethod === 'free_download' ? 'Free download' : 'Sale',
-            description: itemTitle,
+            type: itemAmount > 0 ? 'sale' : 'download',
+            title: itemTitle,
+            description: `Purchased by ${customerName}`,
+            orderNumber: order.orderNumber || order.id?.slice(-8).toUpperCase(),
+            customerEmail,
             date: order.createdAt,
-            amount: itemAmount
+            amount: itemAmount,
+            status: order.paymentMethod === 'free_download' ? 'free' : 'pending'
           };
         });
       }
@@ -740,21 +848,6 @@ export const prerender = false;
             </div><!-- end section-content -->
           </section>
 
-          <!-- Debug Info (temporary) -->
-          <section class="account-section" style="background: #1a1a2e; border: 1px solid #f59e0b;">
-            <div class="section-header">
-              <h2>🔧 Debug Info</h2>
-            </div>
-            <div style="font-family: monospace; font-size: 0.85rem; color: #9ca3af;">
-              <p><strong>Partner ID:</strong> {debugInfo.partnerId}</p>
-              <p><strong>Artist Name:</strong> {debugInfo.artistName || '(empty)'}</p>
-              <p><strong>Release IDs:</strong> {debugInfo.releaseIds.length > 0 ? debugInfo.releaseIds.join(', ') : '(none found)'}</p>
-              <p><strong>Ledger Entries Found:</strong> {debugInfo.ledgerCount} (total: £{debugInfo.ledgerTotal.toFixed(2)})</p>
-              <p><strong>Orders Found:</strong> {debugInfo.ordersCount}</p>
-              <p><strong>Pending Payouts:</strong> {debugInfo.pendingPayoutsCount}</p>
-            </div>
-          </section>
-
           <!-- Sales Overview -->
           <section class="account-section">
             <div class="section-header">
@@ -816,23 +909,71 @@ export const prerender = false;
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.slice(0, 20).map(order => (
-                      <tr>
-                        <td class="order-id">#{order.id.slice(-8).toUpperCase()}</td>
-                        <td>{formatDate(order.createdAt)}</td>
-                        <td>{order.customerName || order.customer?.name || 'Customer'}</td>
-                        <td class="item-cell">{order.itemTitle || order.title || order.items?.[0]?.title || '-'}</td>
-                        <td class="amount">{formatPrice(order.total || order.amount || 0)}</td>
-                        <td>
-                          <span class={`status-pill ${getStatusClass(order.status)}`}>
-                            {order.status || 'Pending'}
-                          </span>
-                        </td>
-                        <td>
-                          <button class="table-btn" data-order-id={order.id}>View</button>
-                        </td>
-                      </tr>
-                    ))}
+                    {orders.slice(0, 20).map(order => {
+                      // Get customer name from various fields
+                      const customerName = order.customerName ||
+                        order.customer?.name ||
+                        (order.customer?.firstName && order.customer?.lastName
+                          ? `${order.customer.firstName} ${order.customer.lastName}`
+                          : order.customer?.firstName) ||
+                        order.customer?.email?.split('@')[0] ||
+                        order.buyerEmail?.split('@')[0] ||
+                        'Customer';
+
+                      // Find matching ledger entry to get actual artist earnings
+                      const ledgerEntry = ledgerEntries.find((e: any) => e.orderId === order.id);
+                      let artistAmount = 0;
+                      if (ledgerEntry) {
+                        artistAmount = ledgerEntry.artistPayout || ledgerEntry.actualArtistPayout || 0;
+                        // If ledger has 0 but has paid evidence, calculate from items
+                        if (artistAmount === 0 && ledgerEntry.artistPayoutStatus !== undefined) {
+                          const artistItems = (ledgerEntry.items || []).filter((item: any) => {
+                            const releaseId = item.id || item.releaseId;
+                            return releaseId && artistReleaseIds.has(releaseId);
+                          });
+                          const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice || 0), 0);
+                          artistAmount = itemsTotal * 0.7;
+                        }
+                      } else {
+                        // No ledger entry - calculate from order items for this artist
+                        const artistItems = (order.items || []).filter((item: any) => {
+                          const releaseId = item.releaseId || item.productId || item.id;
+                          return releaseId && artistReleaseIds.has(releaseId);
+                        });
+                        const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.price || item.lineTotal || 0), 0);
+                        artistAmount = itemsTotal * 0.7;
+                      }
+
+                      // Determine status based on ledger payout status
+                      let displayStatus = order.status || 'Pending';
+                      if (ledgerEntry) {
+                        if (ledgerEntry.artistPayoutStatus === 'paid') {
+                          displayStatus = 'Paid';
+                        } else if (ledgerEntry.artistPayoutStatus === 'pending' || (artistAmount > 0 && ledgerEntry.artistPayoutStatus !== 'paid')) {
+                          displayStatus = 'Pending';
+                        } else if (ledgerEntry.artistPayoutStatus === 'not_applicable' && artistAmount > 0) {
+                          displayStatus = 'Pending';
+                        }
+                      }
+
+                      return (
+                        <tr>
+                          <td class="order-id">#{order.id.slice(-8).toUpperCase()}</td>
+                          <td>{formatDate(order.createdAt)}</td>
+                          <td>{customerName}</td>
+                          <td class="item-cell">{order.itemTitle || order.title || order.items?.[0]?.title || order.items?.[0]?.name || '-'}</td>
+                          <td class="amount">{formatPrice(artistAmount)}</td>
+                          <td>
+                            <span class={`status-pill ${getStatusClass(displayStatus)}`}>
+                              {displayStatus}
+                            </span>
+                          </td>
+                          <td>
+                            <button class="table-btn" data-order-id={order.id}>View</button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -879,14 +1020,18 @@ export const prerender = false;
                 {activity.map(item => (
                   <div class="activity-item">
                     <div class="activity-icon">
-                      {item.type === 'order' ? '🛒' : '📌'}
+                      {item.type === 'sale' ? '💰' : '📥'}
                     </div>
                     <div class="activity-content">
                       <div class="activity-title">{item.title}</div>
                       <div class="activity-desc">{item.description}</div>
+                      {item.orderNumber && <div class="activity-order">Order #{item.orderNumber}</div>}
                     </div>
                     <div class="activity-meta">
-                      {item.amount && <span class="activity-amount">{formatPrice(item.amount)}</span>}
+                      <span class={`activity-status ${item.status}`}>
+                        {item.status === 'paid' ? '✓ Paid' : item.status === 'free' ? 'Free' : '⏳ Pending'}
+                      </span>
+                      {item.amount > 0 && <span class="activity-amount">{formatPrice(item.amount)}</span>}
                       <span class="activity-date">{formatDateTime(item.date)}</span>
                     </div>
                   </div>
@@ -1484,10 +1629,43 @@ export const prerender = false;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  
+
+  .activity-order {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    font-family: monospace;
+  }
+
   .activity-meta {
     text-align: right;
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+  }
+
+  .activity-status {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 500;
+  }
+
+  .activity-status.paid {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .activity-status.pending {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+  }
+
+  .activity-status.free {
+    background: rgba(96, 165, 250, 0.2);
+    color: #60a5fa;
   }
   
   .activity-amount {

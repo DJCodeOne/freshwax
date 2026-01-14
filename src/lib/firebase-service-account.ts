@@ -349,13 +349,106 @@ export async function saQueryCollection(
   projectId: string,
   collection: string,
   options?: {
+    filters?: Array<{ field: string; op: string; value: any }>;
     orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
     limit?: number;
   }
 ): Promise<Record<string, any>[]> {
   const token = await getServiceAccountToken(serviceAccountKey);
 
-  // Build query URL
+  // If we have filters, use structured query (POST)
+  if (options?.filters && options.filters.length > 0) {
+    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery`;
+
+    // Map operator strings to Firestore operators
+    const opMap: Record<string, string> = {
+      'EQUAL': 'EQUAL',
+      '==': 'EQUAL',
+      'NOT_EQUAL': 'NOT_EQUAL',
+      '!=': 'NOT_EQUAL',
+      'LESS_THAN': 'LESS_THAN',
+      '<': 'LESS_THAN',
+      'LESS_THAN_OR_EQUAL': 'LESS_THAN_OR_EQUAL',
+      '<=': 'LESS_THAN_OR_EQUAL',
+      'GREATER_THAN': 'GREATER_THAN',
+      '>': 'GREATER_THAN',
+      'GREATER_THAN_OR_EQUAL': 'GREATER_THAN_OR_EQUAL',
+      '>=': 'GREATER_THAN_OR_EQUAL',
+      'IN': 'IN',
+      'NOT_IN': 'NOT_IN',
+      'ARRAY_CONTAINS': 'ARRAY_CONTAINS',
+      'ARRAY_CONTAINS_ANY': 'ARRAY_CONTAINS_ANY'
+    };
+
+    // Build composite filter for multiple filters
+    const fieldFilters = options.filters.map(f => ({
+      fieldFilter: {
+        field: { fieldPath: f.field },
+        op: opMap[f.op] || f.op,
+        value: toFirestoreValue(f.value)
+      }
+    }));
+
+    let where: any;
+    if (fieldFilters.length === 1) {
+      where = fieldFilters[0];
+    } else {
+      where = {
+        compositeFilter: {
+          op: 'AND',
+          filters: fieldFilters
+        }
+      };
+    }
+
+    const structuredQuery: any = {
+      from: [{ collectionId: collection }],
+      where
+    };
+
+    if (options?.orderBy) {
+      structuredQuery.orderBy = [{
+        field: { fieldPath: options.orderBy.field },
+        direction: options.orderBy.direction || 'ASCENDING'
+      }];
+    }
+
+    if (options?.limit) {
+      structuredQuery.limit = options.limit;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ structuredQuery })
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('[saQueryCollection] Structured query error:', error);
+      return [];
+    }
+
+    const results = await response.json() as any[];
+    return results
+      .filter((r: any) => r.document) // Filter out empty results
+      .map((r: any) => {
+        const doc = r.document;
+        const result: Record<string, any> = {};
+        const fields = doc.fields || {};
+        for (const [key, value] of Object.entries(fields)) {
+          result[key] = fromFirestoreValue(value);
+        }
+        const nameParts = doc.name.split('/');
+        result.id = nameParts[nameParts.length - 1];
+        return result;
+      });
+  }
+
+  // No filters - use simple GET
   let url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}`;
   const params: string[] = [];
 
