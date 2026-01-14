@@ -2,15 +2,40 @@
 // Set preferred payout method (stripe or paypal)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
   initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_PROJECT_ID: projectId,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
+  if (!clientEmail || !privateKey) {
+    console.error('[Payout] Service account not configured');
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Service account not configured'
+    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // Build service account key
+  const serviceAccountKey = JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
   });
 
   try {
@@ -91,8 +116,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Update preference
-    await updateDocument(collection, docId, {
+    // Update preference using service account auth
+    await saUpdateDocument(serviceAccountKey, projectId, collection, docId, {
       payoutMethod,
       payoutMethodUpdatedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
