@@ -624,7 +624,12 @@ export const prerender = false;
       });
       
       if (response.ok) {
-        location.reload();
+        // Close modal and refresh data without full page reload
+        editModal?.classList.add('hidden');
+        mixesInitialized = false;
+        await initMixes(auth.currentUser);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
       } else {
         const result = await response.json();
         throw new Error(result.error || 'Failed to update mix');
