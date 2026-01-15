@@ -26,8 +26,8 @@ export const GET: APIRoute = async ({ url }) => {
   const allowedDomains = [
     'pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev',
     'cdn.freshwax.co.uk',
-    'res.cloudinary.com',
-    'firebasestorage.googleapis.com'
+    'firebasestorage.googleapis.com',
+    'r2.cloudflarestorage.com' // For presigned R2 URLs
   ];
   
   let isAllowed = false;

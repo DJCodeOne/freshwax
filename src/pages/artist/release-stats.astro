@@ -1,13 +1,14 @@
 ---
 // /src/pages/artist/release-stats.astro
 // Release Analytics - Sales, plays, and performance tracking
-// Source of truth: salesLedger collection
+// Source of truth: salesLedger (D1 primary, Firebase backup)
 
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;
@@ -16,8 +17,7 @@ let ledgerEntries: any[] = [];
 let totals = {
   releases: 0,
   liveReleases: 0,
-  pendingReleases: 0,
-  plays: 0,
+  pendingRevenue: 0,
   sales: 0,
   revenue: 0,
   earnings: 0
@@ -71,21 +71,49 @@ if (partnerId) {
       });
       byUserId.forEach(r => releaseMap.set(r.id, r));
 
+      // Query by submitterEmail (email-based matching)
+      if (partner.email) {
+        const byEmail = await queryCollection('releases', {
+          filters: [{ field: 'submitterEmail', op: 'EQUAL', value: partner.email }]
+        });
+        byEmail.forEach(r => releaseMap.set(r.id, r));
+      }
+
       releases = Array.from(releaseMap.values());
       const releaseIds = releases.map(r => r.id);
 
-      // Query salesLedger for accurate sales data (source of truth)
-      if (serviceAccountKey && releaseIds.length > 0) {
-        try {
-          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-            limit: 1000
-          });
+      // Query salesLedger for accurate sales data (D1 primary, Firebase backup)
+      if (releaseIds.length > 0) {
+        let allLedgerEntries: any[] = [];
 
-          // Filter entries that contain this artist's releases
-          allLedgerEntries.forEach((entry: any) => {
+        // Try D1 first (primary read source)
+        const db = env?.DB;
+        if (db) {
+          try {
+            allLedgerEntries = await d1GetLedgerEntries(db, { limit: 1000 });
+            console.log(`[release-stats] D1 read: ${allLedgerEntries.length} ledger entries`);
+          } catch (d1Error) {
+            console.error('[release-stats] D1 read failed:', d1Error);
+          }
+        }
+
+        // Fallback to Firebase if D1 empty or failed
+        if (allLedgerEntries.length === 0 && serviceAccountKey) {
+          try {
+            allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+              orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+              limit: 1000
+            });
+            console.log(`[release-stats] Firebase fallback: ${allLedgerEntries.length} ledger entries`);
+          } catch (fbError) {
+            console.error('[release-stats] Firebase fallback failed:', fbError);
+          }
+        }
+
+        // Filter entries that contain this artist's releases
+        allLedgerEntries.forEach((entry: any) => {
             const artistItems = (entry.items || []).filter((item: any) =>
-              (item.type === 'release' || item.type === 'track') && releaseIds.includes(item.id)
+              (item.type === 'release' || item.type === 'track' || item.type === 'digital') && releaseIds.includes(item.id || item.releaseId || item.productId)
             );
 
             if (artistItems.length > 0) {
@@ -93,25 +121,29 @@ if (partnerId) {
 
               // Aggregate sales by release ID
               artistItems.forEach((item: any) => {
-                const existing = releaseSalesMap.get(item.id) || { sales: 0, revenue: 0, earnings: 0 };
+                const itemId = item.id || item.releaseId || item.productId;
+                const existing = releaseSalesMap.get(itemId) || { sales: 0, revenue: 0, earnings: 0 };
                 existing.sales += item.quantity || 1;
-                existing.revenue += item.lineTotal || item.unitPrice || 0;
-                releaseSalesMap.set(item.id, existing);
+                existing.revenue += entry.grossTotal || 0;
+                releaseSalesMap.set(itemId, existing);
               });
 
-              // Add artist payout to totals
-              totals.earnings += entry.artistPayout || entry.actualArtistPayout || 0;
+              // Add artist payout to totals and track pending revenue
+              const payout = entry.artistPayout || entry.actualArtistPayout || 0;
+              totals.earnings += payout;
+
+              // Track pending revenue (not yet paid out)
+              const isPending = entry.artistPayoutStatus !== 'paid';
+              const pendingAmount = entry.grossTotal || payout || 0;
+              if (isPending && pendingAmount > 0) {
+                totals.pendingRevenue += pendingAmount;
+              }
             }
           });
-        } catch (ledgerErr) {
-          console.error('Error fetching ledger entries:', ledgerErr);
-        }
       }
 
       // Calculate totals using ledger data where available
       releases.forEach(release => {
-        totals.plays += release.stats?.plays || release.plays || 0;
-
         // Use ledger data if available, otherwise fall back to release stats
         const ledgerData = releaseSalesMap.get(release.id);
         if (ledgerData) {
@@ -127,8 +159,6 @@ if (partnerId) {
 
         if (release.status === 'live') {
           totals.liveReleases++;
-        } else {
-          totals.pendingReleases++;
         }
       });
 
@@ -207,18 +237,13 @@ export const prerender = false;
               </div>
               <div class="total-card amber">
                 <div class="total-icon">🟡</div>
-                <div class="total-value">{totals.pendingReleases}</div>
+                <div class="total-value">£{totals.pendingRevenue.toFixed(2)}</div>
                 <div class="total-label">Pending</div>
               </div>
               <div class="total-card highlight">
                 <div class="total-icon">🛒</div>
                 <div class="total-value">{formatNumber(totals.sales)}</div>
                 <div class="total-label">Total Sales</div>
-              </div>
-              <div class="total-card">
-                <div class="total-icon">▶️</div>
-                <div class="total-value">{formatNumber(totals.plays)}</div>
-                <div class="total-label">Total Plays</div>
               </div>
               <div class="total-card green">
                 <div class="total-icon">💰</div>
@@ -259,10 +284,6 @@ export const prerender = false;
                     <div class="stat-item">
                       <span class="stat-value">{formatNumber(release.ledgerSales ?? release.stats?.downloads ?? release.sales ?? 0)}</span>
                       <span class="stat-label">Sales</span>
-                    </div>
-                    <div class="stat-item">
-                      <span class="stat-value">{formatNumber(release.stats?.plays || release.plays || 0)}</span>
-                      <span class="stat-label">Plays</span>
                     </div>
                     <div class="stat-item green">
                       <span class="stat-value">{formatPrice(release.pricePerSale || release.price || 0)}</span>
@@ -391,7 +412,7 @@ export const prerender = false;
   
   .totals-grid {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 1rem;
   }
   

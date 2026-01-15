@@ -1,10 +1,12 @@
 ---
 // /src/pages/admin/payments.astro
 // Fresh Wax Payments Admin - Disputes, Refunds, and Failed Payouts
+// Ledger: D1 primary, Firebase backup
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 // Get service account config for payouts collection (requires auth)
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
@@ -196,30 +198,67 @@ const recentOrders = await queryCollection('orders', {
   limit: 100
 });
 
-// Query salesLedger for accurate fee and payout data (source of truth)
+// Query salesLedger for accurate fee and payout data (D1 primary, Firebase backup)
 let ledgerEntries: Record<string, any>[] = [];
 const ledgerByOrderId: Record<string, any> = {};
-try {
-  ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-    orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-    limit: 500
-  });
-  // Index by orderId for quick lookups
-  for (const entry of ledgerEntries) {
-    if (entry.orderId) {
-      ledgerByOrderId[entry.orderId] = entry;
-    }
+
+// Try D1 first (primary read source)
+const db = runtimeEnv?.DB;
+if (db) {
+  try {
+    ledgerEntries = await d1GetLedgerEntries(db, { limit: 500 });
+    console.log('[payments] D1 read:', ledgerEntries.length, 'ledger entries');
+  } catch (d1Error) {
+    console.error('[payments] D1 read failed:', d1Error);
   }
-  console.log('[payments] Loaded', ledgerEntries.length, 'ledger entries');
-} catch (err) {
-  console.error('[payments] Error fetching ledger:', err);
 }
 
-// Fetch artists to map artistId -> artistName
+// Fallback to Firebase if D1 empty or failed
+if (ledgerEntries.length === 0) {
+  try {
+    ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+      orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+      limit: 500
+    });
+    console.log('[payments] Firebase fallback:', ledgerEntries.length, 'ledger entries');
+  } catch (err) {
+    console.error('[payments] Firebase fallback failed:', err);
+  }
+}
+
+// Index by orderId for quick lookups
+for (const entry of ledgerEntries) {
+  if (entry.orderId) {
+    ledgerByOrderId[entry.orderId] = entry;
+  }
+}
+
+// Fetch artists to map artistId -> artist info (name + payment preferences)
 const artists = await queryCollection('artists', { limit: 200 });
 const artistMap: Record<string, string> = {};
+const artistPaymentMap: Record<string, { name: string; payoutMethod: string | null; paypalEmail: string | null; stripeConnectId: string | null }> = {};
 for (const artist of artists) {
-  artistMap[artist.id] = artist.artistName || artist.name || 'Unknown';
+  const paymentInfo = {
+    name: artist.artistName || artist.name || 'Unknown',
+    payoutMethod: artist.payoutMethod || null,
+    paypalEmail: artist.paypalEmail || null,
+    stripeConnectId: artist.stripeConnectId || null
+  };
+
+  // Index by Firebase document ID
+  artistMap[artist.id] = paymentInfo.name;
+  artistPaymentMap[artist.id] = paymentInfo;
+
+  // Also index by email for fallback lookup
+  if (artist.email) {
+    artistPaymentMap[artist.email] = paymentInfo;
+  }
+
+  // Also index by common slug patterns (e.g., "code_one" for "Code One")
+  const slug = (artist.artistName || artist.name || '').toLowerCase().replace(/\s+/g, '_');
+  if (slug) {
+    artistPaymentMap[slug] = paymentInfo;
+  }
 }
 
 // Fetch releases to map releaseId -> artistId
@@ -438,13 +477,29 @@ export const prerender = false;
                         <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                           {allPayees.map(payee => {
                             const style = typeStyles[payee.type];
-                            const methodBadge = payee.payoutMethod === 'paypal'
-                              ? { text: 'PayPal', color: '#0070ba', bg: '#e6f3ff' }
-                              : payee.payoutMethod === 'stripe' || payee.stripeConnectId
-                                ? { text: 'Stripe', color: '#635bff', bg: '#f0efff' }
-                                : payee.paypalEmail
+                            // Get artist's preferred payment method from their profile
+                            // Try multiple lookup keys: id, email, name slug
+                            const nameSlug = (payee.name || '').toLowerCase().replace(/\s+/g, '_');
+                            const artistPrefs = artistPaymentMap[payee.id]
+                              || artistPaymentMap[payee.email]
+                              || artistPaymentMap[nameSlug]
+                              || null;
+                            const preferredMethod = artistPrefs?.payoutMethod || payee.payoutMethod;
+                            const hasPayPal = artistPrefs?.paypalEmail || payee.paypalEmail;
+                            const hasStripe = artistPrefs?.stripeConnectId || payee.stripeConnectId;
+
+                            const methodBadge = preferredMethod === 'paypal' && hasPayPal
+                              ? { text: 'PayPal ★', color: '#0070ba', bg: '#e6f3ff' }
+                              : preferredMethod === 'stripe' && hasStripe
+                                ? { text: 'Stripe ★', color: '#635bff', bg: '#f0efff' }
+                                : hasPayPal
                                   ? { text: 'PayPal', color: '#0070ba', bg: '#e6f3ff' }
-                                  : { text: 'Not Set', color: '#9ca3af', bg: '#f3f4f6' };
+                                  : hasStripe
+                                    ? { text: 'Stripe', color: '#635bff', bg: '#f0efff' }
+                                    : { text: 'Not Set', color: '#9ca3af', bg: '#f3f4f6' };
+
+                            // Update payee email with artist's PayPal if not set
+                            const payeeEmail = payee.email || payee.paypalEmail || artistPrefs?.paypalEmail || '';
                             return (
                               <div style={`display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0.5rem; background: ${style.bg}; border-radius: 4px; font-size: 0.8rem;`}>
                                 <span style="font-size: 0.75rem;">{style.icon}</span>
@@ -459,10 +514,10 @@ export const prerender = false;
                                   data-payee-type={payee.type}
                                   data-payee-id={payee.id}
                                   data-payee-name={payee.name}
-                                  data-payee-email={payee.email || payee.paypalEmail}
+                                  data-payee-email={payeeEmail}
                                   data-payee-amount={payee.amount}
-                                  data-payout-method={payee.payoutMethod}
-                                  data-stripe-connect-id={payee.stripeConnectId}
+                                  data-payout-method={preferredMethod}
+                                  data-stripe-connect-id={hasStripe}
                                 >
                                   💸 Pay
                                 </button>

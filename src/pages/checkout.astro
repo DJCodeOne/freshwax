@@ -180,7 +180,7 @@ export const prerender = false;
 
   // Update payment button text with new total
   function updatePaymentButtonText(finalTotal) {
-    const stripeBtn = document.getElementById('stripePayButton');
+    const stripeBtn = document.getElementById('submitBtn');
     const paypalBtn = document.getElementById('customPaypalBtn');
     const freeSection = document.getElementById('freeOrderSection');
     const paymentSection = document.getElementById('paymentMethodSection');
@@ -194,7 +194,7 @@ export const prerender = false;
       if (paymentSection) paymentSection.style.display = 'block';
       if (freeSection) freeSection.style.display = 'none';
       if (stripeBtn) {
-        stripeBtn.querySelector('span').textContent = `PAY WITH CARD — £${finalTotal.toFixed(2)}`;
+        stripeBtn.textContent = `PAY WITH CARD — £${finalTotal.toFixed(2)}`;
       }
       if (paypalBtn) {
         const priceSpan = paypalBtn.querySelector('.paypal-price');

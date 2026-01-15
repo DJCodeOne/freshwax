@@ -162,7 +162,11 @@
       "Bash(__NEW_LINE_fc48c175c156a39f__ echo \"\")",
       "Bash(__NEW_LINE_00c6186ce91dc4d5__ echo \"\")",
       "Bash(for id in code_one_FW-1765803666207 dj_bakkus_FW-1767896005916 marc_ofx_FW-1768141362174 skru_ultron-ep_FW-1767981893 srs_FW-1768141395772 underground_lair_recordings_FW-1767368892434)",
-      "Bash(npx astro:*)"
+      "Bash(npx astro:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File scripts/daily-backup.ps1)",
+      "Bash(pm2 save:*)",
+      "Bash(pm2-startup:*)",
+      "Bash(pm2 status:*)"
     ]
   }
 }

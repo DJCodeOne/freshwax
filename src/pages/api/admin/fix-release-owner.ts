@@ -24,7 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     type: 'service_account',
     project_id: projectId,
     private_key_id: 'auto',
-    private_key: privateKey.replace(/\n/g, '\n'),
+    private_key: privateKey.replace(/\\n/g, '\n'),
     client_email: clientEmail,
     client_id: '',
     auth_uri: 'https://accounts.google.com/o/oauth2/auth',
@@ -63,10 +63,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Update the release
+    // Update the release with all ownership fields
     await saUpdateDocument(serviceAccountKey, projectId, 'releases', releaseId, {
       submittedBy: newOwnerId,
+      submitterId: newOwnerId,
       artistId: newOwnerId,
+      submitterEmail: artist.email,
       updatedAt: new Date().toISOString()
     });
 

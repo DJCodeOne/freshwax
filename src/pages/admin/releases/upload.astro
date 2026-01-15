@@ -458,10 +458,15 @@ uploadBtn.onclick = async () => {
       await uploadFileWithProgress(upload.uploadUrl, track.blob, track.type, track.name);
       debug(`Track ${i + 1} uploaded successfully`);
 
+      // Determine format from file extension
+      const ext = track.name.split('.').pop()?.toLowerCase() || 'mp3';
+      const format = ext === 'wav' ? 'wav' : ext === 'flac' ? 'flac' : 'mp3';
+
       trackData.push({
         trackNumber: i + 1,
         title: track.title,
-        url: upload.publicUrl
+        url: upload.publicUrl,
+        format: format
       });
     }
 
@@ -517,6 +522,19 @@ manualBtn.onclick = async () => {
   status.innerHTML = "";
 
   try {
+    // Validate required fields
+    if (!artistName || !releaseName) {
+      throw new Error("Please enter artist name and release name.");
+    }
+
+    if (!coverInput.files || coverInput.files.length === 0) {
+      throw new Error("Please select a cover art image.");
+    }
+
+    if (!tracksInput.files || tracksInput.files.length === 0) {
+      throw new Error("No audio files selected! Please include at least one MP3/WAV file.");
+    }
+
     const files = [
       { filename: coverInput.files[0].name, contentType: coverInput.files[0].type, size: coverInput.files[0].size },
       ...Array.from(tracksInput.files).map(f => ({ filename: f.name, contentType: f.type, size: f.size }))

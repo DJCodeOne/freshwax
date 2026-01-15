@@ -357,42 +357,64 @@ export const prerender = false;
             </section>
           )}
 
-          <!-- Payout History -->
+          <!-- Earnings Breakdown -->
           <section class="payouts-section">
-            <h2>Payout History</h2>
+            <h2>Earnings Breakdown</h2>
+            <p class="section-desc">Detailed breakdown of fees and payouts per sale</p>
 
-            {payouts.length === 0 ? (
+            {ledgerEntries.length === 0 ? (
               <div class="empty-state">
                 <div class="empty-icon">📭</div>
-                <h3>No payouts yet</h3>
-                <p>When customers purchase your music, your payouts will appear here.</p>
+                <h3>No sales yet</h3>
+                <p>When customers purchase your music, your earnings breakdown will appear here.</p>
               </div>
             ) : (
               <div class="payouts-table-wrap">
-                <table class="payouts-table">
+                <table class="payouts-table breakdown-table">
                   <thead>
                     <tr>
                       <th>Date</th>
                       <th>Order</th>
-                      <th>Amount</th>
+                      <th>Gross</th>
+                      <th>Processing</th>
+                      <th>Platform</th>
+                      <th>Payout Fee</th>
+                      <th>Your Payout</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {payouts.map(payout => (
-                      <tr>
-                        <td>{formatDate(payout.createdAt)}</td>
-                        <td class="order-num">#{(payout.orderNumber || payout.orderId || '').slice(-8).toUpperCase()}</td>
-                        <td class="amount">{formatPrice(payout.amount)}</td>
-                        <td>
-                          <span class={`status-pill ${getStatusClass(payout.status)}`}>
-                            {getStatusLabel(payout.status)}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {ledgerEntries.map((entry: any) => {
+                      const gross = entry.grossTotal || 0;
+                      const processingFee = entry.paypalFee || entry.stripeFee || 0;
+                      const platformFee = entry.freshwaxFee || entry.freshWaxFee || 0;
+                      const payoutFee = entry.artistPayoutFee || 0;
+                      const payout = entry.artistPayout || 0;
+                      const status = entry.artistPayoutStatus || 'pending';
+                      return (
+                        <tr>
+                          <td>{formatDate(entry.timestamp)}</td>
+                          <td class="order-num">#{(entry.orderNumber || '').slice(-8).toUpperCase()}</td>
+                          <td class="gross">{formatPrice(gross)}</td>
+                          <td class="fee">{processingFee > 0 ? `-${formatPrice(processingFee)}` : '-'}</td>
+                          <td class="fee">{platformFee > 0 ? `-${formatPrice(platformFee)}` : '-'}</td>
+                          <td class="fee">{payoutFee > 0 ? `-${formatPrice(payoutFee)}` : '-'}</td>
+                          <td class="amount">{formatPrice(payout)}</td>
+                          <td>
+                            <span class={`status-pill ${status === 'paid' ? 'completed' : 'pending'}`}>
+                              {status === 'paid' ? 'Paid' : 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
+              </div>
+              <div class="fee-legend">
+                <span class="legend-item"><strong>Processing:</strong> Payment provider fee (PayPal/Stripe)</span>
+                <span class="legend-item"><strong>Platform:</strong> Fresh Wax 1% fee</span>
+                <span class="legend-item"><strong>Payout Fee:</strong> PayPal payout fee (if applicable)</span>
               </div>
             )}
           </section>
@@ -693,6 +715,50 @@ export const prerender = false;
   .amount {
     font-weight: 700;
     color: #22c55e;
+  }
+
+  .gross {
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .fee {
+    color: #f87171;
+    font-size: 0.875rem;
+  }
+
+  .breakdown-table th,
+  .breakdown-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .breakdown-table th:first-child,
+  .breakdown-table td:first-child {
+    text-align: left;
+  }
+
+  .breakdown-table .order-num {
+    font-size: 0.75rem;
+  }
+
+  .fee-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #374151;
+  }
+
+  .fee-legend .legend-item {
+    font-size: 0.8125rem;
+    color: #9ca3af;
+  }
+
+  .fee-legend .legend-item strong {
+    color: #e5e7eb;
   }
 
   .status-pill {
@@ -1033,6 +1099,20 @@ export const prerender = false;
     .payouts-table th,
     .payouts-table td {
       padding: 0.75rem 0.5rem;
+    }
+
+    .breakdown-table {
+      font-size: 0.75rem;
+    }
+
+    .breakdown-table th,
+    .breakdown-table td {
+      padding: 0.5rem 0.25rem;
+    }
+
+    .fee-legend {
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .chart-container {

@@ -1,8 +1,10 @@
 // src/pages/api/admin/update-ledger-entry.ts
 // Admin endpoint to correct ledger entries
+// Dual-write: D1 (primary) + Firebase (backup)
 
 import type { APIRoute } from 'astro';
 import { saUpdateDocument, saQueryCollection, saDeleteDocument } from '../../../lib/firebase-service-account';
+import { d1GetLedgerEntries, d1UpdateLedgerEntry, d1DeleteLedgerEntry } from '../../../lib/d1-catalog';
 
 export const prerender = false;
 
@@ -34,12 +36,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { action, ledgerId, updates } = body;
 
+    const db = env?.DB;
+
     if (action === 'list') {
-      // List all ledger entries
-      const entries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-        orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-        limit: 100
-      });
+      // List all ledger entries - try D1 first
+      let entries: any[] = [];
+
+      if (db) {
+        try {
+          entries = await d1GetLedgerEntries(db, { limit: 100 });
+          console.log('[update-ledger] D1 read:', entries.length, 'entries');
+        } catch (d1Error) {
+          console.error('[update-ledger] D1 read failed:', d1Error);
+        }
+      }
+
+      // Fallback to Firebase if D1 empty or failed
+      if (entries.length === 0) {
+        entries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+          orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+          limit: 100
+        });
+      }
+
       return new Response(JSON.stringify({ success: true, entries }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -55,20 +74,45 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.netRevenue = (updates.grossTotal || 0) - totalFees;
       }
 
+      // Update Firebase first
       await saUpdateDocument(serviceAccountKey, projectId, 'salesLedger', ledgerId, {
         ...updates,
         correctedAt: new Date().toISOString()
       });
 
-      return new Response(JSON.stringify({ success: true, message: 'Entry updated' }), {
+      // Also update D1
+      if (db) {
+        try {
+          await d1UpdateLedgerEntry(db, ledgerId, updates);
+          console.log('[update-ledger] D1 updated:', ledgerId);
+        } catch (d1Error) {
+          console.error('[update-ledger] D1 update failed:', d1Error);
+          // Don't fail - Firebase update succeeded
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'Entry updated (D1 + Firebase)' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
     if (action === 'delete' && ledgerId) {
+      // Delete from Firebase first
       await saDeleteDocument(serviceAccountKey, projectId, 'salesLedger', ledgerId);
-      return new Response(JSON.stringify({ success: true, message: 'Entry deleted' }), {
+
+      // Also delete from D1
+      if (db) {
+        try {
+          await d1DeleteLedgerEntry(db, ledgerId);
+          console.log('[update-ledger] D1 deleted:', ledgerId);
+        } catch (d1Error) {
+          console.error('[update-ledger] D1 delete failed:', d1Error);
+          // Don't fail - Firebase delete succeeded
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'Entry deleted (D1 + Firebase)' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });

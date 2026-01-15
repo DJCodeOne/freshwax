@@ -348,6 +348,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Built ${tracks.length} tracks`);
 
+    // Validate: if metadata has tracks but we found none, fail
+    if (metadataTracks.length > 0 && tracks.length === 0) {
+      log.error(`Track mismatch: metadata has ${metadataTracks.length} tracks but no audio files were found/matched`);
+      return ApiErrors.badRequest(`No audio files found for ${metadataTracks.length} track(s). Please ensure audio files are uploaded with the submission.`);
+    }
+
     const now = new Date().toISOString();
 
     // Build release document

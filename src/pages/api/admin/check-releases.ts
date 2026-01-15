@@ -48,6 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       id: r.id,
       artistName: r.artistName || r.artist,
       releaseName: r.releaseName || r.title,
+      submitterEmail: r.submitterEmail || r.email || 'NOT SET',
       submitterId: r.submitterId || 'NOT SET',
       uploadedBy: r.uploadedBy || 'NOT SET',
       userId: r.userId || 'NOT SET',

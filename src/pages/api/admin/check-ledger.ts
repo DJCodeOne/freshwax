@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       submitterId: e.submitterId || 'NOT SET',
       artistId: e.artistId || 'NOT SET',
       artistName: e.artistName || 'NOT SET',
-      items: (e.items || []).map((i: any) => i.title)
+      items: (e.items || []).map((i: any) => ({ id: i.id, releaseId: i.releaseId, productId: i.productId, title: i.title, type: i.type }))
     }));
 
     const totals = {

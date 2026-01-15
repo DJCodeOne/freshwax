@@ -256,33 +256,12 @@ const firebaseConfig = {
 
         // Normalize email (googlemail.com -> gmail.com)
         const normalizedEmail = normalizeGmailEmail(user.email);
-        const isGooglemailVariant = user.email !== normalizedEmail;
 
-        // Check if user already exists in Firestore (check both original and normalized email)
+        // Check if user already exists in Firestore
         let userDoc = await getDoc(doc(db, 'users', user.uid));
 
-        // If this is a googlemail.com variant, check if gmail.com account exists
-        if (!userDoc.exists() && isGooglemailVariant) {
-          // Search for existing user with the gmail.com version
-          const { getDocs, query, where, collection } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-          const existingQuery = query(collection(db, 'users'), where('email', '==', normalizedEmail));
-          const existingDocs = await getDocs(existingQuery);
-
-          if (!existingDocs.empty) {
-            // Account exists with gmail.com - sign out and show error
-            await signOut(auth);
-            errorMessage.innerHTML = `
-              <strong>Account already exists!</strong><br>
-              You have an existing account with <strong>${normalizedEmail}</strong>.<br>
-              Please sign in with email/password or use that email for Google Sign-In.
-            `;
-            errorMessage.style.display = 'block';
-            return;
-          }
-        }
-
         if (!userDoc.exists()) {
-          // New user - create account (use normalized email)
+          // New user - create account with normalized email
           const userData = {
             uid: user.uid,
             email: normalizedEmail,
@@ -294,7 +273,7 @@ const firebaseConfig = {
             updatedAt: serverTimestamp(),
             roles: {
               customer: true,
-              djEligible: false,
+              dj: true,
               artist: false,
               merchSeller: false,
               vinylSeller: false
@@ -328,11 +307,7 @@ const firebaseConfig = {
           return;
         }
 
-        if (error.code === 'auth/account-exists-with-different-credential') {
-          errorMessage.textContent = 'An account already exists with this email. Try signing in with email/password.';
-        } else {
-          errorMessage.textContent = 'Google sign-in failed. Please try again.';
-        }
+        errorMessage.textContent = 'Google sign-in failed. Please try again.';
         errorMessage.style.display = 'block';
       }
     });
@@ -410,8 +385,11 @@ const firebaseConfig = {
           localStorage.removeItem('fw_saved_email');
         }
         
-        // Sign in
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Normalize email (gmail/googlemail are the same)
+        const normalizedEmail = normalizeGmailEmail(email);
+
+        // Sign in with normalized email
+        const userCredential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
         const user = userCredential.user;
 
         // Check if email is verified

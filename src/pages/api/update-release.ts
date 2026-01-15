@@ -117,7 +117,7 @@ export async function POST({ request, locals }: any) {
       };
     }
 
-    // Handle per-track BPM and Key updates
+    // Handle per-track updates (Featured, Remixer, BPM, Key)
     if (cleanedData.trackUpdates && Array.isArray(cleanedData.trackUpdates)) {
       const existingTracks = releaseDoc.tracks || [];
       const updatedTracks = existingTracks.map((track: any, idx: number) => {
@@ -125,6 +125,8 @@ export async function POST({ request, locals }: any) {
         if (trackUpdate) {
           return {
             ...track,
+            featured: trackUpdate.featured ?? track.featured,
+            remixer: trackUpdate.remixer ?? track.remixer,
             bpm: trackUpdate.bpm ?? track.bpm,
             key: trackUpdate.key ?? track.key
           };

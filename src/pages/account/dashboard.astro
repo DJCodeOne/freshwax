@@ -1584,40 +1584,56 @@ export const prerender = false;
     document.getElementById('statSpent').textContent = '£' + totalSpent.toFixed(2);
   }
 
-  // Download via server-side proxy to bypass CORS
-  async function downloadFile(url, filename, button) {
+  // Download via secure presigned URLs
+  async function downloadFile(downloadInfo, filename, button) {
     const originalText = button.innerHTML;
     button.classList.add('downloading');
     button.innerHTML = 'Downloading...';
-    
+
     try {
-      // Use server-side proxy to fetch the file
-      const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
-      
-      const response = await fetch(proxyUrl);
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Download failed: ${response.status}`);
+      const { orderId, releaseId, trackIndex, fileType } = downloadInfo;
+
+      // Get Firebase auth token
+      const user = window.firebaseAuth?.currentUser;
+      if (!user) {
+        throw new Error('Please sign in to download');
       }
-      
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      
+      const token = await user.getIdToken();
+
+      // Request presigned download URL
+      const presignResponse = await fetch('/api/presign-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ orderId, releaseId, trackIndex, fileType })
+      });
+
+      if (!presignResponse.ok) {
+        const errorData = await presignResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to authorize download: ${presignResponse.status}`);
+      }
+
+      const { downloadUrl } = await presignResponse.json();
+
+      // Download directly using presigned URL - browser handles this natively
+      // (presigned URLs don't have CORS issues when navigating directly)
       const link = document.createElement('a');
-      link.href = blobUrl;
+      link.href = downloadUrl;
       link.download = filename;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      window.URL.revokeObjectURL(blobUrl);
-      
+
       button.innerHTML = '✓ Done!';
       setTimeout(() => {
         button.innerHTML = originalText;
         button.classList.remove('downloading');
       }, 2000);
-      
+
     } catch (error) {
       console.error('Download error:', error);
       button.innerHTML = '✗ Error';
@@ -1632,27 +1648,28 @@ export const prerender = false;
   function renderDownloads(ordersList) {
     const container = document.getElementById('downloadsContainer');
     if (!container) return;
-    
-    // Extract all digital items from orders
+
+    // Extract all digital items from orders with orderId for secure downloads
     const allDownloads = [];
     (ordersList || []).forEach(order => {
       (order.items || []).forEach(item => {
         if (item.downloads?.tracks?.length > 0 || item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.type === 'vinyl') {
           allDownloads.push({
             ...item,
+            orderId: order.id, // Include orderId for presigned URL requests
             orderNumber: order.orderNumber,
             orderDate: order.createdAt
           });
         }
       });
     });
-    
+
     // Group downloads by release to avoid duplicate artwork buttons
     const releaseMap = new Map();
-    
+
     allDownloads.forEach(item => {
       const releaseId = item.releaseId || item.productId || item.id;
-      
+
       if (releaseMap.has(releaseId)) {
         // Add tracks to existing release group, avoid duplicates
         const existing = releaseMap.get(releaseId);
@@ -1668,6 +1685,7 @@ export const prerender = false;
         // Create new release group
         releaseMap.set(releaseId, {
           ...item,
+          releaseId, // Ensure releaseId is stored
           downloads: {
             artistName: item.downloads?.artistName || item.artist || '',
             releaseName: item.downloads?.releaseName || item.name || '',
@@ -1700,11 +1718,14 @@ export const prerender = false;
       const displayName = artistName ? artistName + ' - ' + releaseName : releaseName;
       const artworkFilename = artistName ? artistName + ' - ' + releaseName + ' - Artwork.jpg' : releaseName + ' - Artwork.jpg';
       
+      const orderId = item.orderId;
+      const releaseId = item.releaseId;
+
       const trackRows = (item.downloads?.tracks || []).map((track, idx) => {
-        const trackFilename = artistName 
+        const trackFilename = artistName
           ? artistName + ' - ' + track.name + ' - ' + releaseName
           : track.name;
-        
+
         return `
           <div class="track-row">
             <span class="track-name">
@@ -1713,13 +1734,13 @@ export const prerender = false;
             </span>
             <div class="dl-buttons">
               ${track.mp3Url ? `
-                <button type="button" class="dl-btn mp3" data-url="${track.mp3Url}" data-filename="${trackFilename}.mp3">
+                <button type="button" class="dl-btn mp3" data-order-id="${orderId}" data-release-id="${releaseId}" data-track-index="${idx}" data-file-type="mp3" data-filename="${trackFilename}.mp3">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                   MP3
                 </button>
               ` : ''}
               ${track.wavUrl ? `
-                <button type="button" class="dl-btn wav" data-url="${track.wavUrl}" data-filename="${trackFilename}.wav">
+                <button type="button" class="dl-btn wav" data-order-id="${orderId}" data-release-id="${releaseId}" data-track-index="${idx}" data-file-type="wav" data-filename="${trackFilename}.wav">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                   WAV
                 </button>
@@ -1743,7 +1764,7 @@ export const prerender = false;
           </div>
           ${item.downloads?.artworkUrl ? `
             <div class="artwork-dl">
-              <button type="button" class="dl-btn art" data-url="${item.downloads.artworkUrl}" data-filename="${artworkFilename}">
+              <button type="button" class="dl-btn art" data-order-id="${orderId}" data-release-id="${releaseId}" data-track-index="0" data-file-type="artwork" data-filename="${artworkFilename}">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Artwork
               </button>
@@ -1754,14 +1775,21 @@ export const prerender = false;
       `;
     }).join('');
     
-    // Attach download handlers
-    container.querySelectorAll('.dl-btn[data-url]').forEach(btn => {
+    // Attach download handlers using secure presigned URLs
+    container.querySelectorAll('.dl-btn[data-order-id]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const button = e.currentTarget;
-        const url = button.dataset.url;
+        const downloadInfo = {
+          orderId: button.dataset.orderId,
+          releaseId: button.dataset.releaseId,
+          trackIndex: parseInt(button.dataset.trackIndex, 10),
+          fileType: button.dataset.fileType
+        };
         const filename = button.dataset.filename || 'download';
-        if (url) downloadFile(url, filename, button);
+        if (downloadInfo.orderId && downloadInfo.releaseId) {
+          downloadFile(downloadInfo, filename, button);
+        }
       });
     });
   }
