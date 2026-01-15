@@ -230,11 +230,17 @@ export const prerender = false;
           const totalDownloads = data.mixes.reduce((sum, m) => sum + (m.downloads || m.downloadCount || 0), 0);
           const totalComments = data.mixes.reduce((sum, m) => sum + (m.commentCount || (Array.isArray(m.comments) ? m.comments.length : 0) || 0), 0);
           
-          document.getElementById('statMixCount').textContent = data.mixes.length;
-          document.getElementById('statPlays').textContent = formatNumber(totalPlays);
-          document.getElementById('statLikes').textContent = formatNumber(totalLikes);
-          document.getElementById('statDownloads').textContent = formatNumber(totalDownloads);
-          document.getElementById('statComments').textContent = formatNumber(totalComments);
+          const statMixCount = document.getElementById('statMixCount');
+          const statPlays = document.getElementById('statPlays');
+          const statLikes = document.getElementById('statLikes');
+          const statDownloads = document.getElementById('statDownloads');
+          const statComments = document.getElementById('statComments');
+
+          if (statMixCount) statMixCount.textContent = data.mixes.length;
+          if (statPlays) statPlays.textContent = formatNumber(totalPlays);
+          if (statLikes) statLikes.textContent = formatNumber(totalLikes);
+          if (statDownloads) statDownloads.textContent = formatNumber(totalDownloads);
+          if (statComments) statComments.textContent = formatNumber(totalComments);
           
           if (data.mixes.length === 0) {
             // Show empty state
