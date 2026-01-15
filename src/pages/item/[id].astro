@@ -108,6 +108,18 @@ if (notes) {
     } else if (trimmed.includes('youtube.com/') || trimmed.includes('YouTube:')) {
       const url = trimmed.replace('YouTube:', '').trim();
       socialLinksTemp.push({ platform: 'YouTube', url: url, icon: '📺' });
+    } else if (trimmed.includes('twitter.com/') || trimmed.includes('x.com/') || trimmed.includes('Twitter:')) {
+      const url = trimmed.replace('Twitter:', '').trim();
+      socialLinksTemp.push({ platform: 'Twitter/X', url: url, icon: '🐦' });
+    } else if (trimmed.match(/^https?:\/\//i)) {
+      // Generic URL - extract domain for display
+      try {
+        const urlObj = new URL(trimmed);
+        const domain = urlObj.hostname.replace('www.', '');
+        socialLinksTemp.push({ platform: domain, url: trimmed, icon: '🌐' });
+      } catch {
+        otherLinesTemp.push(trimmed);
+      }
     } else {
       otherLinesTemp.push(trimmed);
     }
@@ -116,6 +128,18 @@ if (notes) {
   socialLinks = socialLinksTemp;
   otherInfo = otherLinesTemp.join('\n');
 }
+
+// Helper to linkify URLs in text
+function linkifyText(text: string): string {
+  if (!text) return '';
+  // Escape HTML first
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // Convert URLs to clickable links
+  const urlRegex = /(https?:\/\/[^\s<]+)/gi;
+  return escaped.replace(urlRegex, '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-red-400 hover:text-red-300 underline">$1</a>');
+}
+
+const descriptionHtml = linkifyText(releaseDescription || otherInfo);
 
 const tracksWithIds = tracks.map((track, index) => {
   const displayNum = track.displayTrackNumber || track.trackNumber + 1 || (index + 1);
@@ -592,15 +616,13 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           </div>
         )}
 
-        {(releaseDescription || otherInfo) && (
+        {descriptionHtml && (
           <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-4 md:p-6 mb-4 md:mb-6">
             <h2 class="text-lg md:text-2xl font-black text-white uppercase tracking-wider mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600 drop-shadow-lg">
               About This Release
             </h2>
             <div class="bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-gray-600 p-4 md:p-5 rounded shadow-inner">
-              <p class="text-white text-sm md:text-base font-semibold leading-relaxed whitespace-pre-wrap">
-                {releaseDescription || otherInfo}
-              </p>
+              <p class="text-white text-sm md:text-base font-semibold leading-relaxed whitespace-pre-wrap" set:html={descriptionHtml} />
             </div>
           </div>
         )}
