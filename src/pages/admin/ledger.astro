@@ -290,7 +290,6 @@ export const prerender = false;
               <tr>
                 <th class="text-center">Date</th>
                 <th class="text-center">Order</th>
-                <th class="text-center">Customer</th>
                 <th class="text-center">Actual Gross</th>
                 <th class="text-center">Actual Net</th>
                 <th class="text-center">Pay To</th>
@@ -315,13 +314,10 @@ export const prerender = false;
                     {formatDate(entry.timestamp)}
                   </td>
                   <td class="text-center" style="font-size: 0.7rem; white-space: nowrap;">
+                    <div style="color: var(--text-muted); margin-bottom: 2px;">{entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}</div>
                     <a href={`/admin/orders?search=${entry.orderNumber}`} class="link">
                       {entry.orderNumber || entry.orderId?.slice(0, 8)}
                     </a>
-                  </td>
-                  <td class="text-center" style="font-size: 0.75rem;">
-                    <div>{entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}</div>
-                    {entry.customerEmail && <div style="font-size: 0.65rem; color: var(--text-muted);">{entry.customerEmail}</div>}
                   </td>
                   <td class="text-center" style="color: var(--text-muted);">
                     {formatCurrency(actualGross)}
