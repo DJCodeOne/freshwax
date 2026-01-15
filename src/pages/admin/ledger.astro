@@ -6,6 +6,10 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntries } from '../../lib/d1-catalog';
+import { getAdminUids } from '../../lib/admin';
+
+export const prerender = false;
+const adminUids = getAdminUids();
 
 // Get environment variables
 const env = Astro.locals?.runtime?.env;
@@ -511,5 +515,53 @@ export const prerender = false;
         btn.textContent = 'Migrate Orders';
       }
     });
+  });
+</script>
+
+<script is:inline define:vars={{ adminUids }}>
+  window.ADMIN_UIDS = adminUids;
+</script>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBK-zLzlm62uk3GqYJrPkLhXVoRj6GqT4U",
+    authDomain: "freshwax-store.firebaseapp.com",
+    projectId: "freshwax-store",
+    storageBucket: "freshwax-store.appspot.com",
+    messagingSenderId: "684466492498",
+    appId: "1:684466492498:web:ca97f5e56c1534b6cc30fb"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  async function checkIsAdmin(uid) {
+    if (window.ADMIN_UIDS?.includes(uid)) return true;
+    try {
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        return data.roles?.includes('admin') || data.isAdmin === true;
+      }
+    } catch (e) {
+      console.error('Error checking admin:', e);
+    }
+    return false;
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = '/login?redirect=/admin/ledger';
+      return;
+    }
+    const isAdmin = await checkIsAdmin(user.uid);
+    if (!isAdmin) {
+      alert('Access denied. Admin privileges required.');
+      window.location.href = '/account/dashboard';
+    }
   });
 </script>
