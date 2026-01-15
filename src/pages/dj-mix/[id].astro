@@ -1788,7 +1788,9 @@ Artist - Track Title
           .filter(line => line.length > 0);
         
         if (tracklistDisplay && lines.length > 0) {
-          tracklistDisplay.innerHTML = lines.map((track, idx) => 
+          // Update classes for tracks view (remove placeholder classes)
+          tracklistDisplay.className = 'space-y-1.5 sm:space-y-2 max-h-96 overflow-y-auto pr-2';
+          tracklistDisplay.innerHTML = lines.map((track, idx) =>
             '<div class="bg-gradient-to-r from-gray-700 to-gray-800 p-2 sm:p-3 rounded border-2 border-gray-600 hover:border-red-600 transition-all">' +
               '<p class="text-white font-bold text-xs sm:text-sm md:text-base">' +
                 '<span class="text-red-500 mr-1 sm:mr-2 font-black">' + (idx + 1) + '.</span>' +
@@ -1797,7 +1799,9 @@ Artist - Track Title
             '</div>'
           ).join('');
         } else if (tracklistDisplay) {
-          tracklistDisplay.innerHTML = '<div class="text-center py-8"><p class="text-gray-400 text-sm sm:text-base">No tracklist available</p></div>';
+          // Update classes for empty state
+          tracklistDisplay.className = 'text-center py-8';
+          tracklistDisplay.innerHTML = '<p class="text-gray-400 text-sm sm:text-base">No tracklist available</p>';
         }
         
         // Update track count in header if present
