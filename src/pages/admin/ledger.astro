@@ -290,15 +290,16 @@ export const prerender = false;
               <tr>
                 <th class="text-center">Date</th>
                 <th class="text-center">Order</th>
+                <th class="text-center">Customer</th>
                 <th class="text-center">Actual Gross</th>
                 <th class="text-center">Actual Net</th>
-                <th class="text-center">Method</th>
                 <th class="text-center">Pay To</th>
                 <th class="text-center">PP Proc</th>
                 <th class="text-center">PP Pay</th>
                 <th class="text-center">FW Fee</th>
                 <th class="text-center">Payout</th>
                 <th class="text-center">Status</th>
+                <th class="text-center">Method</th>
                 <th class="text-center">Notes</th>
               </tr>
             </thead>
@@ -318,20 +319,15 @@ export const prerender = false;
                     <a href={`/admin/orders?search=${entry.orderNumber}`} class="link">
                       {entry.orderNumber || entry.orderId?.slice(0, 8)}
                     </a>
-                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">
-                      {entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}
-                    </div>
+                  </td>
+                  <td class="text-center" style="font-size: 0.75rem; color: var(--text-muted);">
+                    {entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}
                   </td>
                   <td class="text-center" style="color: var(--text-muted);">
                     {formatCurrency(actualGross)}
                   </td>
                   <td class="text-center" style="color: var(--accent-green);">
                     {formatCurrency(actualGross - (entry.actualPaypalFee || entry.paypalFee || 0) - (entry.freshWaxFee || 0))}
-                  </td>
-                  <td class="text-center">
-                    <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-info' : 'badge-default'}`}>
-                      {entry.paymentMethod}
-                    </span>
                   </td>
                   <td class="text-center" style="font-size: 0.8rem;">
                     <div>{entry.submitterName || entry.artistName || '-'}</div>
@@ -352,6 +348,11 @@ export const prerender = false;
                   <td class="text-center">
                     <span class={`badge ${payoutStatus === 'paid' ? 'badge-success' : payoutStatus === 'pending' ? 'badge-warning' : 'badge-default'}`}>
                       {payoutStatus}
+                    </span>
+                  </td>
+                  <td class="text-center">
+                    <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-info' : 'badge-default'}`}>
+                      {entry.paymentMethod}
                     </span>
                   </td>
                   <td class="text-center" style="font-size: 0.65rem; max-width: 100px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;" title={entry.adjustmentNote || entry.artistPayoutNote || ''}>
