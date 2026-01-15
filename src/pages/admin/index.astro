@@ -6,6 +6,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { AwsClient } from 'aws4fetch';
 import '../../styles/admin/index.css';
 
 // Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
@@ -28,6 +29,14 @@ const serviceAccountKey = JSON.stringify({
   token_uri: 'https://oauth2.googleapis.com/token'
 });
 
+// R2 config for pending submissions count
+const r2Config = {
+  accountId: runtimeEnv?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
+  accessKeyId: runtimeEnv?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
+  secretAccessKey: runtimeEnv?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
+  bucketName: 'freshwax-releases',
+};
+
 // Fetch all data using REST API with error handling
 let ordersData: any[] = [];
 let releasesData: any[] = [];
@@ -42,6 +51,7 @@ let pendingSupplierPayoutsData: any[] = [];
 let pendingSellerPayoutsData: any[] = [];
 let disputesData: any[] = [];
 let refundsData: any[] = [];
+let r2SubmissionsCount = 0;
 
 try {
   const results = await Promise.allSettled([
@@ -76,6 +86,30 @@ try {
   refundsData = results[12].status === 'fulfilled' ? results[12].value : [];
 } catch (error) {
   console.error('[Admin Dashboard] Error fetching data:', error);
+}
+
+// Fetch R2 pending submissions count
+try {
+  if (r2Config.accessKeyId && r2Config.secretAccessKey) {
+    const awsClient = new AwsClient({
+      accessKeyId: r2Config.accessKeyId,
+      secretAccessKey: r2Config.secretAccessKey,
+      service: 's3',
+      region: 'auto',
+    });
+    const endpoint = `https://${r2Config.accountId}.r2.cloudflarestorage.com`;
+
+    // Check submissions/ folder
+    const submissionsUrl = `${endpoint}/${r2Config.bucketName}?list-type=2&prefix=submissions/&delimiter=/`;
+    const submissionsResponse = await awsClient.fetch(submissionsUrl);
+    if (submissionsResponse.ok) {
+      const xmlText = await submissionsResponse.text();
+      const prefixMatches = [...xmlText.matchAll(/<Prefix>submissions\/([^<]+)\/<\/Prefix>/g)];
+      r2SubmissionsCount = prefixMatches.filter(m => !m[1].startsWith('test-')).length;
+    }
+  }
+} catch (error) {
+  console.error('[Admin Dashboard] Error fetching R2 submissions:', error);
 }
 
 // Process orders - sort by createdAt desc
@@ -322,7 +356,7 @@ export const prerender = false;
     <div class="stat-card">
       <div class="stat-label">Live Releases</div>
       <div class="stat-value">{liveReleases.length}</div>
-      <div class="stat-detail">{pendingReleases.length} pending</div>
+      <div class="stat-detail">{r2SubmissionsCount} pending</div>
     </div>
     
     <div class="stat-card">
