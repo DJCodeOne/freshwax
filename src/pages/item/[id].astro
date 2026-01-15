@@ -52,6 +52,7 @@ const {
   overallRating = { average: 0, count: 0, total: 0 },
   comments = [],
   notes = '',
+  description = '',
   releaseDescription = '',
   masteredBy = '',
   copyrightHolder = '',
@@ -81,10 +82,12 @@ const hasBio = !!(artistBio && artistBio.trim());
 let socialLinks = [];
 let otherInfo = '';
 
-if (notes) {
+// Check notes, description, or releaseDescription for social links
+const notesText = notes || description || '';
+if (notesText) {
   const socialLinksTemp = [];
   const otherLinesTemp = [];
-  const lines = notes.split('\n');
+  const lines = notesText.split('\n');
   
   for (const line of lines) {
     const trimmed = line.trim();
