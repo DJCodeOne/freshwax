@@ -299,7 +299,6 @@ export const prerender = false;
                 <th class="text-center">FW Fee</th>
                 <th class="text-center">Payout</th>
                 <th class="text-center">Status</th>
-                <th class="text-center">Method</th>
                 <th class="text-center">Notes</th>
               </tr>
             </thead>
@@ -349,11 +348,11 @@ export const prerender = false;
                     <span class={`badge ${payoutStatus === 'paid' ? 'badge-success' : payoutStatus === 'pending' ? 'badge-warning' : 'badge-default'}`}>
                       {payoutStatus}
                     </span>
-                  </td>
-                  <td class="text-center">
-                    <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-info' : 'badge-default'}`}>
-                      {entry.paymentMethod}
-                    </span>
+                    <div style="margin-top: 4px;">
+                      <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-info' : 'badge-default'}`}>
+                        {entry.paymentMethod}
+                      </span>
+                    </div>
                   </td>
                   <td class="text-center" style="font-size: 0.65rem; max-width: 100px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;" title={entry.adjustmentNote || entry.artistPayoutNote || ''}>
                     {entry.adjustmentNote || entry.artistPayoutNote || '-'}
