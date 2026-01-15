@@ -1283,10 +1283,10 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
       btn.onclick = function() {
         var title = btn.getAttribute('data-title');
         var dj = btn.getAttribute('data-dj');
+        var mixId = btn.getAttribute('data-mix-id');
         var card = btn.closest('.mix-card');
-        var uploadDate = card.getAttribute('data-upload-date');
         var artwork = card.getAttribute('data-artwork') || '/place-holder.webp';
-        var shareUrl = window.location.origin + '/dj-mixes?mix=' + uploadDate;
+        var shareUrl = window.location.origin + '/dj-mix/' + mixId;
 
         // Store current share data for social buttons
         window.currentShareData = { title: title, dj: dj, url: shareUrl, artwork: artwork };
