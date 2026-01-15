@@ -107,6 +107,23 @@ try {
       const prefixMatches = [...xmlText.matchAll(/<Prefix>submissions\/([^<]+)\/<\/Prefix>/g)];
       r2SubmissionsCount = prefixMatches.filter(m => !m[1].startsWith('test-')).length;
     }
+
+    // Also check root level for submission-like folders (Artist-timestamp pattern)
+    const rootUrl = `${endpoint}/${r2Config.bucketName}?list-type=2&delimiter=/`;
+    const rootResponse = await awsClient.fetch(rootUrl);
+    if (rootResponse.ok) {
+      const rootXml = await rootResponse.text();
+      const rootPrefixes = [...rootXml.matchAll(/<Prefix>([^<]+)\/<\/Prefix>/g)];
+      const submissionPattern = /^[A-Za-z0-9_\-\s]+[-_]\d{13,}$/;
+      for (const match of rootPrefixes) {
+        const folder = match[1];
+        // Skip known non-submission folders
+        if (['submissions', 'releases', 'assets', 'thumbnails', 'audio', 'temp'].includes(folder)) continue;
+        if (submissionPattern.test(folder)) {
+          r2SubmissionsCount++;
+        }
+      }
+    }
   }
 } catch (error) {
   console.error('[Admin Dashboard] Error fetching R2 submissions:', error);
