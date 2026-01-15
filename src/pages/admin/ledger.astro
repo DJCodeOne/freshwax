@@ -319,8 +319,9 @@ export const prerender = false;
                       {entry.orderNumber || entry.orderId?.slice(0, 8)}
                     </a>
                   </td>
-                  <td class="text-center" style="font-size: 0.75rem; color: var(--text-muted);">
-                    {entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}
+                  <td class="text-center" style="font-size: 0.75rem;">
+                    <div>{entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}</div>
+                    {entry.customerEmail && <div style="font-size: 0.65rem; color: var(--text-muted);">{entry.customerEmail}</div>}
                   </td>
                   <td class="text-center" style="color: var(--text-muted);">
                     {formatCurrency(actualGross)}
