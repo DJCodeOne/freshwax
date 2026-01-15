@@ -54,7 +54,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // 2. Firestore REST API doesn't support OR queries, so we filter client-side
       const allMixes = await queryCollection('dj-mixes', {
         limit: 500,
-        cacheTime: skipCache ? 0 : 120000 // Skip cache after updates (t= param), otherwise 2 min
+        skipCache: skipCache, // Skip cache after updates (t= param)
+        cacheTTL: 120000 // 2 min cache when not skipping
       });
 
       // Filter by any userId field variation (handles schema inconsistency)
