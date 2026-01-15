@@ -1,9 +1,11 @@
 ---
 // src/pages/admin/ledger.astro
 // Sales Ledger - Source of truth for all transactions
+// D1 primary, Firebase backup
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 // Get environment variables
 const env = Astro.locals?.runtime?.env;
@@ -33,10 +35,10 @@ const startOfYear = new Date(now.getFullYear(), 0, 1);
 // Fetch ledger entries
 let ledgerEntries: any[] = [];
 let totals = {
-  allTime: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 },
-  thisMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 },
-  lastMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 },
-  thisYear: { orders: 0, gross: 0, net: 0, stripeFees: 0, paypalFees: 0, fwFees: 0 }
+  allTime: { orders: 0, gross: 0, net: 0, stripeFees: 0, ppProcFees: 0, ppPayoutFees: 0, fwFees: 0 },
+  thisMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, ppProcFees: 0, ppPayoutFees: 0, fwFees: 0 },
+  lastMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, ppProcFees: 0, ppPayoutFees: 0, fwFees: 0 },
+  thisYear: { orders: 0, gross: 0, net: 0, stripeFees: 0, ppProcFees: 0, ppPayoutFees: 0, fwFees: 0 }
 };
 
 // PayPal balance tracking (using actual values)
@@ -51,11 +53,24 @@ let paypalBalance = {
 };
 
 try {
-  if (serviceAccountKey) {
+  // Try D1 first (primary read source)
+  const db = env?.DB;
+  if (db) {
+    try {
+      ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
+      console.log('[ledger] D1 read:', ledgerEntries.length, 'entries');
+    } catch (d1Error) {
+      console.error('[ledger] D1 read failed:', d1Error);
+    }
+  }
+
+  // Fallback to Firebase if D1 empty or failed
+  if (ledgerEntries.length === 0 && serviceAccountKey) {
     ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
       orderBy: { field: 'timestamp', direction: 'DESCENDING' },
       limit: 2000
     });
+    console.log('[ledger] Firebase fallback:', ledgerEntries.length, 'entries');
   }
 
   // Calculate totals
@@ -87,12 +102,16 @@ try {
       }
     }
 
+    // PayPal payout fee (only if paid via PayPal)
+    const ppPayoutFee = (entry.artistPayoutMethod === 'paypal' && entry.artistPayoutFee) ? entry.artistPayoutFee : 0;
+
     // All time
     totals.allTime.orders++;
     totals.allTime.gross += actualGross;
     totals.allTime.net += actualNet;
     totals.allTime.stripeFees += stripeFee;
-    totals.allTime.paypalFees += actualPaypalFee;
+    totals.allTime.ppProcFees += actualPaypalFee;
+    totals.allTime.ppPayoutFees += ppPayoutFee;
     totals.allTime.fwFees += fwFee;
 
     // This month
@@ -101,7 +120,8 @@ try {
       totals.thisMonth.gross += actualGross;
       totals.thisMonth.net += actualNet;
       totals.thisMonth.stripeFees += stripeFee;
-      totals.thisMonth.paypalFees += actualPaypalFee;
+      totals.thisMonth.ppProcFees += actualPaypalFee;
+      totals.thisMonth.ppPayoutFees += ppPayoutFee;
       totals.thisMonth.fwFees += fwFee;
     }
 
@@ -111,7 +131,8 @@ try {
       totals.lastMonth.gross += actualGross;
       totals.lastMonth.net += actualNet;
       totals.lastMonth.stripeFees += stripeFee;
-      totals.lastMonth.paypalFees += actualPaypalFee;
+      totals.lastMonth.ppProcFees += actualPaypalFee;
+      totals.lastMonth.ppPayoutFees += ppPayoutFee;
       totals.lastMonth.fwFees += fwFee;
     }
 
@@ -121,7 +142,8 @@ try {
       totals.thisYear.gross += actualGross;
       totals.thisYear.net += actualNet;
       totals.thisYear.stripeFees += stripeFee;
-      totals.thisYear.paypalFees += actualPaypalFee;
+      totals.thisYear.ppProcFees += actualPaypalFee;
+      totals.thisYear.ppPayoutFees += ppPayoutFee;
       totals.thisYear.fwFees += fwFee;
     }
   });
@@ -174,16 +196,16 @@ export const prerender = false;
             <span class="ledger-value">{formatCurrency(paypalBalance.actualGross)}</span>
           </div>
           <div class="ledger-item">
-            <span class="ledger-label">PP Fees</span>
+            <span class="ledger-label">PP Proc</span>
             <span class="ledger-value muted">-{formatCurrency(paypalBalance.actualFees)}</span>
           </div>
           <div class="ledger-item">
-            <span class="ledger-label">Net</span>
-            <span class="ledger-value">{formatCurrency(paypalBalance.actualNet)}</span>
+            <span class="ledger-label">PP Payout</span>
+            <span class="ledger-value muted">-{formatCurrency(paypalBalance.payoutFees)}</span>
           </div>
           <div class="ledger-item">
-            <span class="ledger-label">Paid Out</span>
-            <span class="ledger-value muted">-{formatCurrency(paypalBalance.artistPayouts + paypalBalance.payoutFees)}</span>
+            <span class="ledger-label">Paid Artists</span>
+            <span class="ledger-value muted">-{formatCurrency(paypalBalance.artistPayouts)}</span>
           </div>
           <div class="ledger-item highlight-green">
             <span class="ledger-label">Balance</span>
@@ -201,24 +223,24 @@ export const prerender = false;
   <!-- Summary Stats -->
   <div class="stats-grid cols-4 mb-4">
     <div class="stat-card compact">
-      <div class="stat-label">This Month</div>
-      <div class="stat-value">{formatCurrency(totals.thisMonth.gross)}</div>
-      <div class="stat-detail">{totals.thisMonth.orders} orders | Net: {formatCurrency(totals.thisMonth.net)}</div>
-    </div>
-    <div class="stat-card compact">
-      <div class="stat-label">Last Month</div>
-      <div class="stat-value">{formatCurrency(totals.lastMonth.gross)}</div>
-      <div class="stat-detail">{totals.lastMonth.orders} orders | Net: {formatCurrency(totals.lastMonth.net)}</div>
-    </div>
-    <div class="stat-card compact success">
-      <div class="stat-label">Year to Date</div>
-      <div class="stat-value">{formatCurrency(totals.thisYear.gross)}</div>
-      <div class="stat-detail">{totals.thisYear.orders} orders | Net: {formatCurrency(totals.thisYear.net)}</div>
-    </div>
-    <div class="stat-card compact">
       <div class="stat-label">All Time</div>
       <div class="stat-value">{formatCurrency(totals.allTime.gross)}</div>
-      <div class="stat-detail">{totals.allTime.orders} orders | Net: {formatCurrency(totals.allTime.net)}</div>
+      <div class="stat-detail">{totals.allTime.orders} orders</div>
+    </div>
+    <div class="stat-card compact success">
+      <div class="stat-label">Paid to Artists</div>
+      <div class="stat-value">{formatCurrency(paypalBalance.artistPayouts)}</div>
+      <div class="stat-detail">Total payouts</div>
+    </div>
+    <div class="stat-card compact">
+      <div class="stat-label">Total PP Fees</div>
+      <div class="stat-value">{formatCurrency(totals.allTime.ppProcFees + totals.allTime.ppPayoutFees)}</div>
+      <div class="stat-detail">Proc + Payout</div>
+    </div>
+    <div class="stat-card compact highlight">
+      <div class="stat-label">FreshWax Tax</div>
+      <div class="stat-value">{formatCurrency(totals.allTime.fwFees)}</div>
+      <div class="stat-detail">Platform revenue</div>
     </div>
   </div>
 
@@ -234,8 +256,12 @@ export const prerender = false;
           <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.stripeFees)}</span>
         </div>
         <div class="ledger-item">
-          <span class="ledger-label">PayPal</span>
-          <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.paypalFees)}</span>
+          <span class="ledger-label">PP Proc</span>
+          <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.ppProcFees)}</span>
+        </div>
+        <div class="ledger-item">
+          <span class="ledger-label">PP Payout</span>
+          <span class="ledger-value" style="font-size: 1rem;">{formatCurrency(totals.allTime.ppPayoutFees)}</span>
         </div>
         <div class="ledger-item highlight-red">
           <span class="ledger-label">FW Revenue</span>
@@ -262,16 +288,18 @@ export const prerender = false;
           <table class="data-table">
             <thead style="position: sticky; top: 0; background: var(--bg-card);">
               <tr>
-                <th>Date</th>
-                <th>Order</th>
-                <th class="text-right">Actual Gross</th>
-                <th class="text-right">Actual Net</th>
-                <th class="text-right">Adj. Net</th>
+                <th class="text-center">Date</th>
+                <th class="text-center">Order</th>
+                <th class="text-center">Actual Gross</th>
+                <th class="text-center">Actual Net</th>
                 <th class="text-center">Method</th>
-                <th>Pay To</th>
-                <th class="text-right">Payout</th>
+                <th class="text-center">Pay To</th>
+                <th class="text-center">PP Proc</th>
+                <th class="text-center">PP Pay</th>
+                <th class="text-center">FW Fee</th>
+                <th class="text-center">Payout</th>
                 <th class="text-center">Status</th>
-                <th>Notes</th>
+                <th class="text-center">Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -283,33 +311,42 @@ export const prerender = false;
                 const payoutStatus = entry.artistPayoutStatus || 'n/a';
                 return (
                 <tr class={isAdjusted ? 'adjusted-row' : ''}>
-                  <td style="white-space: nowrap; font-size: 0.75rem;">
+                  <td class="text-center" style="white-space: nowrap; font-size: 0.75rem;">
                     {formatDate(entry.timestamp)}
                   </td>
-                  <td>
+                  <td class="text-center" style="font-size: 0.7rem; white-space: nowrap;">
                     <a href={`/admin/orders?search=${entry.orderNumber}`} class="link">
                       {entry.orderNumber || entry.orderId?.slice(0, 8)}
                     </a>
+                    <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 2px;">
+                      {entry.customerName || (entry.customerEmail ? entry.customerEmail.split('@')[0] : '-')}
+                    </div>
                   </td>
-                  <td class="text-right" style="color: var(--text-muted);">
+                  <td class="text-center" style="color: var(--text-muted);">
                     {formatCurrency(actualGross)}
                   </td>
-                  <td class="text-right" style="color: var(--text-muted);">
-                    {formatCurrency(actualNet)}
-                  </td>
-                  <td class="text-right" style="color: var(--accent-green);">
-                    {formatCurrency(entry.netRevenue)}
+                  <td class="text-center" style="color: var(--accent-green);">
+                    {formatCurrency(actualGross - (entry.actualPaypalFee || entry.paypalFee || 0) - (entry.freshWaxFee || 0))}
                   </td>
                   <td class="text-center">
-                    <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-warning' : 'badge-default'}`}>
+                    <span class={`badge ${entry.paymentMethod === 'stripe' ? 'badge-info' : entry.paymentMethod === 'paypal' ? 'badge-info' : 'badge-default'}`}>
                       {entry.paymentMethod}
                     </span>
                   </td>
-                  <td style="font-size: 0.8rem;">
+                  <td class="text-center" style="font-size: 0.8rem;">
                     <div>{entry.submitterName || entry.artistName || '-'}</div>
-                    {entry.submitterEmail && <div style="font-size: 0.7rem; color: var(--text-muted);">{entry.submitterEmail}</div>}
+                    {entry.submitterEmail && <div style="font-size: 0.7rem; color: var(--text-muted);" title={entry.submitterEmail}>{entry.submitterEmail.length > 15 ? entry.submitterEmail.slice(0, 15) + '...' : entry.submitterEmail}</div>}
                   </td>
-                  <td class="text-right">
+                  <td class="text-center" style="font-size: 0.8rem; color: var(--text-muted);">
+                    {entry.paymentMethod === 'paypal' && (entry.actualPaypalFee || entry.paypalFee) ? formatCurrency(entry.actualPaypalFee || entry.paypalFee) : '-'}
+                  </td>
+                  <td class="text-center" style="font-size: 0.8rem; color: var(--accent-yellow, #eab308);">
+                    {entry.artistPayoutFee && entry.artistPayoutMethod === 'paypal' ? formatCurrency(entry.artistPayoutFee) : '-'}
+                  </td>
+                  <td class="text-center" style="font-size: 0.8rem; color: var(--accent-red, #ef4444);">
+                    {entry.freshWaxFee ? formatCurrency(entry.freshWaxFee) : '-'}
+                  </td>
+                  <td class="text-center">
                     {entry.artistPayout ? formatCurrency(entry.artistPayout) : '-'}
                   </td>
                   <td class="text-center">
@@ -317,7 +354,7 @@ export const prerender = false;
                       {payoutStatus}
                     </span>
                   </td>
-                  <td style="font-size: 0.7rem; max-width: 150px; color: var(--text-muted);">
+                  <td class="text-center" style="font-size: 0.65rem; max-width: 100px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;" title={entry.adjustmentNote || entry.artistPayoutNote || ''}>
                     {entry.adjustmentNote || entry.artistPayoutNote || '-'}
                   </td>
                 </tr>

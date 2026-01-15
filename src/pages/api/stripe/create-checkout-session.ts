@@ -314,6 +314,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       customer_email: orderData.customer.email,
       customer_firstName: orderData.customer.firstName,
       customer_lastName: orderData.customer.lastName,
+      customer_displayName: orderData.customer.displayName || orderData.customer.firstName || '',
       customer_phone: orderData.customer.phone || '',
       customer_userId: orderData.customer.userId || '',
       hasPhysicalItems: String(hasPhysicalItems),

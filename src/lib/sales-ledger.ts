@@ -1,8 +1,13 @@
 // src/lib/sales-ledger.ts
 // Sales ledger for accurate revenue tracking
 // Each completed order creates an immutable ledger entry
+// Architecture: D1 (primary read) + Firebase (backup)
 
 import { addDocument, queryCollection } from './firebase-rest';
+import { d1InsertLedgerEntry, d1GetLedgerEntries, d1GetLedgerTotals } from './d1-catalog';
+
+// D1 database type (from Cloudflare bindings)
+type D1Database = any;
 
 export interface LedgerEntry {
   // Order reference
@@ -18,6 +23,7 @@ export interface LedgerEntry {
   // Customer
   customerId: string | null;
   customerEmail: string;
+  customerName?: string | null;
 
   // Artist/Submitter (for payout tracking)
   artistId?: string | null;       // User ID of the artist to be paid
@@ -65,12 +71,14 @@ export interface LedgerEntry {
 /**
  * Record a completed order to the sales ledger
  * Call this when payment is confirmed (webhook, capture, etc.)
+ * Dual-write: D1 (primary) + Firebase (backup)
  */
 export async function recordSale(params: {
   orderId: string;
   orderNumber: string;
   customerId?: string | null;
   customerEmail: string;
+  customerName?: string | null;
   subtotal: number;
   shipping?: number;
   discount?: number;
@@ -89,6 +97,8 @@ export async function recordSale(params: {
   artistName?: string | null;
   submitterId?: string | null;
   submitterEmail?: string | null;
+  // D1 database for dual-write (optional, but recommended)
+  db?: D1Database;
 }): Promise<{ success: boolean; ledgerId?: string; error?: string }> {
   try {
     const now = new Date();
@@ -132,6 +142,7 @@ export async function recordSale(params: {
       day: now.getDate(),
       customerId: params.customerId || null,
       customerEmail: params.customerEmail,
+      customerName: params.customerName || null,
       // Artist/submitter info
       artistId: params.artistId || null,
       artistName: params.artistName || null,
@@ -160,12 +171,26 @@ export async function recordSale(params: {
       items: itemsSummary
     };
 
-    // Save to ledger collection
+    // Dual-write: Firebase (backup) first to get ID
     const result = await addDocument('salesLedger', entry);
+    const ledgerId = result.id;
+
+    // Then write to D1 (primary read source)
+    if (params.db) {
+      try {
+        await d1InsertLedgerEntry(params.db, ledgerId, { ...entry, id: ledgerId });
+        console.log(`[sales-ledger] D1 write successful for: ${ledgerId}`);
+      } catch (d1Error) {
+        // Log D1 error but don't fail - Firebase backup is sufficient
+        console.error('[sales-ledger] D1 write failed (Firebase backup exists):', d1Error);
+      }
+    } else {
+      console.log('[sales-ledger] D1 not available, Firebase-only write');
+    }
 
     console.log(`[sales-ledger] Recorded sale: ${params.orderNumber} - £${params.grossTotal.toFixed(2)}`);
 
-    return { success: true, ledgerId: result.id };
+    return { success: true, ledgerId };
   } catch (error) {
     console.error('[sales-ledger] Error recording sale:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -174,6 +199,7 @@ export async function recordSale(params: {
 
 /**
  * Get ledger entries for a date range
+ * Reads from D1 (primary) with Firebase fallback
  */
 export async function getLedgerEntries(options: {
   startDate?: Date;
@@ -181,7 +207,39 @@ export async function getLedgerEntries(options: {
   year?: number;
   month?: number;
   limit?: number;
+  artistId?: string;
+  // D1 database for primary reads
+  db?: D1Database;
 }): Promise<LedgerEntry[]> {
+  // Try D1 first (primary read source)
+  if (options.db) {
+    try {
+      const entries = await d1GetLedgerEntries(options.db, {
+        year: options.year,
+        month: options.month,
+        artistId: options.artistId,
+        limit: options.limit || 1000
+      });
+
+      // Filter by date range if provided (D1 doesn't have this filter)
+      let filtered = entries;
+      if (options.startDate || options.endDate) {
+        filtered = entries.filter((e: any) => {
+          const timestamp = new Date(e.timestamp);
+          if (options.startDate && timestamp < options.startDate) return false;
+          if (options.endDate && timestamp > options.endDate) return false;
+          return true;
+        });
+      }
+
+      console.log(`[sales-ledger] D1 read: ${filtered.length} entries`);
+      return filtered as LedgerEntry[];
+    } catch (d1Error) {
+      console.error('[sales-ledger] D1 read failed, falling back to Firebase:', d1Error);
+    }
+  }
+
+  // Fallback to Firebase
   try {
     const filters: any[] = [];
 
@@ -209,6 +267,7 @@ export async function getLedgerEntries(options: {
       });
     }
 
+    console.log(`[sales-ledger] Firebase fallback read: ${filtered.length} entries`);
     return filtered as LedgerEntry[];
   } catch (error) {
     console.error('[sales-ledger] Error fetching entries:', error);
@@ -219,12 +278,14 @@ export async function getLedgerEntries(options: {
 /**
  * Record a multi-seller order to the sales ledger
  * Creates separate ledger entries for each seller/artist
+ * Dual-write: D1 (primary) + Firebase (backup)
  */
 export async function recordMultiSellerSale(params: {
   orderId: string;
   orderNumber: string;
   customerId?: string | null;
   customerEmail: string;
+  customerName?: string | null;
   grossTotal: number;
   shipping?: number;
   stripeFee?: number;
@@ -250,6 +311,8 @@ export async function recordMultiSellerSale(params: {
     submitterId?: string | null;
     submitterEmail?: string | null;
   }>;
+  // D1 database for dual-write (optional, but recommended)
+  db?: D1Database;
 }): Promise<{ success: boolean; ledgerIds?: string[]; error?: string }> {
   try {
     const now = new Date();
@@ -321,6 +384,7 @@ export async function recordMultiSellerSale(params: {
         day: now.getDate(),
         customerId: params.customerId || null,
         customerEmail: params.customerEmail,
+        customerName: params.customerName || null,
         // Seller info
         artistId: sellerId,
         artistName: artistName,
@@ -349,8 +413,20 @@ export async function recordMultiSellerSale(params: {
         items: itemsSummary
       };
 
+      // Dual-write: Firebase (backup) first to get ID
       const result = await addDocument('salesLedger', entry);
-      ledgerIds.push(result.id);
+      const ledgerId = result.id;
+      ledgerIds.push(ledgerId);
+
+      // Then write to D1 (primary read source)
+      if (params.db) {
+        try {
+          await d1InsertLedgerEntry(params.db, ledgerId, { ...entry, id: ledgerId });
+        } catch (d1Error) {
+          console.error(`[sales-ledger] D1 write failed for seller ${sellerId}:`, d1Error);
+        }
+      }
+
       console.log(`[sales-ledger] Recorded sale for seller ${sellerId}: ${params.orderNumber} - £${sellerSubtotal.toFixed(2)} (net: £${sellerNetRevenue.toFixed(2)})`);
     }
 

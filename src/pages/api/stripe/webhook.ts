@@ -1186,10 +1186,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             try {
               const release = await getDocument('releases', releaseId);
               if (release) {
-                submitterId = release.submitterId || release.uploadedBy || release.userId || null;
-                submitterEmail = release.submitterEmail || release.metadata?.email || null;
+                submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
+                // Email field - release stores it as 'email', not 'submitterEmail'
+                submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
-                console.log(`[Stripe Webhook] Item ${item.name}: seller=${submitterId}`);
+
+                console.log(`[Stripe Webhook] Item ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
               }
             } catch (lookupErr) {
               console.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
@@ -1202,9 +1204,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const merch = await getDocument('merch', item.productId);
               if (merch) {
                 submitterId = merch.sellerId || merch.userId || merch.createdBy || null;
-                submitterEmail = merch.sellerEmail || null;
+                submitterEmail = merch.email || merch.sellerEmail || null;
                 artistName = merch.sellerName || merch.brandName || artistName;
-                console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}`);
+                console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
               }
             } catch (lookupErr) {
               console.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
@@ -1220,11 +1222,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }));
 
         // Use multi-seller recording to create per-seller ledger entries
+        // Dual-write: D1 (primary) + Firebase (backup)
         await recordMultiSellerSale({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           customerId: metadata.customer_userId || null,
           customerEmail: metadata.customer_email,
+          customerName: metadata.customer_displayName || metadata.customer_firstName || null,
           grossTotal: session.amount_total / 100,
           shipping: shippingAmount,
           stripeFee: Math.round(stripeFee * 100) / 100,
@@ -1233,9 +1237,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           paymentId: session.payment_intent as string,
           hasPhysical: metadata.hasPhysicalItems === 'true',
           hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
-          items: enrichedItems
+          items: enrichedItems,
+          db: env?.DB  // D1 database for dual-write
         });
-        console.log('[Stripe Webhook] ✅ Sale recorded to ledger (per-seller entries created)');
+        console.log('[Stripe Webhook] ✅ Sale recorded to ledger (D1 + Firebase)');
       } catch (ledgerErr) {
         console.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
         // Don't fail the order, ledger is supplementary
