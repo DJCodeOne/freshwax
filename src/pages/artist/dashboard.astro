@@ -9,6 +9,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
 import { getAdminUids } from '../../lib/admin';
 
 // Service account for ledger queries
@@ -77,40 +78,53 @@ if (partnerId) {
       // Fetch earnings from salesLedger (source of truth)
       stats.stripeConnected = !!partnerDoc.stripeConnectId && partnerDoc.stripeConnectStatus === 'active';
 
-      // Query ledger for this artist's earnings
-      if (serviceAccountKey) {
+      // Query ledger for this artist's earnings - D1 primary, Firebase fallback
+      const db = env?.DB;
+      let artistEntries: any[] = [];
+
+      if (db) {
+        try {
+          // D1 is primary source of truth
+          artistEntries = await d1GetLedgerEntriesByArtist(db, partnerId);
+          console.log('[Partner Dashboard] D1 ledger entries:', artistEntries.length);
+        } catch (d1Err) {
+          console.error('[Partner Dashboard] D1 error, trying Firebase:', d1Err);
+        }
+      }
+
+      // Fallback to Firebase if D1 failed or unavailable
+      if (artistEntries.length === 0 && serviceAccountKey) {
         try {
           const ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
             limit: 500
           });
-          // Filter for entries where this artist is the submitter/recipient
-          const artistEntries = ledgerEntries.filter((e: any) =>
+          artistEntries = ledgerEntries.filter((e: any) =>
             e.artistId === partnerId ||
             e.submitterId === partnerId ||
             e.artistName === partnerDoc.artistName
           );
-
-          // Calculate earnings from ledger
-          let totalPaid = 0;
-          let pendingAmount = 0;
-          artistEntries.forEach((entry: any) => {
-            if (entry.artistPayoutStatus === 'paid') {
-              totalPaid += entry.artistPayoutNet || entry.artistPayout || 0;
-            } else if (entry.artistPayoutStatus === 'pending') {
-              pendingAmount += entry.artistPayout || 0;
-            }
-          });
-
-          stats.totalEarnings = totalPaid;
-          stats.pendingBalance = pendingAmount;
-        } catch (e) {
-          console.error('[Partner Dashboard] Error fetching ledger:', e);
-          // Fallback to stored values
-          stats.totalEarnings = partnerDoc.totalEarnings || 0;
-          stats.pendingBalance = partnerDoc.pendingBalance || 0;
+          console.log('[Partner Dashboard] Firebase fallback entries:', artistEntries.length);
+        } catch (fbErr) {
+          console.error('[Partner Dashboard] Firebase error:', fbErr);
         }
-      } else {
-        // Fallback if no service account
+      }
+
+      // Calculate earnings from ledger
+      let totalPaid = 0;
+      let pendingAmount = 0;
+      artistEntries.forEach((entry: any) => {
+        if (entry.artistPayoutStatus === 'paid') {
+          totalPaid += entry.artistPayoutNet || entry.artistPayout || 0;
+        } else if (entry.artistPayoutStatus === 'pending') {
+          pendingAmount += entry.artistPayout || 0;
+        }
+      });
+
+      stats.totalEarnings = totalPaid;
+      stats.pendingBalance = pendingAmount;
+
+      // Final fallback to stored values if no entries found
+      if (artistEntries.length === 0) {
         stats.totalEarnings = partnerDoc.totalEarnings || 0;
         stats.pendingBalance = partnerDoc.pendingBalance || 0;
       }
@@ -202,6 +216,14 @@ if (partnerId) {
           filters: [{ field: 'userId', op: 'EQUAL', value: partnerId }]
         });
         byUserId.forEach(r => releaseMap.set(r.id, r));
+
+        // Query by submitterEmail (email-based matching - primary for external uploads)
+        if (partner.email) {
+          const byEmail = await queryCollection('releases', {
+            filters: [{ field: 'submitterEmail', op: 'EQUAL', value: partner.email }]
+          });
+          byEmail.forEach(r => releaseMap.set(r.id, r));
+        }
 
         const releases = Array.from(releaseMap.values());
         stats.releases = releases.length;

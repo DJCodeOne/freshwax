@@ -8,6 +8,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: any = null;
@@ -48,55 +49,67 @@ if (partnerId) {
     if (partnerDoc) {
       partner = { id: partnerId, ...partnerDoc };
 
-      // Query salesLedger for this artist's earnings (source of truth)
-      if (serviceAccountKey) {
+      // Query salesLedger for this artist's earnings - D1 primary, Firebase fallback
+      const db = env?.DB;
+
+      // Try D1 first (primary source of truth)
+      if (db) {
+        try {
+          ledgerEntries = await d1GetLedgerEntriesByArtist(db, partnerId);
+          console.log('[Artist Payouts] D1 ledger entries:', ledgerEntries.length);
+        } catch (d1Err) {
+          console.error('[Artist Payouts] D1 error:', d1Err);
+        }
+      }
+
+      // Fallback to Firebase if D1 failed or unavailable
+      if (ledgerEntries.length === 0 && serviceAccountKey) {
         try {
           const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
             orderBy: { field: 'timestamp', direction: 'DESCENDING' },
             limit: 500
           });
-
-          // Filter entries where this artist is the submitter (person to be paid)
           ledgerEntries = allLedgerEntries.filter((e: any) =>
             e.submitterId === partnerId ||
             e.artistId === partnerId ||
             e.artistName === partnerDoc.artistName
           );
-
-          // Calculate earnings from ledger
-          let totalEarned = 0;
-          let totalPaid = 0;
-          let thisMonthEarned = 0;
-
-          const now = new Date();
-          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-          ledgerEntries.forEach((entry: any) => {
-            const artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
-            totalEarned += artistPayout;
-
-            if (entry.artistPayoutStatus === 'paid') {
-              totalPaid += entry.artistPayoutPaid || artistPayout;
-            }
-
-            // This month earnings
-            const entryDate = new Date(entry.timestamp);
-            if (entryDate >= monthStart) {
-              thisMonthEarned += artistPayout;
-            }
-          });
-
-          summary.totalEarnings = totalEarned;
-          summary.paidOut = totalPaid;
-          summary.pendingBalance = totalEarned - totalPaid;
-          summary.thisMonthEarnings = thisMonthEarned;
-        } catch (ledgerErr) {
-          console.error('Error fetching ledger entries:', ledgerErr);
-          // Fall back to partner.totalEarnings
-          summary.totalEarnings = partnerDoc.totalEarnings || 0;
+          console.log('[Artist Payouts] Firebase fallback entries:', ledgerEntries.length);
+        } catch (fbErr) {
+          console.error('[Artist Payouts] Firebase error:', fbErr);
         }
-      } else {
-        // Fallback if no service account
+      }
+
+      // Calculate earnings from ledger
+      let totalEarned = 0;
+      let totalPaid = 0;
+      let thisMonthEarned = 0;
+
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      ledgerEntries.forEach((entry: any) => {
+        const artistPayout = entry.artistPayout || entry.actualArtistPayout || 0;
+        totalEarned += artistPayout;
+
+        if (entry.artistPayoutStatus === 'paid') {
+          totalPaid += entry.artistPayoutPaid || artistPayout;
+        }
+
+        // This month earnings
+        const entryDate = new Date(entry.timestamp);
+        if (entryDate >= monthStart) {
+          thisMonthEarned += artistPayout;
+        }
+      });
+
+      summary.totalEarnings = totalEarned;
+      summary.paidOut = totalPaid;
+      summary.pendingBalance = totalEarned - totalPaid;
+      summary.thisMonthEarnings = thisMonthEarned;
+
+      // Final fallback to stored values if no entries found
+      if (ledgerEntries.length === 0) {
         summary.totalEarnings = partnerDoc.totalEarnings || 0;
       }
 
