@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const limitParam = url.searchParams.get('limit');
   const userId = url.searchParams.get('userId');
   const limit = limitParam ? parseInt(limitParam) : 50;
-  const skipCache = url.searchParams.get('fresh') === '1';
+  const skipCache = url.searchParams.get('fresh') === '1' || url.searchParams.get('t') !== null;
 
   try {
     let mixes: any[] = [];
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // 2. Firestore REST API doesn't support OR queries, so we filter client-side
       const allMixes = await queryCollection('dj-mixes', {
         limit: 500,
-        cacheTime: 120000 // 2 min cache - shared across all user lookups
+        cacheTime: skipCache ? 0 : 120000 // Skip cache after updates (t= param), otherwise 2 min
       });
 
       // Filter by any userId field variation (handles schema inconsistency)
