@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
-import { saSetDocument } from '../../lib/firebase-service-account';
+import { saSetDocument, saQueryCollection } from '../../lib/firebase-service-account';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -356,6 +356,41 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const now = new Date().toISOString();
 
+    // Look up artist by email to get proper ownership ID
+    let artistOwnerId = '';
+    let artistOwnerEmail = metadata.email || '';
+    if (artistOwnerEmail) {
+      try {
+        // Normalize email for lookup (handle gmail/googlemail)
+        const normalizedEmail = artistOwnerEmail.toLowerCase().replace('@googlemail.com', '@gmail.com');
+
+        // Query artists collection by email
+        const artists = await saQueryCollection(serviceAccountKey, projectId, 'artists', {
+          filters: [{ field: 'email', op: '==', value: normalizedEmail }]
+        });
+        if (artists && artists.length > 0) {
+          artistOwnerId = artists[0].id;
+          log.info(`Found artist by email: ${artistOwnerId}`);
+        } else {
+          // Also try the original email if normalization changed it
+          if (normalizedEmail !== artistOwnerEmail.toLowerCase()) {
+            const artists2 = await saQueryCollection(serviceAccountKey, projectId, 'artists', {
+              filters: [{ field: 'email', op: '==', value: artistOwnerEmail.toLowerCase() }]
+            });
+            if (artists2 && artists2.length > 0) {
+              artistOwnerId = artists2[0].id;
+              log.info(`Found artist by original email: ${artistOwnerId}`);
+            }
+          }
+        }
+        if (!artistOwnerId) {
+          log.warn(`No artist found for email: ${artistOwnerEmail}`);
+        }
+      } catch (err) {
+        log.warn(`Failed to lookup artist by email: ${err}`);
+      }
+    }
+
     // Build release document
     const releaseData = {
       id: releaseId,
@@ -415,10 +450,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: now,
       processedAt: now,
 
-      // Original submission
+      // Original submission & ownership
       submissionId: submissionId,
       email: metadata.email || '',
-      submittedBy: metadata.submittedBy || ''
+      submittedBy: metadata.submittedBy || '',
+      submitterEmail: artistOwnerEmail,
+      submitterId: artistOwnerId,
+      artistId: artistOwnerId
     };
 
     // Save to Firebase using service account auth
