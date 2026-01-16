@@ -380,7 +380,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
           <div class="earning-info">
             <span class="earning-label">Gross Revenue</span>
             <span class="earning-value">{formatCurrency(grossRevenue)}</span>
-            <span class="earning-detail">{realOrders.length} real order{realOrders.length !== 1 ? 's' : ''} (excl. test)</span>
+            <span class="earning-detail">{realOrders.length} order{realOrders.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
 
@@ -398,7 +398,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
           <div class="earning-info">
             <span class="earning-label">Artist Earnings</span>
             <span class="earning-value">{formatCurrency(netToArtists)}</span>
-            <span class="earning-detail">{realOrders.length} real order{realOrders.length !== 1 ? 's' : ''}</span>
+            <span class="earning-detail">{realOrders.length} order{realOrders.length !== 1 ? 's' : ''}</span>
           </div>
         </div>
 
