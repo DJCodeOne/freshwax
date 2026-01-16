@@ -515,20 +515,29 @@ Astro.response.headers.set('Pragma', 'no-cache');
             <thead>
               <tr>
                 <th>Order</th>
+                <th>Customer</th>
+                <th>Purchased</th>
                 <th>Total</th>
-                <th>Status</th>
                 <th>Date</th>
               </tr>
             </thead>
             <tbody>
-              {recentOrders.map(order => (
-                <tr>
-                  <td class="cell-mono">#{order.id?.slice(-6).toUpperCase()}</td>
-                  <td class="font-bold">{formatCurrency(order.totals?.total || order.total)}</td>
-                  <td><span class={`badge badge-${order.status}`}>{order.status}</span></td>
-                  <td class="cell-secondary">{formatDate(order.createdAt)}</td>
-                </tr>
-              ))}
+              {recentOrders.map(order => {
+                const customerName = order.shipping?.name || order.customer?.name || order.customerEmail?.split('@')[0] || '-';
+                const items = order.items || [];
+                const purchasedSummary = items.length > 0
+                  ? items.map((i: any) => i.title || i.name).slice(0, 2).join(', ') + (items.length > 2 ? ` +${items.length - 2}` : '')
+                  : '-';
+                return (
+                  <tr>
+                    <td class="cell-mono">#{order.id?.slice(-6).toUpperCase()}</td>
+                    <td class="cell-truncate" style="max-width: 120px;" title={customerName}>{customerName}</td>
+                    <td class="cell-truncate" style="max-width: 180px;" title={purchasedSummary}>{purchasedSummary}</td>
+                    <td class="font-bold">{formatCurrency(order.totals?.total || order.total)}</td>
+                    <td class="cell-secondary">{formatDate(order.createdAt)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
