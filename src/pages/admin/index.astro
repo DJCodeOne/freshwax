@@ -47,7 +47,7 @@ try {
     queryCollection('payouts', { limit: 200 }),
     queryCollection('disputes', { limit: 50 }),
     queryCollection('refunds', { limit: 50 }),
-    queryCollection('ledger', { limit: 500 })
+    queryCollection('salesLedger', { limit: 500 })
   ]);
 
   ordersData = results[0].status === 'fulfilled' ? results[0].value : [];
