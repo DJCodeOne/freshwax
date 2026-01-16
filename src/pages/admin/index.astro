@@ -33,6 +33,7 @@ let disputesData: any[] = [];
 let refundsData: any[] = [];
 let ledgerData: any[] = [];
 let r2SubmissionsCount = 0;
+let r2PendingFolders: string[] = [];
 
 try {
   const results = await Promise.allSettled([
@@ -81,7 +82,9 @@ try {
     if (submissionsResponse.ok) {
       const xmlText = await submissionsResponse.text();
       const prefixMatches = [...xmlText.matchAll(/<Prefix>submissions\/([^<]+)\/<\/Prefix>/g)];
-      r2SubmissionsCount = prefixMatches.filter(m => !m[1].startsWith('test-')).length;
+      const subFolders = prefixMatches.filter(m => !m[1].startsWith('test-')).map(m => `submissions/${m[1]}`);
+      r2SubmissionsCount = subFolders.length;
+      r2PendingFolders.push(...subFolders);
     }
 
     // Also check root level for submission-like folders (Artist-timestamp pattern)
@@ -96,6 +99,7 @@ try {
         // Skip known non-submission folders
         if (['submissions', 'releases', 'assets', 'thumbnails', 'audio', 'temp'].includes(folder)) continue;
         if (submissionPattern.test(folder)) {
+          r2PendingFolders.push(folder);
           r2SubmissionsCount++;
         }
       }
@@ -348,10 +352,10 @@ Astro.response.headers.set('Pragma', 'no-cache');
       <div class="stat-detail">Need attention</div>
     </div>
     
-    <div class="stat-card">
+    <div class="stat-card" title={r2PendingFolders.length > 0 ? `Pending: ${r2PendingFolders.join(', ')}` : ''}>
       <div class="stat-label">Live Releases</div>
       <div class="stat-value">{liveReleases.length}</div>
-      <div class="stat-detail">{r2SubmissionsCount} pending</div>
+      <div class="stat-detail">{r2SubmissionsCount} pending{r2PendingFolders.length > 0 ? ` (${r2PendingFolders[0].substring(0, 20)}...)` : ''}</div>
     </div>
     
     <div class="stat-card">
