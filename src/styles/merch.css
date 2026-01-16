@@ -585,9 +585,9 @@
   background: rgba(0, 0, 0, 0.85);
   z-index: 9999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
+  padding: 2rem 1rem;
   overflow-y: auto;
 }
 .gc-modal-overlay.hidden {
@@ -597,11 +597,12 @@
   background: #1a1a1a;
   border-radius: 12px;
   width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
+  max-width: 600px;
+  max-height: calc(100vh - 4rem);
   overflow-y: auto;
   position: relative;
   border: 1px solid #333;
+  margin: auto 0;
 }
 .gc-modal-close {
   position: absolute;
