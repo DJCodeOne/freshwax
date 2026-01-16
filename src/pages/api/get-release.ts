@@ -76,7 +76,15 @@ export const GET: APIRoute = async ({ request, cookies }) => {
       try {
         const userDoc = await getDocument('users', normalized.artistId);
         if (userDoc?.pendingRoles?.artist?.bio) {
-          artistBio = userDoc.pendingRoles.artist.bio;
+          const bio = userDoc.pendingRoles.artist.bio.trim();
+          // Skip placeholder/default bios
+          const placeholderBios = [
+            'electronic music / digital and vinyl',
+            'electronic music digital and vinyl'
+          ];
+          if (!placeholderBios.includes(bio.toLowerCase())) {
+            artistBio = bio;
+          }
         }
       } catch (err) {
         log.info('[get-release] Could not fetch artist bio:', err);
