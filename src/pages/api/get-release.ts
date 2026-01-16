@@ -69,12 +69,25 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     }
     
     const normalized = normalizeRelease(release, releaseId);
-    
-    log.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName);
-    
-    return new Response(JSON.stringify({ 
+
+    // Fetch artist bio from users collection if artistId exists
+    let artistBio = '';
+    if (normalized.artistId) {
+      try {
+        const userDoc = await getDocument('users', normalized.artistId);
+        if (userDoc?.pendingRoles?.artist?.bio) {
+          artistBio = userDoc.pendingRoles.artist.bio;
+        }
+      } catch (err) {
+        log.info('[get-release] Could not fetch artist bio:', err);
+      }
+    }
+
+    log.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName, artistBio ? '(has bio)' : '(no bio)');
+
+    return new Response(JSON.stringify({
       success: true,
-      release: normalized,
+      release: { ...normalized, artistBio },
       source: 'firebase-rest'
     }), {
       status: 200,
