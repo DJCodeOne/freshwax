@@ -82,7 +82,7 @@ function calculateMetricsFromLedger(entries: any[]) {
 
   entries.forEach(entry => {
     // Use actual values from ledger
-    revenue += entry.actualGrossTotal ?? entry.grossTotal ?? 0;
+    revenue += entry.grossTotal ?? 0;
     stripeFees += entry.stripeFee ?? 0;
     paypalFees += entry.actualPaypalFee ?? entry.paypalFee ?? 0;
     freshWaxFees += entry.freshWaxFee ?? 0;
