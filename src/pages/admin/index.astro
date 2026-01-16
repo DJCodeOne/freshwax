@@ -5,29 +5,12 @@
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
-import { saQueryCollection } from '../../lib/firebase-service-account';
 import { AwsClient } from 'aws4fetch';
 import '../../styles/admin/index.css';
 
 // Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-
-// Service account config for collections that require auth
-const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-const serviceAccountKey = JSON.stringify({
-  type: 'service_account',
-  project_id: projectId,
-  private_key_id: 'auto',
-  private_key: privateKey?.replace(/\\n/g, '\n'),
-  client_email: clientEmail,
-  client_id: '',
-  auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-  token_uri: 'https://oauth2.googleapis.com/token'
-});
 
 // R2 config for pending submissions count
 const r2Config = {
@@ -46,9 +29,6 @@ let mixesData: any[] = [];
 let livestreamsData: any[] = [];
 let bypassRequestsData: any[] = [];
 let payoutsData: any[] = [];
-let pendingPayoutsData: any[] = [];
-let pendingSupplierPayoutsData: any[] = [];
-let pendingSellerPayoutsData: any[] = [];
 let disputesData: any[] = [];
 let refundsData: any[] = [];
 let ledgerData: any[] = [];
@@ -64,10 +44,6 @@ try {
     queryCollection('livestreams', { limit: 10 }),
     queryCollection('bypassRequests', { limit: 20 }),
     queryCollection('payouts', { limit: 200 }),
-    // Use service account auth for pending payouts collections
-    saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', { limit: 100 }),
-    saQueryCollection(serviceAccountKey, projectId, 'pendingSupplierPayouts', { limit: 100 }),
-    saQueryCollection(serviceAccountKey, projectId, 'pendingCrateSellerPayouts', { limit: 100 }),
     queryCollection('disputes', { limit: 50 }),
     queryCollection('refunds', { limit: 50 }),
     queryCollection('ledger', { limit: 500 })
@@ -81,12 +57,9 @@ try {
   livestreamsData = results[5].status === 'fulfilled' ? results[5].value : [];
   bypassRequestsData = results[6].status === 'fulfilled' ? results[6].value.filter((r: any) => r.status === 'pending') : [];
   payoutsData = results[7].status === 'fulfilled' ? results[7].value : [];
-  pendingPayoutsData = results[8].status === 'fulfilled' ? results[8].value : [];
-  pendingSupplierPayoutsData = results[9].status === 'fulfilled' ? results[9].value : [];
-  pendingSellerPayoutsData = results[10].status === 'fulfilled' ? results[10].value : [];
-  disputesData = results[11].status === 'fulfilled' ? results[11].value : [];
-  refundsData = results[12].status === 'fulfilled' ? results[12].value : [];
-  ledgerData = results[13].status === 'fulfilled' ? results[13].value : [];
+  disputesData = results[8].status === 'fulfilled' ? results[8].value : [];
+  refundsData = results[9].status === 'fulfilled' ? results[9].value : [];
+  ledgerData = results[10].status === 'fulfilled' ? results[10].value : [];
 } catch (error) {
   console.error('[Admin Dashboard] Error fetching data:', error);
 }
@@ -222,21 +195,13 @@ const totalArtistPayouts = payoutsData
   .filter(p => p.status === 'completed')
   .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-// Calculate pending payouts (all types: artist, supplier, seller)
-const pendingArtistAmount = pendingPayoutsData
-  .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
-  .reduce((sum, p) => sum + (p.amount || 0), 0);
-const pendingSupplierAmount = pendingSupplierPayoutsData
-  .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
-  .reduce((sum, p) => sum + (p.amount || 0), 0);
-const pendingSellerAmount = pendingSellerPayoutsData
-  .filter(p => p.status !== 'completed' && p.status !== 'cancelled')
-  .reduce((sum, p) => sum + (p.amount || 0), 0);
-const totalPendingPayouts = pendingArtistAmount + pendingSupplierAmount + pendingSellerAmount;
-const totalPendingCount =
-  pendingPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length +
-  pendingSupplierPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length +
-  pendingSellerPayoutsData.filter(p => p.status !== 'completed' && p.status !== 'cancelled').length;
+// Pending payouts - calculated from ledger (source of truth)
+// Entries with artistPayoutStatus 'pending' or 'unpaid' are awaiting payout
+const pendingLedgerEntries = ledgerData.filter(e =>
+  e.artistPayoutStatus === 'pending' || e.artistPayoutStatus === 'unpaid'
+);
+const totalPendingPayouts = pendingLedgerEntries.reduce((sum, e) => sum + (e.artistPayout || 0), 0);
+const totalPendingCount = pendingLedgerEntries.length;
 
 // Calculate refunds issued
 const totalRefunded = refundsData.reduce((sum, r) => sum + (r.amount || 0), 0);
@@ -247,13 +212,9 @@ const disputesUnderReview = openDisputes.reduce((sum, d) => sum + (d.amount || 0
 const disputesLost = disputesData.filter(d => d.status === 'lost').reduce((sum, d) => sum + (d.amount || 0), 0);
 const disputesWon = disputesData.filter(d => d.status === 'won').reduce((sum, d) => sum + (d.amount || 0), 0);
 
-// Calculate financials from ledger (most accurate source)
+// Calculate financials from ledger (source of truth)
 const ledgerGross = ledgerData.reduce((sum, e) => sum + (e.grossTotal || 0), 0);
-const ledgerNet = ledgerData.reduce((sum, e) => sum + (e.netRevenue || 0), 0);
 const ledgerArtistPayout = ledgerData.reduce((sum, e) => sum + (e.artistPayout || 0), 0);
-const ledgerPendingPayout = ledgerData
-  .filter(e => e.artistPayoutStatus === 'pending' || e.artistPayoutStatus === 'unpaid')
-  .reduce((sum, e) => sum + (e.artistPayout || 0), 0);
 
 // Use ledger values if available, fallback to order calculations
 const grossRevenue = ledgerGross > 0 ? ledgerGross : realOrders.reduce((sum, o) => sum + (o.totals?.total || o.total || 0), 0);
