@@ -243,21 +243,27 @@ const netToArtists = ledgerArtistPayout > 0
 const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 
-const lastMonthPayouts = payoutsData
-  .filter(p => {
-    if (!p.completedAt) return false;
-    const d = new Date(p.completedAt);
+// Calculate last month's payouts from ledger
+const lastMonthPayouts = ledgerData
+  .filter(e => {
+    if (e.artistPayoutStatus !== 'paid') return false;
+    const paidAt = e.artistPaidAt || e.createdAt;
+    if (!paidAt) return false;
+    const d = new Date(paidAt);
     return d >= lastMonth && d <= endOfLastMonth;
   })
-  .reduce((sum, p) => sum + (p.amount || 0), 0);
+  .reduce((sum, e) => sum + (e.artistPayout || 0), 0);
 
-const thisMonthPayouts = payoutsData
-  .filter(p => {
-    if (!p.completedAt) return false;
-    const d = new Date(p.completedAt);
+// Calculate this month's payouts from ledger (paid entries this month)
+const thisMonthPayouts = ledgerData
+  .filter(e => {
+    if (e.artistPayoutStatus !== 'paid') return false;
+    const paidAt = e.artistPaidAt || e.createdAt;
+    if (!paidAt) return false;
+    const d = new Date(paidAt);
     return d >= startOfMonth;
   })
-  .reduce((sum, p) => sum + (p.amount || 0), 0);
+  .reduce((sum, e) => sum + (e.artistPayout || 0), 0);
 
 // Format helpers
 const formatCurrency = (amount) => {
