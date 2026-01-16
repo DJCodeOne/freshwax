@@ -523,7 +523,9 @@ Astro.response.headers.set('Pragma', 'no-cache');
             </thead>
             <tbody>
               {recentOrders.map(order => {
-                const customerName = order.shipping?.name || order.customer?.name || order.customerEmail?.split('@')[0] || '-';
+                const customerName = order.customer?.firstName && order.customer?.lastName
+                  ? `${order.customer.firstName} ${order.customer.lastName}`
+                  : order.customer?.email?.split('@')[0] || '-';
                 const items = order.items || [];
                 const purchasedSummary = items.length > 0
                   ? items.map((i: any) => i.title || i.name).slice(0, 2).join(', ') + (items.length > 2 ? ` +${items.length - 2}` : '')
