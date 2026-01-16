@@ -335,6 +335,10 @@ if (totalPendingPayouts > 0) {
 }
 
 export const prerender = false;
+
+// Prevent caching of admin dashboard for real-time data accuracy
+Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+Astro.response.headers.set('Pragma', 'no-cache');
 ---
 
 <AdminLayout title="Dashboard" activeNav="dashboard">
