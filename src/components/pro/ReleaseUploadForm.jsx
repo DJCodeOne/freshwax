@@ -792,7 +792,7 @@ export default function ReleaseUploadForm({ userEmail: initialEmail, userId: ini
                       type="text"
                       value={track.featured || ''}
                       onChange={(e) => updateTrack(track.id, 'featured', e.target.value)}
-                      placeholder="feat. Artist"
+                      placeholder="ft. Artist"
                       className="w-full px-3 py-2 bg-white border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-600"
                     />
                   </div>
