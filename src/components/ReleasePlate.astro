@@ -523,7 +523,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                 </span>
                 <p class="text-sm text-white truncate flex-1 min-w-0 font-body" title={track.title} data-track-title={track.title}>
                   {track.title}
-                  {track.featured && <span class="text-gray-400 font-normal"> ft. {track.featured}</span>}
+                  {track.featured && <span class="text-gray-400 font-normal text-xs"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>}
                   {track.remixer && <span class="text-gray-400 font-normal"> ({track.remixer} Remix)</span>}
                 </p>
                 {finalTrackPrice > 0 && (
