@@ -362,6 +362,33 @@ const getStockBadgeClass = (stock) => {
   )}
 </AdminLayout>
 
+<!-- Image Editor Modal -->
+<div class="image-editor-overlay hidden" id="imageEditorOverlay">
+  <div class="image-editor-modal">
+    <div class="image-editor-header">
+      <h3>Resize & Position Image</h3>
+      <button type="button" class="image-editor-close" onclick="closeImageEditor()">&times;</button>
+    </div>
+    <div class="image-editor-body">
+      <div class="crop-container" id="cropContainer">
+        <img id="cropImage" src="" alt="Crop preview" />
+        <div class="crop-grid"></div>
+      </div>
+      <div class="editor-controls">
+        <div class="editor-control-row">
+          <label>Zoom</label>
+          <input type="range" id="zoomSlider" min="100" max="300" value="100" />
+          <span class="value" id="zoomValue">100%</span>
+        </div>
+      </div>
+      <p class="editor-hint">Drag the image to position it within the square frame</p>
+      <div class="editor-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeImageEditor()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script define:vars={{ id, product, adminKey }}>
   const ADMIN_KEY = adminKey;
@@ -386,6 +413,224 @@ const getStockBadgeClass = (stock) => {
   const uploadProgress = document.getElementById('uploadProgress');
   const progressFill = document.getElementById('progressFill');
   const progressText = document.getElementById('progressText');
+
+  // Image editor state
+  let editorState = {
+    active: false,
+    imageIndex: -1,
+    originalDataUrl: null,
+    zoom: 100,
+    panX: 0,
+    panY: 0,
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    imgNaturalWidth: 0,
+    imgNaturalHeight: 0,
+    originalFile: null,
+    pendingFiles: []
+  };
+
+  function openImageEditor(imageUrl, imageIndex = -1, file = null) {
+    editorState.active = true;
+    editorState.imageIndex = imageIndex;
+    editorState.originalDataUrl = imageUrl;
+    editorState.originalFile = file;
+    editorState.zoom = 100;
+    editorState.panX = 0;
+    editorState.panY = 0;
+
+    const overlay = document.getElementById('imageEditorOverlay');
+    const cropImage = document.getElementById('cropImage');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomValue = document.getElementById('zoomValue');
+
+    overlay.classList.remove('hidden');
+    zoomSlider.value = 100;
+    zoomValue.textContent = '100%';
+
+    cropImage.onload = function() {
+      editorState.imgNaturalWidth = this.naturalWidth;
+      editorState.imgNaturalHeight = this.naturalHeight;
+      updateCropPreview();
+    };
+    cropImage.src = imageUrl;
+
+    setupEditorListeners();
+  }
+
+  function setupEditorListeners() {
+    const container = document.getElementById('cropContainer');
+    const cropImage = document.getElementById('cropImage');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomValue = document.getElementById('zoomValue');
+
+    zoomSlider.oninput = function() {
+      editorState.zoom = parseInt(this.value);
+      zoomValue.textContent = editorState.zoom + '%';
+      updateCropPreview();
+    };
+
+    container.onmousedown = function(e) {
+      if (e.target === cropImage || e.target === container) {
+        editorState.isDragging = true;
+        editorState.dragStartX = e.clientX - editorState.panX;
+        editorState.dragStartY = e.clientY - editorState.panY;
+        e.preventDefault();
+      }
+    };
+
+    document.onmousemove = function(e) {
+      if (editorState.isDragging && editorState.active) {
+        editorState.panX = e.clientX - editorState.dragStartX;
+        editorState.panY = e.clientY - editorState.dragStartY;
+        updateCropPreview();
+      }
+    };
+
+    document.onmouseup = function() {
+      editorState.isDragging = false;
+    };
+
+    container.ontouchstart = function(e) {
+      if (e.touches.length === 1) {
+        editorState.isDragging = true;
+        editorState.dragStartX = e.touches[0].clientX - editorState.panX;
+        editorState.dragStartY = e.touches[0].clientY - editorState.panY;
+        e.preventDefault();
+      }
+    };
+
+    container.ontouchmove = function(e) {
+      if (editorState.isDragging && e.touches.length === 1) {
+        editorState.panX = e.touches[0].clientX - editorState.dragStartX;
+        editorState.panY = e.touches[0].clientY - editorState.dragStartY;
+        updateCropPreview();
+        e.preventDefault();
+      }
+    };
+
+    container.ontouchend = function() {
+      editorState.isDragging = false;
+    };
+  }
+
+  function updateCropPreview() {
+    const container = document.getElementById('cropContainer');
+    const cropImage = document.getElementById('cropImage');
+    const containerSize = container.offsetWidth;
+
+    const scale = editorState.zoom / 100;
+    const displayWidth = editorState.imgNaturalWidth * scale;
+    const displayHeight = editorState.imgNaturalHeight * scale;
+
+    const minScale = containerSize / Math.min(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
+    const actualWidth = editorState.imgNaturalWidth * Math.max(scale, minScale);
+    const actualHeight = editorState.imgNaturalHeight * Math.max(scale, minScale);
+
+    const left = (containerSize - actualWidth) / 2 + editorState.panX;
+    const top = (containerSize - actualHeight) / 2 + editorState.panY;
+
+    cropImage.style.width = actualWidth + 'px';
+    cropImage.style.height = actualHeight + 'px';
+    cropImage.style.left = left + 'px';
+    cropImage.style.top = top + 'px';
+  }
+
+  window.closeImageEditor = function() {
+    document.getElementById('imageEditorOverlay').classList.add('hidden');
+    editorState.active = false;
+    editorState.isDragging = false;
+
+    if (editorState.pendingFiles.length > 0) {
+      setTimeout(processNextPendingFile, 100);
+    }
+  };
+
+  window.saveImageCrop = function() {
+    const container = document.getElementById('cropContainer');
+    const cropImage = document.getElementById('cropImage');
+    const containerSize = container.offsetWidth;
+
+    const outputSize = 800;
+    const canvas = document.createElement('canvas');
+    canvas.width = outputSize;
+    canvas.height = outputSize;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, outputSize, outputSize);
+
+    const scale = editorState.zoom / 100;
+    const minScale = containerSize / Math.min(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
+    const actualScale = Math.max(scale, minScale);
+    const displayWidth = editorState.imgNaturalWidth * actualScale;
+    const displayHeight = editorState.imgNaturalHeight * actualScale;
+    const centerX = (containerSize - displayWidth) / 2 + editorState.panX;
+    const centerY = (containerSize - displayHeight) / 2 + editorState.panY;
+
+    const outputScale = outputSize / containerSize;
+
+    ctx.drawImage(
+      cropImage,
+      centerX * outputScale,
+      centerY * outputScale,
+      displayWidth * outputScale,
+      displayHeight * outputScale
+    );
+
+    canvas.toBlob(async blob => {
+      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      if (editorState.imageIndex >= 0) {
+        // Editing existing image - upload and replace
+        progressText.textContent = 'Uploading cropped image...';
+        uploadProgress.style.display = 'block';
+        progressFill.style.width = '50%';
+
+        try {
+          const formData = new FormData();
+          formData.append('file', blob, 'cropped.jpg');
+          formData.append('folder', `merch/${id}`);
+          formData.append('filename', `${Date.now()}_cropped.webp`);
+
+          const response = await fetch('/api/upload-merch-image', {
+            method: 'POST',
+            headers: { 'X-Admin-Key': ADMIN_KEY },
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            images[editorState.imageIndex].url = result.url;
+            images[editorState.imageIndex].key = result.key;
+            renderImages();
+            await saveImages();
+          } else {
+            alert('Failed to upload: ' + result.error);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          alert('Failed to upload cropped image');
+        }
+
+        uploadProgress.style.display = 'none';
+      }
+
+      closeImageEditor();
+    }, 'image/jpeg', 0.9);
+  };
+
+  window.editImage = function(idx) {
+    openImageEditor(images[idx].url, idx, null);
+  };
+
+  function processNextPendingFile() {
+    if (editorState.pendingFiles.length === 0) return;
+    const { dataUrl, file } = editorState.pendingFiles.shift();
+    openImageEditor(dataUrl, -1, file);
+  }
   
   function updateImageCount() {
     imageCountEl.textContent = `${images.length} / ${MAX_IMAGES}`;
@@ -408,6 +653,7 @@ const getStockBadgeClass = (stock) => {
       div.innerHTML = `
         <img src="${img.url}" alt="Product image ${idx + 1}" />
         <div class="image-overlay">
+          <button type="button" class="image-btn image-btn-edit" title="Edit image" data-action="edit">✏️</button>
           <button type="button" class="image-btn image-btn-primary" title="Set as primary" data-action="primary">⭐</button>
           <button type="button" class="image-btn image-btn-delete" title="Delete image" data-action="delete">🗑️</button>
         </div>
@@ -428,7 +674,13 @@ const getStockBadgeClass = (stock) => {
   function setupImageItemEvents(item, idx) {
     // Delete button
     item.querySelector('[data-action="delete"]').addEventListener('click', () => deleteImage(idx));
-    
+
+    // Edit button
+    const editBtn = item.querySelector('[data-action="edit"]');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => editImage(idx));
+    }
+
     // Primary button
     const primaryBtn = item.querySelector('[data-action="primary"]');
     if (primaryBtn) {
