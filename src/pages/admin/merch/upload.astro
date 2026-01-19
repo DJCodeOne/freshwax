@@ -559,15 +559,14 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         editorState.imgNaturalWidth = cropImage.naturalWidth;
         editorState.imgNaturalHeight = cropImage.naturalHeight;
 
-        // Calculate initial zoom to fit image within container
+        // Calculate initial zoom to fit entire image within container
         const container = document.getElementById('cropContainer');
         const containerSize = container.offsetWidth;
-        const minDim = Math.min(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
         const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
 
-        // Start with zoom that makes the smallest dimension fill the container
-        const initialZoom = Math.ceil((containerSize / minDim) * 100);
-        editorState.zoom = Math.max(100, Math.min(300, initialZoom));
+        // Start with zoom that makes the largest dimension fit within the container
+        const initialZoom = Math.floor((containerSize / maxDim) * 100);
+        editorState.zoom = Math.max(25, Math.min(300, initialZoom));
         zoomSlider.value = editorState.zoom;
         document.getElementById('zoomValue').textContent = editorState.zoom + '%';
 
