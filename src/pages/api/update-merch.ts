@@ -15,12 +15,15 @@ const log = {
 
 export const prerender = false;
 
+// Firebase API key fallback (same as in firebase-rest.ts)
+const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
   initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK,
   });
 }
 
