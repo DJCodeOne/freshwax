@@ -255,18 +255,19 @@
     /* Image preview with edit button */
     .image-preview-item .edit-btn {
       position: absolute;
-      bottom: 5px;
-      right: 5px;
-      background: #000;
+      top: 5px;
+      left: 5px;
+      background: #2563eb;
       color: #fff;
       border: none;
-      padding: 4px 8px;
+      padding: 5px 10px;
       cursor: pointer;
       font-weight: 700;
-      font-size: 10px;
+      font-size: 11px;
       text-transform: uppercase;
+      z-index: 5;
     }
-    .image-preview-item .edit-btn:hover { background: #dc2626; }
+    .image-preview-item .edit-btn:hover { background: #1d4ed8; }
 
     /* Responsive */
     @media (max-width: 1200px) {
