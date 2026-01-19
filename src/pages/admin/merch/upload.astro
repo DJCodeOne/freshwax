@@ -351,12 +351,56 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
   <div class="toast" id="toast"></div>
 
+  <!-- Image Editor Modal -->
+  <div class="image-editor-overlay hidden" id="imageEditorOverlay">
+    <div class="image-editor-modal">
+      <div class="image-editor-header">
+        <h3>Resize & Position Image</h3>
+        <button type="button" class="image-editor-close" onclick="closeImageEditor()">&times;</button>
+      </div>
+      <div class="image-editor-body">
+        <div class="crop-container" id="cropContainer">
+          <img id="cropImage" src="" alt="Crop preview" />
+          <div class="crop-grid"></div>
+        </div>
+        <div class="editor-controls">
+          <div class="editor-control-row">
+            <label>Zoom</label>
+            <input type="range" id="zoomSlider" min="100" max="300" value="100" />
+            <span class="value" id="zoomValue">100%</span>
+          </div>
+        </div>
+        <p class="editor-hint">Drag the image to position it within the square frame</p>
+        <div class="editor-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeImageEditor()">Cancel</button>
+          <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script define:vars={{ adminKey }}>
     const ADMIN_KEY = adminKey;
 
     // State
     let uploadedImages = [];
     let suppliers = [];
+
+    // Image editor state
+    let editorState = {
+      active: false,
+      imageIndex: -1, // -1 means new image, >= 0 means editing existing
+      originalDataUrl: null,
+      zoom: 100,
+      panX: 0,
+      panY: 0,
+      isDragging: false,
+      dragStartX: 0,
+      dragStartY: 0,
+      imgNaturalWidth: 0,
+      imgNaturalHeight: 0,
+      pendingFiles: [] // Queue for multiple file drops
+    };
     
     // Product type configuration
     const productTypes = {
@@ -466,26 +510,225 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     }
 
     function handleImageFiles(files) {
-      Array.from(files).forEach(file => {
-        if (uploadedImages.length >= 10) {
+      const fileArray = Array.from(files);
+
+      // Queue all files
+      fileArray.forEach(file => {
+        if (uploadedImages.length + editorState.pendingFiles.length >= 10) {
           showToast('Maximum 10 images allowed', 'error');
           return;
         }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          uploadedImages.push({
-            file: file,
-            dataUrl: e.target.result,
-            color: null, // Will be set via dropdown
-            colorHex: null
-          });
+        editorState.pendingFiles.push(file);
+      });
+
+      // Start processing queue
+      processNextPendingFile();
+    }
+
+    function processNextPendingFile() {
+      if (editorState.pendingFiles.length === 0) return;
+
+      const file = editorState.pendingFiles.shift();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        openImageEditor(e.target.result, -1, file);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openImageEditor(dataUrl, index = -1, file = null) {
+      editorState.active = true;
+      editorState.imageIndex = index;
+      editorState.originalDataUrl = dataUrl;
+      editorState.originalFile = file;
+      editorState.zoom = 100;
+      editorState.panX = 0;
+      editorState.panY = 0;
+
+      const overlay = document.getElementById('imageEditorOverlay');
+      const cropImage = document.getElementById('cropImage');
+      const zoomSlider = document.getElementById('zoomSlider');
+
+      overlay.classList.remove('hidden');
+      cropImage.src = dataUrl;
+      zoomSlider.value = 100;
+      document.getElementById('zoomValue').textContent = '100%';
+
+      // Wait for image to load to get natural dimensions
+      cropImage.onload = () => {
+        editorState.imgNaturalWidth = cropImage.naturalWidth;
+        editorState.imgNaturalHeight = cropImage.naturalHeight;
+
+        // Calculate initial zoom to fit image within container
+        const container = document.getElementById('cropContainer');
+        const containerSize = container.offsetWidth;
+        const minDim = Math.min(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
+        const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
+
+        // Start with zoom that makes the smallest dimension fill the container
+        const initialZoom = Math.ceil((containerSize / minDim) * 100);
+        editorState.zoom = Math.max(100, Math.min(300, initialZoom));
+        zoomSlider.value = editorState.zoom;
+        document.getElementById('zoomValue').textContent = editorState.zoom + '%';
+
+        updateCropPreview();
+        setupEditorListeners();
+      };
+    }
+
+    function setupEditorListeners() {
+      const container = document.getElementById('cropContainer');
+      const zoomSlider = document.getElementById('zoomSlider');
+
+      // Remove old listeners
+      container.onmousedown = null;
+      container.ontouchstart = null;
+
+      // Zoom slider
+      zoomSlider.oninput = (e) => {
+        editorState.zoom = parseInt(e.target.value);
+        document.getElementById('zoomValue').textContent = editorState.zoom + '%';
+        updateCropPreview();
+      };
+
+      // Pan with mouse
+      container.onmousedown = (e) => {
+        e.preventDefault();
+        editorState.isDragging = true;
+        editorState.dragStartX = e.clientX - editorState.panX;
+        editorState.dragStartY = e.clientY - editorState.panY;
+      };
+
+      document.onmousemove = (e) => {
+        if (!editorState.isDragging) return;
+        editorState.panX = e.clientX - editorState.dragStartX;
+        editorState.panY = e.clientY - editorState.dragStartY;
+        updateCropPreview();
+      };
+
+      document.onmouseup = () => {
+        editorState.isDragging = false;
+      };
+
+      // Pan with touch
+      container.ontouchstart = (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        editorState.isDragging = true;
+        editorState.dragStartX = touch.clientX - editorState.panX;
+        editorState.dragStartY = touch.clientY - editorState.panY;
+      };
+
+      document.ontouchmove = (e) => {
+        if (!editorState.isDragging) return;
+        const touch = e.touches[0];
+        editorState.panX = touch.clientX - editorState.dragStartX;
+        editorState.panY = touch.clientY - editorState.dragStartY;
+        updateCropPreview();
+      };
+
+      document.ontouchend = () => {
+        editorState.isDragging = false;
+      };
+    }
+
+    function updateCropPreview() {
+      const cropImage = document.getElementById('cropImage');
+      const container = document.getElementById('cropContainer');
+      const containerSize = container.offsetWidth;
+
+      const scale = editorState.zoom / 100;
+      const displayWidth = editorState.imgNaturalWidth * scale;
+      const displayHeight = editorState.imgNaturalHeight * scale;
+
+      // Center the image, then apply pan offset
+      const centerX = (containerSize - displayWidth) / 2 + editorState.panX;
+      const centerY = (containerSize - displayHeight) / 2 + editorState.panY;
+
+      cropImage.style.width = displayWidth + 'px';
+      cropImage.style.height = displayHeight + 'px';
+      cropImage.style.left = centerX + 'px';
+      cropImage.style.top = centerY + 'px';
+    }
+
+    window.closeImageEditor = function() {
+      document.getElementById('imageEditorOverlay').classList.add('hidden');
+      editorState.active = false;
+      editorState.isDragging = false;
+
+      // Process next file in queue
+      if (editorState.pendingFiles.length > 0) {
+        setTimeout(processNextPendingFile, 100);
+      }
+    };
+
+    window.saveImageCrop = function() {
+      const container = document.getElementById('cropContainer');
+      const cropImage = document.getElementById('cropImage');
+      const containerSize = container.offsetWidth;
+
+      // Create canvas for the crop (800x800 output)
+      const outputSize = 800;
+      const canvas = document.createElement('canvas');
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      const ctx = canvas.getContext('2d');
+
+      // Fill with white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, outputSize, outputSize);
+
+      // Calculate the visible portion of the image
+      const scale = editorState.zoom / 100;
+      const displayWidth = editorState.imgNaturalWidth * scale;
+      const displayHeight = editorState.imgNaturalHeight * scale;
+      const centerX = (containerSize - displayWidth) / 2 + editorState.panX;
+      const centerY = (containerSize - displayHeight) / 2 + editorState.panY;
+
+      // Scale factor from container to output
+      const outputScale = outputSize / containerSize;
+
+      // Draw the image onto canvas with correct position and scale
+      ctx.drawImage(
+        cropImage,
+        centerX * outputScale,
+        centerY * outputScale,
+        displayWidth * outputScale,
+        displayHeight * outputScale
+      );
+
+      // Convert to data URL
+      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+      // Convert data URL to Blob for file upload
+      fetch(croppedDataUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const croppedFile = new File([blob], editorState.originalFile?.name || 'image.jpg', { type: 'image/jpeg' });
+
+          if (editorState.imageIndex === -1) {
+            // New image
+            uploadedImages.push({
+              file: croppedFile,
+              dataUrl: croppedDataUrl,
+              color: null,
+              colorHex: null
+            });
+          } else {
+            // Editing existing image
+            uploadedImages[editorState.imageIndex].file = croppedFile;
+            uploadedImages[editorState.imageIndex].dataUrl = croppedDataUrl;
+          }
+
           renderImagePreviews();
           updatePreview();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+          closeImageEditor();
+        });
+    };
+
+    window.editImage = function(idx) {
+      openImageEditor(uploadedImages[idx].dataUrl, idx, uploadedImages[idx].file);
+    };
 
     function getSelectedColors() {
       const colors = [];
@@ -501,24 +744,25 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     function renderImagePreviews() {
       const grid = document.getElementById('imagePreviewGrid');
       const selectedColors = getSelectedColors();
-      
+
       grid.innerHTML = uploadedImages.map((img, idx) => {
-        const colorOptions = selectedColors.map(c => 
+        const colorOptions = selectedColors.map(c =>
           `<option value="${c.name}" data-hex="${c.hex}" ${img.color === c.name ? 'selected' : ''}>${c.name}</option>`
         ).join('');
-        
+
         const hasColors = selectedColors.length > 0;
-        const colorDisplay = img.color ? 
+        const colorDisplay = img.color ?
           `<div class="image-color-badge">
             <span class="color-dot" style="background: ${img.colorHex || '#ccc'}"></span>
             <span>${img.color}</span>
           </div>` : '';
-        
+
         return `
           <div class="image-preview-item">
             <div class="image-wrapper">
               <img src="${img.dataUrl}" alt="Product image ${idx + 1}" />
               ${idx === 0 ? '<div class="badge">PRIMARY</div>' : ''}
+              <button type="button" class="edit-btn" onclick="editImage(${idx})">Edit</button>
               <button type="button" class="remove-btn" onclick="removeImage(${idx})">×</button>
             </div>
             ${hasColors ? `
