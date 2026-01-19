@@ -166,7 +166,9 @@
       "Bash(powershell -ExecutionPolicy Bypass -File scripts/daily-backup.ps1)",
       "Bash(pm2 save:*)",
       "Bash(pm2-startup:*)",
-      "Bash(pm2 status:*)"
+      "Bash(pm2 status:*)",
+      "WebFetch(domain:opengovuk.com)",
+      "Bash(git reset:*)"
     ]
   }
 }

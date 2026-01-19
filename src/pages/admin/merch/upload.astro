@@ -697,33 +697,29 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         displayHeight * outputScale
       );
 
-      // Convert to data URL
-      const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      // Use canvas.toBlob to avoid CSP issues with data: URLs
+      canvas.toBlob(blob => {
+        const croppedFile = new File([blob], editorState.originalFile?.name || 'image.jpg', { type: 'image/jpeg' });
+        const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
-      // Convert data URL to Blob for file upload
-      fetch(croppedDataUrl)
-        .then(res => res.blob())
-        .then(blob => {
-          const croppedFile = new File([blob], editorState.originalFile?.name || 'image.jpg', { type: 'image/jpeg' });
+        if (editorState.imageIndex === -1) {
+          // New image
+          uploadedImages.push({
+            file: croppedFile,
+            dataUrl: croppedDataUrl,
+            color: null,
+            colorHex: null
+          });
+        } else {
+          // Editing existing image
+          uploadedImages[editorState.imageIndex].file = croppedFile;
+          uploadedImages[editorState.imageIndex].dataUrl = croppedDataUrl;
+        }
 
-          if (editorState.imageIndex === -1) {
-            // New image
-            uploadedImages.push({
-              file: croppedFile,
-              dataUrl: croppedDataUrl,
-              color: null,
-              colorHex: null
-            });
-          } else {
-            // Editing existing image
-            uploadedImages[editorState.imageIndex].file = croppedFile;
-            uploadedImages[editorState.imageIndex].dataUrl = croppedDataUrl;
-          }
-
-          renderImagePreviews();
-          updatePreview();
-          closeImageEditor();
-        });
+        renderImagePreviews();
+        updatePreview();
+        closeImageEditor();
+      }, 'image/jpeg', 0.9);
     };
 
     window.editImage = function(idx) {
