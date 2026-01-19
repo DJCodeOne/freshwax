@@ -377,7 +377,7 @@ const getStockBadgeClass = (stock) => {
       <div class="editor-controls">
         <div class="editor-control-row">
           <label>Zoom</label>
-          <input type="range" id="zoomSlider" min="25" max="300" value="100" />
+          <input type="range" id="zoomSlider" min="10" max="300" value="100" />
           <span class="value" id="zoomValue">100%</span>
         </div>
       </div>
@@ -452,6 +452,16 @@ const getStockBadgeClass = (stock) => {
     cropImage.onload = function() {
       editorState.imgNaturalWidth = this.naturalWidth;
       editorState.imgNaturalHeight = this.naturalHeight;
+
+      // Calculate initial zoom to fit entire image within container
+      const container = document.getElementById('cropContainer');
+      const containerSize = container.offsetWidth;
+      const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
+      const initialZoom = Math.floor((containerSize / maxDim) * 100);
+      editorState.zoom = Math.max(10, Math.min(300, initialZoom));
+      zoomSlider.value = editorState.zoom;
+      zoomValue.textContent = editorState.zoom + '%';
+
       updateCropPreview();
     };
     cropImage.src = imageUrl;

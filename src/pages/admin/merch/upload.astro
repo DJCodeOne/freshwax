@@ -366,7 +366,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         <div class="editor-controls">
           <div class="editor-control-row">
             <label>Zoom</label>
-            <input type="range" id="zoomSlider" min="25" max="300" value="100" />
+            <input type="range" id="zoomSlider" min="10" max="300" value="100" />
             <span class="value" id="zoomValue">100%</span>
           </div>
         </div>
@@ -566,7 +566,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
         // Start with zoom that makes the largest dimension fit within the container
         const initialZoom = Math.floor((containerSize / maxDim) * 100);
-        editorState.zoom = Math.max(25, Math.min(300, initialZoom));
+        editorState.zoom = Math.max(10, Math.min(300, initialZoom));
         zoomSlider.value = editorState.zoom;
         document.getElementById('zoomValue').textContent = editorState.zoom + '%';
 
