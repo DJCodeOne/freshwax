@@ -3,7 +3,7 @@
 // Merch item edit page - based on releases edit layout
 
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
-import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
 import '../../../../styles/admin/merch/edit.css';
 
 export const prerender = false;
@@ -11,6 +11,12 @@ export const prerender = false;
 // Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
+
+// Initialize Firebase env for Cloudflare runtime
+initFirebaseEnv({
+  FIREBASE_PROJECT_ID: runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+  FIREBASE_API_KEY: runtimeEnv?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+});
 
 const { id } = Astro.params;
 
