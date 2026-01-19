@@ -377,7 +377,7 @@ const getStockBadgeClass = (stock) => {
       <div class="editor-controls">
         <div class="editor-control-row">
           <label>Zoom</label>
-          <input type="range" id="zoomSlider" min="100" max="300" value="100" />
+          <input type="range" id="zoomSlider" min="25" max="300" value="100" />
           <span class="value" id="zoomValue">100%</span>
         </div>
       </div>
@@ -521,12 +521,8 @@ const getStockBadgeClass = (stock) => {
     const containerSize = container.offsetWidth;
 
     const scale = editorState.zoom / 100;
-    const displayWidth = editorState.imgNaturalWidth * scale;
-    const displayHeight = editorState.imgNaturalHeight * scale;
-
-    const minScale = containerSize / Math.min(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
-    const actualWidth = editorState.imgNaturalWidth * Math.max(scale, minScale);
-    const actualHeight = editorState.imgNaturalHeight * Math.max(scale, minScale);
+    const actualWidth = editorState.imgNaturalWidth * scale;
+    const actualHeight = editorState.imgNaturalHeight * scale;
 
     const left = (containerSize - actualWidth) / 2 + editorState.panX;
     const top = (containerSize - actualHeight) / 2 + editorState.panY;
@@ -562,10 +558,8 @@ const getStockBadgeClass = (stock) => {
     ctx.fillRect(0, 0, outputSize, outputSize);
 
     const scale = editorState.zoom / 100;
-    const minScale = containerSize / Math.min(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
-    const actualScale = Math.max(scale, minScale);
-    const displayWidth = editorState.imgNaturalWidth * actualScale;
-    const displayHeight = editorState.imgNaturalHeight * actualScale;
+    const displayWidth = editorState.imgNaturalWidth * scale;
+    const displayHeight = editorState.imgNaturalHeight * scale;
     const centerX = (containerSize - displayWidth) / 2 + editorState.panX;
     const centerY = (containerSize - displayHeight) / 2 + editorState.panY;
 
