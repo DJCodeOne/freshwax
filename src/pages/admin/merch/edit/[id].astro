@@ -584,12 +584,13 @@ const getStockBadgeClass = (stock) => {
 
     const outputScale = outputSize / containerSize;
 
+    // Draw the full source image at the calculated position/size
+    // Use 9-argument form: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
     ctx.drawImage(
       cropImage,
-      centerX * outputScale,
-      centerY * outputScale,
-      displayWidth * outputScale,
-      displayHeight * outputScale
+      0, 0, editorState.imgNaturalWidth, editorState.imgNaturalHeight,  // source: full image
+      centerX * outputScale, centerY * outputScale,  // destination position
+      displayWidth * outputScale, displayHeight * outputScale  // destination size
     );
 
     canvas.toBlob(async blob => {
