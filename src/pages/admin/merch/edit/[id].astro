@@ -910,12 +910,14 @@ const getStockBadgeClass = (stock) => {
       });
       
       const result = await response.json();
-      
+
       if (!result.success) {
-        console.error('Failed to save images:', result.error);
+        console.error('Failed to save images:', result.error, result.details);
+        alert('Failed to save images: ' + (result.details || result.error));
       }
     } catch (error) {
       console.error('Save error:', error);
+      alert('Save error: ' + error);
     }
   }
   

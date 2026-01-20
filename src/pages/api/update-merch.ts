@@ -330,12 +330,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    log.error('[update-merch] Error:', error);
+    // Always log errors in production too
+    console.error('[update-merch] Error:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update product',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: errorMessage
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
