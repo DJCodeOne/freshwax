@@ -103,12 +103,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.imageUrl = primaryImage; // Keep legacy field in sync
       }
 
-      // Use service account for authorized write (try both env var names)
-      const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY || import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+      // Use service account for authorized write
       const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
+      // Try full JSON first, then construct from individual env vars
+      let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY || import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
       if (!serviceAccountKey) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_KEY not configured');
+        // Construct from individual env vars
+        const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+        const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+        if (clientEmail && privateKey) {
+          serviceAccountKey = JSON.stringify({
+            type: 'service_account',
+            project_id: projectId,
+            private_key_id: 'auto',
+            private_key: privateKey.replace(/\\n/g, '\n'),
+            client_email: clientEmail,
+            client_id: '',
+            auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+            token_uri: 'https://oauth2.googleapis.com/token'
+          });
+        }
+      }
+
+      if (!serviceAccountKey) {
+        throw new Error('Firebase service account not configured (need FIREBASE_SERVICE_ACCOUNT or FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY)');
       }
 
       await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updates);
