@@ -6,7 +6,7 @@
 import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
 
 export const prerender = false;
@@ -81,9 +81,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const inputBuffer = await file.arrayBuffer();
     const originalSize = file.size;
 
-    // Process image: crop to square, resize to 800x800, convert to WebP
-    const processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
-    const compressedSize = processed.buffer.length;
+    // Check if we should keep the original image dimensions
+    const keepOriginal = formData.get('keepOriginal') === 'true';
+
+    let processedBuffer: Uint8Array;
+    let dimensions: string;
+
+    if (keepOriginal) {
+      // Convert to WebP without cropping - maintains original aspect ratio
+      // Use a large max size to effectively not resize (just convert format)
+      const processed = await processImageToWebP(inputBuffer, 4096, 4096, WEBP_QUALITY);
+      processedBuffer = processed.buffer;
+      dimensions = `${processed.width}x${processed.height}`;
+    } else {
+      // Process image: crop to square, resize to 800x800, convert to WebP
+      const processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
+      processedBuffer = processed.buffer;
+      dimensions = `${IMAGE_SIZE}x${IMAGE_SIZE}`;
+    }
+
+    const compressedSize = processedBuffer.length;
 
     // Ensure filename ends with .webp
     filename = filename.replace(/\.[^.]+$/, '') + '.webp';
@@ -98,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: key,
-        Body: processed.buffer,
+        Body: processedBuffer,
         ContentType: 'image/webp',
         CacheControl: 'public, max-age=31536000', // 1 year cache
       })
@@ -109,7 +126,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Calculate compression stats
     const savings = Math.round((1 - compressedSize / originalSize) * 100);
 
-    console.log(`[upload-merch-image] Processed: → ${IMAGE_SIZE}x${IMAGE_SIZE}, ${(originalSize/1024).toFixed(1)}KB → ${(compressedSize/1024).toFixed(1)}KB (${savings}% smaller)`);
+    console.log(`[upload-merch-image] Processed: → ${dimensions}, ${(originalSize/1024).toFixed(1)}KB → ${(compressedSize/1024).toFixed(1)}KB (${savings}% smaller)`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -117,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       key: key,
       size: compressedSize,
       originalSize: originalSize,
-      dimensions: `${IMAGE_SIZE}x${IMAGE_SIZE}`,
+      dimensions: dimensions,
       contentType: 'image/webp',
       savings: `${savings}%`
     }), {

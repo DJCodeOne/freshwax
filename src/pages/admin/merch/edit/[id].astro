@@ -393,13 +393,15 @@ const getStockBadgeClass = (stock) => {
       <p class="editor-hint">Drag the image to position it within the square frame</p>
       <div class="editor-actions">
         <button type="button" class="btn btn-secondary" onclick="closeImageEditor()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save</button>
+        <button type="button" class="btn btn-secondary" onclick="useOriginalImage()">Use Original</button>
+        <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save Cropped</button>
       </div>
     </div>
   </div>
 </div>
 
 <script define:vars={{ id, product, adminKey }}>
+  console.log('EDIT PAGE SCRIPT LOADED - v2');
   const ADMIN_KEY = adminKey;
 
   // Get initial images array
@@ -458,22 +460,30 @@ const getStockBadgeClass = (stock) => {
     zoomSlider.value = 100;
     zoomValue.textContent = '100%';
 
-    cropImage.onload = function() {
-      editorState.imgNaturalWidth = this.naturalWidth;
-      editorState.imgNaturalHeight = this.naturalHeight;
+    function handleImageLoad() {
+      editorState.imgNaturalWidth = cropImage.naturalWidth;
+      editorState.imgNaturalHeight = cropImage.naturalHeight;
 
       // Calculate initial zoom to fit entire image within container
       const container = document.getElementById('cropContainer');
       const containerSize = container.offsetWidth;
       const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
-      const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.85); // 85% to show full image with margin
+      const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.70); // 70% to show full image with margin
+      console.log('Edit page - Container:', containerSize, 'MaxDim:', maxDim, 'Zoom:', initialZoom);
       editorState.zoom = Math.max(10, Math.min(300, initialZoom));
       zoomSlider.value = editorState.zoom;
       zoomValue.textContent = editorState.zoom + '%';
 
       updateCropPreview();
-    };
+    }
+
+    cropImage.onload = handleImageLoad;
     cropImage.src = imageUrl;
+
+    // If image is already cached/complete, trigger manually
+    if (cropImage.complete && cropImage.naturalWidth > 0) {
+      handleImageLoad();
+    }
 
     setupEditorListeners();
   }
@@ -545,6 +555,8 @@ const getStockBadgeClass = (stock) => {
 
     const left = (containerSize - actualWidth) / 2 + editorState.panX;
     const top = (containerSize - actualHeight) / 2 + editorState.panY;
+
+    console.log('updateCropPreview - zoom:', editorState.zoom, 'scale:', scale, 'width:', actualWidth, 'height:', actualHeight);
 
     cropImage.style.width = actualWidth + 'px';
     cropImage.style.height = actualHeight + 'px';
@@ -634,6 +646,53 @@ const getStockBadgeClass = (stock) => {
 
       closeImageEditor();
     }, 'image/jpeg', 0.9);
+  };
+
+  window.useOriginalImage = async function() {
+    // Use the original image without any cropping
+    if (editorState.imageIndex >= 0) {
+      // Editing existing image - nothing to change, just close
+      closeImageEditor();
+    } else if (editorState.originalFile) {
+      // New image upload - upload the original file without cropping
+      uploadProgress.style.display = 'block';
+      progressFill.style.width = '50%';
+      progressText.textContent = 'Uploading original image...';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', editorState.originalFile);
+        formData.append('folder', `merch/${id}`);
+        formData.append('filename', `${Date.now()}_original.webp`);
+        formData.append('keepOriginal', 'true'); // Skip cropping, keep original dimensions
+
+        const response = await fetch('/api/upload-merch-image', {
+          method: 'POST',
+          headers: { 'X-Admin-Key': ADMIN_KEY },
+          body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          images.push({
+            url: result.url,
+            key: result.key,
+            index: images.length
+          });
+          renderImages();
+          await saveImages();
+        } else {
+          alert('Failed to upload: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('Failed to upload original image');
+      }
+
+      uploadProgress.style.display = 'none';
+      closeImageEditor();
+    }
   };
 
   window.editImage = function(idx) {
@@ -813,84 +872,87 @@ const getStockBadgeClass = (stock) => {
     }
   }
   
-  // Upload new images
+  // Upload new images - now goes through editor to give choice of crop or original
   imageUpload.addEventListener('change', async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-    
+
     // Check limit
     const remaining = MAX_IMAGES - images.length;
     if (remaining <= 0) {
       alert('Maximum 5 images allowed');
       return;
     }
-    
+
     const filesToUpload = files.slice(0, remaining);
-    
-    uploadProgress.style.display = 'block';
-    progressFill.style.width = '0%';
-    progressText.textContent = `Uploading 0 / ${filesToUpload.length}...`;
-    
-    for (let i = 0; i < filesToUpload.length; i++) {
-      const file = filesToUpload[i];
-      
+
+    // Reset input so same file can be selected again
+    imageUpload.value = '';
+
+    // Queue files for editor
+    for (const file of filesToUpload) {
       // Validate
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
         alert(`Invalid file type: ${file.name}`);
         continue;
       }
-      
+
       if (file.size > 10 * 1024 * 1024) {
         alert(`File too large: ${file.name} (max 10MB)`);
         continue;
       }
-      
-      progressText.textContent = `Processing ${i + 1} / ${filesToUpload.length}...`;
-      
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', `merch/${id}`);
-        formData.append('filename', `${Date.now()}_${i}.webp`);
 
-        const response = await fetch('/api/upload-merch-image', {
-          method: 'POST',
-          headers: { 'X-Admin-Key': ADMIN_KEY },
-          body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          images.push({
-            url: result.url,
-            key: result.key,
-            index: images.length
-          });
-          
-          progressFill.style.width = `${((i + 1) / filesToUpload.length) * 100}%`;
-          
-          // Show compression stats
-          if (result.savings) {
-            progressText.textContent = `Processed ${i + 1} / ${filesToUpload.length} (${result.savings} smaller)`;
-          }
-        } else {
-          alert(`Failed to upload ${file.name}: ${result.error}`);
+      // Read file and queue for editor
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        editorState.pendingFiles.push({ dataUrl: ev.target.result, file: file });
+        // Start processing if not already active
+        if (!editorState.active && editorState.pendingFiles.length === 1) {
+          processNextPendingFile();
         }
-      } catch (error) {
-        console.error('Upload error:', error);
-        alert(`Failed to upload ${file.name}`);
-      }
+      };
+      reader.readAsDataURL(file);
     }
-    
-    // Reset input
-    imageUpload.value = '';
-    uploadProgress.style.display = 'none';
-    
-    // Re-render and save
-    renderImages();
-    await saveImages();
   });
+
+  // Legacy direct upload function (kept for reference but not used)
+  async function directUploadImage(file, index, total) {
+    uploadProgress.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = `Processing ${index + 1} / ${total}...`;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', `merch/${id}`);
+      formData.append('filename', `${Date.now()}_${index}.webp`);
+
+      const response = await fetch('/api/upload-merch-image', {
+        method: 'POST',
+        headers: { 'X-Admin-Key': ADMIN_KEY },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        images.push({
+          url: result.url,
+          key: result.key,
+          index: images.length
+        });
+        renderImages();
+        await saveImages();
+      } else {
+        alert(`Failed to upload ${file.name}: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert(`Failed to upload ${file.name}`);
+    }
+
+    uploadProgress.style.display = 'none';
+  }
   
   // Save images to Firebase
   async function saveImages() {

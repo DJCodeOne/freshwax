@@ -373,7 +373,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         <p class="editor-hint">Drag the image to position it within the square frame</p>
         <div class="editor-actions">
           <button type="button" class="btn btn-secondary" onclick="closeImageEditor()">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save</button>
+          <button type="button" class="btn btn-secondary" onclick="useOriginalImage()">Use Original</button>
+          <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save Cropped</button>
         </div>
       </div>
     </div>
@@ -554,8 +555,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       zoomSlider.value = 100;
       document.getElementById('zoomValue').textContent = '100%';
 
-      // Wait for image to load to get natural dimensions
-      cropImage.onload = () => {
+      // Handler for when image loads
+      function handleImageLoad() {
         editorState.imgNaturalWidth = cropImage.naturalWidth;
         editorState.imgNaturalHeight = cropImage.naturalHeight;
 
@@ -565,14 +566,22 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
 
         // Start with zoom that makes the largest dimension fit within the container with padding
-        const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.85); // 85% to show full image with margin
+        const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.70); // 70% to show full image with margin
+        console.log('Upload - Container:', containerSize, 'Natural:', editorState.imgNaturalWidth, 'x', editorState.imgNaturalHeight, 'MaxDim:', maxDim, 'Zoom:', initialZoom);
         editorState.zoom = Math.max(10, Math.min(300, initialZoom));
         zoomSlider.value = editorState.zoom;
         document.getElementById('zoomValue').textContent = editorState.zoom + '%';
 
         updateCropPreview();
         setupEditorListeners();
-      };
+      }
+
+      cropImage.onload = handleImageLoad;
+
+      // If image is already cached/complete, trigger manually
+      if (cropImage.complete && cropImage.naturalWidth > 0) {
+        handleImageLoad();
+      }
     }
 
     function setupEditorListeners() {
@@ -666,7 +675,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       const cropImage = document.getElementById('cropImage');
       const containerSize = container.offsetWidth;
 
-      // Create canvas for the crop (800x800 output)
+      // Create canvas for the output (800x800)
       const outputSize = 800;
       const canvas = document.createElement('canvas');
       canvas.width = outputSize;
@@ -687,13 +696,19 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       // Scale factor from container to output
       const outputScale = outputSize / containerSize;
 
+      // Calculate destination coordinates
+      const destX = centerX * outputScale;
+      const destY = centerY * outputScale;
+      const destW = displayWidth * outputScale;
+      const destH = displayHeight * outputScale;
+
+      console.log('Save - destX:', destX, 'destY:', destY, 'destW:', destW, 'destH:', destH);
+
       // Draw the full source image at the calculated position/size
-      // Use 9-argument form: drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh)
       ctx.drawImage(
         cropImage,
         0, 0, editorState.imgNaturalWidth, editorState.imgNaturalHeight,  // source: full image
-        centerX * outputScale, centerY * outputScale,  // destination position
-        displayWidth * outputScale, displayHeight * outputScale  // destination size
+        destX, destY, destW, destH  // destination
       );
 
       // Use canvas.toBlob to avoid CSP issues with data: URLs
@@ -702,23 +717,51 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
 
         if (editorState.imageIndex === -1) {
-          // New image
+          // New image - cropped so keepOriginal is false
           uploadedImages.push({
             file: croppedFile,
             dataUrl: croppedDataUrl,
             color: null,
-            colorHex: null
+            colorHex: null,
+            keepOriginal: false
           });
         } else {
-          // Editing existing image
+          // Editing existing image - cropped so keepOriginal is false
           uploadedImages[editorState.imageIndex].file = croppedFile;
           uploadedImages[editorState.imageIndex].dataUrl = croppedDataUrl;
+          uploadedImages[editorState.imageIndex].keepOriginal = false;
         }
 
         renderImagePreviews();
         updatePreview();
         closeImageEditor();
       }, 'image/jpeg', 0.9);
+    };
+
+    window.useOriginalImage = function() {
+      // Use the original image without any cropping
+      const file = editorState.originalFile;
+      const dataUrl = editorState.originalDataUrl;
+
+      if (editorState.imageIndex === -1) {
+        // New image - add to list with keepOriginal flag
+        uploadedImages.push({
+          file: file,
+          dataUrl: dataUrl,
+          color: null,
+          colorHex: null,
+          keepOriginal: true
+        });
+      } else {
+        // Editing existing - restore original and mark as keepOriginal
+        uploadedImages[editorState.imageIndex].file = file;
+        uploadedImages[editorState.imageIndex].dataUrl = dataUrl;
+        uploadedImages[editorState.imageIndex].keepOriginal = true;
+      }
+
+      renderImagePreviews();
+      updatePreview();
+      closeImageEditor();
     };
 
     window.editImage = function(idx) {
@@ -1059,14 +1102,15 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         // Build form data
         const formData = new FormData();
         
-        // Images with color associations
+        // Images with color associations and keepOriginal flag
         const imageColorMap = [];
         uploadedImages.forEach((img, idx) => {
           formData.append(`image_${idx}`, img.file);
           imageColorMap.push({
             index: idx,
             color: img.color || null,
-            colorHex: img.colorHex || null
+            colorHex: img.colorHex || null,
+            keepOriginal: img.keepOriginal || false
           });
         });
         formData.append('imageCount', uploadedImages.length.toString());

@@ -8,7 +8,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { setDocument, updateDocument, getDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
 
@@ -185,7 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
 
     // Parse image-color mappings
-    let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null}> = [];
+    let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null; keepOriginal?: boolean}> = [];
     try {
       const mapJson = formData.get('imageColorMap') as string;
       if (mapJson) {
@@ -216,8 +216,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const inputBuffer = await imageFile.arrayBuffer();
       const originalSize = inputBuffer.byteLength;
 
-      // Process image: crop to square, resize to 800x800, convert to WebP
-      const processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
+      // Check if this image should keep original dimensions
+      const colorMapping = imageColorMap.find(m => m.index === i);
+      const keepOriginal = colorMapping?.keepOriginal === true;
+
+      // Process image: either keep original aspect ratio or crop to square
+      let processed;
+      if (keepOriginal) {
+        // Convert to WebP without cropping - maintains original aspect ratio
+        processed = await processImageToWebP(inputBuffer, 4096, 4096, WEBP_QUALITY);
+        log.info('[upload-merch] Keeping original dimensions:', processed.width, 'x', processed.height);
+      } else {
+        // Crop to square, resize to 800x800, convert to WebP
+        processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
+      }
 
       // Always save as .webp
       const imageKey = folderPath + '/image_' + i + '.webp';
@@ -234,9 +246,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const imageUrl = r2Config.publicDomain + '/' + imageKey;
 
-      // Find color mapping for this image
-      const colorMapping = imageColorMap.find(m => m.index === i);
-
+      // colorMapping already found earlier for keepOriginal check
       uploadedImages.push({
         url: imageUrl,
         key: imageKey,

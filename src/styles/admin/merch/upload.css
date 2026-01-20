@@ -269,6 +269,19 @@
     }
     .image-preview-item .edit-btn:hover { background: #1d4ed8; }
 
+    /* Subtle glow effect for product images */
+    .image-preview-item {
+      animation: subtleGlow 3s ease-in-out infinite;
+    }
+    @keyframes subtleGlow {
+      0%, 100% {
+        box-shadow: 0 0 5px rgba(220, 38, 38, 0.3), 0 0 10px rgba(220, 38, 38, 0.1);
+      }
+      50% {
+        box-shadow: 0 0 15px rgba(220, 38, 38, 0.5), 0 0 25px rgba(220, 38, 38, 0.2);
+      }
+    }
+
     /* Responsive */
     @media (max-width: 1200px) {
       .form-layout { grid-template-columns: 1fr; }
