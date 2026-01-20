@@ -3,7 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, clearCache } from '../../lib/firebase-rest';
+import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 
@@ -102,7 +103,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.imageUrl = primaryImage; // Keep legacy field in sync
       }
 
-      await updateDocument('merch', productId, updates);
+      // Use service account for authorized write
+      const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT;
+      const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+      if (!serviceAccountKey) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT not configured');
+      }
+
+      await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updates);
 
       // Dual-write to D1 (secondary, non-blocking)
       const db = env?.DB;
@@ -302,7 +311,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updates.isLowStock = currentStock <= updates.lowStockThreshold && currentStock > 0;
     }
 
-    await updateDocument('merch', productId, updates);
+    // Use service account for authorized write
+    const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT;
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+    if (!serviceAccountKey) {
+      throw new Error('FIREBASE_SERVICE_ACCOUNT not configured');
+    }
+
+    await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updates);
 
     const updatedDoc = await getDocument('merch', productId);
     const updatedProduct = { id: productId, ...updatedDoc };
