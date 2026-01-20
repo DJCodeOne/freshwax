@@ -103,12 +103,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.imageUrl = primaryImage; // Keep legacy field in sync
       }
 
-      // Use service account for authorized write
-      const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT;
+      // Use service account for authorized write (try both env var names)
+      const serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY || import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
       const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
       if (!serviceAccountKey) {
-        throw new Error('FIREBASE_SERVICE_ACCOUNT not configured');
+        throw new Error('FIREBASE_SERVICE_ACCOUNT or FIREBASE_SERVICE_ACCOUNT_KEY not configured');
       }
 
       await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updates);
