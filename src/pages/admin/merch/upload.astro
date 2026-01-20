@@ -564,8 +564,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         const containerSize = container.offsetWidth;
         const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
 
-        // Start with zoom that makes the largest dimension fit within the container
-        const initialZoom = Math.floor((containerSize / maxDim) * 100);
+        // Start with zoom that makes the largest dimension fit within the container with padding
+        const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.85); // 85% to show full image with margin
         editorState.zoom = Math.max(10, Math.min(300, initialZoom));
         zoomSlider.value = editorState.zoom;
         document.getElementById('zoomValue').textContent = editorState.zoom + '%';

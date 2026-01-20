@@ -466,7 +466,7 @@ const getStockBadgeClass = (stock) => {
       const container = document.getElementById('cropContainer');
       const containerSize = container.offsetWidth;
       const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
-      const initialZoom = Math.floor((containerSize / maxDim) * 100);
+      const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.85); // 85% to show full image with margin
       editorState.zoom = Math.max(10, Math.min(300, initialZoom));
       zoomSlider.value = editorState.zoom;
       zoomValue.textContent = editorState.zoom + '%';
