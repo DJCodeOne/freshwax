@@ -141,7 +141,7 @@ export const GET = async ({ locals }: { locals: any }) => {
     <image:image>
       <image:loc>${escapeXml(imageUrl)}</image:loc>
       <image:title>${title}${artist ? ` by ${artist}` : ''}</image:title>
-      <image:caption>${title} - ${Array.isArray(genres) ? genres.join(', ') : genres} release on ${label}</image:caption>
+      <image:caption>${title} - ${escapeXml(Array.isArray(genres) ? genres.join(', ') : String(genres))} release on ${label}</image:caption>
     </image:image>`;
     }
     

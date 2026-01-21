@@ -542,6 +542,108 @@
 
   .option-section .required { color: #dc2626; }
 
+  /* Size Guide */
+  .size-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+  }
+
+  .size-label-row label {
+    margin-bottom: 0;
+  }
+
+  .size-guide-btn {
+    background: none;
+    border: none;
+    color: #dc2626;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  .size-guide-btn:hover {
+    color: #b91c1c;
+  }
+
+  .size-guide-popup {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 1000;
+    min-width: 250px;
+  }
+
+  .size-guide-popup.active {
+    display: block;
+  }
+
+  .size-guide-content {
+    padding: 1rem;
+  }
+
+  .size-guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eee;
+  }
+
+  .size-guide-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #333;
+  }
+
+  .size-guide-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+
+  .size-guide-close:hover {
+    color: #333;
+  }
+
+  .size-guide-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .size-guide-table th,
+  .size-guide-table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+    font-size: 0.85rem;
+  }
+
+  .size-guide-table th {
+    font-weight: 700;
+    color: #333;
+    background: #f9f9f9;
+  }
+
+  .size-guide-table tr:last-child td {
+    border-bottom: none;
+  }
+
   .option-grid {
     display: flex;
     flex-wrap: wrap;

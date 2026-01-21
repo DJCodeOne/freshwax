@@ -345,8 +345,29 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
           
           <!-- Size Selection -->
           <div id="sizeSection" class="option-section">
-            <label>Select Size <span class="required">*</span></label>
+            <div class="size-label-row">
+              <label>Select Size <span class="required">*</span></label>
+              <button type="button" id="sizeGuideBtn" class="size-guide-btn">Size Guide</button>
+            </div>
             <div id="sizeOptions" class="option-grid"></div>
+            <!-- Size Guide Popup -->
+            <div id="sizeGuidePopup" class="size-guide-popup">
+              <div class="size-guide-content">
+                <div class="size-guide-header">
+                  <h4>Size Guide (Chest in inches)</h4>
+                  <button type="button" class="size-guide-close">&times;</button>
+                </div>
+                <table class="size-guide-table">
+                  <tr><th>Size</th><th>Chest</th></tr>
+                  <tr><td>S</td><td>34-36"</td></tr>
+                  <tr><td>M</td><td>38-40"</td></tr>
+                  <tr><td>L</td><td>42-44"</td></tr>
+                  <tr><td>XL</td><td>46-48"</td></tr>
+                  <tr><td>XXL</td><td>50-52"</td></tr>
+                  <tr><td>3XL</td><td>54-56"</td></tr>
+                </table>
+              </div>
+            </div>
           </div>
           
           <!-- Color Selection -->
@@ -693,6 +714,35 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
     var currentProduct = null;
     var selectedSize = null;
     var selectedColor = null;
+
+    // Size Guide popup
+    var sizeGuideBtn = document.getElementById('sizeGuideBtn');
+    var sizeGuidePopup = document.getElementById('sizeGuidePopup');
+    var sizeGuideClose = document.querySelector('.size-guide-close');
+
+    if (sizeGuideBtn && sizeGuidePopup) {
+      sizeGuideBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        sizeGuidePopup.classList.add('active');
+      });
+    }
+
+    if (sizeGuideClose && sizeGuidePopup) {
+      sizeGuideClose.addEventListener('click', function(e) {
+        e.preventDefault();
+        sizeGuidePopup.classList.remove('active');
+      });
+    }
+
+    // Close size guide when clicking outside
+    if (sizeGuidePopup) {
+      sizeGuidePopup.addEventListener('click', function(e) {
+        if (e.target === sizeGuidePopup) {
+          sizeGuidePopup.classList.remove('active');
+        }
+      });
+    }
 
     // Open modal when clicking on card image, info, or buy button
     document.querySelectorAll('.product-card').forEach(card => {

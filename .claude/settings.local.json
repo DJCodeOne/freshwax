@@ -171,7 +171,8 @@
       "Bash(git reset:*)",
       "Bash(python:*)",
       "Bash(magick:*)",
-      "Bash(convert:*)"
+      "Bash(convert:*)",
+      "Bash(XL 46-48\", XXL 50-52\", 3XL 54-56\"\n- Fix sitemap to escape ampersands in genre names\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
