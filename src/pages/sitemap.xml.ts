@@ -142,8 +142,6 @@ export const GET = async ({ locals }: { locals: any }) => {
       <image:loc>${escapeXml(imageUrl)}</image:loc>
       <image:title>${title}${artist ? ` by ${artist}` : ''}</image:title>
       <image:caption>${title} - ${Array.isArray(genres) ? genres.join(', ') : genres} release on ${label}</image:caption>
-      <image:geo_location>United Kingdom</image:geo_location>
-      <image:license>https://freshwax.co.uk/terms</image:license>
     </image:image>`;
     }
     
