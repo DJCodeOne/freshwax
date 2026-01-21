@@ -48,12 +48,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Upsert all Firebase items to D1
     let synced = 0;
+    const failed: { id: string; name: string; error?: string }[] = [];
+
     for (const item of merchItems) {
       try {
-        await d1UpsertMerch(db, item.id, item);
-        synced++;
+        const success = await d1UpsertMerch(db, item.id, item);
+        if (success) {
+          synced++;
+        } else {
+          failed.push({ id: item.id, name: item.name, error: 'Upsert returned false' });
+        }
       } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
         console.error(`[sync-merch-to-d1] Failed to sync ${item.id}:`, e);
+        failed.push({ id: item.id, name: item.name, error: errMsg });
       }
     }
 
@@ -63,8 +71,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Synced ${synced} items to D1, deleted ${toDelete.length} stale items`,
+      message: `Synced ${synced} of ${merchItems.length} items to D1, deleted ${toDelete.length} stale items`,
       synced,
+      total: merchItems.length,
+      failed: failed.length,
+      failedItems: failed,
       deleted: toDelete.length,
       deletedIds: toDelete
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });

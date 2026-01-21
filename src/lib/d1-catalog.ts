@@ -151,8 +151,22 @@ export interface D1Merch {
   updated_at: string;
 }
 
+// Extract URL from image (can be string or object with url property)
+function extractImageUrl(img: any): string | null {
+  if (!img) return null;
+  if (typeof img === 'string') return img;
+  if (typeof img === 'object' && img.url) return img.url;
+  return null;
+}
+
 // Convert Firebase merch document to D1 row
 export function merchToD1Row(id: string, doc: any): Partial<D1Merch> {
+  // Extract image URL - handle both string and object formats
+  let imageUrl = extractImageUrl(doc.imageUrl) || extractImageUrl(doc.image);
+  if (!imageUrl && doc.images && Array.isArray(doc.images)) {
+    imageUrl = extractImageUrl(doc.images[0]);
+  }
+
   return {
     id,
     name: doc.name || doc.title || 'Untitled',
@@ -160,7 +174,7 @@ export function merchToD1Row(id: string, doc: any): Partial<D1Merch> {
     price: doc.price || 0,
     stock: doc.stock || doc.quantity || 0,
     published: (doc.published ?? doc.active ?? true) ? 1 : 0,
-    image_url: doc.imageUrl || doc.image || doc.images?.[0] || null,
+    image_url: imageUrl,
     data: JSON.stringify(doc),
     created_at: doc.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
