@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, initFirebaseEnv, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saDeleteDocument, saAddDocument } from '../../lib/firebase-service-account';
+import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
 
@@ -186,6 +187,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     await saDeleteDocument(serviceAccountKey, projectId, 'merch', productId);
+
+    // Also delete from D1 if available
+    const db = env?.DB;
+    if (db) {
+      try {
+        await d1DeleteMerch(db, productId);
+        log.info('[delete-merch] Also deleted from D1');
+      } catch (d1Error) {
+        log.error('[delete-merch] D1 deletion failed (non-critical):', d1Error);
+      }
+    }
 
     // Clear merch cache so the list refreshes
     clearCache('merch');

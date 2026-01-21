@@ -426,6 +426,18 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
   }
 }
 
+// Delete merch from D1
+export async function d1DeleteMerch(db: D1Database, id: string): Promise<boolean> {
+  try {
+    await db.prepare('DELETE FROM merch WHERE id = ?').bind(id).run();
+    console.log('[D1] Deleted merch:', id);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error deleting merch:', e);
+    return false;
+  }
+}
+
 // =============================================
 // COMMENTS
 // =============================================
