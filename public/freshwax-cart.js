@@ -140,7 +140,7 @@ function saveCart(cart) {
 }
 
 function addToCart(item) {
-  console.log('[Cart] Adding item:', item.name);
+  console.log('[Cart] Adding item:', item.name, 'size:', item.size, 'color:', item.color);
 
   var customerId = getCustomerId();
   if (!customerId) {
@@ -152,15 +152,26 @@ function addToCart(item) {
   var cart = getLocalCart();
   var items = cart.items || [];
 
-  // Check if item already exists (same id, type, size, color)
+  // Normalize size/color for comparison (treat undefined, null, '', 'none' as empty)
+  function normalize(val) {
+    if (!val || val === 'none' || val === 'null' || val === 'undefined') return '';
+    return String(val).toLowerCase().trim();
+  }
+
+  var itemSize = normalize(item.size);
+  var itemColor = normalize(item.color);
+
+  // Check if exact variant exists (same id, type, size, color)
   var existingIndex = -1;
   for (var i = 0; i < items.length; i++) {
     var existing = items[i];
+    var existingSize = normalize(existing.size);
+    var existingColor = normalize(existing.color);
+
     if (existing.id === item.id &&
         existing.type === item.type &&
-        existing.format === item.format &&
-        existing.size === item.size &&
-        existing.color === item.color) {
+        existingSize === itemSize &&
+        existingColor === itemColor) {
       existingIndex = i;
       break;
     }
@@ -176,7 +187,7 @@ function addToCart(item) {
     }
     newItem.quantity = item.quantity || 1;
     items.push(newItem);
-    console.log('[Cart] Added new item, total:', items.length);
+    console.log('[Cart] Added new variant, total items:', items.length);
   }
 
   saveCart({ items: items });
