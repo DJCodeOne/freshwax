@@ -197,79 +197,55 @@ function goToCheckout() {
   window.location.href = '/checkout';
 }
 
-// Track initialization
-var cartPageInitialized = false;
-var lastInitTime = 0;
-
+// Simple init - just render the cart
 function init() {
   var container = document.getElementById('cart-content');
   if (!container) return;
 
-  // Debounce
-  var now = Date.now();
-  if (now - lastInitTime < 100) return;
-  lastInitTime = now;
+  console.log('[Cart Page] Init called');
 
-  // Check if already rendered (not showing loading state)
-  var hasLoadingState = container.querySelector('.loading-state');
-  if (cartPageInitialized && !hasLoadingState) {
-    console.log('[Cart Page] Already initialized');
-    return;
-  }
+  // Always render - let renderCart handle the logic
+  updateCartCount();
+  renderCart();
 
-  console.log('[Cart Page] Initializing...');
-  cartPageInitialized = true;
-
-  // Wait for FreshWaxCart to be ready, then render
-  if (window.FreshWaxCart) {
-    // Try to load from KV first in case localStorage is stale
+  // Also try to sync with KV in background (non-blocking)
+  if (window.FreshWaxCart && window.FreshWaxCart.loadFromKV) {
     window.FreshWaxCart.loadFromKV().then(function(kvCart) {
       if (kvCart && kvCart.items && kvCart.items.length > 0) {
-        // KV has items - check if newer than local
         var localCart = window.FreshWaxCart.get();
         var localTime = localCart.updatedAt ? new Date(localCart.updatedAt).getTime() : 0;
         var kvTime = kvCart.updatedAt ? new Date(kvCart.updatedAt).getTime() : 0;
 
         if (kvTime > localTime) {
-          console.log('[Cart Page] Using KV cart (newer)');
+          console.log('[Cart Page] KV has newer cart, updating');
           window.FreshWaxCart.save(kvCart);
+          renderCart();
         }
       }
-      updateCartCount();
-      renderCart();
-    }).catch(function() {
-      // KV load failed, use local
-      updateCartCount();
-      renderCart();
+    }).catch(function(err) {
+      console.log('[Cart Page] KV sync skipped:', err);
     });
-  } else {
-    // FreshWaxCart not ready yet, wait a bit
-    setTimeout(function() {
-      updateCartCount();
-      renderCart();
-    }, 100);
   }
 }
 
 // Listen for cart updates
 window.addEventListener('cart-updated', function() {
-  updateCartCount();
-  renderCart();
+  if (document.getElementById('cart-content')) {
+    updateCartCount();
+    renderCart();
+  }
 });
 
 window.addEventListener('cartUpdated', function() {
-  updateCartCount();
-  renderCart();
+  if (document.getElementById('cart-content')) {
+    updateCartCount();
+    renderCart();
+  }
 });
 
 // Handle Astro View Transitions
-document.addEventListener('astro:before-swap', function() {
-  cartPageInitialized = false;
-  lastInitTime = 0;
-});
-
 document.addEventListener('astro:page-load', function() {
-  console.log('[Cart Page] astro:page-load');
+  console.log('[Cart Page] page-load');
   init();
 });
 
