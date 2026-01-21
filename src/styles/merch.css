@@ -72,6 +72,115 @@
     border-color: #dc2626;
   }
 
+  /* Nested Category Dropdown */
+  .category-filter {
+    position: relative;
+  }
+
+  .category-dropdown {
+    position: relative;
+  }
+
+  .category-dropdown-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 2px solid #ddd;
+    background: #fff;
+    color: #333;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .category-dropdown-btn:hover,
+  .category-dropdown-btn:focus {
+    border-color: #dc2626;
+    outline: none;
+  }
+
+  .category-dropdown-btn svg {
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .category-dropdown.open .category-dropdown-btn svg {
+    transform: rotate(180deg);
+  }
+
+  .category-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 180px;
+    background: #fff;
+    border: 2px solid #ddd;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 100;
+  }
+
+  .category-dropdown.open .category-menu {
+    display: block;
+  }
+
+  .category-menu-item {
+    position: relative;
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #333;
+  }
+
+  .category-menu-item:hover {
+    background: #f5f5f5;
+  }
+
+  .category-menu-item.has-submenu > svg {
+    opacity: 0.5;
+  }
+
+  .category-submenu {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 100%;
+    min-width: 160px;
+    background: #fff;
+    border: 2px solid #ddd;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .category-menu-item.has-submenu:hover .category-submenu {
+    display: block;
+  }
+
+  .category-submenu-item {
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #333;
+  }
+
+  .category-submenu-item:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  .category-menu-item:not(.has-submenu):hover {
+    background: #dc2626;
+    color: #fff;
+  }
+
   .clear-btn {
     padding: 0.625rem 1.25rem;
     background: #dc2626;

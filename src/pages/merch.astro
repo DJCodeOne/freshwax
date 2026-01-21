@@ -21,17 +21,35 @@ const db = (Astro.locals as any).runtime?.env?.DB;
 
 // Fetch merch using D1 first, Firebase fallback
 let products: any[] = [];
-let categories: Record<string, string> = {};
+// Hierarchical categories: { categorySlug: { label: string, names: string[] } }
+let categoryGroups: Record<string, { label: string; names: Set<string> }> = {};
 let productTypes: Record<string, string> = {};
+
+// Category type display names
+const categoryLabels: Record<string, string> = {
+  freshwax: 'Fresh Wax',
+  label: 'Label',
+  soundsystem: 'Sound System',
+  dj: 'DJ',
+  crew: 'Crew',
+  clothing: 'Fresh Wax'  // Legacy category for older products
+};
 
 try {
   const merchData = await getLiveMerch(undefined, db);
 
   products = merchData.map(doc => {
-    // Build filter options - use categoryName as the key since category is generic (e.g. "clothing")
-    if (doc.categoryName) {
-      categories[doc.categoryName] = doc.categoryName;
+    // Build hierarchical category filter
+    const catSlug = doc.category || 'freshwax';
+    const catName = doc.categoryName || 'Fresh Wax';
+    if (!categoryGroups[catSlug]) {
+      categoryGroups[catSlug] = {
+        label: categoryLabels[catSlug] || catSlug,
+        names: new Set()
+      };
     }
+    categoryGroups[catSlug].names.add(catName);
+
     if (doc.productType && doc.productTypeName) {
       productTypes[doc.productType] = doc.productTypeName;
     }
@@ -112,6 +130,13 @@ try {
 
 const onSaleCount = products.filter(p => p.onSale).length;
 const productsJson = JSON.stringify(products);
+
+// Convert Sets to arrays for template use
+const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) => ({
+  slug,
+  label: group.label,
+  names: Array.from(group.names).sort()
+})).sort((a, b) => a.label.localeCompare(b.label));
 ---
 
 <Layout title="Merch Store">
@@ -137,14 +162,37 @@ const productsJson = JSON.stringify(products);
       <!-- Filters Bar - Full Width -->
       <section class="filters-bar">
         <div class="filters-row">
-          <div class="filter-item">
+          <div class="filter-item category-filter">
             <label>Category</label>
-            <select id="categoryFilter">
-              <option value="">All</option>
-              {Object.entries(categories).map(([key, name]) => (
-                <option value={key}>{name}</option>
-              ))}
-            </select>
+            <div class="category-dropdown" id="categoryDropdown">
+              <button type="button" class="category-dropdown-btn" id="categoryBtn">
+                <span id="categoryLabel">All</span>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+              </button>
+              <div class="category-menu">
+                <div class="category-menu-item" data-category="" data-name="">
+                  <span>All Categories</span>
+                </div>
+                {categoryGroupsArray.map(group => (
+                  <div class="category-menu-item has-submenu" data-category={group.slug}>
+                    <span>{group.label}</span>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 0l4 4-4 4"/></svg>
+                    <div class="category-submenu">
+                      <div class="category-submenu-item" data-category={group.slug} data-name="">
+                        <span>All {group.label}</span>
+                      </div>
+                      {group.names.map(name => (
+                        <div class="category-submenu-item" data-category={group.slug} data-name={name}>
+                          <span>{name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <input type="hidden" id="categoryFilter" value="" />
+            <input type="hidden" id="categoryNameFilter" value="" />
           </div>
 
           <div class="filter-item">
@@ -199,7 +247,8 @@ const productsJson = JSON.stringify(products);
               <div 
                 class="product-card"
                 data-id={product.id}
-                data-category={product.categoryName || ''}
+                data-category={product.category || 'freshwax'}
+                data-category-name={product.categoryName || ''}
                 data-type={product.productType || ''}
                 data-stock={product.stockStatus}
                 data-sale={product.onSale ? 'true' : 'false'}
@@ -481,7 +530,11 @@ const productsJson = JSON.stringify(products);
 <script>
   function init() {
     // Filters
-    const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement;
+    const categoryFilter = document.getElementById('categoryFilter') as HTMLInputElement;
+    const categoryNameFilter = document.getElementById('categoryNameFilter') as HTMLInputElement;
+    const categoryDropdown = document.getElementById('categoryDropdown');
+    const categoryBtn = document.getElementById('categoryBtn');
+    const categoryLabel = document.getElementById('categoryLabel');
     const typeFilter = document.getElementById('typeFilter') as HTMLSelectElement;
     const stockFilter = document.getElementById('stockFilter') as HTMLSelectElement;
     const sortSelect = document.getElementById('sortSelect') as HTMLSelectElement;
@@ -489,8 +542,50 @@ const productsJson = JSON.stringify(products);
     const grid = document.getElementById('productsGrid');
     const countEl = document.getElementById('visibleCount');
 
+    // Nested category dropdown logic
+    categoryBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      categoryDropdown?.classList.toggle('open');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+      categoryDropdown?.classList.remove('open');
+    });
+
+    // Handle category selection
+    categoryDropdown?.querySelectorAll('.category-menu-item:not(.has-submenu), .category-submenu-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const el = e.currentTarget as HTMLElement;
+        const cat = el.dataset.category || '';
+        const name = el.dataset.name || '';
+
+        if (categoryFilter) categoryFilter.value = cat;
+        if (categoryNameFilter) categoryNameFilter.value = name;
+
+        // Update button label
+        if (categoryLabel) {
+          if (!cat && !name) {
+            categoryLabel.textContent = 'All';
+          } else if (name) {
+            categoryLabel.textContent = name;
+          } else {
+            // Find the parent label for this category
+            const parentItem = categoryDropdown.querySelector(`.category-menu-item[data-category="${cat}"]`);
+            const label = parentItem?.querySelector('span')?.textContent || cat;
+            categoryLabel.textContent = `All ${label}`;
+          }
+        }
+
+        categoryDropdown.classList.remove('open');
+        applyFilters();
+      });
+    });
+
     function applyFilters() {
       const category = categoryFilter?.value || '';
+      const categoryName = categoryNameFilter?.value || '';
       const type = typeFilter?.value || '';
       const stock = stockFilter?.value || '';
       const sort = sortSelect?.value || 'featured';
@@ -500,7 +595,11 @@ const productsJson = JSON.stringify(products);
 
       cards.forEach(card => {
         let show = true;
-        if (category && card.dataset.category !== category) show = false;
+        // Category filter: match category type and optionally name
+        if (category) {
+          if (card.dataset.category !== category) show = false;
+          if (show && categoryName && card.dataset.categoryName !== categoryName) show = false;
+        }
         if (type && card.dataset.type !== type) show = false;
         if (stock === 'in-stock' && card.dataset.stock === 'out-of-stock') show = false;
         if (stock === 'on-sale' && card.dataset.sale !== 'true') show = false;
@@ -531,12 +630,13 @@ const productsJson = JSON.stringify(products);
       if (countEl) countEl.textContent = String(visible);
     }
 
-    categoryFilter?.addEventListener('change', applyFilters);
     typeFilter?.addEventListener('change', applyFilters);
     stockFilter?.addEventListener('change', applyFilters);
     sortSelect?.addEventListener('change', applyFilters);
     clearBtn?.addEventListener('click', () => {
       if (categoryFilter) categoryFilter.value = '';
+      if (categoryNameFilter) categoryNameFilter.value = '';
+      if (categoryLabel) categoryLabel.textContent = 'All';
       if (typeFilter) typeFilter.value = '';
       if (stockFilter) stockFilter.value = '';
       if (sortSelect) sortSelect.value = 'featured';
