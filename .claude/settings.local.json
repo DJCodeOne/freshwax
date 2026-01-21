@@ -168,7 +168,8 @@
       "Bash(pm2-startup:*)",
       "Bash(pm2 status:*)",
       "WebFetch(domain:opengovuk.com)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(python:*)"
     ]
   }
 }

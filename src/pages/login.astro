@@ -269,6 +269,7 @@ const firebaseConfig = {
             displayNameLower: (user.displayName || normalizedEmail.split('@')[0]).toLowerCase(),
             photoURL: user.photoURL || null,
             provider: 'Google',
+            emailVerified: true, // Google accounts are pre-verified
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
             roles: {
