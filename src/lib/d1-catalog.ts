@@ -162,6 +162,7 @@ export function merchToD1Row(id: string, doc: any): Partial<D1Merch> {
     published: (doc.published ?? doc.active ?? true) ? 1 : 0,
     image_url: doc.imageUrl || doc.image || doc.images?.[0] || null,
     data: JSON.stringify(doc),
+    created_at: doc.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 }
@@ -403,8 +404,8 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
     const row = merchToD1Row(id, doc);
 
     await db.prepare(`
-      INSERT INTO merch (id, name, type, price, stock, published, image_url, data, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO merch (id, name, type, price, stock, published, image_url, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         name = excluded.name,
         type = excluded.type,
@@ -415,7 +416,7 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
         data = excluded.data,
         updated_at = excluded.updated_at
     `).bind(
-      row.id, row.name, row.type, row.price, row.stock, row.published, row.image_url, row.data, row.updated_at
+      row.id, row.name, row.type, row.price, row.stock, row.published, row.image_url, row.data, row.created_at, row.updated_at
     ).run();
 
     console.log('[D1] Upserted merch:', id);
