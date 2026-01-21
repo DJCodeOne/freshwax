@@ -404,14 +404,27 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
                 <div style="${gridStyle}">
                   ${variantKeys.map(key => {
                     const v = variantStock[key];
-                    const stock = v.stock || 0;
+                    // Handle both old (number) and new (object) formats
+                    const stock = typeof v === 'number' ? v : (v.stock || 0);
                     let itemStyle = itemBaseStyle;
                     if (stock === 0) itemStyle += ' border-color: #dc2626; background: #fef2f2;';
                     else if (stock <= 3) itemStyle += ' border-color: #f59e0b; background: #fffbeb;';
-                    const label = v.size || v.color || key;
+                    // Parse label from key or object properties
+                    let label = key;
+                    if (typeof v === 'object') {
+                      label = [v.size, v.color].filter(Boolean).join(' / ') || key;
+                    } else {
+                      // Parse from key format (e.g., "m_black" -> "M / Black")
+                      const parts = key.split('_');
+                      if (parts.length === 2) {
+                        const size = parts[0].toUpperCase();
+                        const color = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).replace(/-/g, ' ');
+                        label = (size !== 'ONESIZE' ? size : '') + (color !== 'Default' ? (size !== 'ONESIZE' ? ' / ' : '') + color : '');
+                      }
+                    }
                     return `
                       <div style="${itemStyle}">
-                        <div style="${labelStyle}">${label}</div>
+                        <div style="${labelStyle}">${label || key}</div>
                         <div style="${stockStyle}">${stock}</div>
                         <div style="${actionsStyle}">
                           <button style="${btnBaseStyle} color: #dc2626; border-color: #dc2626;" onclick="quickAdjust('${product.productId}', '${key}', -1)">−</button>
@@ -639,15 +652,31 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         const optionStyle = 'padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; text-align: center; transition: all 0.2s;';
         const labelStyle = 'font-weight: 600; font-size: 0.875rem;';
         const stockLabelStyle = 'font-size: 0.75rem; color: #666;';
-        
+
         document.getElementById('variantSelectorGroup').style.display = 'block';
         const variantContainer = document.getElementById('variantSelector');
         variantContainer.innerHTML = variantKeys.map(key => {
           const v = variantStock[key];
+          // Handle both old (number) and new (object) formats
+          const stock = typeof v === 'number' ? v : (v.stock || 0);
+          let label = '';
+          if (typeof v === 'object') {
+            label = [v.size, v.color].filter(Boolean).join(' ');
+          } else {
+            // Parse from key format (e.g., "m_black" -> "M Black")
+            const parts = key.split('_');
+            if (parts.length === 2) {
+              const size = parts[0].toUpperCase();
+              const color = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).replace(/-/g, ' ');
+              label = (size !== 'ONESIZE' ? size + ' ' : '') + (color !== 'Default' ? color : '');
+            } else {
+              label = key;
+            }
+          }
           return `
             <div style="${optionStyle}" class="variant-option" data-variant-key="${key}">
-              <div style="${labelStyle}">${v.size || ''} ${v.color || ''}</div>
-              <div style="${stockLabelStyle}">${v.stock || 0} in stock</div>
+              <div style="${labelStyle}">${label || key}</div>
+              <div style="${stockLabelStyle}">${stock} in stock</div>
             </div>
           `;
         }).join('');
@@ -1180,7 +1209,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     window.submitModalUpdate = submitModalUpdate;
     window.updateStockTakeChange = updateStockTakeChange;
     window.updateStockTakeReason = updateStockTakeReason;
-    window.saveStockTakeChanges = saveStockTakeChanges;
+    window.saveStockTakeChanges = saveStockTake;
     window.printStockTake = printStockTake;
     window.selectProduct = selectProduct;
     window.selectVariant = selectVariant;

@@ -269,7 +269,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
             <h2>Stock by Variant</h2>
           </div>
           <div class="form-card-body">
-            <p style="color: #666; margin-bottom: 1rem; font-size: 0.875rem;">Enter stock quantities for each size/color combination</p>
+            <p style="color: #666; margin-bottom: 1rem; font-size: 0.875rem;">Enter stock quantities for each size/colour combination</p>
             <div id="variantTableContainer">
               <p style="color: #999; font-style: italic;">Select sizes and/or colours above to see variants</p>
             </div>
@@ -743,6 +743,14 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       const file = editorState.originalFile;
       const dataUrl = editorState.originalDataUrl;
 
+      console.log('useOriginalImage called', { file: !!file, dataUrl: !!dataUrl, imageIndex: editorState.imageIndex });
+
+      if (!file || !dataUrl) {
+        alert('Error: No original file available');
+        closeImageEditor();
+        return;
+      }
+
       if (editorState.imageIndex === -1) {
         // New image - add to list with keepOriginal flag
         uploadedImages.push({
@@ -752,11 +760,13 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
           colorHex: null,
           keepOriginal: true
         });
+        console.log('Added new image with keepOriginal=true, total images:', uploadedImages.length);
       } else {
         // Editing existing - restore original and mark as keepOriginal
         uploadedImages[editorState.imageIndex].file = file;
         uploadedImages[editorState.imageIndex].dataUrl = dataUrl;
         uploadedImages[editorState.imageIndex].keepOriginal = true;
+        console.log('Updated existing image at index', editorState.imageIndex);
       }
 
       renderImagePreviews();

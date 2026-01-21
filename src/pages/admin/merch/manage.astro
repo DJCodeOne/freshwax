@@ -3,7 +3,10 @@
 // Fresh Wax Merch Management - Unified Admin Design
 
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { queryCollection } from '../../../lib/firebase-rest';
+import { queryCollection, clearCache } from '../../../lib/firebase-rest';
+
+// Clear cache to ensure fresh data
+clearCache();
 
 // Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
@@ -216,7 +219,7 @@ export const prerender = false;
                 </td>
                 <td class="cell-primary">
                   {product.supplier || 'Fresh Wax'}
-                  {product.supplierCut && (
+                  {product.supplierCut > 0 && (
                     <div class="cell-secondary">{product.supplierCut}% cut</div>
                   )}
                 </td>
@@ -344,7 +347,7 @@ export const prerender = false;
           show = false;
         }
         
-        (row as HTMLElement).style.display = show ? '' : 'none';
+        row.style.display = show ? '' : 'none';
       });
     }
     
@@ -360,19 +363,19 @@ export const prerender = false;
     
     // Category filter
     categorySelect?.addEventListener('change', (e) => {
-      activeCategory = (e.target as HTMLSelectElement).value;
+      activeCategory = e.target.value;
       filterRows();
     });
-    
+
     // Search filter
     searchInput?.addEventListener('input', (e) => {
-      searchTerm = (e.target as HTMLInputElement).value;
+      searchTerm = e.target.value;
       filterRows();
     });
   });
   
   // Delete function
-  function deleteProduct(id: string) {
+  window.deleteProduct = function(id) {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
     fetch('/api/delete-merch', {
@@ -383,7 +386,8 @@ export const prerender = false;
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        window.location.reload();
+        // Force hard refresh by adding cache-busting parameter
+        window.location.href = window.location.pathname + '?t=' + Date.now();
       } else {
         alert('Error: ' + (data.error || 'Failed to delete'));
       }
@@ -391,8 +395,5 @@ export const prerender = false;
     .catch(err => {
       alert('Error: ' + err.message);
     });
-  }
-  
-  // Make delete function global
-  (window as any).deleteProduct = deleteProduct;
+  };
 </script>

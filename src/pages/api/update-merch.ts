@@ -103,6 +103,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.imageUrl = primaryImage; // Keep legacy field in sync
       }
 
+      // Colors and sizes support
+      if (data.colors !== undefined) {
+        updates.colors = data.colors;
+      }
+
+      if (data.sizes !== undefined) {
+        updates.sizes = data.sizes;
+      }
+
+      if (data.variantStock !== undefined) {
+        updates.variantStock = data.variantStock;
+      }
+
+      if (data.totalStock !== undefined) {
+        // Ensure totalStock is always a valid number
+        const numericStock = typeof data.totalStock === 'number' ? data.totalStock : parseInt(data.totalStock, 10);
+        updates.totalStock = Number.isFinite(numericStock) ? numericStock : 0;
+        updates.stock = updates.totalStock; // Keep legacy field in sync
+      }
+
+      if (data.hasColors !== undefined) {
+        updates.hasColors = data.hasColors;
+      }
+
+      if (data.hasSizes !== undefined) {
+        updates.hasSizes = data.hasSizes;
+      }
+
       // Use service account for authorized write
       const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 

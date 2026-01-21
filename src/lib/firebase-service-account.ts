@@ -343,6 +343,55 @@ export async function saDeleteDocument(
   }
 }
 
+// Add a document with auto-generated ID using service account auth
+export async function saAddDocument(
+  serviceAccountKey: string,
+  projectId: string,
+  collection: string,
+  data: Record<string, any>
+): Promise<{ id: string; data: Record<string, any> }> {
+  const token = await getServiceAccountToken(serviceAccountKey);
+  const url = getFirestoreUrl(projectId, collection);
+
+  // Convert data to Firestore fields format
+  const fields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFirestoreValue(value);
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ fields })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to add document: ${response.status} - ${error}`);
+  }
+
+  const result = await response.json();
+
+  // Extract document ID from the name field (format: projects/.../documents/collection/docId)
+  const nameParts = result.name?.split('/') || [];
+  const docId = nameParts[nameParts.length - 1] || '';
+
+  // Convert result fields back to plain object
+  const resultData: Record<string, any> = {};
+  const docFields = result.fields || {};
+  for (const [key, value] of Object.entries(docFields)) {
+    resultData[key] = fromFirestoreValue(value);
+  }
+
+  return {
+    id: docId,
+    data: resultData
+  };
+}
+
 // Query a collection with service account auth
 export async function saQueryCollection(
   serviceAccountKey: string,

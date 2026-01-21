@@ -45,23 +45,31 @@ try {
       stockLabel = 'Low Stock';
     }
     
-    // Get images - images array contains objects with url property
+    // Get images - keep full objects for color association
+    let imageObjects: any[] = [];
     let allImages: string[] = [];
     if (doc.images && Array.isArray(doc.images)) {
-      allImages = doc.images
-        .map((img: any) => {
-          if (typeof img === 'string') return img;
-          if (img && typeof img === 'object' && img.url) return img.url;
-          return null;
-        })
-        .filter(Boolean);
+      imageObjects = doc.images.filter((img: any) => {
+        if (typeof img === 'string') return true;
+        if (img && typeof img === 'object' && img.url) return true;
+        return false;
+      });
+      allImages = imageObjects.map((img: any) => {
+        if (typeof img === 'string') return img;
+        return img.url;
+      });
     }
-    
+
     if (allImages.length === 0) {
-      if (doc.primaryImage) allImages = [doc.primaryImage];
-      else if (doc.imageUrl) allImages = [doc.imageUrl];
+      if (doc.primaryImage) {
+        allImages = [doc.primaryImage];
+        imageObjects = [{ url: doc.primaryImage }];
+      } else if (doc.imageUrl) {
+        allImages = [doc.imageUrl];
+        imageObjects = [{ url: doc.imageUrl }];
+      }
     }
-    
+
     const imageUrl = doc.primaryImage || allImages[0] || '';
     
     // Process colors - array of {hex, name} objects
@@ -77,6 +85,7 @@ try {
       stockStatus,
       stockLabel,
       images: allImages,
+      imageObjects,
       imageUrl,
       colorList,
       colorNames,
@@ -221,8 +230,12 @@ const productsJson = JSON.stringify(products);
                   
                   {product.colorList && product.colorList.length > 0 && (
                     <div class="color-dots">
-                      {product.colorList.map((color: string) => (
-                        <span class="dot" style={`background:${color}`}></span>
+                      {product.colorList.map((color: string, idx: number) => (
+                        <span
+                          class="dot"
+                          style={`background:${color}`}
+                          data-color={product.colorNames?.[idx] || color}
+                        ></span>
                       ))}
                     </div>
                   )}
@@ -525,6 +538,45 @@ const productsJson = JSON.stringify(products);
       applyFilters();
     });
 
+    // Color dot hover - show corresponding image
+    document.querySelectorAll('.product-card').forEach(card => {
+      const product = JSON.parse((card as HTMLElement).dataset.product || '{}');
+      const cardImg = card.querySelector('.card-image img') as HTMLImageElement;
+      const originalSrc = cardImg?.src || '';
+
+      // Store original image for mouseout
+      if (cardImg) {
+        cardImg.dataset.originalSrc = originalSrc;
+      }
+
+      // Add hover listeners to color dots
+      card.querySelectorAll('.color-dots .dot').forEach(dot => {
+        dot.addEventListener('mouseenter', () => {
+          const colorName = (dot as HTMLElement).dataset.color;
+          if (!colorName || !cardImg || !product.imageObjects) return;
+
+          // Find image matching this color
+          const matchingImage = product.imageObjects.find((img: any) => {
+            if (typeof img === 'object' && img.color) {
+              return img.color.toLowerCase() === colorName.toLowerCase();
+            }
+            return false;
+          });
+
+          if (matchingImage?.url) {
+            cardImg.src = matchingImage.url;
+          }
+        });
+
+        dot.addEventListener('mouseleave', () => {
+          // Restore original image
+          if (cardImg && cardImg.dataset.originalSrc) {
+            cardImg.src = cardImg.dataset.originalSrc;
+          }
+        });
+      });
+    });
+
     // Modal
     const modal = document.getElementById('buyModal');
     const modalClose = document.querySelector('.modal-close');
@@ -535,7 +587,7 @@ const productsJson = JSON.stringify(products);
     // Open modal when clicking on card image, info, or buy button
     document.querySelectorAll('.product-card').forEach(card => {
       const product = JSON.parse((card as HTMLElement).dataset.product || '{}');
-      
+
       // Click on image or info opens modal
       card.querySelectorAll('.card-clickable').forEach(el => {
         el.addEventListener('click', (e) => {
@@ -543,7 +595,7 @@ const productsJson = JSON.stringify(products);
           openModal(product);
         });
       });
-      
+
       // Buy button also opens modal
       const buyBtn = card.querySelector('.buy-btn');
       buyBtn?.addEventListener('click', (e) => {
@@ -673,6 +725,35 @@ const productsJson = JSON.stringify(products);
               colorOptions.querySelectorAll('.color-opt').forEach(b => b.classList.remove('selected'));
               btn.classList.add('selected');
               selectedColor = (btn as HTMLElement).dataset.color || null;
+
+              // Find and show image for this color
+              const colorName = selectedColor;
+              if (colorName && currentProduct?.imageObjects) {
+                // Look for an image associated with this color
+                const matchingImage = currentProduct.imageObjects.find((img: any) => {
+                  if (typeof img === 'object' && img.color) {
+                    return img.color.toLowerCase() === colorName.toLowerCase();
+                  }
+                  return false;
+                });
+
+                const mainImg = document.getElementById('modalImg') as HTMLImageElement;
+                const thumbs = document.getElementById('modalThumbs');
+
+                if (matchingImage && mainImg) {
+                  const imgUrl = matchingImage.url;
+                  if (imgUrl) {
+                    mainImg.src = imgUrl;
+                    // Update thumbnail active state
+                    if (thumbs) {
+                      thumbs.querySelectorAll('.thumb').forEach(t => {
+                        t.classList.toggle('active', (t as HTMLElement).dataset.src === imgUrl);
+                      });
+                    }
+                  }
+                }
+              }
+
               updateCartButton();
             });
           });
@@ -730,15 +811,29 @@ const productsJson = JSON.stringify(products);
     // Add to Cart
     document.getElementById('addToCartBtn')?.addEventListener('click', () => {
       if (!currentProduct) return;
-      
+
+      // Find image matching selected color, fallback to primary image
+      let cartImage = currentProduct.imageUrl;
+      if (selectedColor && selectedColor !== 'none' && currentProduct.imageObjects) {
+        const matchingImage = currentProduct.imageObjects.find((img: any) => {
+          if (typeof img === 'object' && img.color) {
+            return img.color.toLowerCase() === selectedColor.toLowerCase();
+          }
+          return false;
+        });
+        if (matchingImage?.url) {
+          cartImage = matchingImage.url;
+        }
+      }
+
       const item = {
         id: currentProduct.id,
         name: currentProduct.name,
         type: 'merch',  // Important: identifies as physical merch not digital
-        price: currentProduct.onSale && currentProduct.salePrice 
-          ? currentProduct.salePrice 
+        price: currentProduct.onSale && currentProduct.salePrice
+          ? currentProduct.salePrice
           : currentProduct.retailPrice,
-        image: currentProduct.imageUrl,
+        image: cartImage,
         size: selectedSize !== 'none' ? selectedSize : undefined,
         color: selectedColor !== 'none' ? selectedColor : undefined,
         quantity: 1

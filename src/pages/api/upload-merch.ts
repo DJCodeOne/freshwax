@@ -6,7 +6,8 @@
 import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { setDocument, updateDocument, getDocument, addDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { saSetDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -32,6 +33,38 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+}
+
+// Get service account credentials
+function getServiceAccountKey(env: any): { key: string; projectId: string } {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+  let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
+                          import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+  if (!serviceAccountKey) {
+    const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+    if (clientEmail && privateKey) {
+      serviceAccountKey = JSON.stringify({
+        type: 'service_account',
+        project_id: projectId,
+        private_key_id: 'auto',
+        private_key: privateKey.replace(/\\n/g, '\n'),
+        client_email: clientEmail,
+        client_id: '',
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token'
+      });
+    }
+  }
+
+  if (!serviceAccountKey) {
+    throw new Error('Firebase service account not configured');
+  }
+
+  return { key: serviceAccountKey, projectId };
 }
 
 // Get R2 configuration from Cloudflare runtime env
@@ -397,8 +430,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[upload-merch] Saving to Firebase');
 
+    // Get service account credentials
+    const { key: serviceAccountKey, projectId } = getServiceAccountKey(env);
+
     // Write to Firebase first (primary)
-    await setDocument('merch', productId, productData);
+    await saSetDocument(serviceAccountKey, projectId, 'merch', productId, productData);
     log.info('[upload-merch] Product saved to Firebase');
 
     // Dual-write to D1 (secondary, non-blocking)
@@ -415,7 +451,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (totalStock > 0) {
       const movementId = 'movement_' + timestamp;
-      await setDocument('merch-stock-movements', movementId, {
+      await saSetDocument(serviceAccountKey, projectId, 'merch-stock-movements', movementId, {
         id: movementId,
         productId: productId,
         productName: productName,
@@ -438,7 +474,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const supplierData = await getDocument('merch-suppliers', supplierId);
         if (supplierData) {
-          await updateDocument('merch-suppliers', supplierId, {
+          await saUpdateDocument(serviceAccountKey, projectId, 'merch-suppliers', supplierId, {
             totalProducts: (supplierData.totalProducts || 0) + 1,
             totalStock: (supplierData.totalStock || 0) + totalStock,
             updatedAt: new Date().toISOString()

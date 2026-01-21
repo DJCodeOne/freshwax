@@ -7,6 +7,9 @@ window.FreshWax = window.FreshWax || {};
 // Cutoff date - users created before this date don't need email verification
 const EMAIL_VERIFY_CUTOFF = new Date('2026-01-06T00:00:00Z').getTime();
 
+// Admin emails that bypass verification
+const ADMIN_EMAILS = ['davidhagon@gmail.com'];
+
 // Check if user needs email verification for interactive features
 window.FreshWax.checkEmailVerified = function(action) {
   return new Promise(async (resolve) => {
@@ -28,9 +31,22 @@ window.FreshWax.checkEmailVerified = function(action) {
     try {
       const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
       const auth = getAuth();
-      const user = auth.currentUser;
+      let user = auth.currentUser;
 
       if (user) {
+        // Force reload user to get latest emailVerified status
+        await user.reload();
+        user = auth.currentUser; // Get refreshed user object
+
+        // Admin bypass - admins never need verification
+        if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+          sessionStorage.setItem('fw_email_grandfathered', 'true');
+          sessionStorage.removeItem('fw_email_unverified');
+          console.log('[FreshWax] Admin user - bypassing verification');
+          resolve(true);
+          return;
+        }
+
         // Check if user was created before the cutoff date (grandfathered)
         const creationTime = user.metadata?.creationTime;
         if (creationTime) {
@@ -46,7 +62,13 @@ window.FreshWax.checkEmailVerified = function(action) {
         }
 
         // New user - check if email is verified
-        if (!user.emailVerified) {
+        if (user.emailVerified) {
+          // Email is verified - clear any stale flags
+          sessionStorage.removeItem('fw_email_unverified');
+          console.log('[FreshWax] Email verified - allowing action');
+          resolve(true);
+          return;
+        } else {
           sessionStorage.setItem('fw_email_unverified', 'true');
           showVerificationModal(action);
           resolve(false);
@@ -193,6 +215,13 @@ window.FreshWax.requireVerified = function(element, action, callback) {
       callback(e);
     }
   });
+};
+
+// Clear verification flags (call on login/logout)
+window.FreshWax.clearVerificationFlags = function() {
+  sessionStorage.removeItem('fw_email_unverified');
+  sessionStorage.removeItem('fw_email_grandfathered');
+  console.log('[FreshWax] Verification flags cleared');
 };
 
 console.log('[FreshWax] Email verification check loaded');

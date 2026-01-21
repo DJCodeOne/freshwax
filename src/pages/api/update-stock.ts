@@ -2,7 +2,8 @@
 // Handles all stock operations: receive, adjust, transfer, reserve, sell
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
@@ -20,6 +21,38 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+}
+
+// Get service account credentials
+function getServiceAccountKey(env: any): { key: string; projectId: string } {
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+  let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
+                          import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+  if (!serviceAccountKey) {
+    const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+    if (clientEmail && privateKey) {
+      serviceAccountKey = JSON.stringify({
+        type: 'service_account',
+        project_id: projectId,
+        private_key_id: 'auto',
+        private_key: privateKey.replace(/\\n/g, '\n'),
+        client_email: clientEmail,
+        client_id: '',
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token'
+      });
+    }
+  }
+
+  if (!serviceAccountKey) {
+    throw new Error('Firebase service account not configured');
+  }
+
+  return { key: serviceAccountKey, projectId };
 }
 
 type StockOperation = 'receive' | 'adjust' | 'sell' | 'return' | 'reserve' | 'unreserve' | 'damaged' | 'transfer' | 'set';
@@ -40,7 +73,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
+
+  // Get service account credentials for writes
+  const { key: serviceAccountKey, projectId } = getServiceAccountKey(env);
 
   try {
     const body = await request.json() as StockUpdate;
@@ -89,7 +126,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const variant = variantStock[variantKey];
+    // Handle both old (number) and new (object) formats
+    let variant = variantStock[variantKey];
+    if (typeof variant === 'number') {
+      // Convert old format to new format
+      variant = {
+        stock: variant,
+        reserved: 0,
+        sold: 0,
+        size: null,
+        color: null,
+        colorHex: null
+      };
+      variantStock[variantKey] = variant;
+    }
     const previousStock = variant.stock || 0;
     let newStock = previousStock;
     let stockDelta = 0;
@@ -169,9 +219,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let totalSold = 0;
 
     Object.values(variantStock).forEach((v: any) => {
-      totalStock += v.stock || 0;
-      totalReserved += v.reserved || 0;
-      totalSold += v.sold || 0;
+      // Handle both old (number) and new (object) formats
+      if (typeof v === 'number') {
+        totalStock += v;
+      } else {
+        totalStock += v.stock || 0;
+        totalReserved += v.reserved || 0;
+        totalSold += v.sold || 0;
+      }
     });
 
     const updateData = {
@@ -184,10 +239,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     };
 
-    await updateDocument('merch', productId, updateData);
+    await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updateData);
 
     const movementId = 'movement_' + Date.now();
-    await setDocument('merch-stock-movements', movementId, {
+    await saSetDocument(serviceAccountKey, projectId, 'merch-stock-movements', movementId, {
       id: movementId,
       productId: productId,
       productName: product.name,
@@ -230,7 +285,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             supplierUpdate.totalDamaged = (supplierData.totalDamaged || 0) + Math.abs(quantity);
           }
 
-          await updateDocument('merch-suppliers', product.supplierId, supplierUpdate);
+          await saUpdateDocument(serviceAccountKey, projectId, 'merch-suppliers', product.supplierId, supplierUpdate);
         }
       } catch (e) {
         log.info('Note: Could not update supplier stats');
