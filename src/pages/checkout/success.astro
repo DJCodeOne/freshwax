@@ -110,7 +110,7 @@ const orderId = Astro.url.searchParams.get('orderId');
         const result = await response.json();
         console.log('[success] Verify result:', JSON.stringify(result));
 
-        // Clear cart for any successful payment
+        // Clear cart for any successful payment (both localStorage and KV)
         if (result.success || result.paymentStatus === 'paid') {
           console.log('[success] Payment successful, clearing cart');
           const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
@@ -119,6 +119,9 @@ const orderId = Astro.url.searchParams.get('orderId');
           }
           localStorage.removeItem('cart');
           window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+
+          // Also clear KV cart
+          fetch('/api/cart', { method: 'DELETE' }).catch(() => {});
         }
 
         if (result.success && result.orderId) {

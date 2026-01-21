@@ -1265,32 +1265,42 @@ export const prerender = false;
   let userTypeChecked = false;
   let isAllowedToBuy = true;
   let duplicatePurchases = [];
-  
-  onAuthStateChanged(auth, async (user) => {
-    currentUser = user;
-    
-    // If no Firebase auth AND no customerId cookie, redirect to login
-    const customerId = getCustomerIdFromCookie();
-    if (!user && !customerId) {
-      window.location.href = '/login?redirect=/checkout';
-      return;
+  let authInitialized = false;
+
+  // Timeout to handle cases where Firebase auth hangs
+  const authTimeout = setTimeout(() => {
+    if (!authInitialized) {
+      console.log('[Checkout] Auth timeout - checking for customerId cookie');
+      const customerId = getCustomerIdFromCookie();
+      if (customerId) {
+        console.log('[Checkout] Found customerId cookie, proceeding with checkout');
+        initCheckoutWithUser(null, customerId);
+      } else {
+        console.log('[Checkout] No auth and no cookie - redirecting to login');
+        window.location.href = '/login?redirect=/checkout';
+      }
     }
-    
-    // If we have a cookie but no Firebase auth, still try to load customer data
-    // The cookie contains the user ID
+  }, 5000); // 5 second timeout
+
+  // Shared function to initialize checkout with user data
+  async function initCheckoutWithUser(user, customerId) {
+    authInitialized = true;
+    clearTimeout(authTimeout);
+    currentUser = user;
+
     const userId = user?.uid || customerId;
-    
+
     if (userId) {
       // Check if user is allowed to make purchases
       const userType = await checkUserType(userId);
-      
+
       // Artists who are NOT also customers cannot buy
       if (userType.isArtist && !userType.isCustomer) {
         isAllowedToBuy = false;
         showAccessDenied();
         return;
       }
-      
+
       customerData = await loadCustomerData(userId);
 
       // Load cart and check for duplicates
@@ -1305,9 +1315,26 @@ export const prerender = false;
       window.location.href = '/login?redirect=/checkout';
       return;
     }
-    
+
     userTypeChecked = true;
     renderCheckout();
+  }
+
+  onAuthStateChanged(auth, async (user) => {
+    // If auth already initialized by timeout, skip
+    if (authInitialized) return;
+
+    // If no Firebase auth AND no customerId cookie, redirect to login
+    const customerId = getCustomerIdFromCookie();
+    if (!user && !customerId) {
+      authInitialized = true;
+      clearTimeout(authTimeout);
+      window.location.href = '/login?redirect=/checkout';
+      return;
+    }
+
+    // Initialize checkout with user/cookie data
+    await initCheckoutWithUser(user, customerId);
   });
 </script>
 

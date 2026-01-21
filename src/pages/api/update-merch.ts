@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, initFirebaseEnv, clearCache } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, clearCache, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
@@ -177,6 +177,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       log.info('[update-merch] Images updated for:', productId);
+
+      // Clear all merch caches to ensure fresh data on next page load
+      clearAllMerchCache();
 
       return new Response(JSON.stringify({
         success: true,
@@ -406,6 +409,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     log.info('[update-merch] Product updated:', productId);
+
+    // Clear all merch caches to ensure fresh data on next page load
+    clearAllMerchCache();
 
     return new Response(JSON.stringify({
       success: true,

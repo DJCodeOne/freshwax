@@ -2,7 +2,7 @@
 // Handles all stock operations: receive, adjust, transfer, reserve, sell
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 
@@ -293,6 +293,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     log.info('[update-stock]', operation + ':', previousStock, '->', newStock);
+
+    // Clear merch caches so stock changes reflect immediately
+    clearAllMerchCache();
 
     return new Response(JSON.stringify({
       success: true,

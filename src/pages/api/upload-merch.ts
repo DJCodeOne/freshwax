@@ -6,7 +6,7 @@
 import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
@@ -487,6 +487,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     log.info('[upload-merch] Complete:', productId);
+
+    // Clear all merch caches to ensure fresh data on next page load
+    clearAllMerchCache();
 
     return new Response(JSON.stringify({
       success: true,

@@ -596,10 +596,14 @@ export async function getLiveDJMixes(limit?: number, db?: any): Promise<any[]> {
 }
 
 // Get published merch with D1 support
-export async function getLiveMerch(limit?: number, db?: any): Promise<any[]> {
+export async function getLiveMerch(limit?: number, db?: any, skipCache?: boolean): Promise<any[]> {
   const cacheKey = `live-merch:${limit || 'all'}`;
-  const cached = getCached(cacheKey);
-  if (cached) return cached;
+
+  // Skip cache if requested (for ensuring fresh data)
+  if (!skipCache) {
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+  }
 
   // Try D1 first if database is provided
   if (db) {
@@ -733,6 +737,12 @@ export function invalidateReleasesCache(): void {
 export function invalidateMixesCache(): void {
   clearCache('mixes');
   clearCache('dj-mixes');
+}
+
+export function clearAllMerchCache(): void {
+  clearCache('merch');
+  clearCache('live-merch');
+  log.info('All merch caches cleared');
 }
 
 export function invalidateUsersCache(): void {

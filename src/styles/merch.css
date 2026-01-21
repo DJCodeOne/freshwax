@@ -571,23 +571,28 @@
 
   .size-guide-popup {
     display: none;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #fff;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    z-index: 1000;
-    min-width: 250px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
   }
 
   .size-guide-popup.active {
-    display: block;
+    display: flex;
   }
 
   .size-guide-content {
+    background: #fff;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    min-width: 250px;
+    max-width: 90vw;
     padding: 1rem;
   }
 
@@ -632,12 +637,16 @@
     text-align: left;
     border-bottom: 1px solid #eee;
     font-size: 0.85rem;
+    color: #333;
   }
 
   .size-guide-table th {
     font-weight: 700;
-    color: #333;
     background: #f9f9f9;
+  }
+
+  .size-guide-table td {
+    color: #555;
   }
 
   .size-guide-table tr:last-child td {

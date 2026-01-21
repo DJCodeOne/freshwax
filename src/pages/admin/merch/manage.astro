@@ -121,6 +121,7 @@ export const prerender = false;
   <Fragment slot="actions">
     <a href="/admin/merch/upload" class="btn btn-primary">+ Add Product</a>
     <a href="/admin/merch/suppliers" class="btn btn-secondary">Suppliers</a>
+    <button id="syncBtn" class="btn btn-warning" onclick="syncToStore()">⟳ Sync to Store</button>
     <a href="/merch" class="btn btn-ghost" target="_blank">View Store</a>
   </Fragment>
 
@@ -259,6 +260,24 @@ export const prerender = false;
 </AdminLayout>
 
 <style is:global>
+  .btn-warning {
+    background: #f59e0b;
+    color: #000;
+    border: 2px solid #000;
+  }
+  .btn-warning:hover {
+    background: #d97706;
+  }
+  .btn-warning:disabled {
+    opacity: 0.7;
+    cursor: wait;
+  }
+  .btn-success {
+    background: #22c55e;
+    color: #fff;
+    border: 2px solid #000;
+  }
+
   .item-cell {
     display: flex;
     align-items: center;
@@ -394,6 +413,42 @@ export const prerender = false;
     })
     .catch(err => {
       alert('Error: ' + err.message);
+    });
+  };
+
+  // Sync to Store function
+  window.syncToStore = function() {
+    const btn = document.getElementById('syncBtn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '⟳ Syncing...';
+    btn.disabled = true;
+
+    fetch('/api/admin/sync-merch-to-d1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        btn.innerHTML = '✓ Synced!';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-success');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove('btn-success');
+          btn.classList.add('btn-warning');
+          btn.disabled = false;
+        }, 2000);
+      } else {
+        alert('Sync failed: ' + (data.error || 'Unknown error'));
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    })
+    .catch(err => {
+      alert('Sync error: ' + err.message);
+      btn.innerHTML = originalText;
+      btn.disabled = false;
     });
   };
 </script>
