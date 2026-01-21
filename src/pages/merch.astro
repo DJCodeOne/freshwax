@@ -72,12 +72,12 @@ try {
     let imageObjects: any[] = [];
     let allImages: string[] = [];
     if (doc.images && Array.isArray(doc.images)) {
-      imageObjects = doc.images.filter((img: any) => {
+      imageObjects = doc.images.filter((img) => {
         if (typeof img === 'string') return true;
         if (img && typeof img === 'object' && img.url) return true;
         return false;
       });
-      allImages = imageObjects.map((img: any) => {
+      allImages = imageObjects.map((img) => {
         if (typeof img === 'string') return img;
         return img.url;
       });
@@ -99,8 +99,8 @@ try {
     let colorList: string[] = [];
     let colorNames: string[] = [];
     if (doc.colors && Array.isArray(doc.colors)) {
-      colorList = doc.colors.map((c: any) => c.hex || c).filter(Boolean);
-      colorNames = doc.colors.map((c: any) => c.name || c.hex || c).filter(Boolean);
+      colorList = doc.colors.map((c) => c.hex || c).filter(Boolean);
+      colorNames = doc.colors.map((c) => c.name || c.hex || c).filter(Boolean);
     }
     
     return {
@@ -527,61 +527,66 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
   window.PRODUCTS_DATA = JSON.parse(productsJson);
 </script>
 
-<script>
+<script is:inline>
   function init() {
     // Filters
-    const categoryFilter = document.getElementById('categoryFilter') as HTMLInputElement;
-    const categoryNameFilter = document.getElementById('categoryNameFilter') as HTMLInputElement;
+    const categoryFilter = document.getElementById('categoryFilter');
+    const categoryNameFilter = document.getElementById('categoryNameFilter');
     const categoryDropdown = document.getElementById('categoryDropdown');
     const categoryBtn = document.getElementById('categoryBtn');
     const categoryLabel = document.getElementById('categoryLabel');
-    const typeFilter = document.getElementById('typeFilter') as HTMLSelectElement;
-    const stockFilter = document.getElementById('stockFilter') as HTMLSelectElement;
-    const sortSelect = document.getElementById('sortSelect') as HTMLSelectElement;
+    const typeFilter = document.getElementById('typeFilter');
+    const stockFilter = document.getElementById('stockFilter');
+    const sortSelect = document.getElementById('sortSelect');
     const clearBtn = document.getElementById('clearFilters');
     const grid = document.getElementById('productsGrid');
     const countEl = document.getElementById('visibleCount');
 
     // Nested category dropdown logic
-    categoryBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      categoryDropdown?.classList.toggle('open');
-    });
+    if (categoryBtn && categoryDropdown) {
+      categoryBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        categoryDropdown.classList.toggle('open');
+      });
+    }
 
     // Close dropdown when clicking outside
-    document.addEventListener('click', () => {
-      categoryDropdown?.classList.remove('open');
+    document.addEventListener('click', function(e) {
+      if (categoryDropdown && !categoryDropdown.contains(e.target)) {
+        categoryDropdown.classList.remove('open');
+      }
     });
 
     // Handle category selection
-    categoryDropdown?.querySelectorAll('.category-menu-item:not(.has-submenu), .category-submenu-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const el = e.currentTarget as HTMLElement;
-        const cat = el.dataset.category || '';
-        const name = el.dataset.name || '';
+    if (categoryDropdown) {
+      categoryDropdown.querySelectorAll('.category-menu-item:not(.has-submenu), .category-submenu-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var cat = this.dataset.category || '';
+          var name = this.dataset.name || '';
 
-        if (categoryFilter) categoryFilter.value = cat;
-        if (categoryNameFilter) categoryNameFilter.value = name;
+          if (categoryFilter) categoryFilter.value = cat;
+          if (categoryNameFilter) categoryNameFilter.value = name;
 
-        // Update button label
-        if (categoryLabel) {
-          if (!cat && !name) {
-            categoryLabel.textContent = 'All';
-          } else if (name) {
-            categoryLabel.textContent = name;
-          } else {
-            // Find the parent label for this category
-            const parentItem = categoryDropdown.querySelector(`.category-menu-item[data-category="${cat}"]`);
-            const label = parentItem?.querySelector('span')?.textContent || cat;
-            categoryLabel.textContent = `All ${label}`;
+          // Update button label
+          if (categoryLabel) {
+            if (!cat && !name) {
+              categoryLabel.textContent = 'All';
+            } else if (name) {
+              categoryLabel.textContent = name;
+            } else {
+              var parentItem = categoryDropdown.querySelector('.category-menu-item[data-category="' + cat + '"]');
+              var label = parentItem ? parentItem.querySelector('span').textContent : cat;
+              categoryLabel.textContent = 'All ' + label;
+            }
           }
-        }
 
-        categoryDropdown.classList.remove('open');
-        applyFilters();
+          categoryDropdown.classList.remove('open');
+          applyFilters();
+        });
       });
-    });
+    }
 
     function applyFilters() {
       const category = categoryFilter?.value || '';
@@ -590,7 +595,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       const stock = stockFilter?.value || '';
       const sort = sortSelect?.value || 'featured';
 
-      const cards = Array.from(grid?.querySelectorAll('.product-card') || []) as HTMLElement[];
+      const cards = Array.from(grid?.querySelectorAll('.product-card') || []) ;
       let visible = 0;
 
       cards.forEach(card => {
@@ -645,8 +650,8 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
 
     // Color dot hover - show corresponding image
     document.querySelectorAll('.product-card').forEach(card => {
-      const product = JSON.parse((card as HTMLElement).dataset.product || '{}');
-      const cardImg = card.querySelector('.card-image img') as HTMLImageElement;
+      const product = JSON.parse((card ).dataset.product || '{}');
+      const cardImg = card.querySelector('.card-image img') ;
       const originalSrc = cardImg?.src || '';
 
       // Store original image for mouseout
@@ -657,11 +662,11 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       // Add hover listeners to color dots
       card.querySelectorAll('.color-dots .dot').forEach(dot => {
         dot.addEventListener('mouseenter', () => {
-          const colorName = (dot as HTMLElement).dataset.color;
+          const colorName = (dot ).dataset.color;
           if (!colorName || !cardImg || !product.imageObjects) return;
 
           // Find image matching this color
-          const matchingImage = product.imageObjects.find((img: any) => {
+          const matchingImage = product.imageObjects.find((img) => {
             if (typeof img === 'object' && img.color) {
               return img.color.toLowerCase() === colorName.toLowerCase();
             }
@@ -685,13 +690,13 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
     // Modal
     const modal = document.getElementById('buyModal');
     const modalClose = document.querySelector('.modal-close');
-    let currentProduct: any = null;
-    let selectedSize: string | null = null;
-    let selectedColor: string | null = null;
+    var currentProduct = null;
+    var selectedSize = null;
+    var selectedColor = null;
 
     // Open modal when clicking on card image, info, or buy button
     document.querySelectorAll('.product-card').forEach(card => {
-      const product = JSON.parse((card as HTMLElement).dataset.product || '{}');
+      const product = JSON.parse((card ).dataset.product || '{}');
 
       // Click on image or info opens modal
       card.querySelectorAll('.card-clickable').forEach(el => {
@@ -717,7 +722,8 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       if (e.key === 'Escape') closeModal();
     });
 
-    function openModal(product: any, skipPushState = false) {
+    function openModal(product, skipPushState) {
+      skipPushState = skipPushState || false;
       if (!modal) return;
       currentProduct = product;
       selectedSize = null;
@@ -729,7 +735,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       }
 
       // Image
-      const mainImg = document.getElementById('modalImg') as HTMLImageElement;
+      const mainImg = document.getElementById('modalImg') ;
       if (mainImg) {
         mainImg.src = product.imageUrl || '';
         mainImg.alt = product.name;
@@ -738,14 +744,14 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       // Thumbnails
       const thumbs = document.getElementById('modalThumbs');
       if (thumbs && product.images?.length > 1) {
-        thumbs.innerHTML = product.images.map((img: string, i: number) => `
+        thumbs.innerHTML = product.images.map((img, i) => `
           <button class="thumb ${i === 0 ? 'active' : ''}" data-src="${img}">
             <img src="${img}" alt="" />
           </button>
         `).join('');
         thumbs.querySelectorAll('.thumb').forEach(t => {
           t.addEventListener('click', () => {
-            mainImg.src = (t as HTMLElement).dataset.src || '';
+            mainImg.src = (t ).dataset.src || '';
             thumbs.querySelectorAll('.thumb').forEach(x => x.classList.remove('active'));
             t.classList.add('active');
           });
@@ -759,7 +765,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       const catEl = document.getElementById('modalCategory');
       const descEl = document.getElementById('modalDesc');
       const priceBox = document.getElementById('modalPriceBox');
-      const viewLink = document.getElementById('viewDetailsLink') as HTMLAnchorElement;
+      const viewLink = document.getElementById('viewDetailsLink') ;
 
       if (nameEl) nameEl.textContent = product.name || '';
       if (catEl) catEl.textContent = product.categoryName || '';
@@ -785,7 +791,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       if (sizeSection && sizeOptions) {
         if (product.sizes?.length > 0) {
           sizeSection.style.display = 'block';
-          sizeOptions.innerHTML = product.sizes.map((s: string, i: number) => 
+          sizeOptions.innerHTML = product.sizes.map((s, i) => 
             `<button class="opt-btn size-btn ${product.sizes.length === 1 ? 'selected' : ''}" data-size="${s}">${s}</button>`
           ).join('');
           
@@ -798,7 +804,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
             btn.addEventListener('click', () => {
               sizeOptions.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
               btn.classList.add('selected');
-              selectedSize = (btn as HTMLElement).dataset.size || null;
+              selectedSize = (btn ).dataset.size || null;
               updateCartButton();
             });
           });
@@ -814,7 +820,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       if (colorSection && colorOptions) {
         if (product.colorList?.length > 0) {
           colorSection.style.display = 'block';
-          colorOptions.innerHTML = product.colorList.map((hex: string, i: number) => {
+          colorOptions.innerHTML = product.colorList.map((hex, i) => {
             const name = product.colorNames?.[i] || hex;
             const isSelected = product.colorList.length === 1 ? 'selected' : '';
             return `<button class="opt-btn color-opt ${isSelected}" data-color="${name}" data-hex="${hex}" style="background:${hex}" title="${name}"></button>`;
@@ -829,20 +835,20 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
             btn.addEventListener('click', () => {
               colorOptions.querySelectorAll('.color-opt').forEach(b => b.classList.remove('selected'));
               btn.classList.add('selected');
-              selectedColor = (btn as HTMLElement).dataset.color || null;
+              selectedColor = (btn ).dataset.color || null;
 
               // Find and show image for this color
               const colorName = selectedColor;
               if (colorName && currentProduct?.imageObjects) {
                 // Look for an image associated with this color
-                const matchingImage = currentProduct.imageObjects.find((img: any) => {
+                const matchingImage = currentProduct.imageObjects.find((img) => {
                   if (typeof img === 'object' && img.color) {
                     return img.color.toLowerCase() === colorName.toLowerCase();
                   }
                   return false;
                 });
 
-                const mainImg = document.getElementById('modalImg') as HTMLImageElement;
+                const mainImg = document.getElementById('modalImg') ;
                 const thumbs = document.getElementById('modalThumbs');
 
                 if (matchingImage && mainImg) {
@@ -852,7 +858,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
                     // Update thumbnail active state
                     if (thumbs) {
                       thumbs.querySelectorAll('.thumb').forEach(t => {
-                        t.classList.toggle('active', (t as HTMLElement).dataset.src === imgUrl);
+                        t.classList.toggle('active', (t ).dataset.src === imgUrl);
                       });
                     }
                   }
@@ -881,7 +887,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
     }
 
     function updateCartButton() {
-      const btn = document.getElementById('addToCartBtn') as HTMLButtonElement;
+      const btn = document.getElementById('addToCartBtn') ;
       const btnText = btn?.querySelector('.btn-text');
       const btnPrice = btn?.querySelector('.btn-price');
       
@@ -920,7 +926,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       // Find image matching selected color, fallback to primary image
       let cartImage = currentProduct.imageUrl;
       if (selectedColor && selectedColor !== 'none' && currentProduct.imageObjects) {
-        const matchingImage = currentProduct.imageObjects.find((img: any) => {
+        const matchingImage = currentProduct.imageObjects.find((img) => {
           if (typeof img === 'object' && img.color) {
             return img.color.toLowerCase() === selectedColor.toLowerCase();
           }
@@ -974,7 +980,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       if (hash.startsWith('#quick-view-')) {
         const productId = hash.replace('#quick-view-', '');
         const products = (window as any).PRODUCTS_DATA || [];
-        const product = products.find((p: any) => p.id === productId);
+        const product = products.find((p) => p.id === productId);
         if (product) {
           openModal(product, true); // skipPushState = true
         }
@@ -990,7 +996,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
     if (initialHash.startsWith('#quick-view-')) {
       const productId = initialHash.replace('#quick-view-', '');
       const products = (window as any).PRODUCTS_DATA || [];
-      const product = products.find((p: any) => p.id === productId);
+      const product = products.find((p) => p.id === productId);
       if (product) {
         // Small delay to ensure DOM is ready
         setTimeout(() => openModal(product, true), 100);
