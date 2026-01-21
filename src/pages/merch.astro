@@ -28,9 +28,9 @@ try {
   const merchData = await getLiveMerch(undefined, db);
 
   products = merchData.map(doc => {
-    // Build filter options
-    if (doc.category && doc.categoryName) {
-      categories[doc.category] = doc.categoryName;
+    // Build filter options - use categoryName as the key since category is generic (e.g. "clothing")
+    if (doc.categoryName) {
+      categories[doc.categoryName] = doc.categoryName;
     }
     if (doc.productType && doc.productTypeName) {
       productTypes[doc.productType] = doc.productTypeName;
@@ -199,7 +199,7 @@ const productsJson = JSON.stringify(products);
               <div 
                 class="product-card"
                 data-id={product.id}
-                data-category={product.category || ''}
+                data-category={product.categoryName || ''}
                 data-type={product.productType || ''}
                 data-stock={product.stockStatus}
                 data-sale={product.onSale ? 'true' : 'false'}
