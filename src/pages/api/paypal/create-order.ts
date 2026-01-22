@@ -7,6 +7,74 @@ import { setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase
 
 export const prerender = false;
 
+// Validate stock availability before checkout
+async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
+  const unavailableItems: string[] = [];
+
+  for (const item of items) {
+    const quantity = item.quantity || 1;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        // Check merch stock
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          if (item.size || item.color) {
+            const variantKey = item.size && item.color
+              ? `${item.size.toLowerCase()}_${item.color.toLowerCase()}`
+              : item.size?.toLowerCase() || item.color?.toLowerCase() || 'default';
+            const variantStock = product.variantStock?.[variantKey]?.stock ?? product.stock ?? 0;
+            if (variantStock < quantity) {
+              unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStock} available`);
+            }
+          } else {
+            const totalStock = product.totalStock ?? product.stock ?? 0;
+            if (totalStock < quantity) {
+              unavailableItems.push(`${item.name} - only ${totalStock} available`);
+            }
+          }
+        }
+      } else if (itemType === 'vinyl') {
+        // Check if this is a crates item (has sellerId, no releaseId) or release vinyl
+        if (item.sellerId && !item.releaseId) {
+          // Vinyl crates item - check if listing is still available
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (!listing) {
+              unavailableItems.push(`${item.name} - listing no longer exists`);
+            } else if (listing.status === 'sold') {
+              unavailableItems.push(`${item.name} - already sold`);
+            } else if (listing.status !== 'published') {
+              unavailableItems.push(`${item.name} - no longer available`);
+            }
+          }
+        } else {
+          // Release vinyl - check stock
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              const vinylStock = release.vinylStock ?? 0;
+              if (vinylStock < quantity) {
+                unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[PayPal] Error checking stock for', item.name, err);
+    }
+  }
+
+  return {
+    available: unavailableItems.length === 0,
+    unavailableItems
+  };
+}
+
 // Validate item prices server-side to prevent manipulation
 async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean }> {
   const validatedItems: any[] = [];
@@ -23,19 +91,33 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
           serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
         }
       } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
-        const releaseId = item.releaseId || item.productId || item.id;
-        if (releaseId) {
-          const release = await getDocument('releases', releaseId);
-          if (release) {
-            if (itemType === 'vinyl') {
-              serverPrice = release.vinylPrice || release.price || item.price;
-            } else if (itemType === 'track' && item.trackId) {
-              const track = (release.tracks || []).find((t: any) =>
-                t.id === item.trackId || t.trackId === item.trackId
-              );
-              serverPrice = track?.price || release.trackPrice || 0.99;
-            } else {
-              serverPrice = release.price || release.digitalPrice || item.price;
+        // Check if this is a vinyl crates item
+        if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
+          // Vinyl crates item - look up price from vinylListings
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (listing) {
+              serverPrice = listing.price || item.price;
+              item.cratesShippingCost = listing.shippingCost || 0;
+              item.isCratesItem = true;
+            }
+          }
+        } else {
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              if (itemType === 'vinyl') {
+                serverPrice = release.vinylPrice || release.price || item.price;
+              } else if (itemType === 'track' && item.trackId) {
+                const track = (release.tracks || []).find((t: any) =>
+                  t.id === item.trackId || t.trackId === item.trackId
+                );
+                serverPrice = track?.price || release.trackPrice || 0.99;
+              } else {
+                serverPrice = release.price || release.digitalPrice || item.price;
+              }
             }
           }
         }
@@ -141,6 +223,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // SECURITY: Validate stock availability before allowing checkout
+    console.log('[PayPal] Validating stock availability...');
+    const stockCheck = await validateStock(orderData.items);
+    if (!stockCheck.available) {
+      console.warn('[PayPal] Stock validation failed:', stockCheck.unavailableItems);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Some items are no longer available',
+        unavailableItems: stockCheck.unavailableItems
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // SECURITY: Validate prices server-side to prevent manipulation

@@ -10,7 +10,7 @@ export const prerender = false;
 const faqs = [
   {
     question: "What is Fresh Wax Crates?",
-    answer: "Crates is our vinyl marketplace where record shops, collectors, and stockists can list their vinyl for sale. Browse thousands of records with detailed info on condition, price, and audio samples."
+    answer: "Crates is our vinyl marketplace where record shops, collectors, and stockists can list their vinyl for sale. Browse records with detailed info on condition, price, and audio samples."
   },
   {
     question: "How does buying from Crates work?",
@@ -31,22 +31,23 @@ const faqs = [
   <Header />
 
   <main class="crates-main">
+    <!-- Background -->
+    <div class="bg-overlay"></div>
+
     <!-- Hero Section -->
-    <section class="hero">
-      <div class="hero-content">
-        <div class="hero-icon">
-          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4m-6-1v6m8-6v6" />
-          </svg>
+    <section class="hero-section">
+      <div class="hero-grid"></div>
+      <div class="hero-container">
+        <div class="hero-content">
+          <h1 class="hero-title">DIG THE <span class="orange">CRATES</span></h1>
+          <p class="hero-subtitle">Vinyl marketplace for stockists, shops & collectors</p>
         </div>
-        <h1>DIG THE <span class="red">CRATES</span></h1>
-        <p class="hero-subtitle">Vinyl marketplace for stockists, shops & collectors</p>
       </div>
     </section>
 
-    <!-- Main Content -->
+    <!-- Main Content with Sidebar -->
     <div class="crates-layout">
-      <!-- Collections Sidebar -->
+      <!-- Collections Sidebar - Desktop -->
       <aside class="collections-sidebar">
         <div class="sidebar-inner">
           <div class="sidebar-header">
@@ -67,7 +68,7 @@ const faqs = [
 
             <button class="collection-nav-btn deals-btn" data-collection="deals">
               <div class="collection-nav-content">
-                <span class="collection-name">Special Deals</span>
+                <span class="collection-name">🔥 Special Deals</span>
                 <span class="collection-count deals-badge" id="dealsCount">0</span>
               </div>
               <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +79,7 @@ const faqs = [
             <div class="sidebar-divider"></div>
 
             <div id="sellerCollections">
-              <div class="loading-collections">Loading collections...</div>
+              <div class="loading-text">Loading collections...</div>
             </div>
           </nav>
         </div>
@@ -86,7 +87,9 @@ const faqs = [
 
       <!-- Main Listings Content -->
       <section class="listings-section">
+        <!-- Header -->
         <div class="section-header">
+          <div class="header-pattern"></div>
           <div class="header-content">
             <div class="header-text">
               <h2 class="section-title" id="sectionTitle">All Vinyl</h2>
@@ -105,7 +108,7 @@ const faqs = [
         <div class="collection-filter-mobile">
           <div class="filter-scroll" id="mobileFilters">
             <button class="filter-btn active" data-collection="all">All</button>
-            <button class="filter-btn deals-filter" data-collection="deals">Deals</button>
+            <button class="filter-btn deals-filter" data-collection="deals">🔥 Deals</button>
           </div>
         </div>
 
@@ -131,59 +134,82 @@ const faqs = [
 </Layout>
 
 <style>
+  /* Main Container */
   .crates-main {
-    background: linear-gradient(to bottom, #111827, #0f172a);
     min-height: 100vh;
+    position: relative;
   }
 
-  /* Hero */
-  .hero {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #1a0a0a 100%);
-    padding: 3rem 1.5rem;
-    text-align: center;
+  .bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+    z-index: -1;
+  }
+
+  /* Hero Section */
+  .hero-section {
+    background: linear-gradient(to bottom, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+    color: white;
+    padding: 3rem 0;
+    position: relative;
+    overflow: hidden;
+    z-index: 10;
     border-bottom: 4px solid #f97316;
   }
 
-  .hero-content {
-    max-width: 800px;
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(rgba(249, 115, 22, 0.03) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(249, 115, 22, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  .hero-container {
+    max-width: 1200px;
     margin: 0 auto;
+    padding: 0 1rem;
+    text-align: center;
+    position: relative;
+    z-index: 10;
   }
 
-  .hero-icon {
-    width: 70px;
-    height: 70px;
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-  }
-
-  .hero-icon svg {
-    width: 40px;
-    height: 40px;
-    color: #fff;
-  }
-
-  .hero h1 {
+  .hero-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 3.5rem;
-    color: #fff;
+    font-size: 3rem;
+    font-weight: 400;
     margin: 0;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
   }
 
-  .hero h1 .red {
+  .hero-title .orange {
     color: #f97316;
   }
 
   .hero-subtitle {
-    font-size: 1rem;
+    font-size: 0.9rem;
     color: #9ca3af;
+    font-weight: 400;
+    letter-spacing: 0.15em;
     margin: 0.75rem 0 0 0;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
+  }
+
+  @media (min-width: 640px) {
+    .hero-section { padding: 4rem 0; }
+    .hero-title { font-size: 4.5rem; }
+    .hero-subtitle { font-size: 1rem; letter-spacing: 0.2em; }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-section { padding: 5rem 0; }
+    .hero-title { font-size: 5.5rem; }
+    .hero-subtitle { font-size: 1.1rem; letter-spacing: 0.25em; }
   }
 
   /* Layout */
@@ -192,6 +218,8 @@ const faqs = [
     max-width: 1400px;
     margin: 0 auto;
     padding: 0 1rem;
+    position: relative;
+    z-index: 1;
   }
 
   /* Sidebar */
@@ -203,9 +231,7 @@ const faqs = [
   }
 
   @media (min-width: 1024px) {
-    .collections-sidebar {
-      display: block;
-    }
+    .collections-sidebar { display: block; }
   }
 
   .sidebar-inner {
@@ -318,7 +344,7 @@ const faqs = [
     color: #f97316;
   }
 
-  .loading-collections {
+  .loading-text {
     text-align: center;
     padding: 1rem;
     color: #6b7280;
@@ -328,21 +354,34 @@ const faqs = [
   /* Main Content */
   .listings-section {
     flex: 1;
-    padding: 1.5rem 0 1.5rem 1.5rem;
     min-width: 0;
+    padding: 1.5rem 0 1.5rem 1.5rem;
   }
 
   @media (max-width: 1023px) {
-    .listings-section {
-      padding: 1.5rem 0;
-    }
+    .listings-section { padding: 1.5rem 0; }
   }
 
   .section-header {
+    background: linear-gradient(to bottom, #1f2937 0%, #374151 100%);
+    border-radius: 1rem;
+    padding: 2rem 1.5rem;
     margin-bottom: 1.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header-pattern {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(249, 115, 22, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.5;
   }
 
   .header-content {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -391,9 +430,7 @@ const faqs = [
   }
 
   @media (min-width: 1024px) {
-    .collection-filter-mobile {
-      display: none;
-    }
+    .collection-filter-mobile { display: none; }
   }
 
   .filter-scroll {
@@ -431,19 +468,12 @@ const faqs = [
 
   /* Listings Grid */
   .listings-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 1.25rem;
   }
 
-  @media (max-width: 640px) {
-    .listings-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
   .loading-state {
-    grid-column: 1 / -1;
     text-align: center;
     padding: 3rem;
     color: #9ca3af;
@@ -464,7 +494,6 @@ const faqs = [
   }
 
   .empty-state {
-    grid-column: 1 / -1;
     text-align: center;
     padding: 4rem 2rem;
   }
@@ -484,167 +513,229 @@ const faqs = [
     color: #9ca3af;
     margin: 0;
   }
+</style>
 
-  /* Vinyl Card */
+<style is:global>
+  /* Vinyl Card Styles - Global for JS-generated content */
   .vinyl-card {
-    background: linear-gradient(135deg, #1f2937, #111827);
-    border: 2px solid #374151;
-    border-radius: 12px;
+    background: linear-gradient(to bottom, #000000 0%, #111827 40%, #1f2937 100%);
+    border-radius: 0.75rem;
     overflow: hidden;
-    transition: all 0.2s;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    gap: 1rem;
     cursor: pointer;
   }
 
   .vinyl-card:hover {
-    border-color: #f97316;
-    transform: translateY(-4px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transform: translateY(-3px);
+    border-color: rgba(249, 115, 22, 0.5);
+    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px rgba(249, 115, 22, 0.1);
   }
 
+  /* Mobile: Vertical layout */
   .vinyl-card-inner {
     display: flex;
-    padding: 1rem;
+    flex-direction: column;
     gap: 1rem;
   }
 
-  .vinyl-image {
-    width: 120px;
-    height: 120px;
-    flex-shrink: 0;
-    border-radius: 8px;
-    overflow: hidden;
-    background: #0f172a;
-    position: relative;
+  /* Desktop: Horizontal layout */
+  @media (min-width: 768px) {
+    .vinyl-card-inner {
+      flex-direction: row;
+      gap: 1.5rem;
+    }
   }
 
-  .vinyl-image img {
+  /* Artwork Container */
+  .vinyl-artwork {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #1a1a1a;
+  }
+
+  @media (min-width: 768px) {
+    .vinyl-artwork {
+      width: 180px;
+      height: 180px;
+      aspect-ratio: auto;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .vinyl-artwork {
+      width: 200px;
+      height: 200px;
+    }
+  }
+
+  .vinyl-artwork img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.3s ease;
   }
 
-  .vinyl-image-placeholder {
+  .vinyl-card:hover .vinyl-artwork img {
+    transform: scale(1.05);
+  }
+
+  .vinyl-artwork-placeholder {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3rem;
-    background: linear-gradient(135deg, #1f2937, #0f172a);
+    font-size: 4rem;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    color: #4b5563;
   }
 
+  /* Sale Badge */
   .sale-badge {
     position: absolute;
-    top: 6px;
-    left: 6px;
+    top: 8px;
+    left: 8px;
     background: linear-gradient(135deg, #22c55e, #16a34a);
     color: #fff;
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    animation: pulse-badge 2s ease-in-out infinite;
+    padding: 0.35rem 0.65rem;
+    border-radius: 6px;
+    z-index: 5;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
   }
 
-  @keyframes pulse-badge {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-  }
-
+  /* Details */
   .vinyl-details {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
+    gap: 0.5rem;
   }
 
   .vinyl-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #fff;
-    margin: 0 0 0.25rem 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: #f97316;
+    margin: 0;
+    text-transform: uppercase;
+    line-height: 1.1;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  @media (min-width: 768px) {
+    .vinyl-title { font-size: 2rem; }
+  }
+
+  @media (min-width: 1024px) {
+    .vinyl-title { font-size: 2.25rem; }
   }
 
   .vinyl-artist {
-    font-size: 0.9rem;
-    color: #f97316;
-    margin: 0 0 0.5rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e5e7eb;
+    margin: 0;
   }
 
+  /* Meta Tags */
   .vinyl-meta {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-    margin-bottom: 0.75rem;
+    margin: 0.5rem 0;
   }
 
-  .vinyl-format, .vinyl-condition {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.5rem;
-    background: rgba(255, 255, 255, 0.1);
+  .vinyl-tag {
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    background: rgba(255, 255, 255, 0.08);
     border-radius: 4px;
     color: #9ca3af;
   }
 
-  .vinyl-condition {
-    background: rgba(249, 115, 22, 0.1);
+  .vinyl-tag.condition {
+    background: rgba(249, 115, 22, 0.15);
     color: #f97316;
+    border: 1px solid rgba(249, 115, 22, 0.3);
   }
 
+  /* Price Row */
   .vinyl-price-row {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     margin-top: auto;
+    padding-top: 0.5rem;
   }
 
   .vinyl-price {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #22c55e;
   }
 
   .vinyl-original-price {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: #6b7280;
     text-decoration: line-through;
   }
 
   .vinyl-info-btn {
     margin-left: auto;
-    padding: 0.5rem 0.75rem;
-    background: rgba(249, 115, 22, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.3);
+    padding: 0.6rem 1rem;
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.4);
     border-radius: 6px;
     color: #f97316;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .vinyl-info-btn:hover {
-    background: rgba(249, 115, 22, 0.2);
+    background: rgba(249, 115, 22, 0.25);
+    border-color: #f97316;
   }
 
+  /* Seller Footer */
   .vinyl-seller {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid #374151;
+    padding: 0.875rem 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
     justify-content: space-between;
     font-size: 0.8rem;
     color: #9ca3af;
+    background: rgba(0, 0, 0, 0.2);
+    margin: 0 -0.75rem -0.75rem -0.75rem;
+    border-radius: 0 0 0.65rem 0.65rem;
   }
 
   .vinyl-seller-name {
     color: #fff;
+    font-weight: 500;
+  }
+
+  .vinyl-genre {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
   }
 </style>
 
@@ -664,6 +755,7 @@ const faqs = [
       }
     } catch (err) {
       console.error('Error loading collections:', err);
+      document.getElementById('sellerCollections').innerHTML = '<div class="loading-text">No collections yet</div>';
     }
   }
 
@@ -672,7 +764,7 @@ const faqs = [
     const mobileFilters = document.getElementById('mobileFilters');
 
     if (allCollections.length === 0) {
-      container.innerHTML = '<div class="loading-collections">No collections yet</div>';
+      container.innerHTML = '<div class="loading-text">No collections yet</div>';
       return;
     }
 
@@ -680,7 +772,7 @@ const faqs = [
     container.innerHTML = allCollections.map(c => `
       <button class="collection-nav-btn" data-collection="${c.id}">
         <div class="collection-nav-content">
-          <span class="collection-name">Collection ${c.collectionNumber}${c.storeName ? ` - ${c.storeName}` : ''}</span>
+          <span class="collection-name">${c.storeName || `Collection ${c.collectionNumber}`}</span>
         </div>
         <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -696,7 +788,7 @@ const faqs = [
       const btn = document.createElement('button');
       btn.className = 'filter-btn';
       btn.dataset.collection = c.id;
-      btn.textContent = `Collection ${c.collectionNumber}`;
+      btn.textContent = c.storeName || `Collection ${c.collectionNumber}`;
       mobileFilters.appendChild(btn);
     });
 
@@ -765,31 +857,33 @@ const faqs = [
       const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : null;
 
       return `
-        <article class="vinyl-card" data-id="${listing.id}" onclick="viewListing('${listing.id}')">
+        <article class="vinyl-card" onclick="viewListing('${listing.id}')">
           <div class="vinyl-card-inner">
-            <div class="vinyl-image">
+            <div class="vinyl-artwork">
               ${imageUrl
-                ? `<img src="${imageUrl}" alt="${listing.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'vinyl-image-placeholder\\'>📀</div>'" />`
-                : '<div class="vinyl-image-placeholder">📀</div>'}
+                ? `<img src="${imageUrl}" alt="${listing.title}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                   <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
+                : '<div class="vinyl-artwork-placeholder">📀</div>'}
               ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
             </div>
             <div class="vinyl-details">
               <h3 class="vinyl-title">${listing.title || 'Untitled'}</h3>
               <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
               <div class="vinyl-meta">
-                <span class="vinyl-format">${listing.format || 'LP'}</span>
-                <span class="vinyl-condition">${listing.mediaCondition || 'VG+'} / ${listing.sleeveCondition || 'VG+'}</span>
+                <span class="vinyl-tag">${listing.format || 'LP'}</span>
+                <span class="vinyl-tag condition">${listing.mediaCondition || 'VG+'} / ${listing.sleeveCondition || 'VG+'}</span>
+                ${listing.releaseYear ? `<span class="vinyl-tag">${listing.releaseYear}</span>` : ''}
               </div>
               <div class="vinyl-price-row">
                 <span class="vinyl-price">£${(listing.price || 0).toFixed(2)}</span>
                 ${hasDiscount && listing.originalPrice ? `<span class="vinyl-original-price">£${listing.originalPrice.toFixed(2)}</span>` : ''}
-                <button class="vinyl-info-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">Info</button>
+                <button class="vinyl-info-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">View Details</button>
               </div>
             </div>
           </div>
           <div class="vinyl-seller">
             <span>Seller: <span class="vinyl-seller-name">${listing.sellerName || 'Unknown'}</span></span>
-            ${listing.genre ? `<span>${listing.genre}</span>` : ''}
+            ${listing.genre ? `<span class="vinyl-genre">${listing.genre}</span>` : ''}
           </div>
         </article>
       `;
@@ -809,10 +903,10 @@ const faqs = [
     if (collection === 'all') {
       title.textContent = 'All Vinyl';
     } else if (collection === 'deals') {
-      title.textContent = 'Special Deals';
+      title.textContent = '🔥 Special Deals';
     } else {
       const col = allCollections.find(c => c.id === collection);
-      title.textContent = col ? `Collection ${col.collectionNumber}${col.storeName ? ` - ${col.storeName}` : ''}` : 'Collection';
+      title.textContent = col ? (col.storeName || `Collection ${col.collectionNumber}`) : 'Collection';
     }
 
     loadListings(collection);
@@ -822,7 +916,22 @@ const faqs = [
     window.location.href = `/crates/${id}`;
   }
 
-  // Initialize
-  loadCollections();
-  loadListings();
+  // Make viewListing available globally
+  window.viewListing = viewListing;
+
+  // Initialize function
+  function initCrates() {
+    loadCollections();
+    loadListings();
+  }
+
+  // Run on initial load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCrates);
+  } else {
+    initCrates();
+  }
+
+  // Re-run on Astro page transitions
+  document.addEventListener('astro:page-load', initCrates);
 </script>

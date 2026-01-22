@@ -285,6 +285,37 @@ export const prerender = false;
           </div>
           <p class="form-hint">Shipping costs are set in your seller settings.</p>
         </div>
+        <div class="form-group">
+          <label for="discountPercent">Discount %</label>
+          <div class="input-prefix">
+            <input type="number" id="discountPercent" name="discountPercent" min="0" max="90" step="1" placeholder="0">
+            <span class="suffix">%</span>
+          </div>
+          <p class="form-hint">Optional - for sale items</p>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="dealType">Deal Type</label>
+          <select id="dealType" name="dealType">
+            <option value="none">No Special Deal</option>
+            <option value="percentage">Percentage Off</option>
+            <option value="clearance">Clearance Sale</option>
+            <option value="collection_deal">Buy My Collection</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="dealDescription">Deal Description</label>
+          <input type="text" id="dealDescription" name="dealDescription" maxlength="200" placeholder="e.g. 50% off this week only!">
+        </div>
+      </div>
+
+      <div class="sale-preview" id="salePreview" style="display:none;">
+        <div class="sale-badge">SALE</div>
+        <span class="original-price" id="previewOriginal">£0.00</span>
+        <span class="sale-price" id="previewSale">£0.00</span>
+        <span class="discount-tag" id="previewDiscount">-0%</span>
       </div>
 
       <div class="price-breakdown" id="priceBreakdown" style="display:none;">
@@ -319,7 +350,7 @@ export const prerender = false;
       <!-- Actions -->
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" id="saveDraftBtn">Save as Draft</button>
-        <button type="submit" class="btn btn-primary" id="submitBtn">Submit for Review</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Publish Listing</button>
       </div>
     </form>
   </div>
@@ -912,29 +943,59 @@ export const prerender = false;
     document.getElementById('descCount').textContent = e.target.value.length;
   });
 
-  // Price breakdown
+  // Price breakdown and sale preview
   const priceInput = document.getElementById('price');
+  const discountInput = document.getElementById('discountPercent');
+  const dealTypeSelect = document.getElementById('dealType');
 
-  function updateBreakdown() {
+  function updatePriceDisplay() {
     const price = parseFloat(priceInput.value) || 0;
+    const discount = parseInt(discountInput.value) || 0;
 
+    // Update price breakdown
     if (price <= 0) {
       document.getElementById('priceBreakdown').style.display = 'none';
+      document.getElementById('salePreview').style.display = 'none';
       return;
     }
 
-    const processingFee = price * 0.03;
-    const platformFee = price * 0.10;
-    const total = price - processingFee - platformFee;
+    // Calculate effective price (after discount)
+    const salePrice = discount > 0 ? price * (1 - discount / 100) : price;
 
-    document.getElementById('breakdownPrice').textContent = `£${price.toFixed(2)}`;
+    const processingFee = salePrice * 0.03;
+    const platformFee = salePrice * 0.10;
+    const total = salePrice - processingFee - platformFee;
+
+    document.getElementById('breakdownPrice').textContent = `£${salePrice.toFixed(2)}`;
     document.getElementById('breakdownProcessing').textContent = `-£${processingFee.toFixed(2)}`;
     document.getElementById('breakdownPlatform').textContent = `-£${platformFee.toFixed(2)}`;
     document.getElementById('breakdownTotal').textContent = `£${total.toFixed(2)}`;
     document.getElementById('priceBreakdown').style.display = 'block';
+
+    // Update sale preview
+    if (discount > 0) {
+      document.getElementById('previewOriginal').textContent = `£${price.toFixed(2)}`;
+      document.getElementById('previewSale').textContent = `£${salePrice.toFixed(2)}`;
+      document.getElementById('previewDiscount').textContent = `-${discount}%`;
+      document.getElementById('salePreview').style.display = 'flex';
+    } else {
+      document.getElementById('salePreview').style.display = 'none';
+    }
   }
 
-  priceInput.addEventListener('input', updateBreakdown);
+  // Auto-select deal type when discount is entered
+  discountInput.addEventListener('input', () => {
+    const discount = parseInt(discountInput.value) || 0;
+    if (discount > 0 && dealTypeSelect.value === 'none') {
+      dealTypeSelect.value = 'percentage';
+    } else if (discount === 0) {
+      dealTypeSelect.value = 'none';
+    }
+    updatePriceDisplay();
+  });
+
+  priceInput.addEventListener('input', updatePriceDisplay);
+  dealTypeSelect.addEventListener('change', updatePriceDisplay);
 
   // Form submission
   document.getElementById('listingForm').addEventListener('submit', async (e) => {
@@ -1066,6 +1127,9 @@ export const prerender = false;
         sleeveCondition: formData.get('sleeveCondition'),
         conditionNotes: formData.get('conditionNotes'),
         price: parseFloat(formData.get('price')),
+        discountPercent: parseInt(formData.get('discountPercent')) || 0,
+        dealType: formData.get('dealType') || 'none',
+        dealDescription: formData.get('dealDescription') || '',
         description: formData.get('description'),
         images: imageUrls,
         tracks: uploadedTracks
@@ -1084,7 +1148,7 @@ export const prerender = false;
 
       // Publish if requested
       if (publish && createResult.listingId) {
-        status.textContent = 'Submitting for review...';
+        status.textContent = 'Publishing listing...';
         progress.style.width = '95%';
 
         await fetch('/api/vinyl/listing', {
@@ -1099,7 +1163,7 @@ export const prerender = false;
       }
 
       progress.style.width = '100%';
-      status.textContent = publish ? 'Listing submitted for review!' : 'Draft saved!';
+      status.textContent = publish ? 'Listing published!' : 'Draft saved!';
 
       setTimeout(() => {
         window.location.href = '/artist/vinyl';
@@ -1470,7 +1534,56 @@ export const prerender = false;
     transform: translateY(-50%);
     color: #999;
   }
+  .input-prefix .suffix {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+  }
   .input-prefix input { padding-left: 1.75rem; }
+  .input-prefix input:has(+ .suffix) { padding-right: 2.5rem; }
+
+  .sale-preview {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05));
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .sale-preview .sale-badge {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .sale-preview .original-price {
+    color: #6b7280;
+    text-decoration: line-through;
+    font-size: 1rem;
+  }
+
+  .sale-preview .sale-price {
+    color: #22c55e;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .sale-preview .discount-tag {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
 
   .price-breakdown {
     background: #252525;

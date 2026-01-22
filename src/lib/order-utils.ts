@@ -283,12 +283,18 @@ export async function processVinylCratesOrders(
       // 3. Get seller email and send notifications
       let sellerEmail = '';
       try {
-        // Try to get seller email from vinyl-sellers collection
-        const seller = await getDocument('vinyl-sellers', sellerId);
+        // Try to get seller email from vinylSellers collection (or vinyl-sellers for legacy)
+        let seller = await getDocument('vinylSellers', sellerId);
+        if (!seller) {
+          seller = await getDocument('vinyl-sellers', sellerId);
+        }
         if (seller) {
-          // Try to get email from users collection
+          sellerEmail = seller?.email || '';
+        }
+        // Also try users collection
+        if (!sellerEmail) {
           const user = await getDocument('users', sellerId);
-          sellerEmail = user?.email || seller?.email || '';
+          sellerEmail = user?.email || '';
         }
       } catch (e) {
         log.info('[order-utils] Could not fetch seller email');

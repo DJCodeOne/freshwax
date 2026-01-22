@@ -134,16 +134,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Get deals (listings with discounts)
     if (type === 'deals') {
+      // Query just by status (no orderBy to avoid needing composite index)
       const listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
         filters: [
           { field: 'status', op: 'EQUAL', value: 'published' }
         ],
-        orderBy: { field: 'publishedAt', direction: 'DESCENDING' },
-        limit: limit
+        limit: 200 // Fetch more since we'll filter
       });
 
-      // Filter for deals (discountPercent > 0)
-      const deals = listings.filter((l: any) => l.discountPercent && l.discountPercent > 0);
+      // Filter for deals (discountPercent > 0) and sort client-side
+      const deals = listings
+        .filter((l: any) => l.discountPercent && l.discountPercent > 0)
+        .sort((a: any, b: any) => {
+          const dateA = new Date(a.publishedAt || a.createdAt).getTime();
+          const dateB = new Date(b.publishedAt || b.createdAt).getTime();
+          return dateB - dateA;
+        })
+        .slice(0, limit);
 
       return new Response(JSON.stringify({
         success: true,
@@ -156,19 +163,34 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Default: Get published listings
-    const filters: any[] = [
-      { field: 'status', op: 'EQUAL', value: 'published' }
-    ];
+    // Query just by status (no orderBy to avoid needing composite index)
+    let listings: any[];
 
-    // Filter by seller collection
     if (collectionId) {
-      filters.push({ field: 'sellerId', op: 'EQUAL', value: collectionId });
+      // Filter by seller - just query by sellerId (single field)
+      listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
+        filters: [
+          { field: 'sellerId', op: 'EQUAL', value: collectionId }
+        ],
+        limit: 200
+      });
+      // Then filter for published status client-side
+      listings = listings.filter((l: any) => l.status === 'published');
+    } else {
+      // No collection filter - query by status
+      listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
+        filters: [
+          { field: 'status', op: 'EQUAL', value: 'published' }
+        ],
+        limit: 200
+      });
     }
 
-    const listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
-      filters,
-      orderBy: { field: 'publishedAt', direction: 'DESCENDING' },
-      limit: limit
+    // Sort client-side by publishedAt DESC
+    listings.sort((a: any, b: any) => {
+      const dateA = new Date(a.publishedAt || a.createdAt).getTime();
+      const dateB = new Date(b.publishedAt || b.createdAt).getTime();
+      return dateB - dateA;
     });
 
     // Client-side filter for genre (Firebase doesn't support multiple field filters easily)

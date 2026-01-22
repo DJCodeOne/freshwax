@@ -39,14 +39,30 @@ async function validateStock(items: any[]): Promise<{ available: boolean, unavai
           }
         }
       } else if (itemType === 'vinyl') {
-        // Check vinyl stock
-        const releaseId = item.releaseId || item.productId || item.id;
-        if (releaseId) {
-          const release = await getDocument('releases', releaseId);
-          if (release) {
-            const vinylStock = release.vinylStock ?? 0;
-            if (vinylStock < quantity) {
-              unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
+        // Check if this is a crates item (has sellerId, no releaseId) or release vinyl
+        if (item.sellerId && !item.releaseId) {
+          // Vinyl crates item - check if listing is still available
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (!listing) {
+              unavailableItems.push(`${item.name} - listing no longer exists`);
+            } else if (listing.status === 'sold') {
+              unavailableItems.push(`${item.name} - already sold`);
+            } else if (listing.status !== 'published') {
+              unavailableItems.push(`${item.name} - no longer available`);
+            }
+          }
+        } else {
+          // Release vinyl - check stock
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              const vinylStock = release.vinylStock ?? 0;
+              if (vinylStock < quantity) {
+                unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
+              }
             }
           }
         }
@@ -82,44 +98,59 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
           serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
         }
       } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
-        // Look up release price
-        const releaseId = item.releaseId || item.productId || item.id;
-        if (releaseId) {
-          const release = await getDocument('releases', releaseId);
-          if (release) {
-            if (itemType === 'vinyl') {
-              serverPrice = release.vinylPrice || release.price || item.price;
+        // Check if this is a vinyl crates item
+        if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
+          // Vinyl crates item - look up price from vinylListings
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (listing) {
+              serverPrice = listing.price || item.price;
+              // Store crates shipping cost (seller sets this)
+              item.cratesShippingCost = listing.shippingCost || 0;
+              item.isCratesItem = true;
+            }
+          }
+        } else {
+          // Look up release price
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              if (itemType === 'vinyl') {
+                serverPrice = release.vinylPrice || release.price || item.price;
 
-              // Also get shipping rates from release
-              item.vinylShippingUK = release.vinylShippingUK;
-              item.vinylShippingEU = release.vinylShippingEU;
-              item.vinylShippingIntl = release.vinylShippingIntl;
+                // Also get shipping rates from release
+                item.vinylShippingUK = release.vinylShippingUK;
+                item.vinylShippingEU = release.vinylShippingEU;
+                item.vinylShippingIntl = release.vinylShippingIntl;
 
-              // Get artist defaults as fallback
-              const artistId = release.artistId || release.userId || item.artistId;
-              if (artistId) {
-                item.artistId = artistId;
-                try {
-                  const artist = await getDocument('artists', artistId);
-                  if (artist) {
-                    item.artistVinylShippingUK = artist.vinylShippingUK;
-                    item.artistVinylShippingEU = artist.vinylShippingEU;
-                    item.artistVinylShippingIntl = artist.vinylShippingIntl;
-                    item.artistName = artist.artistName || artist.name;
+                // Get artist defaults as fallback
+                const artistId = release.artistId || release.userId || item.artistId;
+                if (artistId) {
+                  item.artistId = artistId;
+                  try {
+                    const artist = await getDocument('artists', artistId);
+                    if (artist) {
+                      item.artistVinylShippingUK = artist.vinylShippingUK;
+                      item.artistVinylShippingEU = artist.vinylShippingEU;
+                      item.artistVinylShippingIntl = artist.vinylShippingIntl;
+                      item.artistName = artist.artistName || artist.name;
+                    }
+                  } catch (e) {
+                    // Artist lookup failed, use defaults
                   }
-                } catch (e) {
-                  // Artist lookup failed, use defaults
                 }
+              } else if (itemType === 'track' && item.trackId) {
+                // Single track - find track price
+                const track = (release.tracks || []).find((t: any) =>
+                  t.id === item.trackId || t.trackId === item.trackId
+                );
+                serverPrice = track?.price || release.trackPrice || 0.99;
+              } else {
+                // Full release
+                serverPrice = release.price || release.digitalPrice || item.price;
               }
-            } else if (itemType === 'track' && item.trackId) {
-              // Single track - find track price
-              const track = (release.tracks || []).find((t: any) =>
-                t.id === item.trackId || t.trackId === item.trackId
-              );
-              serverPrice = track?.price || release.trackPrice || 0.99;
-            } else {
-              // Full release
-              serverPrice = release.price || release.digitalPrice || item.price;
             }
           }
         }
