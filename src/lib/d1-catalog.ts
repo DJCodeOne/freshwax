@@ -1438,3 +1438,48 @@ export async function d1GetAllVinylSellers(db: D1Database): Promise<any[]> {
     return [];
   }
 }
+
+// Get next available collection number
+export async function d1GetNextCollectionNumber(db: D1Database): Promise<number> {
+  try {
+    const result = await db.prepare(
+      `SELECT MAX(json_extract(data, '$.collectionNumber')) as max_num FROM vinyl_sellers`
+    ).first();
+
+    const maxNum = (result as any)?.max_num || 0;
+    return maxNum + 1;
+  } catch (e) {
+    console.error('[D1] Error getting next collection number:', e);
+    return 1; // Default to 1 if error
+  }
+}
+
+// Get vinyl seller by collection number (for public crates page)
+export async function d1GetVinylSellerByCollection(db: D1Database, collectionNumber: number): Promise<any | null> {
+  try {
+    const row = await db.prepare(
+      `SELECT data FROM vinyl_sellers WHERE json_extract(data, '$.collectionNumber') = ?`
+    ).bind(collectionNumber).first();
+
+    return row ? d1RowToVinylSeller(row as D1VinylSeller) : null;
+  } catch (e) {
+    console.error('[D1] Error getting vinyl seller by collection:', e);
+    return null;
+  }
+}
+
+// Get all vinyl sellers with collection numbers (for public crates sidebar)
+export async function d1GetAllCollections(db: D1Database): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT data FROM vinyl_sellers
+       WHERE json_extract(data, '$.collectionNumber') IS NOT NULL
+       ORDER BY json_extract(data, '$.collectionNumber') ASC`
+    ).all();
+
+    return (results || []).map((row: any) => d1RowToVinylSeller(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting all collections:', e);
+    return [];
+  }
+}

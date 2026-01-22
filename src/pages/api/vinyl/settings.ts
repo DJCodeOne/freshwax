@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
-import { d1GetVinylSeller, d1UpsertVinylSeller } from '../../../lib/d1-catalog';
+import { d1GetVinylSeller, d1UpsertVinylSeller, d1GetNextCollectionNumber } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { saSetDocument } from '../../../lib/firebase-service-account';
 
@@ -183,9 +183,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate and sanitize data
     const now = new Date().toISOString();
+    const db = env.DB;
 
-    const settings = {
+    // Check if user already has settings (to preserve collection number)
+    let existingSettings = null;
+    let collectionNumber = null;
+    let isNewSeller = false;
+
+    if (db) {
+      try {
+        existingSettings = await d1GetVinylSeller(db, userId);
+        if (existingSettings?.collectionNumber) {
+          collectionNumber = existingSettings.collectionNumber;
+        } else {
+          // New seller - assign next collection number
+          collectionNumber = await d1GetNextCollectionNumber(db);
+          isNewSeller = true;
+          console.log('[vinyl/settings POST] Assigning collection number:', collectionNumber);
+        }
+      } catch (e) {
+        console.error('[vinyl/settings POST] Error checking existing settings:', e);
+      }
+    }
+
+    const settings: any = {
       userId,
+      collectionNumber,
       // UK Shipping
       shippingSingle: Math.min(Math.max(parseFloat(body.shippingSingle) || 0, 0), MAX_SHIPPING),
       shippingAdditional: Math.min(Math.max(parseFloat(body.shippingAdditional) || 0, 0), MAX_SHIPPING),
@@ -206,14 +229,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       discogsUrl: (body.discogsUrl || '').trim().slice(0, 200),
       // Meta
       updatedAt: now,
-      createdAt: body.createdAt || now
+      createdAt: existingSettings?.createdAt || body.createdAt || now
     };
 
     let d1Success = false;
     let firebaseSuccess = false;
 
     // Write to D1 first (primary)
-    const db = env.DB;
     if (db) {
       try {
         d1Success = await d1UpsertVinylSeller(db, userId, settings);
@@ -255,6 +277,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       message: 'Settings saved',
+      collectionNumber: collectionNumber,
+      isNewSeller: isNewSeller,
       storage: { d1: d1Success, firebase: firebaseSuccess }
     }), {
       status: 200,

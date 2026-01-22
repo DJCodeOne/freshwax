@@ -136,6 +136,14 @@ export const prerender = false;
         <p class="section-desc">This info appears on your seller profile.</p>
 
         <div class="form-group">
+          <label>Your Collection</label>
+          <div class="collection-display" id="collectionDisplay">
+            <span class="collection-number" id="collectionNumber">—</span>
+            <span class="collection-hint">Auto-assigned when you save settings</span>
+          </div>
+        </div>
+
+        <div class="form-group">
           <label for="storeName">Store Name</label>
           <input type="text" id="storeName" name="storeName" maxlength="50" placeholder="Your store name">
         </div>
@@ -240,6 +248,13 @@ export const prerender = false;
         document.getElementById('estimatedDelivery').value = data.estimatedDelivery || '2-3';
         document.getElementById('dispatchTime').value = data.dispatchTime || '1_day';
 
+        // Collection number
+        if (data.collectionNumber) {
+          document.getElementById('collectionNumber').textContent = `Collection ${data.collectionNumber}`;
+          document.getElementById('collectionNumber').classList.add('assigned');
+          document.querySelector('.collection-hint').textContent = 'Your unique collection in Vinyl Crates';
+        }
+
         // Store info
         document.getElementById('storeName').value = data.storeName || '';
         document.getElementById('location').value = data.location || '';
@@ -307,6 +322,13 @@ export const prerender = false;
       }
 
       console.log('[settings] Saved to:', result.storage);
+
+      // Update collection number display if newly assigned
+      if (result.collectionNumber) {
+        document.getElementById('collectionNumber').textContent = `Collection ${result.collectionNumber}`;
+        document.getElementById('collectionNumber').classList.add('assigned');
+        document.querySelector('.collection-hint').textContent = 'Your unique collection in Vinyl Crates';
+      }
 
       // Show success
       successMessage.style.display = 'flex';
@@ -440,6 +462,31 @@ export const prerender = false;
     font-size: 0.8rem;
     color: #666;
     text-align: right;
+  }
+
+  .collection-display {
+    background: #252525;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .collection-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #666;
+  }
+
+  .collection-number.assigned {
+    color: #f97316;
+  }
+
+  .collection-hint {
+    font-size: 0.8rem;
+    color: #888;
   }
 
   .form-row {
