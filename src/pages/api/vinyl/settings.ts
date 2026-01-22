@@ -195,6 +195,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       shippingEuropeAdditional: Math.min(Math.max(parseFloat(body.shippingEuropeAdditional) || 0, 0), MAX_SHIPPING),
       shippingWorldwide: Math.min(Math.max(parseFloat(body.shippingWorldwide) || 0, 0), MAX_SHIPPING),
       shippingWorldwideAdditional: Math.min(Math.max(parseFloat(body.shippingWorldwideAdditional) || 0, 0), MAX_SHIPPING),
+      // Delivery options
+      deliveryMethod: body.deliveryMethod || 'royal_mail_signed',
+      estimatedDelivery: body.estimatedDelivery || '2-3',
+      dispatchTime: body.dispatchTime || '1_day',
       // Store Info
       storeName: (body.storeName || '').trim().slice(0, MAX_STORE_NAME),
       location: (body.location || '').trim().slice(0, MAX_LOCATION),

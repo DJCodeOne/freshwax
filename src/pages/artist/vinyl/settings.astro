@@ -8,7 +8,7 @@ export const prerender = false;
 <VinylDashboardLayout title="Seller Settings" activeSection="settings">
   <div class="settings-container">
     <!-- Loading State -->
-    <div id="loadingState" class="loading-state">
+    <div id="settingsLoadingState" class="loading-state">
       <div class="spinner"></div>
       <p>Loading settings...</p>
     </div>
@@ -44,6 +44,39 @@ export const prerender = false;
           <div class="example-row"><span>1 record:</span> <span id="example1">£0.00</span></div>
           <div class="example-row"><span>2 records:</span> <span id="example2">£0.00</span></div>
           <div class="example-row"><span>3 records:</span> <span id="example3">£0.00</span></div>
+        </div>
+
+        <div class="form-group">
+          <label for="deliveryMethod">Delivery Method</label>
+          <select id="deliveryMethod" name="deliveryMethod">
+            <option value="royal_mail_signed">Royal Mail Signed For</option>
+            <option value="royal_mail_tracked">Royal Mail Tracked</option>
+            <option value="royal_mail_standard">Royal Mail Standard</option>
+            <option value="courier">Courier (DPD, Evri, etc.)</option>
+            <option value="collection">Collection Only</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="estimatedDelivery">Estimated Delivery Time (UK)</label>
+          <select id="estimatedDelivery" name="estimatedDelivery">
+            <option value="1-2">1-2 working days</option>
+            <option value="2-3">2-3 working days</option>
+            <option value="3-5">3-5 working days</option>
+            <option value="5-7">5-7 working days</option>
+            <option value="7-10">7-10 working days</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="dispatchTime">Dispatch Time</label>
+          <select id="dispatchTime" name="dispatchTime">
+            <option value="same_day">Same day (if ordered before 2pm)</option>
+            <option value="1_day">Within 1 working day</option>
+            <option value="2_days">Within 2 working days</option>
+            <option value="3_days">Within 3 working days</option>
+            <option value="5_days">Within 5 working days</option>
+          </select>
         </div>
       </section>
 
@@ -153,7 +186,7 @@ export const prerender = false;
 
   let currentUser = null;
 
-  const loadingState = document.getElementById('loadingState');
+  const settingsLoadingState = document.getElementById('settingsLoadingState');
   const settingsForm = document.getElementById('settingsForm');
   const successMessage = document.getElementById('successMessage');
 
@@ -202,6 +235,11 @@ export const prerender = false;
           document.getElementById('internationalFields').style.display = 'block';
         }
 
+        // Delivery options
+        document.getElementById('deliveryMethod').value = data.deliveryMethod || 'royal_mail_signed';
+        document.getElementById('estimatedDelivery').value = data.estimatedDelivery || '2-3';
+        document.getElementById('dispatchTime').value = data.dispatchTime || '1_day';
+
         // Store info
         document.getElementById('storeName').value = data.storeName || '';
         document.getElementById('location').value = data.location || '';
@@ -242,6 +280,10 @@ export const prerender = false;
         shippingEuropeAdditional: parseFloat(document.getElementById('shippingEuropeAdditional').value) || 0,
         shippingWorldwide: parseFloat(document.getElementById('shippingWorldwide').value) || 0,
         shippingWorldwideAdditional: parseFloat(document.getElementById('shippingWorldwideAdditional').value) || 0,
+        // Delivery options
+        deliveryMethod: document.getElementById('deliveryMethod').value,
+        estimatedDelivery: document.getElementById('estimatedDelivery').value,
+        dispatchTime: document.getElementById('dispatchTime').value,
         // Store info
         storeName: document.getElementById('storeName').value.trim(),
         location: document.getElementById('location').value.trim(),
@@ -293,7 +335,7 @@ export const prerender = false;
     currentUser = user;
     await loadSettings(user.uid);
 
-    loadingState.style.display = 'none';
+    settingsLoadingState.style.display = 'none';
     settingsForm.style.display = 'block';
   });
 </script>
