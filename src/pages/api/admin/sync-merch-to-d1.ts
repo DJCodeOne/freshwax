@@ -26,9 +26,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Clear Firebase cache to get fresh data
     clearCache('merch');
+    clearCache('query');
+    clearCache('doc');
 
-    // Get all merch from Firebase
-    const merchItems = await queryCollection('merch', { limit: 500 });
+    // Get all merch from Firebase (skip cache to ensure fresh data)
+    const merchItems = await queryCollection('merch', { limit: 500, skipCache: true });
     console.log(`[sync-merch-to-d1] Found ${merchItems.length} items in Firebase`);
 
     // Get existing D1 merch IDs

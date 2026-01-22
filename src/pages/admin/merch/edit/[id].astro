@@ -40,7 +40,7 @@ if (Astro.request.method === 'POST') {
       description: formData.get('description') || '',
       category: formData.get('category') || 'general',
       productType: formData.get('productType') || 'other',
-      price: parseFloat(formData.get('price') as string) || 0,
+      retailPrice: parseFloat(formData.get('retailPrice') as string) || 0,
       costPrice: parseFloat(formData.get('costPrice') as string) || null,
       salePrice: parseFloat(formData.get('salePrice') as string) || null,
       onSale: formData.get('onSale') === 'on',
@@ -264,7 +264,7 @@ const getStockBadgeClass = (stock) => {
                 </div>
                 <div class="form-group">
                   <label class="form-label">Retail Price (£)</label>
-                  <input type="number" name="price" class="form-input" step="0.01" min="0" value={product.price ? product.price.toFixed(2) : ''} placeholder="25.00" required />
+                  <input type="number" name="retailPrice" class="form-input" step="0.01" min="0" value={product.retailPrice ? product.retailPrice.toFixed(2) : ''} placeholder="25.00" required />
                 </div>
                 <div class="form-group">
                   <label class="form-label">Sale Price (£)</label>
@@ -422,7 +422,7 @@ const getStockBadgeClass = (stock) => {
                   <span class="sale-price">{formatCurrency(product.salePrice)}</span>
                 ) : null}
                 <span class={product.onSale ? 'original-price strikethrough' : 'current-price'}>
-                  {formatCurrency(product.price)}
+                  {formatCurrency(product.retailPrice)}
                 </span>
               </div>
               <div class="preview-stock">

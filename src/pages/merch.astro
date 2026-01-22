@@ -170,22 +170,31 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
                 <div class="category-menu-item" data-category="" data-name="">
                   <span>All Categories</span>
                 </div>
-                {categoryGroupsArray.map(group => (
-                  <div class="category-menu-item has-submenu" data-category={group.slug}>
-                    <span>{group.label}</span>
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 0l4 4-4 4"/></svg>
-                    <div class="category-submenu">
-                      <div class="category-submenu-item" data-category={group.slug} data-name="">
-                        <span>All {group.label}</span>
-                      </div>
-                      {group.names.map(name => (
-                        <div class="category-submenu-item" data-category={group.slug} data-name={name}>
-                          <span>{name}</span>
-                        </div>
-                      ))}
+                {categoryGroupsArray.map(group => {
+                  // If only one supplier and it matches the category label, show as direct link
+                  const singleSupplier = group.names.length === 1 && group.names[0] === group.label;
+
+                  return singleSupplier ? (
+                    <div class="category-menu-item" data-category={group.slug} data-name={group.names[0]}>
+                      <span>{group.label}</span>
                     </div>
-                  </div>
-                ))}
+                  ) : (
+                    <div class="category-menu-item has-submenu" data-category={group.slug}>
+                      <span>{group.label}</span>
+                      <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 0l4 4-4 4"/></svg>
+                      <div class="category-submenu">
+                        <div class="category-submenu-item" data-category={group.slug} data-name="">
+                          <span>All {group.label}</span>
+                        </div>
+                        {group.names.map(name => (
+                          <div class="category-submenu-item" data-category={group.slug} data-name={name}>
+                            <span>{name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
             <input type="hidden" id="categoryFilter" value="" />

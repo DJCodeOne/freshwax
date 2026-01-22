@@ -2,9 +2,10 @@
 // Handles all stock operations: receive, adjust, transfer, reserve, sell
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv, clearAllMerchCache } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv, clearAllMerchCache, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
+import { d1UpsertMerch } from '../../lib/d1-catalog';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -293,6 +294,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     log.info('[update-stock]', operation + ':', previousStock, '->', newStock);
+
+    // Dual-write to D1 so stock changes reflect on merch page
+    const db = env?.DB;
+    if (db) {
+      try {
+        // Clear document cache first to get fresh data
+        clearCache(`doc:merch:${productId}`);
+        const updatedProduct = await getDocument('merch', productId);
+        if (updatedProduct) {
+          await d1UpsertMerch(db, productId, updatedProduct);
+          log.info('[update-stock] Also updated in D1');
+        }
+      } catch (d1Error) {
+        log.error('[update-stock] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
 
     // Clear merch caches so stock changes reflect immediately
     clearAllMerchCache();

@@ -131,6 +131,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.hasSizes = data.hasSizes;
       }
 
+      // Price updates
+      if (data.retailPrice !== undefined) {
+        updates.retailPrice = parseFloat(data.retailPrice) || 0;
+      }
+
+      if (data.costPrice !== undefined) {
+        updates.costPrice = parseFloat(data.costPrice) || 0;
+      }
+
+      if (data.salePrice !== undefined) {
+        updates.salePrice = data.salePrice ? parseFloat(data.salePrice) : null;
+      }
+
+      if (data.onSale !== undefined) {
+        updates.onSale = !!data.onSale;
+      }
+
       // Use service account for authorized write
       const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
@@ -161,6 +178,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updates);
+
+      // Clear document cache to ensure we get fresh data from Firebase
+      clearCache(`doc:merch:${productId}`);
 
       // Dual-write to D1 (secondary, non-blocking)
       const db = env?.DB;
@@ -393,6 +413,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     await saUpdateDocument(serviceAccountKey, projectId, 'merch', productId, updates);
+
+    // Clear document cache to ensure we get fresh data from Firebase
+    clearCache(`doc:merch:${productId}`);
 
     const updatedDoc = await getDocument('merch', productId);
     const updatedProduct = { id: productId, ...updatedDoc };
