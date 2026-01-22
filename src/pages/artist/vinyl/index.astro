@@ -53,7 +53,7 @@ export const prerender = false;
   </div>
 
   <!-- Loading State -->
-  <div id="loadingState" class="loading-state">
+  <div id="listingsLoadingState" class="listings-loading-state">
     <div class="spinner"></div>
     <p>Loading your listings...</p>
   </div>
@@ -110,7 +110,7 @@ export const prerender = false;
       updateStats();
       renderListings();
 
-      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('listingsLoadingState').style.display = 'none';
 
       if (allListings.length === 0) {
         document.getElementById('emptyState').style.display = 'flex';
@@ -120,7 +120,7 @@ export const prerender = false;
 
     } catch (error) {
       console.error('Error loading listings:', error);
-      document.getElementById('loadingState').innerHTML = `
+      document.getElementById('listingsLoadingState').innerHTML = `
         <div class="empty-icon">❌</div>
         <h3>Error loading listings</h3>
         <p>${error.message}</p>
@@ -340,8 +340,8 @@ export const prerender = false;
     gap: 1rem;
   }
 
-  .page-header h1 { margin: 0; font-size: 1.75rem; }
-  .subtitle { color: #666; margin: 0.25rem 0 0; }
+  .page-header h1 { margin: 0; font-size: 1.75rem; color: #fff; }
+  .subtitle { color: #888; margin: 0.25rem 0 0; }
 
   .btn {
     display: inline-flex;
@@ -352,11 +352,13 @@ export const prerender = false;
     font-weight: 600;
     text-decoration: none;
     border: none;
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .btn-primary { background: #000; color: #fff; }
-  .btn-primary:hover { background: #333; }
+  .btn-primary { background: #f97316; color: #fff; }
+  .btn-primary:hover { background: #ea580c; }
 
   .stats-grid {
     display: grid;
@@ -366,21 +368,22 @@ export const prerender = false;
   }
 
   .stat-card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
     padding: 1rem;
     text-align: center;
   }
 
   .stat-card.success { border-color: #16a34a; }
-  .stat-card.warning { border-color: #d97706; }
+  .stat-card.warning { border-color: #f97316; }
   .stat-card.info { border-color: #0284c7; }
 
-  .stat-value { font-size: 1.75rem; font-weight: 800; }
-  .stat-card.success .stat-value { color: #16a34a; }
-  .stat-card.warning .stat-value { color: #d97706; }
-  .stat-card.info .stat-value { color: #0284c7; }
-  .stat-label { font-size: 0.8rem; color: #666; margin-top: 0.25rem; }
+  .stat-value { font-size: 1.75rem; font-weight: 800; color: #fff; }
+  .stat-card.success .stat-value { color: #22c55e; }
+  .stat-card.warning .stat-value { color: #f97316; }
+  .stat-card.info .stat-value { color: #38bdf8; }
+  .stat-label { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
 
   .filter-bar {
     display: flex;
@@ -391,39 +394,50 @@ export const prerender = false;
     gap: 1rem;
   }
 
-  .filter-tabs { display: flex; gap: 0.5rem; }
+  .filter-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
   .filter-tab {
     padding: 0.5rem 1rem;
-    background: #f5f5f5;
-    border: none;
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 0.9rem;
+    color: #ccc;
+    transition: all 0.2s;
   }
 
-  .filter-tab.active { background: #000; color: #fff; }
+  .filter-tab:hover { background: #333; }
+  .filter-tab.active { background: #f97316; color: #fff; border-color: #f97316; }
 
   .search-box input {
     padding: 0.5rem 1rem;
-    border: 1px solid #ddd;
+    border: 1px solid #444;
+    border-radius: 6px;
     width: 250px;
     font-size: 0.9rem;
+    background: #252525;
+    color: #fff;
   }
 
-  .loading-state, .empty-state {
+  .search-box input::placeholder { color: #666; }
+  .search-box input:focus { outline: none; border-color: #f97316; }
+
+  .listings-loading-state, .empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 4rem 2rem;
     text-align: center;
+    color: #888;
   }
 
   .spinner {
     width: 40px;
     height: 40px;
-    border: 3px solid #e5e5e5;
-    border-top-color: #000;
+    border: 3px solid #333;
+    border-top-color: #f97316;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
     margin-bottom: 1rem;
@@ -432,8 +446,8 @@ export const prerender = false;
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
-  .empty-state h3 { margin: 0 0 0.5rem; }
-  .empty-state p { color: #666; margin: 0 0 1.5rem; }
+  .empty-state h3 { margin: 0 0 0.5rem; color: #fff; }
+  .empty-state p { color: #888; margin: 0 0 1.5rem; }
 
   .listings-grid {
     display: grid;
@@ -442,19 +456,23 @@ export const prerender = false;
   }
 
   .listing-card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
     overflow: hidden;
-    transition: box-shadow 0.2s;
+    transition: all 0.2s;
   }
 
-  .listing-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .listing-card:hover {
+    border-color: #f97316;
+    box-shadow: 0 4px 20px rgba(249, 115, 22, 0.15);
+  }
 
   .listing-image {
     aspect-ratio: 1;
     background-size: cover;
     background-position: center;
-    background-color: #f5f5f5;
+    background-color: #252525;
     position: relative;
   }
 
@@ -462,17 +480,18 @@ export const prerender = false;
     position: absolute;
     top: 0.75rem;
     left: 0.75rem;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
-    background: #000;
+    background: #333;
     color: #fff;
+    border-radius: 4px;
   }
 
   .status-badge.success { background: #16a34a; }
-  .status-badge.warning { background: #d97706; }
-  .status-badge.secondary { background: #666; }
+  .status-badge.warning { background: #f97316; }
+  .status-badge.secondary { background: #555; }
   .status-badge.info { background: #0284c7; }
 
   .listing-info { padding: 1rem; }
@@ -481,6 +500,7 @@ export const prerender = false;
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
+    color: #fff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -488,7 +508,7 @@ export const prerender = false;
 
   .listing-info .title {
     margin: 0.25rem 0 0.75rem;
-    color: #666;
+    color: #888;
     font-size: 0.9rem;
     white-space: nowrap;
     overflow: hidden;
@@ -504,12 +524,13 @@ export const prerender = false;
 
   .condition {
     font-size: 0.8rem;
-    color: #666;
-    background: #f5f5f5;
+    color: #888;
+    background: #252525;
     padding: 0.25rem 0.5rem;
+    border-radius: 4px;
   }
 
-  .price { font-weight: 700; }
+  .price { font-weight: 700; color: #f97316; }
 
   .actions {
     display: flex;
@@ -520,19 +541,23 @@ export const prerender = false;
   .btn-sm {
     padding: 0.35rem 0.75rem;
     font-size: 0.8rem;
-    background: #f5f5f5;
+    background: #333;
     border: none;
+    border-radius: 4px;
     cursor: pointer;
     text-decoration: none;
-    color: #333;
+    color: #fff;
+    transition: all 0.2s;
   }
 
-  .btn-sm:hover { background: #e5e5e5; }
+  .btn-sm:hover { background: #444; }
   .btn-sm.btn-success { background: #16a34a; color: #fff; }
+  .btn-sm.btn-success:hover { background: #15803d; }
   .btn-sm.btn-danger { background: #dc2626; color: #fff; }
+  .btn-sm.btn-danger:hover { background: #b91c1c; }
 
   .sold-label {
-    color: #16a34a;
+    color: #22c55e;
     font-weight: 600;
   }
 
@@ -542,7 +567,7 @@ export const prerender = false;
 
   @media (max-width: 600px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .filter-bar { flex-direction: column; }
+    .filter-bar { flex-direction: column; align-items: stretch; }
     .filter-tabs { flex-wrap: wrap; }
     .search-box input { width: 100%; }
   }
