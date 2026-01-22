@@ -19,7 +19,9 @@ const MAX_IMAGES = 6;
 // Valid condition grades (Goldmine scale)
 const VALID_CONDITIONS = ['M', 'NM', 'VG+', 'VG', 'G+', 'G', 'F', 'P'];
 const VALID_FORMATS = ['LP', '12"', '10"', '7"', 'Box Set', 'EP', 'Compilation', 'Other'];
-const VALID_STATUSES = ['draft', 'pending', 'published', 'sold', 'removed'];
+const VALID_STATUSES = ['draft', 'published', 'sold', 'removed'];
+const MAX_DISCOUNT = 90; // Max 90% discount
+const VALID_DEAL_TYPES = ['none', 'percentage', 'collection_deal', 'clearance'];
 
 // Generate unique listing ID
 function generateListingId(): string {
@@ -252,6 +254,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           audioSampleDuration: track.audioSampleDuration || null
         }));
 
+        // Process discount/deal info
+        const discountPercent = Math.min(Math.max(parseInt(data.discountPercent) || 0, 0), MAX_DISCOUNT);
+        const dealType = VALID_DEAL_TYPES.includes(data.dealType) ? data.dealType : 'none';
+        const originalPrice = Math.round(data.price * 100) / 100;
+        const salePrice = discountPercent > 0 ? Math.round(originalPrice * (1 - discountPercent / 100) * 100) / 100 : originalPrice;
+
         const listing = {
           id: newId,
           sellerId,
@@ -266,7 +274,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           mediaCondition: data.mediaCondition,
           sleeveCondition: data.sleeveCondition,
           conditionNotes: (data.conditionNotes || '').trim().slice(0, 500),
-          price: Math.round(data.price * 100) / 100,
+          price: salePrice,
+          originalPrice: originalPrice,
+          discountPercent: discountPercent,
+          dealType: dealType,
+          dealDescription: (data.dealDescription || '').trim().slice(0, 200),
           shippingCost: Math.round((data.shippingCost || 0) * 100) / 100,
           description: (data.description || '').trim().slice(0, MAX_DESCRIPTION_LENGTH),
           images: (data.images || []).slice(0, MAX_IMAGES),
@@ -331,7 +343,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const allowedFields = [
           'title', 'artist', 'label', 'catalogNumber', 'format', 'releaseYear',
           'genre', 'mediaCondition', 'sleeveCondition', 'conditionNotes',
-          'price', 'shippingCost', 'description', 'images', 'tracks', 'audioSampleUrl', 'audioSampleDuration'
+          'shippingCost', 'description', 'images', 'tracks', 'audioSampleUrl', 'audioSampleDuration',
+          'dealType', 'dealDescription'
         ];
 
         // If tracks are being updated, sanitize them
@@ -349,6 +362,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (data[field] !== undefined) {
             updateData[field] = data[field];
           }
+        }
+
+        // Handle price and discount updates together
+        if (data.price !== undefined || data.discountPercent !== undefined) {
+          const newPrice = data.price !== undefined ? parseFloat(data.price) : existing.originalPrice || existing.price;
+          const newDiscount = data.discountPercent !== undefined
+            ? Math.min(Math.max(parseInt(data.discountPercent) || 0, 0), MAX_DISCOUNT)
+            : existing.discountPercent || 0;
+
+          updateData.originalPrice = Math.round(newPrice * 100) / 100;
+          updateData.discountPercent = newDiscount;
+          updateData.price = newDiscount > 0
+            ? Math.round(newPrice * (1 - newDiscount / 100) * 100) / 100
+            : Math.round(newPrice * 100) / 100;
+        }
+
+        // Validate deal type if provided
+        if (data.dealType !== undefined) {
+          updateData.dealType = VALID_DEAL_TYPES.includes(data.dealType) ? data.dealType : 'none';
         }
 
         // Validate if price/conditions changed
@@ -393,13 +425,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         }
 
+        // Go live immediately - no approval needed
         await updateDocument('vinylListings', listingId, {
-          status: 'pending', // Goes to admin for approval
-          submittedAt: new Date().toISOString(),
+          status: 'published',
+          publishedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing submitted for review' }), {
+        return new Response(JSON.stringify({ success: true, message: 'Listing is now live!' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });

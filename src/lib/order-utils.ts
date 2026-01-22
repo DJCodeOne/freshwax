@@ -1,8 +1,9 @@
 // src/lib/order-utils.ts
 // Shared order creation utilities for PayPal and Stripe payment flows
 
-import { getDocument, updateDocument, addDocument, clearCache } from './firebase-rest';
+import { getDocument, updateDocument, addDocument, clearCache, setDocument } from './firebase-rest';
 import { d1UpsertMerch } from './d1-catalog';
+import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -191,6 +192,154 @@ export async function updateVinylStock(items: any[], orderNumber: string, orderI
       } catch (stockErr) {
         console.error('[order-utils] Vinyl stock update error:', stockErr);
       }
+    }
+  }
+}
+
+// Process vinyl crates orders (marketplace items from sellers)
+// Creates order records for sellers, marks listings as sold, and sends notifications
+export async function processVinylCratesOrders(
+  items: any[],
+  orderNumber: string,
+  orderId: string,
+  customer: { email: string; firstName: string; lastName: string },
+  shipping: any,
+  env?: any,
+  idToken?: string
+): Promise<void> {
+  const now = new Date().toISOString();
+
+  // Filter for crates items (have sellerId - these are marketplace items, not new releases)
+  const cratesItems = items.filter(item =>
+    item.type === 'vinyl' && item.sellerId && !item.releaseId
+  );
+
+  if (cratesItems.length === 0) {
+    log.info('[order-utils] No vinyl crates items to process');
+    return;
+  }
+
+  log.info('[order-utils] Processing', cratesItems.length, 'vinyl crates items');
+
+  for (const item of cratesItems) {
+    try {
+      const listingId = item.id;
+      const sellerId = item.sellerId;
+      const sellerName = item.sellerName || 'Unknown Seller';
+
+      log.info('[order-utils] Processing crates item:', item.title, 'from seller:', sellerName);
+
+      // 1. Mark the listing as sold
+      try {
+        await updateDocument('vinylListings', listingId, {
+          status: 'sold',
+          soldAt: now,
+          soldOrderNumber: orderNumber,
+          soldOrderId: orderId,
+          soldTo: customer.email,
+          updatedAt: now
+        });
+        log.info('[order-utils] ✓ Listing marked as sold:', listingId);
+      } catch (markSoldErr) {
+        console.error('[order-utils] Failed to mark listing as sold:', markSoldErr);
+      }
+
+      // 2. Create vinyl order record for the seller
+      const vinylOrder = {
+        orderId: orderId,
+        orderNumber: orderNumber,
+        listingId: listingId,
+        sellerId: sellerId,
+        sellerName: sellerName,
+        title: item.title || item.name,
+        artist: item.artist,
+        price: item.price,
+        originalPrice: item.originalPrice || item.price,
+        discountPercent: item.discountPercent || 0,
+        shippingCost: item.shippingCost || 0,
+        format: item.format,
+        condition: item.condition,
+        image: item.image,
+        buyer: {
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          name: `${customer.firstName} ${customer.lastName}`
+        },
+        shipping: shipping,
+        status: 'pending', // Seller needs to ship
+        createdAt: now,
+        updatedAt: now
+      };
+
+      try {
+        const vinylOrderId = `vo_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+        await setDocument('vinylOrders', vinylOrderId, vinylOrder);
+        log.info('[order-utils] ✓ Vinyl order created:', vinylOrderId);
+      } catch (orderErr) {
+        console.error('[order-utils] Failed to create vinyl order:', orderErr);
+      }
+
+      // 3. Get seller email and send notifications
+      let sellerEmail = '';
+      try {
+        // Try to get seller email from vinyl-sellers collection
+        const seller = await getDocument('vinyl-sellers', sellerId);
+        if (seller) {
+          // Try to get email from users collection
+          const user = await getDocument('users', sellerId);
+          sellerEmail = user?.email || seller?.email || '';
+        }
+      } catch (e) {
+        log.info('[order-utils] Could not fetch seller email');
+      }
+
+      // Send seller notification
+      if (sellerEmail) {
+        try {
+          await sendVinylOrderSellerEmail(
+            sellerEmail,
+            sellerName,
+            {
+              orderNumber,
+              itemTitle: item.title || item.name,
+              itemArtist: item.artist,
+              price: item.price,
+              buyerName: `${customer.firstName} ${customer.lastName}`,
+              buyerEmail: customer.email,
+              shippingAddress: shipping
+            },
+            env
+          );
+          log.info('[order-utils] ✓ Seller email sent to:', sellerEmail);
+        } catch (emailErr) {
+          console.error('[order-utils] Seller email failed:', emailErr);
+        }
+      }
+
+      // Send admin notification
+      try {
+        await sendVinylOrderAdminEmail(
+          {
+            orderNumber,
+            sellerId,
+            sellerName,
+            sellerEmail: sellerEmail || 'unknown',
+            itemTitle: item.title || item.name,
+            itemArtist: item.artist,
+            price: item.price,
+            buyerName: `${customer.firstName} ${customer.lastName}`,
+            buyerEmail: customer.email
+          },
+          env
+        );
+        log.info('[order-utils] ✓ Admin email sent');
+      } catch (adminEmailErr) {
+        console.error('[order-utils] Admin email failed:', adminEmailErr);
+      }
+
+    } catch (err) {
+      console.error('[order-utils] Error processing crates item:', err);
     }
   }
 }
@@ -783,6 +932,17 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
 
     // Update stock for vinyl items
     await updateVinylStock(order.items, orderNumber, orderRef.id, idToken);
+
+    // Process vinyl crates orders (marketplace items from sellers)
+    await processVinylCratesOrders(
+      order.items,
+      orderNumber,
+      orderRef.id,
+      order.customer,
+      order.shipping,
+      env,
+      idToken
+    );
 
     // Send confirmation email
     console.log('[createOrder] Sending confirmation email...');

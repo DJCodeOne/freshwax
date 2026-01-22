@@ -32,6 +32,17 @@ export const prerender = false;
         <div class="loading">Loading applications...</div>
       </div>
     </div>
+
+    <!-- Vinyl Listings Section -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Vinyl Listings</h2>
+        <button class="refresh-btn" id="refresh-vinyl">↻ Refresh</button>
+      </div>
+      <div id="vinyl-listings" class="requests-list">
+        <div class="loading">Loading vinyl listings...</div>
+      </div>
+    </div>
   </div>
 </AdminLayout>
 
@@ -206,6 +217,64 @@ export const prerender = false;
     padding: 2rem;
     color: #ef4444;
   }
+
+  /* Vinyl card styles */
+  .vinyl-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .vinyl-preview {
+    flex-shrink: 0;
+  }
+
+  .vinyl-thumb {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .vinyl-thumb-placeholder {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0.5rem;
+    font-size: 2rem;
+  }
+
+  .vinyl-artist {
+    font-size: 0.9rem;
+    color: #f97316;
+    margin-bottom: 0.375rem;
+  }
+
+  .vinyl-meta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 0.375rem;
+  }
+
+  .vinyl-condition {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 0.125rem 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+  }
+
+  .vinyl-price {
+    font-size: 0.8rem;
+    color: #22c55e;
+    font-weight: 600;
+  }
 </style>
 
 <script>
@@ -351,15 +420,98 @@ export const prerender = false;
     }
   }
 
+  async function loadVinylListings() {
+    const container = document.getElementById('vinyl-listings');
+
+    try {
+      const res = await fetch('/api/admin/vinyl-listings');
+      const data = await res.json();
+
+      if (!data.success) {
+        container.innerHTML = '<div class="error-state">Failed to load vinyl listings</div>';
+        return;
+      }
+
+      const listings = data.listings || [];
+
+      if (listings.length === 0) {
+        container.innerHTML = '<div class="empty-state"><span>📦</span><p>No pending vinyl listings</p></div>';
+        return;
+      }
+
+      container.innerHTML = listings.map(listing => `
+        <div class="request-card vinyl-card" data-vinyl-id="${listing.id}">
+          <div class="vinyl-preview">
+            ${listing.images && listing.images.length > 0
+              ? `<img src="${listing.images[0]}" alt="${listing.title}" class="vinyl-thumb" />`
+              : '<div class="vinyl-thumb-placeholder">📀</div>'}
+          </div>
+          <div class="request-info">
+            <div class="request-name">${listing.title || 'Untitled'}</div>
+            <div class="vinyl-artist">${listing.artist || 'Unknown Artist'}</div>
+            <div class="vinyl-meta">
+              <span class="request-type">${listing.format || 'LP'}</span>
+              <span class="vinyl-condition">${listing.mediaCondition || 'VG+'} / ${listing.sleeveCondition || 'VG+'}</span>
+              <span class="vinyl-price">£${(listing.price || 0).toFixed(2)}</span>
+            </div>
+            <div class="request-email">Seller: ${listing.sellerName || listing.sellerId || 'Unknown'}</div>
+            <div class="request-date">${listing.submittedAt ? new Date(listing.submittedAt).toLocaleString() : 'Unknown date'}</div>
+          </div>
+          <div class="request-actions">
+            <button class="btn-approve" onclick="handleVinyl('approve', '${listing.id}')">Approve</button>
+            <button class="btn-deny" onclick="handleVinyl('reject', '${listing.id}')">Reject</button>
+          </div>
+        </div>
+      `).join('');
+
+    } catch (err) {
+      console.error('Error loading vinyl listings:', err);
+      container.innerHTML = '<div class="error-state">Error loading vinyl listings</div>';
+    }
+  }
+
+  async function handleVinyl(action, listingId) {
+    const card = document.querySelector(`[data-vinyl-id="${listingId}"]`);
+    if (card) card.style.opacity = '0.5';
+
+    try {
+      const res = await fetch('/api/admin/vinyl-listings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, listingId })
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        if (card) card.remove();
+        const container = document.getElementById('vinyl-listings');
+        if (!container.querySelector('.request-card')) {
+          container.innerHTML = '<div class="empty-state"><span>📦</span><p>No pending vinyl listings</p></div>';
+        }
+      } else {
+        alert('Action failed: ' + (data.error || 'Unknown error'));
+        if (card) card.style.opacity = '1';
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Action failed');
+      if (card) card.style.opacity = '1';
+    }
+  }
+
   // Load on page load
   loadBypassRequests();
   loadPartnerApplications();
+  loadVinylListings();
 
   // Refresh buttons
   document.getElementById('refresh-bypass')?.addEventListener('click', loadBypassRequests);
   document.getElementById('refresh-partners')?.addEventListener('click', loadPartnerApplications);
+  document.getElementById('refresh-vinyl')?.addEventListener('click', loadVinylListings);
 
   // Make functions global
   window.handleBypass = handleBypass;
   window.handlePartner = handlePartner;
+  window.handleVinyl = handleVinyl;
 </script>

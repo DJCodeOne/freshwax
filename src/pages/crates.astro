@@ -1,9 +1,11 @@
 ---
 // src/pages/crates.astro
-// Crates - Vinyl marketplace for stockists to sell their collections
+// Vinyl marketplace - public browsing page
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+
+export const prerender = false;
 
 const faqs = [
   {
@@ -15,27 +17,15 @@ const faqs = [
     answer: "Just like buying a new release - add to bag, checkout, and the stockist ships directly to you. Each listing shows the seller, condition grading, and any notes about the record."
   },
   {
-    question: "How do I sell my vinyl on Crates?",
-    answer: "Register as a stockist, then use our uploader to list your records. Add images, audio samples, condition grades, and pricing. You handle shipping when orders come in."
-  },
-  {
     question: "What condition grading system do you use?",
     answer: "We use the standard Goldmine grading system: Mint (M), Near Mint (NM), Very Good Plus (VG+), Very Good (VG), Good (G), and Fair (F). Each listing includes detailed condition notes."
-  },
-  {
-    question: "Is there a fee for selling?",
-    answer: "Fresh Wax takes a small commission on sales. Contact us for current rates and to set up your stockist account."
-  },
-  {
-    question: "How do seller reviews work?",
-    answer: "After receiving their order, buyers can leave a rating and review for the stockist. This helps build trust and gives future customers confidence when buying from you."
   }
 ];
 ---
 
 <Layout
   title="Crates - Vinyl Marketplace"
-  description="Buy and sell vinyl on Fresh Wax Crates. Browse records from stockists and collectors with detailed condition grades, audio samples, and direct checkout."
+  description="Buy vinyl on Fresh Wax Crates. Browse records from stockists and collectors with detailed condition grades, audio samples, and direct checkout."
   faqs={faqs}
 >
   <Header />
@@ -54,135 +44,87 @@ const faqs = [
       </div>
     </section>
 
-    <!-- Coming Soon Section -->
-    <section class="coming-soon">
-      <div class="coming-soon-content">
-        <div class="coming-soon-icon">📦</div>
-        <h2>Coming Soon</h2>
-        <p>We're building a vinyl marketplace where stockists, record shops, and collectors can list their records for sale. Think Discogs, but integrated directly into Fresh Wax - same checkout, same trust.</p>
-
-        <div class="features-grid">
-          <div class="feature">
-            <div class="feature-icon">📸</div>
-            <h3>Full Listings</h3>
-            <p>Photos, audio samples, condition grades, and detailed notes for every record</p>
+    <!-- Main Content -->
+    <div class="crates-layout">
+      <!-- Collections Sidebar -->
+      <aside class="collections-sidebar">
+        <div class="sidebar-inner">
+          <div class="sidebar-header">
+            <div class="sidebar-title">Collections</div>
+            <p class="sidebar-subtitle" id="collectionCount">Loading...</p>
           </div>
-          <div class="feature">
-            <div class="feature-icon">⭐</div>
-            <h3>Condition Grading</h3>
-            <p>Goldmine standard grading from Mint to Fair - know exactly what you're buying</p>
+
+          <nav class="collection-nav" id="collectionNav">
+            <button class="collection-nav-btn active" data-collection="all">
+              <div class="collection-nav-content">
+                <span class="collection-name">All Vinyl</span>
+                <span class="collection-count" id="allCount">0</span>
+              </div>
+              <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+
+            <button class="collection-nav-btn deals-btn" data-collection="deals">
+              <div class="collection-nav-content">
+                <span class="collection-name">Special Deals</span>
+                <span class="collection-count deals-badge" id="dealsCount">0</span>
+              </div>
+              <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+
+            <div class="sidebar-divider"></div>
+
+            <div id="sellerCollections">
+              <div class="loading-collections">Loading collections...</div>
+            </div>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- Main Listings Content -->
+      <section class="listings-section">
+        <div class="section-header">
+          <div class="header-content">
+            <div class="header-text">
+              <h2 class="section-title" id="sectionTitle">All Vinyl</h2>
+              <p class="section-subtitle"><span id="listingCount">0</span> records available</p>
+            </div>
+            <a href="/artist/vinyl" class="sell-btn">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+              </svg>
+              Sell Your Vinyl
+            </a>
           </div>
-          <div class="feature">
-            <div class="feature-icon">🛒</div>
-            <h3>Easy Checkout</h3>
-            <p>Same bag, same checkout as new releases - stockist ships direct to you</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">💬</div>
-            <h3>Seller Reviews</h3>
-            <p>Buyers rate their experience - build confidence with verified feedback on every stockist</p>
+        </div>
+
+        <!-- Mobile Collection Filter -->
+        <div class="collection-filter-mobile">
+          <div class="filter-scroll" id="mobileFilters">
+            <button class="filter-btn active" data-collection="all">All</button>
+            <button class="filter-btn deals-filter" data-collection="deals">Deals</button>
           </div>
         </div>
 
-        <div class="notify-section">
-          <h3>Get Notified</h3>
-          <p>Be the first to know when Crates launches.</p>
-          <a href="/newsletter" class="notify-btn">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            Subscribe to Newsletter
-          </a>
+        <!-- Listings Grid -->
+        <div class="listings-grid" id="listingsGrid">
+          <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Loading vinyl...</p>
+          </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Why Crates Section -->
-    <section class="why-section">
-      <h2>Why Sell With Us?</h2>
-      <div class="why-grid">
-        <div class="why-card">
-          <div class="why-number">01</div>
-          <h3>Targeted Audience</h3>
-          <p>Your records go straight to jungle and D&B heads who are actively buying. No time-wasters, just serious collectors.</p>
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-icon">📦</div>
+          <h3>No Vinyl Found</h3>
+          <p>Check back soon for new listings!</p>
         </div>
-        <div class="why-card">
-          <div class="why-number">02</div>
-          <h3>Quick Uploads</h3>
-          <p>Simple uploader - add photos, audio samples, price and condition. Images auto-resize for web. List records in seconds.</p>
-        </div>
-        <div class="why-card">
-          <div class="why-number">03</div>
-          <h3>Build Your Rep</h3>
-          <p>Buyers leave reviews after purchase. Good service means good ratings, and good ratings mean more sales.</p>
-        </div>
-        <div class="why-card">
-          <div class="why-number">04</div>
-          <h3>You Ship Direct</h3>
-          <p>When an order comes in, you pack and post. Keep your margins healthy with no middleman handling.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Seller Dashboard Section -->
-    <section class="dashboard-section">
-      <h2>Your Vinyl Dashboard</h2>
-      <p class="dashboard-intro">Once approved, you get full access to your own seller dashboard with everything you need to manage your inventory and sales.</p>
-
-      <div class="dashboard-grid">
-        <div class="dashboard-card">
-          <div class="dashboard-icon">📤</div>
-          <h3>Upload New Items</h3>
-          <p>Quick and simple uploader. Add photos (auto-resized for web), audio samples, condition grades, pricing, and notes. Get your records listed fast.</p>
-        </div>
-        <div class="dashboard-card">
-          <div class="dashboard-icon">📦</div>
-          <h3>Manage Inventory</h3>
-          <p>View all your listings in one place. Edit prices, update conditions, mark items as sold, or remove listings. Full control over your stock.</p>
-        </div>
-        <div class="dashboard-card">
-          <div class="dashboard-icon">💷</div>
-          <h3>Track Sales</h3>
-          <p>See your orders as they come in. View buyer details, shipping addresses, and order history. Know exactly what needs posting.</p>
-        </div>
-        <div class="dashboard-card">
-          <div class="dashboard-icon">⭐</div>
-          <h3>Monitor Reviews</h3>
-          <p>Keep track of your buyer feedback and ratings. See what's working and maintain your reputation on the platform.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- How It Works Section -->
-    <section class="how-it-works">
-      <h2>How To Get Started</h2>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h3>Register</h3>
-          <p>Create an account and select "Vinyl Seller" as your role during registration.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <h3>Get Approved</h3>
-          <p>We'll review your application and upgrade your account to full Vinyl Seller status.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3>Start Listing</h3>
-          <p>Access your dashboard, upload your first records, and start selling to the community.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- For Stockists Section -->
-    <section class="artists-section">
-      <div class="artists-content">
-        <h2>Want To Sell Your Vinyl?</h2>
-        <p>Whether you're a record shop with stock to shift or a collector trimming the collection, we'd love to have you on board. Register your interest and we'll be in touch when Crates launches.</p>
-        <a href="/contact" class="artists-btn">Register Interest</a>
-      </div>
-    </section>
+      </section>
+    </div>
   </main>
 
   <Footer />
@@ -197,9 +139,9 @@ const faqs = [
   /* Hero */
   .hero {
     background: linear-gradient(135deg, #1f2937 0%, #111827 50%, #1a0a0a 100%);
-    padding: 4rem 1.5rem;
+    padding: 3rem 1.5rem;
     text-align: center;
-    border-bottom: 4px solid #dc2626;
+    border-bottom: 4px solid #f97316;
   }
 
   .hero-content {
@@ -208,446 +150,679 @@ const faqs = [
   }
 
   .hero-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, #dc2626, #991b1b);
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
     border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 0 auto 1rem;
   }
 
   .hero-icon svg {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     color: #fff;
   }
 
   .hero h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 4rem;
+    font-size: 3.5rem;
     color: #fff;
     margin: 0;
     letter-spacing: 0.05em;
   }
 
   .hero h1 .red {
-    color: #dc2626;
+    color: #f97316;
   }
 
   .hero-subtitle {
-    font-size: 1.125rem;
+    font-size: 1rem;
     color: #9ca3af;
-    margin: 1rem 0 0 0;
+    margin: 0.75rem 0 0 0;
     text-transform: uppercase;
     letter-spacing: 0.15em;
   }
 
-  /* Coming Soon */
-  .coming-soon {
-    padding: 4rem 1.5rem;
-    max-width: 1000px;
+  /* Layout */
+  .crates-layout {
+    display: flex;
+    max-width: 1400px;
     margin: 0 auto;
+    padding: 0 1rem;
   }
 
-  .coming-soon-content {
+  /* Sidebar */
+  .collections-sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    padding: 1.5rem 0;
+    display: none;
+  }
+
+  @media (min-width: 1024px) {
+    .collections-sidebar {
+      display: block;
+    }
+  }
+
+  .sidebar-inner {
+    position: sticky;
+    top: 80px;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .sidebar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    color: #fff;
+    letter-spacing: 0.05em;
+  }
+
+  .sidebar-subtitle {
+    font-size: 0.8rem;
+    color: #9ca3af;
+    margin: 0.25rem 0 0 0;
+  }
+
+  .sidebar-divider {
+    height: 1px;
+    background: #374151;
+    margin: 0.5rem 0;
+  }
+
+  .collection-nav {
+    padding: 0.75rem;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+  }
+
+  .collection-nav-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 0.25rem;
+  }
+
+  .collection-nav-btn:hover {
+    background: rgba(249, 115, 22, 0.1);
+  }
+
+  .collection-nav-btn.active {
+    background: rgba(249, 115, 22, 0.15);
+    border-left: 3px solid #f97316;
+  }
+
+  .collection-nav-btn.deals-btn {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+  }
+
+  .collection-nav-btn.deals-btn:hover {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+  }
+
+  .collection-nav-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .collection-name {
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .collection-count {
+    background: rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+  }
+
+  .collection-count.deals-badge {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+  }
+
+  .collection-arrow {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .collection-nav-btn:hover .collection-arrow,
+  .collection-nav-btn.active .collection-arrow {
+    opacity: 1;
+    color: #f97316;
+  }
+
+  .loading-collections {
     text-align: center;
+    padding: 1rem;
+    color: #6b7280;
+    font-size: 0.85rem;
   }
 
-  .coming-soon-icon {
-    font-size: 4rem;
+  /* Main Content */
+  .listings-section {
+    flex: 1;
+    padding: 1.5rem 0 1.5rem 1.5rem;
+    min-width: 0;
+  }
+
+  @media (max-width: 1023px) {
+    .listings-section {
+      padding: 1.5rem 0;
+    }
+  }
+
+  .section-header {
     margin-bottom: 1.5rem;
   }
 
-  .coming-soon h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
-    color: #fff;
-    margin: 0 0 1rem 0;
-  }
-
-  .coming-soon > .coming-soon-content > p {
-    font-size: 1.125rem;
-    color: #9ca3af;
-    max-width: 600px;
-    margin: 0 auto 3rem;
-    line-height: 1.7;
-  }
-
-  /* Features Grid */
-  .features-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-  }
-
-  .feature {
-    background: linear-gradient(135deg, #1f2937, #111827);
-    border: 2px solid #374151;
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    transition: all 0.2s;
-  }
-
-  .feature:hover {
-    border-color: #dc2626;
-    transform: translateY(-4px);
-  }
-
-  .feature-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .feature h3 {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    font-size: 1.25rem;
-    color: #fff;
-    margin: 0 0 0.5rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  .feature p {
-    color: #9ca3af;
-    font-size: 0.9375rem;
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  /* Notify Section */
-  .notify-section {
-    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-    border: 2px solid #dc2626;
-    border-radius: 16px;
-    padding: 2.5rem;
-    max-width: 500px;
-    margin: 0 auto;
-    box-shadow: 0 0 30px rgba(220, 38, 38, 0.15);
-  }
-
-  .notify-section h3 {
-    font-family: 'Inter', sans-serif; font-weight: 700;
-    font-size: 1.75rem;
-    color: #fff;
-    margin: 0 0 0.5rem 0;
-  }
-
-  .notify-section p {
-    color: #9ca3af;
-    margin: 0 0 1.5rem 0;
-    font-size: 1rem;
-  }
-
-  .notify-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: linear-gradient(to right, #dc2626, #991b1b);
-    color: #fff;
-    padding: 1rem 2rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 1rem;
-    text-decoration: none;
-    transition: all 0.2s;
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
-  }
-
-  .notify-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(220, 38, 38, 0.4);
-  }
-
-  .notify-btn svg {
-    width: 1.25rem;
-    height: 1.25rem;
-  }
-
-  /* Why Section */
-  .why-section {
-    padding: 4rem 1.5rem;
-    background: linear-gradient(135deg, #1f2937, #111827);
-    border-top: 2px solid #374151;
-    border-bottom: 2px solid #374151;
-  }
-
-  .why-section h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    color: #fff;
-    text-align: center;
-    margin: 0 0 3rem 0;
-  }
-
-  .why-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .why-card {
-    background: linear-gradient(135deg, #111827, #0f172a);
-    border: 2px solid #374151;
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    transition: all 0.2s;
-  }
-
-  .why-card:hover {
-    border-color: #dc2626;
-    transform: translateY(-2px);
-  }
-
-  .why-number {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 3rem;
-    color: #dc2626;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
-  }
-
-  .why-card h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #fff;
-    margin: 0 0 0.75rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  .why-card p {
-    color: #9ca3af;
-    font-size: 0.9375rem;
-    margin: 0;
-    line-height: 1.6;
-  }
-
-  /* Artists Section */
-  .artists-section {
-    padding: 4rem 1.5rem;
-    text-align: center;
-    background: linear-gradient(to bottom, #0f172a, #111827);
-  }
-
-  .artists-content {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .artists-section h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    color: #fff;
-    margin: 0 0 1rem 0;
-  }
-
-  .artists-section p {
-    color: #9ca3af;
-    font-size: 1.125rem;
-    margin: 0 0 2rem 0;
-    line-height: 1.7;
-  }
-
-  .artists-btn {
-    display: inline-block;
-    background: transparent;
-    color: #fff;
-    border: 2px solid #fff;
-    padding: 1rem 2.5rem;
-    border-radius: 8px;
-    font-weight: 700;
-    font-size: 1rem;
-    text-decoration: none;
-    transition: all 0.2s;
-  }
-
-  .artists-btn:hover {
-    background: #fff;
-    color: #111827;
-  }
-
-  /* Dashboard Section */
-  .dashboard-section {
-    padding: 4rem 1.5rem;
-    background: linear-gradient(to bottom, #111827, #1f2937);
-  }
-
-  .dashboard-section h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    color: #fff;
-    text-align: center;
-    margin: 0 0 1rem 0;
-  }
-
-  .dashboard-intro {
-    text-align: center;
-    color: #9ca3af;
-    font-size: 1.125rem;
-    max-width: 600px;
-    margin: 0 auto 3rem;
-    line-height: 1.7;
-  }
-
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1.5rem;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .dashboard-card {
-    background: linear-gradient(135deg, #1f2937, #111827);
-    border: 2px solid #374151;
-    border-radius: 12px;
-    padding: 2rem;
-    text-align: center;
-    transition: all 0.2s;
-  }
-
-  .dashboard-card:hover {
-    border-color: #dc2626;
-    transform: translateY(-4px);
-  }
-
-  .dashboard-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .dashboard-card h3 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #fff;
-    margin: 0 0 0.75rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-
-  .dashboard-card p {
-    color: #9ca3af;
-    font-size: 0.875rem;
-    margin: 0;
-    line-height: 1.6;
-  }
-
-  /* How It Works Section */
-  .how-it-works {
-    padding: 4rem 1.5rem;
-    background: linear-gradient(135deg, #0f172a, #111827);
-    border-top: 2px solid #374151;
-    border-bottom: 2px solid #374151;
-  }
-
-  .how-it-works h2 {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    color: #fff;
-    text-align: center;
-    margin: 0 0 3rem 0;
-  }
-
-  .steps {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    max-width: 900px;
-    margin: 0 auto;
-  }
-
-  .step {
-    flex: 1;
-    text-align: center;
-    max-width: 280px;
-  }
-
-  .step-number {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #dc2626, #991b1b);
-    border-radius: 50%;
+  .header-content {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .section-title {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2rem;
     color: #fff;
-    margin: 0 auto 1rem;
-    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    margin: 0;
+    letter-spacing: 0.03em;
   }
 
-  .step h3 {
+  .section-subtitle {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin: 0.25rem 0 0 0;
+  }
+
+  .sell-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .sell-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+  }
+
+  /* Mobile Filters */
+  .collection-filter-mobile {
+    display: block;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  @media (min-width: 1024px) {
+    .collection-filter-mobile {
+      display: none;
+    }
+  }
+
+  .filter-scroll {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .filter-btn {
+    flex-shrink: 0;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #374151;
+    border-radius: 20px;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: #f97316;
+    color: #fff;
+  }
+
+  .filter-btn.deals-filter {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #22c55e;
+  }
+
+  /* Listings Grid */
+  .listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25rem;
+  }
+
+  @media (max-width: 640px) {
+    .listings-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .loading-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: #9ca3af;
+  }
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #374151;
+    border-top-color: #f97316;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    color: #fff;
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .empty-state p {
+    color: #9ca3af;
+    margin: 0;
+  }
+
+  /* Vinyl Card */
+  .vinyl-card {
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .vinyl-card:hover {
+    border-color: #f97316;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+
+  .vinyl-card-inner {
+    display: flex;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .vinyl-image {
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #0f172a;
+    position: relative;
+  }
+
+  .vinyl-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .vinyl-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    background: linear-gradient(135deg, #1f2937, #0f172a);
+  }
+
+  .sale-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .vinyl-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .vinyl-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.25rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .vinyl-artist {
+    font-size: 0.9rem;
+    color: #f97316;
+    margin: 0 0 0.5rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .vinyl-meta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+
+  .vinyl-format, .vinyl-condition {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    color: #9ca3af;
+  }
+
+  .vinyl-condition {
+    background: rgba(249, 115, 22, 0.1);
+    color: #f97316;
+  }
+
+  .vinyl-price-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: auto;
+  }
+
+  .vinyl-price {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #fff;
-    margin: 0 0 0.5rem 0;
-    text-transform: uppercase;
+    color: #22c55e;
   }
 
-  .step p {
+  .vinyl-original-price {
+    font-size: 0.9rem;
+    color: #6b7280;
+    text-decoration: line-through;
+  }
+
+  .vinyl-info-btn {
+    margin-left: auto;
+    padding: 0.5rem 0.75rem;
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: 6px;
+    color: #f97316;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .vinyl-info-btn:hover {
+    background: rgba(249, 115, 22, 0.2);
+  }
+
+  .vinyl-seller {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #374151;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
     color: #9ca3af;
-    font-size: 0.9375rem;
-    margin: 0;
-    line-height: 1.6;
   }
 
-  /* Responsive */
-  @media (max-width: 900px) {
-    .why-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .dashboard-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-
-    .steps {
-      flex-direction: column;
-      align-items: center;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .hero h1 {
-      font-size: 3rem;
-    }
-
-    .hero-subtitle {
-      font-size: 1rem;
-    }
-
-    .coming-soon h2 {
-      font-size: 2.25rem;
-    }
-
-    .features-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .why-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .dashboard-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .why-section h2,
-    .artists-section h2,
-    .dashboard-section h2,
-    .how-it-works h2 {
-      font-size: 2rem;
-    }
+  .vinyl-seller-name {
+    color: #fff;
   }
 </style>
+
+<script is:inline>
+  let allListings = [];
+  let allCollections = [];
+  let currentCollection = 'all';
+
+  async function loadCollections() {
+    try {
+      const res = await fetch('/api/vinyl/public?type=collections');
+      const data = await res.json();
+
+      if (data.success && data.collections) {
+        allCollections = data.collections;
+        renderCollections();
+      }
+    } catch (err) {
+      console.error('Error loading collections:', err);
+    }
+  }
+
+  function renderCollections() {
+    const container = document.getElementById('sellerCollections');
+    const mobileFilters = document.getElementById('mobileFilters');
+
+    if (allCollections.length === 0) {
+      container.innerHTML = '<div class="loading-collections">No collections yet</div>';
+      return;
+    }
+
+    // Desktop sidebar
+    container.innerHTML = allCollections.map(c => `
+      <button class="collection-nav-btn" data-collection="${c.id}">
+        <div class="collection-nav-content">
+          <span class="collection-name">Collection ${c.collectionNumber}${c.storeName ? ` - ${c.storeName}` : ''}</span>
+        </div>
+        <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+    `).join('');
+
+    // Mobile filters
+    const existingMobile = mobileFilters.querySelectorAll('.filter-btn:not([data-collection="all"]):not([data-collection="deals"])');
+    existingMobile.forEach(b => b.remove());
+
+    allCollections.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-btn';
+      btn.dataset.collection = c.id;
+      btn.textContent = `Collection ${c.collectionNumber}`;
+      mobileFilters.appendChild(btn);
+    });
+
+    // Update count
+    document.getElementById('collectionCount').textContent = `${allCollections.length} seller${allCollections.length !== 1 ? 's' : ''}`;
+
+    // Add click handlers
+    document.querySelectorAll('[data-collection]').forEach(btn => {
+      btn.addEventListener('click', () => selectCollection(btn.dataset.collection));
+    });
+  }
+
+  async function loadListings(collection = 'all') {
+    const grid = document.getElementById('listingsGrid');
+    const empty = document.getElementById('emptyState');
+
+    grid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading vinyl...</p></div>';
+    empty.style.display = 'none';
+
+    try {
+      let url = '/api/vinyl/public?type=listings';
+      if (collection === 'deals') {
+        url = '/api/vinyl/public?type=deals';
+      } else if (collection !== 'all') {
+        url += `&collection=${collection}`;
+      }
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data.success) {
+        allListings = data.listings || [];
+        renderListings();
+
+        // Update counts
+        document.getElementById('listingCount').textContent = allListings.length;
+        document.getElementById('allCount').textContent = allListings.length;
+
+        // Get deals count
+        const dealsCount = allListings.filter(l => l.discountPercent > 0).length;
+        document.getElementById('dealsCount').textContent = dealsCount;
+      } else {
+        grid.innerHTML = '';
+        empty.style.display = 'block';
+      }
+    } catch (err) {
+      console.error('Error loading listings:', err);
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+    }
+  }
+
+  function renderListings() {
+    const grid = document.getElementById('listingsGrid');
+    const empty = document.getElementById('emptyState');
+
+    if (allListings.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    empty.style.display = 'none';
+    grid.innerHTML = allListings.map(listing => {
+      const hasDiscount = listing.discountPercent && listing.discountPercent > 0;
+      const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : null;
+
+      return `
+        <article class="vinyl-card" data-id="${listing.id}" onclick="viewListing('${listing.id}')">
+          <div class="vinyl-card-inner">
+            <div class="vinyl-image">
+              ${imageUrl
+                ? `<img src="${imageUrl}" alt="${listing.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'vinyl-image-placeholder\\'>📀</div>'" />`
+                : '<div class="vinyl-image-placeholder">📀</div>'}
+              ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
+            </div>
+            <div class="vinyl-details">
+              <h3 class="vinyl-title">${listing.title || 'Untitled'}</h3>
+              <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
+              <div class="vinyl-meta">
+                <span class="vinyl-format">${listing.format || 'LP'}</span>
+                <span class="vinyl-condition">${listing.mediaCondition || 'VG+'} / ${listing.sleeveCondition || 'VG+'}</span>
+              </div>
+              <div class="vinyl-price-row">
+                <span class="vinyl-price">£${(listing.price || 0).toFixed(2)}</span>
+                ${hasDiscount && listing.originalPrice ? `<span class="vinyl-original-price">£${listing.originalPrice.toFixed(2)}</span>` : ''}
+                <button class="vinyl-info-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">Info</button>
+              </div>
+            </div>
+          </div>
+          <div class="vinyl-seller">
+            <span>Seller: <span class="vinyl-seller-name">${listing.sellerName || 'Unknown'}</span></span>
+            ${listing.genre ? `<span>${listing.genre}</span>` : ''}
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function selectCollection(collection) {
+    currentCollection = collection;
+
+    // Update active states
+    document.querySelectorAll('[data-collection]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.collection === collection);
+    });
+
+    // Update title
+    const title = document.getElementById('sectionTitle');
+    if (collection === 'all') {
+      title.textContent = 'All Vinyl';
+    } else if (collection === 'deals') {
+      title.textContent = 'Special Deals';
+    } else {
+      const col = allCollections.find(c => c.id === collection);
+      title.textContent = col ? `Collection ${col.collectionNumber}${col.storeName ? ` - ${col.storeName}` : ''}` : 'Collection';
+    }
+
+    loadListings(collection);
+  }
+
+  function viewListing(id) {
+    window.location.href = `/crates/${id}`;
+  }
+
+  // Initialize
+  loadCollections();
+  loadListings();
+</script>
