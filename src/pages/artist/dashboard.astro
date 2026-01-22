@@ -9,7 +9,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
-import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
+import { d1GetLedgerEntriesByArtist, d1GetMerchBySupplierId, d1GetMerchBySupplierName } from '../../lib/d1-catalog';
 import { getAdminUids } from '../../lib/admin';
 
 // Service account for ledger queries
@@ -232,36 +232,18 @@ if (partnerId) {
       }
 
       // Fetch merch stats (only if approved)
-      if (effectiveIsMerchSupplier && approved) {
+      // Uses D1 for merch data to reduce Firebase read quota costs
+      const db = env?.DB;
+      if (effectiveIsMerchSupplier && approved && db) {
         // Try multiple strategies to find products linked to this supplier
         let merchProducts: any[] = [];
 
-        // Strategy 1: Query by supplierId
-        merchProducts = await queryCollection('merch', {
-          filters: [{ field: 'supplierId', op: 'EQUAL', value: partnerId }]
-        });
+        // Strategy 1: Query by supplierId (from D1)
+        merchProducts = await d1GetMerchBySupplierId(db, partnerId);
 
-        // Strategy 2: If no results, try by supplier name
+        // Strategy 2: If no results, try by supplier name (from D1)
         if (merchProducts.length === 0 && partner.artistName) {
-          merchProducts = await queryCollection('merch', {
-            filters: [{ field: 'supplierName', op: 'EQUAL', value: partner.artistName }]
-          });
-        }
-
-        // Strategy 3: Check merch-suppliers collection for linked products
-        if (merchProducts.length === 0) {
-          try {
-            const supplierData = await getDocument('merch-suppliers', partnerId);
-            if (supplierData?.products && supplierData.products.length > 0) {
-              const productPromises = supplierData.products.slice(0, 50).map((pid: string) =>
-                getDocument('merch', pid)
-              );
-              const productDocs = await Promise.all(productPromises);
-              merchProducts = productDocs.filter((d): d is NonNullable<typeof d> => d !== null);
-            }
-          } catch (e) {
-            // Ignore errors from merch-suppliers lookup
-          }
+          merchProducts = await d1GetMerchBySupplierName(db, partner.artistName);
         }
 
         stats.merchProducts = merchProducts.length;

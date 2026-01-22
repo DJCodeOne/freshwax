@@ -1,11 +1,11 @@
 ---
 // src/pages/artist/vinyl/orders.astro
 // Vinyl seller's orders management page
-import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+import VinylDashboardLayout from '../../../layouts/VinylDashboardLayout.astro';
 export const prerender = false;
 ---
 
-<ProDashboardLayout title="Vinyl Orders" activeNav="vinyl">
+<VinylDashboardLayout title="Vinyl Orders" activeSection="orders">
   <div class="page-header">
     <div class="header-content">
       <h1>Vinyl Orders</h1>
@@ -90,7 +90,7 @@ export const prerender = false;
       </div>
     </div>
   </div>
-</ProDashboardLayout>
+</VinylDashboardLayout>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';

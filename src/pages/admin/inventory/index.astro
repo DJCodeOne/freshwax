@@ -52,14 +52,13 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     
     <div class="section">
       <div class="tabs">
-        <button class="tab active" data-tab="receive">Receive Stock</button>
-        <button class="tab" data-tab="stock">Stock Levels</button>
+        <button class="tab active" data-tab="stock">Stock Levels</button>
         <button class="tab" data-tab="stocktake">Stock Take</button>
         <button class="tab" data-tab="movements">Movement Log</button>
       </div>
       
-      <!-- Receive Stock Tab -->
-      <div class="tab-content active" id="tab-receive">
+      <!-- Receive Stock Tab (hidden - use admin/merch/manage instead) -->
+      <div class="tab-content" id="tab-receive" style="display:none;">
         <div class="receive-form">
           <div class="form-group product-search">
             <label class="form-label">Search Product</label>
@@ -109,7 +108,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       </div>
       
       <!-- Stock Levels Tab -->
-      <div class="tab-content" id="tab-stock">
+      <div class="tab-content active" id="tab-stock">
         <div class="filters">
           <div class="filter-group">
             <span class="filter-label">Filter:</span>
@@ -904,7 +903,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       // Filter products
       let filtered = allProducts;
       if (supplierFilter !== 'all') {
-        filtered = filtered.filter(p => (p.supplier || 'Fresh Wax') === supplierFilter);
+        filtered = filtered.filter(p => (p.supplier || p.supplierName || p.category || 'Fresh Wax') === supplierFilter);
       }
       if (categoryFilter !== 'all') {
         filtered = filtered.filter(p => (p.category || '').toLowerCase() === categoryFilter.toLowerCase());
@@ -916,10 +915,10 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         return;
       }
       
-      // Group by supplier
+      // Group by supplier (categoryName is used as supplier/brand name)
       const bySupplier = {};
       filtered.forEach(p => {
-        const supplier = p.supplier || 'Fresh Wax';
+        const supplier = p.supplier || p.supplierName || p.category || 'Fresh Wax';
         if (!bySupplier[supplier]) bySupplier[supplier] = [];
         bySupplier[supplier].push(p);
       });
@@ -1009,9 +1008,22 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
             variantKeys.forEach(vKey => {
               totalVariants++;
               const v = variantStock[vKey];
-              const stock = v.stock || 0;
+              // Handle both old (number) and new (object) formats
+              const stock = typeof v === 'number' ? v : (v.stock || 0);
               totalStock += stock;
-              const label = v.size || v.color || vKey;
+              // Parse label from object or key
+              let label = vKey;
+              if (typeof v === 'object') {
+                label = [v.size, v.color].filter(Boolean).join(' / ') || vKey;
+              } else {
+                // Parse from key format (e.g., "m_black" -> "M / Black")
+                const parts = vKey.split('_');
+                if (parts.length >= 1) {
+                  const size = parts[0].toUpperCase();
+                  const color = parts[1] ? parts[1].charAt(0).toUpperCase() + parts[1].slice(1) : '';
+                  label = [size !== 'DEFAULT' ? size : '', color].filter(Boolean).join(' / ') || vKey;
+                }
+              }
               const key = `${product.productId}_${vKey}`;
               const change = stockTakeChanges[key];
               const counted = change?.counted ?? '';
@@ -1019,10 +1031,11 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
               const variance = counted !== '' ? (parseInt(counted) - stock) : '';
               const varianceColor = variance > 0 ? '#22c55e' : (variance < 0 ? '#dc2626' : '#000');
               
+              const variantSku = typeof v === 'object' ? (v.sku || '-') : '-';
               html += `
                 <tr style="${trStyle}">
                   <td style="${tdStyle} ${sizeIndent}">${label}</td>
-                  <td style="${tdStyle} ${skuStyle}">${v.sku || '-'}</td>
+                  <td style="${tdStyle} ${skuStyle}">${variantSku}</td>
                   <td style="${tdStyle} text-align: center;">${stock}</td>
                   <td style="${tdStyle} text-align: center;">
                     <input type="number" style="${inputStyle}" 
@@ -1166,15 +1179,18 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     }
     
     // Populate supplier filter
+    // Note: categoryName is used as the supplier/brand name in this system
     function populateSupplierFilter() {
       const select = document.getElementById('supplierFilter');
       allSuppliers.clear();
-      
+
       allProducts.forEach(p => {
-        allSuppliers.add(p.supplier || 'Fresh Wax');
+        // categoryName is the primary supplier identifier, then fall back to others
+        const supplier = p.supplier || p.supplierName || p.category || 'Fresh Wax';
+        allSuppliers.add(supplier);
       });
-      
-      select.innerHTML = '<option value="all">All Suppliers</option>' + 
+
+      select.innerHTML = '<option value="all">All Suppliers</option>' +
         Array.from(allSuppliers).sort().map(s => `<option value="${s}">${s}</option>`).join('');
     }
     

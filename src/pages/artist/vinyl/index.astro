@@ -1,11 +1,11 @@
 ---
 // src/pages/artist/vinyl/index.astro
 // Vinyl seller's listings management page
-import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+import VinylDashboardLayout from '../../../layouts/VinylDashboardLayout.astro';
 export const prerender = false;
 ---
 
-<ProDashboardLayout title="My Vinyl Listings" activeNav="vinyl">
+<VinylDashboardLayout title="My Vinyl Listings" activeSection="listings">
   <div class="page-header">
     <div class="header-content">
       <h1>My Vinyl Listings</h1>
@@ -69,7 +69,7 @@ export const prerender = false;
   <!-- Listings Grid -->
   <div id="listingsGrid" class="listings-grid" style="display:none;">
   </div>
-</ProDashboardLayout>
+</VinylDashboardLayout>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';

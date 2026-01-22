@@ -453,6 +453,39 @@ export async function d1DeleteMerch(db: D1Database, id: string): Promise<boolean
   }
 }
 
+// Get merch by supplier ID (for artist dashboards)
+export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string): Promise<any[]> {
+  try {
+    // Query using JSON extraction for supplierId
+    const { results } = await db.prepare(
+      `SELECT data FROM merch
+       WHERE json_extract(data, '$.supplierId') = ?
+       ORDER BY created_at DESC`
+    ).bind(supplierId).all();
+
+    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting merch by supplier:', e);
+    return [];
+  }
+}
+
+// Get merch by supplier name (fallback for artist dashboards)
+export async function d1GetMerchBySupplierName(db: D1Database, supplierName: string): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT data FROM merch
+       WHERE json_extract(data, '$.supplierName') = ?
+       ORDER BY created_at DESC`
+    ).bind(supplierName).all();
+
+    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting merch by supplier name:', e);
+    return [];
+  }
+}
+
 // =============================================
 // COMMENTS
 // =============================================
@@ -1263,5 +1296,145 @@ export async function d1DeleteLedgerEntry(db: D1Database, id: string): Promise<b
   } catch (e) {
     console.error('[D1] Error deleting ledger entry:', e);
     return false;
+  }
+}
+
+// =============================================
+// VINYL SELLERS (settings for vinyl crate sellers)
+// D1 Primary, Firebase backup
+// =============================================
+
+export interface D1VinylSeller {
+  id: string;  // user_id
+  store_name: string | null;
+  location: string | null;
+  description: string | null;
+  discogs_url: string | null;
+  shipping_single: number;
+  shipping_additional: number;
+  ships_international: number;
+  shipping_europe: number;
+  shipping_europe_additional: number;
+  shipping_worldwide: number;
+  shipping_worldwide_additional: number;
+  data: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Convert vinyl seller document to D1 row
+export function vinylSellerToD1Row(id: string, doc: any): Partial<D1VinylSeller> {
+  return {
+    id,
+    store_name: doc.storeName || null,
+    location: doc.location || null,
+    description: doc.description || null,
+    discogs_url: doc.discogsUrl || null,
+    shipping_single: doc.shippingSingle || 0,
+    shipping_additional: doc.shippingAdditional || 0,
+    ships_international: doc.shipsInternational ? 1 : 0,
+    shipping_europe: doc.shippingEurope || 0,
+    shipping_europe_additional: doc.shippingEuropeAdditional || 0,
+    shipping_worldwide: doc.shippingWorldwide || 0,
+    shipping_worldwide_additional: doc.shippingWorldwideAdditional || 0,
+    data: JSON.stringify(doc),
+    updated_at: new Date().toISOString()
+  };
+}
+
+// Convert D1 row back to vinyl seller document
+export function d1RowToVinylSeller(row: D1VinylSeller): any {
+  try {
+    const doc = JSON.parse(row.data);
+    doc.id = row.id;
+    doc.userId = row.id;
+    return doc;
+  } catch (e) {
+    console.error('[D1] Error parsing vinyl seller data:', e);
+    return null;
+  }
+}
+
+// Get vinyl seller settings by user ID
+export async function d1GetVinylSeller(db: D1Database, userId: string): Promise<any | null> {
+  try {
+    const row = await db.prepare(
+      `SELECT data FROM vinyl_sellers WHERE id = ?`
+    ).bind(userId).first();
+
+    return row ? d1RowToVinylSeller(row as D1VinylSeller) : null;
+  } catch (e) {
+    console.error('[D1] Error getting vinyl seller:', e);
+    return null;
+  }
+}
+
+// Upsert vinyl seller settings
+export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: any): Promise<boolean> {
+  try {
+    const row = vinylSellerToD1Row(userId, doc);
+
+    await db.prepare(`
+      INSERT INTO vinyl_sellers (
+        id, store_name, location, description, discogs_url,
+        shipping_single, shipping_additional, ships_international,
+        shipping_europe, shipping_europe_additional,
+        shipping_worldwide, shipping_worldwide_additional,
+        data, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        store_name = excluded.store_name,
+        location = excluded.location,
+        description = excluded.description,
+        discogs_url = excluded.discogs_url,
+        shipping_single = excluded.shipping_single,
+        shipping_additional = excluded.shipping_additional,
+        ships_international = excluded.ships_international,
+        shipping_europe = excluded.shipping_europe,
+        shipping_europe_additional = excluded.shipping_europe_additional,
+        shipping_worldwide = excluded.shipping_worldwide,
+        shipping_worldwide_additional = excluded.shipping_worldwide_additional,
+        data = excluded.data,
+        updated_at = excluded.updated_at
+    `).bind(
+      row.id, row.store_name, row.location, row.description, row.discogs_url,
+      row.shipping_single, row.shipping_additional, row.ships_international,
+      row.shipping_europe, row.shipping_europe_additional,
+      row.shipping_worldwide, row.shipping_worldwide_additional,
+      row.data, doc.createdAt || new Date().toISOString(), row.updated_at
+    ).run();
+
+    console.log('[D1] Upserted vinyl seller:', userId);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error upserting vinyl seller:', e);
+    return false;
+  }
+}
+
+// Delete vinyl seller settings
+export async function d1DeleteVinylSeller(db: D1Database, userId: string): Promise<boolean> {
+  try {
+    await db.prepare('DELETE FROM vinyl_sellers WHERE id = ?').bind(userId).run();
+    console.log('[D1] Deleted vinyl seller:', userId);
+    return true;
+  } catch (e) {
+    console.error('[D1] Error deleting vinyl seller:', e);
+    return false;
+  }
+}
+
+// Get all vinyl sellers (for admin)
+export async function d1GetAllVinylSellers(db: D1Database): Promise<any[]> {
+  try {
+    const { results } = await db.prepare(
+      `SELECT data FROM vinyl_sellers ORDER BY updated_at DESC`
+    ).all();
+
+    return (results || []).map((row: any) => d1RowToVinylSeller(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error getting all vinyl sellers:', e);
+    return [];
   }
 }

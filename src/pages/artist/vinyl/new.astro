@@ -1,96 +1,163 @@
 ---
 // src/pages/artist/vinyl/new.astro
 // Create new vinyl listing page for sellers
-import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+import VinylDashboardLayout from '../../../layouts/VinylDashboardLayout.astro';
 export const prerender = false;
 ---
 
-<ProDashboardLayout title="List New Vinyl" activeNav="vinyl">
-  <div class="page-header">
-    <div class="header-content">
-      <a href="/artist/vinyl" class="back-link">← Back to My Listings</a>
-      <h1>List New Vinyl</h1>
-      <p class="subtitle">Add a record to your crate for sale</p>
-    </div>
-  </div>
+<VinylDashboardLayout title="List New Vinyl" activeSection="new">
+  <div class="form-container">
+    <form id="listingForm" class="listing-form">
+      <!-- Record Details Section - FIRST -->
+      <section class="form-section">
+        <h2>Record Details</h2>
 
-  <form id="listingForm" class="listing-form">
-    <!-- Images Section -->
-    <section class="form-section">
-      <h2>Photos</h2>
-      <p class="section-desc">Add up to 6 photos. First image is the cover. Show front, back, labels, and any flaws.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="artist">Artist <span class="required">*</span></label>
+            <input type="text" id="artist" name="artist" required maxlength="100" placeholder="e.g. Goldie">
+          </div>
+          <div class="form-group">
+            <label for="title">Title <span class="required">*</span></label>
+            <input type="text" id="title" name="title" required maxlength="100" placeholder="e.g. Timeless">
+          </div>
+        </div>
 
-      <div class="image-grid" id="imageGrid">
-        <div class="image-slot empty" data-index="0">
-          <input type="file" accept="image/*" class="image-input" id="imageInput0">
-          <label for="imageInput0" class="image-label">
-            <span class="plus">+</span>
-            <span class="text">Cover Photo</span>
-          </label>
-          <div class="image-preview"></div>
-          <button type="button" class="remove-btn" style="display:none;">×</button>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="label">Label</label>
+            <input type="text" id="label" name="label" maxlength="100" placeholder="e.g. Metalheadz">
+          </div>
+          <div class="form-group">
+            <label for="catalogNumber">Catalogue Number</label>
+            <input type="text" id="catalogNumber" name="catalogNumber" maxlength="50" placeholder="e.g. METH001">
+          </div>
         </div>
-        <div class="image-slot empty" data-index="1">
-          <input type="file" accept="image/*" class="image-input" id="imageInput1">
-          <label for="imageInput1" class="image-label">
-            <span class="plus">+</span>
-            <span class="text">Add Photo</span>
-          </label>
-          <div class="image-preview"></div>
-          <button type="button" class="remove-btn" style="display:none;">×</button>
-        </div>
-        <div class="image-slot empty" data-index="2">
-          <input type="file" accept="image/*" class="image-input" id="imageInput2">
-          <label for="imageInput2" class="image-label">
-            <span class="plus">+</span>
-            <span class="text">Add Photo</span>
-          </label>
-          <div class="image-preview"></div>
-          <button type="button" class="remove-btn" style="display:none;">×</button>
-        </div>
-        <div class="image-slot empty" data-index="3">
-          <input type="file" accept="image/*" class="image-input" id="imageInput3">
-          <label for="imageInput3" class="image-label">
-            <span class="plus">+</span>
-            <span class="text">Add Photo</span>
-          </label>
-          <div class="image-preview"></div>
-          <button type="button" class="remove-btn" style="display:none;">×</button>
-        </div>
-        <div class="image-slot empty" data-index="4">
-          <input type="file" accept="image/*" class="image-input" id="imageInput4">
-          <label for="imageInput4" class="image-label">
-            <span class="plus">+</span>
-            <span class="text">Add Photo</span>
-          </label>
-          <div class="image-preview"></div>
-          <button type="button" class="remove-btn" style="display:none;">×</button>
-        </div>
-        <div class="image-slot empty" data-index="5">
-          <input type="file" accept="image/*" class="image-input" id="imageInput5">
-          <label for="imageInput5" class="image-label">
-            <span class="plus">+</span>
-            <span class="text">Add Photo</span>
-          </label>
-          <div class="image-preview"></div>
-          <button type="button" class="remove-btn" style="display:none;">×</button>
-        </div>
-      </div>
-    </section>
 
-    <!-- Tracklist Section -->
-    <section class="form-section">
-      <h2>Tracklist</h2>
-      <p class="section-desc">Add tracks from your record. Each track can have a sample clip (up to 1:30, converted to MP3 128kbps).</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="format">Format <span class="required">*</span></label>
+            <select id="format" name="format" required>
+              <option value="LP">LP (12" Album)</option>
+              <option value="12&quot;">12" Single</option>
+              <option value="10&quot;">10"</option>
+              <option value="7&quot;">7"</option>
+              <option value="EP">EP</option>
+              <option value="Box Set">Box Set</option>
+              <option value="Compilation">Compilation</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="releaseYear">Release Year</label>
+            <input type="number" id="releaseYear" name="releaseYear" min="1900" max="2030" placeholder="e.g. 1995">
+          </div>
+        </div>
 
-      <div id="tracklistContainer">
-        <!-- Tracks will be added here dynamically -->
-      </div>
+        <div class="form-group">
+          <label for="genre">Genre</label>
+          <select id="genre" name="genre">
+            <option value="">Select genre...</option>
+            <option value="Jungle">Jungle</option>
+            <option value="Drum and Bass">Drum and Bass</option>
+            <option value="Hardcore">Hardcore</option>
+            <option value="Techno">Techno</option>
+            <option value="Jungle Techno">Jungle Techno</option>
+            <option value="Breakbeat">Breakbeat</option>
+            <option value="Old Skool">Old Skool</option>
+            <option value="Ragga Jungle">Ragga Jungle</option>
+            <option value="Tribal">Tribal</option>
+            <option value="Liquid">Liquid</option>
+            <option value="Darkstep">Darkstep</option>
+            <option value="Techstep">Techstep</option>
+            <option value="Neurofunk">Neurofunk</option>
+            <option value="Ambient">Ambient</option>
+            <option value="Dub">Dub</option>
+            <option value="Reggae">Reggae</option>
+            <option value="Hip Hop">Hip Hop</option>
+            <option value="Electronic">Electronic</option>
+            <option value="Alternative">Alternative</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </section>
 
-      <button type="button" class="add-track-btn" id="addTrackBtn">
-        <span class="plus">+</span> Add Track
-      </button>
-    </section>
+      <!-- Images Section -->
+      <section class="form-section">
+        <h2>Photos</h2>
+        <p class="section-desc">Add up to 6 photos. First image is the cover. Show front, back, labels, and any flaws.</p>
+
+        <div class="image-grid" id="imageGrid">
+          <div class="image-slot empty" data-index="0">
+            <input type="file" accept="image/*" class="image-input" id="imageInput0">
+            <label for="imageInput0" class="image-label">
+              <span class="plus">+</span>
+              <span class="text">Cover Photo</span>
+            </label>
+            <div class="image-preview"></div>
+            <button type="button" class="remove-btn" style="display:none;">×</button>
+          </div>
+          <div class="image-slot empty" data-index="1">
+            <input type="file" accept="image/*" class="image-input" id="imageInput1">
+            <label for="imageInput1" class="image-label">
+              <span class="plus">+</span>
+              <span class="text">Add Photo</span>
+            </label>
+            <div class="image-preview"></div>
+            <button type="button" class="remove-btn" style="display:none;">×</button>
+          </div>
+          <div class="image-slot empty" data-index="2">
+            <input type="file" accept="image/*" class="image-input" id="imageInput2">
+            <label for="imageInput2" class="image-label">
+              <span class="plus">+</span>
+              <span class="text">Add Photo</span>
+            </label>
+            <div class="image-preview"></div>
+            <button type="button" class="remove-btn" style="display:none;">×</button>
+          </div>
+          <div class="image-slot empty" data-index="3">
+            <input type="file" accept="image/*" class="image-input" id="imageInput3">
+            <label for="imageInput3" class="image-label">
+              <span class="plus">+</span>
+              <span class="text">Add Photo</span>
+            </label>
+            <div class="image-preview"></div>
+            <button type="button" class="remove-btn" style="display:none;">×</button>
+          </div>
+          <div class="image-slot empty" data-index="4">
+            <input type="file" accept="image/*" class="image-input" id="imageInput4">
+            <label for="imageInput4" class="image-label">
+              <span class="plus">+</span>
+              <span class="text">Add Photo</span>
+            </label>
+            <div class="image-preview"></div>
+            <button type="button" class="remove-btn" style="display:none;">×</button>
+          </div>
+          <div class="image-slot empty" data-index="5">
+            <input type="file" accept="image/*" class="image-input" id="imageInput5">
+            <label for="imageInput5" class="image-label">
+              <span class="plus">+</span>
+              <span class="text">Add Photo</span>
+            </label>
+            <div class="image-preview"></div>
+            <button type="button" class="remove-btn" style="display:none;">×</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tracklist Section -->
+      <section class="form-section">
+        <h2>Tracklist</h2>
+        <p class="section-desc">Add tracks from your record. Each track can have a sample clip (up to 1:30, converted to MP3 128kbps).</p>
+
+        <div id="tracklistContainer">
+          <!-- Tracks will be added here dynamically -->
+        </div>
+
+        <button type="button" class="add-track-btn" id="addTrackBtn">
+          <span class="plus">+</span> Add Track
+        </button>
+      </section>
 
     <!-- Waveform Modal -->
     <div class="modal-overlay" id="waveformModal" style="display:none;">
@@ -162,59 +229,7 @@ export const prerender = false;
       </div>
     </div>
 
-    <!-- Record Details Section -->
-    <section class="form-section">
-      <h2>Record Details</h2>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="artist">Artist <span class="required">*</span></label>
-          <input type="text" id="artist" name="artist" required maxlength="100" placeholder="e.g. Goldie">
-        </div>
-        <div class="form-group">
-          <label for="title">Title <span class="required">*</span></label>
-          <input type="text" id="title" name="title" required maxlength="100" placeholder="e.g. Timeless">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="label">Label</label>
-          <input type="text" id="label" name="label" maxlength="100" placeholder="e.g. Metalheadz">
-        </div>
-        <div class="form-group">
-          <label for="catalogNumber">Catalogue Number</label>
-          <input type="text" id="catalogNumber" name="catalogNumber" maxlength="50" placeholder="e.g. METH001">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="format">Format <span class="required">*</span></label>
-          <select id="format" name="format" required>
-            <option value="LP">LP (12" Album)</option>
-            <option value="12&quot;">12" Single</option>
-            <option value="10&quot;">10"</option>
-            <option value="7&quot;">7"</option>
-            <option value="EP">EP</option>
-            <option value="Box Set">Box Set</option>
-            <option value="Compilation">Compilation</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="releaseYear">Release Year</label>
-          <input type="number" id="releaseYear" name="releaseYear" min="1900" max="2030" placeholder="e.g. 1995">
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="genre">Genre</label>
-        <input type="text" id="genre" name="genre" maxlength="50" placeholder="e.g. Drum & Bass, Jungle, House">
-      </div>
-    </section>
-
-    <!-- Condition Section -->
+      <!-- Condition Section -->
     <section class="form-section">
       <h2>Condition</h2>
       <p class="section-desc">Use the Goldmine grading scale. Be honest - it builds trust!</p>
@@ -268,14 +283,7 @@ export const prerender = false;
             <span class="prefix">£</span>
             <input type="number" id="price" name="price" required min="0.01" max="10000" step="0.01" placeholder="0.00">
           </div>
-        </div>
-        <div class="form-group">
-          <label for="shippingCost">Shipping Cost (GBP) <span class="required">*</span></label>
-          <div class="input-prefix">
-            <span class="prefix">£</span>
-            <input type="number" id="shippingCost" name="shippingCost" required min="0" max="100" step="0.01" placeholder="0.00">
-          </div>
-          <p class="form-hint">UK shipping cost. International buyers will see an estimate.</p>
+          <p class="form-hint">Shipping costs are set in your seller settings.</p>
         </div>
       </div>
 
@@ -283,10 +291,6 @@ export const prerender = false;
         <div class="breakdown-row">
           <span>Your price:</span>
           <span id="breakdownPrice">£0.00</span>
-        </div>
-        <div class="breakdown-row">
-          <span>Shipping:</span>
-          <span id="breakdownShipping">£0.00</span>
         </div>
         <div class="breakdown-row">
           <span>Processing fee (3%):</span>
@@ -312,12 +316,13 @@ export const prerender = false;
       </div>
     </section>
 
-    <!-- Actions -->
-    <div class="form-actions">
-      <button type="button" class="btn btn-secondary" id="saveDraftBtn">Save as Draft</button>
-      <button type="submit" class="btn btn-primary" id="submitBtn">Submit for Review</button>
-    </div>
-  </form>
+      <!-- Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" id="saveDraftBtn">Save as Draft</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Submit for Review</button>
+      </div>
+    </form>
+  </div>
 
   <!-- Upload Progress Modal -->
   <div id="uploadModal" class="modal-overlay" style="display:none;">
@@ -329,7 +334,7 @@ export const prerender = false;
       <p id="uploadStatus">Preparing images...</p>
     </div>
   </div>
-</ProDashboardLayout>
+</VinylDashboardLayout>
 
 <script>
   // Load lamejs for MP3 encoding
@@ -909,23 +914,20 @@ export const prerender = false;
 
   // Price breakdown
   const priceInput = document.getElementById('price');
-  const shippingInput = document.getElementById('shippingCost');
 
   function updateBreakdown() {
     const price = parseFloat(priceInput.value) || 0;
-    const shipping = parseFloat(shippingInput.value) || 0;
 
     if (price <= 0) {
       document.getElementById('priceBreakdown').style.display = 'none';
       return;
     }
 
-    const processingFee = (price + shipping) * 0.03;
+    const processingFee = price * 0.03;
     const platformFee = price * 0.10;
-    const total = price + shipping - processingFee - platformFee;
+    const total = price - processingFee - platformFee;
 
     document.getElementById('breakdownPrice').textContent = `£${price.toFixed(2)}`;
-    document.getElementById('breakdownShipping').textContent = `£${shipping.toFixed(2)}`;
     document.getElementById('breakdownProcessing').textContent = `-£${processingFee.toFixed(2)}`;
     document.getElementById('breakdownPlatform').textContent = `-£${platformFee.toFixed(2)}`;
     document.getElementById('breakdownTotal').textContent = `£${total.toFixed(2)}`;
@@ -933,7 +935,6 @@ export const prerender = false;
   }
 
   priceInput.addEventListener('input', updateBreakdown);
-  shippingInput.addEventListener('input', updateBreakdown);
 
   // Form submission
   document.getElementById('listingForm').addEventListener('submit', async (e) => {
@@ -1065,7 +1066,6 @@ export const prerender = false;
         sleeveCondition: formData.get('sleeveCondition'),
         conditionNotes: formData.get('conditionNotes'),
         price: parseFloat(formData.get('price')),
-        shippingCost: parseFloat(formData.get('shippingCost') || '0'),
         description: formData.get('description'),
         images: imageUrls,
         tracks: uploadedTracks
@@ -1114,31 +1114,34 @@ export const prerender = false;
 </script>
 
 <style>
-  .page-header { margin-bottom: 2rem; }
-  .back-link { color: #666; text-decoration: none; font-size: 0.9rem; }
-  .back-link:hover { color: #000; }
-  .page-header h1 { margin: 0.5rem 0 0.25rem; font-size: 1.75rem; }
-  .subtitle { color: #666; margin: 0; }
+  /* Container for centering */
+  .form-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
 
-  .listing-form { max-width: 800px; }
+  .listing-form { width: 100%; }
 
   .form-section {
-    background: #fff;
-    border: 1px solid #e5e5e5;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
   }
 
   .form-section h2 {
     font-size: 1.1rem;
-    margin: 0 0 0.25rem;
+    margin: 0 0 0.5rem;
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    color: #fff;
   }
 
-  .optional { font-weight: 400; color: #999; font-size: 0.85rem; }
-  .section-desc { color: #666; font-size: 0.9rem; margin: 0 0 1rem; }
+  .optional { font-weight: 400; color: #888; font-size: 0.85rem; }
+  .section-desc { color: #999; font-size: 0.9rem; margin: 0 0 1rem; }
 
   .image-grid {
     display: grid;
@@ -1148,13 +1151,14 @@ export const prerender = false;
 
   .image-slot {
     aspect-ratio: 1;
-    border: 2px dashed #ddd;
+    border: 2px dashed #444;
+    border-radius: 8px;
     position: relative;
-    background: #fafafa;
+    background: #252525;
     overflow: hidden;
   }
 
-  .image-slot.has-image { border-style: solid; border-color: #000; }
+  .image-slot.has-image { border-style: solid; border-color: #f97316; }
 
   .image-input { display: none; }
 
@@ -1202,10 +1206,11 @@ export const prerender = false;
   }
 
   .audio-upload {
-    border: 2px dashed #ddd;
+    border: 2px dashed #444;
+    border-radius: 8px;
     padding: 2rem;
     text-align: center;
-    background: #fafafa;
+    background: #252525;
   }
 
   .audio-input { display: none; }
@@ -1216,11 +1221,11 @@ export const prerender = false;
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
-    color: #666;
+    color: #999;
   }
 
   .audio-label .icon { font-size: 2rem; }
-  .audio-label .hint { font-size: 0.8rem; color: #999; }
+  .audio-label .hint { font-size: 0.8rem; color: #666; }
 
   .audio-preview {
     display: flex;
@@ -1430,22 +1435,32 @@ export const prerender = false;
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
   .form-group { margin-bottom: 1rem; }
-  .form-group label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; }
+  .form-group label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 0.25rem; color: #ccc; }
   .form-group input, .form-group select, .form-group textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #ddd;
+    border: 1px solid #444;
+    border-radius: 6px;
     font-size: 1rem;
     font-family: inherit;
+    background: #252525;
+    color: #fff;
+  }
+  .form-group input::placeholder, .form-group textarea::placeholder {
+    color: #666;
   }
   .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
     outline: none;
-    border-color: #000;
+    border-color: #f97316;
+  }
+  .form-group select option {
+    background: #252525;
+    color: #fff;
   }
 
-  .required { color: #dc2626; }
-  .form-hint { font-size: 0.8rem; color: #999; margin-top: 0.25rem; }
-  .char-count { font-size: 0.8rem; color: #999; text-align: right; }
+  .required { color: #f97316; }
+  .form-hint { font-size: 0.8rem; color: #777; margin-top: 0.25rem; }
+  .char-count { font-size: 0.8rem; color: #777; text-align: right; }
 
   .input-prefix { position: relative; }
   .input-prefix .prefix {
@@ -1453,15 +1468,17 @@ export const prerender = false;
     left: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
-    color: #666;
+    color: #999;
   }
   .input-prefix input { padding-left: 1.75rem; }
 
   .price-breakdown {
-    background: #f9f9f9;
+    background: #252525;
     padding: 1rem;
     margin-top: 1rem;
-    border: 1px solid #e5e5e5;
+    border: 1px solid #444;
+    border-radius: 6px;
+    color: #ccc;
   }
 
   .breakdown-row {
@@ -1472,18 +1489,19 @@ export const prerender = false;
   }
 
   .breakdown-row.total {
-    border-top: 2px solid #000;
+    border-top: 2px solid #f97316;
     font-weight: 700;
     font-size: 1rem;
     margin-top: 0.5rem;
     padding-top: 0.75rem;
+    color: #fff;
   }
 
   .form-actions {
     display: flex;
     gap: 1rem;
     justify-content: flex-end;
-    padding: 1rem 0;
+    padding: 1.5rem 0;
   }
 
   .btn {
@@ -1491,13 +1509,15 @@ export const prerender = false;
     font-size: 1rem;
     font-weight: 600;
     border: none;
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.2s;
   }
 
-  .btn-primary { background: #000; color: #fff; }
-  .btn-primary:hover { background: #333; }
-  .btn-secondary { background: #f5f5f5; color: #333; border: 1px solid #ddd; }
-  .btn-secondary:hover { background: #eee; }
+  .btn-primary { background: #f97316; color: #fff; }
+  .btn-primary:hover { background: #ea580c; }
+  .btn-secondary { background: #333; color: #fff; border: 1px solid #444; }
+  .btn-secondary:hover { background: #444; }
 
   .modal-overlay {
     position: fixed;
@@ -1534,138 +1554,151 @@ export const prerender = false;
     transition: width 0.3s;
   }
 
-  /* Tracklist Styles */
-  #tracklistContainer {
+  /* Tracklist Styles - use :global for dynamically created elements */
+  :global(#tracklistContainer) {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     margin-bottom: 1.25rem;
   }
 
-  .track-row {
-    display: flex;
-    align-items: center;
+  :global(.track-row) {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 1rem;
     padding: 1rem 1.25rem;
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    background: #252525;
+    border: 1px solid #444;
+    border-radius: 12px;
   }
 
-  .track-row:hover {
-    border-color: #ccc;
+  :global(.track-row:hover) {
+    border-color: #f97316;
   }
 
-  .track-number {
-    width: 32px;
-    height: 32px;
-    background: #000;
+  :global(.track-number) {
+    width: 36px;
+    height: 36px;
+    background: #f97316;
     color: #fff;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.85rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     flex-shrink: 0;
   }
 
-  .track-fields {
-    display: flex;
+  :global(.track-fields) {
+    display: flex !important;
+    flex-direction: row !important;
     gap: 1rem;
     flex: 1;
     align-items: center;
   }
 
-  .track-field.track-side {
+  :global(.track-field.track-side) {
     flex-shrink: 0;
   }
 
-  .track-side-select {
-    width: 60px;
-    padding: 0.6rem 0.5rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    background: #fafafa;
+  :global(.track-side-select) {
+    width: 65px;
+    padding: 0.65rem 0.5rem;
+    border: 1px solid #555;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: #333;
+    color: #fff;
     cursor: pointer;
   }
 
-  .track-side-select:focus {
+  :global(.track-side-select:focus) {
     outline: none;
-    border-color: #000;
-    background: #fff;
+    border-color: #f97316;
   }
 
-  .track-field.track-name-field {
+  :global(.track-side-select option) {
+    background: #333;
+    color: #fff;
+  }
+
+  :global(.track-field.track-name-field) {
     flex: 1;
     min-width: 150px;
   }
 
-  .track-name-input {
+  :global(.track-name-input) {
     width: 100%;
-    padding: 0.6rem 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 0.95rem;
+    padding: 0.65rem 0.85rem;
+    border: 1px solid #555;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #333;
+    color: #fff;
   }
 
-  .track-name-input::placeholder {
-    color: #aaa;
+  :global(.track-name-input::placeholder) {
+    color: #777;
   }
 
-  .track-name-input:focus {
+  :global(.track-name-input:focus) {
     outline: none;
-    border-color: #000;
+    border-color: #f97316;
   }
 
-  .track-field.track-sample {
+  :global(.track-field.track-sample) {
     flex-shrink: 0;
   }
 
-  .add-sample-btn {
-    padding: 0.6rem 1rem;
-    background: #f8f8f8;
-    border: 1px dashed #ccc;
-    border-radius: 6px;
+  :global(.add-sample-btn) {
+    padding: 0.65rem 1.25rem;
+    background: #444;
+    border: 1px solid #666;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 0.9rem;
-    color: #666;
+    font-weight: 500;
+    color: #ccc;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.5rem;
     transition: all 0.15s ease;
+    white-space: nowrap;
   }
 
-  .add-sample-btn:hover {
-    background: #f0f0f0;
-    border-color: #999;
-    color: #333;
+  :global(.add-sample-btn:hover) {
+    background: #555;
+    border-color: #f97316;
+    color: #fff;
   }
 
-  .add-sample-btn.has-sample {
-    background: #e8f5e9;
-    border: 1px solid #81c784;
-    border-style: solid;
-    color: #2e7d32;
-    font-weight: 500;
+  :global(.add-sample-btn.has-sample) {
+    background: #166534;
+    border: 1px solid #22c55e;
+    color: #fff;
+    font-weight: 600;
   }
 
-  .add-sample-btn .sample-icon {
+  :global(.add-sample-btn.has-sample:hover) {
+    background: #15803d;
+  }
+
+  :global(.add-sample-btn .sample-icon) {
     font-size: 1.1rem;
   }
 
-  .remove-track-btn {
-    width: 32px;
-    height: 32px;
+  :global(.remove-track-btn) {
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    background: transparent;
-    border: 1px solid transparent;
+    background: #333;
+    border: 1px solid #555;
     cursor: pointer;
-    font-size: 1.3rem;
-    color: #bbb;
+    font-size: 1.4rem;
+    color: #999;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1673,35 +1706,36 @@ export const prerender = false;
     transition: all 0.15s ease;
   }
 
-  .remove-track-btn:hover {
-    background: #fee2e2;
-    border-color: #fca5a5;
-    color: #dc2626;
+  :global(.remove-track-btn:hover) {
+    background: #7f1d1d;
+    border-color: #dc2626;
+    color: #fff;
   }
 
-  .add-track-btn {
+  :global(.add-track-btn) {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     width: 100%;
     padding: 1rem;
-    background: #fafafa;
-    border: 2px dashed #ddd;
-    border-radius: 8px;
+    background: #252525;
+    border: 2px dashed #555;
+    border-radius: 12px;
     cursor: pointer;
-    font-size: 0.95rem;
-    color: #666;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #999;
     transition: all 0.15s ease;
   }
 
-  .add-track-btn:hover {
-    background: #f0f0f0;
-    border-color: #bbb;
-    color: #333;
+  :global(.add-track-btn:hover) {
+    background: #333;
+    border-color: #f97316;
+    color: #fff;
   }
 
-  .add-track-btn .plus {
+  :global(.add-track-btn .plus) {
     font-size: 1.4rem;
     font-weight: 300;
     line-height: 1;
@@ -1806,42 +1840,42 @@ export const prerender = false;
     .time-display { gap: 0.5rem; }
     .region-duration { font-size: 1.2rem; }
 
-    .track-row {
+    :global(.track-row) {
       flex-wrap: wrap;
       padding: 0.875rem 1rem;
       gap: 0.75rem;
     }
 
-    .track-number {
-      width: 28px;
-      height: 28px;
-      font-size: 0.8rem;
+    :global(.track-number) {
+      width: 32px;
+      height: 32px;
+      font-size: 0.85rem;
     }
 
-    .track-fields {
+    :global(.track-fields) {
       flex-wrap: wrap;
-      width: calc(100% - 70px);
+      width: calc(100% - 80px);
       gap: 0.5rem;
     }
 
-    .track-field.track-side {
+    :global(.track-field.track-side) {
       order: 1;
     }
 
-    .track-field.track-sample {
+    :global(.track-field.track-sample) {
       order: 2;
     }
 
-    .track-field.track-name-field {
+    :global(.track-field.track-name-field) {
       width: 100%;
       order: 3;
       margin-top: 0.25rem;
     }
 
-    .track-side-select,
-    .track-name-input,
-    .add-sample-btn {
-      padding: 0.5rem 0.6rem;
+    :global(.track-side-select),
+    :global(.track-name-input),
+    :global(.add-sample-btn) {
+      padding: 0.55rem 0.7rem;
       font-size: 0.9rem;
     }
 

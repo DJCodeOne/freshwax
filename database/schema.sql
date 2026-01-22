@@ -282,3 +282,32 @@ CREATE INDEX IF NOT EXISTS idx_ledger_artist ON sales_ledger(artist_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_submitter ON sales_ledger(submitter_id);
 CREATE INDEX IF NOT EXISTS idx_ledger_payout_status ON sales_ledger(artist_payout_status);
 CREATE INDEX IF NOT EXISTS idx_ledger_payment_method ON sales_ledger(payment_method);
+
+-- =============================================
+-- VINYL SELLERS (settings for vinyl crate sellers)
+-- D1 Primary, Firebase backup
+-- =============================================
+CREATE TABLE IF NOT EXISTS vinyl_sellers (
+  id TEXT PRIMARY KEY,  -- user_id
+  -- Store info
+  store_name TEXT,
+  location TEXT,
+  description TEXT,
+  discogs_url TEXT,
+  -- UK Shipping
+  shipping_single REAL DEFAULT 0,
+  shipping_additional REAL DEFAULT 0,
+  -- International shipping
+  ships_international INTEGER DEFAULT 0,
+  shipping_europe REAL DEFAULT 0,
+  shipping_europe_additional REAL DEFAULT 0,
+  shipping_worldwide REAL DEFAULT 0,
+  shipping_worldwide_additional REAL DEFAULT 0,
+  -- Full document as JSON
+  data TEXT NOT NULL,
+  -- Timestamps
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_vinyl_sellers_store ON vinyl_sellers(store_name);

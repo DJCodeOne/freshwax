@@ -154,10 +154,24 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // List all suppliers (admin only)
     // Combine from both merch-suppliers collection AND users with merchSupplier role
-    const [merchSuppliers, allUsers] = await Promise.all([
+    const [merchSuppliers, allUsers, allMerch] = await Promise.all([
       queryCollection('merch-suppliers', { limit: 100 }),
-      queryCollection('users', { limit: 500 })
+      queryCollection('users', { limit: 500 }),
+      queryCollection('merch', { limit: 500 })
     ]);
+
+    // Helper to calculate supplier stats from merch products
+    function calcSupplierStats(supplierId: string, supplierName?: string) {
+      const products = allMerch.filter((m: any) =>
+        m.supplierId === supplierId ||
+        (supplierName && m.supplierName === supplierName)
+      );
+      return {
+        totalProducts: products.length,
+        totalStock: products.reduce((sum: number, p: any) => sum + (p.totalStock || p.stock || 0), 0),
+        totalSold: products.reduce((sum: number, p: any) => sum + (p.totalSold || p.soldStock || 0), 0)
+      };
+    }
 
     // Convert users with merchSupplier/merchSeller role to supplier format
     const userSuppliers = allUsers
@@ -165,31 +179,47 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         const roles = u.roles || {};
         return (roles.merchSupplier === true || roles.merchSeller === true) && u.deleted !== true;
       })
-      .map((u: any) => ({
-        id: u.id,
-        name: u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || 'Unknown',
-        email: u.email,
-        phone: u.phone || '',
-        type: u.partnerInfo?.type || 'other',
-        code: (u.displayName || 'USR').substring(0, 3).toUpperCase(),
-        defaultCut: u.partnerInfo?.defaultCut || 50,
-        contactName: u.fullName || u.displayName || '',
-        notes: u.partnerInfo?.notes || '',
-        accessCode: null, // User-based suppliers use auth, not access codes
-        totalProducts: 0,
-        totalStock: 0,
-        totalSold: 0,
-        totalRevenue: u.totalEarnings || 0,
-        active: u.approved === true || u.partnerInfo?.approved === true,
-        createdAt: u.createdAt,
-        updatedAt: u.updatedAt,
-        source: 'users' // Track source for admin UI
-      }));
+      .map((u: any) => {
+        const supplierName = u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || 'Unknown';
+        const stats = calcSupplierStats(u.id, supplierName);
+        return {
+          id: u.id,
+          name: supplierName,
+          email: u.email,
+          phone: u.phone || '',
+          type: u.partnerInfo?.type || 'other',
+          code: (u.displayName || 'USR').substring(0, 3).toUpperCase(),
+          defaultCut: u.partnerInfo?.defaultCut || 50,
+          contactName: u.fullName || u.displayName || '',
+          notes: u.partnerInfo?.notes || '',
+          accessCode: null, // User-based suppliers use auth, not access codes
+          totalProducts: stats.totalProducts,
+          totalStock: stats.totalStock,
+          totalSold: stats.totalSold,
+          totalRevenue: u.totalEarnings || 0,
+          active: u.approved === true || u.partnerInfo?.approved === true,
+          createdAt: u.createdAt,
+          updatedAt: u.updatedAt,
+          source: 'users' // Track source for admin UI
+        };
+      });
+
+    // Update merch-suppliers with calculated stats too
+    const merchSuppliersWithStats = merchSuppliers.map((s: any) => {
+      const stats = calcSupplierStats(s.id, s.name);
+      return {
+        ...s,
+        totalProducts: stats.totalProducts || s.totalProducts || 0,
+        totalStock: stats.totalStock || s.totalStock || 0,
+        totalSold: stats.totalSold || s.totalSold || 0,
+        source: 'merch-suppliers'
+      };
+    });
 
     // Combine both sources, avoiding duplicates by email
     const supplierEmails = new Set(merchSuppliers.map((s: any) => s.email?.toLowerCase()));
     const combinedSuppliers = [
-      ...merchSuppliers.map((s: any) => ({ ...s, source: 'merch-suppliers' })),
+      ...merchSuppliersWithStats,
       ...userSuppliers.filter((u: any) => !u.email || !supplierEmails.has(u.email.toLowerCase()))
     ];
 

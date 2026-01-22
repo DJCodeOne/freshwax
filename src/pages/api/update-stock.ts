@@ -386,30 +386,78 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
       });
     }
 
-    // Build filters for query
-    const filters: Array<{field: string, op: any, value: any}> = [];
-    if (lowStockOnly) {
-      filters.push({ field: 'isLowStock', op: 'EQUAL', value: true });
-    }
-    if (supplierId) {
-      filters.push({ field: 'supplierId', op: 'EQUAL', value: supplierId });
-    }
+    // Fetch products and suppliers in parallel for name resolution
+    const [products, merchSuppliers, users] = await Promise.all([
+      queryCollection('merch', {
+        filters: lowStockOnly ? [{ field: 'isLowStock', op: 'EQUAL', value: true }] : undefined
+      }),
+      queryCollection('merch-suppliers', { limit: 100 }),
+      queryCollection('users', { limit: 500 })
+    ]);
 
-    const products = await queryCollection('merch', {
-      filters: filters.length > 0 ? filters : undefined
+    // Build supplier lookup maps by ID and email
+    const supplierById = new Map<string, string>();
+    const supplierByEmail = new Map<string, string>();
+
+    // Add merch-suppliers
+    merchSuppliers.forEach((s: any) => {
+      if (s.id) supplierById.set(s.id, s.name || 'Unknown');
+      if (s.email) supplierByEmail.set(s.email.toLowerCase(), s.name || 'Unknown');
     });
 
+    // Add users with merchSupplier/merchSeller role
+    users.forEach((u: any) => {
+      const roles = u.roles || {};
+      if (roles.merchSupplier === true || roles.merchSeller === true || u.isMerchSupplier === true) {
+        const name = u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || u.artistName || 'Unknown';
+        if (u.id) supplierById.set(u.id, name);
+        if (u.email) supplierByEmail.set(u.email.toLowerCase(), name);
+      }
+    });
+
+    // Helper to resolve supplier name
+    // Note: categoryName is used as the supplier/brand name in this system
+    function resolveSupplierName(data: any): string {
+      // categoryName is the primary supplier identifier
+      if (data.categoryName && data.categoryName !== data.category) {
+        return data.categoryName;
+      }
+
+      // Try explicit supplierName
+      if (data.supplierName) return data.supplierName;
+      if (data.supplier) return data.supplier;
+
+      // Try lookup by supplierId
+      if (data.supplierId && supplierById.has(data.supplierId)) {
+        return supplierById.get(data.supplierId)!;
+      }
+
+      // Try lookup by supplierEmail
+      if (data.supplierEmail && supplierByEmail.has(data.supplierEmail.toLowerCase())) {
+        return supplierByEmail.get(data.supplierEmail.toLowerCase())!;
+      }
+
+      // Try lookup by createdBy (user ID who uploaded)
+      if (data.createdBy && supplierById.has(data.createdBy)) {
+        return supplierById.get(data.createdBy)!;
+      }
+
+      return 'Fresh Wax';
+    }
+
     const stockReport: any[] = [];
-    products.forEach(data => {
+    products.forEach((data: any) => {
+      const resolvedSupplier = resolveSupplierName(data);
       stockReport.push({
         productId: data.id,
         name: data.name,
         sku: data.sku,
         productType: data.productType,
-        category: data.categoryName,
+        category: data.categoryName || data.category,
+        productCategory: data.category,
         supplierId: data.supplierId,
-        supplierName: data.supplierName,
-        supplier: data.supplierName || 'Fresh Wax',
+        supplierName: resolvedSupplier,
+        supplier: resolvedSupplier,
         totalStock: data.totalStock,
         reservedStock: data.reservedStock || 0,
         soldStock: data.soldStock || 0,

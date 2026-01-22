@@ -1068,7 +1068,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
     async function loadSuppliers() {
       try {
-        const response = await fetch('/api/suppliers');
+        const response = await fetch('/api/suppliers', {
+          headers: { 'X-Admin-Key': ADMIN_KEY }
+        });
         const data = await response.json();
         
         if (data.success && data.suppliers) {

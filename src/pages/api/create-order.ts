@@ -2,7 +2,8 @@
 // Creates order in Firebase and sends confirmation email
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, incrementField, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, incrementField, initFirebaseEnv, clearCache } from '../../lib/firebase-rest';
+import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Conditional logging - only logs in development
@@ -362,6 +363,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }, idToken);
 
               log.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
+
+              // Sync to D1 so public merch page shows updated stock
+              const db = env?.DB;
+              if (db) {
+                try {
+                  clearCache(`doc:merch:${item.productId}`);
+                  const updatedProduct = await getDocument('merch', item.productId);
+                  if (updatedProduct) {
+                    await d1UpsertMerch(db, item.productId, updatedProduct);
+                    log.info('[create-order] ✓ D1 synced for:', item.name);
+                  }
+                } catch (d1Error) {
+                  log.error('[create-order] D1 sync failed (non-critical):', d1Error);
+                }
+              }
 
               // Update supplier stats if applicable
               if (productData.supplierId) {

@@ -1,6 +1,11 @@
 ---
 // src/pages/admin/merch/suppliers.astro
 // Manage merch suppliers/consignment partners
+export const prerender = false;
+
+// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <!DOCTYPE html>
@@ -254,7 +259,8 @@
 
   <div class="toast" id="toast"></div>
 
-  <script>
+  <script define:vars={{ adminKey }}>
+    const ADMIN_KEY = adminKey;
     let suppliers = [];
     let newSupplierCode = '';
 
@@ -262,7 +268,9 @@
 
     async function loadSuppliers() {
       try {
-        const response = await fetch('/api/suppliers');
+        const response = await fetch('/api/suppliers', {
+          headers: { 'X-Admin-Key': ADMIN_KEY }
+        });
         const data = await response.json();
         
         if (data.success) {
@@ -396,9 +404,9 @@
       try {
         const response = await fetch('/api/suppliers', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
           body: JSON.stringify({
-            name, type, code, defaultCut, contactName, email, phone, notes
+            name, type, code, defaultCut, contactName, email, phone, notes, adminKey: ADMIN_KEY
           })
         });
         
@@ -472,8 +480,8 @@
       try {
         const response = await fetch('/api/suppliers', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates)
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+          body: JSON.stringify({ ...updates, adminKey: ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to update');
@@ -492,8 +500,8 @@
       try {
         const response = await fetch('/api/suppliers', {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ supplierId: id })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+          body: JSON.stringify({ supplierId: id, adminKey: ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to deactivate');
@@ -509,8 +517,8 @@
       try {
         const response = await fetch('/api/suppliers', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ supplierId: id, active: true })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+          body: JSON.stringify({ supplierId: id, active: true, adminKey: ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to activate');
@@ -531,8 +539,8 @@
       try {
         const response = await fetch('/api/suppliers?id=' + id, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ supplierId: id, hardDelete: true })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+          body: JSON.stringify({ supplierId: id, hardDelete: true, adminKey: ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to delete');

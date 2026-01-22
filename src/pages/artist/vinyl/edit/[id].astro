@@ -1,14 +1,14 @@
 ---
 // src/pages/artist/vinyl/edit/[id].astro
 // Edit vinyl listing page
-import ProDashboardLayout from '../../../../layouts/ProDashboardLayout.astro';
+import VinylDashboardLayout from '../../../../layouts/VinylDashboardLayout.astro';
 
 const { id } = Astro.params;
 
 export const prerender = false;
 ---
 
-<ProDashboardLayout title="Edit Listing" activeNav="vinyl">
+<VinylDashboardLayout title="Edit Listing" activeSection="listings">
   <div class="page-header">
     <div class="header-content">
       <a href="/artist/vinyl" class="back-link">← Back to My Listings</a>
@@ -161,7 +161,7 @@ export const prerender = false;
       <button type="submit" class="btn btn-primary" id="saveBtn">Save Changes</button>
     </div>
   </form>
-</ProDashboardLayout>
+</VinylDashboardLayout>
 
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';

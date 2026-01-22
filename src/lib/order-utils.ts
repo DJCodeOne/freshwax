@@ -1,7 +1,8 @@
 // src/lib/order-utils.ts
 // Shared order creation utilities for PayPal and Stripe payment flows
 
-import { getDocument, updateDocument, addDocument } from './firebase-rest';
+import { getDocument, updateDocument, addDocument, clearCache } from './firebase-rest';
+import { d1UpsertMerch } from './d1-catalog';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -195,7 +196,7 @@ export async function updateVinylStock(items: any[], orderNumber: string, orderI
 }
 
 // Refund stock when order is cancelled
-export async function refundOrderStock(orderId: string, items: any[], orderNumber: string, idToken?: string): Promise<void> {
+export async function refundOrderStock(orderId: string, items: any[], orderNumber: string, idToken?: string, env?: any): Promise<void> {
   const now = new Date().toISOString();
 
   for (const item of items) {
@@ -263,6 +264,21 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
             }, idToken);
 
             log.info('[order-utils] ✓ Merch stock refunded:', item.name, previousStock, '->', newStock);
+
+            // Sync to D1
+            const db = env?.DB;
+            if (db) {
+              try {
+                clearCache(`doc:merch:${item.productId}`);
+                const updatedProduct = await getDocument('merch', item.productId);
+                if (updatedProduct) {
+                  await d1UpsertMerch(db, item.productId, updatedProduct);
+                  log.info('[order-utils] ✓ D1 synced after refund:', item.name);
+                }
+              } catch (d1Error) {
+                log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
+              }
+            }
           }
         }
       } catch (refundErr) {
@@ -313,7 +329,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
 }
 
 // Update stock for merch items
-export async function updateMerchStock(items: any[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
+export async function updateMerchStock(items: any[], orderNumber: string, orderId: string, idToken?: string, env?: any): Promise<void> {
   const now = new Date().toISOString();
 
   for (const item of items) {
@@ -390,6 +406,21 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
             }, idToken);
 
             log.info('[order-utils] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
+
+            // Sync to D1 so public merch page shows updated stock
+            const db = env?.DB;
+            if (db) {
+              try {
+                clearCache(`doc:merch:${item.productId}`);
+                const updatedProduct = await getDocument('merch', item.productId);
+                if (updatedProduct) {
+                  await d1UpsertMerch(db, item.productId, updatedProduct);
+                  log.info('[order-utils] ✓ D1 synced for:', item.name);
+                }
+              } catch (d1Error) {
+                log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
+              }
+            }
 
             // Update supplier stats if applicable
             if (productData.supplierId) {
@@ -747,8 +778,8 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     console.log('[createOrder] Order ID:', orderRef.id);
     console.log('[createOrder] Order Number:', orderNumber);
 
-    // Update stock for merch items
-    await updateMerchStock(order.items, orderNumber, orderRef.id, idToken);
+    // Update stock for merch items (includes D1 sync)
+    await updateMerchStock(order.items, orderNumber, orderRef.id, idToken, env);
 
     // Update stock for vinyl items
     await updateVinylStock(order.items, orderNumber, orderRef.id, idToken);
