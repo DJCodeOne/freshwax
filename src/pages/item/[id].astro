@@ -1944,10 +1944,11 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     
     // Check initial wishlist status
     async function checkWishlistStatus() {
-      if (!currentUser) return;
+      const user = window.firebaseAuth?.currentUser;
+      if (!user) return;
 
       try {
-        const token = await currentUser.getIdToken();
+        const token = await user.getIdToken();
         const response = await fetch('/api/wishlist', {
           method: 'POST',
           headers: {
@@ -1955,7 +1956,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            userId: currentUser.uid,
+            userId: user.uid,
             releaseId: releaseId,
             action: 'check'
           })
@@ -1975,7 +1976,8 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     wishlistBtn.addEventListener('click', async function(e) {
       e.preventDefault();
 
-      if (!currentUser) {
+      const user = window.firebaseAuth?.currentUser;
+      if (!user) {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
@@ -1992,7 +1994,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       }
 
       try {
-        const token = await currentUser.getIdToken();
+        const token = await user.getIdToken();
         const response = await fetch('/api/wishlist', {
           method: 'POST',
           headers: {
@@ -2000,7 +2002,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            userId: currentUser.uid,
+            userId: user.uid,
             releaseId: releaseId,
             releaseName: releaseName,
             artistName: artistName,
