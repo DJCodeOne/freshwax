@@ -570,9 +570,15 @@ async function initRatings() {
       }
 
       try {
+        // Get auth token for API
+        const token = await user.getIdToken();
+
         const response = await fetch('/api/rate-release', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({ releaseId, rating, userId: user.uid })
         });
         
@@ -800,10 +806,16 @@ async function initComments() {
       try {
         submitBtn.setAttribute('disabled', 'true');
         submitBtn.textContent = 'Posting...';
-        
+
+        // Get auth token for API
+        const token = await user.getIdToken();
+
         const response = await fetch('/api/add-comment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
             releaseId,
             userName: username.substring(0, 30),
