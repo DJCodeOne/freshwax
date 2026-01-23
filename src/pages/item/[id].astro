@@ -1487,9 +1487,15 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     // Use currentUser.uid if available, fallback to cachedUserId for View Transitions
     const userId = currentUser ? currentUser.uid : cachedUserId;
 
+    // Get auth token for API
+    const token = currentUser ? await currentUser.getIdToken() : null;
+
     fetch('/api/add-comment', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
       body: JSON.stringify({
         releaseId: releaseId,
         userName: userName,
@@ -1671,7 +1677,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   }
   
   // Select a GIF - immediately post it
-  function selectGif(url) {
+  async function selectGif(url) {
     if (!currentUser) {
       alert('Please login to post GIFs');
       closeGiphyModal();
@@ -1695,9 +1701,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     }
     
     // Immediately post the GIF
+    const token = await currentUser.getIdToken();
+
     fetch('/api/add-comment', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
       body: JSON.stringify({
         releaseId: releaseId,
         userName: userName,
@@ -2078,4 +2089,4 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/item-page.js?v=20260123b"></script>
+<script type="module" src="/item-page.js?v=20260123c"></script>

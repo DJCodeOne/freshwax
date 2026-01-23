@@ -1294,20 +1294,26 @@ function getUserId() {
   return match ? match[1] : null;
 }
 
-function initWishlist() {
+async function initWishlist() {
   const wishlistBtn = document.getElementById('wishlistBtn');
   if (!wishlistBtn || wishlistBtn.hasAttribute('data-wishlist-init')) return;
   wishlistBtn.setAttribute('data-wishlist-init', 'true');
 
-  const userId = getUserId();
+  // Wait for auth and get user
+  const user = await getAuthUser();
 
   // Check initial wishlist state
-  if (userId) {
+  if (user) {
     const releaseId = wishlistBtn.getAttribute('data-release-id');
+    const token = await user.getIdToken();
+
     fetch(`/api/wishlist`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, releaseId, action: 'check' })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ userId: user.uid, releaseId, action: 'check' })
     })
     .then(res => res.json())
     .then(data => {
@@ -1320,10 +1326,10 @@ function initWishlist() {
 
   // Handle click
   wishlistBtn.addEventListener('click', async () => {
-    const userId = getUserId();
+    const user = await getAuthUser();
     const releaseId = wishlistBtn.getAttribute('data-release-id');
 
-    if (!userId) {
+    if (!user) {
       showToast('Please log in to add items to your wishlist');
       return;
     }
@@ -1333,10 +1339,15 @@ function initWishlist() {
     wishlistBtn.style.pointerEvents = 'none';
 
     try {
+      const token = await user.getIdToken();
+
       const response = await fetch('/api/wishlist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, releaseId, action: 'toggle' })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ userId: user.uid, releaseId, action: 'toggle' })
       });
 
       const data = await response.json();
