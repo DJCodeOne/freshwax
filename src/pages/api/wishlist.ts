@@ -232,9 +232,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: any) {
     console.error('[WISHLIST API] Error:', error);
+    console.error('[WISHLIST API] Error stack:', error.stack);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to update wishlist'
+      error: error.message || 'Failed to update wishlist',
+      details: error.stack?.split('\n')[0] || 'Unknown'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
