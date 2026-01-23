@@ -544,7 +544,7 @@ const firebaseConfig = {
       merch.forEach(item => {
         const priceStr = item.price ? `£${item.price.toFixed(2)}` : '';
         const stockStr = item.stock === 0 ? '<span style="color: #dc2626;">Out of Stock</span>' : (item.stock <= 5 ? `<span style="color: #f59e0b;">Low Stock</span>` : '');
-        html += `<a href="/merch/${item.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+        html += `<a href="/merch#quick-view-${item.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
           <img src="${item.artwork_url || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 500; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</div>
