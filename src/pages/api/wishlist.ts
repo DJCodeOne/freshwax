@@ -12,12 +12,16 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   });
 
   try {
+    // SECURITY: Verify auth token
+    const { verifyRequestUser } = await import('../../lib/firebase-rest');
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    const userId = url.searchParams.get('userId');
-
-    if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-        status: 400,
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
@@ -109,6 +113,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Extract the ID token from Authorization header for Firestore rules
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+
     const body = await request.json();
     const { releaseId, action } = body;
 
@@ -137,7 +145,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await updateDocument('users', userId, {
         wishlist: currentWishlist,
         wishlistUpdatedAt: now
-      });
+      }, idToken);
 
       return new Response(JSON.stringify({
         success: true,
@@ -158,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await updateDocument('users', userId, {
         wishlist: newWishlist,
         wishlistUpdatedAt: now
-      });
+      }, idToken);
 
       return new Response(JSON.stringify({
         success: true,
@@ -181,7 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('users', userId, {
           wishlist: newWishlist,
           wishlistUpdatedAt: now
-        });
+        }, idToken);
         return new Response(JSON.stringify({
           success: true,
           message: 'Removed from wishlist',
@@ -196,7 +204,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('users', userId, {
           wishlist: currentWishlist,
           wishlistUpdatedAt: now
-        });
+        }, idToken);
         return new Response(JSON.stringify({
           success: true,
           message: 'Added to wishlist',
