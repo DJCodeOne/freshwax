@@ -1093,254 +1093,270 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
 
   let gcCurrentUser = null;
   let gcSelectedAmount = 0;
+  let gcInitialized = false;
 
-  // Modal open/close
-  const gcModal = document.getElementById('giftCardModal');
-  const gcOpenBtn = document.getElementById('openGiftCardModal');
-  const gcCloseBtn = document.querySelector('.gc-modal-close');
+  function initGiftCard() {
+    // Prevent double initialization
+    if (gcInitialized) return;
+    gcInitialized = true;
 
-  gcOpenBtn?.addEventListener('click', () => {
-    gcModal?.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-  });
+    // Modal open/close
+    const gcModal = document.getElementById('giftCardModal');
+    const gcOpenBtn = document.getElementById('openGiftCardModal');
+    const gcCloseBtn = document.querySelector('.gc-modal-close');
 
-  gcCloseBtn?.addEventListener('click', closeGcModal);
-  gcModal?.addEventListener('click', (e) => {
-    if (e.target === gcModal) closeGcModal();
-  });
+    if (!gcOpenBtn) return; // Element not found
 
-  function closeGcModal() {
-    gcModal?.classList.add('hidden');
-    document.body.style.overflow = '';
-  }
+    gcOpenBtn.addEventListener('click', () => {
+      gcModal?.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    });
 
-  // Format code input
-  const gcCodeInput = document.getElementById('gcGiftCardCode');
-  gcCodeInput?.addEventListener('input', (e) => {
-    let value = e.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, '');
-    if (value.length > 4) {
-      const prefix = value.substring(0, 4);
-      const rest = value.substring(4);
-      const chunks = rest.match(/.{1,4}/g) || [];
-      value = prefix + '-' + chunks.join('-');
+    gcCloseBtn?.addEventListener('click', closeGcModal);
+    gcModal?.addEventListener('click', (e) => {
+      if (e.target === gcModal) closeGcModal();
+    });
+
+    function closeGcModal() {
+      gcModal?.classList.add('hidden');
+      document.body.style.overflow = '';
     }
-    e.target.value = value;
-  });
 
-  // Redeem form
-  const gcRedeemForm = document.getElementById('gcRedeemForm');
-  gcRedeemForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!gcCurrentUser) return;
-
-    const code = document.getElementById('gcGiftCardCode').value.trim();
-    const errorEl = document.getElementById('gcRedeemError');
-    const successEl = document.getElementById('gcRedeemSuccess');
-    const btn = document.getElementById('gcRedeemBtn');
-
-    errorEl.style.display = 'none';
-    successEl.style.display = 'none';
-    btn.disabled = true;
-
-    try {
-      const response = await fetch('/api/giftcards/redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, userId: gcCurrentUser.uid })
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        successEl.textContent = result.message;
-        successEl.style.display = 'block';
-        document.getElementById('gcGiftCardCode').value = '';
-        document.getElementById('gcCreditBalance').textContent = `£${result.newBalance.toFixed(2)}`;
-      } else {
-        errorEl.textContent = result.error || 'Failed to redeem';
-        errorEl.style.display = 'block';
+    // Format code input
+    const gcCodeInput = document.getElementById('gcGiftCardCode');
+    gcCodeInput?.addEventListener('input', (e) => {
+      let value = e.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, '');
+      if (value.length > 4) {
+        const prefix = value.substring(0, 4);
+        const rest = value.substring(4);
+        const chunks = rest.match(/.{1,4}/g) || [];
+        value = prefix + '-' + chunks.join('-');
       }
-    } catch (err) {
-      errorEl.textContent = 'Something went wrong';
-      errorEl.style.display = 'block';
-    } finally {
-      btn.disabled = false;
-    }
-  });
+      e.target.value = value;
+    });
 
-  // Amount selection
-  document.querySelector('.gc-amount-selector')?.addEventListener('click', (e) => {
-    const btn = e.target.closest('.gc-amount-btn');
-    if (!btn) return;
+    // Redeem form
+    const gcRedeemForm = document.getElementById('gcRedeemForm');
+    gcRedeemForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!gcCurrentUser) return;
 
-    document.querySelectorAll('.gc-amount-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
+      const code = document.getElementById('gcGiftCardCode').value.trim();
+      const errorEl = document.getElementById('gcRedeemError');
+      const successEl = document.getElementById('gcRedeemSuccess');
+      const btn = document.getElementById('gcRedeemBtn');
 
-    const amount = btn.dataset.amount;
-    if (amount === 'custom') {
-      document.getElementById('gcCustomAmountWrapper')?.classList.remove('hidden');
-      const customVal = parseInt(document.getElementById('gcCustomAmount')?.value) || 0;
-      updateGcAmount(customVal >= 5 ? customVal : 0);
-    } else {
-      document.getElementById('gcCustomAmountWrapper')?.classList.add('hidden');
-      updateGcAmount(parseInt(amount));
-    }
-  });
-
-  document.getElementById('gcCustomAmount')?.addEventListener('input', (e) => {
-    let value = parseInt(e.target.value) || 0;
-    if (value > 500) { value = 500; e.target.value = 500; }
-    updateGcAmount(value >= 5 ? value : 0);
-  });
-
-  function updateGcAmount(amount) {
-    gcSelectedAmount = amount;
-    document.getElementById('gcSelectedAmount').textContent = `£${amount}`;
-    const btn = document.getElementById('gcPurchaseBtn');
-    const btnText = btn?.querySelector('.gc-btn-text');
-    if (amount > 0) {
-      btnText.textContent = `Purchase Gift Card - £${amount}`;
-      btn.disabled = false;
-    } else {
-      btnText.textContent = 'Select an amount';
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
       btn.disabled = true;
-    }
-  }
 
-  // Recipient toggle
-  document.querySelectorAll('input[name="gcRecipientType"]').forEach(input => {
-    input.addEventListener('change', () => {
-      if (input.value === 'gift') {
-        document.getElementById('gcGiftFields')?.classList.remove('hidden');
-        document.getElementById('gcSelfFields')?.classList.add('hidden');
-      } else {
-        document.getElementById('gcGiftFields')?.classList.add('hidden');
-        document.getElementById('gcSelfFields')?.classList.remove('hidden');
-        if (gcCurrentUser) {
-          document.getElementById('gcSelfEmail').textContent = gcCurrentUser.email || '-';
+      try {
+        const response = await fetch('/api/giftcards/redeem', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, userId: gcCurrentUser.uid })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          successEl.textContent = result.message;
+          successEl.style.display = 'block';
+          document.getElementById('gcGiftCardCode').value = '';
+          document.getElementById('gcCreditBalance').textContent = `£${result.newBalance.toFixed(2)}`;
+        } else {
+          errorEl.textContent = result.error || 'Failed to redeem';
+          errorEl.style.display = 'block';
         }
+      } catch (err) {
+        errorEl.textContent = 'Something went wrong';
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
       }
     });
-  });
 
-  // Purchase
-  document.getElementById('gcPurchaseBtn')?.addEventListener('click', async () => {
-    if (!gcCurrentUser || gcSelectedAmount < 5) return;
+    // Amount selection
+    document.querySelector('.gc-amount-selector')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('.gc-amount-btn');
+      if (!btn) return;
 
-    const errorEl = document.getElementById('gcPurchaseError');
-    const btn = document.getElementById('gcPurchaseBtn');
-    const btnText = btn.querySelector('.gc-btn-text');
-    const btnLoading = btn.querySelector('.gc-btn-loading');
+      document.querySelectorAll('.gc-amount-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
 
-    const recipientType = document.querySelector('input[name="gcRecipientType"]:checked')?.value || 'gift';
-    const recipientName = document.getElementById('gcRecipientName')?.value.trim() || '';
-    const recipientEmail = document.getElementById('gcRecipientEmail')?.value.trim() || '';
-    const message = document.getElementById('gcGiftMessage')?.value.trim() || '';
-    const paymentMethod = document.querySelector('input[name="gcPaymentMethod"]:checked')?.value || 'stripe';
-
-    if (recipientType === 'gift' && !recipientEmail) {
-      errorEl.textContent = 'Please enter recipient email';
-      errorEl.style.display = 'block';
-      return;
-    }
-
-    errorEl.style.display = 'none';
-    btn.disabled = true;
-    btnText.classList.add('hidden');
-    btnLoading.classList.remove('hidden');
-
-    const purchaseData = {
-      amount: gcSelectedAmount,
-      buyerUserId: gcCurrentUser.uid,
-      buyerEmail: gcCurrentUser.email,
-      buyerName: gcCurrentUser.displayName || '',
-      recipientType,
-      recipientName: recipientType === 'self' ? (gcCurrentUser.displayName || '') : recipientName,
-      recipientEmail: recipientType === 'gift' ? recipientEmail : gcCurrentUser.email,
-      message
-    };
-
-    try {
-      if (paymentMethod === 'stripe') {
-        // Create Stripe checkout session
-        const response = await fetch('/api/giftcards/create-stripe-session', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(purchaseData)
-        });
-        const result = await response.json();
-
-        if (result.success && result.checkoutUrl) {
-          // Redirect to Stripe checkout
-          window.location.href = result.checkoutUrl;
-        } else {
-          errorEl.textContent = result.error || 'Failed to create checkout session';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-          btnText.classList.remove('hidden');
-          btnLoading.classList.add('hidden');
-        }
+      const amount = btn.dataset.amount;
+      if (amount === 'custom') {
+        document.getElementById('gcCustomAmountWrapper')?.classList.remove('hidden');
+        const customVal = parseInt(document.getElementById('gcCustomAmount')?.value) || 0;
+        updateGcAmount(customVal >= 5 ? customVal : 0);
       } else {
-        // Create PayPal order
-        const response = await fetch('/api/giftcards/create-paypal-order', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(purchaseData)
-        });
-        const result = await response.json();
+        document.getElementById('gcCustomAmountWrapper')?.classList.add('hidden');
+        updateGcAmount(parseInt(amount));
+      }
+    });
 
-        if (result.success && result.approvalUrl) {
-          // Redirect to PayPal approval
-          window.location.href = result.approvalUrl;
+    document.getElementById('gcCustomAmount')?.addEventListener('input', (e) => {
+      let value = parseInt(e.target.value) || 0;
+      if (value > 500) { value = 500; e.target.value = 500; }
+      updateGcAmount(value >= 5 ? value : 0);
+    });
+
+    function updateGcAmount(amount) {
+      gcSelectedAmount = amount;
+      document.getElementById('gcSelectedAmount').textContent = `£${amount}`;
+      const btn = document.getElementById('gcPurchaseBtn');
+      const btnText = btn?.querySelector('.gc-btn-text');
+      if (amount > 0) {
+        btnText.textContent = `Purchase Gift Card - £${amount}`;
+        btn.disabled = false;
+      } else {
+        btnText.textContent = 'Select an amount';
+        btn.disabled = true;
+      }
+    }
+
+    // Recipient toggle
+    document.querySelectorAll('input[name="gcRecipientType"]').forEach(input => {
+      input.addEventListener('change', () => {
+        if (input.value === 'gift') {
+          document.getElementById('gcGiftFields')?.classList.remove('hidden');
+          document.getElementById('gcSelfFields')?.classList.add('hidden');
         } else {
-          errorEl.textContent = result.error || 'Failed to create PayPal order';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-          btnText.classList.remove('hidden');
-          btnLoading.classList.add('hidden');
+          document.getElementById('gcGiftFields')?.classList.add('hidden');
+          document.getElementById('gcSelfFields')?.classList.remove('hidden');
+          if (gcCurrentUser) {
+            document.getElementById('gcSelfEmail').textContent = gcCurrentUser.email || '-';
+          }
         }
+      });
+    });
+
+    // Purchase
+    document.getElementById('gcPurchaseBtn')?.addEventListener('click', async () => {
+      if (!gcCurrentUser || gcSelectedAmount < 5) return;
+
+      const errorEl = document.getElementById('gcPurchaseError');
+      const btn = document.getElementById('gcPurchaseBtn');
+      const btnText = btn.querySelector('.gc-btn-text');
+      const btnLoading = btn.querySelector('.gc-btn-loading');
+
+      const recipientType = document.querySelector('input[name="gcRecipientType"]:checked')?.value || 'gift';
+      const recipientName = document.getElementById('gcRecipientName')?.value.trim() || '';
+      const recipientEmail = document.getElementById('gcRecipientEmail')?.value.trim() || '';
+      const message = document.getElementById('gcGiftMessage')?.value.trim() || '';
+      const paymentMethod = document.querySelector('input[name="gcPaymentMethod"]:checked')?.value || 'stripe';
+
+      if (recipientType === 'gift' && !recipientEmail) {
+        errorEl.textContent = 'Please enter recipient email';
+        errorEl.style.display = 'block';
+        return;
       }
-    } catch (err) {
-      errorEl.textContent = 'Something went wrong';
-      errorEl.style.display = 'block';
-      btn.disabled = false;
-      btnText.classList.remove('hidden');
-      btnLoading.classList.add('hidden');
+
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btnText.classList.add('hidden');
+      btnLoading.classList.remove('hidden');
+
+      const purchaseData = {
+        amount: gcSelectedAmount,
+        buyerUserId: gcCurrentUser.uid,
+        buyerEmail: gcCurrentUser.email,
+        buyerName: gcCurrentUser.displayName || '',
+        recipientType,
+        recipientName: recipientType === 'self' ? (gcCurrentUser.displayName || '') : recipientName,
+        recipientEmail: recipientType === 'gift' ? recipientEmail : gcCurrentUser.email,
+        message
+      };
+
+      try {
+        if (paymentMethod === 'stripe') {
+          const response = await fetch('/api/giftcards/create-stripe-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(purchaseData)
+          });
+          const result = await response.json();
+
+          if (result.success && result.checkoutUrl) {
+            window.location.href = result.checkoutUrl;
+          } else {
+            errorEl.textContent = result.error || 'Failed to create checkout session';
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btnText.classList.remove('hidden');
+            btnLoading.classList.add('hidden');
+          }
+        } else {
+          const response = await fetch('/api/giftcards/create-paypal-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(purchaseData)
+          });
+          const result = await response.json();
+
+          if (result.success && result.approvalUrl) {
+            window.location.href = result.approvalUrl;
+          } else {
+            errorEl.textContent = result.error || 'Failed to create PayPal order';
+            errorEl.style.display = 'block';
+            btn.disabled = false;
+            btnText.classList.remove('hidden');
+            btnLoading.classList.add('hidden');
+          }
+        }
+      } catch (err) {
+        errorEl.textContent = 'Something went wrong';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    });
+
+    // Load balance
+    async function loadGcBalance(userId) {
+      try {
+        const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+        const result = await response.json();
+        if (result.success) {
+          document.getElementById('gcCreditBalance').textContent = `£${result.balance.toFixed(2)}`;
+          document.getElementById('gcBalanceDisplay')?.classList.remove('hidden');
+        }
+      } catch (e) {}
     }
+
+    // Auth state
+    function updateGcAuthUI(user) {
+      gcCurrentUser = user;
+      if (user) {
+        document.getElementById('gcLoginPrompt')?.classList.add('hidden');
+        document.getElementById('gcRedeemForm')?.classList.remove('hidden');
+        document.getElementById('gcPurchaseLoginPrompt')?.classList.add('hidden');
+        document.getElementById('gcPurchaseActions')?.classList.remove('hidden');
+        document.getElementById('gcPaymentSection')?.classList.remove('hidden');
+        document.getElementById('gcSelfEmail').textContent = user.email || '-';
+        loadGcBalance(user.uid);
+      } else {
+        document.getElementById('gcLoginPrompt')?.classList.remove('hidden');
+        document.getElementById('gcRedeemForm')?.classList.add('hidden');
+        document.getElementById('gcPurchaseLoginPrompt')?.classList.remove('hidden');
+        document.getElementById('gcPurchaseActions')?.classList.add('hidden');
+        document.getElementById('gcPaymentSection')?.classList.add('hidden');
+        document.getElementById('gcBalanceDisplay')?.classList.add('hidden');
+      }
+    }
+
+    onAuthStateChanged(auth, updateGcAuthUI);
+  }
+
+  // Initialize on page load and Astro navigation
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initGiftCard);
+  } else {
+    initGiftCard();
+  }
+  document.addEventListener('astro:page-load', () => {
+    gcInitialized = false;
+    initGiftCard();
   });
-
-  // Load balance
-  async function loadGcBalance(userId) {
-    try {
-      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
-      const result = await response.json();
-      if (result.success) {
-        document.getElementById('gcCreditBalance').textContent = `£${result.balance.toFixed(2)}`;
-        document.getElementById('gcBalanceDisplay')?.classList.remove('hidden');
-      }
-    } catch (e) {}
-  }
-
-  // Auth state
-  function updateGcAuthUI(user) {
-    gcCurrentUser = user;
-    if (user) {
-      document.getElementById('gcLoginPrompt')?.classList.add('hidden');
-      document.getElementById('gcRedeemForm')?.classList.remove('hidden');
-      document.getElementById('gcPurchaseLoginPrompt')?.classList.add('hidden');
-      document.getElementById('gcPurchaseActions')?.classList.remove('hidden');
-      document.getElementById('gcPaymentSection')?.classList.remove('hidden');
-      document.getElementById('gcSelfEmail').textContent = user.email || '-';
-      loadGcBalance(user.uid);
-    } else {
-      document.getElementById('gcLoginPrompt')?.classList.remove('hidden');
-      document.getElementById('gcRedeemForm')?.classList.add('hidden');
-      document.getElementById('gcPurchaseLoginPrompt')?.classList.remove('hidden');
-      document.getElementById('gcPurchaseActions')?.classList.add('hidden');
-      document.getElementById('gcPaymentSection')?.classList.add('hidden');
-      document.getElementById('gcBalanceDisplay')?.classList.add('hidden');
-    }
-  }
-
-  onAuthStateChanged(auth, updateGcAuthUI);
 </script>
 
