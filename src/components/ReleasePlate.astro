@@ -2090,91 +2090,111 @@ const totalDurationFormatted = totalDurationSeconds > 0
     console.log('initWishlistSystem called, found buttons:', wishlistButtons.length);
 
     // Function to fetch and update wishlist state
-    function fetchWishlistState() {
-      var userId = getUserId();
-      if (userId && wishlistButtons.length > 0) {
-        fetch('/api/wishlist?userId=' + userId)
-          .then(function(res) { return res.json(); })
-          .then(function(data) {
-            if (data.success && data.wishlist) {
-              var wishlistIds = data.wishlist.map(function(r) { return r.id; });
-              wishlistButtons.forEach(function(btn) {
-                var releaseId = btn.getAttribute('data-release-id');
-                if (wishlistIds.includes(releaseId)) {
-                  setWishlistState(btn, true);
-                }
-              });
-            }
+    async function fetchWishlistState() {
+      var user = window.firebaseAuth?.currentUser;
+      if (user && wishlistButtons.length > 0) {
+        try {
+          var token = await user.getIdToken();
+          fetch('/api/wishlist?userId=' + user.uid, {
+            headers: { 'Authorization': 'Bearer ' + token }
           })
-          .catch(function(err) {
-            console.log('Failed to load wishlist state:', err);
-          });
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+              if (data.success && data.wishlist) {
+                var wishlistIds = data.wishlist.map(function(r) { return r.id; });
+                wishlistButtons.forEach(function(btn) {
+                  var releaseId = btn.getAttribute('data-release-id');
+                  if (wishlistIds.includes(releaseId)) {
+                    setWishlistState(btn, true);
+                  }
+                });
+              }
+            })
+            .catch(function(err) {
+              console.log('Failed to load wishlist state:', err);
+            });
+        } catch (err) {
+          console.log('Failed to get auth token for wishlist:', err);
+        }
       }
     }
 
     // Wait for auth to be ready before checking wishlist state
-    // This ensures the userId cookie has been set by Header.astro
     if (window.authReady) {
       window.authReady.then(function(user) {
         if (user) {
-          // Small delay to ensure cookie is set after auth state handler runs
-          setTimeout(fetchWishlistState, 50);
+          fetchWishlistState();
         }
       });
-    } else {
-      // Fallback: check immediately if authReady not available
-      fetchWishlistState();
+    } else if (window.firebaseAuth) {
+      window.firebaseAuth.onAuthStateChanged(function(user) {
+        if (user) {
+          fetchWishlistState();
+        }
+      });
     }
     
     // Use event delegation - one listener on document
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', async function(e) {
       var btn = e.target.closest('.wishlist-btn');
       if (!btn) return;
-      
+
       e.preventDefault();
       e.stopPropagation();
-      
-      var userId = getUserId();
+
+      var user = window.firebaseAuth?.currentUser;
       var releaseId = btn.getAttribute('data-release-id');
-      
+
       // Must be logged in to use wishlist
-      if (!userId) {
+      if (!user) {
         showToast('Please log in to add items to your wishlist');
         return;
       }
-      
+
       // Disable button during request
       btn.style.opacity = '0.5';
       btn.style.pointerEvents = 'none';
-      
-      // Call API to toggle wishlist
-      fetch('/api/wishlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userId,
-          releaseId: releaseId,
-          action: 'toggle'
+
+      try {
+        var token = await user.getIdToken();
+
+        // Call API to toggle wishlist
+        fetch('/api/wishlist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            userId: user.uid,
+            releaseId: releaseId,
+            action: 'toggle'
+          })
         })
-      })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
-        
-        if (data.success) {
-          setWishlistState(btn, data.inWishlist);
-          showToast(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
-        } else {
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+
+          if (data.success) {
+            setWishlistState(btn, data.inWishlist);
+            showToast(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
+          } else {
+            showToast('Failed to update wishlist');
+          }
+        })
+        .catch(function(err) {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+          console.error('Wishlist error:', err);
           showToast('Failed to update wishlist');
-        }
-      })
-      .catch(function(err) {
+        });
+      } catch (err) {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
-        console.error('Wishlist error:', err);
-        showToast('Failed to update wishlist');
-      });
+        console.error('Auth error:', err);
+        showToast('Authentication error');
+      }
     });
   }
   
