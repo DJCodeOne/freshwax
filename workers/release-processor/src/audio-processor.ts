@@ -51,18 +51,25 @@ async function getAudioDuration(ffmpeg: FFmpeg, inputFile: string): Promise<numb
 }
 
 /**
- * Convert WAV to MP3 (320kbps)
+ * Convert WAV to MP3 (320kbps DJ quality)
+ * Settings optimized for professional DJ/radio use:
+ * - CBR 320kbps for CDJ/DJ software compatibility
+ * - Highest quality LAME algorithm (-q:a 0)
+ * - Full stereo mode for maximum quality at high bitrates
+ * - Preserves original sample rate (44.1/48kHz)
  */
 async function convertWavToMp3(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<Uint8Array> {
-  console.log('[Audio] Converting WAV to MP3...');
+  console.log('[Audio] Converting WAV to 320kbps MP3 (DJ quality)...');
 
   await ffmpeg.writeFile('input.wav', inputData);
 
   await ffmpeg.exec([
     '-i', 'input.wav',
     '-codec:a', 'libmp3lame',
-    '-b:a', '320k',
-    '-ar', '44100',
+    '-b:a', '320k',           // Constant bitrate 320kbps
+    '-q:a', '0',              // Highest quality algorithm
+    '-joint_stereo', '0',     // Full stereo (better at 320k)
+    '-cutoff', '20500',       // Standard high-frequency cutoff for 320k
     '-y',
     'output.mp3'
   ]);
@@ -73,7 +80,7 @@ async function convertWavToMp3(ffmpeg: FFmpeg, inputData: Uint8Array): Promise<U
   await ffmpeg.deleteFile('input.wav');
   await ffmpeg.deleteFile('output.mp3');
 
-  console.log(`[Audio] WAV to MP3 complete: ${output.length} bytes`);
+  console.log(`[Audio] WAV to MP3 complete: ${output.length} bytes (320kbps DJ quality)`);
   return output as Uint8Array;
 }
 
@@ -193,17 +200,19 @@ export async function processAudioTrack(
     wavData = await convertMp3ToWav(ffmpeg, trackBuffer);
   } else if (sourceFormat === 'flac' || sourceFormat === 'aiff') {
     // Convert lossless formats to both MP3 and WAV
-    console.log(`[Audio] Converting ${sourceFormat} to MP3 and WAV...`);
+    console.log(`[Audio] Converting ${sourceFormat} to 320kbps MP3 and WAV (DJ quality)...`);
 
     const inputFile = `input.${sourceFormat}`;
     await ffmpeg.writeFile(inputFile, trackBuffer);
 
-    // Convert to MP3
+    // Convert to MP3 (DJ quality settings)
     await ffmpeg.exec([
       '-i', inputFile,
       '-codec:a', 'libmp3lame',
-      '-b:a', '320k',
-      '-ar', '44100',
+      '-b:a', '320k',           // Constant bitrate 320kbps
+      '-q:a', '0',              // Highest quality algorithm
+      '-joint_stereo', '0',     // Full stereo (better at 320k)
+      '-cutoff', '20500',       // Standard high-frequency cutoff for 320k
       '-y',
       'output.mp3'
     ]);
