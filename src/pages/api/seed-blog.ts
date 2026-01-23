@@ -1,9 +1,11 @@
 // src/pages/api/seed-blog.ts
 // One-time seed script for initial blog posts
+// Call with: /api/seed-blog?key=YOUR_ADMIN_KEY
 // DELETE THIS FILE after running once
 
 import type { APIRoute } from 'astro';
 import { setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getAdminKey } from '../../lib/admin';
 
 export const prerender = false;
 
@@ -17,10 +19,6 @@ const blogPosts = [
     tags: ['vinyl', 'jungle', 'drum and bass', 'releases', 'music collection'],
     author: 'Fresh Wax',
     featuredImage: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=1200&h=630&fit=crop',
-    status: 'published',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    views: 0,
     content: `
 <h2>The Heart of Underground Music: Our Vinyl Collection</h2>
 
@@ -68,10 +66,6 @@ const blogPosts = [
     tags: ['dj mixes', 'free music', 'streaming', 'jungle', 'drum and bass', 'podcasts'],
     author: 'Fresh Wax',
     featuredImage: 'https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=1200&h=630&fit=crop',
-    status: 'published',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    views: 0,
     content: `
 <h2>Your Free Source for Quality DJ Mixes</h2>
 
@@ -115,10 +109,6 @@ const blogPosts = [
     tags: ['merchandise', 'clothing', 't-shirts', 'hoodies', 'accessories', 'streetwear'],
     author: 'Fresh Wax',
     featuredImage: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=1200&h=630&fit=crop',
-    status: 'published',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    views: 0,
     content: `
 <h2>Wear Your Sound: Fresh Wax Official Merchandise</h2>
 
@@ -163,10 +153,6 @@ const blogPosts = [
     tags: ['sample packs', 'music production', 'drums', 'bass', 'loops', 'royalty free'],
     author: 'Fresh Wax',
     featuredImage: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1200&h=630&fit=crop',
-    status: 'published',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    views: 0,
     content: `
 <h2>Sounds for Producers, By Producers</h2>
 
@@ -218,10 +204,6 @@ const blogPosts = [
     tags: ['live streaming', 'events', 'dj sets', 'live music', 'virtual events'],
     author: 'Fresh Wax',
     featuredImage: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&h=630&fit=crop',
-    status: 'published',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    views: 0,
     content: `
 <h2>The Rave Comes to You</h2>
 
@@ -272,10 +254,6 @@ const blogPosts = [
     tags: ['crates', 'playlists', 'wishlist', 'music organisation', 'features'],
     author: 'Fresh Wax',
     featuredImage: 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=1200&h=630&fit=crop',
-    status: 'published',
-    publishedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    views: 0,
     content: `
 <h2>Your Personal Record Box</h2>
 
@@ -320,6 +298,21 @@ const blogPosts = [
 ];
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Check for admin key in query params for this one-time seed
+  const url = new URL(request.url);
+  const key = url.searchParams.get('key');
+  const expectedKey = getAdminKey(locals);
+
+  if (!key || key !== expectedKey) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Admin key required. Call with ?key=YOUR_ADMIN_KEY'
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -328,13 +321,25 @@ export const GET: APIRoute = async ({ request, locals }) => {
   });
 
   const results: any[] = [];
+  const now = new Date().toISOString();
 
   try {
     for (const post of blogPosts) {
       const { id, ...postData } = post;
 
+      const fullPostData = {
+        ...postData,
+        status: 'published',
+        views: 0,
+        createdAt: now,
+        updatedAt: now,
+        publishedAt: now,
+        seoTitle: postData.title,
+        seoDescription: postData.excerpt
+      };
+
       try {
-        await setDocument('blog-posts', id, postData);
+        await setDocument('blog-posts', id, fullPostData);
         results.push({ id, status: 'created', title: post.title });
       } catch (err: any) {
         results.push({ id, status: 'error', error: err.message });
