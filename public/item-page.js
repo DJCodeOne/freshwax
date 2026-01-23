@@ -214,10 +214,10 @@ function showToast(message) {
 }
 
 // Player initialization - FIXED with lazy audio creation
-// CLIP RESTRICTION: Play 60 seconds starting at 60s into the track
-const CLIP_START_TIME = 60; // Start at 60 seconds into track
-const CLIP_DURATION = 60;   // Play for 60 seconds max
-const CLIP_END_TIME = CLIP_START_TIME + CLIP_DURATION; // Stop at 120 seconds
+// CLIP RESTRICTION: Play 90 seconds starting at 60s (1 min) into the track
+const CLIP_START_TIME = 60; // Start at 1 minute into track
+const CLIP_DURATION = 90;   // Play for 90 seconds max
+const CLIP_END_TIME = CLIP_START_TIME + CLIP_DURATION; // Stop at 150 seconds (2:30)
 const FADE_DURATION = 3;    // Fade in/out over 3 seconds
 const FADE_OUT_START = CLIP_END_TIME - FADE_DURATION; // Start fading out 3s before end
 const TARGET_VOLUME = 1.0;  // Target volume for playback
@@ -348,7 +348,7 @@ function initPlayer() {
 
             // CLIP RESTRICTION: Stop playback at CLIP_END_TIME (120s)
             if (currentTime >= CLIP_END_TIME) {
-              console.log('[Player] Clip limit reached (60s preview), stopping');
+              console.log('[Player] Clip limit reached (90s preview), stopping');
               audio.pause();
               audio.volume = TARGET_VOLUME; // Reset volume after fade
               audio.currentTime = CLIP_START_TIME; // Reset to clip start
@@ -360,7 +360,7 @@ function initPlayer() {
               currentCanvas = null;
 
               // Show toast notification
-              showToast('60 second preview ended');
+              showToast('90 second preview ended');
 
               if (window.AudioManager) {
                 window.AudioManager.onTracklistPreviewStop();
@@ -469,12 +469,12 @@ function initPlayer() {
         audio.volume = 0; // Start at 0 for fade in
       }
 
-      console.log('[Player] Playing track:', trackTitle, 'from', CLIP_START_TIME + 's (60s preview)');
+      console.log('[Player] Playing track:', trackTitle, 'from', CLIP_START_TIME + 's (90s preview)');
       audio.play().then(() => {
         console.log('[Player] Playback started');
         if (playIcon) playIcon.classList.add('hidden');
         if (pauseIcon) pauseIcon.classList.remove('hidden');
-        showToast('Playing 60 second preview');
+        showToast('Playing 90 second preview');
       }).catch(err => {
         console.error('[Player] Play error:', err);
         audio.volume = TARGET_VOLUME; // Reset volume on error

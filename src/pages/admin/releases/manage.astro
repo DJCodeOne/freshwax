@@ -196,8 +196,18 @@ const formatCurrency = (amount) => {
                     >
                       ✏️
                     </a>
+                    {!release.audioProcessed && (
+                      <button
+                        class="btn btn-outline btn-sm process-audio-btn"
+                        data-id={release.id}
+                        data-name={release.releaseName}
+                        title="Process Audio (generate MP3+WAV)"
+                      >
+                        🎵
+                      </button>
+                    )}
                     {release.status !== 'live' && (
-                      <button 
+                      <button
                         class="btn btn-success btn-sm publish-btn"
                         data-id={release.id}
                         title="Publish"
@@ -276,6 +286,119 @@ const formatCurrency = (amount) => {
 
       formatFilter?.addEventListener('change', filterReleases);
       searchInput?.addEventListener('input', filterReleases);
+
+      // Process audio for a release
+      const AUDIO_PROCESSOR_URL = 'http://localhost:8089';
+
+      async function checkAudioProcessor() {
+        try {
+          const response = await fetch(`${AUDIO_PROCESSOR_URL}/health`, {
+            method: 'GET',
+            signal: AbortSignal.timeout(2000)
+          });
+          if (!response.ok) return false;
+          const data = await response.json();
+          return data.status === 'healthy' && data.r2Configured;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      document.querySelectorAll('.process-audio-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.id;
+          const name = btn.dataset.name || 'this release';
+
+          // Check if audio processor is available
+          const isAvailable = await checkAudioProcessor();
+          if (!isAvailable) {
+            showToast('Audio processor not running. Start it with: node scripts/audio-processor.cjs', 'error');
+            return;
+          }
+
+          if (!confirm(`Process audio for "${name}"? This will generate MP3+WAV formats for all tracks.`)) return;
+
+          btn.disabled = true;
+          btn.textContent = '⏳';
+
+          try {
+            // Get release details
+            const releaseRes = await fetch(`/api/get-release?id=${id}&nocache=1`);
+            const releaseData = await releaseRes.json();
+
+            if (!releaseData.success || !releaseData.release) {
+              throw new Error('Failed to fetch release details');
+            }
+
+            const release = releaseData.release;
+            const baseFolder = `releases/${id}`;
+            const processedTracks = [];
+
+            // Process each track
+            for (const track of release.tracks || []) {
+              try {
+                // Get the R2 key from the track URL
+                const url = track.url || track.mp3Url || track.wavUrl;
+                if (!url) continue;
+
+                const urlParts = new URL(url);
+                const sourceKey = urlParts.pathname.substring(1);
+
+                const response = await fetch(`${AUDIO_PROCESSOR_URL}/process-track`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    sourceKey: sourceKey,
+                    releaseFolder: baseFolder,
+                    trackNumber: track.trackNumber,
+                    trackTitle: track.title
+                  })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                  processedTracks.push({
+                    trackNumber: track.trackNumber,
+                    mp3Url: result.mp3Url,
+                    wavUrl: result.wavUrl,
+                    previewUrl: result.previewUrl
+                  });
+                }
+              } catch (err) {
+                console.error(`Track processing error:`, err);
+              }
+            }
+
+            if (processedTracks.length > 0) {
+              // Update release with processed URLs
+              await fetch('/api/releases/update-tracks', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Admin-Key': adminKey
+                },
+                body: JSON.stringify({
+                  releaseId: id,
+                  tracks: processedTracks
+                })
+              });
+
+              showToast(`Processed ${processedTracks.length} tracks!`);
+              setTimeout(() => location.reload(), 1500);
+            } else {
+              showToast('No tracks were processed', 'error');
+              btn.disabled = false;
+              btn.textContent = '🎵';
+            }
+
+          } catch (error) {
+            console.error(error);
+            showToast('Audio processing failed', 'error');
+            btn.disabled = false;
+            btn.textContent = '🎵';
+          }
+        });
+      });
 
       // Publish release
       document.querySelectorAll('.publish-btn').forEach(btn => {

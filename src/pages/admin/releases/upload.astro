@@ -498,8 +498,20 @@ uploadBtn.onclick = async () => {
     }
 
     debug("Upload complete!");
-    setProgress(100, "Complete!");
-    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">Manage Releases</a> to review and approve.`);
+    setProgress(100, "Upload complete!");
+
+    // Try to process audio with local audio processor
+    const processingResult = await processAudioTracks(
+      presignData.releaseId,
+      presignData.baseFolder,
+      trackData
+    );
+
+    if (processingResult.processed) {
+      setStatus(`Release uploaded and audio processed! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+    } else {
+      setStatus(`Release uploaded successfully! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+    }
 
     // Reset
     extractedData = null;
@@ -512,6 +524,129 @@ uploadBtn.onclick = async () => {
     uploadBtn.disabled = false;
   }
 };
+
+// Audio processor integration
+const AUDIO_PROCESSOR_URL = 'http://localhost:8089';
+
+async function checkAudioProcessor() {
+  try {
+    const response = await fetch(`${AUDIO_PROCESSOR_URL}/health`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(2000)
+    });
+    if (!response.ok) return false;
+    const data = await response.json();
+    return data.status === 'healthy' && data.r2Configured;
+  } catch (e) {
+    debug(`Audio processor not available: ${e.message}`);
+    return false;
+  }
+}
+
+async function processAudioTracks(releaseId, baseFolder, tracks) {
+  debug("Checking audio processor availability...");
+
+  const isAvailable = await checkAudioProcessor();
+  if (!isAvailable) {
+    debug("Audio processor not running - skipping audio conversion");
+    return {
+      processed: false,
+      message: "Audio processor not running. Run the local processor to generate MP3+WAV formats."
+    };
+  }
+
+  debug("Audio processor available! Starting audio conversion...");
+  setProgress(0, "Processing audio formats...");
+
+  const processedTracks = [];
+  let successCount = 0;
+
+  for (let i = 0; i < tracks.length; i++) {
+    const track = tracks[i];
+    debug(`Processing track ${i + 1}/${tracks.length}: ${track.title}`);
+    setProgress((i / tracks.length) * 100, `Processing track ${i + 1}/${tracks.length}: ${track.title}...`);
+
+    try {
+      // Build the R2 key from the track URL
+      // URL format: https://cdn.freshwax.co.uk/releases/{releaseId}/tracks/{filename}
+      const urlParts = new URL(track.url);
+      const sourceKey = urlParts.pathname.substring(1); // Remove leading /
+
+      debug(`Calling audio processor for: ${sourceKey}`);
+
+      const response = await fetch(`${AUDIO_PROCESSOR_URL}/process-track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceKey: sourceKey,
+          releaseFolder: baseFolder,
+          trackNumber: track.trackNumber,
+          trackTitle: track.title
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        debug(`Track ${i + 1} processed: MP3=${result.mp3Url}, WAV=${result.wavUrl}`);
+        processedTracks.push({
+          trackNumber: track.trackNumber,
+          title: track.title,
+          mp3Url: result.mp3Url,
+          wavUrl: result.wavUrl,
+          previewUrl: result.previewUrl,
+          mp3Size: result.mp3Size,
+          wavSize: result.wavSize
+        });
+        successCount++;
+      } else {
+        debug(`Track ${i + 1} processing failed: ${result.error}`);
+        processedTracks.push({ ...track, error: result.error });
+      }
+    } catch (err) {
+      debug(`Track ${i + 1} processing error: ${err.message}`);
+      processedTracks.push({ ...track, error: err.message });
+    }
+  }
+
+  // Update release record with processed URLs
+  if (successCount > 0) {
+    debug(`Updating release with ${successCount} processed tracks...`);
+    setProgress(95, "Updating release record...");
+
+    try {
+      const updateResponse = await fetch('/api/releases/update-tracks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Key': window.ADMIN_KEY
+        },
+        body: JSON.stringify({
+          releaseId: releaseId,
+          tracks: processedTracks.filter(t => !t.error)
+        })
+      });
+
+      const updateResult = await updateResponse.json();
+      if (!updateResult.success) {
+        debug(`Failed to update release: ${updateResult.error}`);
+      }
+    } catch (err) {
+      debug(`Update error: ${err.message}`);
+    }
+  }
+
+  setProgress(100, "Processing complete!");
+
+  return {
+    processed: successCount > 0,
+    message: successCount === tracks.length
+      ? `All ${successCount} tracks processed with MP3+WAV+preview.`
+      : successCount > 0
+        ? `${successCount}/${tracks.length} tracks processed.`
+        : "Audio processing failed."
+  };
+}
 
 // Manual upload handler
 manualBtn.onclick = async () => {
@@ -600,8 +735,20 @@ manualBtn.onclick = async () => {
       throw new Error(completeData.error || "Failed to create release");
     }
 
-    setProgress(100, "Complete!");
-    setStatus(`Release uploaded successfully! <a href="/admin/releases/manage">Manage Releases</a> to review and approve.`);
+    setProgress(100, "Upload complete!");
+
+    // Try to process audio with local audio processor
+    const processingResult = await processAudioTracks(
+      presignData.releaseId,
+      presignData.baseFolder,
+      trackData
+    );
+
+    if (processingResult.processed) {
+      setStatus(`Release uploaded and audio processed! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+    } else {
+      setStatus(`Release uploaded successfully! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+    }
 
     // Reset form
     artistInput.value = "";

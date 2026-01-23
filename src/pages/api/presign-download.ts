@@ -152,43 +152,72 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Fetch the release to get the actual file URLs
-    // (URLs are stored in releases collection, not in orders)
-    const releaseData = await getDocument('releases', releaseId);
-
-    if (!releaseData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     // Get the URL to presign
+    // First try order's stored download data (locked at purchase time - safer)
+    // Then fall back to current release data
     let fileUrl: string | null = null;
 
     if (fileType === 'artwork') {
-      fileUrl = releaseData.coverArtUrl || releaseData.artworkUrl || releaseData.artwork?.cover || null;
+      // Try order's stored artwork first
+      fileUrl = item.downloads?.artworkUrl || null;
     } else {
-      const tracks = releaseData.tracks || [];
-
-      // For single track purchases, match by trackId or name
-      if (item.type === 'track' && item.trackId) {
-        const track = tracks.find((t: any) =>
-          t.id === item.trackId ||
-          t.trackId === item.trackId ||
-          String(t.trackNumber) === String(item.trackId)
-        );
-        if (track) {
-          fileUrl = fileType === 'mp3' ? track.mp3Url : track.wavUrl;
+      // Try order's stored track URLs first (locked at purchase time)
+      const orderTracks = item.downloads?.tracks || [];
+      if (orderTracks.length > 0) {
+        if (item.type === 'track' && item.trackId) {
+          // Single track purchase - find by name or index
+          const orderTrack = orderTracks.find((t: any) =>
+            t.name === item.name || t.trackId === item.trackId
+          ) || orderTracks[0];
+          if (orderTrack) {
+            fileUrl = fileType === 'mp3' ? orderTrack.mp3Url : orderTrack.wavUrl;
+          }
+        } else {
+          // Full release - use trackIndex
+          const orderTrack = orderTracks[trackIndex];
+          if (orderTrack) {
+            fileUrl = fileType === 'mp3' ? orderTrack.mp3Url : orderTrack.wavUrl;
+          }
         }
+      }
+    }
+
+    // Fall back to current release data if order doesn't have URLs
+    if (!fileUrl) {
+      log.info('[presign-download] Order has no stored URL, fetching from release');
+      const releaseData = await getDocument('releases', releaseId);
+
+      if (!releaseData) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Release not found'
+        }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (fileType === 'artwork') {
+        fileUrl = releaseData.coverArtUrl || releaseData.artworkUrl || releaseData.artwork?.cover || null;
       } else {
-        // For full release purchases, use trackIndex
-        const track = tracks[trackIndex];
-        if (track) {
-          fileUrl = fileType === 'mp3' ? track.mp3Url : track.wavUrl;
+        const tracks = releaseData.tracks || [];
+
+        // For single track purchases, match by trackId or name
+        if (item.type === 'track' && item.trackId) {
+          const track = tracks.find((t: any) =>
+            t.id === item.trackId ||
+            t.trackId === item.trackId ||
+            String(t.trackNumber) === String(item.trackId)
+          );
+          if (track) {
+            fileUrl = fileType === 'mp3' ? track.mp3Url : track.wavUrl;
+          }
+        } else {
+          // For full release purchases, use trackIndex
+          const track = tracks[trackIndex];
+          if (track) {
+            fileUrl = fileType === 'mp3' ? track.mp3Url : track.wavUrl;
+          }
         }
       }
     }
