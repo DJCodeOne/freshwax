@@ -99,11 +99,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
         const value = item[field];
         if (value && typeof value === 'string' && value.toLowerCase().includes(query)) return true;
       }
-      // Search colors and sizes
+      // Search colors and sizes (with type guards)
       const colors = item.colors || [];
       const sizes = item.sizes || [];
-      if (colors.some((c: string) => c.toLowerCase().includes(query))) return true;
-      if (sizes.some((s: string) => s.toLowerCase().includes(query))) return true;
+      if (Array.isArray(colors) && colors.some((c: any) => typeof c === 'string' && c.toLowerCase().includes(query))) return true;
+      if (Array.isArray(sizes) && sizes.some((s: any) => typeof s === 'string' && s.toLowerCase().includes(query))) return true;
       return false;
     }).map((item: any) => ({
       id: item.id,
