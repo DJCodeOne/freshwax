@@ -2052,19 +2052,35 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     
     // Check status when auth is ready
     function initWishlistCheck() {
-      if (window.firebaseAuth) {
+      // Wait for both firebaseAuth and currentUser to be ready
+      if (window.firebaseAuth?.currentUser) {
         checkWishlistStatus();
+      } else if (window.firebaseAuth) {
+        // Auth exists but user not loaded yet - use onAuthStateChanged
+        window.firebaseAuth.onAuthStateChanged(function(user) {
+          if (user) {
+            checkWishlistStatus();
+          }
+        });
       } else {
+        // Wait for firebaseAuth to be available
         const interval = setInterval(function() {
-          if (window.firebaseAuth) {
+          if (window.firebaseAuth?.currentUser) {
             clearInterval(interval);
             checkWishlistStatus();
+          } else if (window.firebaseAuth) {
+            clearInterval(interval);
+            window.firebaseAuth.onAuthStateChanged(function(user) {
+              if (user) {
+                checkWishlistStatus();
+              }
+            });
           }
         }, 500);
         setTimeout(function() { clearInterval(interval); }, 10000);
       }
     }
-    
+
     // Run on load
     initWishlistCheck();
   }
