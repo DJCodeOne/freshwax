@@ -947,12 +947,15 @@ export const prerender = false;
   // Load wishlist count for badge (lightweight)
   async function loadWishlistCount(userId) {
     const badge = document.getElementById('wishlistBadge');
-    if (!badge) return;
-    
+    if (!badge || !currentUser) return;
+
     try {
-      const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(userId)}`);
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(userId)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
-      
+
       if (data.success) {
         const count = data.count || 0;
         badge.textContent = count;
@@ -967,15 +970,18 @@ export const prerender = false;
   let wishlistLoaded = false;
   async function loadWishlist(userId) {
     if (wishlistLoaded) return;
-    
+
     const container = document.getElementById('wishlistContainer');
     const badge = document.getElementById('wishlistBadge');
-    if (!container) return;
-    
+    if (!container || !currentUser) return;
+
     container.innerHTML = '<div class="empty-state"><p style="color: #fff;">Loading wishlist...</p></div>';
-    
+
     try {
-      const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(userId)}`);
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(userId)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
       
       if (data.success) {
@@ -1045,16 +1051,20 @@ export const prerender = false;
               card.style.pointerEvents = 'none';
               
               try {
+                const removeToken = await currentUser.getIdToken();
                 const res = await fetch('/api/wishlist', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${removeToken}`
+                  },
                   body: JSON.stringify({
                     userId: userId,
                     releaseId: releaseId,
                     action: 'remove'
                   })
                 });
-                
+
                 const result = await res.json();
                 if (result.success) {
                   card.remove();
