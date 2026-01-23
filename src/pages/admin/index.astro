@@ -32,6 +32,7 @@ let payoutsData: any[] = [];
 let disputesData: any[] = [];
 let refundsData: any[] = [];
 let ledgerData: any[] = [];
+let blogPostsData: any[] = [];
 let r2SubmissionsCount = 0;
 let r2PendingFolders: string[] = [];
 
@@ -47,7 +48,8 @@ try {
     queryCollection('payouts', { limit: 200 }),
     queryCollection('disputes', { limit: 50 }),
     queryCollection('refunds', { limit: 50 }),
-    queryCollection('salesLedger', { limit: 500 })
+    queryCollection('salesLedger', { limit: 500 }),
+    queryCollection('blog-posts', { limit: 100 })
   ]);
 
   ordersData = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -61,6 +63,7 @@ try {
   disputesData = results[8].status === 'fulfilled' ? results[8].value : [];
   refundsData = results[9].status === 'fulfilled' ? results[9].value : [];
   ledgerData = results[10].status === 'fulfilled' ? results[10].value : [];
+  blogPostsData = results[11].status === 'fulfilled' ? results[11].value : [];
 } catch (error) {
   console.error('[Admin Dashboard] Error fetching data:', error);
 }
@@ -161,6 +164,10 @@ const outOfStockMerch = merch.filter(m => {
   }
   return (m.stock || 0) === 0;
 });
+
+// Blog posts stats
+const blogPosts = blogPostsData;
+const publishedBlogPosts = blogPosts.filter(p => p.published);
 
 // DJ Mixes stats
 const mixes = mixesData;
@@ -572,6 +579,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
             <span class="quick-icon">🎧</span>
             <span class="quick-text">Manage DJ Mixes</span>
             <span class="quick-count">{mixes.length}</span>
+          </a>
+          <a href="/admin/blog" class="quick-link">
+            <span class="quick-icon">📝</span>
+            <span class="quick-text">Manage Blog</span>
+            <span class="quick-count">{publishedBlogPosts.length}</span>
           </a>
           <a href="/admin/streaming" class="quick-link">
             <span class="quick-icon">🔴</span>
