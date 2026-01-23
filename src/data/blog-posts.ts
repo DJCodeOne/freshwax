@@ -143,37 +143,38 @@ export const blogPosts: BlogPost[] = [
     `
   },
   {
-    slug: 'crates-curated-playlists',
-    title: 'Crates: Curated Playlists for Every Mood',
-    excerpt: 'Discover hand-picked selections organised by vibe, tempo, and style for the perfect listening experience.',
+    slug: 'crates-vinyl-marketplace',
+    title: 'Crates: Buy & Sell Vinyl Collections',
+    excerpt: 'Discover rare vinyl from collectors and sellers worldwide. Browse curated crates of jungle, drum & bass, and more.',
     featuredImage: 'https://images.unsplash.com/photo-1483412033650-1015ddeb83d1?w=800&q=80',
-    category: 'Playlists',
+    category: 'Marketplace',
     publishedAt: '2025-01-03',
     author: 'Fresh Wax',
-    tags: ['playlists', 'crates', 'curated', 'discovery'],
+    tags: ['vinyl', 'crates', 'marketplace', 'collectors', 'rare records'],
     content: `
-      <p>Sometimes you know exactly what vibe you're after. Our Crates feature organises the best tracks and mixes by mood, tempo, and style, making it easy to find exactly what you need.</p>
+      <p>Fresh Wax Crates is our vinyl marketplace where collectors and sellers can list their record collections for sale. Think of it like Discogs, but built specifically for the jungle and drum & bass community.</p>
 
-      <h2>Expertly Curated</h2>
-      <p>Each crate is put together by selectors who know the music inside out. Whether you're after deep liquid rollers for a Sunday morning or dark steppers for a late-night session, we've got a crate for that.</p>
+      <h2>For Buyers</h2>
+      <p>Dig through carefully catalogued collections from vinyl enthusiasts around the world. Whether you're hunting for a rare white label, filling gaps in your collection, or discovering classic pressings you've never seen before, Crates connects you with sellers who share your passion.</p>
+      <p>Each listing includes condition grading, photos, and detailed information so you know exactly what you're getting before you buy.</p>
 
-      <h2>Discover New Music</h2>
-      <p>Crates are a brilliant way to discover new tracks and artists. Each playlist is designed to flow, introducing you to music you might have missed while keeping the energy consistent.</p>
+      <h2>For Sellers</h2>
+      <p>Got records gathering dust? Turn your collection into cash by listing on Crates. Our platform makes it easy to catalogue your vinyl, set your prices, and reach buyers who actually appreciate what you're selling.</p>
+      <p>No listing fees for basic accounts – we only take a small commission when you make a sale.</p>
 
-      <h2>Growing Collection</h2>
-      <p>We're constantly adding new crates to our collection. From era-specific selections to label showcases, there's always something new to explore.</p>
-
-      <h2>Categories Include:</h2>
+      <h2>What You'll Find</h2>
       <ul>
-        <li>Deep & Liquid</li>
-        <li>Jump Up & Dancefloor</li>
-        <li>Classic Jungle</li>
-        <li>Atmospheric & Intelligent</li>
-        <li>Dark & Minimal</li>
-        <li>Label Spotlights</li>
+        <li>Rare jungle and drum & bass pressings</li>
+        <li>Classic label back catalogues</li>
+        <li>Test pressings and promos</li>
+        <li>Full collection lots</li>
+        <li>International sellers and buyers</li>
       </ul>
 
-      <p>Explore our <a href="/crates">Crates</a> section and dig into something new.</p>
+      <h2>Built for the Scene</h2>
+      <p>Unlike generic marketplaces, Crates is designed by and for the jungle and DnB community. Sellers understand the music, and buyers know they're dealing with fellow heads who care about vinyl as much as they do.</p>
+
+      <p>Start digging in <a href="/crates">Crates</a> and find your next holy grail.</p>
     `
   }
 ];
