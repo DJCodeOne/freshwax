@@ -204,7 +204,7 @@ type D1Database = any; // Will be typed from Cloudflare bindings
 export async function d1GetAllPublishedReleases(db: D1Database): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM releases_v2 WHERE published = 1 ORDER BY release_date DESC`
+      `SELECT id, data FROM releases_v2 WHERE published = 1 ORDER BY release_date DESC`
     ).all();
 
     return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
@@ -217,7 +217,7 @@ export async function d1GetAllPublishedReleases(db: D1Database): Promise<any[]> 
 export async function d1GetReleaseById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(
-      `SELECT data FROM releases_v2 WHERE id = ?`
+      `SELECT id, data FROM releases_v2 WHERE id = ?`
     ).bind(id).first();
 
     return row ? d1RowToRelease(row) : null;
@@ -230,7 +230,7 @@ export async function d1GetReleaseById(db: D1Database, id: string): Promise<any 
 export async function d1GetReleasesByArtist(db: D1Database, artist: string): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM releases_v2 WHERE artist_name = ? AND published = 1 ORDER BY release_date DESC`
+      `SELECT id, data FROM releases_v2 WHERE artist_name = ? AND published = 1 ORDER BY release_date DESC`
     ).bind(artist).all();
 
     return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
@@ -289,7 +289,7 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
 export async function d1GetAllPublishedMixes(db: D1Database): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC`
+      `SELECT id, data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC`
     ).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
@@ -302,7 +302,7 @@ export async function d1GetAllPublishedMixes(db: D1Database): Promise<any[]> {
 export async function d1GetAllMixes(db: D1Database): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM dj_mixes ORDER BY upload_date DESC`
+      `SELECT id, data FROM dj_mixes ORDER BY upload_date DESC`
     ).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
@@ -315,7 +315,7 @@ export async function d1GetAllMixes(db: D1Database): Promise<any[]> {
 export async function d1GetMixById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(
-      `SELECT data FROM dj_mixes WHERE id = ?`
+      `SELECT id, data FROM dj_mixes WHERE id = ?`
     ).bind(id).first();
 
     return row ? d1RowToMix(row) : null;
@@ -328,7 +328,7 @@ export async function d1GetMixById(db: D1Database, id: string): Promise<any | nu
 export async function d1GetMixesByUser(db: D1Database, userId: string): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM dj_mixes WHERE user_id = ? ORDER BY upload_date DESC`
+      `SELECT id, data FROM dj_mixes WHERE user_id = ? ORDER BY upload_date DESC`
     ).bind(userId).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
@@ -390,7 +390,7 @@ export async function d1DeleteMix(db: D1Database, id: string): Promise<boolean> 
 export async function d1GetAllPublishedMerch(db: D1Database): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC`
+      `SELECT id, data FROM merch WHERE published = 1 ORDER BY created_at DESC`
     ).all();
 
     return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
@@ -403,7 +403,7 @@ export async function d1GetAllPublishedMerch(db: D1Database): Promise<any[]> {
 export async function d1GetMerchById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(
-      `SELECT data FROM merch WHERE id = ?`
+      `SELECT id, data FROM merch WHERE id = ?`
     ).bind(id).first();
 
     return row ? d1RowToMerch(row) : null;
@@ -458,7 +458,7 @@ export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string)
   try {
     // Query using JSON extraction for supplierId
     const { results } = await db.prepare(
-      `SELECT data FROM merch
+      `SELECT id, data FROM merch
        WHERE json_extract(data, '$.supplierId') = ?
        ORDER BY created_at DESC`
     ).bind(supplierId).all();
@@ -474,7 +474,7 @@ export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string)
 export async function d1GetMerchBySupplierName(db: D1Database, supplierName: string): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM merch
+      `SELECT id, data FROM merch
        WHERE json_extract(data, '$.supplierName') = ?
        ORDER BY created_at DESC`
     ).bind(supplierName).all();
