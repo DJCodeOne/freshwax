@@ -15,27 +15,36 @@ export interface BlogPost {
 
 export const blogPosts: BlogPost[] = [
   {
-    slug: 'discover-exclusive-vinyl-releases',
-    title: 'Discover Exclusive Vinyl Releases on Fresh Wax',
-    excerpt: 'Explore our curated collection of jungle and drum & bass vinyl releases from independent artists worldwide.',
+    slug: 'discover-new-releases',
+    title: 'Discover New Releases on Fresh Wax',
+    excerpt: 'Explore the latest digital releases from jungle and drum & bass artists, with vinyl editions available on select titles.',
     featuredImage: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
     category: 'Releases',
     publishedAt: '2025-01-15',
     author: 'Fresh Wax',
-    tags: ['vinyl', 'releases', 'jungle', 'drum and bass'],
+    tags: ['releases', 'digital', 'vinyl', 'jungle', 'drum and bass'],
     content: `
-      <p>At Fresh Wax, we're passionate about bringing you the finest vinyl releases from the jungle and drum & bass underground. Our platform connects you directly with independent artists and labels who are pushing the boundaries of the sound we all love.</p>
+      <p>Fresh Wax is your home for the latest jungle and drum & bass releases from independent artists and labels. Our releases section features brand new music available for digital download, with select titles also available on vinyl.</p>
 
-      <h2>Why Vinyl Still Matters</h2>
-      <p>In an age of streaming and digital downloads, vinyl remains the gold standard for serious collectors and DJs. There's something irreplaceable about the warmth of analogue sound, the ritual of dropping the needle, and the tangible connection to the music you love.</p>
-      <p>Our vinyl section features exclusive pressings, limited editions, and reissues of classic tracks that defined the scene. Each release is carefully selected to ensure you're getting music that matters.</p>
+      <h2>Digital First, Vinyl When It Counts</h2>
+      <p>Most releases on Fresh Wax are digital, giving you instant access to high-quality downloads. But when labels decide to press vinyl, we've got you covered there too.</p>
+      <p>Here's the best part: <strong>buy the vinyl and get the digital downloads free</strong>. No need to choose between formats – grab the wax and you'll have the digital files ready to go while you wait for your record to arrive.</p>
 
       <h2>Supporting Independent Artists</h2>
-      <p>When you buy vinyl through Fresh Wax, you're directly supporting the artists and labels who create the music. We believe in fair compensation for creators, which is why we've built a platform that puts artists first.</p>
+      <p>When you buy through Fresh Wax, you're directly supporting the artists and labels who create the music. We believe in fair compensation for creators, which is why we've built a platform that puts artists first.</p>
       <p>Every purchase helps fund future releases, studio time, and keeps the underground scene alive and thriving.</p>
 
-      <h2>Browse Our Collection</h2>
-      <p>Head over to our <a href="/releases">Releases</a> section to explore the latest additions. Whether you're after deep jungle rollers, technical DnB, or anything in between, you'll find something to add to your crate.</p>
+      <h2>What You'll Find</h2>
+      <ul>
+        <li>Brand new digital releases in high-quality formats</li>
+        <li>Vinyl editions on select titles</li>
+        <li>Free digital downloads with vinyl purchases</li>
+        <li>Exclusive releases you won't find elsewhere</li>
+        <li>Direct support to artists and labels</li>
+      </ul>
+
+      <h2>Browse the Latest</h2>
+      <p>Head over to our <a href="/releases">Releases</a> section to explore the latest drops. Whether you're after deep jungle rollers, technical DnB, or anything in between, you'll find fresh music to add to your collection.</p>
     `
   },
   {
