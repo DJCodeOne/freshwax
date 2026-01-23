@@ -1210,55 +1210,103 @@ export class PlaylistManager {
     // Clear any existing countdown
     this.stopCountdown();
 
-    // Show loading state in bottom duration element only (top is for live stream duration)
+    // Show loading state
     const bottomDurationEl = document.getElementById('bottomDuration');
+    const previewDurationEl = document.getElementById('previewDuration');
     if (bottomDurationEl) bottomDurationEl.textContent = '--:--';
+    if (previewDurationEl) previewDurationEl.textContent = '--:--';
 
-    // Wait a moment for player to be ready and have duration info
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    try {
-      const duration = await this.player.getDuration();
-      if (duration > 0) {
-        // Start countdown interval
-        this.startCountdown(duration);
+    // Try to get duration with retries (MP3 metadata may not be loaded immediately)
+    let duration = 0;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 500 : 1000));
+      try {
+        duration = await this.player.getDuration();
+        if (duration > 0) break;
+      } catch (error) {
+        console.warn('[PlaylistManager] getDuration attempt', attempt + 1, 'failed:', error);
       }
-    } catch (error) {
-      console.warn('[PlaylistManager] Could not get duration:', error);
+    }
+
+    if (duration > 0) {
+      console.log('[PlaylistManager] Got duration:', duration, 'seconds');
+      this.startCountdown(duration);
+    } else {
+      console.warn('[PlaylistManager] Could not get duration after 5 attempts, using elapsed timer');
+      // Fallback: show elapsed time instead of countdown
+      this.startElapsedTimer();
     }
   }
 
   /**
-   * Start countdown display that updates every second
+   * Start countdown display - uses cached values for stability
    */
-  private async startCountdown(totalDuration: number): Promise<void> {
-    // Get duration elements
+  private startCountdown(totalDuration: number): void {
     const bottomDurationEl = document.getElementById('bottomDuration');
     const previewDurationEl = document.getElementById('previewDuration');
     const genreEl = document.getElementById('streamGenre');
 
-    // Set genre to "Playlist" instead of showing countdown there
     if (genreEl) {
       genreEl.textContent = 'Playlist';
     }
 
-    // Update display immediately
-    const updateDisplay = async () => {
-      try {
-        const currentTime = await this.player.getCurrentTime();
+    // Cache the start time for stable countdown
+    const countdownStartTime = Date.now();
+    let lastPlayerTime = 0;
+
+    // Get initial player time synchronously if possible
+    this.player.getCurrentTime().then(t => { lastPlayerTime = t; }).catch(() => {});
+
+    const updateDisplay = () => {
+      // Use player time if available, otherwise estimate from wall clock
+      this.player.getCurrentTime().then(currentTime => {
+        // Sanity check - if time jumped backwards or too far forward, use last known
+        if (currentTime < lastPlayerTime - 2 || currentTime > lastPlayerTime + 3) {
+          // Estimate based on wall clock since countdown started
+          const elapsedSinceStart = (Date.now() - countdownStartTime) / 1000;
+          currentTime = Math.min(lastPlayerTime + elapsedSinceStart, totalDuration);
+        }
+        lastPlayerTime = currentTime;
+
         const remaining = Math.max(0, totalDuration - currentTime);
         const formattedTime = this.formatDuration(remaining);
-        // Update both bottom duration and preview duration in modal
         if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
         if (previewDurationEl) previewDurationEl.textContent = formattedTime;
-      } catch (error) {
-        // Silently fail if player not ready
-      }
+      }).catch(() => {
+        // On error, estimate based on wall clock
+        const elapsed = (Date.now() - countdownStartTime) / 1000 + lastPlayerTime;
+        const remaining = Math.max(0, totalDuration - elapsed);
+        const formattedTime = this.formatDuration(remaining);
+        if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
+        if (previewDurationEl) previewDurationEl.textContent = formattedTime;
+      });
     };
 
-    await updateDisplay();
+    // Update immediately then every second
+    updateDisplay();
+    this.countdownInterval = window.setInterval(updateDisplay, 1000);
+  }
 
-    // Update every second
+  /**
+   * Fallback: show elapsed time when duration is unknown
+   */
+  private startElapsedTimer(): void {
+    const bottomDurationEl = document.getElementById('bottomDuration');
+    const previewDurationEl = document.getElementById('previewDuration');
+
+    // Use server's trackStartedAt if available for accurate elapsed time
+    const serverStartTime = this.playlist.trackStartedAt
+      ? new Date(this.playlist.trackStartedAt).getTime()
+      : Date.now();
+
+    const updateDisplay = () => {
+      const elapsed = Math.floor((Date.now() - serverStartTime) / 1000);
+      const formattedTime = this.formatDuration(elapsed);
+      if (bottomDurationEl) bottomDurationEl.textContent = formattedTime;
+      if (previewDurationEl) previewDurationEl.textContent = formattedTime;
+    };
+
+    updateDisplay();
     this.countdownInterval = window.setInterval(updateDisplay, 1000);
   }
 
