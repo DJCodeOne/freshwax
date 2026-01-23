@@ -2442,11 +2442,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         })
       });
       
-      if (response.ok) {
-        // Also play locally immediately
-        shoutoutQueue.push({ name: userName, message: message });
-        playNextShoutout();
+      if (!response.ok) {
+        console.error('Shoutout send failed:', response.status);
       }
+      // Shoutout will come back via Pusher to handleIncomingShoutout
     } catch (e) {
       console.error('Shoutout error:', e);
     }
@@ -3001,12 +3000,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const reactionChannelName = `stream-${streamId}`;
       const reactionChannel = statusPusher.subscribe(reactionChannelName);
 
-      reactionChannel.bind('shoutout', (data) => {
-        console.log('[Shoutout] Received from Pusher:', data);
-        if (typeof window.handleIncomingShoutout === 'function') {
-          window.handleIncomingShoutout(data);
-        }
-      });
+      // NOTE: Shoutout handling is done by live-stream.js chatChannel.bind('shoutout')
+      // to avoid duplicate shoutouts - DO NOT add a handler here
 
       // NOTE: Reaction animations are handled by live-stream.js chatChannel.bind('reaction')
       // to avoid duplicate emoji animations - DO NOT add a handler here
