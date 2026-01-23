@@ -5,28 +5,12 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { blogPosts as posts, getCategories } from '../../data/blog-posts';
 
-export const prerender = false;
-
-// Fetch blog posts from API
-let posts: any[] = [];
-let error: string | null = null;
-
-try {
-  const baseUrl = import.meta.env.SITE || 'https://freshwax.co.uk';
-  const response = await fetch(`${baseUrl}/api/blog?limit=50`);
-  const data = await response.json();
-
-  if (data.success && data.posts) {
-    posts = data.posts;
-  }
-} catch (err) {
-  console.error('[BLOG] Error fetching posts:', err);
-  error = 'Failed to load blog posts';
-}
+export const prerender = true;
 
 // Extract unique categories for filter
-const categories = [...new Set(posts.map(p => p.category).filter(Boolean))];
+const categories = getCategories();
 
 // Format date helper
 function formatDate(dateString: string): string {
@@ -87,11 +71,7 @@ function truncateExcerpt(text: string, maxLength: number = 150): string {
 
     <!-- Blog Posts Grid -->
     <section class="blog-grid-section">
-      {error ? (
-        <div class="error-state">
-          <p>{error}</p>
-        </div>
-      ) : posts.length === 0 ? (
+      {posts.length === 0 ? (
         <div class="empty-state">
           <div class="empty-icon">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">

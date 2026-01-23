@@ -5,29 +5,20 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { blogPosts, getPostBySlug } from '../../data/blog-posts';
 
-export const prerender = false;
+export const prerender = true;
 
-const { slug } = Astro.params;
-
-let post: any = null;
-let error: string | null = null;
-
-try {
-  const baseUrl = import.meta.env.SITE || 'https://freshwax.co.uk';
-  // Increment views on page load
-  const response = await fetch(`${baseUrl}/api/blog?slug=${slug}&view=1`);
-  const data = await response.json();
-
-  if (data.success && data.post) {
-    post = data.post;
-  } else {
-    error = 'Post not found';
-  }
-} catch (err) {
-  console.error('[BLOG POST] Error fetching post:', err);
-  error = 'Failed to load post';
+export function getStaticPaths() {
+  return blogPosts.map(post => ({
+    params: { slug: post.slug },
+    props: { post }
+  }));
 }
+
+const { post } = Astro.props;
+const { slug } = Astro.params;
+const error = !post ? 'Post not found' : null;
 
 // Format date helper
 function formatDate(dateString: string): string {
@@ -61,8 +52,8 @@ function generateExcerpt(content: string, maxLength: number = 160): string {
 const seoTitle = post?.title || 'Post Not Found';
 const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.');
 const seoImage = post?.featuredImage || '/og-image.jpg';
-const publishedTime = post?.publishedAt || post?.createdAt || new Date().toISOString();
-const modifiedTime = post?.updatedAt || publishedTime;
+const publishedTime = post?.publishedAt || new Date().toISOString();
+const modifiedTime = publishedTime;
 ---
 
 <Layout
@@ -121,11 +112,7 @@ const modifiedTime = post?.updatedAt || publishedTime;
 
           <div class="author-info">
             <div class="author-avatar">
-              {post.authorAvatar ? (
-                <img src={post.authorAvatar} alt={post.author || 'Author'} />
-              ) : (
-                <span class="avatar-initial">{(post.author || 'F')[0].toUpperCase()}</span>
-              )}
+              <span class="avatar-initial">{(post.author || 'F')[0].toUpperCase()}</span>
             </div>
             <div class="author-details">
               <span class="author-name">{post.author || 'Fresh Wax'}</span>
@@ -351,12 +338,6 @@ const modifiedTime = post?.updatedAt || publishedTime;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-  }
-
-  .author-avatar img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
   }
 
   .avatar-initial {
