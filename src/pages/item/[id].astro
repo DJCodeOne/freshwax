@@ -1944,20 +1944,23 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     
     // Check initial wishlist status
     async function checkWishlistStatus() {
-      const userId = getCurrentUserId();
-      if (!userId) return;
-      
+      if (!currentUser) return;
+
       try {
+        const token = await currentUser.getIdToken();
         const response = await fetch('/api/wishlist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
-            userId: userId,
+            userId: currentUser.uid,
             releaseId: releaseId,
             action: 'check'
           })
         });
-        
+
         const data = await response.json();
         if (data.success && data.inWishlist) {
           wishlistBtn.classList.add('active');
@@ -1971,15 +1974,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     // Handle click
     wishlistBtn.addEventListener('click', async function(e) {
       e.preventDefault();
-      
-      const userId = getCurrentUserId();
-      if (!userId) {
+
+      if (!currentUser) {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
-      
+
       const isInWishlist = wishlistBtn.classList.contains('active');
-      
+
       // Optimistic UI
       if (isInWishlist) {
         wishlistBtn.classList.remove('active');
@@ -1988,13 +1990,17 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         wishlistBtn.classList.add('active');
         wishlistBtn.title = 'Remove from wishlist';
       }
-      
+
       try {
+        const token = await currentUser.getIdToken();
         const response = await fetch('/api/wishlist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
-            userId: userId,
+            userId: currentUser.uid,
             releaseId: releaseId,
             releaseName: releaseName,
             artistName: artistName,
@@ -2089,4 +2095,4 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/item-page.js?v=20260123c"></script>
+<script type="module" src="/item-page.js?v=20260123d"></script>
