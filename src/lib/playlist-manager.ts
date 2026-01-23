@@ -57,6 +57,7 @@ export class PlaylistManager {
   private recentlyPlayed: Map<string, number> = new Map(); // URL -> timestamp
   private globalRecentlyPlayed: any[] = []; // Recently played from Pusher (global)
   private countdownInterval: number | null = null; // Countdown display interval
+  private countdownTrackId: string | null = null; // Track ID countdown is running for
   private consecutiveErrors: number = 0; // Track errors to prevent infinite loops
   private containerId: string; // Store container ID for existence check
   private lastPlayedUrl: string | null = null; // Track last played URL to avoid immediate repeats
@@ -1207,6 +1208,15 @@ export class PlaylistManager {
    * Update duration display after player is ready - shows countdown
    */
   private async updateDurationDisplay(): Promise<void> {
+    // Get current track ID
+    const currentTrack = this.playlist.queue[this.playlist.currentIndex];
+    const currentTrackId = currentTrack?.id;
+
+    // Skip if countdown is already running for this track
+    if (this.countdownInterval && this.countdownTrackId === currentTrackId) {
+      return;
+    }
+
     // Clear any existing countdown
     this.stopCountdown();
 
@@ -1215,6 +1225,9 @@ export class PlaylistManager {
     const previewDurationEl = document.getElementById('previewDuration');
     if (bottomDurationEl) bottomDurationEl.textContent = '--:--';
     if (previewDurationEl) previewDurationEl.textContent = '--:--';
+
+    // Track which track this countdown is for
+    this.countdownTrackId = currentTrackId || null;
 
     // Try to get duration with retries (MP3 metadata may not be loaded immediately)
     let duration = 0;
@@ -1318,6 +1331,7 @@ export class PlaylistManager {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
     }
+    this.countdownTrackId = null;
   }
 
   /**
