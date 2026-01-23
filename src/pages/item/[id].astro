@@ -1787,21 +1787,25 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     
     // Check initial follow status
     async function checkFollowStatus() {
-      const userId = getCurrentUserId();
-      if (!userId) return;
-      
+      const user = window.firebaseAuth?.currentUser;
+      if (!user) return;
+
       try {
+        const token = await user.getIdToken();
         const response = await fetch('/api/follow-artist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
-            userId: userId,
+            userId: user.uid,
             artistName: artistName,
             artistId: artistId,
             action: 'check'
           })
         });
-        
+
         const data = await response.json();
         if (data.success && data.isFollowing) {
           followBtn.classList.add('following');
@@ -1816,8 +1820,8 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     followBtn.addEventListener('click', async function(e) {
       e.preventDefault();
 
-      const userId = getCurrentUserId();
-      if (!userId) {
+      const user = window.firebaseAuth?.currentUser;
+      if (!user) {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
@@ -1834,11 +1838,15 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       }
 
       try {
+        const token = await user.getIdToken();
         const response = await fetch('/api/follow-artist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
-            userId: userId,
+            userId: user.uid,
             artistName: artistName,
             artistId: artistId,
             action: 'toggle'

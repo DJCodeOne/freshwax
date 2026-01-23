@@ -1161,12 +1161,15 @@ export const prerender = false;
   // Load following count for badge
   async function loadFollowingCount(userId) {
     const badge = document.getElementById('followingBadge');
-    if (!badge) return;
-    
+    if (!badge || !currentUser) return;
+
     try {
-      const response = await fetch(`/api/follow-artist?userId=${encodeURIComponent(userId)}`);
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/follow-artist?userId=${encodeURIComponent(userId)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
-      
+
       if (data.success) {
         const count = data.count || 0;
         badge.textContent = count;
@@ -1181,15 +1184,18 @@ export const prerender = false;
   let followingLoaded = false;
   async function loadFollowing(userId) {
     if (followingLoaded) return;
-    
+
     const container = document.getElementById('followingContainer');
     const badge = document.getElementById('followingBadge');
-    if (!container) return;
-    
+    if (!container || !currentUser) return;
+
     container.innerHTML = '<div class="empty-state"><p style="color: #fff;">Loading artists...</p></div>';
-    
+
     try {
-      const response = await fetch(`/api/follow-artist?userId=${encodeURIComponent(userId)}`);
+      const token = await currentUser.getIdToken();
+      const response = await fetch(`/api/follow-artist?userId=${encodeURIComponent(userId)}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await response.json();
       
       if (data.success) {
@@ -1244,16 +1250,20 @@ export const prerender = false;
               card.style.pointerEvents = 'none';
               
               try {
+                const unfollowToken = await currentUser.getIdToken();
                 const res = await fetch('/api/follow-artist', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${unfollowToken}`
+                  },
                   body: JSON.stringify({
                     userId: userId,
                     artistName: artistName,
                     action: 'unfollow'
                   })
                 });
-                
+
                 const result = await res.json();
                 if (result.success) {
                   card.remove();
