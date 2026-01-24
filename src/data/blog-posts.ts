@@ -55,7 +55,7 @@ export const blogPosts: BlogPost[] = [
     category: 'Mixes',
     publishedAt: '2025-01-12',
     author: 'Fresh Wax',
-    tags: ['dj mixes', 'streaming', 'jungle', 'drum and bass'],
+    tags: ['dj mixes', 'streaming', 'jungle', 'drum and bass', 'download'],
     content: `
       <p>Our DJ Mixes section is your portal to hours of carefully curated selections from some of the most talented DJs in the scene. Whether you're looking for background vibes while you work or fuel for your next rave, we've got you covered.</p>
 
@@ -63,11 +63,22 @@ export const blogPosts: BlogPost[] = [
       <p>Fresh Wax is committed to showcasing both established names and rising talent. Our mixes come from DJs who live and breathe jungle and drum & bass, bringing you selections that go beyond the obvious choices.</p>
       <p>Each mix tells a story, taking you on a journey through the depths of the underground.</p>
 
-      <h2>Free to Stream</h2>
-      <p>All our mixes are completely free to stream. We believe great music should be accessible to everyone. Simply hit play and let the selectors take you on a journey.</p>
+      <h2>Stream & Download</h2>
+      <p>All mixes are free to stream instantly. Want to take a mix with you? Downloads are available too, so you can listen offline wherever you go.</p>
 
-      <h2>Submit Your Mix</h2>
-      <p>Are you a DJ with a fire selection to share? We're always looking for new talent. Get in touch through our partner application to submit your mix for consideration.</p>
+      <h2>Community Features</h2>
+      <p>Each mix has its own page with everything you need:</p>
+      <ul>
+        <li><strong>Tracklisting</strong> – See what's in the mix</li>
+        <li><strong>Reviews & Comments</strong> – Share your thoughts and read what others think</li>
+        <li><strong>Ratings</strong> – Rate mixes and see community scores</li>
+        <li><strong>Likes</strong> – Show love for your favourites</li>
+        <li><strong>Share Links</strong> – Spread the word easily</li>
+        <li><strong>DJ Info & Links</strong> – Connect with the selector</li>
+      </ul>
+
+      <h2>Upload Your Mix</h2>
+      <p>Are you a DJ? Upload your mix directly to Fresh Wax for instant streaming and downloads. Add your tracklisting, description, artwork and links – then share it with the world. No waiting for approval, just upload and go live.</p>
 
       <p>Check out our <a href="/mixes">DJ Mixes</a> section and discover your new favourite selector.</p>
     `
