@@ -95,6 +95,7 @@ export const prerender = false;
               <div class="subscription-tier" id="subscriptionTier">
                 <span class="tier-badge free">Standard</span>
                 <span class="tier-name">Account</span>
+                <button class="tier-toggle-btn hidden" id="tierToggleBtn" title="Show Plus benefits">▼</button>
               </div>
               <div class="subscription-status" id="subscriptionStatus"></div>
             </div>
@@ -113,13 +114,6 @@ export const prerender = false;
             <!-- Upgrade section removed - now in Go Plus modal -->
 
             <div class="subscription-pro hidden collapsed" id="subscriptionPro">
-              <div class="pro-header" id="proHeader" style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
-                <div class="pro-active">
-                  <span class="pro-icon-large">⚡</span>
-                  <span class="pro-message">You're a Plus member!</span>
-                </div>
-                <button class="pro-toggle-btn" id="proToggleBtn" style="background: none; border: none; color: #a3a3a3; font-size: 1.2rem; cursor: pointer; padding: 5px;">▼</button>
-              </div>
               <div class="pro-details" id="proDetails" style="display: none;">
                 <p class="pro-expires" id="proExpires"></p>
 
@@ -3010,18 +3004,19 @@ export const prerender = false;
         // Load referral code
         loadReferralCode(userId);
 
-        // Set up toggle for Plus member section
-        const proHeader = document.getElementById('proHeader');
+        // Show and set up toggle for Plus member section
+        const tierToggleBtn = document.getElementById('tierToggleBtn');
         const proDetails = document.getElementById('proDetails');
-        const proToggleBtn = document.getElementById('proToggleBtn');
-        console.log('[Dashboard] Pro toggle setup:', { proHeader: !!proHeader, proDetails: !!proDetails, proToggleBtn: !!proToggleBtn });
-        if (proHeader && proDetails && proToggleBtn) {
-          proHeader.addEventListener('click', (e) => {
+        console.log('[Dashboard] Tier toggle setup:', { tierToggleBtn: !!tierToggleBtn, proDetails: !!proDetails });
+        if (tierToggleBtn && proDetails) {
+          tierToggleBtn.classList.remove('hidden');
+          tierToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             const isHidden = proDetails.style.display === 'none' || proDetails.style.display === '';
-            console.log('[Dashboard] Pro toggle clicked, isHidden:', isHidden);
+            console.log('[Dashboard] Tier toggle clicked, isHidden:', isHidden);
             proDetails.style.display = isHidden ? 'block' : 'none';
-            proToggleBtn.textContent = isHidden ? '▲' : '▼';
+            tierToggleBtn.textContent = isHidden ? '▲' : '▼';
+            tierToggleBtn.classList.toggle('open', isHidden);
           });
         }
       } else {
@@ -4361,6 +4356,25 @@ export const prerender = false;
     color: #fff;
     font-weight: 600;
     font-size: 1.1rem;
+  }
+
+  .tier-toggle-btn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    margin-left: 0.25rem;
+    transition: transform 0.2s, color 0.2s;
+  }
+
+  .tier-toggle-btn:hover {
+    color: #f59e0b;
+  }
+
+  .tier-toggle-btn.open {
+    transform: rotate(180deg);
   }
 
   .subscription-usage {
