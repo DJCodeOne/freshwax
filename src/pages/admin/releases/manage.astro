@@ -66,6 +66,13 @@ const formatCurrency = (amount) => {
 
 <AdminLayout title="Releases" activeNav="releases" showStats={true} stats={stats}>
   <Fragment slot="actions">
+    <div id="audioServerStatus" class="audio-server-status">
+      <span id="audioServerIcon" class="status-icon">⏳</span>
+      <span id="audioServerText">Checking...</span>
+      <button id="startAudioServerBtn" class="btn btn-sm btn-outline hidden" title="Copy command to start server">
+        Start Server
+      </button>
+    </div>
     <a href="/admin/releases/process" class="btn btn-outline">Process Submissions</a>
     <a href="/admin/sync-release" class="btn btn-primary">+ Upload New Release</a>
   </Fragment>
@@ -247,6 +254,33 @@ const formatCurrency = (amount) => {
     </div>
   </div>
 
+  <!-- Audio Processing Modal -->
+  <div id="audioModal" class="audio-modal hidden">
+    <div class="audio-modal-overlay"></div>
+    <div class="audio-modal-content">
+      <div class="audio-modal-header">
+        <div class="audio-modal-icon">🎵</div>
+        <h3 id="audioModalTitle">Processing Audio</h3>
+        <p id="audioModalSubtitle" class="audio-subtitle"></p>
+      </div>
+
+      <div class="audio-progress-container">
+        <div class="audio-progress-bar">
+          <div id="audioProgressFill" class="audio-progress-fill"></div>
+        </div>
+        <div id="audioProgressText" class="audio-progress-text">Preparing...</div>
+      </div>
+
+      <div id="audioTrackList" class="audio-track-list">
+        <!-- Track items will be added dynamically -->
+      </div>
+
+      <div id="audioModalActions" class="audio-modal-actions hidden">
+        <button id="closeAudioModalBtn" class="btn btn-primary">Close</button>
+      </div>
+    </div>
+  </div>
+
   <Fragment slot="scripts">
     <script define:vars={{ adminKey }}>
       // Filter functionality
@@ -286,22 +320,149 @@ const formatCurrency = (amount) => {
       formatFilter?.addEventListener('change', filterReleases);
       searchInput?.addEventListener('input', filterReleases);
 
-      // Process audio for a release
+      // Audio Processor Server Status
       const AUDIO_PROCESSOR_URL = 'http://localhost:8089';
+      const audioServerIcon = document.getElementById('audioServerIcon');
+      const audioServerText = document.getElementById('audioServerText');
+      const startAudioServerBtn = document.getElementById('startAudioServerBtn');
 
-      async function checkAudioProcessor() {
-        try {
-          const response = await fetch(`${AUDIO_PROCESSOR_URL}/health`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(2000)
-          });
-          if (!response.ok) return false;
-          const data = await response.json();
-          return data.status === 'healthy' && data.r2Configured;
-        } catch (e) {
-          return false;
+      async function updateServerStatus() {
+        const isRunning = await checkAudioProcessor();
+        if (isRunning) {
+          audioServerIcon.textContent = '🟢';
+          audioServerText.textContent = 'Audio Processor Online';
+          startAudioServerBtn.classList.add('hidden');
+        } else {
+          audioServerIcon.textContent = '🔴';
+          audioServerText.textContent = 'Audio Processor Offline';
+          startAudioServerBtn.classList.remove('hidden');
         }
       }
+
+      // Check status on page load
+      updateServerStatus();
+      // Re-check every 10 seconds
+      setInterval(updateServerStatus, 10000);
+
+      // Start server button - copies command to clipboard
+      startAudioServerBtn?.addEventListener('click', async () => {
+        const command = 'node scripts/audio-processor.cjs';
+        try {
+          await navigator.clipboard.writeText(command);
+          showToast('Command copied! Run in terminal: ' + command);
+        } catch (e) {
+          showToast('Run in terminal: ' + command);
+        }
+      });
+
+      async function checkAudioProcessor() {
+        // Try both localhost and 127.0.0.1 in case of IPv4/IPv6 issues
+        const urls = [
+          `${AUDIO_PROCESSOR_URL}/health`,
+          'http://127.0.0.1:8089/health'
+        ];
+
+        for (const url of urls) {
+          try {
+            const response = await fetch(url, {
+              method: 'GET',
+              signal: AbortSignal.timeout(2000)
+            });
+            if (!response.ok) continue;
+            const data = await response.json();
+            if (data.status === 'healthy' && data.r2Configured) {
+              return true;
+            }
+          } catch (e) {
+            // Try next URL
+          }
+        }
+        return false;
+      }
+
+      // Audio Processing Modal elements
+      const audioModal = document.getElementById('audioModal');
+      const audioModalTitle = document.getElementById('audioModalTitle');
+      const audioModalSubtitle = document.getElementById('audioModalSubtitle');
+      const audioProgressFill = document.getElementById('audioProgressFill');
+      const audioProgressText = document.getElementById('audioProgressText');
+      const audioTrackList = document.getElementById('audioTrackList');
+      const audioModalActions = document.getElementById('audioModalActions');
+      const closeAudioModalBtn = document.getElementById('closeAudioModalBtn');
+
+      function showAudioModal(releaseName, trackCount) {
+        audioModalTitle.textContent = 'Processing Audio';
+        audioModalSubtitle.textContent = releaseName;
+        audioProgressFill.style.width = '0%';
+        audioProgressText.textContent = `Preparing ${trackCount} track${trackCount > 1 ? 's' : ''}...`;
+        audioTrackList.innerHTML = '';
+        audioModalActions.classList.add('hidden');
+        audioModal.classList.remove('hidden');
+      }
+
+      function updateAudioProgress(current, total, trackName, status) {
+        const percent = Math.round((current / total) * 100);
+        audioProgressFill.style.width = `${percent}%`;
+        audioProgressText.textContent = `Processing track ${current} of ${total}`;
+      }
+
+      function addTrackStatus(trackNum, trackName, status, details = '') {
+        const statusIcons = {
+          pending: '⏳',
+          processing: '🔄',
+          success: '✅',
+          skipped: '⏭️',
+          error: '❌'
+        };
+        const statusColors = {
+          pending: '#6b7280',
+          processing: '#f59e0b',
+          success: '#10b981',
+          skipped: '#3b82f6',
+          error: '#ef4444'
+        };
+
+        const existingItem = document.getElementById(`track-status-${trackNum}`);
+        if (existingItem) {
+          existingItem.querySelector('.track-status-icon').textContent = statusIcons[status];
+          existingItem.querySelector('.track-status-icon').style.color = statusColors[status];
+          if (details) {
+            existingItem.querySelector('.track-status-details').textContent = details;
+          }
+          return;
+        }
+
+        const item = document.createElement('div');
+        item.id = `track-status-${trackNum}`;
+        item.className = 'track-status-item';
+        item.innerHTML = `
+          <span class="track-status-icon" style="color: ${statusColors[status]}">${statusIcons[status]}</span>
+          <span class="track-status-name">${trackNum}. ${trackName}</span>
+          <span class="track-status-details">${details}</span>
+        `;
+        audioTrackList.appendChild(item);
+      }
+
+      function finishAudioModal(success, message) {
+        audioModalTitle.textContent = success ? 'Processing Complete' : 'Processing Failed';
+        audioProgressText.textContent = message;
+        audioProgressFill.style.width = '100%';
+        audioProgressFill.style.background = success ? '#10b981' : '#ef4444';
+        audioModalActions.classList.remove('hidden');
+      }
+
+      closeAudioModalBtn?.addEventListener('click', () => {
+        audioModal.classList.add('hidden');
+        location.reload();
+      });
+
+      // Click overlay to close (only when done)
+      audioModal?.querySelector('.audio-modal-overlay')?.addEventListener('click', () => {
+        if (!audioModalActions.classList.contains('hidden')) {
+          audioModal.classList.add('hidden');
+          location.reload();
+        }
+      });
 
       document.querySelectorAll('.process-audio-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
@@ -336,11 +497,23 @@ const formatCurrency = (amount) => {
             }
 
             const release = releaseData.release;
+            const tracks = release.tracks || [];
             const baseFolder = `releases/${id}`;
             const processedTracks = [];
 
+            // Show modal with track list
+            showAudioModal(name, tracks.length);
+
+            // Add all tracks as pending
+            for (const track of tracks) {
+              const trackNum = track.displayTrackNumber || (track.trackNumber + 1);
+              const trackTitle = track.trackName || track.title || `Track ${trackNum}`;
+              addTrackStatus(trackNum, trackTitle, 'pending');
+            }
+
             // Process each track
-            for (const track of release.tracks || []) {
+            let processed = 0;
+            for (const track of tracks) {
               try {
                 // Get the R2 key from the track URL
                 const url = track.url || track.mp3Url || track.wavUrl;
@@ -353,6 +526,10 @@ const formatCurrency = (amount) => {
                 const trackNum = track.displayTrackNumber || (track.trackNumber + 1);
                 const trackTitle = track.trackName || track.title || `Track ${trackNum}`;
 
+                // Update UI to show processing
+                addTrackStatus(trackNum, trackTitle, 'processing', 'Converting...');
+                updateAudioProgress(processed + 1, tracks.length, trackTitle);
+
                 const response = await fetch(`${AUDIO_PROCESSOR_URL}/process-track`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -360,7 +537,8 @@ const formatCurrency = (amount) => {
                     sourceKey: sourceKey,
                     releaseFolder: baseFolder,
                     trackNumber: trackNum,
-                    trackTitle: trackTitle
+                    trackTitle: trackTitle,
+                    originalWavUrl: track.wavUrl // Keep original WAV URL to avoid duplication
                   })
                 });
 
@@ -372,17 +550,30 @@ const formatCurrency = (amount) => {
                     wavUrl: result.wavUrl,
                     previewUrl: result.previewUrl
                   });
+
+                  if (result.skipped) {
+                    addTrackStatus(trackNum, trackTitle, 'skipped', result.reason || 'Already processed');
+                  } else {
+                    addTrackStatus(trackNum, trackTitle, 'success', 'MP3 + WAV ready');
+                  }
                 } else {
                   console.error(`Track ${trackNum} processing failed:`, result.error);
+                  addTrackStatus(trackNum, trackTitle, 'error', result.error || 'Failed');
                 }
               } catch (err) {
                 console.error(`Track processing error:`, err);
+                const trackNum = track.displayTrackNumber || (track.trackNumber + 1);
+                const trackTitle = track.trackName || track.title || `Track ${trackNum}`;
+                addTrackStatus(trackNum, trackTitle, 'error', err.message || 'Error');
               }
+              processed++;
             }
 
             if (processedTracks.length > 0) {
               // Update release with processed URLs
+              audioProgressText.textContent = 'Updating database...';
               console.log('[Audio] Updating release with processed tracks:', processedTracks);
+
               const updateResponse = await fetch('/api/releases/update-tracks', {
                 method: 'POST',
                 headers: {
@@ -399,22 +590,23 @@ const formatCurrency = (amount) => {
               console.log('[Audio] Update response:', updateResult);
 
               if (updateResult.success) {
-                showToast(`Processed ${processedTracks.length} tracks!`);
-                setTimeout(() => location.reload(), 1500);
+                finishAudioModal(true, `Successfully processed ${processedTracks.length} track${processedTracks.length > 1 ? 's' : ''}!`);
+                btn.textContent = '✓';
+                btn.classList.add('btn-audio-done');
               } else {
-                showToast(`Processing done but update failed: ${updateResult.error}`, 'error');
+                finishAudioModal(false, `Processing done but database update failed: ${updateResult.error}`);
                 btn.disabled = false;
                 btn.textContent = alreadyProcessed ? '✓' : '🎵';
               }
             } else {
-              showToast('No tracks were processed', 'error');
+              finishAudioModal(false, 'No tracks were processed');
               btn.disabled = false;
               btn.textContent = alreadyProcessed ? '✓' : '🎵';
             }
 
           } catch (error) {
             console.error(error);
-            showToast('Audio processing failed', 'error');
+            finishAudioModal(false, `Processing failed: ${error.message}`);
             btn.disabled = false;
             btn.textContent = alreadyProcessed ? '✓' : '🎵';
           }
@@ -637,5 +829,172 @@ const formatCurrency = (amount) => {
   .btn-audio-done:hover {
     background: #15803d !important;
     border-color: #15803d !important;
+  }
+
+  /* Audio Processing Modal */
+  .audio-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .audio-modal.hidden {
+    display: none;
+  }
+
+  .audio-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+  }
+
+  .audio-modal-content {
+    position: relative;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .audio-modal-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .audio-modal-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .audio-modal-header h3 {
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #fff;
+    margin: 0;
+  }
+
+  .audio-subtitle {
+    color: #9ca3af;
+    margin: 0.25rem 0 0;
+    font-size: 0.95rem;
+  }
+
+  .audio-progress-container {
+    margin-bottom: 1.5rem;
+  }
+
+  .audio-progress-bar {
+    height: 8px;
+    background: #333;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .audio-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f59e0b, #ef4444);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .audio-progress-text {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.9rem;
+  }
+
+  .audio-track-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .track-status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #252540;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .track-status-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: color 0.2s;
+  }
+
+  .track-status-name {
+    flex: 1;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-status-details {
+    color: #6b7280;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .audio-modal-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+
+  .audio-modal-actions.hidden {
+    display: none;
+  }
+
+  .audio-modal-actions .btn {
+    min-width: 120px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+  }
+
+  /* Audio Server Status Indicator */
+  .audio-server-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #252540;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    margin-right: 0.5rem;
+  }
+
+  .audio-server-status .status-icon {
+    font-size: 0.9rem;
+  }
+
+  .audio-server-status #audioServerText {
+    color: #9ca3af;
+  }
+
+  .audio-server-status .btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+  }
+
+  .audio-server-status .hidden {
+    display: none;
   }
 </style>

@@ -298,18 +298,40 @@ function createPreview(inputPath, outputPath) {
 
 /**
  * Process a single audio track
- * Returns URLs for both formats and preview
+ * SMART PROCESSING:
+ * - WAV/FLAC/AIFF source → Create MP3 only, keep original WAV URL (no duplication)
+ * - MP3 source → Create WAV from MP3 (lossy but needed for WAV download option)
  */
-async function processTrack(sourceKey, releaseFolder, trackNumber, trackTitle) {
+async function processTrack(sourceKey, releaseFolder, trackNumber, trackTitle, originalWavUrl) {
+  const sourceFormat = getAudioFormat(sourceKey);
+  console.log(`[Processor] Processing track ${trackNumber}: ${trackTitle}`);
+  console.log(`[Processor] Source: ${sourceKey} (${sourceFormat})`);
+
+  // If there's already an original WAV URL and source is MP3, skip - we have both formats
+  if (sourceFormat === 'mp3' && originalWavUrl) {
+    console.log(`[Processor] Source is MP3 but original WAV exists - skipping`);
+    const sourceUrl = `${R2_CONFIG.publicDomain}/${sourceKey}`;
+    return {
+      trackNumber,
+      title: trackTitle,
+      mp3Url: sourceUrl,
+      wavUrl: originalWavUrl,
+      previewUrl: sourceUrl,
+      skipped: true,
+      reason: 'Already has both MP3 and WAV'
+    };
+  }
+
+  // Validate supported formats
+  if (!['wav', 'flac', 'aiff', 'mp3'].includes(sourceFormat)) {
+    throw new Error(`Unsupported audio format: ${sourceFormat}`);
+  }
+
   const jobId = crypto.randomBytes(4).toString('hex');
   const tempDir = path.join(TEMP_DIR, jobId);
   fs.mkdirSync(tempDir, { recursive: true });
 
   try {
-    const sourceFormat = getAudioFormat(sourceKey);
-    console.log(`[Processor] Processing track ${trackNumber}: ${trackTitle}`);
-    console.log(`[Processor] Source: ${sourceKey} (${sourceFormat})`);
-
     // Download source file
     console.log(`[Processor] Downloading from R2...`);
     const sourceData = await downloadFromR2(sourceKey);
@@ -327,61 +349,61 @@ async function processTrack(sourceKey, releaseFolder, trackNumber, trackTitle) {
       .substring(0, 50);
     const paddedNum = trackNumber.toString().padStart(2, '0');
 
-    let mp3Path, wavPath, mp3Data, wavData;
+    let mp3Url, wavUrl, mp3Size, wavSize;
 
-    if (sourceFormat === 'wav' || sourceFormat === 'flac' || sourceFormat === 'aiff') {
-      // Lossless source → create MP3, keep/convert WAV
-      mp3Path = path.join(tempDir, `${paddedNum}-${safeTitle}.mp3`);
-      wavPath = path.join(tempDir, `${paddedNum}-${safeTitle}.wav`);
+    if (sourceFormat === 'mp3') {
+      // MP3 source: keep MP3 as-is, create WAV for download option
+      console.log(`[Processor] Source is MP3 - creating WAV for download option`);
+
+      mp3Url = `${R2_CONFIG.publicDomain}/${sourceKey}`;
+      mp3Size = sourceData.length;
+
+      // Convert MP3 to WAV (16-bit 44.1kHz)
+      const wavPath = path.join(tempDir, `${paddedNum}-${safeTitle}.wav`);
+      await convertAudio(sourcePath, wavPath, 'wav');
+      const wavData = fs.readFileSync(wavPath);
+
+      // Upload WAV to R2
+      console.log(`[Processor] Uploading WAV to R2...`);
+      const wavKey = `${releaseFolder}/tracks/${paddedNum}-${safeTitle}.wav`;
+      wavUrl = await uploadToR2(wavKey, wavData, 'audio/wav');
+      wavSize = wavData.length;
+
+      console.log(`[Processor] Track ${trackNumber} complete:`);
+      console.log(`  MP3: ${mp3Url} [ORIGINAL]`);
+      console.log(`  WAV: ${wavUrl} (${(wavSize / 1024 / 1024).toFixed(2)} MB) [CREATED FROM MP3]`);
+
+    } else {
+      // WAV/FLAC/AIFF source: create MP3, keep original as WAV
+      console.log(`[Processor] Source is ${sourceFormat.toUpperCase()} - creating MP3 only`);
 
       // Convert to 320kbps MP3
+      const mp3Path = path.join(tempDir, `${paddedNum}-${safeTitle}.mp3`);
       await convertAudio(sourcePath, mp3Path, 'mp3');
-      mp3Data = fs.readFileSync(mp3Path);
+      const mp3Data = fs.readFileSync(mp3Path);
 
-      // For WAV: if source is WAV, use it; otherwise convert
-      if (sourceFormat === 'wav') {
-        wavData = sourceData;
-      } else {
-        await convertAudio(sourcePath, wavPath, 'wav');
-        wavData = fs.readFileSync(wavPath);
-      }
-    } else if (sourceFormat === 'mp3') {
-      // MP3 source → keep MP3, create WAV
-      mp3Path = path.join(tempDir, `${paddedNum}-${safeTitle}.mp3`);
-      wavPath = path.join(tempDir, `${paddedNum}-${safeTitle}.wav`);
+      // Upload MP3 to R2
+      console.log(`[Processor] Uploading MP3 to R2...`);
+      const mp3Key = `${releaseFolder}/tracks/${paddedNum}-${safeTitle}.mp3`;
+      mp3Url = await uploadToR2(mp3Key, mp3Data, 'audio/mpeg');
+      mp3Size = mp3Data.length;
 
-      // Use source MP3 directly
-      mp3Data = sourceData;
+      // Keep original WAV/FLAC/AIFF URL - no duplication!
+      wavUrl = originalWavUrl || `${R2_CONFIG.publicDomain}/${sourceKey}`;
 
-      // Convert to WAV
-      await convertAudio(sourcePath, wavPath, 'wav');
-      wavData = fs.readFileSync(wavPath);
-    } else {
-      throw new Error(`Unsupported audio format: ${sourceFormat}`);
+      console.log(`[Processor] Track ${trackNumber} complete:`);
+      console.log(`  MP3: ${mp3Url} (${(mp3Size / 1024 / 1024).toFixed(2)} MB) [NEW]`);
+      console.log(`  WAV: ${wavUrl} [ORIGINAL - no duplication]`);
     }
-
-    // Upload to R2 (no separate preview file - player enforces 90s limit)
-    console.log(`[Processor] Uploading processed files to R2...`);
-    const mp3Key = `${releaseFolder}/tracks/${paddedNum}-${safeTitle}.mp3`;
-    const wavKey = `${releaseFolder}/tracks/${paddedNum}-${safeTitle}.wav`;
-
-    const [mp3Url, wavUrl] = await Promise.all([
-      uploadToR2(mp3Key, mp3Data, 'audio/mpeg'),
-      uploadToR2(wavKey, wavData, 'audio/wav')
-    ]);
-
-    console.log(`[Processor] Track ${trackNumber} complete:`);
-    console.log(`  MP3: ${mp3Url} (${(mp3Data.length / 1024 / 1024).toFixed(2)} MB)`);
-    console.log(`  WAV: ${wavUrl} (${(wavData.length / 1024 / 1024).toFixed(2)} MB)`);
 
     return {
       trackNumber,
       title: trackTitle,
       mp3Url,
       wavUrl,
-      previewUrl: mp3Url, // Player uses MP3 with 90s limit enforced client-side
-      mp3Size: mp3Data.length,
-      wavSize: wavData.length
+      previewUrl: mp3Url,
+      mp3Size,
+      wavSize
     };
 
   } finally {
@@ -432,7 +454,7 @@ async function handleRequest(req, res) {
     req.on('end', async () => {
       try {
         const data = JSON.parse(body);
-        const { sourceKey, releaseFolder, trackNumber, trackTitle } = data;
+        const { sourceKey, releaseFolder, trackNumber, trackTitle, originalWavUrl } = data;
 
         if (!sourceKey || !releaseFolder || !trackNumber || !trackTitle) {
           res.writeHead(400, { 'Content-Type': 'application/json', ...corsHeaders });
@@ -444,8 +466,9 @@ async function handleRequest(req, res) {
         console.log(`  Source: ${sourceKey}`);
         console.log(`  Release: ${releaseFolder}`);
         console.log(`  Track: ${trackNumber} - ${trackTitle}`);
+        if (originalWavUrl) console.log(`  Original WAV: ${originalWavUrl}`);
 
-        const result = await processTrack(sourceKey, releaseFolder, trackNumber, trackTitle);
+        const result = await processTrack(sourceKey, releaseFolder, trackNumber, trackTitle, originalWavUrl);
 
         res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
         res.end(JSON.stringify({ success: true, ...result }));
