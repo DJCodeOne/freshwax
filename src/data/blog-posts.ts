@@ -51,7 +51,7 @@ export const blogPosts: BlogPost[] = [
     slug: 'dj-mixes-underground-sounds',
     title: 'DJ Mixes: Your Gateway to Underground Sounds',
     excerpt: 'Stream curated DJ mixes from talented selectors spanning jungle, drum & bass, and beyond.',
-    featuredImage: 'https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=800&q=80',
+    featuredImage: 'https://images.unsplash.com/photo-1598520106830-8c45c2035460?w=800&q=80',
     category: 'Mixes',
     publishedAt: '2025-01-12',
     author: 'Fresh Wax',
