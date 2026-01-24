@@ -684,7 +684,24 @@ export const prerender = false;
         </div>
       </div>
     </div>
+
+    <!-- ZIP Progress Modal -->
+    <div id="zipProgressModal" class="zip-modal hidden">
+      <div class="zip-modal-backdrop"></div>
+      <div class="zip-modal-content">
+        <h3 class="zip-modal-title">Creating ZIP Download</h3>
+        <div class="zip-progress-bar">
+          <div id="zipProgressFill" class="zip-progress-fill"></div>
+        </div>
+        <p id="zipProgressText" class="zip-progress-text">Preparing download...</p>
+        <div id="zipFileList" class="zip-file-list"></div>
+        <button type="button" id="zipModalClose" class="zip-modal-close">Cancel</button>
+      </div>
+    </div>
   </main>
+
+  <!-- JSZip for ZIP downloads -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <Footer />
 </Layout>
@@ -1664,6 +1681,196 @@ export const prerender = false;
     }
   }
 
+  // Download ZIP containing all tracks and artwork
+  async function downloadZip(button) {
+    const orderId = button.dataset.orderId;
+    const releaseId = button.dataset.releaseId;
+    const releaseName = button.dataset.releaseName;
+    const artistName = button.dataset.artist;
+    const artworkUrl = button.dataset.artworkUrl;
+    let tracks = [];
+    try {
+      tracks = JSON.parse(button.dataset.tracks || '[]');
+    } catch (e) {
+      console.error('Failed to parse tracks:', e);
+    }
+
+    // Show progress modal
+    const modal = document.getElementById('zipProgressModal');
+    const progressFill = document.getElementById('zipProgressFill');
+    const progressText = document.getElementById('zipProgressText');
+    const fileList = document.getElementById('zipFileList');
+
+    modal.classList.remove('hidden');
+    progressFill.style.width = '0%';
+    progressText.textContent = 'Preparing download...';
+    fileList.innerHTML = '';
+
+    const originalText = button.innerHTML;
+    button.classList.add('downloading');
+    button.innerHTML = 'Creating ZIP...';
+
+    try {
+      // Get Firebase auth token
+      const user = window.firebaseAuth?.currentUser;
+      if (!user) {
+        throw new Error('Please sign in to download');
+      }
+      const token = await user.getIdToken();
+
+      // Build list of files to download
+      const filesToDownload = [];
+
+      // Add artwork if available
+      if (artworkUrl) {
+        filesToDownload.push({
+          type: 'artwork',
+          trackIndex: 0,
+          filename: `${releaseName} - Artwork.jpg`,
+          label: 'Artwork'
+        });
+      }
+
+      // Add all tracks (MP3 and WAV)
+      tracks.forEach((track, idx) => {
+        const trackName = artistName ? `${artistName} - ${track.name}` : track.name;
+        if (track.mp3Url) {
+          filesToDownload.push({
+            type: 'mp3',
+            trackIndex: idx,
+            filename: `${trackName}.mp3`,
+            label: `${track.name} (MP3)`
+          });
+        }
+        if (track.wavUrl) {
+          filesToDownload.push({
+            type: 'wav',
+            trackIndex: idx,
+            filename: `${trackName}.wav`,
+            label: `${track.name} (WAV)`
+          });
+        }
+      });
+
+      if (filesToDownload.length === 0) {
+        throw new Error('No files available to download');
+      }
+
+      // Initialize JSZip
+      if (typeof JSZip === 'undefined') {
+        throw new Error('ZIP library not loaded. Please refresh the page.');
+      }
+      const zip = new JSZip();
+      const folder = zip.folder(releaseName);
+
+      // Download each file and add to ZIP
+      let completed = 0;
+      for (const file of filesToDownload) {
+        // Update progress UI
+        const percent = Math.round((completed / filesToDownload.length) * 100);
+        progressFill.style.width = `${percent}%`;
+        progressText.textContent = `Downloading ${file.label}...`;
+
+        // Add to file list
+        const listItem = document.createElement('div');
+        listItem.className = 'zip-file-item';
+        listItem.innerHTML = `<span class="zip-file-icon">⏳</span> ${file.label}`;
+        listItem.id = `zip-file-${completed}`;
+        fileList.appendChild(listItem);
+
+        try {
+          // Get presigned URL
+          const presignResponse = await fetch('/api/presign-download', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              orderId,
+              releaseId,
+              trackIndex: file.trackIndex,
+              fileType: file.type
+            })
+          });
+
+          if (!presignResponse.ok) {
+            throw new Error(`Failed to get download URL for ${file.label}`);
+          }
+
+          const { downloadUrl } = await presignResponse.json();
+
+          // Fetch the file
+          const fileResponse = await fetch(downloadUrl);
+          if (!fileResponse.ok) {
+            throw new Error(`Failed to download ${file.label}`);
+          }
+
+          const blob = await fileResponse.blob();
+          folder.file(file.filename, blob);
+
+          // Update list item to show success
+          const itemEl = document.getElementById(`zip-file-${completed}`);
+          if (itemEl) {
+            itemEl.innerHTML = `<span class="zip-file-icon" style="color: #22c55e;">✓</span> ${file.label}`;
+          }
+        } catch (fileError) {
+          console.error(`Error downloading ${file.label}:`, fileError);
+          const itemEl = document.getElementById(`zip-file-${completed}`);
+          if (itemEl) {
+            itemEl.innerHTML = `<span class="zip-file-icon" style="color: #ef4444;">✗</span> ${file.label} - Failed`;
+          }
+        }
+
+        completed++;
+      }
+
+      // Generate ZIP
+      progressText.textContent = 'Creating ZIP file...';
+      progressFill.style.width = '95%';
+
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      }, (metadata) => {
+        const zipPercent = 95 + (metadata.percent * 0.05);
+        progressFill.style.width = `${zipPercent}%`;
+      });
+
+      // Trigger download
+      progressFill.style.width = '100%';
+      progressText.textContent = 'Download ready!';
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = URL.createObjectURL(zipBlob);
+      downloadLink.download = `${releaseName}.zip`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      URL.revokeObjectURL(downloadLink.href);
+
+      button.innerHTML = '✓ Done!';
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('downloading');
+        modal.classList.add('hidden');
+      }, 2000);
+
+    } catch (error) {
+      console.error('ZIP download error:', error);
+      progressText.textContent = `Error: ${error.message}`;
+      progressFill.style.background = '#ef4444';
+
+      button.innerHTML = '✗ Error';
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('downloading');
+        progressFill.style.background = '';
+      }, 3000);
+    }
+  }
+
   // Render downloads from orders
   function renderDownloads(ordersList) {
     const container = document.getElementById('downloadsContainer');
@@ -1782,21 +1989,25 @@ export const prerender = false;
               <p>${typeLabel} · ${orderDate}</p>
             </div>
           </div>
-          ${item.downloads?.artworkUrl ? `
-            <div class="artwork-dl">
+          <div class="release-dl-buttons">
+            ${item.downloads?.artworkUrl ? `
               <button type="button" class="dl-btn art" data-order-id="${orderId}" data-release-id="${releaseId}" data-track-index="0" data-file-type="artwork" data-filename="${artworkFilename}">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Artwork
               </button>
-            </div>
-          ` : ''}
+            ` : ''}
+            <button type="button" class="dl-btn zip" data-order-id="${orderId}" data-release-id="${releaseId}" data-release-name="${displayName.replace(/'/g, '&#39;')}" data-tracks='${JSON.stringify(item.downloads?.tracks || []).replace(/'/g, '&#39;')}' data-artwork-url="${item.downloads?.artworkUrl || ''}" data-artist="${artistName.replace(/'/g, '&#39;')}">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+              Download ZIP
+            </button>
+          </div>
           ${trackRows ? `<div class="track-list">${trackRows}</div>` : ''}
         </div>
       `;
     }).join('');
     
-    // Attach download handlers using secure presigned URLs
-    container.querySelectorAll('.dl-btn[data-order-id]').forEach(btn => {
+    // Attach download handlers using secure presigned URLs (exclude ZIP buttons)
+    container.querySelectorAll('.dl-btn[data-order-id]:not(.zip)').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const button = e.currentTarget;
@@ -1810,6 +2021,14 @@ export const prerender = false;
         if (downloadInfo.orderId && downloadInfo.releaseId) {
           downloadFile(downloadInfo, filename, button);
         }
+      });
+    });
+
+    // Attach ZIP download handlers
+    container.querySelectorAll('.dl-btn.zip[data-order-id]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        downloadZip(e.currentTarget);
       });
     });
   }
@@ -3451,6 +3670,20 @@ export const prerender = false;
     };
   }
 
+  // ZIP Modal close functionality
+  function initZipModal() {
+    const modal = document.getElementById('zipProgressModal');
+    const closeBtn = document.getElementById('zipModalClose');
+    const backdrop = modal?.querySelector('.zip-modal-backdrop');
+
+    function closeZipModal() {
+      modal?.classList.add('hidden');
+    }
+
+    closeBtn?.addEventListener('click', closeZipModal);
+    backdrop?.addEventListener('click', closeZipModal);
+  }
+
   // Check URL params for successful upgrade
   function checkUpgradeSuccess() {
     const params = new URLSearchParams(window.location.search);
@@ -3682,6 +3915,7 @@ export const prerender = false;
 
           // Initialize Go Plus modal
           initGoPlusModal();
+          initZipModal();
 
         } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);
@@ -3696,6 +3930,7 @@ export const prerender = false;
           initLogout();
           initProfileForm();
           initGoPlusModal();
+          initZipModal();
         }
         
       } else {
@@ -4589,5 +4824,143 @@ export const prerender = false;
     .badge-option {
       font-size: 1.2rem;
     }
+  }
+
+  /* Release download buttons container */
+  .release-dl-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* ZIP download button */
+  .dl-btn.zip {
+    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+    border: 1px solid #8b5cf6;
+    flex: 1;
+    min-width: 120px;
+    justify-content: center;
+  }
+
+  .dl-btn.zip:hover {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    transform: translateY(-1px);
+  }
+
+  .dl-btn.zip.downloading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* ZIP Progress Modal */
+  .zip-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .zip-modal.hidden {
+    display: none;
+  }
+
+  .zip-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(4px);
+  }
+
+  .zip-modal-content {
+    position: relative;
+    background: #1a1a2e;
+    border: 1px solid #374151;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  }
+
+  .zip-modal-title {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    text-align: center;
+  }
+
+  .zip-progress-bar {
+    height: 8px;
+    background: #374151;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  .zip-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7c3aed 0%, #a855f7 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .zip-progress-text {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    text-align: center;
+    margin: 0 0 1rem 0;
+  }
+
+  .zip-file-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+  }
+
+  .zip-file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    color: #d1d5db;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .zip-file-item:last-child {
+    border-bottom: none;
+  }
+
+  .zip-file-icon {
+    flex-shrink: 0;
+  }
+
+  .zip-modal-close {
+    width: 100%;
+    padding: 0.75rem;
+    background: #374151;
+    color: #fff;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .zip-modal-close:hover {
+    background: #4b5563;
   }
 </style>
