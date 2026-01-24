@@ -131,7 +131,7 @@ export const blogPosts: BlogPost[] = [
     slug: 'live-streaming-fresh-wax',
     title: 'Live Streaming: Experience Fresh Wax Live',
     excerpt: 'Tune into live DJ sets, exclusive performances, and real-time interaction with the community.',
-    featuredImage: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80',
+    featuredImage: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=800&q=80',
     category: 'Live',
     publishedAt: '2025-01-05',
     author: 'Fresh Wax',
