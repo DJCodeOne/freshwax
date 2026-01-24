@@ -101,30 +101,33 @@ function signR2Request(method, path, headers, payload = '') {
  */
 function downloadFromR2(key) {
   return new Promise((resolve, reject) => {
-    const path = `/${R2_CONFIG.bucketName}/${key}`;
-    const headers = signR2Request('GET', path, {});
+    // Use public CDN URL for download - simpler, no auth needed
+    const encodedKey = key.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    const cdnUrl = `${R2_CONFIG.publicDomain}/${encodedKey}`;
 
-    const options = {
-      hostname: `${R2_CONFIG.accountId}.r2.cloudflarestorage.com`,
-      port: 443,
-      path: path,
-      method: 'GET',
-      headers: headers
-    };
+    console.log(`[Download] Fetching from CDN: ${cdnUrl}`);
 
-    const req = https.request(options, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`R2 download failed: ${res.statusCode}`));
+    https.get(cdnUrl, (res) => {
+      // Handle redirects
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        https.get(res.headers.location, handleResponse);
         return;
       }
 
-      const chunks = [];
-      res.on('data', chunk => chunks.push(chunk));
-      res.on('end', () => resolve(Buffer.concat(chunks)));
-    });
+      handleResponse(res);
 
-    req.on('error', reject);
-    req.end();
+      function handleResponse(response) {
+        if (response.statusCode !== 200) {
+          reject(new Error(`CDN download failed: ${response.statusCode}`));
+          return;
+        }
+
+        const chunks = [];
+        response.on('data', chunk => chunks.push(chunk));
+        response.on('end', () => resolve(Buffer.concat(chunks)));
+        response.on('error', reject);
+      }
+    }).on('error', reject);
   });
 }
 
