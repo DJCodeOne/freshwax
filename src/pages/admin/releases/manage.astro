@@ -382,7 +382,8 @@ const formatCurrency = (amount) => {
 
             if (processedTracks.length > 0) {
               // Update release with processed URLs
-              await fetch('/api/releases/update-tracks', {
+              console.log('[Audio] Updating release with processed tracks:', processedTracks);
+              const updateResponse = await fetch('/api/releases/update-tracks', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -394,8 +395,17 @@ const formatCurrency = (amount) => {
                 })
               });
 
-              showToast(`Processed ${processedTracks.length} tracks!`);
-              setTimeout(() => location.reload(), 1500);
+              const updateResult = await updateResponse.json();
+              console.log('[Audio] Update response:', updateResult);
+
+              if (updateResult.success) {
+                showToast(`Processed ${processedTracks.length} tracks!`);
+                setTimeout(() => location.reload(), 1500);
+              } else {
+                showToast(`Processing done but update failed: ${updateResult.error}`, 'error');
+                btn.disabled = false;
+                btn.textContent = alreadyProcessed ? '✓' : '🎵';
+              }
             } else {
               showToast('No tracks were processed', 'error');
               btn.disabled = false;
