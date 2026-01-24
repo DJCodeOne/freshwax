@@ -241,7 +241,8 @@ const modifiedTime = publishedTime;
   }
 
   .blog-site-title .text-red,
-  .article-title .text-red {
+  .article-title :global(.text-red),
+  :global(.text-red) {
     color: #dc2626;
   }
 
