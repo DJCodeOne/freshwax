@@ -58,6 +58,7 @@ export class PlaylistManager {
   private globalRecentlyPlayed: any[] = []; // Recently played from Pusher (global)
   private countdownInterval: number | null = null; // Countdown display interval
   private countdownTrackId: string | null = null; // Track ID countdown is running for
+  private isFetchingDuration: boolean = false; // Prevent duplicate duration fetches
   private consecutiveErrors: number = 0; // Track errors to prevent infinite loops
   private containerId: string; // Store container ID for existence check
   private lastPlayedUrl: string | null = null; // Track last played URL to avoid immediate repeats
@@ -1217,17 +1218,21 @@ export class PlaylistManager {
       return;
     }
 
+    // Skip if already fetching duration for this track (prevents --:-- flash)
+    if (this.isFetchingDuration && this.countdownTrackId === currentTrackId) {
+      return;
+    }
+
     // Clear any existing countdown
     this.stopCountdown();
 
-    // Show loading state
+    // Track which track this countdown is for (set BEFORE async operations)
+    this.countdownTrackId = currentTrackId || null;
+    this.isFetchingDuration = true;
+
+    // Only show loading state if no countdown was previously running
     const bottomDurationEl = document.getElementById('bottomDuration');
     const previewDurationEl = document.getElementById('previewDuration');
-    if (bottomDurationEl) bottomDurationEl.textContent = '--:--';
-    if (previewDurationEl) previewDurationEl.textContent = '--:--';
-
-    // Track which track this countdown is for
-    this.countdownTrackId = currentTrackId || null;
 
     // Try to get duration with retries (MP3 metadata may not be loaded immediately)
     let duration = 0;
@@ -1240,6 +1245,8 @@ export class PlaylistManager {
         console.warn('[PlaylistManager] getDuration attempt', attempt + 1, 'failed:', error);
       }
     }
+
+    this.isFetchingDuration = false;
 
     if (duration > 0) {
       console.log('[PlaylistManager] Got duration:', duration, 'seconds');
