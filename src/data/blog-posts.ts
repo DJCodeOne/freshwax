@@ -99,7 +99,7 @@ export const blogPosts: BlogPost[] = [
       <p>Every seller on our platform is verified, so you know you're getting authentic, official merchandise. No bootlegs, no knockoffs – just the real thing.</p>
 
       <h2>For Sellers</h2>
-      <p>Got merch to sell? Whether you're a sound system, label, or artist, we make it easy. Just send us your stock and we do the rest – professional photography, listing on the store, and shipping to customers. You get paid instantly when a sale completes.</p>
+      <p>Got merch to sell? Whether you're a sound system, label, or artist, we make it easy. Just send us your stock and we do the rest – product photos, listing on the store, and shipping to customers. You get paid instantly when a sale completes.</p>
       <p>It's sale or return: you send stock to us at your expense, and if it doesn't sell, we return it at ours. Zero risk way to get your merch in front of the scene.</p>
 
       <p>Browse the <a href="/merch">Merch Store</a> and find something to wear to the next dance.</p>
