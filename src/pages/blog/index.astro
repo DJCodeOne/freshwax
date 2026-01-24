@@ -39,6 +39,12 @@ function truncateExcerpt(text: string, maxLength: number = 150): string {
   if (stripped.length <= maxLength) return stripped;
   return stripped.substring(0, maxLength).trim() + '...';
 }
+
+// Apply Fresh Wax branding to text (white Fresh, red Wax)
+function brandFreshWax(text: string): string {
+  if (!text) return '';
+  return text.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
+}
 ---
 
 <Layout
@@ -99,7 +105,7 @@ function truncateExcerpt(text: string, maxLength: number = 150): string {
                   </div>
                 )}
                 <div class="card-content">
-                  <h2 class="card-title">{post.title}</h2>
+                  <h2 class="card-title" set:html={brandFreshWax(post.title)} />
                   {post.excerpt && (
                     <p class="card-excerpt">{truncateExcerpt(post.excerpt)}</p>
                   )}

@@ -48,6 +48,12 @@ function generateExcerpt(content: string, maxLength: number = 160): string {
   return text.substring(0, maxLength).trim() + '...';
 }
 
+// Apply Fresh Wax branding to text (white Fresh, red Wax)
+function brandFreshWax(text: string): string {
+  if (!text) return '';
+  return text.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
+}
+
 // Prepare SEO data
 const seoTitle = post?.title || 'Post Not Found';
 const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.');
@@ -76,6 +82,13 @@ const modifiedTime = publishedTime;
   <Header />
 
   <div class="blog-post-page">
+    <!-- Branded Header -->
+    <div class="blog-header">
+      <a href="/blog" class="blog-title-link">
+        <h2 class="blog-site-title">FRESH <span class="text-red">WAX</span> BLOG</h2>
+      </a>
+    </div>
+
     {error || !post ? (
       <div class="error-container">
         <div class="error-content">
@@ -104,7 +117,7 @@ const modifiedTime = publishedTime;
             <span class="read-time">{getReadTime(post.content)}</span>
           </div>
 
-          <h1 class="article-title">{post.title}</h1>
+          <h1 class="article-title" set:html={brandFreshWax(post.title)} />
 
           {post.excerpt && (
             <p class="article-excerpt">{post.excerpt}</p>
@@ -206,6 +219,30 @@ const modifiedTime = publishedTime;
   .blog-post-page {
     min-height: 100vh;
     background: #000000;
+  }
+
+  /* Branded Header */
+  .blog-header {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .blog-title-link {
+    text-decoration: none;
+  }
+
+  .blog-site-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.1em;
+    margin: 0;
+  }
+
+  .blog-site-title .text-red,
+  .article-title .text-red {
+    color: #dc2626;
   }
 
   /* Error State */
