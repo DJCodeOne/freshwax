@@ -112,34 +112,6 @@ export const prerender = false;
             </div>
 
             <!-- Upgrade section removed - now in Go Plus modal -->
-
-            <div class="subscription-pro hidden collapsed" id="subscriptionPro">
-              <div class="pro-details" id="proDetails" style="display: none;">
-                <p class="pro-expires" id="proExpires"></p>
-
-                <!-- Referral Code Section -->
-                <div class="referral-section" id="referralSection">
-                <div class="referral-header">
-                  <span class="referral-icon">🎁</span>
-                  <span class="referral-title">Invite a Friend - 50% Off!</span>
-                </div>
-                <p class="referral-desc">Share your code with a friend and they'll get 50% off Plus (just £5 instead of £10)!</p>
-                <div class="referral-code-box">
-                  <code id="referralCodeDisplay" class="referral-code">Loading...</code>
-                </div>
-                <button class="copy-referral-btn" id="copyReferralBtn" title="Copy code">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                  </svg>
-                  <span>Copy Code</span>
-                </button>
-                <p class="referral-note" id="referralNote">One-time use code. Expires in 1 year.</p>
-                <p class="referral-expires" id="referralExpires">Offer ends 26th December 2026</p>
-                <p class="referral-used hidden" id="referralUsed">✓ Your referral code has been used!</p>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div class="section">
@@ -517,6 +489,39 @@ export const prerender = false;
                 </div>
               </div>
               <button type="button" id="deleteAccountBtn" class="delete-account-btn">Delete My Account</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plus Member Modal -->
+        <div id="plusMemberModal" class="modal-overlay hidden">
+          <div class="modal-content plus-modal">
+            <button class="modal-close" onclick="document.getElementById('plusMemberModal').classList.add('hidden'); document.body.style.overflow='';">&times;</button>
+            <div class="plus-modal-header">
+              <span class="plus-modal-icon">⚡</span>
+              <h2>Plus Membership</h2>
+            </div>
+            <p class="pro-expires" id="proExpires"></p>
+
+            <div class="referral-section" id="referralSection">
+              <div class="referral-header">
+                <span class="referral-icon">🎁</span>
+                <span class="referral-title">Invite a Friend - 50% Off!</span>
+              </div>
+              <p class="referral-desc">Share your code with a friend and they'll get 50% off Plus (just £5 instead of £10)!</p>
+              <div class="referral-code-box">
+                <code id="referralCodeDisplay" class="referral-code">Loading...</code>
+              </div>
+              <button class="copy-referral-btn" id="copyReferralBtn" title="Copy code">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Copy Code</span>
+              </button>
+              <p class="referral-note" id="referralNote">One-time use code. Expires in 1 year.</p>
+              <p class="referral-expires" id="referralExpires">Offer ends 26th December 2026</p>
+              <p class="referral-used hidden" id="referralUsed">✓ Your referral code has been used!</p>
             </div>
           </div>
         </div>
@@ -3004,19 +3009,23 @@ export const prerender = false;
         // Load referral code
         loadReferralCode(userId);
 
-        // Show and set up toggle for Plus member section
+        // Show and set up toggle for Plus member modal
         const tierToggleBtn = document.getElementById('tierToggleBtn');
-        const proDetails = document.getElementById('proDetails');
-        console.log('[Dashboard] Tier toggle setup:', { tierToggleBtn: !!tierToggleBtn, proDetails: !!proDetails });
-        if (tierToggleBtn && proDetails) {
+        const plusMemberModal = document.getElementById('plusMemberModal');
+        if (tierToggleBtn && plusMemberModal) {
           tierToggleBtn.classList.remove('hidden');
           tierToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const isHidden = proDetails.style.display === 'none' || proDetails.style.display === '';
-            console.log('[Dashboard] Tier toggle clicked, isHidden:', isHidden);
-            proDetails.style.display = isHidden ? 'block' : 'none';
-            tierToggleBtn.textContent = isHidden ? '▲' : '▼';
-            tierToggleBtn.classList.toggle('open', isHidden);
+            plusMemberModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+          });
+
+          // Close modal on backdrop click
+          plusMemberModal.addEventListener('click', (e) => {
+            if (e.target === plusMemberModal) {
+              plusMemberModal.classList.add('hidden');
+              document.body.style.overflow = '';
+            }
           });
         }
       } else {
@@ -4059,6 +4068,156 @@ export const prerender = false;
 
   .goplus-modal-close:hover {
     background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Plus Member Modal */
+  #plusMemberModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .plus-modal {
+    position: relative;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 1rem;
+    max-width: 450px;
+    width: 90%;
+    padding: 1.5rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(245, 158, 11, 0.2);
+    animation: modalSlideIn 0.3s ease-out;
+  }
+
+  .plus-modal .modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 2rem;
+    height: 2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+
+  .plus-modal .modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .plus-modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .plus-modal-icon {
+    font-size: 1.5rem;
+  }
+
+  .plus-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #fff;
+  }
+
+  .plus-modal .pro-expires {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .plus-modal .referral-section {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .plus-modal .referral-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .plus-modal .referral-title {
+    font-weight: 600;
+    color: #f59e0b;
+  }
+
+  .plus-modal .referral-desc {
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .plus-modal .referral-code-box {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #374151;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    text-align: center;
+  }
+
+  .plus-modal .referral-code {
+    color: #f59e0b;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .plus-modal .copy-referral-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.6rem;
+    background: #f59e0b;
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .plus-modal .copy-referral-btn:hover {
+    background: #d97706;
+  }
+
+  .plus-modal .referral-note,
+  .plus-modal .referral-expires {
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+
+  .plus-modal .referral-used {
+    color: #22c55e;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    text-align: center;
   }
 
   .goplus-modal-header {
