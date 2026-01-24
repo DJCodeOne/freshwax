@@ -520,7 +520,9 @@ const formatCurrency = (amount) => {
                 if (!url) continue;
 
                 const urlParts = new URL(url);
-                const sourceKey = urlParts.pathname.substring(1);
+                // Decode the pathname to get actual characters (spaces, not %20)
+                // The processor will re-encode as needed for the CDN request
+                const sourceKey = decodeURIComponent(urlParts.pathname.substring(1));
 
                 // Use displayTrackNumber (1-indexed) or fallback to trackNumber+1
                 const trackNum = track.displayTrackNumber || (track.trackNumber + 1);
