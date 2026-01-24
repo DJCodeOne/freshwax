@@ -1702,8 +1702,9 @@ export const prerender = false;
     const fileList = document.getElementById('zipFileList');
 
     modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
     progressFill.style.width = '0%';
-    progressText.textContent = 'Preparing download...';
+    progressText.textContent = 'Verifying purchase...';
     fileList.innerHTML = '';
 
     const originalText = button.innerHTML;
@@ -1718,34 +1719,55 @@ export const prerender = false;
       }
       const token = await user.getIdToken();
 
-      // Build list of files to download
+      // Verify purchase by checking one file (this validates order ownership)
+      const verifyResponse = await fetch('/api/presign-download', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          orderId,
+          releaseId,
+          trackIndex: 0,
+          fileType: tracks[0]?.mp3Url ? 'mp3' : 'wav'
+        })
+      });
+
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Purchase verification failed');
+      }
+
+      progressText.textContent = 'Preparing download...';
+
+      // Build list of files to download using CDN URLs directly
+      // (CDN has CORS enabled, presigned R2 URLs don't)
       const filesToDownload = [];
 
-      // Add artwork if available
+      // Add artwork if available - detect extension from URL
       if (artworkUrl) {
+        const artworkExt = artworkUrl.split('.').pop()?.split('?')[0] || 'jpg';
         filesToDownload.push({
-          type: 'artwork',
-          trackIndex: 0,
-          filename: `${releaseName} - Artwork.jpg`,
+          url: artworkUrl,
+          filename: `${releaseName} - Artwork.${artworkExt}`,
           label: 'Artwork'
         });
       }
 
-      // Add all tracks (MP3 and WAV)
+      // Add all tracks (MP3 and WAV) using their CDN URLs
       tracks.forEach((track, idx) => {
         const trackName = artistName ? `${artistName} - ${track.name}` : track.name;
         if (track.mp3Url) {
           filesToDownload.push({
-            type: 'mp3',
-            trackIndex: idx,
+            url: track.mp3Url,
             filename: `${trackName}.mp3`,
             label: `${track.name} (MP3)`
           });
         }
         if (track.wavUrl) {
           filesToDownload.push({
-            type: 'wav',
-            trackIndex: idx,
+            url: track.wavUrl,
             filename: `${trackName}.wav`,
             label: `${track.name} (WAV)`
           });
@@ -1765,6 +1787,7 @@ export const prerender = false;
 
       // Download each file and add to ZIP
       let completed = 0;
+      let successCount = 0;
       for (const file of filesToDownload) {
         // Update progress UI
         const percent = Math.round((completed / filesToDownload.length) * 100);
@@ -1779,35 +1802,15 @@ export const prerender = false;
         fileList.appendChild(listItem);
 
         try {
-          // Get presigned URL
-          const presignResponse = await fetch('/api/presign-download', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              orderId,
-              releaseId,
-              trackIndex: file.trackIndex,
-              fileType: file.type
-            })
-          });
-
-          if (!presignResponse.ok) {
-            throw new Error(`Failed to get download URL for ${file.label}`);
-          }
-
-          const { downloadUrl } = await presignResponse.json();
-
-          // Fetch the file
-          const fileResponse = await fetch(downloadUrl);
+          // Fetch directly from CDN URL (has CORS enabled)
+          const fileResponse = await fetch(file.url);
           if (!fileResponse.ok) {
-            throw new Error(`Failed to download ${file.label}`);
+            throw new Error(`HTTP ${fileResponse.status}`);
           }
 
           const blob = await fileResponse.blob();
           folder.file(file.filename, blob);
+          successCount++;
 
           // Update list item to show success
           const itemEl = document.getElementById(`zip-file-${completed}`);
@@ -1823,6 +1826,11 @@ export const prerender = false;
         }
 
         completed++;
+      }
+
+      // Check if any files were downloaded
+      if (successCount === 0) {
+        throw new Error('Failed to download any files');
       }
 
       // Generate ZIP
@@ -1855,6 +1863,7 @@ export const prerender = false;
         button.innerHTML = originalText;
         button.classList.remove('downloading');
         modal.classList.add('hidden');
+        document.body.style.overflow = '';
       }, 2000);
 
     } catch (error) {
@@ -1867,6 +1876,8 @@ export const prerender = false;
         button.innerHTML = originalText;
         button.classList.remove('downloading');
         progressFill.style.background = '';
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
       }, 3000);
     }
   }
@@ -3678,6 +3689,13 @@ export const prerender = false;
 
     function closeZipModal() {
       modal?.classList.add('hidden');
+      document.body.style.overflow = '';
+      // Reset progress bar state
+      const progressFill = document.getElementById('zipProgressFill');
+      if (progressFill) {
+        progressFill.style.width = '0%';
+        progressFill.style.background = '';
+      }
     }
 
     closeBtn?.addEventListener('click', closeZipModal);

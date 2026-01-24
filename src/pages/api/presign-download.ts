@@ -223,7 +223,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!fileUrl) {
-      log.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType, tracksCount: releaseData.tracks?.length });
+      log.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
       return new Response(JSON.stringify({
         success: false,
         error: `${fileType} file not available for this item`
