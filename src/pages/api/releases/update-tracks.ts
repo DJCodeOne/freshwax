@@ -85,8 +85,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info(`Tracks to update: ${tracks.length}`);
 
     // Update existing tracks with processed URLs
-    const updatedTracks = (existingRelease.tracks || []).map((existingTrack: any) => {
-      const processedTrack = tracks.find((t: any) => t.trackNumber === existingTrack.trackNumber);
+    // Match by canonical trackNumber (displayTrackNumber - 1) since trackNumber field can be inconsistent
+    const updatedTracks = (existingRelease.tracks || []).map((existingTrack: any, index: number) => {
+      // Use displayTrackNumber - 1 as canonical index, fallback to array index
+      const canonicalIndex = existingTrack.displayTrackNumber ? existingTrack.displayTrackNumber - 1 : index;
+      const processedTrack = tracks.find((t: any) => t.trackNumber === canonicalIndex);
 
       if (processedTrack) {
         return {

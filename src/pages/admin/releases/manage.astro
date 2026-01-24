@@ -549,8 +549,11 @@ const formatCurrency = (amount) => {
 
                 const result = await response.json();
                 if (result.success) {
+                  // Use displayTrackNumber - 1 as the canonical 0-indexed trackNumber
+                  // This is more reliable than track.trackNumber which can be inconsistent
+                  const canonicalTrackNumber = (track.displayTrackNumber || trackNum) - 1;
                   processedTracks.push({
-                    trackNumber: track.trackNumber, // Keep original index for Firebase update
+                    trackNumber: canonicalTrackNumber,
                     mp3Url: result.mp3Url,
                     wavUrl: result.wavUrl,
                     previewUrl: result.previewUrl
