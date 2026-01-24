@@ -437,8 +437,8 @@ const formatCurrency = (amount) => {
         item.className = 'track-status-item';
         item.innerHTML = `
           <span class="track-status-icon" style="color: ${statusColors[status]}">${statusIcons[status]}</span>
-          <span class="track-status-name">${trackNum}. ${trackName}</span>
-          <span class="track-status-details">${details}</span>
+          <span class="track-status-name" style="color: #fff;">${trackNum}. ${trackName}</span>
+          <span class="track-status-details" style="color: #aaa;">${details}</span>
         `;
         audioTrackList.appendChild(item);
       }
