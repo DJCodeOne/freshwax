@@ -196,16 +196,15 @@ const formatCurrency = (amount) => {
                     >
                       ✏️
                     </a>
-                    {!release.audioProcessed && (
-                      <button
-                        class="btn btn-outline btn-sm process-audio-btn"
-                        data-id={release.id}
-                        data-name={release.releaseName}
-                        title="Process Audio (generate MP3+WAV)"
-                      >
-                        🎵
-                      </button>
-                    )}
+                    <button
+                      class={`btn btn-sm process-audio-btn ${release.audioProcessed ? 'btn-audio-done' : 'btn-outline'}`}
+                      data-id={release.id}
+                      data-name={release.releaseName}
+                      data-processed={release.audioProcessed ? 'true' : 'false'}
+                      title={release.audioProcessed ? 'Audio processed (MP3+WAV ready) - Click to reprocess' : 'Process Audio (generate MP3+WAV)'}
+                    >
+                      {release.audioProcessed ? '✓' : '🎵'}
+                    </button>
                     {release.status !== 'live' && (
                       <button
                         class="btn btn-success btn-sm publish-btn"
@@ -308,6 +307,7 @@ const formatCurrency = (amount) => {
         btn.addEventListener('click', async () => {
           const id = btn.dataset.id;
           const name = btn.dataset.name || 'this release';
+          const alreadyProcessed = btn.dataset.processed === 'true';
 
           // Check if audio processor is available
           const isAvailable = await checkAudioProcessor();
@@ -316,7 +316,12 @@ const formatCurrency = (amount) => {
             return;
           }
 
-          if (!confirm(`Process audio for "${name}"? This will generate MP3+WAV formats for all tracks.`)) return;
+          // Different confirmation message if already processed
+          const confirmMsg = alreadyProcessed
+            ? `Audio already processed for "${name}". Reprocess all tracks? This will regenerate MP3+WAV formats.`
+            : `Process audio for "${name}"? This will generate MP3+WAV formats for all tracks.`;
+
+          if (!confirm(confirmMsg)) return;
 
           btn.disabled = true;
           btn.textContent = '⏳';
@@ -388,14 +393,14 @@ const formatCurrency = (amount) => {
             } else {
               showToast('No tracks were processed', 'error');
               btn.disabled = false;
-              btn.textContent = '🎵';
+              btn.textContent = alreadyProcessed ? '✓' : '🎵';
             }
 
           } catch (error) {
             console.error(error);
             showToast('Audio processing failed', 'error');
             btn.disabled = false;
-            btn.textContent = '🎵';
+            btn.textContent = alreadyProcessed ? '✓' : '🎵';
           }
         });
       });
@@ -603,5 +608,18 @@ const formatCurrency = (amount) => {
 
   .delete-modal-actions .btn-outline:hover {
     background: #333;
+  }
+
+  /* Audio processed button - green tick */
+  .btn-audio-done {
+    background: #16a34a !important;
+    border-color: #16a34a !important;
+    color: #fff !important;
+    cursor: pointer;
+  }
+
+  .btn-audio-done:hover {
+    background: #15803d !important;
+    border-color: #15803d !important;
   }
 </style>
