@@ -349,25 +349,31 @@ const formatCurrency = (amount) => {
                 const urlParts = new URL(url);
                 const sourceKey = urlParts.pathname.substring(1);
 
+                // Use displayTrackNumber (1-indexed) or fallback to trackNumber+1
+                const trackNum = track.displayTrackNumber || (track.trackNumber + 1);
+                const trackTitle = track.trackName || track.title || `Track ${trackNum}`;
+
                 const response = await fetch(`${AUDIO_PROCESSOR_URL}/process-track`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     sourceKey: sourceKey,
                     releaseFolder: baseFolder,
-                    trackNumber: track.trackNumber,
-                    trackTitle: track.title
+                    trackNumber: trackNum,
+                    trackTitle: trackTitle
                   })
                 });
 
                 const result = await response.json();
                 if (result.success) {
                   processedTracks.push({
-                    trackNumber: track.trackNumber,
+                    trackNumber: track.trackNumber, // Keep original index for Firebase update
                     mp3Url: result.mp3Url,
                     wavUrl: result.wavUrl,
                     previewUrl: result.previewUrl
                   });
+                } else {
+                  console.error(`Track ${trackNum} processing failed:`, result.error);
                 }
               } catch (err) {
                 console.error(`Track processing error:`, err);
