@@ -801,9 +801,8 @@ export class PlaylistManager {
       // Show video player and hide overlays
       this.showVideoPlayer();
 
-      // Log to play history (local and server)
+      // Log to local play history only (server history updated when track ENDS)
       this.logToHistory(currentItem);
-      this.logToServerHistory(currentItem);
 
       // Mark URL as played (for 1-hour cooldown)
       this.markAsPlayed(currentItem.url);
@@ -2148,10 +2147,7 @@ export class PlaylistManager {
       currentItem.title = title;
       // Update the UI with the new title
       this.renderUI();
-
-      // Also update server history with the real title
-      // This ensures recently played shows correct titles
-      this.logToServerHistory(currentItem);
+      // Note: Server history is updated with correct title when track ends (trackEnded action)
     }
   }
 
