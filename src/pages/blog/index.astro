@@ -52,7 +52,7 @@ function truncateExcerpt(text: string, maxLength: number = 150): string {
     <!-- Hero Section -->
     <section class="blog-hero">
       <div class="hero-content">
-        <h1>Fresh Wax Blog</h1>
+        <h1>Fresh <span class="text-red">Wax</span> Blog</h1>
         <p>News, interviews, and insights from the jungle & drum and bass scene</p>
       </div>
     </section>
@@ -192,6 +192,10 @@ function truncateExcerpt(text: string, maxLength: number = 150): string {
     color: #ffffff;
     margin-bottom: 1rem;
     letter-spacing: -0.02em;
+  }
+
+  .text-red {
+    color: #dc2626;
   }
 
   .hero-content p {
