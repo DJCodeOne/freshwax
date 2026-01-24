@@ -73,27 +73,35 @@ export const blogPosts: BlogPost[] = [
     `
   },
   {
-    slug: 'fresh-wax-merch-collection',
-    title: 'Fresh Wax Merch: Wear Your Sound',
-    excerpt: 'Rep the underground with our exclusive merchandise collection designed for true heads.',
+    slug: 'merch-store-sound-systems-labels-djs',
+    title: 'Merch Store: Rep Your Favourite Sound Systems, Labels & DJs',
+    excerpt: 'Shop official merchandise from sound systems, labels, crews, DJs and Fresh Wax own brand - all in one place.',
     featuredImage: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&q=80',
     category: 'Merch',
     publishedAt: '2025-01-10',
     author: 'Fresh Wax',
-    tags: ['merchandise', 'clothing', 'streetwear'],
+    tags: ['merchandise', 'clothing', 'sound systems', 'labels', 'djs'],
     content: `
-      <p>Fresh Wax isn't just about the music – it's a lifestyle. Our merchandise collection lets you wear your passion for jungle and drum & bass with pride.</p>
+      <p>Fresh Wax Merch is more than just our own brand – it's a marketplace where sound systems, labels, crews, and DJs can sell their official merchandise directly to fans.</p>
 
-      <h2>Quality You Can Feel</h2>
-      <p>We don't do cheap throwaway fashion. Every item in our collection is made from premium materials, designed to last. From heavyweight cotton tees to cosy hoodies, our merch is built for real life.</p>
+      <h2>One Stop Shop</h2>
+      <p>No more hunting across different websites to find merch from your favourite artists. We bring together gear from across the scene in one place, making it easy to rep the sounds you love.</p>
 
-      <h2>Designs That Matter</h2>
-      <p>Our designs are created by artists who understand the culture. Each piece reflects the energy and aesthetic of the scene, from subtle nods that only the heads will recognise to bold statements that turn heads.</p>
+      <h2>Who's Selling?</h2>
+      <ul>
+        <li><strong>Sound Systems</strong> – Official merch from legendary rigs and crews</li>
+        <li><strong>Labels</strong> – Represent your favourite imprints</li>
+        <li><strong>DJs & Producers</strong> – Support artists directly</li>
+        <li><strong>Fresh Wax</strong> – Our own brand essentials</li>
+      </ul>
 
-      <h2>Limited Drops</h2>
-      <p>Many of our items are released as limited editions, so when they're gone, they're gone. Keep an eye on our socials and sign up to our newsletter to be the first to know about new drops.</p>
+      <h2>Quality Guaranteed</h2>
+      <p>Every seller on our platform is verified, so you know you're getting authentic, official merchandise. No bootlegs, no knockoffs – just the real thing.</p>
 
-      <p>Browse our full <a href="/merch">Merch Collection</a> and find your new favourite piece.</p>
+      <h2>For Sellers</h2>
+      <p>Got merch to sell? Whether you're a sound system, label, or artist, Fresh Wax gives you a platform to reach the jungle and DnB community. We handle the storefront, you handle the product.</p>
+
+      <p>Browse the <a href="/merch">Merch Store</a> and find something to wear to the next dance.</p>
     `
   },
   {
