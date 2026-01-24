@@ -1,0 +1,8 @@
+---
+// src/pages/account/index.astro
+// Redirect /account to /account/dashboard
+
+export const prerender = false;
+
+return Astro.redirect('/account/dashboard');
+---
