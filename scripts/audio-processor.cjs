@@ -392,7 +392,9 @@ async function processTrack(sourceKey, releaseFolder, trackNumber, trackTitle, o
       mp3Size = mp3Data.length;
 
       // Keep original WAV/FLAC/AIFF URL - no duplication!
-      wavUrl = originalWavUrl || `${R2_CONFIG.publicDomain}/${sourceKey}`;
+      // URL-encode the sourceKey if we need to construct the URL
+      const encodedSourceKey = sourceKey.split('/').map(s => encodeURIComponent(s)).join('/');
+      wavUrl = originalWavUrl || `${R2_CONFIG.publicDomain}/${encodedSourceKey}`;
 
       console.log(`[Processor] Track ${trackNumber} complete:`);
       console.log(`  MP3: ${mp3Url} (${(mp3Size / 1024 / 1024).toFixed(2)} MB) [NEW]`);

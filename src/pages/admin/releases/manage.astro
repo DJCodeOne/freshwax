@@ -530,6 +530,9 @@ const formatCurrency = (amount) => {
                 addTrackStatus(trackNum, trackTitle, 'processing', 'Converting...');
                 updateAudioProgress(processed + 1, tracks.length, trackTitle);
 
+                // Get the original WAV URL - could be wavUrl, url, or need to construct from sourceKey
+                const originalWavUrl = track.wavUrl || track.url || `https://cdn.freshwax.co.uk/${sourceKey}`;
+
                 const response = await fetch(`${AUDIO_PROCESSOR_URL}/process-track`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -538,7 +541,7 @@ const formatCurrency = (amount) => {
                     releaseFolder: baseFolder,
                     trackNumber: trackNum,
                     trackTitle: trackTitle,
-                    originalWavUrl: track.wavUrl // Keep original WAV URL to avoid duplication
+                    originalWavUrl: originalWavUrl
                   })
                 });
 
