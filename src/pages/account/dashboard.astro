@@ -503,6 +503,24 @@ export const prerender = false;
             </div>
             <p class="pro-expires" id="proExpires"></p>
 
+            <!-- Plus Stats -->
+            <div class="plus-stats">
+              <div class="plus-stat">
+                <span class="plus-stat-icon">🎵</span>
+                <div class="plus-stat-info">
+                  <span class="plus-stat-label">Personal Playlist</span>
+                  <span class="plus-stat-value" id="playlistTrackCount">-- tracks</span>
+                </div>
+              </div>
+              <div class="plus-stat">
+                <span class="plus-stat-icon">⏭️</span>
+                <div class="plus-stat-info">
+                  <span class="plus-stat-label">Daily Skips</span>
+                  <span class="plus-stat-value" id="skipCount">-- / --</span>
+                </div>
+              </div>
+            </div>
+
             <div class="referral-section" id="referralSection">
               <div class="referral-header">
                 <span class="referral-icon">🎁</span>
@@ -3009,6 +3027,9 @@ export const prerender = false;
         // Load referral code
         loadReferralCode(userId);
 
+        // Load Plus stats (playlist count and skip count)
+        loadPlusStats(userId);
+
         // Show and set up toggle for Plus member modal
         const tierToggleBtn = document.getElementById('tierToggleBtn');
         const plusMemberModal = document.getElementById('plusMemberModal');
@@ -3237,6 +3258,38 @@ export const prerender = false;
       console.error('Error loading referral code:', error);
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       if (referralCodeDisplay) referralCodeDisplay.textContent = 'Error loading';
+    }
+  }
+
+  // Load Plus stats (playlist count and skip usage)
+  async function loadPlusStats(userId) {
+    try {
+      const playlistCountEl = document.getElementById('playlistTrackCount');
+      const skipCountEl = document.getElementById('skipCount');
+
+      // Fetch personal playlist count
+      const playlistRes = await fetch(`/api/playlist/personal?userId=${userId}`);
+      const playlistData = await playlistRes.json();
+      if (playlistData.success && playlistCountEl) {
+        const count = playlistData.playlist?.length || 0;
+        const limit = playlistData.trackLimit || 1000;
+        playlistCountEl.textContent = `${count} / ${limit} tracks`;
+      }
+
+      // Fetch skip usage - need auth token
+      const user = auth.currentUser;
+      const idToken = user ? await user.getIdToken() : null;
+      if (idToken) {
+        const skipRes = await fetch('/api/playlist/skip', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const skipData = await skipRes.json();
+        if (skipData.success && skipCountEl) {
+          skipCountEl.textContent = `${skipData.used || 0} / ${skipData.limit || 3} used`;
+        }
+      }
+    } catch (error) {
+      console.error('[Dashboard] Error loading Plus stats:', error);
     }
   }
 
@@ -4140,8 +4193,48 @@ export const prerender = false;
     color: #9ca3af;
     font-size: 0.85rem;
     margin-bottom: 1rem;
+  }
+
+  .plus-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .plus-stat {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .plus-stat-icon {
+    font-size: 1.25rem;
+  }
+
+  .plus-stat-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+
+  .plus-stat-label {
+    font-size: 0.7rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .plus-stat-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
   }
 
   .plus-modal .referral-section {
