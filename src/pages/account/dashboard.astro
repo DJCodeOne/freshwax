@@ -708,7 +708,7 @@ export const prerender = false;
   </main>
 
   <!-- JSZip for ZIP downloads -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <Footer />
 </Layout>
@@ -1707,14 +1707,34 @@ export const prerender = false;
     const progressFill = document.getElementById('zipProgressFill');
     const progressText = document.getElementById('zipProgressText');
     const fileList = document.getElementById('zipFileList');
+    const closeBtn = document.getElementById('zipModalClose');
+    const originalText = button.innerHTML;
+
+    // Create abort controller for cancellation
+    const abortController = new AbortController();
+    let isCancelled = false;
+
+    // Cancel handler
+    const cancelHandler = () => {
+      isCancelled = true;
+      abortController.abort();
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      progressFill.style.width = '0%';
+      progressFill.classList.remove('creating');
+      progressFill.style.background = '';
+      button.innerHTML = originalText;
+      button.classList.remove('downloading');
+    };
+    closeBtn?.addEventListener('click', cancelHandler, { once: true });
 
     modal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
     progressFill.style.width = '0%';
+    progressFill.classList.remove('creating');
     progressText.textContent = 'Verifying purchase...';
     fileList.innerHTML = '';
 
-    const originalText = button.innerHTML;
     button.classList.add('downloading');
     button.innerHTML = 'Creating ZIP...';
 
@@ -1785,21 +1805,35 @@ export const prerender = false;
         throw new Error('No files available to download');
       }
 
-      // Initialize JSZip
+      // Initialize JSZip - dynamically load if not available
       if (typeof JSZip === 'undefined') {
-        throw new Error('ZIP library not loaded. Please refresh the page.');
+        progressText.textContent = 'Loading ZIP library...';
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+          script.onload = resolve;
+          script.onerror = () => reject(new Error('Failed to load ZIP library'));
+          document.head.appendChild(script);
+        });
       }
-      const zip = new JSZip();
+      const zip = new (window as any).JSZip();
       const folder = zip.folder(releaseName);
 
-      // Download each file and add to ZIP
+      // Download each file and add to ZIP (80% of progress for downloads)
       let completed = 0;
       let successCount = 0;
+      const downloadProgressWeight = 80; // 80% for downloads, 20% for ZIP creation
+
       for (const file of filesToDownload) {
-        // Update progress UI
-        const percent = Math.round((completed / filesToDownload.length) * 100);
-        progressFill.style.width = `${percent}%`;
-        progressText.textContent = `Downloading ${file.label}...`;
+        // Check if cancelled
+        if (isCancelled) {
+          throw new Error('Download cancelled');
+        }
+
+        // Update progress UI - base progress for this file
+        const basePercent = Math.round((completed / filesToDownload.length) * downloadProgressWeight);
+        progressFill.style.width = `${basePercent}%`;
+        progressText.textContent = `Downloading ${file.label}... (${completed + 1}/${filesToDownload.length})`;
 
         // Add to file list
         const listItem = document.createElement('div');
@@ -1809,14 +1843,43 @@ export const prerender = false;
         fileList.appendChild(listItem);
 
         try {
-          // Fetch directly from CDN URL (has CORS enabled)
-          const fileResponse = await fetch(file.url);
+          // Use download proxy API to bypass CORS
+          const proxyUrl = `/api/download?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
+          const fileResponse = await fetch(proxyUrl, { signal: abortController.signal });
           if (!fileResponse.ok) {
             throw new Error(`HTTP ${fileResponse.status}`);
           }
 
-          const blob = await fileResponse.blob();
-          folder.file(file.filename, blob);
+          // Stream the response with progress tracking
+          const contentLength = fileResponse.headers.get('content-length');
+          const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
+
+          let receivedBytes = 0;
+          const chunks: Uint8Array[] = [];
+          const reader = fileResponse.body?.getReader();
+
+          if (reader && totalSize > 0) {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              receivedBytes += value.length;
+
+              // Update progress within this file's allocation
+              const fileProgress = receivedBytes / totalSize;
+              const overallPercent = basePercent + (fileProgress * (downloadProgressWeight / filesToDownload.length));
+              progressFill.style.width = `${Math.round(overallPercent)}%`;
+            }
+
+            // Combine chunks into blob
+            const blob = new Blob(chunks);
+            folder.file(file.filename, blob);
+          } else {
+            // Fallback if streaming not available
+            const blob = await fileResponse.blob();
+            folder.file(file.filename, blob);
+          }
+
           successCount++;
 
           // Update list item to show success
@@ -1824,7 +1887,10 @@ export const prerender = false;
           if (itemEl) {
             itemEl.innerHTML = `<span class="zip-file-icon" style="color: #22c55e;">✓</span> ${file.label}`;
           }
-        } catch (fileError) {
+        } catch (fileError: any) {
+          if (fileError.name === 'AbortError' || isCancelled) {
+            throw new Error('Download cancelled');
+          }
           console.error(`Error downloading ${file.label}:`, fileError);
           const itemEl = document.getElementById(`zip-file-${completed}`);
           if (itemEl) {
@@ -1835,23 +1901,30 @@ export const prerender = false;
         completed++;
       }
 
-      // Check if any files were downloaded
+      // Check if cancelled or no files downloaded
+      if (isCancelled) {
+        throw new Error('Download cancelled');
+      }
       if (successCount === 0) {
         throw new Error('Failed to download any files');
       }
 
-      // Generate ZIP
+      // Generate ZIP with animation
       progressText.textContent = 'Creating ZIP file...';
-      progressFill.style.width = '95%';
+      progressFill.style.width = '80%';
+      progressFill.classList.add('creating');
 
       const zipBlob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: { level: 6 }
-      }, (metadata) => {
-        const zipPercent = 95 + (metadata.percent * 0.05);
-        progressFill.style.width = `${zipPercent}%`;
+      }, (metadata: any) => {
+        // 80% to 100% during ZIP generation
+        const zipPercent = 80 + (metadata.percent * 0.2);
+        progressFill.style.width = `${Math.round(zipPercent)}%`;
       });
+
+      progressFill.classList.remove('creating');
 
       // Trigger download
       progressFill.style.width = '100%';
@@ -1866,14 +1939,24 @@ export const prerender = false;
       URL.revokeObjectURL(downloadLink.href);
 
       button.innerHTML = '✓ Done!';
+      closeBtn?.removeEventListener('click', cancelHandler);
       setTimeout(() => {
         button.innerHTML = originalText;
         button.classList.remove('downloading');
+        progressFill.style.width = '0%';
         modal.classList.add('hidden');
         document.body.style.overflow = '';
       }, 2000);
 
-    } catch (error) {
+    } catch (error: any) {
+      // Clean up animation state
+      progressFill.classList.remove('creating');
+
+      // If cancelled, just clean up silently (already handled by cancelHandler)
+      if (isCancelled || error.message === 'Download cancelled') {
+        return;
+      }
+
       console.error('ZIP download error:', error);
       progressText.textContent = `Error: ${error.message}`;
       progressFill.style.background = '#ef4444';
@@ -1883,6 +1966,7 @@ export const prerender = false;
         button.innerHTML = originalText;
         button.classList.remove('downloading');
         progressFill.style.background = '';
+        progressFill.style.width = '0%';
         modal.classList.add('hidden');
         document.body.style.overflow = '';
       }, 3000);
@@ -5164,6 +5248,18 @@ export const prerender = false;
     border-radius: 4px;
     transition: width 0.3s ease;
     width: 0%;
+  }
+
+  .zip-progress-fill.creating {
+    animation: zipPulse 1.5s ease-in-out infinite;
+    background: linear-gradient(90deg, #f97316 0%, #fbbf24 50%, #f97316 100%);
+    background-size: 200% 100%;
+  }
+
+  @keyframes zipPulse {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
   }
 
   .zip-progress-text {
