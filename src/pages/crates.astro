@@ -920,6 +920,9 @@ const faqs = [
   let currentCollection = 'all';
 
   async function loadCollections() {
+    const container = document.getElementById('sellerCollections');
+    if (!container) return;
+
     try {
       const res = await fetch('/api/vinyl/public?type=collections');
       const data = await res.json();
@@ -930,13 +933,14 @@ const faqs = [
       }
     } catch (err) {
       console.error('Error loading collections:', err);
-      document.getElementById('sellerCollections').innerHTML = '<div class="loading-text">No collections yet</div>';
+      container.innerHTML = '<div class="loading-text">No collections yet</div>';
     }
   }
 
   function renderCollections() {
     const container = document.getElementById('sellerCollections');
     const mobileFilters = document.getElementById('mobileFilters');
+    if (!container || !mobileFilters) return;
 
     if (allCollections.length === 0) {
       container.innerHTML = '<div class="loading-text">No collections yet</div>';
@@ -979,6 +983,7 @@ const faqs = [
   async function loadListings(collection = 'all') {
     const grid = document.getElementById('listingsGrid');
     const empty = document.getElementById('emptyState');
+    if (!grid || !empty) return;
 
     grid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading vinyl...</p></div>';
     empty.style.display = 'none';
@@ -1105,6 +1110,10 @@ const faqs = [
 
   // Initialize function
   function initCrates() {
+    // Only run on crates page - check if key element exists
+    const listingsGrid = document.getElementById('listingsGrid');
+    if (!listingsGrid) return;
+
     loadCollections();
     loadListings();
   }

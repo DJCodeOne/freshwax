@@ -414,15 +414,20 @@ const faqs = [
   }
   
   // Load user balance
-  async function loadBalance(userId) {
+  async function loadBalance(user) {
     try {
-      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/giftcards/balance', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
       const result = await response.json();
-      
+
       if (result.success) {
         const balanceEl = document.getElementById('creditBalance');
         const balanceDisplay = document.getElementById('balanceDisplay');
-        
+
         if (balanceEl) {
           balanceEl.textContent = `£${result.balance.toFixed(2)}`;
         }
@@ -514,7 +519,7 @@ const faqs = [
       purchaseLoginPrompt?.classList.add('hidden');
       purchaseActions?.classList.remove('hidden');
       paymentMethodSection?.classList.remove('hidden');
-      loadBalance(user.uid);
+      loadBalance(user);
       
       // Fetch user name
       await fetchUserName(user.uid);

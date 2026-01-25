@@ -1313,9 +1313,12 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
     });
 
     // Load balance
-    async function loadGcBalance(userId) {
+    async function loadGcBalance(user) {
       try {
-        const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/giftcards/balance', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
         const result = await response.json();
         if (result.success) {
           document.getElementById('gcCreditBalance').textContent = `£${result.balance.toFixed(2)}`;
@@ -1334,7 +1337,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
         document.getElementById('gcPurchaseActions')?.classList.remove('hidden');
         document.getElementById('gcPaymentSection')?.classList.remove('hidden');
         document.getElementById('gcSelfEmail').textContent = user.email || '-';
-        loadGcBalance(user.uid);
+        loadGcBalance(user);
       } else {
         document.getElementById('gcLoginPrompt')?.classList.remove('hidden');
         document.getElementById('gcRedeemForm')?.classList.add('hidden');

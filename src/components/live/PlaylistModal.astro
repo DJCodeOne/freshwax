@@ -3355,20 +3355,52 @@
   window.removeEventListener('playlistUpdate', handlePlaylistUpdate);
   window.addEventListener('playlistUpdate', handlePlaylistUpdate);
 
+  // Cleanup function to properly destroy the playlist manager
+  function cleanupPlaylistManager() {
+    if (playlistManager) {
+      console.log('[PlaylistModal] Destroying old playlist manager');
+      try {
+        playlistManager.destroy();
+      } catch (e) {
+        console.error('[PlaylistModal] Error destroying manager:', e);
+      }
+    }
+    playlistManager = null;
+    (window as any).playlistManager = null;
+    hasInitializedThisPage = false;
+    listenersAttached = false;
+  }
+
+  // Cleanup when navigating away from page (View Transitions)
+  function handleBeforeSwap() {
+    console.log('[PlaylistModal] astro:before-swap - cleaning up');
+    cleanupPlaylistManager();
+  }
+
   // Use Astro's page-load event for View Transitions compatibility
   // This fires on initial load AND after every View Transition navigation
   // Use a named function to prevent duplicate listeners
   function handlePageLoad() {
     console.log('[PlaylistModal] astro:page-load event fired');
-    // Reset flags for fresh initialization on new page
-    hasInitializedThisPage = false;
-    listenersAttached = false;
-    playlistManager = null;
+
+    // Check if we're on the live page (playlist modal exists)
+    const playlistContainer = document.getElementById('playlistPlayer');
+    if (!playlistContainer) {
+      console.log('[PlaylistModal] Not on live page, skipping initialization');
+      return;
+    }
+
+    // Clean up any existing manager first
+    cleanupPlaylistManager();
+
+    // Fresh initialization
     startInitialization();
     setupEventListeners();
   }
 
-  // Remove existing listener before adding (prevents duplicates across script reloads)
+  // Remove existing listeners before adding (prevents duplicates across script reloads)
+  document.removeEventListener('astro:before-swap', handleBeforeSwap);
+  document.addEventListener('astro:before-swap', handleBeforeSwap);
   document.removeEventListener('astro:page-load', handlePageLoad);
   document.addEventListener('astro:page-load', handlePageLoad);
 

@@ -655,9 +655,9 @@ const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
 
 async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
   try {
-    console.log('[GlobalPlaylist] Trying local playlist server...');
-    const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/list`, {
-      signal: AbortSignal.timeout(5000)
+    console.log('[GlobalPlaylist] Trying local playlist server /random endpoint...');
+    const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/random`, {
+      signal: AbortSignal.timeout(5000) // Fast endpoint, 5s is plenty
     });
 
     if (!response.ok) {
@@ -666,26 +666,18 @@ async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
     }
 
     const data = await response.json();
-    if (!data.files || data.files.length === 0) {
-      console.log('[GlobalPlaylist] Local server has no files');
+    if (!data.success || !data.track) {
+      console.log('[GlobalPlaylist] Local server has no tracks');
       return null;
     }
 
-    console.log('[GlobalPlaylist] Local server has', data.files.length, 'MP3 files');
+    const selected = data.track;
+    console.log('[GlobalPlaylist] Random track from', data.totalCount, 'files:', selected.name);
 
-    // Pick a random track (prefer ones with thumbnails)
-    const filesWithThumbs = data.files.filter((f: any) => f.thumbnail);
-    const filesToPickFrom = filesWithThumbs.length > 0 ? filesWithThumbs : data.files;
-    const randomIndex = Math.floor(Math.random() * filesToPickFrom.length);
-    const selected = filesToPickFrom[randomIndex];
     const url = `${LOCAL_PLAYLIST_SERVER}${selected.url}`;
-
-    // Use track's own thumbnail if available, otherwise fallback
     const thumbnail = selected.thumbnail
       ? `${LOCAL_PLAYLIST_SERVER}${selected.thumbnail}`
       : AUDIO_THUMBNAIL_FALLBACK;
-
-    console.log('[GlobalPlaylist] Selected local MP3:', selected.name, 'thumb:', !!selected.thumbnail);
 
     return {
       id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,

@@ -1833,7 +1833,7 @@ export const prerender = false;
         // Update progress UI - base progress for this file
         const basePercent = Math.round((completed / filesToDownload.length) * downloadProgressWeight);
         progressFill.style.width = `${basePercent}%`;
-        progressText.textContent = `Downloading ${file.label}... (${completed + 1}/${filesToDownload.length})`;
+        progressText.textContent = `Downloading ${file.label}... ${basePercent}%`;
 
         // Add to file list
         const listItem = document.createElement('div');
@@ -1867,8 +1867,9 @@ export const prerender = false;
 
               // Update progress within this file's allocation
               const fileProgress = receivedBytes / totalSize;
-              const overallPercent = basePercent + (fileProgress * (downloadProgressWeight / filesToDownload.length));
-              progressFill.style.width = `${Math.round(overallPercent)}%`;
+              const overallPercent = Math.round(basePercent + (fileProgress * (downloadProgressWeight / filesToDownload.length)));
+              progressFill.style.width = `${overallPercent}%`;
+              progressText.textContent = `Downloading ${file.label}... ${overallPercent}%`;
             }
 
             // Combine chunks into blob

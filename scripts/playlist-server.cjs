@@ -8,8 +8,10 @@ const url = require('url');
 const PORT = 8088;
 const MUSIC_DIR = 'H:\\FreshWax-Backup';
 const MAX_CONNECTIONS = 100;
-const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+const HEALTH_CHECK_INTERVAL = 60000; // 60 seconds (reduced frequency)
 const RESTART_DELAY = 5000; // 5 seconds before restart attempt
+const AUDIO_STREAM_BUFFER = 256 * 1024; // 256KB buffer for smooth audio
+const AUDIO_TIMEOUT = 10 * 60 * 1000; // 10 minutes for audio streams
 
 // Stats tracking
 let stats = {
@@ -21,10 +23,11 @@ let stats = {
   driveAvailable: true
 };
 
-// Cache for file list (rebuild every 5 minutes)
+// Cache for file list (rebuild every 10 minutes in background)
 let fileCache = null;
 let fileCacheTime = 0;
-const CACHE_TTL = 5 * 60 * 1000;
+let isCacheRebuilding = false;
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 // Logging with timestamps
 function log(level, message, data = null) {
@@ -37,19 +40,34 @@ function log(level, message, data = null) {
   }
 }
 
-// Check if music directory is accessible
-function checkDriveAvailable() {
+// Check if music directory is accessible (async to avoid blocking)
+async function checkDriveAvailable() {
+  return new Promise((resolve) => {
+    fs.access(MUSIC_DIR, fs.constants.R_OK, (err) => {
+      if (err) {
+        if (stats.driveAvailable) {
+          log('ERROR', 'Music drive is NOT available', err.message);
+        }
+        stats.driveAvailable = false;
+        resolve(false);
+      } else {
+        if (!stats.driveAvailable) {
+          log('INFO', 'Music drive is now available');
+        }
+        stats.driveAvailable = true;
+        resolve(true);
+      }
+    });
+  });
+}
+
+// Sync version only for startup
+function checkDriveAvailableSync() {
   try {
     fs.accessSync(MUSIC_DIR, fs.constants.R_OK);
-    if (!stats.driveAvailable) {
-      log('INFO', 'Music drive is now available');
-    }
     stats.driveAvailable = true;
     return true;
   } catch (err) {
-    if (stats.driveAvailable) {
-      log('ERROR', 'Music drive is NOT available', err.message);
-    }
     stats.driveAvailable = false;
     return false;
   }
@@ -60,15 +78,21 @@ function getBaseName(filename) {
   return filename.replace(/\.(mp3|webp|jpg|info\.json)$/i, '');
 }
 
-// Build file list with thumbnails and metadata (async-safe)
-function buildFileList() {
+// Get cached file list (never blocks - triggers async rebuild if stale)
+function getFileList() {
   const now = Date.now();
-  if (fileCache && (now - fileCacheTime) < CACHE_TTL) {
-    return fileCache;
+
+  // If cache is stale and not already rebuilding, trigger background rebuild
+  if (fileCache && (now - fileCacheTime) >= CACHE_TTL && !isCacheRebuilding) {
+    rebuildFileCacheAsync(); // Non-blocking
   }
 
-  if (!checkDriveAvailable()) {
-    // Return cached data if available, otherwise empty
+  return fileCache || [];
+}
+
+// Sync version for startup only
+function buildFileListSync() {
+  if (!stats.driveAvailable) {
     return fileCache || [];
   }
 
@@ -77,7 +101,6 @@ function buildFileList() {
     const mp3Files = allFiles.filter(f => f.endsWith('.mp3'));
     const webpFiles = new Set(allFiles.filter(f => f.endsWith('.webp')).map(getBaseName));
     const jpgFiles = new Set(allFiles.filter(f => f.endsWith('.jpg')).map(getBaseName));
-    const jsonFiles = new Set(allFiles.filter(f => f.endsWith('.info.json')).map(f => f.replace('.info.json', '')));
 
     const files = mp3Files.map(f => {
       const baseName = getBaseName(f);
@@ -90,43 +113,90 @@ function buildFileList() {
         thumbnail = `/thumb/${encodeURIComponent(baseName + '.jpg')}`;
       }
 
-      let duration = null;
-      let uploader = null;
-      if (jsonFiles.has(baseName)) {
-        try {
-          const jsonPath = path.join(MUSIC_DIR, baseName + '.info.json');
-          const meta = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
-          duration = meta.duration || null;
-          uploader = meta.uploader || meta.channel || null;
-        } catch (e) {
-          // Ignore JSON read errors
-        }
-      }
-
       return {
         name: displayName,
         file: f,
         url: `/music/${encodeURIComponent(f)}`,
         thumbnail,
-        duration,
-        uploader
+        duration: null,
+        uploader: null
       };
     });
 
     fileCache = files;
-    fileCacheTime = now;
-    log('INFO', `File cache rebuilt: ${files.length} MP3 files`);
+    fileCacheTime = Date.now();
+    log('INFO', `File cache built: ${files.length} MP3 files`);
     return files;
   } catch (err) {
     log('ERROR', 'Failed to build file list', err.message);
     stats.errors++;
-    return fileCache || [];
+    return [];
   }
 }
 
-// Safe stream with error handling
-function safeStreamFile(filePath, res, options = {}) {
-  const stream = fs.createReadStream(filePath, options);
+// Async background rebuild (never blocks audio streaming)
+function rebuildFileCacheAsync() {
+  if (isCacheRebuilding || !stats.driveAvailable) return;
+
+  isCacheRebuilding = true;
+  log('INFO', 'Starting background cache rebuild...');
+
+  fs.readdir(MUSIC_DIR, (err, allFiles) => {
+    if (err) {
+      log('ERROR', 'Background cache rebuild failed', err.message);
+      isCacheRebuilding = false;
+      return;
+    }
+
+    // Process in next tick to avoid blocking
+    setImmediate(() => {
+      try {
+        const mp3Files = allFiles.filter(f => f.endsWith('.mp3'));
+        const webpFiles = new Set(allFiles.filter(f => f.endsWith('.webp')).map(getBaseName));
+        const jpgFiles = new Set(allFiles.filter(f => f.endsWith('.jpg')).map(getBaseName));
+
+        const files = mp3Files.map(f => {
+          const baseName = getBaseName(f);
+          const displayName = baseName.replace(/\s*\[[^\]]+\]$/, '');
+
+          let thumbnail = null;
+          if (webpFiles.has(baseName)) {
+            thumbnail = `/thumb/${encodeURIComponent(baseName + '.webp')}`;
+          } else if (jpgFiles.has(baseName)) {
+            thumbnail = `/thumb/${encodeURIComponent(baseName + '.jpg')}`;
+          }
+
+          return {
+            name: displayName,
+            file: f,
+            url: `/music/${encodeURIComponent(f)}`,
+            thumbnail,
+            duration: null,
+            uploader: null
+          };
+        });
+
+        fileCache = files;
+        fileCacheTime = Date.now();
+        isCacheRebuilding = false;
+        log('INFO', `Background cache rebuilt: ${files.length} MP3 files`);
+      } catch (e) {
+        log('ERROR', 'Background cache processing failed', e.message);
+        isCacheRebuilding = false;
+      }
+    });
+  });
+}
+
+// Safe stream with error handling and optimized buffer for audio
+function safeStreamFile(filePath, res, options = {}, isAudio = false) {
+  // Use larger buffer for audio to prevent stuttering
+  const streamOptions = {
+    ...options,
+    highWaterMark: isAudio ? AUDIO_STREAM_BUFFER : 64 * 1024
+  };
+
+  const stream = fs.createReadStream(filePath, streamOptions);
 
   stream.on('error', (err) => {
     log('ERROR', `Stream error for ${filePath}`, err.message);
@@ -163,9 +233,13 @@ function createServer() {
       stats.activeConnections = Math.max(0, stats.activeConnections - 1);
     });
 
-    // Set timeout for stale connections
-    req.setTimeout(60000, () => {
-      log('WARN', 'Request timeout', req.url);
+    // Set timeout - longer for audio streams
+    const isAudioRequest = req.url && req.url.startsWith('/music/');
+    const timeout = isAudioRequest ? AUDIO_TIMEOUT : 60000;
+    req.setTimeout(timeout, () => {
+      if (!isAudioRequest) { // Don't log timeout for audio (they're expected to be long)
+        log('WARN', 'Request timeout', req.url);
+      }
       res.end();
     });
 
@@ -204,16 +278,39 @@ function createServer() {
         return;
       }
 
-      // /list - return JSON list of all MP3s
+      // /list - return JSON list of all MP3s (uses cached list, never blocks)
       if (filePath === '/list') {
         if (!stats.driveAvailable) {
           res.writeHead(503, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Music drive not available', cached: !!fileCache }));
           return;
         }
-        const files = buildFileList();
+        const files = getFileList();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ count: files.length, files }));
+        return;
+      }
+
+      // /random - return a single random MP3 (uses cached list, never blocks)
+      if (filePath === '/random') {
+        if (!stats.driveAvailable) {
+          res.writeHead(503, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Music drive not available' }));
+          return;
+        }
+        const files = getFileList();
+        if (files.length === 0) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'No files available' }));
+          return;
+        }
+        // Prefer files with thumbnails
+        const filesWithThumbs = files.filter(f => f.thumbnail);
+        const filesToPickFrom = filesWithThumbs.length > 0 ? filesWithThumbs : files;
+        const randomIndex = Math.floor(Math.random() * filesToPickFrom.length);
+        const selected = filesToPickFrom[randomIndex];
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, track: selected, totalCount: files.length }));
         return;
       }
 
@@ -281,16 +378,18 @@ function createServer() {
               'Content-Range': `bytes ${start}-${end}/${fileSize}`,
               'Accept-Ranges': 'bytes',
               'Content-Length': chunkSize,
-              'Content-Type': 'audio/mpeg'
+              'Content-Type': 'audio/mpeg',
+              'Cache-Control': 'public, max-age=3600'
             });
-            safeStreamFile(fullPath, res, { start, end });
+            safeStreamFile(fullPath, res, { start, end }, true); // true = audio
           } else {
             res.writeHead(200, {
               'Content-Length': fileSize,
               'Content-Type': 'audio/mpeg',
-              'Accept-Ranges': 'bytes'
+              'Accept-Ranges': 'bytes',
+              'Cache-Control': 'public, max-age=3600'
             });
-            safeStreamFile(fullPath, res);
+            safeStreamFile(fullPath, res, {}, true); // true = audio
           }
         });
         return;
@@ -311,7 +410,7 @@ function createServer() {
               <p>Uptime: ${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${uptime % 60}s</p>
               <p>Requests: ${stats.requestsServed} | Errors: ${stats.errors} | Active: ${stats.activeConnections}</p>
               <p>Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB</p>
-              <p><a href="/list" style="color: #0af;">View file list (JSON)</a> | <a href="/health" style="color: #0af;">Health check</a></p>
+              <p><a href="/list" style="color: #0af;">View file list (JSON)</a> | <a href="/random" style="color: #0af;">Random track</a> | <a href="/health" style="color: #0af;">Health check</a></p>
             </body>
           </html>
         `);
@@ -352,10 +451,10 @@ function createServer() {
   return server;
 }
 
-// Periodic health check
+// Periodic health check (async to avoid blocking audio streams)
 function startHealthCheck() {
-  setInterval(() => {
-    checkDriveAvailable();
+  setInterval(async () => {
+    await checkDriveAvailable();
     stats.lastHealthCheck = new Date().toISOString();
 
     // Memory warning
@@ -400,12 +499,12 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Start the server
 function start() {
-  // Initial drive check
-  checkDriveAvailable();
+  // Initial drive check (sync at startup is fine)
+  checkDriveAvailableSync();
 
-  // Pre-build file cache
+  // Pre-build file cache (sync at startup is fine)
   if (stats.driveAvailable) {
-    buildFileList();
+    buildFileListSync();
   }
 
   const server = createServer();
@@ -419,6 +518,7 @@ function start() {
   Endpoints:
     /        - Status page
     /list    - JSON list of all MP3s
+    /random  - Single random MP3 (for auto-play)
     /music/* - Stream MP3 files
     /thumb/* - Serve thumbnails
     /health  - Health check (JSON)
