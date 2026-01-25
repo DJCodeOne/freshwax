@@ -4184,29 +4184,39 @@ export const prerender = false;
     letter-spacing: 0.05em;
   }
 
-  .plus-modal .copy-referral-btn {
-    display: flex;
+  .plus-modal .copy-referral-btn,
+  #plusMemberModal .copy-referral-btn {
+    display: flex !important;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     width: 100%;
     padding: 0.6rem;
-    background: #f59e0b;
-    color: #fff;
-    border: none;
+    background: #f59e0b !important;
+    color: #fff !important;
+    border: none !important;
     border-radius: 6px;
     font-weight: 600;
     font-size: 0.85rem;
     cursor: pointer;
     transition: background 0.2s;
+    margin: 0 !important;
   }
 
-  .plus-modal .copy-referral-btn svg {
-    stroke: #fff;
+  .plus-modal .copy-referral-btn svg,
+  #plusMemberModal .copy-referral-btn svg {
+    stroke: #fff !important;
+    color: #fff !important;
   }
 
-  .plus-modal .copy-referral-btn:hover {
-    background: #d97706;
+  .plus-modal .copy-referral-btn span,
+  #plusMemberModal .copy-referral-btn span {
+    color: #fff !important;
+  }
+
+  .plus-modal .copy-referral-btn:hover,
+  #plusMemberModal .copy-referral-btn:hover {
+    background: #d97706 !important;
   }
 
   .plus-modal .referral-note,
