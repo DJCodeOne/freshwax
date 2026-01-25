@@ -4602,31 +4602,30 @@ export const prerender = false;
   }
 
   .subscription-usage {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
     margin-bottom: 1.25rem;
-    padding: 1rem;
+    padding: 0.75rem 1rem;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
   }
 
   .usage-item {
     display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    align-items: center;
+    gap: 0.4rem;
   }
 
   .usage-label {
     font-size: 0.75rem;
     color: #888;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
   .usage-value {
-    font-size: 1rem;
+    font-size: 0.85rem;
     color: #fff;
+    font-weight: 600;
     font-weight: 500;
   }
 
@@ -4900,7 +4899,8 @@ export const prerender = false;
 
   @media (max-width: 640px) {
     .subscription-usage {
-      grid-template-columns: 1fr;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .subscription-upgrade {
