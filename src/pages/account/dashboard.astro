@@ -3275,18 +3275,12 @@ export const prerender = false;
         if (playlistLimitEl) playlistLimitEl.textContent = limit;
       }
 
-      // Fetch skip usage - need auth token
-      const user = auth.currentUser;
-      const idToken = user ? await user.getIdToken() : null;
-      if (idToken) {
-        const skipRes = await fetch('/api/playlist/skip', {
-          headers: { 'Authorization': `Bearer ${idToken}` }
-        });
-        const skipData = await skipRes.json();
-        if (skipData.success) {
-          if (skipsUsedEl) skipsUsedEl.textContent = skipData.used || 0;
-          if (skipsLimitEl) skipsLimitEl.textContent = skipData.limit || 3;
-        }
+      // Fetch skip usage
+      const skipRes = await fetch(`/api/playlist/skip?userId=${userId}`);
+      const skipData = await skipRes.json();
+      if (skipData.success) {
+        if (skipsUsedEl) skipsUsedEl.textContent = skipData.used || 0;
+        if (skipsLimitEl) skipsLimitEl.textContent = skipData.limit || 3;
       }
     } catch (error) {
       console.error('[Dashboard] Error loading Plus stats:', error);
