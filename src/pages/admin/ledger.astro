@@ -551,11 +551,26 @@ const formatDate = (dateStr: string) => {
     return false;
   }
 
+  // Track if this is the first auth state change (Firebase loading cached state)
+  let isFirstCheck = true;
+
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      window.location.href = '/login?redirect=/admin/ledger';
+      if (isFirstCheck) {
+        // First check with null user - wait briefly for cached auth to load
+        isFirstCheck = false;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Check again after delay
+        if (!auth.currentUser) {
+          window.location.href = '/login?redirect=/admin/ledger';
+        }
+      } else {
+        // Subsequent check - user logged out
+        window.location.href = '/login?redirect=/admin/ledger';
+      }
       return;
     }
+    isFirstCheck = false;
     const isAdmin = await checkIsAdmin(user.uid);
     if (!isAdmin) {
       alert('Access denied. Admin privileges required.');

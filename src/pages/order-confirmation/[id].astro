@@ -257,16 +257,26 @@ const physicalItems = enrichedItems.filter((item: any) =>
                       </div>
                     </div>
                     
-                    {item.downloads?.artworkUrl && (
-                      <div class="artwork-dl" style="margin-bottom: 1rem;">
+                    <div class="release-dl-buttons" style="margin-bottom: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                      {item.downloads?.artworkUrl && (
                         <button type="button" class="dl-btn art" data-url={item.downloads.artworkUrl} data-filename={`${item.downloads.artistName} - ${item.downloads.releaseName} - Artwork.jpg`}>
                           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
-                          Download Artwork
+                          Artwork
                         </button>
-                      </div>
-                    )}
+                      )}
+                      <button type="button" class="dl-btn zip"
+                        data-release-name={`${item.downloads?.artistName} - ${item.downloads?.releaseName}`}
+                        data-tracks={JSON.stringify(item.downloads?.tracks || [])}
+                        data-artwork-url={item.downloads?.artworkUrl || ''}
+                        data-artist={item.downloads?.artistName || ''}>
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                        </svg>
+                        Download ZIP
+                      </button>
+                    </div>
                     
                     {item.downloads?.tracks?.length > 0 ? (
                       <div class="track-list">
@@ -400,6 +410,20 @@ const physicalItems = enrichedItems.filter((item: any) =>
           </div>
         </>
       )}
+    </div>
+
+    <!-- ZIP Progress Modal -->
+    <div id="zipProgressModal" class="zip-modal hidden">
+      <div class="zip-modal-backdrop"></div>
+      <div class="zip-modal-content">
+        <h3 class="zip-modal-title">Creating ZIP Download</h3>
+        <div class="zip-progress-bar">
+          <div id="zipProgressFill" class="zip-progress-fill"></div>
+        </div>
+        <p id="zipProgressText" class="zip-progress-text">Preparing download...</p>
+        <div id="zipFileList" class="zip-file-list"></div>
+        <button type="button" id="zipModalClose" class="zip-modal-close">Cancel</button>
+      </div>
     </div>
   </main>
 
@@ -662,10 +686,132 @@ const physicalItems = enrichedItems.filter((item: any) =>
     background: #1d4ed8;
     transform: translateY(-2px);
   }
-  
+
+  .dl-btn.zip {
+    background: #f97316;
+    color: #fff;
+  }
+
+  .dl-btn.zip:hover {
+    background: #ea580c;
+    transform: translateY(-2px);
+  }
+
   .dl-btn.downloading {
     opacity: 0.7;
     pointer-events: none;
+  }
+
+  /* ZIP Modal */
+  .zip-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .zip-modal.hidden {
+    display: none;
+  }
+
+  .zip-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  .zip-modal-content {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    color: #000;
+  }
+
+  .zip-modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #000;
+  }
+
+  .zip-progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .zip-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f97316, #fb923c);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .zip-progress-fill.creating {
+    animation: pulse-progress 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse-progress {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .zip-progress-text {
+    font-size: 0.875rem;
+    color: #666;
+    margin-bottom: 1rem;
+  }
+
+  .zip-file-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    text-align: left;
+  }
+
+  .zip-file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
+    font-size: 0.8125rem;
+    color: #333;
+  }
+
+  .zip-file-item.success {
+    color: #16a34a;
+  }
+
+  .zip-file-item.error {
+    color: #dc2626;
+  }
+
+  .zip-modal-close {
+    background: #f3f4f6;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    color: #374151;
+  }
+
+  .zip-modal-close:hover {
+    background: #e5e7eb;
   }
   
   .artwork-dl {
@@ -1293,17 +1439,245 @@ const physicalItems = enrichedItems.filter((item: any) =>
     }
   }
   
-  // Attach click handlers to all download buttons
-  document.querySelectorAll('.dl-btn[data-url]').forEach(btn => {
+  // Attach click handlers to all download buttons (excluding ZIP buttons)
+  document.querySelectorAll('.dl-btn[data-url]:not(.zip)').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       const button = e.currentTarget as HTMLButtonElement;
       const url = button.dataset.url;
       const filename = button.dataset.filename || 'download';
-      
+
       if (url) {
         downloadFile(url, filename, button);
       }
     });
+  });
+
+  // Download ZIP containing all tracks and artwork
+  async function downloadZip(button: HTMLButtonElement) {
+    const releaseName = button.dataset.releaseName || 'Release';
+    const artistName = button.dataset.artist || '';
+    const artworkUrl = button.dataset.artworkUrl || '';
+    let tracks: { name: string; mp3Url?: string; wavUrl?: string }[] = [];
+    try {
+      tracks = JSON.parse(button.dataset.tracks || '[]');
+    } catch (e) {
+      console.error('Failed to parse tracks:', e);
+    }
+
+    // Get modal elements
+    const modal = document.getElementById('zipProgressModal');
+    const progressFill = document.getElementById('zipProgressFill');
+    const progressText = document.getElementById('zipProgressText');
+    const fileList = document.getElementById('zipFileList');
+    const closeBtn = document.getElementById('zipModalClose');
+    const originalText = button.innerHTML;
+
+    if (!modal || !progressFill || !progressText || !fileList) return;
+
+    // Create abort controller for cancellation
+    const abortController = new AbortController();
+    let isCancelled = false;
+
+    // Cancel handler
+    const cancelHandler = () => {
+      isCancelled = true;
+      abortController.abort();
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      progressFill.style.width = '0%';
+      progressFill.classList.remove('creating');
+      button.innerHTML = originalText;
+      button.classList.remove('downloading');
+    };
+    closeBtn?.addEventListener('click', cancelHandler, { once: true });
+
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    progressFill.style.width = '0%';
+    progressFill.classList.remove('creating');
+    progressText.textContent = 'Preparing download...';
+    fileList.innerHTML = '';
+
+    button.classList.add('downloading');
+    button.innerHTML = 'Creating ZIP...';
+
+    try {
+      // Build list of files to download
+      const filesToDownload: { url: string; filename: string; label: string }[] = [];
+
+      // Add artwork if available
+      if (artworkUrl) {
+        const artworkExt = artworkUrl.split('.').pop()?.split('?')[0] || 'jpg';
+        filesToDownload.push({
+          url: artworkUrl,
+          filename: `${releaseName} - Artwork.${artworkExt}`,
+          label: 'Artwork'
+        });
+      }
+
+      // Add all tracks (MP3 and WAV)
+      tracks.forEach((track) => {
+        const trackName = artistName ? `${artistName} - ${track.name}` : track.name;
+        if (track.mp3Url) {
+          filesToDownload.push({
+            url: track.mp3Url,
+            filename: `${trackName}.mp3`,
+            label: `${track.name} (MP3)`
+          });
+        }
+        if (track.wavUrl) {
+          filesToDownload.push({
+            url: track.wavUrl,
+            filename: `${trackName}.wav`,
+            label: `${track.name} (WAV)`
+          });
+        }
+      });
+
+      if (filesToDownload.length === 0) {
+        throw new Error('No files available to download');
+      }
+
+      // Initialize JSZip - dynamically load if not available
+      if (typeof (window as any).JSZip === 'undefined') {
+        progressText.textContent = 'Loading ZIP library...';
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('Failed to load ZIP library'));
+          document.head.appendChild(script);
+        });
+      }
+      const zip = new (window as any).JSZip();
+      const folder = zip.folder(releaseName);
+
+      // Download each file and add to ZIP
+      let completed = 0;
+      let successCount = 0;
+      const downloadProgressWeight = 80;
+
+      for (const file of filesToDownload) {
+        if (isCancelled) {
+          throw new Error('Download cancelled');
+        }
+
+        const basePercent = Math.round((completed / filesToDownload.length) * downloadProgressWeight);
+        progressFill.style.width = `${basePercent}%`;
+        progressText.textContent = `Downloading ${file.label}... ${basePercent}%`;
+
+        const listItem = document.createElement('div');
+        listItem.className = 'zip-file-item';
+        listItem.textContent = `⏳ ${file.label}`;
+        fileList.appendChild(listItem);
+
+        try {
+          // Use server-side proxy to fetch the file
+          const proxyUrl = `/api/download?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
+
+          const response = await fetch(proxyUrl, { signal: abortController.signal });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          const blob = await response.blob();
+          folder.file(file.filename, blob);
+
+          listItem.textContent = `✓ ${file.label}`;
+          listItem.className = 'zip-file-item success';
+          successCount++;
+        } catch (err: any) {
+          if (err.name === 'AbortError') throw new Error('Download cancelled');
+          console.error(`Failed to download ${file.label}:`, err);
+          listItem.textContent = `✗ ${file.label} - Failed`;
+          listItem.className = 'zip-file-item error';
+        }
+
+        completed++;
+        const overallPercent = Math.round((completed / filesToDownload.length) * downloadProgressWeight);
+        progressFill.style.width = `${overallPercent}%`;
+      }
+
+      if (successCount === 0) {
+        throw new Error('No files could be downloaded');
+      }
+
+      // Create ZIP file
+      progressText.textContent = 'Creating ZIP file...';
+      progressFill.style.width = '85%';
+      progressFill.classList.add('creating');
+
+      const zipBlob = await zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      }, (metadata: any) => {
+        const zipProgress = 80 + Math.round(metadata.percent * 0.2);
+        progressFill.style.width = `${zipProgress}%`;
+      });
+
+      progressFill.classList.remove('creating');
+      progressFill.style.width = '100%';
+      progressText.textContent = 'Download ready!';
+
+      // Trigger download
+      const zipUrl = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = zipUrl;
+      link.download = `${releaseName}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(zipUrl);
+
+      // Success
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        progressFill.style.width = '0%';
+      }, 1500);
+
+      button.innerHTML = '✓ Done!';
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('downloading');
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('ZIP download error:', error);
+
+      if (error.message !== 'Download cancelled') {
+        progressText.textContent = `Error: ${error.message}`;
+        progressFill.style.background = '#dc2626';
+
+        setTimeout(() => {
+          modal.classList.add('hidden');
+          document.body.style.overflow = '';
+          progressFill.style.width = '0%';
+          progressFill.style.background = '';
+        }, 3000);
+      }
+
+      button.innerHTML = '✗ Error';
+      setTimeout(() => {
+        button.innerHTML = originalText;
+        button.classList.remove('downloading');
+      }, 2000);
+    }
+  }
+
+  // Attach ZIP download handlers
+  document.querySelectorAll('.dl-btn.zip').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      downloadZip(e.currentTarget as HTMLButtonElement);
+    });
+  });
+
+  // ZIP Modal close on backdrop click
+  const zipModal = document.getElementById('zipProgressModal');
+  const zipBackdrop = zipModal?.querySelector('.zip-modal-backdrop');
+  zipBackdrop?.addEventListener('click', () => {
+    zipModal?.classList.add('hidden');
+    document.body.style.overflow = '';
   });
 </script>

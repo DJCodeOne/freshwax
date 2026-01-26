@@ -1229,20 +1229,21 @@ export class PlaylistManager {
     this.countdownTrackId = currentTrackId || null;
     this.isFetchingDuration = true;
 
-    // Only show loading state if no countdown was previously running
-    const bottomDurationEl = document.getElementById('bottomDuration');
-    const previewDurationEl = document.getElementById('previewDuration');
-
-    // Try to get duration with retries (MP3 metadata may not be loaded immediately)
+    // Wait for metadata to load properly (especially for audio files)
+    // This uses event listeners instead of polling for more reliable duration detection
     let duration = 0;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 500 : 1000));
-      try {
+    try {
+      // First try the event-based metadata wait (10 second timeout)
+      duration = await this.player.waitForMetadata(10000);
+
+      // If that didn't work, try direct getDuration as fallback
+      if (duration <= 0) {
+        // Small delay then retry
+        await new Promise(resolve => setTimeout(resolve, 500));
         duration = await this.player.getDuration();
-        if (duration > 0) break;
-      } catch (error) {
-        console.warn('[PlaylistManager] getDuration attempt', attempt + 1, 'failed:', error);
       }
+    } catch (error) {
+      console.warn('[PlaylistManager] Error getting duration:', error);
     }
 
     this.isFetchingDuration = false;
@@ -1251,7 +1252,7 @@ export class PlaylistManager {
       console.log('[PlaylistManager] Got duration:', duration, 'seconds');
       this.startCountdown(duration);
     } else {
-      console.warn('[PlaylistManager] Could not get duration after 5 attempts, using elapsed timer');
+      console.warn('[PlaylistManager] Could not get duration, using elapsed timer');
       // Fallback: show elapsed time instead of countdown
       this.startElapsedTimer();
     }

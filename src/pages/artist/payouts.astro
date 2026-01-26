@@ -120,11 +120,11 @@ if (partnerId) {
         limit: 50
       });
 
-      // Fetch pending payouts
+      // Fetch pending payouts (include 'pending' status for new payouts)
       pendingPayouts = await queryCollection('pendingPayouts', {
         filters: [
           { field: 'artistId', op: 'EQUAL', value: partnerId },
-          { field: 'status', op: 'IN', value: ['awaiting_connect', 'retry_pending', 'processing'] }
+          { field: 'status', op: 'IN', value: ['pending', 'awaiting_connect', 'retry_pending', 'processing'] }
         ],
         orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
       });

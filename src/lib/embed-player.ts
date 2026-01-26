@@ -609,12 +609,81 @@ export class EmbedPlayerManager {
           });
         });
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
-        return this.directVideo.duration || 0;
+        const duration = this.directVideo.duration;
+        // Check for NaN or Infinity (streams)
+        if (isNaN(duration) || !isFinite(duration)) {
+          return 0;
+        }
+        return duration;
       }
     } catch (error) {
       console.error('[EmbedPlayerManager] GetDuration error:', error);
     }
     return 0;
+  }
+
+  /**
+   * Wait for audio/video metadata to load (for getting accurate duration)
+   * Returns a promise that resolves with duration once metadata is available
+   */
+  waitForMetadata(timeoutMs: number = 10000): Promise<number> {
+    return new Promise((resolve) => {
+      if (this.currentPlatform !== 'direct' || !this.directVideo) {
+        // For non-direct platforms, just use getDuration
+        this.getDuration().then(resolve);
+        return;
+      }
+
+      const media = this.directVideo;
+
+      // If metadata already loaded
+      if (media.readyState >= 1 && !isNaN(media.duration) && isFinite(media.duration) && media.duration > 0) {
+        console.log('[EmbedPlayerManager] Metadata already loaded, duration:', media.duration);
+        resolve(media.duration);
+        return;
+      }
+
+      let resolved = false;
+      const timeoutId = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          console.warn('[EmbedPlayerManager] Metadata timeout after', timeoutMs, 'ms');
+          resolve(0);
+        }
+      }, timeoutMs);
+
+      const onMetadataLoaded = () => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(timeoutId);
+        media.removeEventListener('loadedmetadata', onMetadataLoaded);
+        media.removeEventListener('durationchange', onDurationChange);
+        const duration = media.duration;
+        if (!isNaN(duration) && isFinite(duration) && duration > 0) {
+          console.log('[EmbedPlayerManager] Metadata loaded via event, duration:', duration);
+          resolve(duration);
+        } else {
+          console.warn('[EmbedPlayerManager] Metadata loaded but duration invalid:', duration);
+          resolve(0);
+        }
+      };
+
+      const onDurationChange = () => {
+        if (resolved) return;
+        const duration = media.duration;
+        if (!isNaN(duration) && isFinite(duration) && duration > 0) {
+          resolved = true;
+          clearTimeout(timeoutId);
+          media.removeEventListener('loadedmetadata', onMetadataLoaded);
+          media.removeEventListener('durationchange', onDurationChange);
+          console.log('[EmbedPlayerManager] Duration available via durationchange:', duration);
+          resolve(duration);
+        }
+      };
+
+      media.addEventListener('loadedmetadata', onMetadataLoaded);
+      media.addEventListener('durationchange', onDurationChange);
+    });
   }
 
   /**
