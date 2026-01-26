@@ -73,6 +73,14 @@ try {
   console.error('Error fetching releases:', e);
 }
 
+// Helper to correct item prices (some might be stored in pence)
+function correctItemPrice(price: number): number {
+  if (price === null || price === undefined) return 0;
+  // If price looks like it's in pence (> 100 for items that should be < £100), convert
+  if (price > 100) return price / 100;
+  return price;
+}
+
 // Calculate metrics from LEDGER (source of truth)
 function calculateMetricsFromLedger(entries: any[]) {
   let revenue = 0;
