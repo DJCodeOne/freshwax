@@ -551,26 +551,43 @@ const formatDate = (dateStr: string) => {
     return false;
   }
 
-  // Track if this is the first auth state change (Firebase loading cached state)
-  let isFirstCheck = true;
+  // Wait for Firebase auth to fully initialize before checking state
+  // This prevents redirect loops when navigating between admin pages
+  let authInitialized = false;
+  let redirectTimeout: number | null = null;
 
   onAuthStateChanged(auth, async (user) => {
+    // Clear any pending redirect
+    if (redirectTimeout) {
+      clearTimeout(redirectTimeout);
+      redirectTimeout = null;
+    }
+
     if (!user) {
-      if (isFirstCheck) {
-        // First check with null user - wait briefly for cached auth to load
-        isFirstCheck = false;
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // Check again after delay
-        if (!auth.currentUser) {
-          window.location.href = '/login?redirect=/admin/ledger';
+      if (!authInitialized) {
+        // First check - auth might still be loading cached state
+        // Check if there's evidence of a logged-in user (Firebase persistence)
+        const hasAuthPersistence = Object.keys(localStorage).some(key =>
+          key.startsWith('firebase:authUser:')
+        );
+
+        if (hasAuthPersistence) {
+          // User was logged in - wait for auth to fully load
+          authInitialized = true;
+          redirectTimeout = window.setTimeout(() => {
+            if (!auth.currentUser) {
+              window.location.href = '/login?redirect=/admin/ledger';
+            }
+          }, 2000);
+          return;
         }
-      } else {
-        // Subsequent check - user logged out
-        window.location.href = '/login?redirect=/admin/ledger';
       }
+      // No persistence or subsequent null - redirect to login
+      window.location.href = '/login?redirect=/admin/ledger';
       return;
     }
-    isFirstCheck = false;
+
+    authInitialized = true;
     const isAdmin = await checkIsAdmin(user.uid);
     if (!isAdmin) {
       alert('Access denied. Admin privileges required.');
