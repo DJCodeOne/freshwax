@@ -57,24 +57,13 @@ let paypalBalance = {
 };
 
 try {
-  // Try D1 first (primary read source)
-  const db = env?.DB;
-  if (db) {
-    try {
-      ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
-      console.log('[ledger] D1 read:', ledgerEntries.length, 'entries');
-    } catch (d1Error) {
-      console.error('[ledger] D1 read failed:', d1Error);
-    }
-  }
-
-  // Fallback to Firebase if D1 empty or failed
-  if (ledgerEntries.length === 0 && serviceAccountKey) {
+  // Use Firebase as primary source (D1 sync not active)
+  if (serviceAccountKey) {
     ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
       orderBy: { field: 'timestamp', direction: 'DESCENDING' },
       limit: 2000
     });
-    console.log('[ledger] Firebase fallback:', ledgerEntries.length, 'entries');
+    console.log('[ledger] Firebase:', ledgerEntries.length, 'entries');
   }
 
   // Calculate totals
