@@ -1242,6 +1242,12 @@ export class PlaylistManager {
         await new Promise(resolve => setTimeout(resolve, 500));
         duration = await this.player.getDuration();
       }
+
+      // If still no duration, check if track has stored duration
+      if (duration <= 0 && currentTrack?.duration) {
+        duration = currentTrack.duration;
+        console.log('[PlaylistManager] Using track stored duration:', duration);
+      }
     } catch (error) {
       console.warn('[PlaylistManager] Error getting duration:', error);
     }
@@ -1252,8 +1258,19 @@ export class PlaylistManager {
       console.log('[PlaylistManager] Got duration:', duration, 'seconds');
       this.startCountdown(duration);
     } else {
-      console.warn('[PlaylistManager] Could not get duration, using elapsed timer');
-      // Fallback: show elapsed time instead of countdown
+      console.warn('[PlaylistManager] Could not get duration from any source');
+      // Last resort: try to calculate from trackStartedAt and expected end
+      const trackStartedAt = this.playlist.trackStartedAt;
+      if (trackStartedAt && currentTrack?.duration) {
+        const elapsed = (Date.now() - trackStartedAt) / 1000;
+        const remaining = Math.max(0, currentTrack.duration - elapsed);
+        if (remaining > 0) {
+          console.log('[PlaylistManager] Calculated remaining from trackStartedAt:', remaining);
+          this.startCountdown(currentTrack.duration);
+          return;
+        }
+      }
+      // Final fallback: show elapsed time instead of countdown
       this.startElapsedTimer();
     }
   }
