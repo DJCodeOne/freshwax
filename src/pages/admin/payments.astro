@@ -14,16 +14,18 @@ const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PR
 const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
-const serviceAccountKey = JSON.stringify({
+const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({
   type: 'service_account',
-  project_id: projectId,
+  project_id: projectId || 'freshwax-store',
   private_key_id: 'auto',
-  private_key: privateKey?.replace(/\\n/g, '\n'),
+  private_key: privateKey.replace(/\\n/g, '\n'),
   client_email: clientEmail,
   client_id: '',
   auth_uri: 'https://accounts.google.com/o/oauth2/auth',
   token_uri: 'https://oauth2.googleapis.com/token'
-});
+}) : null;
+
+console.log('[payments] Service account configured:', !!serviceAccountKey);
 
 // Fetch disputes
 const disputes = await queryCollection('disputes', {
@@ -49,43 +51,51 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
 // Fetch all pending payouts with status 'pending' (for manual review)
 // Use service account auth to ensure we can read the pendingPayouts collection
 let manualPendingPayouts: Record<string, any>[] = [];
-try {
-  manualPendingPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
-    filters: [
-      { field: 'status', op: 'EQUAL', value: 'pending' }
-    ],
-    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-    limit: 100
-  });
-  console.log('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
-} catch (err) {
-  console.error('[payments] Error fetching manualPendingPayouts:', err);
+if (serviceAccountKey) {
+  try {
+    manualPendingPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingPayouts', {
+      filters: [
+        { field: 'status', op: 'EQUAL', value: 'pending' }
+      ],
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit: 100
+    });
+    console.log('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
+  } catch (err) {
+    console.error('[payments] Error fetching manualPendingPayouts:', err);
+  }
+} else {
+  console.warn('[payments] No service account key - cannot fetch pending payouts');
 }
 
 // Fetch pending supplier payouts
 let pendingSupplierPayouts: Record<string, any>[] = [];
-try {
-  pendingSupplierPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingSupplierPayouts', {
-    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-    limit: 100
-  });
-  console.log('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
-} catch (err) {
-  // Collection might not exist yet
-  console.log('[payments] No pending supplier payouts collection');
+if (serviceAccountKey) {
+  try {
+    pendingSupplierPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSupplierPayouts', {
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit: 100
+    });
+    console.log('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
+  } catch (err) {
+    // Collection might not exist yet
+    console.log('[payments] No pending supplier payouts collection');
+  }
 }
 
 // Fetch pending seller payouts (vinyl crate)
 let pendingSellerPayouts: Record<string, any>[] = [];
-try {
-  pendingSellerPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingSellerPayouts', {
-    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-    limit: 100
-  });
-  console.log('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
-} catch (err) {
-  // Collection might not exist yet
-  console.log('[payments] No pending seller payouts collection');
+if (serviceAccountKey) {
+  try {
+    pendingSellerPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSellerPayouts', {
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+      limit: 100
+    });
+    console.log('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
+  } catch (err) {
+    // Collection might not exist yet
+    console.log('[payments] No pending seller payouts collection');
+  }
 }
 
 // Define payee type for unified tracking
