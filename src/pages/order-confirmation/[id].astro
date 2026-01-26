@@ -1393,6 +1393,21 @@ const physicalItems = enrichedItems.filter((item: any) =>
 </style>
 
 <script>
+  // Clear cart after successful order
+  (function clearCartAfterPurchase() {
+    try {
+      const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
+      if (customerId) {
+        localStorage.removeItem('freshwax_cart_' + customerId);
+      }
+      localStorage.removeItem('cart');
+      window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
+      console.log('[order-confirmation] Cart cleared after purchase');
+    } catch (e) {
+      console.error('[order-confirmation] Error clearing cart:', e);
+    }
+  })();
+
   // Download via server-side proxy to bypass CORS
   async function downloadFile(url: string, filename: string, button: HTMLButtonElement) {
     const originalText = button.innerHTML;
