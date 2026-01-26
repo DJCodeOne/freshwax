@@ -101,7 +101,7 @@ function renderCart() {
           '<h2 style="font-family: Inter, sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.04em; color: #fff; margin: 0;">YOUR BAG</h2>' +
         '</div>' +
         '<div class="empty-cart" style="text-align: center; padding: 4rem 2rem;">' +
-          '<div style="font-size: 4rem; margin-bottom: 1.5rem;">🛒</div>' +
+          '<div style="font-size: 4rem; margin-bottom: 1.5rem;">👜</div>' +
           '<h3 style="margin: 0 0 0.75rem 0; font-family: Inter, sans-serif; font-weight: 700; font-size: 2rem; color: #fff; letter-spacing: 0.02em;">YOUR BAG IS EMPTY</h3>' +
           '<p style="margin: 0 0 2rem 0; color: #9ca3af; font-size: 1rem;">Add some items to get started</p>' +
           '<a href="/" style="display: inline-block; padding: 0.875rem 2rem; background: #dc2626; color: #fff; text-decoration: none; font-family: Inter, sans-serif; font-weight: 700; font-size: 1.125rem; border-radius: 8px; letter-spacing: 0.04em;">BROWSE RELEASES</a>' +
