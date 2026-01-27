@@ -147,11 +147,16 @@ const defaultKeywords = [
 
 const allKeywords = [...new Set([...keywords, ...defaultKeywords])];
 
-const fullTitle = title === 'Home' 
-  ? `${SITE.name} | ${SITE.tagline}` 
+const fullTitle = title === 'Home'
+  ? `${SITE.name} | ${SITE.tagline}`
   : `${title} | ${SITE.name}`;
-  
-const canonicalUrl = canonical || new URL(Astro.url.pathname, SITE.url).href;
+
+// Normalize pathname: remove trailing slash (except for root "/")
+const normalizedPath = Astro.url.pathname === '/'
+  ? '/'
+  : Astro.url.pathname.replace(/\/+$/, '');
+
+const canonicalUrl = canonical || new URL(normalizedPath, SITE.url).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
 
 // ===========================================

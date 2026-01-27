@@ -2,7 +2,7 @@
 // Enhanced Dynamic XML sitemap with audio/video extensions for music e-commerce
 // Optimized for Google Search Console and rich results
 
-import { getLiveReleases, getLiveDJMixes, getLiveMerch } from '../lib/firebase-rest';
+import { getLiveReleases, getLiveDJMixes, getLiveMerch, queryCollection, initFirebaseEnv } from '../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -16,7 +16,9 @@ const staticPages = [
   { url: '/dj-mixes', priority: '0.9', changefreq: 'daily' },
   { url: '/dj-mix-chart', priority: '0.8', changefreq: 'daily' },
   { url: '/merch', priority: '0.8', changefreq: 'weekly' },
+  { url: '/crates', priority: '0.8', changefreq: 'daily' },
   { url: '/live', priority: '0.8', changefreq: 'hourly' },
+  { url: '/blog', priority: '0.7', changefreq: 'weekly' },
   
   // Medium priority - informational/conversion
   { url: '/giftcards', priority: '0.7', changefreq: 'monthly' },
