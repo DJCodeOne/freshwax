@@ -536,8 +536,8 @@ export const prerender = false;
               <div id="lookupError" style="margin-top: 0.5rem; font-size: 0.8125rem; color: #dc2626; display: none;"></div>
             </div>
             
-            <!-- Manual Address Fields -->
-            <div id="manualAddressFields" style="display: ${hasSavedAddress ? 'block' : 'none'};">
+            <!-- Manual Address Fields - Always show if no saved address (required fields can't be hidden) -->
+            <div id="manualAddressFields" style="display: block;">
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address1" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 1 *</label>
@@ -580,8 +580,8 @@ export const prerender = false;
               </div>
             </div>
             
-            <!-- Enter Manually Link (shown when fields hidden) -->
-            <div id="manualEntryLink" style="display: ${hasSavedAddress ? 'none' : 'block'}; margin-top: 0.75rem;">
+            <!-- Enter Manually Link (hidden since fields always visible now) -->
+            <div id="manualEntryLink" style="display: none; margin-top: 0.75rem;">
               <button type="button" onclick="document.getElementById('manualAddressFields').style.display='block'; document.getElementById('manualEntryLink').style.display='none';" style="background: none; border: none; color: #60a5fa; font-size: 0.875rem; cursor: pointer; text-decoration: underline;">
                 Or enter address manually
               </button>
