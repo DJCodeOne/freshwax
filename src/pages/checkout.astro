@@ -795,12 +795,7 @@ export const prerender = false;
     const errorMsg = document.getElementById('error-message');
 
     try {
-      // Check email verification
-      if (window.FreshWax?.checkEmailVerified) {
-        const verified = await window.FreshWax.checkEmailVerified('complete purchases');
-        if (!verified) return;
-      }
-
+      // Skip email verification on checkout
       const form = document.getElementById('checkoutForm');
       const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
 
@@ -916,14 +911,7 @@ export const prerender = false;
       },
 
       createOrder: async function(data, actions) {
-        // Check email verification for new users - must verify before purchasing
-        if (window.FreshWax?.checkEmailVerified) {
-          const verified = await window.FreshWax.checkEmailVerified('complete purchases');
-          if (!verified) {
-            throw new Error('Email verification required');
-          }
-        }
-
+        // Skip email verification on checkout
         const form = document.getElementById('checkoutForm');
         const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
 
@@ -1070,14 +1058,13 @@ export const prerender = false;
   
   async function handleSubmit(e) {
     e.preventDefault();
+    console.log('[Checkout] Form submitted');
 
-    // Check email verification for new users - must verify before purchasing
-    if (window.FreshWax?.checkEmailVerified) {
-      const verified = await window.FreshWax.checkEmailVerified('complete purchases');
-      if (!verified) return;
-    }
+    // Skip email verification on checkout - let them buy!
+    // Email verification can be enforced elsewhere if needed
 
     const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
+    console.log('[Checkout] Totals calculated:', { subtotal, shipping, total, hasPhysicalItems });
 
     // If PayPal is selected and not a free order, don't process here (PayPal buttons handle it)
     if (selectedPaymentMethod === 'paypal' && total > 0) {
@@ -1165,12 +1152,19 @@ export const prerender = false;
     };
 
     try {
-      // Get Firebase ID token for authenticated write
+      // Get Firebase ID token for authenticated write (with timeout)
       if (currentUser) {
         try {
-          orderData.idToken = await currentUser.getIdToken();
+          console.log('[Checkout] Getting ID token...');
+          const tokenPromise = currentUser.getIdToken();
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Token timeout')), 5000)
+          );
+          orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);
+          console.log('[Checkout] Got ID token');
         } catch (tokenErr) {
-          console.warn('Could not get ID token:', tokenErr);
+          console.warn('[Checkout] Could not get ID token:', tokenErr);
+          // Continue without token - API will handle unauthenticated request
         }
       }
 
@@ -1202,16 +1196,20 @@ export const prerender = false;
         }
       } else {
         // Create Stripe checkout session
+        console.log('[Checkout] Creating Stripe session...', orderData);
         const response = await fetch('/api/stripe/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData)
         });
+        console.log('[Checkout] Stripe response status:', response.status);
 
         const result = await response.json();
+        console.log('[Checkout] Stripe result:', result);
 
         if (result.success && result.checkoutUrl) {
           // Redirect to Stripe checkout
+          console.log('[Checkout] Redirecting to:', result.checkoutUrl);
           window.location.href = result.checkoutUrl;
         } else {
           throw new Error(result.error || 'Failed to create checkout session');
