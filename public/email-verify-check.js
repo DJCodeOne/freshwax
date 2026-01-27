@@ -13,15 +13,22 @@ const ADMIN_EMAILS = ['davidhagon@gmail.com'];
 // Check if user needs email verification for interactive features
 window.FreshWax.checkEmailVerified = function(action) {
   return new Promise(async (resolve) => {
+    // Add 5 second timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      console.warn('[FreshWax] Email verification check timed out - allowing action');
+      resolve(true);
+    }, 5000);
     // First check if user is grandfathered (existing user before verification was required)
     const grandfathered = sessionStorage.getItem('fw_email_grandfathered');
     if (grandfathered === 'true') {
+      clearTimeout(timeout);
       resolve(true);
       return;
     }
 
     // Check sessionStorage flag (set at login for new unverified users)
     if (sessionStorage.getItem('fw_email_unverified') === 'true') {
+      clearTimeout(timeout);
       showVerificationModal(action);
       resolve(false);
       return;
@@ -43,6 +50,7 @@ window.FreshWax.checkEmailVerified = function(action) {
           sessionStorage.setItem('fw_email_grandfathered', 'true');
           sessionStorage.removeItem('fw_email_unverified');
           console.log('[FreshWax] Admin user - bypassing verification');
+          clearTimeout(timeout);
           resolve(true);
           return;
         }
@@ -56,6 +64,7 @@ window.FreshWax.checkEmailVerified = function(action) {
             sessionStorage.setItem('fw_email_grandfathered', 'true');
             sessionStorage.removeItem('fw_email_unverified');
             console.log('[FreshWax] User grandfathered - created before verification requirement');
+            clearTimeout(timeout);
             resolve(true);
             return;
           }
@@ -66,10 +75,12 @@ window.FreshWax.checkEmailVerified = function(action) {
           // Email is verified - clear any stale flags
           sessionStorage.removeItem('fw_email_unverified');
           console.log('[FreshWax] Email verified - allowing action');
+          clearTimeout(timeout);
           resolve(true);
           return;
         } else {
           sessionStorage.setItem('fw_email_unverified', 'true');
+          clearTimeout(timeout);
           showVerificationModal(action);
           resolve(false);
           return;
@@ -79,6 +90,7 @@ window.FreshWax.checkEmailVerified = function(action) {
       console.warn('[FreshWax] Could not check Firebase auth:', e);
     }
 
+    clearTimeout(timeout);
     resolve(true);
   });
 };
