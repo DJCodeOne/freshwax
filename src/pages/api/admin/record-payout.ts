@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { saSetDocument } from '../../../lib/firebase-service-account';
+import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
 
@@ -105,6 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const results: any[] = [];
 
     for (const payment of Object.values(artistPayments)) {
+      // Skip payments with zero or negative amounts (fees exceed item price)
       if (payment.amount <= 0) continue;
 
       // Record the payout as completed (manual) using service account auth
@@ -141,12 +142,69 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[admin] ✓ Recorded manual payout for', payment.artistName, '£' + payment.amount.toFixed(2));
     }
 
+    // If no artist payouts were created (e.g., all items are low-value/merch),
+    // create a "cleared" record to mark the order as handled
+    if (results.length === 0) {
+      const clearedPayoutId = `cleared_${orderId}_${Date.now()}`;
+      await saSetDocument(
+        serviceAccountKey,
+        projectId,
+        'payouts',
+        clearedPayoutId,
+        {
+          artistId: 'none',
+          artistName: 'Order Cleared',
+          orderId,
+          orderNumber: order.orderNumber,
+          amount: 0,
+          currency: 'gbp',
+          status: 'completed',
+          payoutMethod: 'cleared',
+          triggeredBy: 'admin',
+          notes: notes || 'Order cleared by admin - no artist payout required',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString()
+        }
+      );
+      results.push({
+        artistId: 'none',
+        artistName: 'Order Cleared',
+        amount: 0,
+        status: 'cleared'
+      });
+      console.log('[admin] ✓ Created cleared record for order', order.orderNumber);
+    }
+
+    // Also remove/update any pending payout records for this order
+    // This prevents the order from reappearing in the queue
+    try {
+      const pendingPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
+        filters: [{ field: 'orderId', op: 'EQUAL', value: orderId }],
+        limit: 50
+      });
+
+      for (const pending of pendingPayouts) {
+        // Update the pending payout to mark it as completed (or delete it)
+        await saUpdateDocument(serviceAccountKey, projectId, 'pendingPayouts', pending.id, {
+          status: 'completed',
+          completedAt: new Date().toISOString(),
+          completedBy: 'admin_manual',
+          notes: notes || 'Marked as paid by admin'
+        });
+        console.log('[admin] ✓ Updated pending payout', pending.id, 'to completed');
+      }
+    } catch (err) {
+      console.error('[admin] Error updating pending payouts:', err);
+      // Don't fail the request - the payout record was still created
+    }
+
     return new Response(JSON.stringify({
       success: true,
       orderId,
       orderNumber: order.orderNumber,
       payouts: results,
-      message: `Recorded ${results.length} manual payout(s)`
+      message: `Recorded ${results.length} payout(s)`
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

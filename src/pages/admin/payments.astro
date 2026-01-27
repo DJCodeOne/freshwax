@@ -53,19 +53,24 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
 let manualPendingPayouts: Record<string, any>[] = [];
 if (serviceAccountKey) {
   try {
+    // Don't use orderBy - documents may have different timestamp fields (createdAt vs timestamp)
+    // Firestore excludes documents that don't have the orderBy field
     manualPendingPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingPayouts', {
       filters: [
         { field: 'status', op: 'EQUAL', value: 'pending' }
       ],
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
       limit: 100
     });
     console.log('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
+    if (manualPendingPayouts.length > 0) {
+      console.log('[payments] Pending payout orderIds:', manualPendingPayouts.map(p => p.orderId).join(', '));
+    }
   } catch (err) {
     console.error('[payments] Error fetching manualPendingPayouts:', err);
   }
 } else {
   console.warn('[payments] No service account key - cannot fetch pending payouts');
+  console.log('[payments] clientEmail:', !!clientEmail, 'privateKey:', !!privateKey);
 }
 
 // Fetch pending supplier payouts
@@ -73,7 +78,6 @@ let pendingSupplierPayouts: Record<string, any>[] = [];
 if (serviceAccountKey) {
   try {
     pendingSupplierPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSupplierPayouts', {
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
       limit: 100
     });
     console.log('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
@@ -88,7 +92,6 @@ let pendingSellerPayouts: Record<string, any>[] = [];
 if (serviceAccountKey) {
   try {
     pendingSellerPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSellerPayouts', {
-      orderBy: { field: 'createdAt', direction: 'DESCENDING' },
       limit: 100
     });
     console.log('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
@@ -190,6 +193,14 @@ for (const payout of pendingSellerPayouts) {
 
 // Legacy: keep orderArtistMap for backwards compatibility
 const orderArtistMap = orderPayeesMap;
+
+// Debug: log which orders have pending payouts mapped
+console.log('[payments] Orders with pending payouts:', Object.keys(orderPayeesMap).length);
+if (Object.keys(orderPayeesMap).length > 0) {
+  for (const [orderId, payees] of Object.entries(orderPayeesMap)) {
+    console.log(`[payments] Order ${orderId}:`, (payees as PayeeInfo[]).map(p => `${p.name}: £${p.amount.toFixed(2)}`).join(', '));
+  }
+}
 
 // Fetch completed payouts using service account auth (payouts collection requires auth)
 let completedPayouts: Record<string, any>[] = [];
@@ -550,7 +561,8 @@ export const prerender = false;
                         const ledger = ledgerByOrderId[order.id];
                         const freshWaxFee = ledger?.freshWaxFee ?? order.totals?.freshWaxFee ?? (itemTotal * 0.01);
                         const stripeFee = ledger?.stripeFee ?? order.totals?.stripeFee ?? 0;
-                        const paypalFee = ledger?.actualPaypalFee ?? ledger?.paypalFee ?? order.totals?.paypalFee ?? 0;
+                        // PayPal fee can be in multiple fields - check all possible locations
+                        const paypalFee = ledger?.actualPaypalFee ?? ledger?.paypalFee ?? order.actualPaypalFee ?? order.paypalFee ?? order.totals?.paypalFee ?? order.totals?.serviceFees ?? 0;
                         const processingFee = order.paymentMethod === 'paypal' ? paypalFee : stripeFee;
                         return (
                           <div style="font-size: 0.75rem; line-height: 1.4;">
