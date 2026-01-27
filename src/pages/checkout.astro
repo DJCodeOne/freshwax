@@ -1130,19 +1130,19 @@ export const prerender = false;
         postcode: form.postcode.value,
         country: form.country.value
       } : null,
-      items: cart.map(item => ({
+      items: cart.filter(item => item && item.name).map(item => ({
         id: item.id || item.productId,
         productId: item.productId || item.id,
         releaseId: item.releaseId || item.productId || item.id,
         trackId: item.trackId || null,
-        name: item.name,
-        type: item.type || item.productType,
-        price: item.price,
-        quantity: item.quantity,
-        image: item.image || item.artwork,
-        artwork: item.artwork || item.image,
+        name: item.name || 'Item',
+        type: item.type || item.productType || 'product',
+        price: item.price || 0,
+        quantity: item.quantity || 1,
+        image: item.image || item.artwork || null,
+        artwork: item.artwork || item.image || null,
         size: item.size || null,
-        color: typeof item.color === 'object' ? item.color.name : item.color || null,
+        color: (item.color && typeof item.color === 'object') ? item.color.name : (item.color || null),
         artist: item.artist || null,
         title: item.title || null
       })),
