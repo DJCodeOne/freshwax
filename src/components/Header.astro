@@ -124,12 +124,6 @@ const firebaseConfig = {
             </svg>
             Merch
           </a>
-          <a href="/samples" class="fwx-menu-link">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-            Samples
-          </a>
           <a href="/crates" class="fwx-menu-link">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4m-6-1v6m8-6v6" />
@@ -204,13 +198,6 @@ const firebaseConfig = {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.5 2L2 6l3 2v12a1 1 0 001 1h12a1 1 0 001-1V8l3-2-4.5-4h-3L12 5l-2.5-3h-3z" />
           </svg>
           Merch
-        </a>
-
-        <a href="/samples" class="fwx-nav-btn">
-          <svg class="fwx-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-          </svg>
-          Samples
         </a>
 
 
@@ -299,12 +286,6 @@ const firebaseConfig = {
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.5 2L2 6l3 2v12a1 1 0 001 1h12a1 1 0 001-1V8l3-2-4.5-4h-3L12 5l-2.5-3h-3z" />
     </svg>
     <span>Merch</span>
-  </a>
-  <a href="/samples" class="fwx-bnav-item">
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="fwx-bnav-icon">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-    </svg>
-    <span>Samples</span>
   </a>
   <a href="/crates" class="fwx-bnav-item">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="fwx-bnav-icon">
@@ -990,8 +971,10 @@ const firebaseConfig = {
     left: 0 !important;
     right: 0 !important;
     z-index: 99999 !important;
-    background: #ffffff !important;
-    border-bottom: 2px solid #000000 !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.8) !important;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
     display: block !important;
     visibility: visible !important;
