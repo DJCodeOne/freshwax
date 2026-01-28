@@ -13,23 +13,36 @@ import { d1GetMerchBySupplierId, d1GetMerchBySupplierName } from '../../lib/d1-c
 const env = (Astro.locals as any)?.runtime?.env;
 const db = env?.DB;
 
-// Get partner from session
-const partnerId = Astro.cookies.get('partnerId')?.value || '';
+// Get partner from session - check partnerId first, then userId
+const partnerId = Astro.cookies.get('partnerId')?.value || Astro.cookies.get('userId')?.value || '';
 let partner: any = null;
 let products: any[] = [];
 
 if (partnerId) {
   try {
-    // Partner data still comes from Firebase (user account info)
+    // Try artists collection first
     partner = await getDocument('artists', partnerId);
-    if (partner && db) {
-      // Use D1 for merch data (reduces Firebase read costs)
 
+    // Fallback to users collection if not found in artists
+    if (!partner) {
+      const userData = await getDocument('users', partnerId);
+      if (userData) {
+        partner = {
+          id: partnerId,
+          artistName: userData.partnerInfo?.displayName || userData.displayName || userData.fullName || userData.name,
+          email: userData.email,
+          isMerchSupplier: userData.roles?.merchSupplier || userData.roles?.merchSeller || false
+        };
+      }
+    }
+
+    if (db) {
+      // Use D1 for merch data (reduces Firebase read costs)
       // Strategy 1: Query by supplierId
       products = await d1GetMerchBySupplierId(db, partnerId);
 
       // Strategy 2: If no results, try by supplier name
-      if (products.length === 0 && partner.artistName) {
+      if (products.length === 0 && partner?.artistName) {
         products = await d1GetMerchBySupplierName(db, partner.artistName);
       }
     }
@@ -38,8 +51,9 @@ if (partnerId) {
   }
 }
 
-const isLoggedIn = !!partner;
-const isMerchSupplier = partner?.isMerchSupplier === true;
+const isLoggedIn = !!partner || products.length > 0;
+// User is a merch supplier if they have the role OR if they have products assigned
+const isMerchSupplier = partner?.isMerchSupplier === true || products.length > 0;
 
 // Calculate stats
 const totalProducts = products.length;

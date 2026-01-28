@@ -36,9 +36,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { productIds, sellerId, sellerName, collection, searchTerm } = body;
+    const { productIds, sellerId, sellerName, collection, searchTerm, listAll } = body;
 
-    if (!sellerId) {
+    // sellerId only required if not listing
+    if (!sellerId && !listAll) {
       return new Response(JSON.stringify({ error: 'sellerId required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -78,8 +79,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           id: p.id,
           name: p.name || p.releaseName,
           category: p.category || p.categoryName,
+          brand: p.brand,
+          label: p.label,
+          artist: p.artist || p.artistName,
           sku: p.sku,
-          sellerId: p.sellerId
+          sellerId: p.sellerId,
+          supplierId: p.supplierId,
+          submitterId: p.submitterId,
+          artistId: p.artistId
         }))
       }, null, 2), {
         status: 200,
@@ -139,11 +146,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updateData.submitterId = sellerId;
         }
 
+        // For merch, also set supplierId (used by dashboard queries)
+        if (collectionName === 'merch') {
+          updateData.supplierId = sellerId;
+        }
+
         // Add seller name if provided
         if (sellerName) {
           updateData.sellerName = sellerName;
           if (collectionName === 'releases') {
             updateData.artistName = sellerName;
+          }
+          if (collectionName === 'merch') {
+            updateData.supplierName = sellerName;
           }
         }
 

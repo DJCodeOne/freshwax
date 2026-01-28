@@ -88,6 +88,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     console.log('[PayPal] Capturing order:', paypalOrderId);
 
+    // IDEMPOTENCY CHECK: Check if order with this PayPal ID already exists
+    try {
+      const existingOrders = await queryCollection('orders', {
+        filters: [{ field: 'paymentId', op: 'EQUAL', value: paypalOrderId }],
+        limit: 1
+      });
+      if (existingOrders && existingOrders.length > 0) {
+        const existingOrder = existingOrders[0];
+        console.log('[PayPal] Order already exists for this payment:', existingOrder.orderNumber);
+        return new Response(JSON.stringify({
+          success: true,
+          orderId: existingOrder.id,
+          orderNumber: existingOrder.orderNumber,
+          message: 'Order already processed'
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (idempotencyErr) {
+      console.log('[PayPal] Could not check for existing order:', idempotencyErr);
+      // Continue with capture attempt
+    }
+
     // SECURITY: Retrieve order data from Firebase instead of trusting client
     let orderData = clientOrderData;
     let usedServerData = false;
@@ -168,10 +192,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     console.log('[PayPal] Payment captured:', captureId, '£' + capturedAmount);
 
-    // SECURITY: Validate captured amount matches expected total
+    // SECURITY: Always validate captured amount matches expected total
     const expectedTotal = parseFloat(orderData.totals?.total?.toFixed(2) || '0');
-    if (!usedServerData && Math.abs(capturedAmount - expectedTotal) > 0.01) {
-      console.error('[PayPal] SECURITY: Amount mismatch! Captured:', capturedAmount, 'Expected:', expectedTotal);
+    if (Math.abs(capturedAmount - expectedTotal) > 0.01) {
+      console.error('[PayPal] SECURITY: Amount mismatch! Captured:', capturedAmount, 'Expected:', expectedTotal, 'UsedServerData:', usedServerData);
       // BLOCK the order - this is a security concern
       // PayPal already captured the money, so we need to handle refund separately
       // But we should NOT create an order with manipulated data
@@ -256,9 +280,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
           try {
             const merch = await getDocument('merch', item.productId);
             if (merch) {
-              submitterId = merch.sellerId || merch.userId || merch.createdBy || null;
+              // Check supplierId first (set by assign-seller), then sellerId, then fallbacks
+              submitterId = merch.supplierId || merch.sellerId || merch.userId || merch.createdBy || null;
               submitterEmail = merch.email || merch.sellerEmail || null;
-              artistName = merch.sellerName || merch.brandName || artistName;
+              artistName = merch.sellerName || merch.supplierName || merch.brandName || artistName;
+
+              // If no email on product, look up seller in users/artists collection
+              if (!submitterEmail && submitterId) {
+                try {
+                  const userData = await getDocument('users', submitterId);
+                  if (userData?.email) {
+                    submitterEmail = userData.email;
+                  } else {
+                    const artistData = await getDocument('artists', submitterId);
+                    if (artistData?.email) {
+                      submitterEmail = artistData.email;
+                    }
+                  }
+                } catch (e) {
+                  // Ignore lookup errors
+                }
+              }
+
               console.log(`[PayPal] Merch ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
             }
           } catch (lookupErr) {

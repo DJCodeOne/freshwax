@@ -1203,9 +1203,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
             try {
               const merch = await getDocument('merch', item.productId);
               if (merch) {
-                submitterId = merch.sellerId || merch.userId || merch.createdBy || null;
+                // Check supplierId first (set by assign-seller), then sellerId, then fallbacks
+                submitterId = merch.supplierId || merch.sellerId || merch.userId || merch.createdBy || null;
                 submitterEmail = merch.email || merch.sellerEmail || null;
-                artistName = merch.sellerName || merch.brandName || artistName;
+                artistName = merch.sellerName || merch.supplierName || merch.brandName || artistName;
+
+                // If no email on product, look up seller in users/artists collection
+                if (!submitterEmail && submitterId) {
+                  try {
+                    const userData = await getDocument('users', submitterId);
+                    if (userData?.email) {
+                      submitterEmail = userData.email;
+                    } else {
+                      const artistData = await getDocument('artists', submitterId);
+                      if (artistData?.email) {
+                        submitterEmail = artistData.email;
+                      }
+                    }
+                  } catch (e) {
+                    // Ignore lookup errors
+                  }
+                }
+
                 console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
               }
             } catch (lookupErr) {

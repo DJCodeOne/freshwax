@@ -321,6 +321,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const previousStock = variant.stock || 0;
               const newStock = Math.max(0, previousStock - item.quantity);
 
+              // ALERT: Check for overselling (stock would have gone negative)
+              if (previousStock < item.quantity) {
+                console.error('[create-order] ⚠️ OVERSOLD ALERT:', item.name, variantKey,
+                  '- Ordered:', item.quantity, '- Available:', previousStock,
+                  '- Shortfall:', item.quantity - previousStock);
+                // Order still processes but admin should be alerted
+              }
+
               variant.stock = newStock;
               variant.sold = (variant.sold || 0) + item.quantity;
               variantStock[variantKey] = variant;
@@ -379,12 +387,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 }
               }
 
-              // Update supplier stats if applicable
+              // Update supplier stats and get seller email for notifications
               if (productData.supplierId) {
                 try {
                   const supplierRevenue = (productData.retailPrice || item.price) * item.quantity * ((productData.supplierCut || 0) / 100);
 
-                  // Fetch current supplier data
+                  // Fetch current supplier data from merch-suppliers
                   const supplierData = await getDocument('merch-suppliers', productData.supplierId);
                   if (supplierData) {
                     await updateDocument('merch-suppliers', productData.supplierId, {
@@ -394,10 +402,46 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       updatedAt: now
                     });
                     log.info('[create-order] ✓ Supplier stats updated');
+
+                    // Attach seller email to item for notification
+                    if (supplierData.email) {
+                      item.sellerEmail = supplierData.email;
+                      item.supplierId = productData.supplierId;
+                      log.info('[create-order] ✓ Attached seller email from merch-suppliers:', supplierData.email);
+                    }
+                  }
+
+                  // If no email yet, try users collection
+                  if (!item.sellerEmail) {
+                    const userData = await getDocument('users', productData.supplierId);
+                    if (userData?.email) {
+                      item.sellerEmail = userData.email;
+                      item.supplierId = productData.supplierId;
+                      log.info('[create-order] ✓ Attached seller email from users:', userData.email);
+                    }
+                  }
+
+                  // If still no email, try artists collection
+                  if (!item.sellerEmail) {
+                    const artistData = await getDocument('artists', productData.supplierId);
+                    if (artistData?.email) {
+                      item.sellerEmail = artistData.email;
+                      item.supplierId = productData.supplierId;
+                      log.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
+                    }
                   }
                 } catch (supplierErr) {
-                  log.info('[create-order] Could not update supplier stats');
+                  log.info('[create-order] Could not update supplier stats:', supplierErr);
                 }
+              }
+
+              // Also attach supplierId/sellerId to item for sales ledger
+              if (productData.supplierId && !item.supplierId) {
+                item.supplierId = productData.supplierId;
+                item.sellerId = productData.supplierId;
+              }
+              if (productData.sellerId && !item.sellerId) {
+                item.sellerId = productData.sellerId;
               }
             } else {
               log.info('[create-order] ⚠️ Variant not found:', variantKey, 'for product:', item.productId);
@@ -1037,18 +1081,7 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
       '</tr>';
   }
 
-  // Shipping address
-  const shippingHtml = order.shipping ?
-    '<tr><td style="padding-top: 20px;">' +
-    '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
-    '<div style="font-weight: 700; color: #9ca3af; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">Ship To</div>' +
-    '<div style="color: #fff; line-height: 1.5; font-size: 14px;">' +
-    order.customer.firstName + ' ' + order.customer.lastName + '<br>' +
-    order.shipping.address1 + '<br>' +
-    (order.shipping.address2 ? order.shipping.address2 + '<br>' : '') +
-    order.shipping.city + ', ' + order.shipping.postcode + '<br>' +
-    order.shipping.country +
-    '</div></div></td></tr>' : '';
+  // Note: Shipping handled by Fresh Wax - no address shown to sellers
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
     '<body style="margin: 0; padding: 0; background: #000; font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;">' +
@@ -1094,9 +1127,6 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '</table>' +
     '</td></tr>' +
 
-    // Shipping address
-    shippingHtml +
-
     // Payment breakdown
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
@@ -1112,17 +1142,12 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '</div>' +
     '</td></tr>' +
 
-    // Action required
+    // Info box - Fresh Wax handles shipping
     '<tr><td style="padding-top: 20px;">' +
-    '<div style="padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0;">' +
-    '<div style="font-weight: 700; color: #92400e; margin-bottom: 4px;">⚠️ Action Required</div>' +
-    '<div style="font-size: 14px; color: #78350f; line-height: 1.5;">Please package and dispatch this order. Once shipped, send tracking info to <a href="mailto:orders@freshwax.co.uk" style="color: #92400e;">orders@freshwax.co.uk</a></div>' +
+    '<div style="padding: 16px; background: #1f2937; border-left: 4px solid #16a34a; border-radius: 0 8px 8px 0;">' +
+    '<div style="font-weight: 700; color: #16a34a; margin-bottom: 4px;">✅ No Action Required</div>' +
+    '<div style="font-size: 14px; color: #9ca3af; line-height: 1.5;">Fresh Wax handles all shipping and fulfilment. View your sales and earnings in your <a href="https://freshwax.co.uk/artist/dashboard" style="color: #dc2626;">Artist Dashboard</a>.</div>' +
     '</div>' +
-    '</td></tr>' +
-
-    // Customer email
-    '<tr><td style="padding-top: 16px;">' +
-    '<div style="font-size: 12px; color: #9ca3af;">Customer email: <strong style="color: #fff;">' + order.customer.email + '</strong></div>' +
     '</td></tr>' +
 
     '</table></td></tr>' +

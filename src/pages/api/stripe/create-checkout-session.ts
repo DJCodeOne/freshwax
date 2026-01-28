@@ -156,8 +156,8 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
         }
       }
 
-      // Check for price mismatch (allow small rounding differences)
-      if (Math.abs(serverPrice - item.price) > 0.02) {
+      // Check for price mismatch (only allow 1p rounding difference)
+      if (Math.abs(serverPrice - item.price) > 0.01) {
         console.warn('[Stripe] Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
         hasPriceMismatch = true;
       }
