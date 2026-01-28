@@ -79,7 +79,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const name = (p.name || p.releaseName || '').toLowerCase();
           const artist = (p.artist || p.artistName || p.brand || '').toLowerCase();
           const label = (p.label || '').toLowerCase();
-          return name.includes(searchLower) || artist.includes(searchLower) || label.includes(searchLower);
+          const category = (p.category || p.categoryName || '').toLowerCase();
+          return name.includes(searchLower) || artist.includes(searchLower) || label.includes(searchLower) || category.includes(searchLower);
         })
         .map((p: any) => p.id);
 
