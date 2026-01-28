@@ -65,6 +65,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     let idsToUpdate: string[] = productIds || [];
 
+    // If listAll is true, just return all products for inspection
+    if (body.listAll) {
+      const allProducts = await saQueryCollection(serviceAccountKey, projectId, collectionName, {
+        limit: 100
+      });
+
+      return new Response(JSON.stringify({
+        success: true,
+        message: `Found ${allProducts.length} products in ${collectionName}`,
+        products: allProducts.map((p: any) => ({
+          id: p.id,
+          name: p.name || p.releaseName,
+          category: p.category || p.categoryName,
+          sku: p.sku,
+          sellerId: p.sellerId
+        }))
+      }, null, 2), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // If searchTerm provided, find matching products
     if (searchTerm && !productIds?.length) {
       console.log(`[assign-seller] Searching ${collectionName} for: ${searchTerm}`);
@@ -80,9 +102,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const artist = (p.artist || p.artistName || p.brand || '').toLowerCase();
           const label = (p.label || '').toLowerCase();
           const category = (p.category || p.categoryName || '').toLowerCase();
-          return name.includes(searchLower) || artist.includes(searchLower) || label.includes(searchLower) || category.includes(searchLower);
+          const sku = (p.sku || '').toLowerCase();
+          const id = (p.id || '').toLowerCase();
+          return name.includes(searchLower) || artist.includes(searchLower) || label.includes(searchLower) || category.includes(searchLower) || sku.includes(searchLower) || id.includes(searchLower);
         })
         .map((p: any) => p.id);
+
+      console.log(`[assign-seller] Search "${searchTerm}" found ${idsToUpdate.length} products:`, idsToUpdate);
 
       console.log(`[assign-seller] Found ${idsToUpdate.length} matching products`);
     }
