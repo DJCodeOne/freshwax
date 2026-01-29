@@ -561,17 +561,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    if (webhookSecret) {
-      console.log('[Stripe Webhook] Verifying signature...');
-      const isValid = await verifyStripeSignature(payload, signature, webhookSecret);
-      if (!isValid) {
-        console.error('[Stripe Webhook] ❌ Invalid signature - REJECTING REQUEST');
+    let event: Stripe.Event;
+
+    if (webhookSecret && stripeSecretKey) {
+      console.log('[Stripe Webhook] Verifying signature with official Stripe SDK...');
+      try {
+        const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
+        // Use constructEventAsync for Cloudflare Workers (Web Crypto API)
+        event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
+        console.log('[Stripe Webhook] ✓ Signature verified successfully via Stripe SDK');
+      } catch (err: any) {
+        console.error('[Stripe Webhook] ❌ Stripe signature verification failed:', err.message);
         return new Response(JSON.stringify({ error: 'Invalid signature' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      console.log('[Stripe Webhook] ✓ Signature verified successfully');
     } else if (!isDevelopment) {
       // In production, REQUIRE webhook secret
       console.error('[Stripe Webhook] ❌ SECURITY: Webhook secret not configured in production - REJECTING');
@@ -581,9 +586,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } else {
       console.log('[Stripe Webhook] ⚠️ DEV MODE: Skipping signature verification');
+      event = JSON.parse(payload);
     }
-
-    const event = JSON.parse(payload);
     console.log('[Stripe Webhook] Event type:', event.type);
     console.log('[Stripe Webhook] Event ID:', event.id || 'no-id');
 
