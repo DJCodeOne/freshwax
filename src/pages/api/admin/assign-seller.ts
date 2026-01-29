@@ -36,11 +36,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { productIds, sellerId, sellerName, collection, searchTerm, listAll } = body;
+    const { productIds, sellerId, sellerName, categoryName, collection, searchTerm, listAll } = body;
 
-    // sellerId only required if not listing
-    if (!sellerId && !listAll) {
-      return new Response(JSON.stringify({ error: 'sellerId required' }), {
+    // sellerId or categoryName required if not listing
+    if (!sellerId && !categoryName && !listAll) {
+      return new Response(JSON.stringify({ error: 'sellerId or categoryName required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -78,13 +78,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         products: allProducts.map((p: any) => ({
           id: p.id,
           name: p.name || p.releaseName,
-          category: p.category || p.categoryName,
+          category: p.category,
+          categoryName: p.categoryName,
           brand: p.brand,
           label: p.label,
           artist: p.artist || p.artistName,
           sku: p.sku,
           sellerId: p.sellerId,
           supplierId: p.supplierId,
+          supplierName: p.supplierName,
           submitterId: p.submitterId,
           artistId: p.artistId
         }))
@@ -136,19 +138,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     for (const productId of idsToUpdate) {
       try {
         const updateData: any = {
-          sellerId,
           updatedAt: new Date().toISOString()
         };
 
-        // For releases, also set artistId
-        if (collectionName === 'releases') {
-          updateData.artistId = sellerId;
-          updateData.submitterId = sellerId;
-        }
+        // Only set seller fields if sellerId is provided
+        if (sellerId) {
+          updateData.sellerId = sellerId;
 
-        // For merch, also set supplierId (used by dashboard queries)
-        if (collectionName === 'merch') {
-          updateData.supplierId = sellerId;
+          // For releases, also set artistId
+          if (collectionName === 'releases') {
+            updateData.artistId = sellerId;
+            updateData.submitterId = sellerId;
+          }
+
+          // For merch, also set supplierId (used by dashboard queries)
+          if (collectionName === 'merch') {
+            updateData.supplierId = sellerId;
+          }
         }
 
         // Add seller name if provided
@@ -162,6 +168,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
+        // Add categoryName if provided (for fixing display name in dropdowns)
+        if (categoryName) {
+          updateData.categoryName = categoryName;
+        }
+
         await saUpdateDocument(serviceAccountKey, projectId, collectionName, productId, updateData);
         results.push(productId);
         console.log(`[assign-seller] Updated ${collectionName}/${productId} -> sellerId: ${sellerId}`);
@@ -173,8 +184,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       message: `Updated ${results.length} products in ${collectionName}`,
-      sellerId,
+      sellerId: sellerId || null,
       sellerName: sellerName || null,
+      categoryName: categoryName || null,
       updated: results,
       errors: errors.length > 0 ? errors : undefined
     }, null, 2), {
