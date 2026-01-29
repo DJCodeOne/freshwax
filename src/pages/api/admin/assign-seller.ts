@@ -36,11 +36,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { productIds, sellerId, sellerName, categoryName, collection, searchTerm, listAll } = body;
+    const { productIds, sellerId, sellerName, categoryName, productType, collection, searchTerm, listAll } = body;
 
-    // sellerId or categoryName required if not listing
-    if (!sellerId && !categoryName && !listAll) {
-      return new Response(JSON.stringify({ error: 'sellerId or categoryName required' }), {
+    // sellerId, categoryName, or productType required if not listing
+    if (!sellerId && !categoryName && !productType && !listAll) {
+      return new Response(JSON.stringify({ error: 'sellerId, categoryName, or productType required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -171,6 +171,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Add categoryName if provided (for fixing display name in dropdowns)
         if (categoryName) {
           updateData.categoryName = categoryName;
+        }
+
+        // Add productType if provided (for fixing filter dropdown)
+        if (productType) {
+          updateData.productType = productType;
         }
 
         await saUpdateDocument(serviceAccountKey, projectId, collectionName, productId, updateData);
