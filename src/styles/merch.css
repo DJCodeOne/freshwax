@@ -216,6 +216,77 @@
     color: #fff;
   }
 
+  /* Custom Dropdown (Type, Availability, Sort) */
+  .custom-dropdown {
+    position: relative;
+  }
+
+  .dropdown-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 2px solid #333;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .dropdown-btn:hover,
+  .dropdown-btn:focus {
+    border-color: #dc2626;
+    outline: none;
+  }
+
+  .dropdown-btn svg {
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+
+  .custom-dropdown.open .dropdown-btn svg {
+    transform: rotate(180deg);
+  }
+
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    min-width: 120px;
+    background: #1a1a1a;
+    border: 2px solid #333;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 200;
+  }
+
+  .custom-dropdown.open .dropdown-menu {
+    display: block;
+  }
+
+  .dropdown-item {
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #ccc;
+  }
+
+  .dropdown-item:hover {
+    background: #dc2626;
+    color: #fff;
+  }
+
+  .dropdown-item.selected {
+    background: #dc2626;
+    color: #fff;
+  }
+
   .clear-btn {
     padding: 0.625rem 1.25rem;
     background: #dc2626;

@@ -188,32 +188,53 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
 
         <div class="filter-item">
           <label>Type</label>
-          <select id="typeFilter">
-            <option value="">All</option>
-            {Object.entries(productTypes).map(([key, name]) => (
-              <option value={key}>{name}</option>
-            ))}
-          </select>
+          <div class="custom-dropdown" id="typeDropdown">
+            <button type="button" class="dropdown-btn">
+              <span id="typeLabel">All</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" data-value="">All</div>
+              {Object.entries(productTypes).map(([key, name]) => (
+                <div class="dropdown-item" data-value={key}>{name}</div>
+              ))}
+            </div>
+          </div>
+          <input type="hidden" id="typeFilter" value="" />
         </div>
 
         <div class="filter-item">
           <label>Availability</label>
-          <select id="stockFilter">
-            <option value="">All</option>
-            <option value="in-stock">In Stock</option>
-            {onSaleCount > 0 && <option value="on-sale">On Sale</option>}
-          </select>
+          <div class="custom-dropdown" id="stockDropdown">
+            <button type="button" class="dropdown-btn">
+              <span id="stockLabel">All</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" data-value="">All</div>
+              <div class="dropdown-item" data-value="in-stock">In Stock</div>
+              {onSaleCount > 0 && <div class="dropdown-item" data-value="on-sale">On Sale</div>}
+            </div>
+          </div>
+          <input type="hidden" id="stockFilter" value="" />
         </div>
 
         <div class="filter-item">
           <label>Sort By</label>
-          <select id="sortSelect">
-            <option value="featured">Featured</option>
-            <option value="newest">Newest</option>
-            <option value="price-low">Price ↑</option>
-            <option value="price-high">Price ↓</option>
-            <option value="name">A-Z</option>
-          </select>
+          <div class="custom-dropdown" id="sortDropdown">
+            <button type="button" class="dropdown-btn">
+              <span id="sortLabel">Featured</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div class="dropdown-menu">
+              <div class="dropdown-item" data-value="featured">Featured</div>
+              <div class="dropdown-item" data-value="newest">Newest</div>
+              <div class="dropdown-item" data-value="price-low">Price ↑</div>
+              <div class="dropdown-item" data-value="price-high">Price ↓</div>
+              <div class="dropdown-item" data-value="name">A-Z</div>
+            </div>
+          </div>
+          <input type="hidden" id="sortSelect" value="featured" />
         </div>
 
         <button id="clearFilters" class="clear-btn">Clear</button>
@@ -571,21 +592,99 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
     const grid = document.getElementById('productsGrid');
     const countEl = document.getElementById('visibleCount');
 
+    // Custom dropdown elements
+    const typeDropdown = document.getElementById('typeDropdown');
+    const stockDropdown = document.getElementById('stockDropdown');
+    const sortDropdown = document.getElementById('sortDropdown');
+    const typeLabel = document.getElementById('typeLabel');
+    const stockLabel = document.getElementById('stockLabel');
+    const sortLabel = document.getElementById('sortLabel');
+    const allDropdowns = [categoryDropdown, typeDropdown, stockDropdown, sortDropdown];
+
     // Nested category dropdown logic
     if (categoryBtn && categoryDropdown) {
       categoryBtn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        closeAllDropdownsExcept(categoryDropdown);
         categoryDropdown.classList.toggle('open');
+      });
+    }
+
+    // Generic dropdown toggle
+    function setupDropdown(dropdown) {
+      if (!dropdown) return;
+      var btn = dropdown.querySelector('.dropdown-btn');
+      if (btn) {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAllDropdownsExcept(dropdown);
+          dropdown.classList.toggle('open');
+        });
+      }
+    }
+
+    setupDropdown(typeDropdown);
+    setupDropdown(stockDropdown);
+    setupDropdown(sortDropdown);
+
+    function closeAllDropdownsExcept(except) {
+      allDropdowns.forEach(function(dd) {
+        if (dd && dd !== except) dd.classList.remove('open');
       });
     }
 
     // Close dropdown when clicking outside
     document.addEventListener('click', function(e) {
-      if (categoryDropdown && !categoryDropdown.contains(e.target)) {
-        categoryDropdown.classList.remove('open');
-      }
+      allDropdowns.forEach(function(dd) {
+        if (dd && !dd.contains(e.target)) {
+          dd.classList.remove('open');
+        }
+      });
     });
+
+    // Handle Type dropdown selection
+    if (typeDropdown) {
+      typeDropdown.querySelectorAll('.dropdown-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var value = this.dataset.value || '';
+          if (typeFilter) typeFilter.value = value;
+          if (typeLabel) typeLabel.textContent = this.textContent;
+          typeDropdown.classList.remove('open');
+          applyFilters();
+        });
+      });
+    }
+
+    // Handle Availability dropdown selection
+    if (stockDropdown) {
+      stockDropdown.querySelectorAll('.dropdown-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var value = this.dataset.value || '';
+          if (stockFilter) stockFilter.value = value;
+          if (stockLabel) stockLabel.textContent = this.textContent;
+          stockDropdown.classList.remove('open');
+          applyFilters();
+        });
+      });
+    }
+
+    // Handle Sort dropdown selection
+    if (sortDropdown) {
+      sortDropdown.querySelectorAll('.dropdown-item').forEach(function(item) {
+        item.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var value = this.dataset.value || 'featured';
+          if (sortSelect) sortSelect.value = value;
+          if (sortLabel) sortLabel.textContent = this.textContent;
+          sortDropdown.classList.remove('open');
+          applyFilters();
+        });
+      });
+    }
 
     // Handle category selection
     if (categoryDropdown) {
@@ -664,17 +763,18 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       if (countEl) countEl.textContent = String(visible);
     }
 
-    if (typeFilter) typeFilter.addEventListener('change', applyFilters);
-    if (stockFilter) stockFilter.addEventListener('change', applyFilters);
-    if (sortSelect) sortSelect.addEventListener('change', applyFilters);
+    // Hidden inputs are updated by dropdown handlers, no need for change listeners
     if (clearBtn) {
       clearBtn.addEventListener('click', function() {
         if (categoryFilter) categoryFilter.value = '';
         if (categoryNameFilter) categoryNameFilter.value = '';
         if (categoryLabel) categoryLabel.textContent = 'All';
         if (typeFilter) typeFilter.value = '';
+        if (typeLabel) typeLabel.textContent = 'All';
         if (stockFilter) stockFilter.value = '';
+        if (stockLabel) stockLabel.textContent = 'All';
         if (sortSelect) sortSelect.value = 'featured';
+        if (sortLabel) sortLabel.textContent = 'Featured';
         applyFilters();
       });
     }
