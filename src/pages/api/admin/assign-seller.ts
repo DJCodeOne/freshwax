@@ -36,11 +36,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { productIds, sellerId, sellerName, categoryName, productType, collection, searchTerm, listAll } = body;
+    const { productIds, sellerId, sellerName, category, categoryName, productType, collection, searchTerm, listAll } = body;
 
-    // sellerId, categoryName, or productType required if not listing
-    if (!sellerId && !categoryName && !productType && !listAll) {
-      return new Response(JSON.stringify({ error: 'sellerId, categoryName, or productType required' }), {
+    // sellerId, category, categoryName, or productType required if not listing
+    if (!sellerId && !category && !categoryName && !productType && !listAll) {
+      return new Response(JSON.stringify({ error: 'sellerId, category, categoryName, or productType required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -166,6 +166,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (collectionName === 'merch') {
             updateData.supplierName = sellerName;
           }
+        }
+
+        // Add category if provided (for fixing category grouping)
+        if (category) {
+          updateData.category = category;
         }
 
         // Add categoryName if provided (for fixing display name in dropdowns)
