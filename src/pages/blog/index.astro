@@ -181,6 +181,38 @@ function brandFreshWax(text: string): string {
 </script>
 
 <style>
+  /* Page Entrance Animations */
+  @keyframes fadeSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeSlideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
   .blog-page {
     min-height: 100vh;
     background: #000000;
@@ -192,6 +224,7 @@ function brandFreshWax(text: string): string {
     border-bottom: 2px solid #dc2626;
     padding: 4rem 1.5rem;
     text-align: center;
+    animation: fadeSlideUp 0.6s ease-out 0.1s both;
   }
 
   .hero-content h1 {
@@ -200,6 +233,7 @@ function brandFreshWax(text: string): string {
     color: #ffffff;
     margin-bottom: 1rem;
     letter-spacing: -0.02em;
+    animation: fadeSlideUp 0.6s ease-out 0.2s both;
   }
 
   .text-red,
@@ -212,6 +246,7 @@ function brandFreshWax(text: string): string {
     color: #9ca3af;
     max-width: 600px;
     margin: 0 auto;
+    animation: fadeSlideUp 0.5s ease-out 0.3s both;
   }
 
   /* Category Filter */
@@ -222,6 +257,7 @@ function brandFreshWax(text: string): string {
     position: sticky;
     top: 0;
     z-index: 10;
+    animation: fadeSlideDown 0.5s ease-out 0.2s both;
   }
 
   .filter-container {
@@ -262,6 +298,7 @@ function brandFreshWax(text: string): string {
     max-width: 1400px;
     margin: 0 auto;
     padding: 3rem 1.5rem;
+    animation: fadeIn 0.5s ease-out 0.3s both;
   }
 
   .blog-grid {
@@ -277,7 +314,20 @@ function brandFreshWax(text: string): string {
     overflow: hidden;
     border: 1px solid #222222;
     transition: all 0.3s;
+    opacity: 0;
+    animation: fadeSlideUp 0.5s ease-out forwards;
   }
+
+  /* Staggered card entrance */
+  .blog-card:nth-child(1) { animation-delay: 0.1s; }
+  .blog-card:nth-child(2) { animation-delay: 0.15s; }
+  .blog-card:nth-child(3) { animation-delay: 0.2s; }
+  .blog-card:nth-child(4) { animation-delay: 0.25s; }
+  .blog-card:nth-child(5) { animation-delay: 0.3s; }
+  .blog-card:nth-child(6) { animation-delay: 0.35s; }
+  .blog-card:nth-child(7) { animation-delay: 0.4s; }
+  .blog-card:nth-child(8) { animation-delay: 0.45s; }
+  .blog-card:nth-child(n+9) { animation-delay: 0.5s; }
 
   .blog-card:hover {
     transform: translateY(-4px);
