@@ -64,6 +64,8 @@
     padding: 1rem 1.5rem;
     border-bottom: 2px solid #222;
     animation: fadeSlideDown 0.5s ease-out both;
+    position: relative;
+    z-index: 100;
   }
 
   .filters-row {
@@ -153,7 +155,7 @@
     background: #1a1a1a;
     border: 2px solid #333;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    z-index: 100;
+    z-index: 200;
   }
 
   .category-dropdown.open .category-menu {
@@ -190,6 +192,7 @@
     background: #1a1a1a;
     border: 2px solid #333;
     box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    z-index: 201;
   }
 
   .category-menu-item.has-submenu:hover .category-submenu {
