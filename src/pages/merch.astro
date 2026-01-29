@@ -139,6 +139,89 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
   <Header />
 
   <main class="merch-page">
+    <!-- Filters Bar - Full Width -->
+    <section class="filters-bar">
+      <div class="filters-row">
+        <div class="filter-item category-filter">
+          <label>Category</label>
+          <div class="category-dropdown" id="categoryDropdown">
+            <button type="button" class="category-dropdown-btn" id="categoryBtn">
+              <span id="categoryLabel">All</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
+            </button>
+            <div class="category-menu">
+              <div class="category-menu-item" data-category="" data-name="">
+                <span>All</span>
+              </div>
+              {categoryGroupsArray.map(group => {
+                // If only one supplier and it matches the category label, show as direct link
+                const singleSupplier = group.names.length === 1 && group.names[0] === group.label;
+
+                return singleSupplier ? (
+                  <div class="category-menu-item" data-category={group.slug} data-name={group.names[0]}>
+                    <span>{group.label}</span>
+                  </div>
+                ) : (
+                  <div class="category-menu-item has-submenu" data-category={group.slug}>
+                    <span>{group.label}</span>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 0l4 4-4 4"/></svg>
+                    <div class="category-submenu">
+                      <div class="category-submenu-item" data-category={group.slug} data-name="">
+                        <span>All {group.label}</span>
+                      </div>
+                      {group.names.map(name => (
+                        <div class="category-submenu-item" data-category={group.slug} data-name={name}>
+                          <span>{name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <input type="hidden" id="categoryFilter" value="" />
+          <input type="hidden" id="categoryNameFilter" value="" />
+        </div>
+
+        <div class="filter-item">
+          <label>Type</label>
+          <select id="typeFilter">
+            <option value="">All</option>
+            {Object.entries(productTypes).map(([key, name]) => (
+              <option value={key}>{name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label>Availability</label>
+          <select id="stockFilter">
+            <option value="">All</option>
+            <option value="in-stock">In Stock</option>
+            {onSaleCount > 0 && <option value="on-sale">On Sale</option>}
+          </select>
+        </div>
+
+        <div class="filter-item">
+          <label>Sort By</label>
+          <select id="sortSelect">
+            <option value="featured">Featured</option>
+            <option value="newest">Newest</option>
+            <option value="price-low">Price ↑</option>
+            <option value="price-high">Price ↓</option>
+            <option value="name">A-Z</option>
+          </select>
+        </div>
+
+        <button id="clearFilters" class="clear-btn">Clear</button>
+
+        <div class="products-count">
+          <span id="visibleCount">{products.length}</span> / {products.length}
+        </div>
+      </div>
+    </section>
+
     <!-- Hero Section -->
     <section class="merch-hero">
       <div class="hero-container">
@@ -155,89 +238,6 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
 
     <!-- Content Section -->
     <div class="merch-content">
-      <!-- Filters Bar - Full Width -->
-      <section class="filters-bar">
-        <div class="filters-row">
-          <div class="filter-item category-filter">
-            <label>Category</label>
-            <div class="category-dropdown" id="categoryDropdown">
-              <button type="button" class="category-dropdown-btn" id="categoryBtn">
-                <span id="categoryLabel">All</span>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M2 4l4 4 4-4"/></svg>
-              </button>
-              <div class="category-menu">
-                <div class="category-menu-item" data-category="" data-name="">
-                  <span>All</span>
-                </div>
-                {categoryGroupsArray.map(group => {
-                  // If only one supplier and it matches the category label, show as direct link
-                  const singleSupplier = group.names.length === 1 && group.names[0] === group.label;
-
-                  return singleSupplier ? (
-                    <div class="category-menu-item" data-category={group.slug} data-name={group.names[0]}>
-                      <span>{group.label}</span>
-                    </div>
-                  ) : (
-                    <div class="category-menu-item has-submenu" data-category={group.slug}>
-                      <span>{group.label}</span>
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><path d="M2 0l4 4-4 4"/></svg>
-                      <div class="category-submenu">
-                        <div class="category-submenu-item" data-category={group.slug} data-name="">
-                          <span>All {group.label}</span>
-                        </div>
-                        {group.names.map(name => (
-                          <div class="category-submenu-item" data-category={group.slug} data-name={name}>
-                            <span>{name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <input type="hidden" id="categoryFilter" value="" />
-            <input type="hidden" id="categoryNameFilter" value="" />
-          </div>
-
-          <div class="filter-item">
-            <label>Type</label>
-            <select id="typeFilter">
-              <option value="">All</option>
-              {Object.entries(productTypes).map(([key, name]) => (
-                <option value={key}>{name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div class="filter-item">
-            <label>Availability</label>
-            <select id="stockFilter">
-              <option value="">All</option>
-              <option value="in-stock">In Stock</option>
-              {onSaleCount > 0 && <option value="on-sale">On Sale</option>}
-            </select>
-          </div>
-
-          <div class="filter-item">
-            <label>Sort By</label>
-            <select id="sortSelect">
-              <option value="featured">Featured</option>
-              <option value="newest">Newest</option>
-              <option value="price-low">Price ↑</option>
-              <option value="price-high">Price ↓</option>
-              <option value="name">A-Z</option>
-            </select>
-          </div>
-
-          <button id="clearFilters" class="clear-btn">Clear</button>
-          
-          <div class="products-count">
-            <span id="visibleCount">{products.length}</span> / {products.length}
-          </div>
-        </div>
-      </section>
-
       <!-- Products Grid - 2x2 -->
       <section class="products-section">
         {products.length === 0 ? (
