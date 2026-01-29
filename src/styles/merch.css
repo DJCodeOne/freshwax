@@ -242,8 +242,8 @@
 
   /* Product Card - Vertical (10% larger) */
   .product-card {
-    background: #111;
-    border: 2px solid #222;
+    background: #1a1a1a;
+    border: 2px solid #2a2a2a;
     display: flex;
     flex-direction: column;
     transition: all 0.2s;
@@ -319,7 +319,7 @@
   .product-name {
     font-family: 'Inter', sans-serif;
     font-size: 1.21rem;
-    color: #fff;
+    color: #dc2626;
     text-decoration: none;
     line-height: 1.2;
     margin-bottom: 0.22rem;
@@ -327,7 +327,7 @@
   }
 
   .card-clickable:hover .product-name,
-  .product-name:hover { color: #dc2626; }
+  .product-name:hover { color: #ef4444; }
 
   .product-meta {
     font-size: 0.77rem;
