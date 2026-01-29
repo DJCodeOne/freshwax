@@ -25,11 +25,10 @@ let productTypes: Record<string, string> = {};
 // Category type display names
 const categoryLabels: Record<string, string> = {
   freshwax: 'Fresh Wax',
-  label: 'Label',
-  soundsystem: 'Sound System',
-  dj: 'DJ',
-  crew: 'Crew',
-  clothing: 'Items'  // Legacy category for older products
+  label: 'Labels',
+  soundsystem: 'Sound Systems',
+  dj: 'DJs',
+  crew: 'Crews'
 };
 
 try {
@@ -168,7 +167,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
               </button>
               <div class="category-menu">
                 <div class="category-menu-item" data-category="" data-name="">
-                  <span>All Categories</span>
+                  <span>All</span>
                 </div>
                 {categoryGroupsArray.map(group => {
                   // If only one supplier and it matches the category label, show as direct link
