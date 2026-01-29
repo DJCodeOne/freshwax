@@ -157,11 +157,11 @@
     border-radius: 4px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
     z-index: 200;
-    overflow: hidden;
   }
 
   .dropdown-menu {
     right: 0;
+    overflow: hidden;
   }
 
   .category-dropdown.open .category-menu,
