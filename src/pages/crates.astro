@@ -4,6 +4,7 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import PageLoader from '../components/PageLoader.astro';
 
 export const prerender = false;
 
@@ -28,6 +29,7 @@ const faqs = [
   description="Buy vinyl on Fresh Wax Crates. Browse records from stockists and collectors with detailed condition grades, audio samples, and direct checkout."
   faqs={faqs}
 >
+  <PageLoader />
   <Header />
 
   <main class="crates-main">

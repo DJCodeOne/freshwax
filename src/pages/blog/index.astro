@@ -5,6 +5,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import PageLoader from '../../components/PageLoader.astro';
 import { blogPosts as posts, getCategories } from '../../data/blog-posts';
 
 export const prerender = true;
@@ -52,6 +53,7 @@ function brandFreshWax(text: string): string {
   description="Latest news, articles and updates from Fresh Wax. Music production tips, artist interviews, and behind-the-scenes content."
   breadcrumbs={[{ name: 'Blog', url: '/blog' }]}
 >
+  <PageLoader />
   <Header />
 
   <div class="blog-page">

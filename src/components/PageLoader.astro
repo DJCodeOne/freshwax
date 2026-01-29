@@ -1,0 +1,128 @@
+---
+// src/components/PageLoader.astro
+// Full-page loading animation that fades out when content is ready
+---
+
+<div id="pageLoader" class="page-loader">
+  <div class="loader-content">
+    <div class="loader-spinner">
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+      <div class="spinner-ring"></div>
+    </div>
+    <div class="loader-text">Loading</div>
+  </div>
+</div>
+
+<style>
+  .page-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: linear-gradient(180deg, #0a0a0a 0%, #111 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+  }
+
+  .page-loader.loaded {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .loader-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .loader-spinner {
+    position: relative;
+    width: 60px;
+    height: 60px;
+  }
+
+  .spinner-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px solid transparent;
+    border-radius: 50%;
+    animation: spinRing 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+  }
+
+  .spinner-ring:nth-child(1) {
+    border-top-color: #dc2626;
+    animation-delay: -0.45s;
+  }
+
+  .spinner-ring:nth-child(2) {
+    border-top-color: #dc2626;
+    opacity: 0.6;
+    animation-delay: -0.3s;
+    inset: 6px;
+  }
+
+  .spinner-ring:nth-child(3) {
+    border-top-color: #dc2626;
+    opacity: 0.3;
+    animation-delay: -0.15s;
+    inset: 12px;
+  }
+
+  @keyframes spinRing {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  .loader-text {
+    color: #888;
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 0.5;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+</style>
+
+<script>
+  // Hide loader when page is fully loaded
+  function hideLoader() {
+    const loader = document.getElementById('pageLoader');
+    if (loader) {
+      loader.classList.add('loaded');
+      // Remove from DOM after animation
+      setTimeout(() => {
+        loader.remove();
+      }, 400);
+    }
+  }
+
+  // Check if already loaded
+  if (document.readyState === 'complete') {
+    hideLoader();
+  } else {
+    window.addEventListener('load', hideLoader);
+  }
+
+  // Fallback: hide after 3 seconds max
+  setTimeout(hideLoader, 3000);
+
+  // Handle Astro view transitions
+  document.addEventListener('astro:page-load', hideLoader);
+</script>

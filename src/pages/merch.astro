@@ -6,6 +6,7 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
+import PageLoader from '../components/PageLoader.astro';
 import { getLiveMerch } from '../lib/firebase-rest';
 import '../styles/merch.css';
 
@@ -136,6 +137,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
 ---
 
 <Layout title="Merch Store">
+  <PageLoader />
   <Header />
 
   <main class="merch-page">
