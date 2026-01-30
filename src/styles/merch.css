@@ -930,29 +930,29 @@
   color: #fff;
 }
 .gc-modal-content {
-  padding: 1.5rem 2rem 2rem;
+  padding: 1.25rem 1.5rem 1.5rem;
   display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 1.25rem;
-  align-items: stretch;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
 }
 .gc-header {
   grid-column: 1 / -1;
   text-align: center;
-  margin-bottom: 0.75rem;
-  padding-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.75rem;
   border-bottom: 1px solid #333;
 }
 .gc-icon {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 .gc-icon svg {
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
 }
 .gc-header h2 {
-  font-size: 1.75rem;
-  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  margin: 0 0 0.25rem;
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -963,40 +963,34 @@
 .gc-subtitle {
   color: #888;
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 .gc-redeem-section, .gc-buy-section {
   background: #111;
   border-radius: 8px;
-  padding: 1.25rem;
+  padding: 1rem;
   border: 1px solid #222;
-  display: flex;
-  flex-direction: column;
-}
-
-.gc-redeem-section {
-  justify-content: space-between;
 }
 .gc-redeem-section h3, .gc-buy-section h3 {
-  font-size: 1rem;
-  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem;
   color: #fff;
   font-weight: 600;
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
   border-bottom: 1px solid #333;
 }
 .gc-login-prompt {
   background: #1a1a1a;
-  padding: 1rem;
-  border-radius: 6px;
+  padding: 0.75rem;
+  border-radius: 4px;
   text-align: center;
   border: 1px solid #333;
 }
 .gc-login-prompt p {
   margin: 0;
   color: #999;
-  font-size: 0.875rem;
-  line-height: 1.5;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 .gc-login-prompt a {
   color: #dc2626;
@@ -1008,17 +1002,17 @@
 }
 .gc-redeem-form, .gc-code-input-wrapper {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 .gc-code-input-wrapper input {
   flex: 1;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
   font-family: monospace;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -1027,14 +1021,14 @@
   border-color: #dc2626;
 }
 .gc-code-input-wrapper button {
-  padding: 0.625rem 1.25rem;
+  padding: 0.5rem 1rem;
   background: #dc2626;
   color: #fff;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   transition: background 0.2s;
 }
 .gc-code-input-wrapper button:hover {
@@ -1042,50 +1036,50 @@
 }
 .gc-error-message {
   color: #ef4444;
-  font-size: 0.8rem;
-  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  margin: 0.5rem 0 0;
   display: none;
 }
 .gc-success-message {
   color: #22c55e;
-  font-size: 0.8rem;
-  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  margin: 0.5rem 0 0;
   display: none;
 }
 .gc-balance-display {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto;
-  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: #1a1a1a;
   border-radius: 6px;
   border: 1px solid #333;
 }
 .gc-balance-label {
   color: #888;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
 }
 .gc-balance-amount {
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: #22c55e;
 }
 .gc-amount-selector {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
 }
 .gc-amount-btn {
-  padding: 0.625rem 0.5rem;
+  padding: 0.5rem 0.4rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   transition: all 0.2s;
 }
 .gc-amount-btn:hover {
@@ -1096,19 +1090,19 @@
   border-color: #dc2626;
 }
 .gc-custom-amount {
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 .gc-custom-amount.hidden {
   display: none;
 }
 .gc-custom-amount input {
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 .gc-custom-amount input:focus {
   outline: none;
@@ -1118,36 +1112,36 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
+  border-radius: 4px;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
   color: #999;
 }
 .gc-selected-amount span:last-child {
   font-weight: 700;
   color: #dc2626;
-  font-size: 1.25rem;
+  font-size: 1rem;
 }
 .gc-recipient-toggle {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
 }
 .gc-toggle-option {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.5rem;
+  gap: 0.4rem;
+  padding: 0.5rem 0.4rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #ccc;
   transition: all 0.2s;
 }
@@ -1165,19 +1159,19 @@
 .gc-gift-fields, .gc-self-fields {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.5rem;
 }
 .gc-gift-fields.hidden, .gc-self-fields.hidden {
   display: none;
 }
 .gc-gift-fields input, .gc-gift-fields textarea {
   width: 100%;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   resize: vertical;
 }
 .gc-gift-fields input:focus, .gc-gift-fields textarea:focus {
@@ -1248,8 +1242,8 @@
 
 /* Gift Card Payment Method Selection */
 .gc-payment-section {
-  margin: 1rem 0;
-  padding-top: 1rem;
+  margin: 0.75rem 0 0;
+  padding-top: 0.75rem;
   border-top: 1px solid #333;
 }
 .gc-payment-section.hidden {
@@ -1257,7 +1251,7 @@
 }
 .gc-payment-methods {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 .gc-payment-option {
   flex: 1;
@@ -1270,13 +1264,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 0.75rem;
+  gap: 0.4rem;
+  padding: 0.5rem 0.5rem;
   background: #1a1a1a;
   border: 1px solid #333;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #ccc;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   transition: all 0.2s;
   font-weight: 500;
   transition: all 0.2s;
