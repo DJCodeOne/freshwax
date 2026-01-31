@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, addDocument, updateDocument, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -47,24 +48,17 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const resend = new Resend(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY);
 
   try {
-    // Check admin auth
-    const adminId = cookies.get('adminId')?.value;
-    if (!adminId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
+    // Check admin auth via X-Admin-Key header or body
     const body = await request.json();
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const {
       subject,
       content,
       subscriberIds, // Array of subscriber IDs, or 'all' for everyone
-      previewEmail // Optional: send preview to this email first
+      previewEmail, // Optional: send preview to this email first
+      testEmail // Alias for previewEmail
     } = body;
 
     if (!subject || !content) {
@@ -129,19 +123,20 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       subscribers = subscribers.slice(0, MAX_SUBSCRIBERS_PER_SEND);
     }
 
-    // If preview email, send only to that
-    if (previewEmail) {
+    // If preview/test email, send only to that
+    const sendTestTo = previewEmail || testEmail;
+    if (sendTestTo) {
       try {
         await resend.emails.send({
           from: 'Fresh Wax <noreply@freshwax.co.uk>',
-          to: previewEmail,
+          to: sendTestTo,
           subject: `[PREVIEW] ${subject}`,
-          html: generateNewsletterHTML(subject, content, previewEmail)
+          html: generateNewsletterHTML(subject, content, sendTestTo)
         });
 
         return new Response(JSON.stringify({
           success: true,
-          message: `Preview sent to ${previewEmail}`,
+          message: `Preview sent to ${sendTestTo}`,
           previewSent: true
         }), {
           status: 200,
@@ -164,7 +159,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       subject,
       content,
       sentAt: new Date(),
-      sentBy: adminId,
+      sentBy: 'admin',
       recipientCount: subscribers.length,
       status: 'sending'
     });

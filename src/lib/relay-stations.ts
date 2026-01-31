@@ -19,7 +19,7 @@ export const APPROVED_RELAY_STATIONS: RelayStation[] = [
     id: 'underground-lair',
     name: 'The Underground Lair',
     streamUrl: 'http://95.217.34.48:8340/stream3',
-    httpsStreamUrl: 'https://relay.freshwax.co.uk/underground-lair',
+    httpsStreamUrl: 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8',
     websiteUrl: 'https://www.theundergroundlair.fr',
     logoUrl: '/place-holder.webp',
     genre: 'Jungle / D&B / Breakcore',

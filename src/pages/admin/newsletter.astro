@@ -3,6 +3,10 @@
 // Admin newsletter management - compose, upload, and send newsletters
 import AdminLayout from '../../layouts/AdminLayout.astro';
 export const prerender = false;
+
+// Get admin key for API authentication
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Newsletter" activeNav="newsletter">
@@ -514,10 +518,14 @@ Stay fresh! 🎵
   }
 </style>
 
+<script define:vars={{ adminKey }}>
+  const ADMIN_KEY = adminKey;
+</script>
+
 <script type="module">
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  
+
   const firebaseConfig = {
     apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g' || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
@@ -526,10 +534,13 @@ Stay fresh! 🎵
     messagingSenderId: "675435782973",
     appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
   };
-  
+
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  
+
+  // Get admin key from define:vars script
+  const ADMIN_KEY = window.ADMIN_KEY || '';
+
   let allSubscribers = [];
   let selectedIds = new Set();
   let currentFilter = 'all';
@@ -589,7 +600,7 @@ Stay fresh! 🎵
   
   async function loadSubscribers() {
     try {
-      const res = await fetch('/api/newsletter/subscribers');
+      const res = await fetch('/api/newsletter/subscribers', { headers: { 'X-Admin-Key': ADMIN_KEY } });
       const data = await res.json();
       if (data.success) {
         allSubscribers = data.subscribers || [];
@@ -756,7 +767,7 @@ Stay fresh! 🎵
     const btn = document.getElementById('testEmailBtn');
     btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
-      const res = await fetch('/api/newsletter/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
+      const res = await fetch('/api/newsletter/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
       const data = await res.json();
       alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed'));
     } catch (e) { alert('Error'); }
@@ -773,7 +784,7 @@ Stay fresh! 🎵
     const btn = document.getElementById('sendBtn');
     btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
-      const res = await fetch('/api/newsletter/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, content: cont, subscriberIds: ids }) });
+      const res = await fetch('/api/newsletter/send', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subject: subj, content: cont, subscriberIds: ids }) });
       const data = await res.json();
       if (data.success) {
         alert(`Sent!\n\nSent: ${data.results?.sent || ids.length}\nFailed: ${data.results?.failed || 0}`);
@@ -791,7 +802,7 @@ Stay fresh! 🎵
     const source = document.getElementById('newSubscriberSource').value;
     if (!email) { alert('Enter email'); return; }
     try {
-      const res = await fetch('/api/newsletter/subscribers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, name, source }) });
+      const res = await fetch('/api/newsletter/subscribers', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ email, name, source }) });
       const data = await res.json();
       if (data.success) { closeModal('addSubscriberModal'); loadSubscribers(); }
       else alert(data.error || 'Failed');
@@ -812,7 +823,7 @@ Stay fresh! 🎵
     const name = document.getElementById('editSubscriberName').value.trim();
     const status = document.getElementById('editSubscriberStatus').value;
     try {
-      const res = await fetch('/api/newsletter/subscribers', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscriberId: id, name, status }) });
+      const res = await fetch('/api/newsletter/subscribers', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subscriberId: id, name, status }) });
       const data = await res.json();
       if (data.success) {
         const s = allSubscribers.find(x => x.id === id);
@@ -834,7 +845,7 @@ Stay fresh! 🎵
   async function confirmDelete() {
     const id = document.getElementById('deleteSubscriberId').value;
     try {
-      const res = await fetch('/api/newsletter/subscribers', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscriberId: id }) });
+      const res = await fetch('/api/newsletter/subscribers', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subscriberId: id }) });
       const data = await res.json();
       if (data.success) {
         allSubscribers = allSubscribers.filter(s => s.id !== id); selectedIds.delete(id);

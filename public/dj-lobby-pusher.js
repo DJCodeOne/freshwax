@@ -57,14 +57,26 @@ export async function initDjLobbyPusher(user, info) {
     return;
   }
 
+  // Get Firebase ID token for authentication
+  let idToken = '';
+  try {
+    idToken = await user.getIdToken();
+    console.log('[DJLobby DEBUG] Got Firebase ID token');
+  } catch (e) {
+    console.error('[DJLobby] Failed to get ID token:', e);
+  }
+
   // Enable Pusher debug logging
   window.Pusher.logToConsole = true;
 
-  // Initialize Pusher
+  // Initialize Pusher with auth token for private channels
   pusher = new window.Pusher(pusherConfig.key, {
     cluster: pusherConfig.cluster,
     authEndpoint: '/api/dj-lobby/pusher-auth',
     auth: {
+      headers: {
+        'Authorization': `Bearer ${idToken}`
+      },
       params: {
         user_id: user.uid
       }

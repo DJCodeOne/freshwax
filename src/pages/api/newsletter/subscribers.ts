@@ -1,7 +1,8 @@
 // src/pages/api/newsletter/subscribers.ts
 // Get all subscribers for admin dashboard
 import type { APIRoute } from 'astro';
-import { queryCollection, deleteDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, deleteDocument, updateDocument, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -20,17 +21,9 @@ const MAX_SUBSCRIBERS_PER_PAGE = 500;
 export const GET: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
-    // Check admin auth
-    const adminId = cookies.get('adminId')?.value;
-    if (!adminId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // Check admin auth via X-Admin-Key header
+    const authError = requireAdminAuth(request, locals);
+    if (authError) return authError;
 
     // Get pagination params
     const url = new URL(request.url);
@@ -83,22 +76,83 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
   }
 };
 
-// Delete subscriber
-export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
+// Add subscriber manually
+export const POST: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
-    const adminId = cookies.get('adminId')?.value;
-    if (!adminId) {
+    const body = await request.json();
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    const { email, name, source } = body;
+
+    if (!email) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Unauthorized'
+        error: 'Email is required'
       }), {
-        status: 401,
+        status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    const { subscriberId } = await request.json();
+    // Check if email already exists
+    const existing = await queryCollection('subscribers', {
+      filters: [{ field: 'email', op: 'EQUAL', value: email.toLowerCase() }],
+      limit: 1
+    });
+
+    if (existing.length > 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Email already subscribed'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Add subscriber
+    const result = await addDocument('subscribers', {
+      email: email.toLowerCase(),
+      name: name || '',
+      source: source || 'manual',
+      status: 'active',
+      subscribedAt: new Date(),
+      emailsSent: 0,
+      emailsOpened: 0
+    });
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Subscriber added',
+      id: result.id
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('[Newsletter] Add subscriber error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to add subscriber'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
+// Delete subscriber
+export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
+  initFirebase(locals);
+  try {
+    const body = await request.json();
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    const { subscriberId } = body;
 
     if (!subscriberId) {
       return new Response(JSON.stringify({
@@ -136,18 +190,11 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
 export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
-    const adminId = cookies.get('adminId')?.value;
-    if (!adminId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const body = await request.json();
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
-    const { subscriberId, status } = await request.json();
+    const { subscriberId, status } = body;
 
     if (!subscriberId || !status) {
       return new Response(JSON.stringify({

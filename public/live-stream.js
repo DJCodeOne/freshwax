@@ -1663,7 +1663,8 @@ function showLiveStream(stream) {
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
     console.log('[Stream] Using Twitch player');
     setupTwitchPlayer(stream);
-  } else if (!isPlaceholder && (stream.streamSource === 'red5' || stream.hlsUrl)) {
+  } else if (!isPlaceholder && !stream.isRelay && (stream.streamSource === 'red5' || stream.hlsUrl)) {
+    // Only use HLS video player for non-relay streams with actual video
     console.log('[Stream] Using HLS player');
     setupHlsPlayer(stream);
   } else {
@@ -1730,7 +1731,8 @@ function setupHlsPlayer(stream) {
   if (twitchEmbed) twitchEmbed.classList.add('hidden');
   
   // Normalize to correct base URL (fixes old trycloudflare.com URLs)
-  const rawHlsUrl = stream.hlsUrl || stream.videoStreamUrl;
+  // For relay streams, use audioStreamUrl or relaySource.url
+  const rawHlsUrl = stream.hlsUrl || stream.videoStreamUrl || stream.audioStreamUrl || stream.relaySource?.url;
   const hlsUrl = normalizeHlsUrl(rawHlsUrl);
 
   if (!hlsUrl) {

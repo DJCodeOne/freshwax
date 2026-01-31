@@ -2174,7 +2174,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       id: 'underground-lair',
       name: 'The Underground Lair',
       streamUrl: 'http://95.217.34.48:8340/stream3',
-      httpsStreamUrl: 'https://relay.freshwax.co.uk/underground-lair',
+      httpsStreamUrl: 'https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8',
       websiteUrl: 'https://www.theundergroundlair.fr',
       logoUrl: '/place-holder.webp',
       genre: 'Jungle / D&B / Breakcore',
@@ -2431,6 +2431,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     if (vinylAvatar2) vinylAvatar2.src = avatarUrl;
   }
 
+  let relayHlsPlayer = null;
+
   function startRelayAudioPreview(stationUrl) {
     const relayAudio = document.getElementById('relayAudio');
     const relayDot = document.getElementById('relayDot');
@@ -2446,6 +2448,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     if (!stationUrl) {
       console.error('[RelayPreview] No station URL provided');
       return;
+    }
+
+    // Clean up existing HLS player
+    if (relayHlsPlayer) {
+      relayHlsPlayer.destroy();
+      relayHlsPlayer = null;
     }
 
     // Set up event listeners
@@ -2474,18 +2482,45 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     relayAudio.volume = 1.0;
     relayAudio.muted = false;
 
-    relayAudio.src = stationUrl;
-    console.log('[RelayPreview] Set src, attempting to play...');
-
-    relayAudio.play().then(() => {
-      console.log('[RelayPreview] Play started successfully');
-    }).catch(e => {
-      console.error('[RelayPreview] Audio play failed:', e.name, e.message);
-      // If autoplay blocked, show user a hint
-      if (e.name === 'NotAllowedError') {
-        console.log('[RelayPreview] Autoplay blocked - user interaction needed');
+    // Check if it's an HLS stream
+    if (stationUrl.includes('.m3u8')) {
+      console.log('[RelayPreview] Using HLS.js for m3u8 stream');
+      if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+        relayHlsPlayer = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true
+        });
+        relayHlsPlayer.loadSource(stationUrl);
+        relayHlsPlayer.attachMedia(relayAudio);
+        relayHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log('[RelayPreview] HLS manifest parsed, playing...');
+          relayAudio.play().catch(e => {
+            console.error('[RelayPreview] HLS play failed:', e.name, e.message);
+          });
+        });
+        relayHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+          console.error('[RelayPreview] HLS error:', data.type, data.details);
+        });
+      } else if (relayAudio.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari native HLS support
+        relayAudio.src = stationUrl;
+        relayAudio.play().catch(e => console.error('[RelayPreview] Safari HLS play failed:', e));
+      } else {
+        console.error('[RelayPreview] HLS not supported');
       }
-    });
+    } else {
+      // Direct audio stream
+      relayAudio.src = stationUrl;
+      console.log('[RelayPreview] Set src, attempting to play...');
+      relayAudio.play().then(() => {
+        console.log('[RelayPreview] Play started successfully');
+      }).catch(e => {
+        console.error('[RelayPreview] Audio play failed:', e.name, e.message);
+        if (e.name === 'NotAllowedError') {
+          console.log('[RelayPreview] Autoplay blocked - user interaction needed');
+        }
+      });
+    }
   }
 
   function renderInlineRelayStations() {
@@ -2539,10 +2574,10 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         log('[Relay] Selected station:', selectedRelaySource.name, 'Live:', selectedRelaySource.isLive, 'Now playing:', selectedRelaySource.nowPlaying);
         // Update the relay preview in left panel immediately
         updateRelayPreview();
-        // Start playing the relay audio preview via cloudflared tunnel (local Node.js relay server)
-        const tunnelUrl = `https://relay.freshwax.co.uk/${selectedRelaySource.id}`;
-        console.log('[Relay] Using tunnel URL:', tunnelUrl);
-        startRelayAudioPreview(tunnelUrl);
+        // Start playing the relay audio preview - use the playbackUrl from source config
+        const previewUrl = selectedRelaySource.playbackUrl || `https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8`;
+        console.log('[Relay] Using preview URL:', previewUrl);
+        startRelayAudioPreview(previewUrl);
         // Show broadcast audio panel so DJ can check levels before going live
         document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
         // Set up relay audio analysers for meters
@@ -6663,8 +6698,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     // Check for relay mode using the mode toggle
     const isRelayMode = currentStreamMode === 'relay';
-    // Use cloudflared tunnel URL for relay (local Node.js server provides CORS headers)
-    const userRelayUrl = isRelayMode && selectedRelaySource ? `https://relay.freshwax.co.uk/${selectedRelaySource.id}` : null;
+    // Use the configured playback URL for relay (HLS stream from MediaMTX)
+    const userRelayUrl = isRelayMode && selectedRelaySource ? (selectedRelaySource.playbackUrl || `https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8`) : null;
     const relaySourceName = selectedRelaySource?.name || 'External Source';
     console.log('[GoLive] Relay mode:', isRelayMode, 'URL:', userRelayUrl);
 

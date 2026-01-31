@@ -794,7 +794,7 @@ export function d1RowToSlot(row: D1LivestreamSlot): any {
 export async function d1GetLiveSlots(db: D1Database): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM livestream_slots WHERE status = 'live' ORDER BY start_time ASC`
+      `SELECT id, data FROM livestream_slots WHERE status = 'live' ORDER BY start_time ASC`
     ).all();
 
     return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
@@ -809,7 +809,7 @@ export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Pr
   try {
     const now = fromTime || new Date().toISOString();
     const { results } = await db.prepare(
-      `SELECT data FROM livestream_slots
+      `SELECT id, data FROM livestream_slots
        WHERE status IN ('scheduled', 'in_lobby', 'live')
        AND end_time > ?
        ORDER BY start_time ASC
@@ -827,7 +827,7 @@ export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Pr
 export async function d1GetSlotById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(
-      `SELECT data FROM livestream_slots WHERE id = ?`
+      `SELECT id, data FROM livestream_slots WHERE id = ?`
     ).bind(id).first();
 
     return row ? d1RowToSlot(row) : null;
@@ -841,7 +841,7 @@ export async function d1GetSlotById(db: D1Database, id: string): Promise<any | n
 export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT data FROM livestream_slots WHERE dj_id = ? ORDER BY start_time DESC LIMIT 20`
+      `SELECT id, data FROM livestream_slots WHERE dj_id = ? ORDER BY start_time DESC LIMIT 20`
     ).bind(djId).all();
 
     return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
