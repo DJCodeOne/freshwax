@@ -1114,7 +1114,28 @@ if (typeof window !== 'undefined') {
       }));
     }
   });
-  
+
+  // Cleanup on ViewTransitions navigation (Astro)
+  // This prevents the Pusher connection from persisting to other pages
+  document.addEventListener('astro:before-swap', () => {
+    console.log('[DJLobby] ViewTransition detected - cleaning up Pusher');
+    if (pusher) {
+      // Disconnect immediately to prevent auth errors on other pages
+      pusher.disconnect();
+      pusher = null;
+      lobbyChannel = null;
+      privateChannel = null;
+      liveStatusChannel = null;
+    }
+    // Send leave beacon
+    if (currentUser) {
+      navigator.sendBeacon('/api/dj-lobby/presence', JSON.stringify({
+        action: 'leave',
+        userId: currentUser.uid
+      }));
+    }
+  });
+
   // Also handle visibility change (tab hidden)
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && currentUser) {
