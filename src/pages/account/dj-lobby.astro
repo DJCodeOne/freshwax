@@ -5183,6 +5183,14 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           // DJ is viewing their own live stream - set streaming flag
           userIsStreaming = true;
 
+          // Switch audio toggle to 'live' so DJ can monitor their output stream
+          // This ensures they hear what viewers are hearing, not the preview
+          if (typeof activeAudioSource !== 'undefined' && typeof updateAudioSourceUI === 'function') {
+            activeAudioSource = 'live';
+            updateAudioSourceUI();
+            console.log('[Stream] Switched audio toggle to LIVE for monitoring');
+          }
+
           // If this is the DJ's own relay stream and relay audio isn't playing, restart it
           // This handles the case where DJ logs out and back in while live
           if (currentStream.isRelay && currentStream.audioStreamUrl) {
@@ -7614,24 +7622,29 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       const obsVid = document.getElementById('obsVideo');
       const liveVid = document.getElementById('hlsVideo');
 
+      // Also handle audioElement for audio-only/relay streams
+      const liveAudio = document.getElementById('audioElement');
+
       if (activeAudioSource === 'preview') {
         // Preview active
         leftArrow?.classList.add('active');
         rightArrow?.classList.remove('active');
         obsControls?.classList.remove('dimmed');
         liveControls?.classList.add('dimmed');
-        // Unmute preview, mute live
+        // Unmute preview, mute live (both video and audio elements)
         if (obsVid) obsVid.muted = false;
         if (liveVid) liveVid.muted = true;
+        if (liveAudio) liveAudio.muted = true;
       } else {
         // Live active
         leftArrow?.classList.remove('active');
         rightArrow?.classList.add('active');
         obsControls?.classList.add('dimmed');
         liveControls?.classList.remove('dimmed');
-        // Mute preview, unmute live
+        // Mute preview, unmute live (both video and audio elements)
         if (obsVid) obsVid.muted = true;
         if (liveVid) liveVid.muted = false;
+        if (liveAudio) liveAudio.muted = false;
       }
     }
 
