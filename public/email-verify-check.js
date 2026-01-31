@@ -18,6 +18,7 @@ window.FreshWax.checkEmailVerified = function(action) {
       console.warn('[FreshWax] Email verification check timed out - allowing action');
       resolve(true);
     }, 5000);
+
     // First check if user is grandfathered (existing user before verification was required)
     const grandfathered = sessionStorage.getItem('fw_email_grandfathered');
     if (grandfathered === 'true') {
@@ -26,15 +27,8 @@ window.FreshWax.checkEmailVerified = function(action) {
       return;
     }
 
-    // Check sessionStorage flag (set at login for new unverified users)
-    if (sessionStorage.getItem('fw_email_unverified') === 'true') {
-      clearTimeout(timeout);
-      showVerificationModal(action);
-      resolve(false);
-      return;
-    }
-
-    // Double-check with Firebase auth state
+    // Check Firebase auth state for admin/grandfathered status BEFORE checking unverified flag
+    // This ensures admins and grandfathered users aren't blocked by stale sessionStorage flags
     try {
       const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
       const auth = getAuth();
@@ -45,7 +39,7 @@ window.FreshWax.checkEmailVerified = function(action) {
         await user.reload();
         user = auth.currentUser; // Get refreshed user object
 
-        // Admin bypass - admins never need verification
+        // Admin bypass - admins never need verification (check this FIRST)
         if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
           sessionStorage.setItem('fw_email_grandfathered', 'true');
           sessionStorage.removeItem('fw_email_unverified');
@@ -68,6 +62,14 @@ window.FreshWax.checkEmailVerified = function(action) {
             resolve(true);
             return;
           }
+        }
+
+        // Now check sessionStorage flag (only after confirming not admin/grandfathered)
+        if (sessionStorage.getItem('fw_email_unverified') === 'true') {
+          clearTimeout(timeout);
+          showVerificationModal(action);
+          resolve(false);
+          return;
         }
 
         // New user - check if email is verified
