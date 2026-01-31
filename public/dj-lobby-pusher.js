@@ -57,28 +57,58 @@ export async function initDjLobbyPusher(user, info) {
     return;
   }
 
-  // Get Firebase ID token for authentication
-  let idToken = '';
-  try {
-    idToken = await user.getIdToken();
-    console.log('[DJLobby DEBUG] Got Firebase ID token');
-  } catch (e) {
-    console.error('[DJLobby] Failed to get ID token:', e);
-  }
-
   // Enable Pusher debug logging
   window.Pusher.logToConsole = true;
 
-  // Initialize Pusher with auth token for private channels
+  // Initialize Pusher with custom authorizer that gets fresh token on each auth attempt
+  // This fixes reconnection issues where the token might be stale
   pusher = new window.Pusher(pusherConfig.key, {
     cluster: pusherConfig.cluster,
-    authEndpoint: '/api/dj-lobby/pusher-auth',
-    auth: {
-      headers: {
-        'Authorization': `Bearer ${idToken}`
-      },
-      params: {
-        user_id: user.uid
+    channelAuthorization: {
+      endpoint: '/api/dj-lobby/pusher-auth',
+      transport: 'ajax',
+      customHandler: async (params, callback) => {
+        try {
+          // Get fresh Firebase ID token on each auth attempt
+          const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+          const auth = getAuth();
+          const currentAuthUser = auth.currentUser;
+
+          if (!currentAuthUser) {
+            console.error('[DJLobby] No authenticated user for Pusher auth');
+            callback(new Error('Not authenticated'), null);
+            return;
+          }
+
+          const idToken = await currentAuthUser.getIdToken();
+          console.log('[DJLobby DEBUG] Got fresh Firebase ID token for Pusher auth');
+
+          // Make auth request with fresh token
+          const response = await fetch('/api/dj-lobby/pusher-auth', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: new URLSearchParams({
+              socket_id: params.socketId,
+              channel_name: params.channelName,
+              user_id: currentAuthUser.uid
+            })
+          });
+
+          if (!response.ok) {
+            console.error('[DJLobby] Pusher auth failed:', response.status);
+            callback(new Error(`Auth failed: ${response.status}`), null);
+            return;
+          }
+
+          const authData = await response.json();
+          callback(null, authData);
+        } catch (e) {
+          console.error('[DJLobby] Pusher auth error:', e);
+          callback(e, null);
+        }
       }
     }
   });

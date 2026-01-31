@@ -39,6 +39,9 @@ window.FreshWax.checkEmailVerified = function(action) {
         await user.reload();
         user = auth.currentUser; // Get refreshed user object
 
+        // Debug logging
+        console.log('[FreshWax] Checking user:', user.email, 'emailVerified:', user.emailVerified, 'created:', user.metadata?.creationTime);
+
         // Admin bypass - admins never need verification (check this FIRST)
         if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
           sessionStorage.setItem('fw_email_grandfathered', 'true');
@@ -81,6 +84,7 @@ window.FreshWax.checkEmailVerified = function(action) {
           resolve(true);
           return;
         } else {
+          console.log('[FreshWax] Email NOT verified - blocking. User:', user.email, 'Admin list:', ADMIN_EMAILS);
           sessionStorage.setItem('fw_email_unverified', 'true');
           clearTimeout(timeout);
           showVerificationModal(action);

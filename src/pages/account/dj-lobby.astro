@@ -1667,26 +1667,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     }
     currentUser = user;
 
-    // Check email verification for new users
-    if (window.FreshWax?.checkEmailVerified) {
-      const verified = await window.FreshWax.checkEmailVerified('access the DJ lobby');
-      if (!verified) {
-        // Show a more prominent block message for DJ lobby
-        const authGate = document.getElementById('authGate');
-        if (authGate) {
-          authGate.innerHTML = `
-            <div class="auth-content">
-              <div class="not-eligible-icon">📧</div>
-              <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Email Verification Required</h2>
-              <p style="color: #aaa; margin-bottom: 1.5rem;">Please verify your email address to access the DJ lobby.</p>
-              <a href="/verify-email" class="action-btn primary">Verify Email</a>
-              <a href="/live" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
-            </div>
-          `;
-        }
-        return;
-      }
-    }
+    // Note: Email verification removed from DJ lobby - approved DJs have already been vetted by admins
+    // Email verification is still enforced for other interactive features (comments, chat, etc.)
 
     // Set a timeout for the access check itself
     const accessCheckTimeout = setTimeout(() => {
@@ -6768,7 +6750,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Stream is live!
       log('[GoLive] Successfully went live!', result);
 
-      // Refresh stream status
+      // Refresh stream status immediately
       await loadStreamStatus();
 
       // Update UI to show we're live
@@ -6776,6 +6758,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
       // Hide ready section since we're now live
       document.getElementById('readySection')?.classList.add('hidden');
+
+      // Poll more frequently for the next 30 seconds to catch when HLS stream is ready
+      // This helps the "Live Stream" player show the stream faster
+      let fastPollCount = 0;
+      const fastPollInterval = setInterval(async () => {
+        fastPollCount++;
+        log('[GoLive] Fast poll #' + fastPollCount);
+        await loadStreamStatus();
+        // Stop after 10 polls (30 seconds) or if we have a stream with HLS
+        if (fastPollCount >= 10 || (currentStream && currentStream.hlsUrl)) {
+          clearInterval(fastPollInterval);
+          log('[GoLive] Fast polling complete');
+        }
+      }, 3000);
 
       return true;
     } else {
