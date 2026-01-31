@@ -2788,9 +2788,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Hide the playlist player container
       const embedPlayer = document.getElementById('embedPlayer');
       if (embedPlayer) embedPlayer.classList.add('hidden');
-      // Show video player for live stream
-      const videoPlayer = document.getElementById('videoPlayer');
-      if (videoPlayer) videoPlayer.classList.remove('hidden');
+      const playlistPlayer = document.getElementById('playlistPlayer');
+      if (playlistPlayer) playlistPlayer.classList.add('hidden');
+      // Don't show videoPlayer here - let live-stream.js decide which player to show
+      // (audioPlayer for relay/audio streams, videoPlayer for HLS video streams)
     }
   }
 
