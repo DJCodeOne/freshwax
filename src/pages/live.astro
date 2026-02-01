@@ -4269,7 +4269,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Show "OFFLINE" and hide "On Air"
       // Only update UI to offline state if live-stream.js hasn't detected a stream
       // This prevents race conditions where schedule API says offline but stream is actually live
-      if (!window.streamDetectedThisSession && !window.isLiveStreamActive) {
+      // Also check currentStreamData which is preserved across View Transitions
+      if (!window.streamDetectedThisSession && !window.isLiveStreamActive && !window.currentStreamData) {
         if (liveStatusText) {
           liveStatusText.textContent = 'OFFLINE';
           liveStatusText.classList.remove('hidden');
@@ -5255,7 +5256,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
       if (npTrackTitle) npTrackTitle.textContent = '';
       // Don't overwrite controlsDjName if live stream is active (preserves relay red text)
-      if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession) controlsDjName.textContent = '--';
+      // Also check currentStreamData which is preserved across View Transitions
+      if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession && !window.currentStreamData) controlsDjName.textContent = '--';
       if (bottomDurationBox) bottomDurationBox.style.display = 'none';
       if (streamGenre) streamGenre.style.display = '';
     }
@@ -5290,7 +5292,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/live-stream.js?v=20260201-fix-djinfo2"></script>
+<script type="module" src="/live-stream.js?v=20260201-fix-djinfo3"></script>
 
 <script>
   // Auto-hide header on live page

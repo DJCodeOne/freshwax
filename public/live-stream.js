@@ -1490,6 +1490,12 @@ function setChatEnabled(enabled) {
 
 // Show offline state
 function showOfflineState(scheduled) {
+  // Don't show offline state if we have cached stream data (View Transitions restoration)
+  if (window.currentStreamData && (streamDetectedThisSession || window.isLiveStreamActive)) {
+    console.log('[showOfflineState] Skipping - cached stream data exists');
+    return;
+  }
+
   window.isLiveStreamActive = false;
   // Clear live stream playing state since we're offline
   setLiveStreamPlaying(false);
