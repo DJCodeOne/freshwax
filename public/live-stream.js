@@ -358,8 +358,6 @@ async function init() {
   // IMMEDIATE UI RESTORATION: If we have cached stream data from before navigation, restore UI instantly
   // This prevents the 1-2 minute delay when switching between pages with View Transitions
   if (window.isLiveStreamActive && window.currentStreamData) {
-    console.log('[Init] Restoring UI from cached stream data:', window.currentStreamData.djName || 'Relay');
-
     // Mark as detected FIRST so other handlers know not to override
     streamDetectedThisSession = true;
     window.streamDetectedThisSession = true;
@@ -371,7 +369,6 @@ async function init() {
     // Also restore AFTER a delay to override any other initialization that might reset values
     setTimeout(() => {
       if (window.currentStreamData) {
-        console.log('[Init] Delayed restoration running');
         restoreStreamUI(window.currentStreamData);
       }
     }, 200);
@@ -392,7 +389,6 @@ async function init() {
       } else {
         controlsDjName.textContent = displayName || 'DJ';
       }
-      console.log('[restoreStreamUI] Set controlsDjName to:', controlsDjName.textContent);
     }
     if (controlsSetTitle) controlsSetTitle.textContent = stream.title || 'Live Set';
     if (djInfoBar) djInfoBar.classList.add('is-live');
@@ -1507,7 +1503,6 @@ function setChatEnabled(enabled) {
 function showOfflineState(scheduled) {
   // Don't show offline state if we have cached stream data (View Transitions restoration)
   if (window.currentStreamData && (streamDetectedThisSession || window.isLiveStreamActive)) {
-    console.log('[showOfflineState] Skipping - cached stream data exists');
     return;
   }
 

@@ -988,7 +988,6 @@ export class PlaylistManager {
     const streamDetectedThisSession = (window as any).streamDetectedThisSession;
 
     if (isLiveStreamActive || streamDetectedThisSession) {
-      console.log('[PlaylistManager] Skipping disableEmojis - live stream active');
       return;
     }
 
