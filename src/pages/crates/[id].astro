@@ -1,0 +1,1125 @@
+---
+// src/pages/crates/[id].astro
+// Vinyl listing detail page with full info and add to bag
+import Layout from '../../layouts/Layout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+export const prerender = false;
+
+const { id } = Astro.params;
+---
+
+<Layout
+  title="Vinyl Details - Crates"
+  description="View vinyl record details on Fresh Wax Crates"
+>
+  <Header />
+
+  <main class="vinyl-detail-main">
+    <div class="container">
+      <!-- Back Link -->
+      <a href="/crates" class="back-link">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Crates
+      </a>
+
+      <!-- Loading State -->
+      <div id="loadingState" class="loading-state">
+        <div class="spinner"></div>
+        <p>Loading vinyl details...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="errorState" class="error-state" style="display: none;">
+        <div class="error-icon">😕</div>
+        <h2>Vinyl Not Found</h2>
+        <p>This listing may have been sold or removed.</p>
+        <a href="/crates" class="back-btn">Browse Crates</a>
+      </div>
+
+      <!-- Content -->
+      <div id="vinylContent" class="vinyl-content" style="display: none;">
+        <div class="vinyl-grid">
+          <!-- Images Section -->
+          <div class="images-section">
+            <div class="main-image" id="mainImage">
+              <img src="/place-holder.webp" alt="Vinyl" id="mainImageImg" />
+              <div class="sale-badge" id="saleBadge" style="display: none;">SALE</div>
+            </div>
+            <div class="image-thumbnails" id="imageThumbnails"></div>
+
+            <!-- Waveform Player -->
+            <div class="waveform-section" id="waveformSection" style="display: none;">
+              <div class="waveform-header">
+                <span class="now-playing" id="nowPlayingText">Select a track</span>
+                <span class="track-time" id="trackTime">0:00 / 0:00</span>
+              </div>
+              <canvas class="waveform-canvas" id="waveformCanvas" width="400" height="50"></canvas>
+              <div class="volume-control">
+                <svg class="volume-icon" fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
+                  <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+                </svg>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Details Section -->
+          <div class="details-section">
+            <div class="listing-header">
+              <h1 id="vinylTitle">Loading...</h1>
+              <p class="vinyl-artist" id="vinylArtist">-</p>
+            </div>
+
+            <div class="price-section">
+              <div class="price-row">
+                <span class="current-price" id="currentPrice">£0.00</span>
+                <span class="original-price" id="originalPrice" style="display: none;">£0.00</span>
+                <span class="discount-badge" id="discountBadge" style="display: none;">-0%</span>
+              </div>
+              <p class="shipping-info" id="shippingInfo">+ Shipping calculated at checkout</p>
+            </div>
+
+            <div class="meta-grid">
+              <div class="meta-item">
+                <span class="meta-label">Format</span>
+                <span class="meta-value" id="vinylFormat">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Media Condition</span>
+                <span class="meta-value condition" id="mediaCondition">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Sleeve Condition</span>
+                <span class="meta-value condition" id="sleeveCondition">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Label</span>
+                <span class="meta-value" id="vinylLabel">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Catalog #</span>
+                <span class="meta-value" id="catalogNumber">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Year</span>
+                <span class="meta-value" id="releaseYear">-</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Genre</span>
+                <span class="meta-value" id="vinylGenre">-</span>
+              </div>
+            </div>
+
+            <div class="condition-notes" id="conditionNotesSection" style="display: none;">
+              <h3>Condition Notes</h3>
+              <p id="conditionNotes"></p>
+            </div>
+
+            <div class="description-section" id="descriptionSection" style="display: none;">
+              <h3>Description</h3>
+              <p id="vinylDescription"></p>
+            </div>
+
+            <!-- Tracklist -->
+            <div class="tracklist-section" id="tracklistSection" style="display: none;">
+              <h3>Tracklist</h3>
+              <div class="tracklist" id="tracklist"></div>
+            </div>
+
+            <!-- Add to Bag -->
+            <div class="purchase-section">
+              <button class="add-to-bag-btn" id="addToBagBtn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                </svg>
+                Add to Bag
+              </button>
+              <p class="seller-info">
+                Sold by: <a href="#" id="sellerLink" class="seller-link">-</a>
+              </p>
+            </div>
+
+            <!-- Deal Description -->
+            <div class="deal-section" id="dealSection" style="display: none;">
+              <div class="deal-badge">SPECIAL DEAL</div>
+              <p id="dealDescription"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  .vinyl-detail-main {
+    background: linear-gradient(to bottom, #111827, #0f172a);
+    min-height: 100vh;
+    padding: 2rem 0 4rem;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #9ca3af;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 2rem;
+    transition: color 0.15s;
+  }
+
+  .back-link:hover {
+    color: #f97316;
+  }
+
+  .loading-state, .error-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #9ca3af;
+  }
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 3px solid #374151;
+    border-top-color: #f97316;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .error-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .error-state h2 {
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .back-btn {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+  }
+
+  .vinyl-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+
+  @media (max-width: 900px) {
+    .vinyl-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+
+  /* Images */
+  .images-section {
+    position: sticky;
+    top: 100px;
+    align-self: start;
+  }
+
+  @media (max-width: 900px) {
+    .images-section {
+      position: static;
+    }
+  }
+
+  .main-image {
+    aspect-ratio: 1;
+    background: #1f2937;
+    border: 2px solid #374151;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 1rem;
+  }
+
+  .main-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .main-image .sale-badge {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    animation: pulse-badge 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  .image-thumbnails {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .thumbnail {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #374151;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .thumbnail:hover, .thumbnail.active {
+    border-color: #f97316;
+  }
+
+  .thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Waveform Section */
+  .waveform-section {
+    margin-top: 1.5rem;
+    background: linear-gradient(135deg, #1f2937, #111827);
+    border: 2px solid #374151;
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .waveform-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .now-playing {
+    color: #f97316;
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 70%;
+  }
+
+  .track-time {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    font-family: monospace;
+  }
+
+  .waveform-canvas {
+    width: 100%;
+    height: 50px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: linear-gradient(to bottom, #0f172a, #1e293b);
+  }
+
+  .volume-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .volume-icon {
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+
+  .volume-slider {
+    flex: 1;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #374151;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+
+  .volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #f97316;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .volume-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #f97316;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+  }
+
+  /* Details */
+  .listing-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .listing-header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+
+  .vinyl-artist {
+    font-size: 1.25rem;
+    color: #f97316;
+    margin: 0;
+  }
+
+  .price-section {
+    margin-bottom: 2rem;
+  }
+
+  .price-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .current-price {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #22c55e;
+  }
+
+  .original-price {
+    font-size: 1.5rem;
+    color: #6b7280;
+    text-decoration: line-through;
+  }
+
+  .discount-badge {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+  }
+
+  .shipping-info {
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin: 0.5rem 0 0 0;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  @media (max-width: 500px) {
+    .meta-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .meta-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .meta-value {
+    font-size: 1rem;
+    color: #fff;
+    font-weight: 500;
+  }
+
+  .meta-value.condition {
+    color: #f97316;
+    font-weight: 600;
+  }
+
+  .condition-notes, .description-section, .tracklist-section {
+    margin-bottom: 2rem;
+  }
+
+  .condition-notes h3, .description-section h3, .tracklist-section h3 {
+    font-size: 1.1rem;
+    color: #fff;
+    margin: 0 0 0.75rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .condition-notes p, .description-section p {
+    color: #d1d5db;
+    line-height: 1.7;
+    margin: 0;
+    white-space: pre-wrap;
+  }
+
+  .tracklist {
+    background: rgba(31, 41, 55, 0.5);
+    border: 1px solid #374151;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .track-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .track-item:last-child {
+    border-bottom: none;
+  }
+
+  .track-item:hover {
+    background: rgba(249, 115, 22, 0.05);
+  }
+
+  .track-number {
+    color: #6b7280;
+    font-size: 0.85rem;
+    min-width: 1.5rem;
+  }
+
+  .track-play-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+    padding: 0;
+  }
+
+  .track-play-btn:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 10px rgba(249, 115, 22, 0.4);
+  }
+
+  .track-play-btn svg {
+    width: 12px;
+    height: 12px;
+    color: #fff;
+  }
+
+  .track-play-btn .pause-icon {
+    display: none;
+  }
+
+  .track-play-btn.playing .play-icon {
+    display: none;
+  }
+
+  .track-play-btn.playing .pause-icon {
+    display: block;
+  }
+
+  .track-play-btn:disabled {
+    background: #374151;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .track-play-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .track-side {
+    color: #f97316;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .track-name {
+    color: #fff;
+    font-size: 0.9rem;
+  }
+
+  .track-text {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .purchase-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #374151;
+  }
+
+  .add-to-bag-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.25rem 2rem;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .add-to-bag-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+  }
+
+  .add-to-bag-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .seller-info {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.9rem;
+    margin: 1rem 0 0 0;
+  }
+
+  .seller-link {
+    color: #f97316;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .seller-link:hover {
+    text-decoration: underline;
+  }
+
+  .deal-section {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 12px;
+  }
+
+  .deal-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .deal-section p {
+    color: #d1d5db;
+    margin: 0;
+    line-height: 1.6;
+  }
+</style>
+
+<script is:inline define:vars={{ listingId: id }}>
+  let listing = null;
+
+  async function loadListing() {
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const content = document.getElementById('vinylContent');
+
+    try {
+      const res = await fetch(`/api/vinyl/public?type=single&id=${listingId}`);
+      const data = await res.json();
+
+      if (!data.success || !data.listing) {
+        loadingState.style.display = 'none';
+        errorState.style.display = 'block';
+        return;
+      }
+
+      listing = data.listing;
+      renderListing();
+
+      loadingState.style.display = 'none';
+      content.style.display = 'block';
+
+      // Update page title
+      document.title = `${listing.title} by ${listing.artist} - Crates`;
+
+    } catch (err) {
+      console.error('Error loading listing:', err);
+      loadingState.style.display = 'none';
+      errorState.style.display = 'block';
+    }
+  }
+
+  // Convert condition abbreviation to full name
+  function getConditionName(abbr) {
+    const conditions = {
+      'M': 'Mint',
+      'NM': 'Near Mint',
+      'VG+': 'Very Good+',
+      'VG': 'Very Good',
+      'G+': 'Good+',
+      'G': 'Good',
+      'F': 'Fair',
+      'P': 'Poor'
+    };
+    return conditions[abbr] || abbr;
+  }
+
+  function renderListing() {
+    // Title and artist
+    document.getElementById('vinylTitle').textContent = listing.title || 'Untitled';
+    document.getElementById('vinylArtist').textContent = listing.artist || 'Unknown Artist';
+
+    // Price
+    const hasDiscount = listing.discountPercent && listing.discountPercent > 0;
+    document.getElementById('currentPrice').textContent = `£${(listing.price || 0).toFixed(2)}`;
+
+    if (hasDiscount && listing.originalPrice) {
+      document.getElementById('originalPrice').textContent = `£${listing.originalPrice.toFixed(2)}`;
+      document.getElementById('originalPrice').style.display = 'inline';
+      document.getElementById('discountBadge').textContent = `-${listing.discountPercent}%`;
+      document.getElementById('discountBadge').style.display = 'inline';
+      document.getElementById('saleBadge').textContent = `${listing.discountPercent}% OFF`;
+      document.getElementById('saleBadge').style.display = 'block';
+    }
+
+    // Shipping
+    if (listing.shippingCost && listing.shippingCost > 0) {
+      document.getElementById('shippingInfo').textContent = `+ £${listing.shippingCost.toFixed(2)} shipping`;
+    }
+
+    // Meta
+    document.getElementById('vinylFormat').textContent = listing.format || '-';
+    document.getElementById('mediaCondition').textContent = getConditionName(listing.mediaCondition) || '-';
+    document.getElementById('sleeveCondition').textContent = getConditionName(listing.sleeveCondition) || '-';
+    document.getElementById('vinylLabel').textContent = listing.label || '-';
+    document.getElementById('catalogNumber').textContent = listing.catalogNumber || '-';
+    document.getElementById('releaseYear').textContent = listing.releaseYear || '-';
+    document.getElementById('vinylGenre').textContent = listing.genre || '-';
+
+    // Condition notes
+    if (listing.conditionNotes) {
+      document.getElementById('conditionNotes').textContent = listing.conditionNotes;
+      document.getElementById('conditionNotesSection').style.display = 'block';
+    }
+
+    // Description
+    if (listing.description) {
+      document.getElementById('vinylDescription').textContent = listing.description;
+      document.getElementById('descriptionSection').style.display = 'block';
+    }
+
+    // Tracklist with inline play buttons
+    if (listing.tracks && listing.tracks.length > 0) {
+      const tracklistEl = document.getElementById('tracklist');
+      const hasSamples = listing.tracks.some(t => t.audioSampleUrl);
+
+      tracklistEl.innerHTML = listing.tracks.map((track, index) => `
+        <div class="track-item" data-track-index="${index}">
+          <span class="track-number">${index + 1}.</span>
+          <button class="track-play-btn" data-track-index="${index}" data-audio-url="${track.audioSampleUrl || ''}" data-track-name="${track.name || 'Untitled'}" ${!track.audioSampleUrl ? 'disabled' : ''}>
+            <svg class="play-icon" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg class="pause-icon" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+            </svg>
+          </button>
+          <span class="track-text">
+            <span class="track-side">${track.side}${track.position}:</span>
+            <span class="track-name">${track.name || 'Untitled'}</span>
+          </span>
+        </div>
+      `).join('');
+      document.getElementById('tracklistSection').style.display = 'block';
+
+      // Show waveform section if any tracks have samples
+      if (hasSamples) {
+        document.getElementById('waveformSection').style.display = 'block';
+        initWaveformPlayer();
+      }
+
+      // Initialize track play buttons
+      initTrackButtons();
+    }
+
+    // Images
+    if (listing.images && listing.images.length > 0) {
+      document.getElementById('mainImageImg').src = listing.images[0];
+
+      if (listing.images.length > 1) {
+        const thumbnailsEl = document.getElementById('imageThumbnails');
+        thumbnailsEl.innerHTML = listing.images.map((img, i) => `
+          <div class="thumbnail ${i === 0 ? 'active' : ''}" data-index="${i}">
+            <img src="${img}" alt="Image ${i + 1}" />
+          </div>
+        `).join('');
+
+        // Add click handlers
+        thumbnailsEl.querySelectorAll('.thumbnail').forEach(thumb => {
+          thumb.addEventListener('click', () => {
+            const index = parseInt(thumb.dataset.index);
+            document.getElementById('mainImageImg').src = listing.images[index];
+            thumbnailsEl.querySelectorAll('.thumbnail').forEach(t => t.classList.remove('active'));
+            thumb.classList.add('active');
+          });
+        });
+      }
+    }
+
+    // Seller
+    document.getElementById('sellerLink').textContent = listing.sellerName || 'Unknown Seller';
+    document.getElementById('sellerLink').href = `/crates?collection=${listing.sellerId}`;
+
+    // Deal description
+    if (listing.dealDescription) {
+      document.getElementById('dealDescription').textContent = listing.dealDescription;
+      document.getElementById('dealSection').style.display = 'block';
+    }
+
+    // Add to bag button
+    document.getElementById('addToBagBtn').addEventListener('click', addToBag);
+  }
+
+  // Track player state
+  let currentAudio = null;
+  let currentButton = null;
+  let currentVolume = 0.7;
+  let waveformCtx = null;
+  let waveformCanvas = null;
+  const BARS = 60;
+
+  function initWaveformPlayer() {
+    waveformCanvas = document.getElementById('waveformCanvas');
+    if (!waveformCanvas) return;
+
+    const container = waveformCanvas.parentElement;
+    waveformCanvas.width = container.offsetWidth - 32 || 400;
+    waveformCanvas.height = 50;
+    waveformCtx = waveformCanvas.getContext('2d');
+    drawWaveform(0, false);
+
+    // Click to seek
+    waveformCanvas.onclick = function(e) {
+      if (!currentAudio || !currentAudio.duration) return;
+      const rect = waveformCanvas.getBoundingClientRect();
+      const progress = (e.clientX - rect.left) / rect.width;
+      currentAudio.currentTime = progress * currentAudio.duration;
+    };
+
+    // Volume slider
+    const volumeSlider = document.getElementById('volumeSlider');
+    if (volumeSlider) {
+      volumeSlider.oninput = function() {
+        currentVolume = volumeSlider.value / 100;
+        if (currentAudio) currentAudio.volume = currentVolume;
+      };
+    }
+  }
+
+  function initTrackButtons() {
+    const playButtons = document.querySelectorAll('.track-play-btn:not([disabled])');
+
+    playButtons.forEach(button => {
+      button.onclick = function() {
+        const index = button.dataset.trackIndex;
+        const audioUrl = button.dataset.audioUrl;
+        const trackName = button.dataset.trackName;
+
+        if (!audioUrl) return;
+
+        // If clicking the same track that's playing, pause it
+        if (currentButton === button && currentAudio && !currentAudio.paused) {
+          currentAudio.pause();
+          button.classList.remove('playing');
+          drawWaveform(currentAudio.currentTime / currentAudio.duration, false);
+          document.getElementById('nowPlayingText').textContent = 'Paused: ' + trackName;
+          return;
+        }
+
+        // Stop any currently playing audio
+        if (currentAudio && !currentAudio.paused) {
+          currentAudio.pause();
+          if (currentButton) {
+            currentButton.classList.remove('playing');
+          }
+        }
+
+        // Create or get audio element
+        let audio = document.querySelector(`audio[data-track-index="${index}"]`);
+        if (!audio) {
+          audio = document.createElement('audio');
+          audio.dataset.trackIndex = index;
+          audio.src = audioUrl;
+          audio.preload = 'metadata';
+          audio.volume = currentVolume;
+          document.body.appendChild(audio);
+
+          audio.ontimeupdate = function() {
+            if (audio === currentAudio && audio.duration && isFinite(audio.duration)) {
+              const progress = audio.currentTime / audio.duration;
+              drawWaveform(progress, !audio.paused);
+              updateTrackTime(audio.currentTime, audio.duration);
+            }
+          };
+
+          audio.onended = function() {
+            button.classList.remove('playing');
+            drawWaveform(0, false);
+            updateTrackTime(0, audio.duration);
+            document.getElementById('nowPlayingText').textContent = 'Select a track';
+          };
+
+          audio.onerror = function() {
+            button.classList.remove('playing');
+            document.getElementById('nowPlayingText').textContent = 'Error loading track';
+            console.error('Error loading track:', audioUrl);
+          };
+        }
+
+        // Play the track
+        currentAudio = audio;
+        currentButton = button;
+        button.classList.add('playing');
+        document.getElementById('nowPlayingText').textContent = trackName;
+
+        audio.play().catch(err => {
+          console.error('Playback failed:', err);
+          button.classList.remove('playing');
+          document.getElementById('nowPlayingText').textContent = 'Playback failed';
+        });
+      };
+    });
+  }
+
+  function drawWaveform(progress, isPlaying) {
+    if (!waveformCtx || !waveformCanvas) return;
+
+    const barWidth = (waveformCanvas.width / BARS) - 1;
+    waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+
+    for (let i = 0; i < BARS; i++) {
+      const height = (Math.random() * 0.5 + 0.3) * waveformCanvas.height;
+      const x = i * (barWidth + 1);
+      const y = (waveformCanvas.height - height) / 2;
+
+      // Played = orange, Unplayed = white when playing, gray when stopped
+      if (isPlaying) {
+        waveformCtx.fillStyle = i / BARS < progress ? '#f97316' : '#ffffff';
+      } else {
+        waveformCtx.fillStyle = i / BARS < progress ? '#f97316' : '#4b5563';
+      }
+      waveformCtx.fillRect(x, y, barWidth, height);
+    }
+  }
+
+  function updateTrackTime(currentTime, duration) {
+    const timeEl = document.getElementById('trackTime');
+    if (timeEl) {
+      timeEl.textContent = `${formatTime(currentTime)} / ${formatTime(duration)}`;
+    }
+  }
+
+  function formatTime(seconds) {
+    if (!seconds || !isFinite(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  async function addToBag() {
+    const btn = document.getElementById('addToBagBtn');
+    const originalText = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = 'Adding...';
+
+    try {
+      // Create vinyl item for bag
+      const item = {
+        id: listing.id,
+        type: 'vinyl',
+        title: listing.title,
+        artist: listing.artist,
+        price: listing.price,
+        originalPrice: listing.originalPrice,
+        discountPercent: listing.discountPercent,
+        shippingCost: listing.shippingCost || 0,
+        image: listing.images && listing.images.length > 0 ? listing.images[0] : null,
+        sellerId: listing.sellerId,
+        sellerName: listing.sellerName,
+        format: listing.format,
+        condition: `${listing.mediaCondition}/${listing.sleeveCondition}`,
+        quantity: 1
+      };
+
+      // Add to localStorage bag
+      let bag = JSON.parse(localStorage.getItem('freshwax_bag') || '[]');
+
+      // Check if already in bag
+      const existingIndex = bag.findIndex(b => b.id === item.id && b.type === 'vinyl');
+      if (existingIndex >= 0) {
+        btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Already in Bag';
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }, 2000);
+        return;
+      }
+
+      bag.push(item);
+      localStorage.setItem('freshwax_bag', JSON.stringify(bag));
+
+      // Update bag count in header if exists
+      const bagCountEl = document.querySelector('.bag-count');
+      if (bagCountEl) {
+        bagCountEl.textContent = bag.length;
+        bagCountEl.style.display = 'flex';
+      }
+
+      // Dispatch event for other components
+      window.dispatchEvent(new CustomEvent('bagUpdated', { detail: { bag } }));
+
+      btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Added to Bag!';
+
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, 2000);
+
+    } catch (err) {
+      console.error('Error adding to bag:', err);
+      btn.innerHTML = 'Error - Try Again';
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }, 2000);
+    }
+  }
+
+  // Reset states before loading
+  function resetStates() {
+    const loadingState = document.getElementById('loadingState');
+    const errorState = document.getElementById('errorState');
+    const content = document.getElementById('vinylContent');
+
+    if (loadingState) loadingState.style.display = 'block';
+    if (errorState) errorState.style.display = 'none';
+    if (content) content.style.display = 'none';
+
+    // Stop any playing audio and clean up
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+    if (currentButton) {
+      currentButton.classList.remove('playing');
+      currentButton = null;
+    }
+    // Reset waveform
+    waveformCtx = null;
+    waveformCanvas = null;
+  }
+
+  // Initialize function
+  function initDetailPage() {
+    // Guard: only run on crates detail pages
+    if (!window.location.pathname.startsWith('/crates/') || window.location.pathname === '/crates/') {
+      return;
+    }
+    // Guard: check if key elements exist
+    if (!document.getElementById('vinylContent')) {
+      return;
+    }
+    resetStates();
+    loadListing();
+  }
+
+  // Run on initial load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDetailPage);
+  } else {
+    initDetailPage();
+  }
+
+  // Re-run on Astro page transitions
+  document.addEventListener('astro:page-load', initDetailPage);
+
+  // Clean up audio when leaving page
+  document.addEventListener('astro:before-swap', function() {
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio = null;
+    }
+  });
+</script>

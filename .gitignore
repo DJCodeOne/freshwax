@@ -36,6 +36,6 @@ temp/
 
 # Misc temp files
 nul
-C*/
+/C*/
 freshwax-store-firebase-adminsdk.json
 backups/
