@@ -4164,7 +4164,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     // Track live status changes for chat clear timer and playlist fallback
     // If live-stream.js already detected an active stream, don't override with slots API data
     // This handles audio-only/BUTT streams where slots API returns currentLive: null
-    if (!currentLive && window.isLiveStreamActive) {
+    if (!currentLive && (window.isLiveStreamActive || window.streamDetectedThisSession)) {
       console.log('[Schedule] Skipping offline state - live-stream.js detected active stream');
       return;
     }
@@ -4292,8 +4292,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         shareBtn.classList.remove('live-active');
       }
       
-      // Mark stream as inactive
-      window.isLiveStreamActive = false;
+      // Mark stream as inactive (only if live-stream.js hasn't detected a stream)
+      if (!window.streamDetectedThisSession) {
+        window.isLiveStreamActive = false;
+      }
 
       // Check for countdown
       const inLobby = upcoming?.filter(s => s.status === 'in_lobby') || [];
@@ -4314,8 +4316,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           schedulePlaylistFallback();
         }
 
-        // Show offline overlay if playlist isn't covering it
-        if (!playlistManager?.isPlaying) {
+        // Show offline overlay if playlist isn't covering it AND no stream was detected
+        // Double-check streamDetectedThisSession to handle race conditions with live-stream.js
+        if (!playlistManager?.isPlaying && !window.streamDetectedThisSession && !window.isLiveStreamActive) {
           offlineOverlay?.classList.remove('hidden');
           // Update offline overlay text from loading state
           if (offlineIconText) offlineIconText.textContent = 'OFFLINE';
@@ -5270,7 +5273,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/live-stream.js?v=20260201-force-hide"></script>
+<script type="module" src="/live-stream.js?v=20260201-auth-fix"></script>
 
 <script>
   // Auto-hide header on live page

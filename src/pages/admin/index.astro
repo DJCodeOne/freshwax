@@ -5,6 +5,7 @@
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 import { AwsClient } from 'aws4fetch';
 import '../../styles/admin/index.css';
 
@@ -36,6 +37,21 @@ let blogPostsData: any[] = [];
 let r2SubmissionsCount = 0;
 let r2PendingFolders: string[] = [];
 
+// Build service account key for salesLedger query
+const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+let serviceAccountKey = '';
+if (clientEmail && privateKey) {
+  serviceAccountKey = JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key: privateKey.replace(/\\n/g, '\n'),
+    client_email: clientEmail
+  });
+}
+
 try {
   const results = await Promise.allSettled([
     queryCollection('orders', { limit: 50 }),
@@ -48,7 +64,10 @@ try {
     queryCollection('payouts', { limit: 200 }),
     queryCollection('disputes', { limit: 50 }),
     queryCollection('refunds', { limit: 50 }),
-    queryCollection('salesLedger', { limit: 500 }),
+    // Use service account for salesLedger (has restricted security rules)
+    serviceAccountKey
+      ? saQueryCollection(serviceAccountKey, projectId, 'salesLedger', { limit: 500 })
+      : queryCollection('salesLedger', { limit: 500 }),
     queryCollection('blog-posts', { limit: 100 })
   ]);
 
@@ -153,13 +172,13 @@ const pendingReleases = releases.filter(r => r.status === 'pending');
 // Merch stats
 const merch = merchData;
 const lowStockMerch = merch.filter(m => {
-  if (m.variants) {
+  if (m.variants && m.variants.length > 0) {
     return m.variants.some(v => (v.stock || 0) <= 5 && (v.stock || 0) > 0);
   }
   return (m.stock || 0) <= 5 && (m.stock || 0) > 0;
 });
 const outOfStockMerch = merch.filter(m => {
-  if (m.variants) {
+  if (m.variants && m.variants.length > 0) {
     return m.variants.every(v => (v.stock || 0) === 0);
   }
   return (m.stock || 0) === 0;
@@ -365,10 +384,10 @@ Astro.response.headers.set('Pragma', 'no-cache');
       <div class="stat-detail">Need attention</div>
     </div>
     
-    <div class="stat-card" title={r2PendingFolders.length > 0 ? `Pending: ${r2PendingFolders.join(', ')}` : ''}>
+    <div class="stat-card" title={pendingReleases.length > 0 ? `Pending: ${pendingReleases.map((r: any) => r.title).join(', ')}` : ''}>
       <div class="stat-label">Live Releases</div>
       <div class="stat-value">{liveReleases.length}</div>
-      <div class="stat-detail">{r2SubmissionsCount} pending{r2PendingFolders.length > 0 ? ` (${r2PendingFolders[0].substring(0, 20)}...)` : ''}</div>
+      <div class="stat-detail">{pendingReleases.length} pending</div>
     </div>
     
     <div class="stat-card">

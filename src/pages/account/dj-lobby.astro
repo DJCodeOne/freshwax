@@ -2746,6 +2746,21 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
   
   async function initLobby() {
+    // DEBUG: Monitor audioPreview visibility changes
+    const audioPreviewEl = document.getElementById('audioPreview');
+    if (audioPreviewEl) {
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            const isHidden = audioPreviewEl.classList.contains('hidden');
+            console.log('[Stream DEBUG] audioPreview class changed! hidden=' + isHidden, new Error().stack?.split('\n').slice(0, 5));
+          }
+        });
+      });
+      observer.observe(audioPreviewEl, { attributes: true, attributeFilter: ['class'] });
+      console.log('[Stream DEBUG] MutationObserver attached to audioPreview');
+    }
+
     // Initialize livestream chat with default welcome message
     renderLivestreamMessages([]);
 
@@ -3384,34 +3399,33 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       }
     }
 
-    // Update source toggle button label to reflect current mode
+    // Update source toggle button label to reflect current mode (PREVIEW/LIVE)
     const label = document.querySelector('#audioSourceToggle .source-label');
     if (label) {
-      if (source === 'butt') {
-        label.textContent = 'BUTT';
-      } else {
-        label.textContent = broadcastAudioSource.toUpperCase();
-      }
+      // Always show current audio source mode (PREVIEW/LIVE), regardless of input type
+      label.textContent = broadcastAudioSource.toUpperCase();
     }
 
     // Update audio source indicator in broadcast panel
-    updateAudioSourceIndicator(source);
+    updateAudioSourceIndicator(source, broadcastAudioSource);
   }
 
   function updateAudioSourceIndicator(source, audioMode = null) {
     const indicator = document.getElementById('audioSourceIndicator');
     const sourceName = indicator?.querySelector('.source-name');
     if (indicator && sourceName) {
+      const mode = audioMode || broadcastAudioSource;
       if (source === 'relay') {
         indicator.classList.add('butt'); // Use same style as BUTT (red dot)
-        sourceName.textContent = 'RELAY';
+        // Show mode (PREVIEW/LIVE) for relay source
+        sourceName.textContent = mode === 'live' ? 'RELAY LIVE' : 'RELAY';
       } else if (source === 'butt') {
         indicator.classList.add('butt');
-        sourceName.textContent = 'BUTT';
+        // Show mode (PREVIEW/LIVE) for BUTT source
+        sourceName.textContent = mode === 'live' ? 'BUTT LIVE' : 'BUTT';
       } else {
         indicator.classList.remove('butt');
         // Show whether analyzing preview or live audio
-        const mode = audioMode || broadcastAudioSource;
         sourceName.textContent = mode === 'live' ? 'OBS LIVE' : 'OBS';
       }
     }
@@ -4316,13 +4330,29 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     // Source toggle button - switches between preview and live audio sources
     document.getElementById('audioSourceToggle')?.addEventListener('click', () => {
-      // In BUTT/RELAY mode, only allow toggle if HLS video is playing (live analysers available)
+      // In BUTT/RELAY mode, check if we have the appropriate audio playing
       if (currentPreviewSource === 'butt' || currentPreviewSource === 'relay') {
+        // For relay mode, check audioElement (not HLS video)
+        const liveAudio = document.getElementById('audioElement');
         const hlsVid = document.getElementById('hlsVideo');
         const hasLiveAnalysers = liveAnalyserL && liveAnalyserR;
-        if (!hlsVid || hlsVid.paused || !hasLiveAnalysers) {
-          console.log('[AudioToggle] Cannot toggle in relay mode - HLS not playing or no live analysers');
+        const hasIcecastAnalysers = icecastAnalyserL && icecastAnalyserR;
+
+        // Allow toggle if we have at least one set of analysers
+        if (!hasIcecastAnalysers && !hasLiveAnalysers) {
+          console.log('[AudioToggle] Cannot toggle - no analysers available');
           return;
+        }
+
+        // Set up live analysers if needed when switching to live mode
+        if (broadcastAudioSource === 'preview' && !hasLiveAnalysers && liveAudio && !liveAudio.paused) {
+          console.log('[AudioToggle] Setting up live analysers for relay mode');
+          const result = setupAudioMeter(liveAudio, 'LiveAudio');
+          if (result) {
+            liveAudioContext = result.audioContext;
+            liveAnalyserL = result.analyserL;
+            liveAnalyserR = result.analyserR;
+          }
         }
       }
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
@@ -4333,7 +4363,15 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       // Sync the main audio toggle to match
       activeAudioSource = broadcastAudioSource;
       updateAudioSourceUI();
-      updateAudioSourceIndicator('obs', broadcastAudioSource);
+
+      // Update indicator based on current preview source
+      if (currentPreviewSource === 'relay') {
+        updateAudioSourceIndicator('relay', broadcastAudioSource);
+      } else if (currentPreviewSource === 'butt') {
+        updateAudioSourceIndicator('butt', broadcastAudioSource);
+      } else {
+        updateAudioSourceIndicator('obs', broadcastAudioSource);
+      }
     });
 
     // Calibration button - toggle panel
@@ -5005,6 +5043,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       const noStreamTakeover = document.getElementById('noStreamTakeover');
 
       if (result.success && result.isLive && result.primaryStream) {
+        console.log('[Stream DEBUG] loadStreamStatus found LIVE stream:', result.primaryStream.djName);
         currentStream = result.primaryStream;
 
         // Set global stream ID for LiveChat component
@@ -5128,9 +5167,33 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         } else {
           // Audio-only stream (BUTT/Icecast/Relay)
           log('[Stream] Showing audio placeholder for audio-only stream');
+          console.log('[Stream DEBUG] Before: offlineState hidden?', offlineState?.classList.contains('hidden'), 'audioPreview hidden?', audioPreview?.classList.contains('hidden'));
           audioPreview?.classList.remove('hidden');
           videoPreview?.classList.add('hidden');
           offlineState?.classList.add('hidden'); // Ensure offline state is hidden
+          // Remove any fade overlay classes (they cover content with z-index: 5)
+          // For audio streams, just remove the classes directly without fade-in animation
+          const playerWrapper = document.querySelector('.preview-player');
+          if (playerWrapper) {
+            playerWrapper.classList.remove('fading-out', 'faded-out', 'fading-in');
+            console.log('[Stream DEBUG] Removed fade classes from playerWrapper');
+          }
+          console.log('[Stream DEBUG] After: offlineState hidden?', offlineState?.classList.contains('hidden'), 'audioPreview hidden?', audioPreview?.classList.contains('hidden'));
+          // Debug: Check actual element dimensions and computed styles
+          setTimeout(() => {
+            const ap = document.getElementById('audioPreview');
+            const pw = document.getElementById('previewPlayer');
+            if (ap && pw) {
+              const apRect = ap.getBoundingClientRect();
+              const pwRect = pw.getBoundingClientRect();
+              const apStyle = getComputedStyle(ap);
+              const pwClasses = pw.className;
+              console.log('[Stream DEBUG] audioPreview dimensions:', { width: apRect.width, height: apRect.height, top: apRect.top, left: apRect.left });
+              console.log('[Stream DEBUG] previewPlayer dimensions:', { width: pwRect.width, height: pwRect.height });
+              console.log('[Stream DEBUG] previewPlayer classes:', pwClasses);
+              console.log('[Stream DEBUG] audioPreview computed style:', { display: apStyle.display, visibility: apStyle.visibility, opacity: apStyle.opacity, zIndex: apStyle.zIndex });
+            }
+          }, 200);
           cleanupHlsPlayer();
 
           // Populate lobby audio placeholder with DJ info
@@ -5164,12 +5227,24 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
           // Setup audio stream with auto-play
           const audioEl = document.getElementById('audioElement');
           const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
+          console.log('[Stream DEBUG] Audio setup - audioStreamUrl:', currentStream.audioStreamUrl, 'streamUrl:', currentStream.streamUrl, 'using:', audioUrl);
           if (audioEl && audioUrl) {
             log('[Audio] Setting up audio stream:', audioUrl);
             audioEl.src = audioUrl;
-            audioEl.play().catch(e => {
+            audioEl.muted = false; // Ensure not muted
+            audioEl.volume = 1;    // Ensure full volume
+            audioEl.play().then(() => {
+              console.log('[Stream DEBUG] Audio play() succeeded, paused:', audioEl.paused, 'muted:', audioEl.muted, 'volume:', audioEl.volume);
+              // Check state again after 2 seconds to catch anything that might mute/stop it
+              setTimeout(() => {
+                console.log('[Stream DEBUG] Audio state after 2s - paused:', audioEl.paused, 'muted:', audioEl.muted, 'volume:', audioEl.volume, 'src:', audioEl.src);
+              }, 2000);
+            }).catch(e => {
               log('[Audio] Auto-play blocked, user interaction required:', e.message);
+              console.log('[Stream DEBUG] Audio play() failed:', e.message);
             });
+          } else {
+            console.log('[Stream DEBUG] Audio NOT setup - audioEl:', !!audioEl, 'audioUrl:', audioUrl);
           }
         }
 
@@ -5185,11 +5260,20 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
           // Switch audio toggle to 'live' so DJ can monitor their output stream
           // This ensures they hear what viewers are hearing, not the preview
-          if (typeof activeAudioSource !== 'undefined' && typeof updateAudioSourceUI === 'function') {
-            activeAudioSource = 'live';
-            updateAudioSourceUI();
-            console.log('[Stream] Switched audio toggle to LIVE for monitoring');
+          // Directly unmute the live audio element since toggle variables may not be ready yet
+          const liveAudioEl = document.getElementById('audioElement');
+          if (liveAudioEl) {
+            liveAudioEl.muted = false;
+            console.log('[Stream] Unmuted live audioElement for DJ monitoring');
           }
+          // Also try to update the toggle UI when it's ready
+          setTimeout(() => {
+            if (typeof activeAudioSource !== 'undefined' && typeof updateAudioSourceUI === 'function') {
+              activeAudioSource = 'live';
+              updateAudioSourceUI();
+              console.log('[Stream] Switched audio toggle to LIVE for monitoring');
+            }
+          }, 500);
 
           // If this is the DJ's own relay stream and relay audio isn't playing, restart it
           // This handles the case where DJ logs out and back in while live
@@ -5291,6 +5375,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Update stream info panel with live data
         updateStreamInfoPanel(true, currentStream);
       } else {
+        console.log('[Stream DEBUG] loadStreamStatus returned NO STREAM - hiding player');
+        console.log('[Stream DEBUG] API result:', result);
         currentStream = null;
         streamStartTime = null;
         streamEndTime = null;
@@ -5616,6 +5702,12 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         headerTimeLeft.textContent = '00:00:00.0';
         headerTimeLeft.classList.add('urgent');
       }
+      // Skip fade if current user is the streaming DJ (they can see their own stream regardless of schedule)
+      // Also skip if the stream is a relay (relay streams continue until manually ended)
+      if (currentStream && (currentStream.djId === currentUser?.uid || currentStream.isRelay)) {
+        console.log('[Stream DEBUG] Skipping fade - own stream or relay, djId:', currentStream.djId, 'isRelay:', currentStream.isRelay);
+        return;
+      }
       // Trigger fade out when time is up (only if DJ is actually changing)
       triggerStreamFadeOut();
       return;
@@ -5643,7 +5735,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     const inEventMode = isInEventMode();
 
     // In event mode, never show mid-session transitions (only at very end of entire event)
-    const skipTransitions = sameDjContinues || inEventMode;
+    // Also skip if viewing own stream or relay stream
+    const isOwnStreamOrRelay = currentStream && (currentStream.djId === currentUser?.uid || currentStream.isRelay);
+    const skipTransitions = sameDjContinues || inEventMode || isOwnStreamOrRelay;
 
     // Start fade out in last 10 seconds (only if DJ changing and not in event mode mid-session)
     if (diff <= 10000 && diff > 0 && !skipTransitions) {
@@ -5660,6 +5754,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   // Fade out video and audio gradually
   let isFadingOut = false;
   function startGradualFadeOut(progress) {
+    console.log('[Stream DEBUG] startGradualFadeOut called! progress:', progress);
     const videoEl = document.getElementById('hlsVideo');
     const audioEl = document.getElementById('audioElement');
     const playerWrapper = document.querySelector('.preview-player');
@@ -5682,6 +5777,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
   // Trigger full fade out
   function triggerStreamFadeOut() {
+    console.log('[Stream DEBUG] triggerStreamFadeOut called! Stack:', new Error().stack?.split('\n').slice(0, 5));
+    console.log('[Stream DEBUG] streamEndTime:', streamEndTime, 'now:', new Date());
     if (isFadingOut) return;
     isFadingOut = true;
 
@@ -7609,6 +7706,38 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         }
       });
     }
+
+    // Handle case where audioElement is already playing (e.g., due to autoplay or quick page load)
+    // This ensures analysers are set up even if we missed the 'play' event
+    setTimeout(() => {
+      const audioEl = document.getElementById('audioElement');
+      if (audioEl && !audioEl.paused && !liveAudioContext) {
+        console.log('[Audio] audioElement already playing, setting up live analysers');
+        const result = setupAudioMeter(audioEl, 'LiveAudio');
+        if (result) {
+          liveAudioContext = result.audioContext;
+          liveAnalyserL = result.analyserL;
+          liveAnalyserR = result.analyserR;
+          console.log('[Audio] Live audio analysers initialized from delayed check');
+        }
+        if (!liveMeterAnimationId) {
+          animateLiveMeters();
+          console.log('[Audio] Started live meters from delayed check');
+        }
+      }
+
+      // Also check relayAudio for icecast analysers
+      const relayAudio = document.getElementById('relayAudio');
+      if (relayAudio && !relayAudio.paused && !icecastAudioContext) {
+        console.log('[Audio] relayAudio already playing, setting up icecast analysers');
+        setupIcecastAnalysers(relayAudio);
+        if (!obsMeterAnimationId) {
+          animateObsMeters();
+          console.log('[Audio] Started preview meters from delayed check');
+        }
+      }
+    }, 1000); // Wait 1 second for any autoplay to complete
+
     // =============== END STEREO AUDIO METERS ===============
 
     // =============== AUDIO SOURCE TOGGLE ===============
@@ -7624,6 +7753,8 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
       // Also handle audioElement for audio-only/relay streams
       const liveAudio = document.getElementById('audioElement');
+      // Handle relayAudio for relay preview
+      const relayAudio = document.getElementById('relayAudio');
 
       if (activeAudioSource === 'preview') {
         // Preview active
@@ -7631,20 +7762,34 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         rightArrow?.classList.remove('active');
         obsControls?.classList.remove('dimmed');
         liveControls?.classList.add('dimmed');
-        // Unmute preview, mute live (both video and audio elements)
+        // Unmute preview sources (OBS video or relay audio), mute live
         if (obsVid) obsVid.muted = false;
+        if (relayAudio) relayAudio.muted = false;
+        // CRITICAL: Relay audio goes through icecastGainNode, not HTML element muted
+        if (icecastGainNode) {
+          icecastGainNode.gain.value = 1;
+          console.log('[Audio Toggle] Set icecastGainNode gain to 1 (unmuted)');
+        }
         if (liveVid) liveVid.muted = true;
         if (liveAudio) liveAudio.muted = true;
+        console.log('[Audio Toggle] Switched to PREVIEW - relayAudio muted:', relayAudio?.muted, 'liveAudio muted:', liveAudio?.muted);
       } else {
         // Live active
         leftArrow?.classList.remove('active');
         rightArrow?.classList.add('active');
         obsControls?.classList.add('dimmed');
         liveControls?.classList.remove('dimmed');
-        // Mute preview, unmute live (both video and audio elements)
+        // Mute preview sources, unmute live
         if (obsVid) obsVid.muted = true;
+        if (relayAudio) relayAudio.muted = true;
+        // CRITICAL: Relay audio goes through icecastGainNode, not HTML element muted
+        if (icecastGainNode) {
+          icecastGainNode.gain.value = 0;
+          console.log('[Audio Toggle] Set icecastGainNode gain to 0 (muted)');
+        }
         if (liveVid) liveVid.muted = false;
         if (liveAudio) liveAudio.muted = false;
+        console.log('[Audio Toggle] Switched to LIVE - relayAudio muted:', relayAudio?.muted, 'liveAudio muted:', liveAudio?.muted);
       }
     }
 
@@ -7653,24 +7798,99 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       activeAudioSource = activeAudioSource === 'preview' ? 'live' : 'preview';
       updateAudioSourceUI();
 
-      // Sync the broadcast audio panel meters to match the toggle
-      // In OBS mode, switch between preview and live analysers
-      // In BUTT mode, always uses Icecast analysers (handled in animateBroadcastMeters)
+      // Sync the broadcast audio panel meters to match the toggle for all modes
+      broadcastAudioSource = activeAudioSource;
+      const label = document.querySelector('#audioSourceToggle .source-label');
+      if (label) label.textContent = broadcastAudioSource.toUpperCase();
+
       if (currentPreviewSource === 'obs') {
-        broadcastAudioSource = activeAudioSource;
-        const label = document.querySelector('#audioSourceToggle .source-label');
-        if (label) label.textContent = broadcastAudioSource.toUpperCase();
-        // Update indicator to show which OBS source is being analyzed
         updateAudioSourceIndicator('obs', broadcastAudioSource);
+      } else if (currentPreviewSource === 'relay') {
+        updateAudioSourceIndicator('relay', broadcastAudioSource);
+      } else if (currentPreviewSource === 'butt') {
+        updateAudioSourceIndicator('butt', broadcastAudioSource);
       }
 
-      // In BUTT mode, start the live meter animation when switching to live
-      // since there's no HLS video to trigger it
-      if (currentPreviewSource === 'butt' && activeAudioSource === 'live') {
-        if (!liveMeterAnimationId && icecastAnalyserL && icecastAnalyserR) {
-          animateLiveMeters();
+      // Resume audio contexts if suspended (browser policy)
+      if (icecastAudioContext?.state === 'suspended') {
+        icecastAudioContext.resume().then(() => console.log('[Audio Toggle] Resumed icecast context'));
+      }
+      if (liveAudioContext?.state === 'suspended') {
+        liveAudioContext.resume().then(() => console.log('[Audio Toggle] Resumed live context'));
+      }
+
+      // For relay/BUTT preview mode, ensure relay audio is playing and meters running
+      if ((currentPreviewSource === 'relay' || currentPreviewSource === 'butt') && activeAudioSource === 'preview') {
+        const relayAudio = document.getElementById('relayAudio');
+        if (relayAudio && relayAudio.paused && relayAudio.src) {
+          console.log('[Audio Toggle] Starting relay audio playback');
+          relayAudio.play().catch(e => console.log('[Audio Toggle] Relay play failed:', e.message));
+        }
+        // Set up icecast analysers if not already done (handles race conditions)
+        if (relayAudio && !relayAudio.paused && !icecastAudioContext) {
+          console.log('[Audio Toggle] Setting up icecast analysers for relay audio');
+          setupIcecastAnalysers(relayAudio);
+        }
+        // Start preview LED strip animation (left side)
+        if (!obsMeterAnimationId && typeof animateObsMeters === 'function') {
+          animateObsMeters();
+          console.log('[Audio Toggle] Started preview LED meters');
+        }
+        // Restart broadcast meters if not running
+        if (!broadcastMeterAnimationId) {
+          animateBroadcastMeters();
         }
       }
+
+      // For relay/BUTT live mode, ensure live meters and audio are working
+      if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && activeAudioSource === 'live') {
+        const liveAudio = document.getElementById('audioElement');
+        if (liveAudio && liveAudio.paused && liveAudio.src) {
+          console.log('[Audio Toggle] Starting live audio playback');
+          liveAudio.play().catch(e => console.log('[Audio Toggle] Live play failed:', e.message));
+        }
+        // Set up live analysers if not already done (handles race conditions)
+        if (liveAudio && !liveAudio.paused && !liveAudioContext) {
+          console.log('[Audio Toggle] Setting up live analysers for audioElement');
+          const result = setupAudioMeter(liveAudio, 'LiveAudio');
+          if (result) {
+            liveAudioContext = result.audioContext;
+            liveAnalyserL = result.analyserL;
+            liveAnalyserR = result.analyserR;
+          }
+        }
+        // Start live LED strip animation (right side)
+        if (!liveMeterAnimationId) {
+          animateLiveMeters();
+          console.log('[Audio Toggle] Started live LED meters');
+        }
+        // Keep preview LED strip running too (shows at 50% opacity)
+        if (!obsMeterAnimationId && typeof animateObsMeters === 'function') {
+          animateObsMeters();
+        }
+        if (!broadcastMeterAnimationId) {
+          animateBroadcastMeters();
+        }
+      }
+
+      // Diagnostic logging
+      const relayEl = document.getElementById('relayAudio');
+      const liveEl = document.getElementById('audioElement');
+      console.log('[Audio Toggle] Complete state:', {
+        mode: currentPreviewSource,
+        source: activeAudioSource,
+        icecastCtx: icecastAudioContext?.state,
+        liveCtx: liveAudioContext?.state,
+        icecastGain: icecastGainNode?.gain?.value,
+        hasIcecastAnalysers: !!(icecastAnalyserL && icecastAnalyserR),
+        hasLiveAnalysers: !!(liveAnalyserL && liveAnalyserR),
+        relayPlaying: relayEl ? !relayEl.paused : 'no element',
+        relayMuted: relayEl?.muted,
+        livePlaying: liveEl ? !liveEl.paused : 'no element',
+        liveMuted: liveEl?.muted,
+        obsMeterRunning: !!obsMeterAnimationId,
+        liveMeterRunning: !!liveMeterAnimationId
+      });
     });
 
     // Initialize audio source state

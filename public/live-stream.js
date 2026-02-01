@@ -1523,6 +1523,7 @@ function showLiveStream(stream) {
     currentStream = stream;
     window.isLiveStreamActive = true;
     streamDetectedThisSession = true; // Prevent playlist updates from re-showing overlays
+    window.streamDetectedThisSession = true; // Expose globally for live.astro to check
     window.liveStreamState.currentStream = stream; // Expose for LiveChat
     window.emojiAnimationsEnabled = true; // Enable emoji animations when live
     setReactionButtonsEnabled(true); // Enable reaction buttons
@@ -4028,6 +4029,7 @@ document.addEventListener('astro:before-swap', () => {
   // Reset initialization flags
   isInitialized = false;
   streamDetectedThisSession = false;
+  window.streamDetectedThisSession = false;
 });
 
 // Re-initialize on Astro View Transitions navigation

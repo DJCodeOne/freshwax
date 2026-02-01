@@ -174,7 +174,8 @@
       "Bash(convert:*)",
       "Bash(XL 46-48\", XXL 50-52\", 3XL 54-56\"\n- Fix sitemap to escape ampersands in genre names\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(diskpart)",
-      "Bash(for i in 01-mispent 02-drift 03-the-speed-of-dark 04-entropic-consciousness)"
+      "Bash(for i in 01-mispent 02-drift 03-the-speed-of-dark 04-entropic-consciousness)",
+      "Bash(while read line)"
     ]
   }
 }
