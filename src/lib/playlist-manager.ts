@@ -1195,13 +1195,18 @@ export class PlaylistManager {
       if (djInfoBar) {
         djInfoBar.classList.remove('playlist-mode');
       }
-      if (djNameEl) {
+      // Only reset DJ name if no live stream is active (preserve relay/DJ name)
+      const isLiveStreamActive = (window as any).isLiveStreamActive;
+      const streamDetectedThisSession = (window as any).streamDetectedThisSession;
+      const currentStreamData = (window as any).currentStreamData;
+      if (djNameEl && !isLiveStreamActive && !streamDetectedThisSession && !currentStreamData) {
         djNameEl.textContent = '--';
       }
       if (labelEl) {
         labelEl.textContent = 'NOW PLAYING';
       }
-      if (djAvatarEl) {
+      // Only reset avatar if no live stream is active
+      if (djAvatarEl && !isLiveStreamActive && !streamDetectedThisSession && !currentStreamData) {
         djAvatarEl.src = '/place-holder.webp';
       }
       if (genreEl) {
