@@ -7948,6 +7948,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 
     // Initialize audio source state
     updateAudioSourceUI();
+
+    // Auto-start preview LED meters on page load (left side active by default)
+    // This ensures meters are ready to respond as soon as audio becomes available
+    if (!obsMeterAnimationId) {
+      animateObsMeters();
+      console.log('[Audio] Preview LED meters auto-started on page load');
+    }
     // =============== END AUDIO SOURCE TOGGLE ===============
 
     // Spawn Key button - Generate stream key without going live
