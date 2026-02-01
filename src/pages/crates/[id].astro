@@ -88,13 +88,13 @@ const { id } = Astro.params;
                 <span class="meta-label">Format</span>
                 <span class="meta-value" id="vinylFormat">-</span>
               </div>
-              <div class="meta-item">
+              <div class="meta-item condition-item">
                 <span class="meta-label">Media Condition</span>
-                <span class="meta-value condition" id="mediaCondition">-</span>
+                <div class="condition-badge-wrapper" id="mediaConditionBadge"></div>
               </div>
-              <div class="meta-item">
+              <div class="meta-item condition-item">
                 <span class="meta-label">Sleeve Condition</span>
-                <span class="meta-value condition" id="sleeveCondition">-</span>
+                <div class="condition-badge-wrapper" id="sleeveConditionBadge"></div>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Label</span>
@@ -493,6 +493,44 @@ const { id } = Astro.params;
     font-weight: 600;
   }
 
+  /* Condition Badges */
+  .condition-item {
+    grid-column: span 1;
+  }
+
+  .condition-badge-wrapper {
+    margin-top: 0.25rem;
+  }
+
+  .condition-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem 0.4rem 0.4rem;
+  }
+
+  .condition-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 30px;
+    padding: 0 0.5rem;
+    color: #000;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 6px;
+  }
+
+  .condition-label {
+    font-size: 0.9rem;
+    color: #fff;
+    font-weight: 600;
+  }
+
   .condition-notes, .description-section, .tracklist-section {
     margin-bottom: 2rem;
   }
@@ -720,19 +758,30 @@ const { id } = Astro.params;
     }
   }
 
-  // Convert condition abbreviation to full name
+  // Condition data with full names and colors
+  const conditionData = {
+    'M': { name: 'Mint', color: '#10b981' },           // Green
+    'NM': { name: 'Near Mint', color: '#14b8a6' },     // Teal
+    'VG+': { name: 'Very Good+', color: '#3b82f6' },   // Blue
+    'VG': { name: 'Very Good', color: '#eab308' },     // Yellow
+    'G+': { name: 'Good+', color: '#f97316' },         // Orange
+    'G': { name: 'Good', color: '#ef4444' },           // Red
+    'F': { name: 'Fair', color: '#dc2626' },           // Dark Red
+    'P': { name: 'Poor', color: '#6b7280' }            // Gray
+  };
+
   function getConditionName(abbr) {
-    const conditions = {
-      'M': 'Mint',
-      'NM': 'Near Mint',
-      'VG+': 'Very Good+',
-      'VG': 'Very Good',
-      'G+': 'Good+',
-      'G': 'Good',
-      'F': 'Fair',
-      'P': 'Poor'
-    };
-    return conditions[abbr] || abbr;
+    return conditionData[abbr]?.name || abbr;
+  }
+
+  function renderConditionBadge(abbr) {
+    const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
+    return `
+      <div class="condition-badge">
+        <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
+        <span class="condition-label">${data.name}</span>
+      </div>
+    `;
   }
 
   function renderListing() {
@@ -760,8 +809,12 @@ const { id } = Astro.params;
 
     // Meta
     document.getElementById('vinylFormat').textContent = listing.format || '-';
-    document.getElementById('mediaCondition').textContent = getConditionName(listing.mediaCondition) || '-';
-    document.getElementById('sleeveCondition').textContent = getConditionName(listing.sleeveCondition) || '-';
+
+    // Render condition badges with colors
+    const mediaBadge = document.getElementById('mediaConditionBadge');
+    const sleeveBadge = document.getElementById('sleeveConditionBadge');
+    if (mediaBadge) mediaBadge.innerHTML = renderConditionBadge(listing.mediaCondition || 'VG+');
+    if (sleeveBadge) sleeveBadge.innerHTML = renderConditionBadge(listing.sleeveCondition || 'VG+');
     document.getElementById('vinylLabel').textContent = listing.label || '-';
     document.getElementById('catalogNumber').textContent = listing.catalogNumber || '-';
     document.getElementById('releaseYear').textContent = listing.releaseYear || '-';

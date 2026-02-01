@@ -871,6 +871,48 @@ const faqs = [
     border: 1px solid rgba(220, 38, 38, 0.3);
   }
 
+  /* Condition Badges */
+  .condition-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
+  }
+
+  .condition-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+  }
+
+  .condition-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 0.35rem;
+    color: #000;
+    font-weight: 700;
+    font-size: 0.7rem;
+    border-radius: 4px;
+  }
+
+  .condition-label {
+    font-size: 0.7rem;
+    color: #d1d5db;
+    font-weight: 500;
+  }
+
+  .condition-separator {
+    color: #4b5563;
+    font-size: 0.8rem;
+  }
+
   /* Price Row */
   .vinyl-price-row {
     display: flex;
@@ -1044,19 +1086,34 @@ const faqs = [
     }
   }
 
-  // Convert condition abbreviation to full name
+  // Condition data with full names and colors
+  const conditionData = {
+    'M': { name: 'Mint', color: '#10b981' },           // Green
+    'NM': { name: 'Near Mint', color: '#14b8a6' },     // Teal
+    'VG+': { name: 'Very Good+', color: '#3b82f6' },   // Blue
+    'VG': { name: 'Very Good', color: '#eab308' },     // Yellow
+    'G+': { name: 'Good+', color: '#f97316' },         // Orange
+    'G': { name: 'Good', color: '#ef4444' },           // Red
+    'F': { name: 'Fair', color: '#dc2626' },           // Dark Red
+    'P': { name: 'Poor', color: '#6b7280' }            // Gray
+  };
+
   function getConditionName(abbr) {
-    const conditions = {
-      'M': 'Mint',
-      'NM': 'Near Mint',
-      'VG+': 'Very Good+',
-      'VG': 'Very Good',
-      'G+': 'Good+',
-      'G': 'Good',
-      'F': 'Fair',
-      'P': 'Poor'
-    };
-    return conditions[abbr] || abbr;
+    return conditionData[abbr]?.name || abbr;
+  }
+
+  function getConditionColor(abbr) {
+    return conditionData[abbr]?.color || '#6b7280';
+  }
+
+  function renderConditionBadge(abbr, label) {
+    const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
+    return `
+      <div class="condition-badge" title="${label}: ${data.name}">
+        <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
+        <span class="condition-label">${data.name}</span>
+      </div>
+    `;
   }
 
   function renderListings() {
@@ -1073,8 +1130,8 @@ const faqs = [
     grid.innerHTML = allListings.map(listing => {
       const hasDiscount = listing.discountPercent && listing.discountPercent > 0;
       const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : null;
-      const mediaCondFull = getConditionName(listing.mediaCondition || 'VG+');
-      const sleeveCondFull = getConditionName(listing.sleeveCondition || 'VG+');
+      const mediaCond = listing.mediaCondition || 'VG+';
+      const sleeveCond = listing.sleeveCondition || 'VG+';
 
       return `
         <article class="vinyl-card" onclick="viewListing('${listing.id}')">
@@ -1091,8 +1148,12 @@ const faqs = [
               <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
               <div class="vinyl-meta">
                 <span class="vinyl-tag">${listing.format || 'LP'}</span>
-                <span class="vinyl-tag condition" title="Media: ${mediaCondFull} / Sleeve: ${sleeveCondFull}">${mediaCondFull} / ${sleeveCondFull}</span>
                 ${listing.releaseYear ? `<span class="vinyl-tag">${listing.releaseYear}</span>` : ''}
+              </div>
+              <div class="condition-badges">
+                ${renderConditionBadge(mediaCond, 'Media')}
+                <span class="condition-separator">/</span>
+                ${renderConditionBadge(sleeveCond, 'Sleeve')}
               </div>
               <div class="vinyl-price-row">
                 <span class="vinyl-price">£${(listing.price || 0).toFixed(2)}</span>
