@@ -1536,7 +1536,7 @@ function showOfflineState(scheduled) {
   const timeSinceSync = Date.now() - lastSyncTime;
   const recentlysynced = timeSinceSync < 3000;
 
-  if (!hasPlaylistItems && !recentlysynced) {
+  if (!hasPlaylistItems && !recentlysynced && !streamDetectedThisSession) {
     window.emojiAnimationsEnabled = false;
     setReactionButtonsEnabled(false);
     setChatEnabled(false);

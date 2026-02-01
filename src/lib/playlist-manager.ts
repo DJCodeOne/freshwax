@@ -983,6 +983,15 @@ export class PlaylistManager {
    * Disable emoji reactions, audio meters, and chat (only if no live stream active)
    */
   private disableEmojis(): void {
+    // Check if a live stream is active - don't disable anything if so
+    const isLiveStreamActive = (window as any).isLiveStreamActive;
+    const streamDetectedThisSession = (window as any).streamDetectedThisSession;
+
+    if (isLiveStreamActive || streamDetectedThisSession) {
+      console.log('[PlaylistManager] Skipping disableEmojis - live stream active');
+      return;
+    }
+
     (window as any).emojiAnimationsEnabled = false;
 
     const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
@@ -990,9 +999,6 @@ export class PlaylistManager {
       (btn as HTMLButtonElement).disabled = true;
       btn.classList.add('disabled', 'reactions-disabled');
     });
-
-    // Only disable chat if no live stream is active
-    const isLiveStreamActive = (window as any).isLiveStreamActive;
     if (!isLiveStreamActive) {
       if (typeof (window as any).setChatEnabled === 'function') {
         (window as any).setChatEnabled(false);
