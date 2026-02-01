@@ -47,6 +47,18 @@ async function setCached(key: string, data: any, ttlSeconds: number): Promise<vo
   }
 }
 
+// Delete from Cache API - exported for use by other APIs (e.g., slots.ts endStream)
+export async function invalidateStatusCache(): Promise<void> {
+  try {
+    const cache = caches.default;
+    // Delete the general status cache
+    await cache.delete(`${CACHE_BASE_URL}/general`);
+    console.log('[status] Invalidated Cache API status cache');
+  } catch (e) {
+    console.log('[status] Cache API delete not available:', e);
+  }
+}
+
 function jsonResponse(data: any, status: number, maxAge: number = 10): Response {
   return new Response(JSON.stringify(data), {
     status,

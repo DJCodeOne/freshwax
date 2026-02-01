@@ -7,6 +7,7 @@ import { broadcastLiveStatus } from '../../../lib/pusher';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
 import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
+import { invalidateStatusCache } from './status';
 
 // Helper to initialize services
 function initServices(locals: any) {
@@ -699,6 +700,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Sync to D1 (non-blocking)
       syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
 
+      // Invalidate Cloudflare Cache API cache so status returns fresh data
+      await invalidateStatusCache();
+
       // Broadcast via Pusher for instant client updates
       await broadcastLiveStatus('stream-started', {
         djId,
@@ -970,6 +974,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await kvDelete('general', { prefix: 'status' });
       console.log('[livestream/slots] Invalidated KV status cache');
 
+      // Invalidate Cloudflare Cache API cache (used by status.ts)
+      await invalidateStatusCache();
+
       // Broadcast via Pusher for instant client updates
       await broadcastLiveStatus('stream-ended', {
         djId: slot.djId,
@@ -1237,6 +1244,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Sync to D1 (non-blocking)
         syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
 
+        // Invalidate Cloudflare Cache API cache so status returns fresh data
+        await invalidateStatusCache();
+
         // Broadcast via Pusher for instant client updates
         await broadcastLiveStatus('stream-started', {
           djId,
@@ -1436,6 +1446,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Sync to D1 (non-blocking)
       syncSlotToD1(db, relaySlotId, { id: relaySlotId, ...newSlot });
+
+      // Invalidate Cloudflare Cache API cache so status returns fresh data
+      await invalidateStatusCache();
 
       // Broadcast via Pusher for instant client updates
       await broadcastLiveStatus('stream-started', {
