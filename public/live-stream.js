@@ -1562,7 +1562,8 @@ function showLiveStream(stream) {
     console.log('[showLiveStream] Hiding offline overlay - classList before:', offlineOverlay.className);
     offlineOverlay.classList.remove('is-loading');
     offlineOverlay.classList.add('hidden');
-    offlineOverlay.style.display = 'none'; // Force hide via inline style
+    // Use cssText to set !important which overrides CSS animations
+    offlineOverlay.style.cssText = 'display: none !important; animation: none !important;';
     console.log('[showLiveStream] Offline overlay hidden');
   }
   document.getElementById('fsOfflineOverlay')?.classList.add('hidden');
@@ -1573,7 +1574,8 @@ function showLiveStream(stream) {
   if (initOverlay) {
     console.log('[showLiveStream] Hiding initializing overlay immediately');
     initOverlay.classList.add('fade-out', 'hidden');
-    initOverlay.style.display = 'none';
+    // Use cssText to set !important which overrides CSS animations
+    initOverlay.style.cssText = 'display: none !important; animation: none !important;';
   }
 
   // Update live badge (main page) - remove loading, add live
