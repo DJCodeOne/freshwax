@@ -1044,6 +1044,21 @@ const faqs = [
     }
   }
 
+  // Convert condition abbreviation to full name
+  function getConditionName(abbr) {
+    const conditions = {
+      'M': 'Mint',
+      'NM': 'Near Mint',
+      'VG+': 'Very Good+',
+      'VG': 'Very Good',
+      'G+': 'Good+',
+      'G': 'Good',
+      'F': 'Fair',
+      'P': 'Poor'
+    };
+    return conditions[abbr] || abbr;
+  }
+
   function renderListings() {
     const grid = document.getElementById('listingsGrid');
     const empty = document.getElementById('emptyState');
@@ -1058,6 +1073,8 @@ const faqs = [
     grid.innerHTML = allListings.map(listing => {
       const hasDiscount = listing.discountPercent && listing.discountPercent > 0;
       const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : null;
+      const mediaCondFull = getConditionName(listing.mediaCondition || 'VG+');
+      const sleeveCondFull = getConditionName(listing.sleeveCondition || 'VG+');
 
       return `
         <article class="vinyl-card" onclick="viewListing('${listing.id}')">
@@ -1074,7 +1091,7 @@ const faqs = [
               <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
               <div class="vinyl-meta">
                 <span class="vinyl-tag">${listing.format || 'LP'}</span>
-                <span class="vinyl-tag condition">${listing.mediaCondition || 'VG+'} / ${listing.sleeveCondition || 'VG+'}</span>
+                <span class="vinyl-tag condition" title="Media: ${mediaCondFull} / Sleeve: ${sleeveCondFull}">${mediaCondFull} / ${sleeveCondFull}</span>
                 ${listing.releaseYear ? `<span class="vinyl-tag">${listing.releaseYear}</span>` : ''}
               </div>
               <div class="vinyl-price-row">
