@@ -2565,22 +2565,39 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         // Set up relay audio analysers for meters
         const relayAudio = document.getElementById('relayAudio');
         if (relayAudio && !icecastAudioContext) {
-          // Wait for audio to start playing before setting up analysers
-          relayAudio.addEventListener('playing', () => {
+          // Helper to set up analysers and start meters
+          const initRelayAnalysers = () => {
             if (!icecastAudioContext) {
               setupIcecastAnalysers(relayAudio);
               currentPreviewSource = 'relay';
               updateAudioSourceIndicator('relay');
               // Initialize and start broadcast meters
               initBroadcastMeters();
-              // Start preview meter animation
-              if (window.startPreviewMeterAnimation) window.startPreviewMeterAnimation();
+              // Start preview meter animation - use small delay to ensure analysers are ready
+              setTimeout(() => {
+                // Force start preview LED meters for relay mode
+                if (window.forceStartPreviewMeters) {
+                  window.forceStartPreviewMeters();
+                } else if (window.startPreviewMeterAnimation) {
+                  window.startPreviewMeterAnimation();
+                }
+              }, 100);
               // Start live output LED meters for relay mode
-              if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
-                animateLiveMeters();
-              }
+              setTimeout(() => {
+                if (window.forceStartLiveMeters) {
+                  window.forceStartLiveMeters();
+                }
+              }, 100);
             }
-          }, { once: true });
+          };
+
+          // If audio is already playing, set up immediately
+          if (!relayAudio.paused) {
+            initRelayAnalysers();
+          } else {
+            // Wait for audio to start playing before setting up analysers
+            relayAudio.addEventListener('playing', initRelayAnalysers, { once: true });
+          }
         } else if (icecastAudioContext) {
           // Analysers already set up, just update indicator and start meters
           currentPreviewSource = 'relay';
@@ -7566,6 +7583,26 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         animateObsMeters();
         console.log('[Audio] Preview LED meter animation started');
       }
+    };
+
+    // Force start preview meters (bypasses animation ID check for relay mode)
+    window.forceStartPreviewMeters = function() {
+      if (obsMeterAnimationId) {
+        cancelAnimationFrame(obsMeterAnimationId);
+        obsMeterAnimationId = null;
+      }
+      animateObsMeters();
+      console.log('[Audio] Preview LED meters force-started');
+    };
+
+    // Force start live meters (bypasses animation ID check for relay mode)
+    window.forceStartLiveMeters = function() {
+      if (liveMeterAnimationId) {
+        cancelAnimationFrame(liveMeterAnimationId);
+        liveMeterAnimationId = null;
+      }
+      animateLiveMeters();
+      console.log('[Audio] Live LED meters force-started');
     };
 
     function animateObsMeters() {
