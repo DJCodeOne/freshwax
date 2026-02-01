@@ -589,8 +589,8 @@ function handlePlaylistUpdate(event) {
       playBtn.classList.remove('playing');
     }
 
-    // Disable emojis and chat if no live stream either (but not if recently synced)
-    if (!window.isLiveStreamActive && !recentlySynced) {
+    // Disable emojis and chat if no live stream either (but not if recently synced or stream already detected)
+    if (!window.isLiveStreamActive && !recentlySynced && !streamDetectedThisSession) {
       window.emojiAnimationsEnabled = false;
       setReactionButtonsEnabled(false);
       setChatEnabled(false);

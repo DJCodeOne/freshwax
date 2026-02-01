@@ -4267,25 +4267,29 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const playlistBtnOff = document.getElementById('playlistBtn');
       if (playlistBtnOff) playlistBtnOff.classList.remove('livestream-active');
       // Show "OFFLINE" and hide "On Air"
-      if (liveStatusText) {
-        liveStatusText.textContent = 'OFFLINE';
-        liveStatusText.classList.remove('hidden');
+      // Only update UI to offline state if live-stream.js hasn't detected a stream
+      // This prevents race conditions where schedule API says offline but stream is actually live
+      if (!window.streamDetectedThisSession && !window.isLiveStreamActive) {
+        if (liveStatusText) {
+          liveStatusText.textContent = 'OFFLINE';
+          liveStatusText.classList.remove('hidden');
+        }
+        const onAirTextOff = document.getElementById('onAirText');
+        if (onAirTextOff) onAirTextOff.classList.add('hidden');
+        if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
+        if (djAvatar) djAvatar.src = '/place-holder.webp';
+
+        // Update controls DJ info bar to offline state (only if playlist isn't playing)
+        const controlsDjName = document.getElementById('controlsDjName');
+        const controlsSetTitle = document.getElementById('controlsSetTitle');
+        const djInfoBar = document.querySelector('.dj-info-bar');
+        const playlistIsPlaying = window.playlistManager?.isPlaying;
+        if (!playlistIsPlaying) {
+          if (controlsDjName) controlsDjName.textContent = '--';
+          if (controlsSetTitle) controlsSetTitle.textContent = 'Waiting for stream...';
+        }
+        if (djInfoBar) djInfoBar.classList.remove('is-live');
       }
-      const onAirTextOff = document.getElementById('onAirText');
-      if (onAirTextOff) onAirTextOff.classList.add('hidden');
-      if (streamTitle) streamTitle.innerHTML = '<span class="title-live">LIVE</span> <span class="title-session">SESSION</span>';
-      if (djAvatar) djAvatar.src = '/place-holder.webp';
-      
-      // Update controls DJ info bar to offline state (only if playlist isn't playing)
-      const controlsDjName = document.getElementById('controlsDjName');
-      const controlsSetTitle = document.getElementById('controlsSetTitle');
-      const djInfoBar = document.querySelector('.dj-info-bar');
-      const playlistIsPlaying = window.playlistManager?.isPlaying;
-      if (!playlistIsPlaying) {
-        if (controlsDjName) controlsDjName.textContent = '--';
-        if (controlsSetTitle) controlsSetTitle.textContent = 'Waiting for stream...';
-      }
-      if (djInfoBar) djInfoBar.classList.remove('is-live');
 
       // Only disable play button if playlist is NOT active
       // This prevents the button from being greyed out during tab switching when playlist is playing
