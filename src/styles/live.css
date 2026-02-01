@@ -2608,18 +2608,27 @@
     animation: autoHideOverlay 10s forwards;
   }
 
+  /* When hidden by JS, stop animation and hide immediately */
   .initializing-overlay.hidden {
-    display: none;
+    display: none !important;
+    animation: none !important;
   }
 
   .initializing-overlay.fade-out {
     opacity: 0;
     pointer-events: none;
+    animation: none; /* Stop the auto-hide animation when manually fading */
   }
 
   /* Offline overlay loading state auto-hide */
   .offline-overlay.is-loading {
     animation: autoHideOverlay 10s forwards;
+  }
+
+  /* When hidden by JS, stop animation and hide immediately */
+  .offline-overlay.hidden {
+    display: none !important;
+    animation: none !important;
   }
 
   /* CSS fallback animation to auto-hide overlays even if JS fails */
