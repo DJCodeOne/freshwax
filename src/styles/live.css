@@ -2595,7 +2595,7 @@
     transition: width 1s linear;
   }
 
-  /* Initializing Overlay */
+  /* Initializing Overlay - auto-hides after 10s via CSS animation as fallback */
   .initializing-overlay {
     position: absolute;
     inset: 0;
@@ -2605,6 +2605,7 @@
     background: rgba(0, 0, 0, 0.95);
     z-index: 25;
     transition: opacity 0.5s ease-out;
+    animation: autoHideOverlay 10s forwards;
   }
 
   .initializing-overlay.hidden {
@@ -2614,6 +2615,18 @@
   .initializing-overlay.fade-out {
     opacity: 0;
     pointer-events: none;
+  }
+
+  /* Offline overlay loading state auto-hide */
+  .offline-overlay.is-loading {
+    animation: autoHideOverlay 10s forwards;
+  }
+
+  /* CSS fallback animation to auto-hide overlays even if JS fails */
+  @keyframes autoHideOverlay {
+    0%, 80% { opacity: 1; pointer-events: auto; }
+    90% { opacity: 0.5; }
+    100% { opacity: 0; pointer-events: none; visibility: hidden; }
   }
 
   .initializing-content {
