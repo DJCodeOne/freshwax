@@ -1559,9 +1559,11 @@ function showLiveStream(stream) {
   document.getElementById('offlineState')?.classList.add('hidden');
   const offlineOverlay = document.getElementById('offlineOverlay');
   if (offlineOverlay) {
+    console.log('[showLiveStream] Hiding offline overlay - classList before:', offlineOverlay.className);
     offlineOverlay.classList.remove('is-loading');
     offlineOverlay.classList.add('hidden');
     offlineOverlay.style.display = 'none'; // Force hide via inline style
+    console.log('[showLiveStream] Offline overlay hidden');
   }
   document.getElementById('fsOfflineOverlay')?.classList.add('hidden');
   document.getElementById('liveState')?.classList.remove('hidden');
