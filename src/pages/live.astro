@@ -359,22 +359,34 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
               </div>
             </div>
           </div>
-          <!-- Inline fallback script to ensure overlay always hides -->
+          <!-- Inline fallback script to ensure overlays always hide -->
           <script>
             (function() {
-              var overlay = document.getElementById('initializingOverlay');
-              if (overlay) {
-                setTimeout(function() {
-                  if (overlay && !overlay.classList.contains('hidden')) {
-                    overlay.classList.add('fade-out');
-                  }
-                }, 5000);
-                setTimeout(function() {
-                  if (overlay) {
-                    overlay.classList.add('hidden');
-                  }
-                }, 10000);
-              }
+              var initOverlay = document.getElementById('initializingOverlay');
+              var offlineOverlay = document.getElementById('offlineOverlay');
+
+              // Fade both overlays after 5 seconds
+              setTimeout(function() {
+                if (initOverlay && !initOverlay.classList.contains('hidden')) {
+                  initOverlay.classList.add('fade-out');
+                }
+                if (offlineOverlay && offlineOverlay.classList.contains('is-loading')) {
+                  offlineOverlay.style.opacity = '0';
+                  offlineOverlay.style.transition = 'opacity 0.5s ease-out';
+                }
+              }, 5000);
+
+              // Force hide both overlays after 10 seconds
+              setTimeout(function() {
+                if (initOverlay) {
+                  initOverlay.classList.add('hidden');
+                  initOverlay.style.display = 'none';
+                }
+                if (offlineOverlay && offlineOverlay.classList.contains('is-loading')) {
+                  offlineOverlay.classList.add('hidden');
+                  offlineOverlay.style.display = 'none';
+                }
+              }, 10000);
             })();
           </script>
 
@@ -5258,7 +5270,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/live-stream.js?v=20260201-overlay-race-fix"></script>
+<script type="module" src="/live-stream.js?v=20260201-offline-fallback"></script>
 
 <script>
   // Auto-hide header on live page

@@ -312,25 +312,42 @@ const EMOJI_CATEGORIES = {
 // INITIALIZATION
 // ==========================================
 async function init() {
-  // FIRST: Start fallback timer to hide initializing overlay (ensures it always fades even if API errors)
+  // FIRST: Start fallback timer to hide overlays (ensures they always fade even if API errors)
   // This MUST be first before any code that could throw an error
   try {
     const initOverlay = document.getElementById('initializingOverlay');
-    if (initOverlay && !initOverlay.classList.contains('hidden')) {
-      console.log('[Init] Setting up overlay fallback timers');
-      setTimeout(() => {
-        if (initOverlay && !initOverlay.classList.contains('hidden') && !initOverlay.classList.contains('fade-out')) {
-          console.log('[Init] Fallback: starting overlay fade');
-          initOverlay.classList.add('fade-out');
-        }
-      }, 5000);
-      setTimeout(() => {
-        if (initOverlay && !initOverlay.classList.contains('hidden')) {
-          console.log('[Init] Fallback: hiding overlay');
-          initOverlay.classList.add('hidden');
-        }
-      }, 10000);
-    }
+    const offlineOverlay = document.getElementById('offlineOverlay');
+
+    console.log('[Init] Setting up overlay fallback timers');
+
+    // Fallback: fade out overlays after 5 seconds
+    setTimeout(() => {
+      if (initOverlay && !initOverlay.classList.contains('hidden') && !initOverlay.classList.contains('fade-out')) {
+        console.log('[Init] Fallback: starting initOverlay fade');
+        initOverlay.classList.add('fade-out');
+      }
+      // Also fade the offline overlay if it's still in loading state
+      if (offlineOverlay && offlineOverlay.classList.contains('is-loading')) {
+        console.log('[Init] Fallback: starting offlineOverlay fade');
+        offlineOverlay.style.opacity = '0';
+        offlineOverlay.style.transition = 'opacity 0.5s ease-out';
+      }
+    }, 5000);
+
+    // Fallback: force hide overlays after 10 seconds
+    setTimeout(() => {
+      if (initOverlay && !initOverlay.classList.contains('hidden')) {
+        console.log('[Init] Fallback: hiding initOverlay');
+        initOverlay.classList.add('hidden');
+        initOverlay.style.display = 'none';
+      }
+      // Force hide offline overlay if it's still in loading state
+      if (offlineOverlay && offlineOverlay.classList.contains('is-loading')) {
+        console.log('[Init] Fallback: hiding offlineOverlay (still loading after 10s)');
+        offlineOverlay.classList.add('hidden');
+        offlineOverlay.style.display = 'none';
+      }
+    }, 10000);
   } catch (e) {
     console.error('[Init] Error setting up overlay timers:', e);
   }
