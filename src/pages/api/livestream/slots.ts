@@ -1103,10 +1103,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
 
-      if (liveSlots.length > 0 && liveSlots[0].djId !== djId) {
+      if (liveSlots.length > 0) {
+        const isOwnSlot = liveSlots[0].djId === djId;
         return new Response(JSON.stringify({
           success: false,
-          error: 'Someone is already streaming. Use takeover if you want to go live.'
+          error: isOwnSlot ? 'You are already streaming' : 'Someone is already streaming. Use takeover if you want to go live.',
+          existingSlotId: isOwnSlot ? liveSlots[0].id : undefined
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
@@ -1139,17 +1141,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Check if anyone is currently live
+      // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
         limit: 1,
         skipCache: true
       });
 
-      if (liveSlots.length > 0 && liveSlots[0].djId !== djId) {
+      if (liveSlots.length > 0) {
+        const isOwnSlot = liveSlots[0].djId === djId;
         return new Response(JSON.stringify({
           success: false,
-          error: 'Someone is already streaming'
+          error: isOwnSlot ? 'You are already streaming' : 'Someone is already streaming',
+          existingSlotId: isOwnSlot ? liveSlots[0].id : undefined
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
@@ -1352,17 +1356,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Check if anyone is currently live
+      // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
         limit: 1,
         skipCache: true
       });
 
-      if (liveSlots.length > 0 && liveSlots[0].djId !== djId) {
+      if (liveSlots.length > 0) {
+        const isOwnSlot = liveSlots[0].djId === djId;
         return new Response(JSON.stringify({
           success: false,
-          error: 'Someone is already streaming'
+          error: isOwnSlot ? 'You are already streaming' : 'Someone is already streaming',
+          existingSlotId: isOwnSlot ? liveSlots[0].id : undefined
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
