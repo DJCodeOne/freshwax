@@ -4224,11 +4224,12 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       if (djAvatar) djAvatar.src = avatarToUse;
 
       // Update controls DJ info bar
+      // Skip if live-stream.js has already set this from more accurate stream data
       const controlsDjName = document.getElementById('controlsDjName');
       const controlsSetTitle = document.getElementById('controlsSetTitle');
       const djInfoBar = document.querySelector('.dj-info-bar');
-      // For relay streams, show title (now playing) instead of DJ name, in red
-      if (controlsDjName) {
+      // Only update DJ name if live-stream.js hasn't already set it (currentStreamData has more accurate relay metadata)
+      if (controlsDjName && !window.currentStreamData) {
         if (currentLive.isRelay && currentLive.title) {
           const relayTitle = currentLive.title.length > 50 ? currentLive.title.substring(0, 50) + '...' : currentLive.title;
           controlsDjName.innerHTML = `<span style="color: #ef4444;">${relayTitle}</span>`;
@@ -4236,7 +4237,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           controlsDjName.textContent = currentLive.djName || 'DJ';
         }
       }
-      if (controlsSetTitle) controlsSetTitle.textContent = currentLive.title || 'Live Set';
+      if (controlsSetTitle && !window.currentStreamData) controlsSetTitle.textContent = currentLive.title || 'Live Set';
       if (djInfoBar) djInfoBar.classList.add('is-live');
 
       offlineOverlay?.classList.add('hidden');
@@ -5301,7 +5302,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/live-stream.js?v=20260201-fix-djinfo4"></script>
+<script type="module" src="/live-stream.js?v=20260201-fix-djinfo5"></script>
 
 <script>
   // Auto-hide header on live page
