@@ -531,6 +531,30 @@ const { id } = Astro.params;
     font-weight: 600;
   }
 
+  .condition-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .condition-type {
+    font-size: 0.7rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+
+  .condition-badge-full {
+    display: flex;
+    flex-direction: column;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+  }
+
   .condition-notes, .description-section, .tracklist-section {
     margin-bottom: 2rem;
   }
@@ -780,6 +804,19 @@ const { id } = Astro.params;
       <div class="condition-badge">
         <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
         <span class="condition-label">${data.name}</span>
+      </div>
+    `;
+  }
+
+  function renderConditionBadgeWithLabel(abbr, label) {
+    const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
+    return `
+      <div class="condition-badge-full">
+        <span class="condition-type">${label}</span>
+        <div class="condition-row">
+          <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
+          <span class="condition-label">${data.name}</span>
+        </div>
       </div>
     `;
   }

@@ -881,24 +881,40 @@ const faqs = [
 
   .condition-badge {
     display: flex;
-    align-items: center;
-    gap: 0.4rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+    padding: 0.4rem 0.5rem;
+    flex: 1;
+  }
+
+  .condition-type {
+    font-size: 0.6rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .condition-row {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
   }
 
   .condition-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
-    height: 24px;
-    padding: 0 0.35rem;
+    min-width: 26px;
+    height: 22px;
+    padding: 0 0.3rem;
     color: #000;
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     border-radius: 4px;
   }
 
@@ -906,11 +922,6 @@ const faqs = [
     font-size: 0.7rem;
     color: #d1d5db;
     font-weight: 500;
-  }
-
-  .condition-separator {
-    color: #4b5563;
-    font-size: 0.8rem;
   }
 
   /* Price Row */
@@ -1110,8 +1121,11 @@ const faqs = [
     const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
     return `
       <div class="condition-badge" title="${label}: ${data.name}">
-        <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
-        <span class="condition-label">${data.name}</span>
+        <span class="condition-type">${label}</span>
+        <div class="condition-row">
+          <span class="condition-icon" style="background: ${data.color}">${abbr}</span>
+          <span class="condition-label">${data.name}</span>
+        </div>
       </div>
     `;
   }
@@ -1151,8 +1165,7 @@ const faqs = [
                 ${listing.releaseYear ? `<span class="vinyl-tag">${listing.releaseYear}</span>` : ''}
               </div>
               <div class="condition-badges">
-                ${renderConditionBadge(mediaCond, 'Media')}
-                <span class="condition-separator">/</span>
+                ${renderConditionBadge(mediaCond, 'Record')}
                 ${renderConditionBadge(sleeveCond, 'Sleeve')}
               </div>
               <div class="vinyl-price-row">
