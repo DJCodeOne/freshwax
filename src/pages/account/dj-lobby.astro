@@ -5059,11 +5059,13 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
   // =============== END BROADCAST AUDIO PANEL ===============
 
-  async function loadStreamStatus() {
+  async function loadStreamStatus(skipCache = false) {
     try {
       // Add cache buster to prevent stale cached responses
+      // Use fresh=1 to bypass server-side cache when called from Pusher events
       const cacheBuster = Date.now();
-      const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
+      const freshParam = skipCache ? '&fresh=1' : '';
+      const response = await fetch(`/api/livestream/status?_t=${cacheBuster}${freshParam}`);
       const result = await response.json();
       
       const statusDot = document.querySelector('.status-dot');

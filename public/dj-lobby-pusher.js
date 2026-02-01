@@ -160,9 +160,9 @@ export async function initDjLobbyPusher(user, info) {
 
   liveStatusChannel.bind('stream-started', (data) => {
     console.log('[DJLobby] Stream started:', data);
-    // Reload stream status to update UI
+    // Reload stream status to update UI - skip cache for fresh data
     if (window.loadStreamStatus) {
-      window.loadStreamStatus();
+      window.loadStreamStatus(true);
     }
   });
 
@@ -179,9 +179,9 @@ export async function initDjLobbyPusher(user, info) {
     }
     // Reset UI to non-streaming state
     resetStreamUI();
-    // Reload stream status to update UI
+    // Reload stream status to update UI - skip cache for fresh data
     if (window.loadStreamStatus) {
-      window.loadStreamStatus();
+      window.loadStreamStatus(true);
     }
   });
 

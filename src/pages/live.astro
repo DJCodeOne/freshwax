@@ -2855,9 +2855,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         console.log('[LiveStatus] DJ went live:', data.djName);
         // Pause playlist when DJ goes live
         pausePlaylistForStream();
-        // Trigger live-stream.js to fetch stream and load HLS player
+        // Trigger live-stream.js to fetch stream and load HLS player - skip cache for fresh data
         if (typeof window.checkLiveStatus === 'function') {
-          window.checkLiveStatus();
+          window.checkLiveStatus(true);
         }
         // Refresh schedule immediately
         scheduleCache = null;

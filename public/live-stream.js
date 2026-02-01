@@ -1330,7 +1330,7 @@ async function setupLiveStatusPusher() {
 // ==========================================
 // STREAM STATUS CHECK
 // ==========================================
-async function checkLiveStatus() {
+async function checkLiveStatus(skipCache = false) {
   try {
     // Refresh playlist manager reference (in case it wasn't ready during init)
     if (!playlistManager) {
@@ -1338,8 +1338,10 @@ async function checkLiveStatus() {
     }
 
     // Add cache buster to avoid Cloudflare caching stale responses
+    // Use fresh=1 to bypass server-side cache when called from Pusher events
     const cacheBuster = Date.now();
-    const response = await fetch(`/api/livestream/status?_t=${cacheBuster}`);
+    const freshParam = skipCache ? '&fresh=1' : '';
+    const response = await fetch(`/api/livestream/status?_t=${cacheBuster}${freshParam}`);
     const result = await response.json();
 
     console.log('[checkLiveStatus] API response:', {
