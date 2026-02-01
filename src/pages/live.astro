@@ -5257,7 +5257,16 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       if (npTrackTitle) npTrackTitle.textContent = '';
       // Don't overwrite controlsDjName if live stream is active (preserves relay red text)
       // Also check currentStreamData which is preserved across View Transitions
-      if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession && !window.currentStreamData) controlsDjName.textContent = '--';
+      console.log('[playlistUpdate] Checking DJ name reset:', {
+        isLiveStreamActive: window.isLiveStreamActive,
+        streamDetectedThisSession: window.streamDetectedThisSession,
+        hasCurrentStreamData: !!window.currentStreamData,
+        currentDjName: controlsDjName?.textContent
+      });
+      if (controlsDjName && !window.isLiveStreamActive && !window.streamDetectedThisSession && !window.currentStreamData) {
+        console.log('[playlistUpdate] RESETTING DJ name to --');
+        controlsDjName.textContent = '--';
+      }
       if (bottomDurationBox) bottomDurationBox.style.display = 'none';
       if (streamGenre) streamGenre.style.display = '';
     }
@@ -5292,7 +5301,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/live-stream.js?v=20260201-fix-djinfo3"></script>
+<script type="module" src="/live-stream.js?v=20260201-fix-djinfo4"></script>
 
 <script>
   // Auto-hide header on live page

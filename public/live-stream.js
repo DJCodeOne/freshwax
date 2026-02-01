@@ -359,10 +359,29 @@ async function init() {
   // This prevents the 1-2 minute delay when switching between pages with View Transitions
   if (window.isLiveStreamActive && window.currentStreamData) {
     console.log('[Init] Restoring UI from cached stream data:', window.currentStreamData.djName || 'Relay');
-    const stream = window.currentStreamData;
+
+    // Mark as detected FIRST so other handlers know not to override
+    streamDetectedThisSession = true;
+    window.streamDetectedThisSession = true;
+    window.emojiAnimationsEnabled = true;
+
+    // Restore UI immediately
+    restoreStreamUI(window.currentStreamData);
+
+    // Also restore AFTER a delay to override any other initialization that might reset values
+    setTimeout(() => {
+      if (window.currentStreamData) {
+        console.log('[Init] Delayed restoration running');
+        restoreStreamUI(window.currentStreamData);
+      }
+    }, 200);
+  }
+
+  // Helper function to restore stream UI from cached data
+  function restoreStreamUI(stream) {
     const displayName = stream.isRelay ? (stream.title || 'Relay Stream') : stream.djName;
 
-    // Restore DJ info bar immediately
+    // Restore DJ info bar
     const controlsDjName = document.getElementById('controlsDjName');
     const controlsSetTitle = document.getElementById('controlsSetTitle');
     const djInfoBar = document.querySelector('.dj-info-bar');
@@ -373,6 +392,7 @@ async function init() {
       } else {
         controlsDjName.textContent = displayName || 'DJ';
       }
+      console.log('[restoreStreamUI] Set controlsDjName to:', controlsDjName.textContent);
     }
     if (controlsSetTitle) controlsSetTitle.textContent = stream.title || 'Live Set';
     if (djInfoBar) djInfoBar.classList.add('is-live');
@@ -400,12 +420,7 @@ async function init() {
       initOverlay.classList.add('hidden');
     }
 
-    // Mark as detected so schedule API doesn't override
-    streamDetectedThisSession = true;
-    window.streamDetectedThisSession = true;
-
     // Enable reactions and chat
-    window.emojiAnimationsEnabled = true;
     setReactionButtonsEnabled(true);
     setChatEnabled(true);
   }
