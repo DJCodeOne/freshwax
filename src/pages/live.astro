@@ -4161,6 +4161,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     const offlineMainText = document.getElementById('offlineMainText');
     const offlineSubText = document.getElementById('offlineSubText');
     
+    // DEBUG: Log state at start of updateLiveQueueBar
+    console.log('[updateLiveQueueBar] Called with:', {
+      currentLive: currentLive ? currentLive.djName : null,
+      isLiveStreamActive: window.isLiveStreamActive,
+      streamDetectedThisSession: window.streamDetectedThisSession
+    });
+
     // Track live status changes for chat clear timer and playlist fallback
     // If live-stream.js already detected an active stream, don't override with slots API data
     // This handles audio-only/BUTT streams where slots API returns currentLive: null
@@ -4318,7 +4325,13 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
         // Show offline overlay if playlist isn't covering it AND no stream was detected
         // Double-check streamDetectedThisSession to handle race conditions with live-stream.js
+        console.log('[updateLiveQueueBar] Offline check:', {
+          playlistPlaying: playlistManager?.isPlaying,
+          streamDetected: window.streamDetectedThisSession,
+          isLiveActive: window.isLiveStreamActive
+        });
         if (!playlistManager?.isPlaying && !window.streamDetectedThisSession && !window.isLiveStreamActive) {
+          console.log('[updateLiveQueueBar] SHOWING offline overlay!');
           offlineOverlay?.classList.remove('hidden');
           // Update offline overlay text from loading state
           if (offlineIconText) offlineIconText.textContent = 'OFFLINE';
@@ -5273,7 +5286,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 </script>
 
 <script is:inline src="/email-verify-check.js"></script>
-<script type="module" src="/live-stream.js?v=20260201-auth-fix"></script>
+<script type="module" src="/live-stream.js?v=20260201-remove-overlay"></script>
 
 <script>
   // Auto-hide header on live page

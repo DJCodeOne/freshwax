@@ -1560,12 +1560,9 @@ function showLiveStream(stream) {
   document.getElementById('offlineState')?.classList.add('hidden');
   const offlineOverlay = document.getElementById('offlineOverlay');
   if (offlineOverlay) {
-    console.log('[showLiveStream] Hiding offline overlay - classList before:', offlineOverlay.className);
-    offlineOverlay.classList.remove('is-loading');
-    offlineOverlay.classList.add('hidden');
-    // Use cssText to set !important which overrides CSS animations
-    offlineOverlay.style.cssText = 'display: none !important; animation: none !important;';
-    console.log('[showLiveStream] Offline overlay hidden');
+    console.log('[showLiveStream] REMOVING offline overlay from DOM');
+    // Nuclear option: remove the element entirely to prevent any CSS from showing it
+    offlineOverlay.remove();
   }
   document.getElementById('fsOfflineOverlay')?.classList.add('hidden');
   document.getElementById('liveState')?.classList.remove('hidden');

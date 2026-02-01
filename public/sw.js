@@ -1,9 +1,9 @@
 // Fresh Wax Service Worker
 // Provides offline support and caching for PWA
 
-const CACHE_NAME = 'freshwax-v5';
-const STATIC_CACHE = 'freshwax-static-v5';
-const DYNAMIC_CACHE = 'freshwax-dynamic-v5';
+const CACHE_NAME = 'freshwax-v6';
+const STATIC_CACHE = 'freshwax-static-v6';
+const DYNAMIC_CACHE = 'freshwax-dynamic-v6';
 
 // Only cache actual static files that definitely exist
 const STATIC_ASSETS = [
