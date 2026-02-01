@@ -355,6 +355,61 @@ async function init() {
   // Check device type for optimizations
   detectMobileDevice();
 
+  // IMMEDIATE UI RESTORATION: If we have cached stream data from before navigation, restore UI instantly
+  // This prevents the 1-2 minute delay when switching between pages with View Transitions
+  if (window.isLiveStreamActive && window.currentStreamData) {
+    console.log('[Init] Restoring UI from cached stream data:', window.currentStreamData.djName || 'Relay');
+    const stream = window.currentStreamData;
+    const displayName = stream.isRelay ? (stream.title || 'Relay Stream') : stream.djName;
+
+    // Restore DJ info bar immediately
+    const controlsDjName = document.getElementById('controlsDjName');
+    const controlsSetTitle = document.getElementById('controlsSetTitle');
+    const djInfoBar = document.querySelector('.dj-info-bar');
+
+    if (controlsDjName) {
+      if (stream.isRelay && stream.title) {
+        controlsDjName.innerHTML = `<span style="color: #ef4444;">${stream.title}</span>`;
+      } else {
+        controlsDjName.textContent = displayName || 'DJ';
+      }
+    }
+    if (controlsSetTitle) controlsSetTitle.textContent = stream.title || 'Live Set';
+    if (djInfoBar) djInfoBar.classList.add('is-live');
+
+    // Restore badges and status
+    const liveBadge = document.getElementById('liveBadge');
+    const liveStatusText = document.getElementById('liveStatusText');
+    const onAirText = document.getElementById('onAirText');
+
+    if (liveBadge) {
+      liveBadge.classList.remove('is-loading');
+      liveBadge.classList.add('is-live');
+    }
+    if (liveStatusText) liveStatusText.classList.add('hidden');
+    if (onAirText) onAirText.classList.remove('hidden');
+
+    // Hide overlays
+    const offlineOverlay = document.getElementById('offlineOverlay');
+    const initOverlay = document.getElementById('initializingOverlay');
+    if (offlineOverlay) {
+      offlineOverlay.classList.add('hidden');
+      offlineOverlay.remove();
+    }
+    if (initOverlay) {
+      initOverlay.classList.add('hidden');
+    }
+
+    // Mark as detected so schedule API doesn't override
+    streamDetectedThisSession = true;
+    window.streamDetectedThisSession = true;
+
+    // Enable reactions and chat
+    window.emojiAnimationsEnabled = true;
+    setReactionButtonsEnabled(true);
+    setChatEnabled(true);
+  }
+
   // Get playlist manager from window (set by PlaylistModal.astro)
   getPlaylistManager();
 
@@ -1536,8 +1591,9 @@ function showLiveStream(stream) {
 
   try {
 
-  // Expose stream ID globally for reaction buttons
+  // Expose stream ID and data globally for reaction buttons and page navigation restoration
   window.currentStreamId = stream.id;
+  window.currentStreamData = stream; // Cache stream data for instant restoration on page nav
   window.firebaseAuth = auth;
 
   // Update TODAY'S LINEUP if relay stream (it may not be in slots API)
@@ -4013,7 +4069,10 @@ safeInit();
 
 // Cleanup before navigating away (Astro View Transitions)
 document.addEventListener('astro:before-swap', () => {
-  console.log('[LiveStream] Cleaning up before navigation...');
+  console.log('[LiveStream] Cleaning up before navigation...', {
+    isLiveStreamActive: window.isLiveStreamActive,
+    hasStreamData: !!window.currentStreamData
+  });
   // Destroy HLS player to prevent memory leaks and conflicts
   if (hlsPlayer) {
     try {
