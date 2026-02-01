@@ -466,7 +466,10 @@ async function init() {
         console.log('[Init] Already subscribed to:', window.currentStreamId);
       }
     } else {
-      console.log('[Init] Live stream active, using live stream channel');
+      // Live stream is active - ensure emojis are enabled
+      window.emojiAnimationsEnabled = true;
+      setReactionButtonsEnabled(true);
+      console.log('[Init] Live stream active, ensuring emojis enabled');
     }
   }, 500);
 
