@@ -2445,6 +2445,22 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       relayDot?.classList.add('connected');
       previewRelayDot?.classList.remove('disconnected');
       previewRelayDot?.classList.add('connected');
+
+      // Set up icecast analysers and start LED meters when audio plays
+      if (!icecastAudioContext) {
+        setupIcecastAnalysers(relayAudio);
+        console.log('[RelayPreview] Icecast analysers initialized');
+      }
+      currentPreviewSource = 'relay';
+      // Start LED meters after short delay to ensure analysers are ready
+      setTimeout(() => {
+        if (window.forceStartPreviewMeters) {
+          window.forceStartPreviewMeters();
+        }
+        if (window.forceStartLiveMeters) {
+          window.forceStartLiveMeters();
+        }
+      }, 50);
     };
 
     relayAudio.onerror = (e) => {
