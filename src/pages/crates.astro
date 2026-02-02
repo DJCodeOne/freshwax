@@ -702,17 +702,28 @@ const faqs = [
     gap: 0;
   }
 
-  /* Individual release items with red divider */
+  /* Individual release items with border */
   .seller-listings .vinyl-card {
-    padding: 1.5rem 0;
-    border-bottom: 2px solid #dc2626;
+    padding: 1.5rem;
+    border: 2px solid #374151;
+    border-radius: 0.5rem;
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
     margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
+  }
+
+  .seller-listings .vinyl-card:hover {
+    border-color: #dc2626;
   }
 
   .seller-listings .vinyl-card:last-child {
-    border-bottom: none;
     margin-bottom: 0;
+  }
+
+  /* Red divider line between releases */
+  .release-divider {
+    height: 2px;
+    background: #dc2626;
+    margin: 0 0 1.5rem 0;
   }
 
   @media (min-width: 640px) {
@@ -1450,7 +1461,11 @@ const faqs = [
             </div>
           </div>
           <div class="seller-listings">
-            ${sellerListings.map((listing, index) => renderVinylCard(listing, index)).join('')}
+            ${sellerListings.map((listing, index, arr) => {
+              const card = renderVinylCard(listing, index);
+              const divider = index < arr.length - 1 ? '<div class="release-divider"></div>' : '';
+              return card + divider;
+            }).join('')}
           </div>
         </div>
       `;
