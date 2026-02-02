@@ -43,7 +43,7 @@ const { id } = Astro.params;
       <!-- Content -->
       <div id="vinylContent" class="vinyl-content" style="display: none;">
         <div class="vinyl-grid">
-          <!-- Images Section -->
+          <!-- LEFT: Images + Buy Button (like ReleasePlate) -->
           <div class="images-section">
             <div class="main-image" id="mainImage">
               <img src="/place-holder.webp" alt="Vinyl" id="mainImageImg" />
@@ -51,23 +51,21 @@ const { id } = Astro.params;
             </div>
             <div class="image-thumbnails" id="imageThumbnails"></div>
 
-            <!-- Waveform Player -->
-            <div class="waveform-section" id="waveformSection" style="display: none;">
-              <div class="waveform-header">
-                <span class="now-playing" id="nowPlayingText">Select a track</span>
-                <span class="track-time" id="trackTime">0:00 / 0:00</span>
-              </div>
-              <canvas class="waveform-canvas" id="waveformCanvas" width="400" height="50"></canvas>
-              <div class="volume-control">
-                <svg class="volume-icon" fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-                  <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+            <!-- Add to Bag (below artwork like ReleasePlate) -->
+            <div class="purchase-section-left">
+              <button class="add-to-bag-btn" id="addToBagBtn">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                 </svg>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" />
-              </div>
+                Add to Bag
+              </button>
+              <p class="seller-info">
+                Sold by: <a href="#" id="sellerLink" class="seller-link">-</a>
+              </p>
             </div>
           </div>
 
-          <!-- Details Section -->
+          <!-- RIGHT: Details + Waveform (like ReleasePlate) -->
           <div class="details-section">
             <div class="listing-header">
               <h1 id="vinylTitle">Loading...</h1>
@@ -124,23 +122,27 @@ const { id } = Astro.params;
               <p id="vinylDescription"></p>
             </div>
 
+            <!-- Waveform Player (always visible like ReleasePlate) -->
+            <div class="waveform-section" id="waveformSection">
+              <div class="waveform-header">
+                <span class="now-playing" id="nowPlayingText">Select a track</span>
+                <span class="track-time" id="trackTime">0:00 / 0:00</span>
+              </div>
+              <div class="waveform-wrapper">
+                <canvas class="waveform-canvas" id="waveformCanvas" width="400" height="50"></canvas>
+              </div>
+              <div class="volume-control">
+                <svg class="volume-icon" fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
+                  <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+                </svg>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" />
+              </div>
+            </div>
+
             <!-- Tracklist -->
             <div class="tracklist-section" id="tracklistSection" style="display: none;">
               <h3>Tracklist</h3>
               <div class="tracklist" id="tracklist"></div>
-            </div>
-
-            <!-- Add to Bag -->
-            <div class="purchase-section">
-              <button class="add-to-bag-btn" id="addToBagBtn">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                </svg>
-                Add to Bag
-              </button>
-              <p class="seller-info">
-                Sold by: <a href="#" id="sellerLink" class="seller-link">-</a>
-              </p>
             </div>
 
             <!-- Deal Description -->
@@ -227,32 +229,45 @@ const { id } = Astro.params;
   }
 
   .vinyl-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
+    display: flex;
+    gap: 2.5rem;
+  }
+
+  .details-section {
+    flex: 1;
+    min-width: 0;
   }
 
   @media (max-width: 900px) {
     .vinyl-grid {
-      grid-template-columns: 1fr;
+      flex-direction: column;
       gap: 2rem;
+      align-items: center;
     }
   }
 
-  /* Images */
+  /* LEFT COLUMN: Images + Buy Button (ReleasePlate style) */
   .images-section {
     position: sticky;
     top: 100px;
     align-self: start;
+    flex-shrink: 0;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
   }
 
   @media (max-width: 900px) {
     .images-section {
       position: static;
+      width: 100%;
+      max-width: 350px;
+      margin: 0 auto;
     }
   }
 
   .main-image {
+    width: 100%;
     aspect-ratio: 1;
     background: #1f2937;
     border: 2px solid #374151;
@@ -266,6 +281,46 @@ const { id } = Astro.params;
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* Purchase section below artwork */
+  .purchase-section-left {
+    margin-top: 1rem;
+  }
+
+  .purchase-section-left .add-to-bag-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .purchase-section-left .add-to-bag-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+  }
+
+  .purchase-section-left .add-to-bag-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .purchase-section-left .seller-info {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin: 0.75rem 0 0 0;
   }
 
   .main-image .sale-badge {
@@ -312,20 +367,20 @@ const { id } = Astro.params;
     object-fit: cover;
   }
 
-  /* Waveform Section */
+  /* Waveform Section (ReleasePlate style) */
   .waveform-section {
-    margin-top: 1.5rem;
-    background: linear-gradient(135deg, #1f2937, #111827);
+    background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
     border: 2px solid #374151;
-    border-radius: 12px;
-    padding: 1rem;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
   }
 
   .waveform-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
   }
 
   .now-playing {
@@ -344,12 +399,21 @@ const { id } = Astro.params;
     font-family: monospace;
   }
 
+  .waveform-wrapper {
+    overflow: hidden;
+    border-radius: 4px;
+    position: relative;
+  }
+
   .waveform-canvas {
     width: 100%;
     height: 50px;
-    border-radius: 6px;
+    display: block;
+    max-width: 100%;
+    border-radius: 4px;
+    border: 2px solid #374151;
     cursor: pointer;
-    background: linear-gradient(to bottom, #0f172a, #1e293b);
+    background: linear-gradient(to bottom, #1a1a1a, #0a0a0a);
   }
 
   .volume-control {
@@ -669,47 +733,6 @@ const { id } = Astro.params;
     gap: 0.35rem;
   }
 
-  .purchase-section {
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid #374151;
-  }
-
-  .add-to-bag-btn {
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    padding: 1.25rem 2rem;
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    border: none;
-    border-radius: 12px;
-    color: #fff;
-    font-size: 1.1rem;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .add-to-bag-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
-  }
-
-  .add-to-bag-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-  }
-
-  .seller-info {
-    text-align: center;
-    color: #9ca3af;
-    font-size: 0.9rem;
-    margin: 1rem 0 0 0;
-  }
-
   .seller-link {
     color: #f97316;
     text-decoration: none;
@@ -869,6 +892,9 @@ const { id } = Astro.params;
       document.getElementById('descriptionSection').style.display = 'block';
     }
 
+    // Always initialize waveform (visible even without audio)
+    initWaveformPlayer();
+
     // Tracklist with inline play buttons
     if (listing.tracks && listing.tracks.length > 0) {
       const tracklistEl = document.getElementById('tracklist');
@@ -893,14 +919,10 @@ const { id } = Astro.params;
       `).join('');
       document.getElementById('tracklistSection').style.display = 'block';
 
-      // Show waveform section if any tracks have samples
+      // Initialize track play buttons if there are samples
       if (hasSamples) {
-        document.getElementById('waveformSection').style.display = 'block';
-        initWaveformPlayer();
+        initTrackButtons();
       }
-
-      // Initialize track play buttons
-      initTrackButtons();
     }
 
     // Images
@@ -949,14 +971,31 @@ const { id } = Astro.params;
   let waveformCanvas = null;
   const BARS = 60;
 
+  // Store static waveform pattern for consistent display
+  let staticWaveformHeights = null;
+
+  function generateStaticWaveform() {
+    // Generate a nice-looking static waveform pattern
+    staticWaveformHeights = [];
+    for (let i = 0; i < BARS; i++) {
+      // Create a natural-looking waveform shape
+      const centerBoost = 1 - Math.abs((i - BARS/2) / (BARS/2)) * 0.3;
+      const height = (Math.random() * 0.4 + 0.35) * centerBoost;
+      staticWaveformHeights.push(height);
+    }
+  }
+
   function initWaveformPlayer() {
     waveformCanvas = document.getElementById('waveformCanvas');
     if (!waveformCanvas) return;
 
     const container = waveformCanvas.parentElement;
-    waveformCanvas.width = container.offsetWidth - 32 || 400;
+    waveformCanvas.width = container.offsetWidth || 400;
     waveformCanvas.height = 50;
     waveformCtx = waveformCanvas.getContext('2d');
+
+    // Generate and draw static waveform
+    generateStaticWaveform();
     drawWaveform(0, false);
 
     // Click to seek
@@ -1055,11 +1094,17 @@ const { id } = Astro.params;
   function drawWaveform(progress, isPlaying) {
     if (!waveformCtx || !waveformCanvas) return;
 
+    // Generate static pattern if not exists
+    if (!staticWaveformHeights) {
+      generateStaticWaveform();
+    }
+
     const barWidth = (waveformCanvas.width / BARS) - 1;
     waveformCtx.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
 
     for (let i = 0; i < BARS; i++) {
-      const height = (Math.random() * 0.5 + 0.3) * waveformCanvas.height;
+      // Use static heights for consistent waveform appearance
+      const height = staticWaveformHeights[i] * waveformCanvas.height;
       const x = i * (barWidth + 1);
       const y = (waveformCanvas.height - height) / 2;
 
@@ -1179,6 +1224,7 @@ const { id } = Astro.params;
     // Reset waveform
     waveformCtx = null;
     waveformCanvas = null;
+    staticWaveformHeights = null;
   }
 
   // Initialize function

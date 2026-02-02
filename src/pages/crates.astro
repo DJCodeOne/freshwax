@@ -56,6 +56,7 @@ const faqs = [
             <div class="sidebar-title">Collections</div>
             <p class="sidebar-subtitle" id="collectionCount">Loading...</p>
           </div>
+          <div class="sidebar-red-border"></div>
 
           <nav class="collection-nav" id="collectionNav">
             <button class="collection-nav-btn active" data-collection="all">
@@ -90,20 +91,24 @@ const faqs = [
       <!-- Main Listings Content -->
       <section class="listings-section">
         <!-- Header -->
-        <div class="section-header">
-          <div class="header-pattern"></div>
-          <div class="header-content">
-            <div class="header-text">
-              <h2 class="section-title" id="sectionTitle">All Vinyl</h2>
-              <p class="section-subtitle"><span id="listingCount">0</span> records available</p>
-            </div>
-            <a href="/artist/vinyl" class="sell-btn">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-              </svg>
-              Sell Your Vinyl
-            </a>
+        <div class="section-header-card">
+          <div class="section-header-pattern"></div>
+          <div class="section-header-content">
+            <h2 class="section-title" id="sectionTitle">All Vinyl</h2>
+            <p class="section-subtitle">
+              <span id="listingCount">0</span> records available
+            </p>
           </div>
+        </div>
+
+        <!-- Sell Button -->
+        <div class="sell-btn-container">
+          <a href="/artist/vinyl" class="sell-btn">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Sell Your Vinyl
+          </a>
         </div>
 
         <!-- Mobile Collection Filter -->
@@ -255,24 +260,25 @@ const faqs = [
     .hero-subtitle { font-size: 1.1rem; letter-spacing: 0.25em; }
   }
 
-  /* Layout */
+  /* Layout - matches releases.astro */
   .crates-layout {
     display: flex;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    position: relative;
-    z-index: 1;
-    animation: fadeIn 0.5s ease-out 0.3s both;
+    min-height: 100vh;
+    background: #000;
   }
 
-  /* Sidebar */
+  /* Sidebar - matches releases.astro */
   .collections-sidebar {
-    width: 280px;
+    width: 320px;
     flex-shrink: 0;
-    padding: 1.5rem 0;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border-right: 2px solid #fff;
+    position: sticky;
+    top: 73px;
+    height: calc(100vh - 73px);
+    overflow-y: auto;
     display: none;
-    animation: fadeSlideUp 0.5s ease-out 0.4s both;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
   @media (min-width: 1024px) {
@@ -280,30 +286,35 @@ const faqs = [
   }
 
   .sidebar-inner {
-    position: sticky;
-    top: 80px;
-    background: linear-gradient(135deg, #1f2937, #111827);
-    border: 2px solid #374151;
-    border-radius: 12px;
-    overflow: hidden;
+    padding: 1.5rem;
   }
 
   .sidebar-header {
-    padding: 1.25rem;
-    border-bottom: 1px solid #374151;
+    margin-bottom: 1.5rem;
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-top: 2px solid #dc2626;
+    border-bottom: 2px solid #dc2626;
+  }
+
+  .sidebar-red-border {
+    display: none;
   }
 
   .sidebar-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    font-weight: 900;
     color: #fff;
     letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
   }
 
   .sidebar-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     color: #9ca3af;
-    margin: 0.25rem 0 0 0;
+    margin: 0;
   }
 
   .sidebar-divider {
@@ -396,56 +407,40 @@ const faqs = [
     font-size: 0.85rem;
   }
 
-  /* Main Content */
+  /* Main Content - matches releases.astro */
   .listings-section {
     flex: 1;
     min-width: 0;
-    padding: 1.5rem 0 1.5rem 1.5rem;
+    padding: 2rem 1rem 2rem 2rem;
+  }
+
+  @media (min-width: 640px) {
+    .listings-section {
+      padding: 2rem 1.5rem 2rem 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .listings-section {
+      padding: 3rem 2rem;
+    }
   }
 
   @media (max-width: 1023px) {
-    .listings-section { padding: 1.5rem 0; }
+    .listings-section {
+      padding: 1.5rem 1rem;
+    }
   }
 
-  .section-header {
-    background: linear-gradient(to bottom, #1f2937 0%, #374151 100%);
-    border-radius: 1rem;
-    padding: 2rem 1.5rem;
-    margin-bottom: 1.5rem;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    position: relative;
-    overflow: hidden;
+  .listings-inner {
+    max-width: 1100px;
+    margin: 0 auto;
   }
 
-  .header-pattern {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(rgba(220, 38, 38, 0.1) 1px, transparent 1px);
-    background-size: 20px 20px;
-    opacity: 0.5;
-  }
-
-  .header-content {
-    position: relative;
+  .sell-btn-container {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .section-title {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2rem;
-    color: #fff;
-    margin: 0;
-    letter-spacing: 0.03em;
-  }
-
-  .section-subtitle {
-    color: #9ca3af;
-    font-size: 0.9rem;
-    margin: 0.25rem 0 0 0;
+    justify-content: flex-end;
+    margin-bottom: 1.5rem;
   }
 
   .sell-btn {
@@ -664,11 +659,80 @@ const faqs = [
     color: #22c55e;
   }
 
+  /* Seller Section Headers (matches releases.astro label style) */
+  .seller-section {
+    margin-bottom: 4rem;
+    scroll-margin-top: 6rem;
+  }
+
+  .seller-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .seller-header-inner {
+    display: inline-flex;
+    align-items: flex-start;
+    background: #000;
+    border-left: 4px solid #dc2626;
+    padding: 0.75rem 1.5rem 0.75rem 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  }
+
+  .seller-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin: 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    line-height: 1.2;
+  }
+
+  .seller-count {
+    font-size: 0.875rem;
+    color: #dc2626;
+    margin: 0.125rem 0 0 0;
+  }
+
+  .seller-listings {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Individual release items with red divider */
+  .seller-listings .vinyl-card {
+    padding: 1.5rem 0;
+    border-bottom: 2px solid #dc2626;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .seller-listings .vinyl-card:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  @media (min-width: 640px) {
+    .seller-name {
+      font-size: 1.75rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .seller-name {
+      font-size: 2rem;
+    }
+  }
+
   /* Listings Grid */
   .listings-grid {
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
+    align-items: center;
   }
 
   .loading-state {
@@ -715,33 +779,31 @@ const faqs = [
 
 <style is:global>
   /* Vinyl Card Styles - Global for JS-generated content */
+  /* ReleasePlate-style 3-column layout */
   .vinyl-card {
-    background: linear-gradient(to bottom, #000000 0%, #111827 40%, #1f2937 100%);
-    border-radius: 0.75rem;
+    background: linear-gradient(to bottom, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
+    border-radius: 0;
     overflow: hidden;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: none;
+    box-shadow: none;
     transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    padding: 0.75rem;
-    gap: 1rem;
-    cursor: pointer;
+    padding: 1.5rem 0;
+    margin-bottom: 0;
+    width: 100%;
   }
 
   .vinyl-card:hover {
-    transform: translateY(-3px);
     border-color: rgba(220, 38, 38, 0.5);
     box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px rgba(220, 38, 38, 0.1);
   }
 
-  /* Mobile: Vertical layout */
+  /* Main 3-column layout */
   .vinyl-card-inner {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 1.5rem;
   }
 
-  /* Desktop: Horizontal layout */
   @media (min-width: 768px) {
     .vinyl-card-inner {
       flex-direction: row;
@@ -749,29 +811,35 @@ const faqs = [
     }
   }
 
-  /* Artwork Container */
+  /* LEFT COLUMN: Artwork + Buttons */
+  .vinyl-left-col {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .vinyl-left-col {
+      width: 256px;
+    }
+  }
+
   .vinyl-artwork {
     position: relative;
     width: 100%;
     aspect-ratio: 1;
-    border-radius: 8px;
+    border-radius: 6px;
     overflow: hidden;
-    flex-shrink: 0;
-    background: #1a1a1a;
+    background: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
   }
 
   @media (min-width: 768px) {
     .vinyl-artwork {
-      width: 180px;
-      height: 180px;
+      width: 256px;
+      height: 256px;
       aspect-ratio: auto;
-    }
-  }
-
-  @media (min-width: 1024px) {
-    .vinyl-artwork {
-      width: 200px;
-      height: 200px;
     }
   }
 
@@ -779,11 +847,6 @@ const faqs = [
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform 0.3s ease;
-  }
-
-  .vinyl-card:hover .vinyl-artwork img {
-    transform: scale(1.05);
   }
 
   .vinyl-artwork-placeholder {
@@ -792,38 +855,106 @@ const faqs = [
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 4rem;
+    font-size: 5rem;
     background: linear-gradient(135deg, #1f2937, #111827);
     color: #4b5563;
   }
 
-  /* Sale Badge */
   .sale-badge {
     position: absolute;
-    top: 8px;
-    left: 8px;
+    top: 10px;
+    left: 10px;
     background: linear-gradient(135deg, #22c55e, #16a34a);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    padding: 0.35rem 0.65rem;
+    padding: 0.4rem 0.75rem;
     border-radius: 6px;
     z-index: 5;
-    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
   }
 
-  /* Details */
-  .vinyl-details {
+  /* Buy buttons row - matches ReleasePlate */
+  .vinyl-buttons {
+    display: flex;
+    gap: 0.5rem;
+    width: 256px;
+  }
+
+  .vinyl-buy-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #111827;
+    border: none;
+    border-radius: 0.5rem;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  .vinyl-buy-btn:hover {
+    background: #000;
+  }
+
+  .vinyl-buy-btn svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .vinyl-buy-btn .btn-price {
+    color: #fff;
+    font-weight: 700;
+  }
+
+  .vinyl-view-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem;
+    background: #dc2626;
+    border: none;
+    border-radius: 0.5rem;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  .vinyl-view-btn:hover {
+    background: #b91c1c;
+  }
+
+  .vinyl-view-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+
+  /* MIDDLE COLUMN: Details */
+  .vinyl-middle-col {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 0.6rem;
+    overflow: hidden;
   }
 
   .vinyl-title {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.75rem;
+    font-size: 2rem;
     font-weight: 400;
     color: #dc2626;
     margin: 0;
@@ -834,159 +965,288 @@ const faqs = [
     text-overflow: ellipsis;
   }
 
-  @media (min-width: 768px) {
-    .vinyl-title { font-size: 2rem; }
-  }
-
-  @media (min-width: 1024px) {
-    .vinyl-title { font-size: 2.25rem; }
+  @media (min-width: 900px) {
+    .vinyl-title { font-size: 2.5rem; }
   }
 
   .vinyl-artist {
-    font-size: 1.1rem;
+    font-size: 1.35rem;
     font-weight: 600;
-    color: #e5e7eb;
+    color: #fff;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  /* Meta Tags */
-  .vinyl-meta {
+  .vinyl-seller-line {
+    font-size: 1rem;
+    color: #9ca3af;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .vinyl-seller-line span {
+    color: #fff;
+  }
+
+  /* Tags row */
+  .vinyl-tags-row {
     display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin: 0.5rem 0;
+    gap: 0.6rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin: 0.75rem 0 0.5rem 0;
+    overflow: hidden;
   }
 
   .vinyl-tag {
-    font-size: 0.75rem;
-    padding: 0.3rem 0.6rem;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.75rem;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    color: #d1d5db;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* Conditions row */
+  .vinyl-conditions-row {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: nowrap;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    overflow: hidden;
+  }
+
+  /* Meta footer (wishlist + track count) */
+  .vinyl-meta-footer {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 0.75rem;
+    font-size: 0.95rem;
     color: #9ca3af;
   }
 
-  .vinyl-tag.condition {
-    background: rgba(220, 38, 38, 0.15);
-    color: #dc2626;
-    border: 1px solid rgba(220, 38, 38, 0.3);
-  }
-
-  /* Condition Badges */
-  .condition-badges {
+  .wishlist-link {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin: 0.5rem 0;
+    gap: 0.4rem;
+    cursor: pointer;
+    transition: color 0.15s;
   }
 
-  .condition-badge {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
+  .wishlist-link:hover {
+    color: #dc2626;
+  }
+
+  .wishlist-link svg {
+    width: 18px;
+    height: 18px;
+    color: #dc2626;
+  }
+
+  .track-count-label {
+    color: #6b7280;
+  }
+
+  /* Inline Condition Badges */
+  .condition-badge-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 6px;
-    padding: 0.4rem 0.5rem;
-    flex: 1;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
-  .condition-type {
-    font-size: 0.6rem;
+  .condition-badge-inline .cond-label {
     color: #6b7280;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 500;
+    font-size: 0.7rem;
   }
 
-  .condition-row {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .condition-icon {
+  .condition-badge-inline .cond-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 26px;
+    min-width: 28px;
     height: 22px;
     padding: 0 0.3rem;
     color: #000;
     font-weight: 700;
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     border-radius: 4px;
   }
 
-  .condition-label {
-    font-size: 0.7rem;
+  .condition-badge-inline .cond-name {
     color: #d1d5db;
     font-weight: 500;
   }
 
-  /* Price Row */
-  .vinyl-price-row {
+  /* RIGHT COLUMN: Tracklist + Waveform */
+  .vinyl-right-col {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.75rem;
-    margin-top: auto;
-    padding-top: 0.5rem;
+    background: rgba(31, 41, 55, 0.6);
+    border: 1px solid #374151;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-width: 0;
   }
 
-  .vinyl-price {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #22c55e;
+  @media (min-width: 768px) {
+    .vinyl-right-col {
+      width: 300px;
+      flex-shrink: 0;
+    }
   }
 
-  .vinyl-original-price {
+  .tracklist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .tracklist-title {
     font-size: 1rem;
-    color: #6b7280;
-    text-decoration: line-through;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .vinyl-info-btn {
-    margin-left: auto;
-    padding: 0.6rem 1rem;
-    background: rgba(220, 38, 38, 0.15);
-    border: 1px solid rgba(220, 38, 38, 0.4);
-    border-radius: 6px;
-    color: #dc2626;
+  .tracklist-price {
     font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
+    color: #9ca3af;
   }
 
-  .vinyl-info-btn:hover {
-    background: rgba(220, 38, 38, 0.25);
-    border-color: #dc2626;
+  /* Track items - show 2 tracks */
+  .track-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 85px;
+    overflow-y: auto;
+    padding-right: 0.4rem;
   }
 
-  /* Seller Footer */
-  .vinyl-seller {
-    padding: 0.875rem 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  .track-list::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .track-list::-webkit-scrollbar-track {
+    background: #1f2937;
+    border-radius: 3px;
+  }
+
+  .track-list::-webkit-scrollbar-thumb {
+    background: #4b5563;
+    border-radius: 3px;
+  }
+
+  .track-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    font-size: 0.8rem;
-    color: #9ca3af;
-    background: rgba(0, 0, 0, 0.2);
-    margin: 0 -0.75rem -0.75rem -0.75rem;
-    border-radius: 0 0 0.65rem 0.65rem;
+    gap: 0.6rem;
+    padding: 0.4rem 0;
   }
 
-  .vinyl-seller-name {
+  .track-play-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #374151;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+
+  .track-play-btn:hover {
+    background: #4b5563;
+  }
+
+  .track-play-btn svg {
+    width: 14px;
+    height: 14px;
     color: #fff;
-    font-weight: 500;
   }
 
-  .vinyl-genre {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 0.2rem 0.5rem;
+  .track-name {
+    flex: 1;
+    font-size: 0.95rem;
+    color: #d1d5db;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .track-num {
+    color: #6b7280;
+    margin-right: 0.35rem;
+  }
+
+  /* Waveform */
+  .vinyl-waveform {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: auto;
+  }
+
+  .waveform-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+
+  .waveform-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+  }
+
+  .waveform-label span {
+    color: #dc2626;
+  }
+
+  .waveform-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .waveform-controls svg {
+    width: 18px;
+    height: 18px;
+    color: #6b7280;
+  }
+
+  .waveform-canvas {
+    width: 100%;
+    height: 50px;
+    display: block;
     border-radius: 4px;
-    font-size: 0.75rem;
+    background: linear-gradient(to bottom, #0f172a, #1e293b);
   }
 </style>
 
@@ -1130,6 +1390,17 @@ const faqs = [
     `;
   }
 
+  function renderConditionBadgeInline(abbr, label) {
+    const data = conditionData[abbr] || { name: abbr, color: '#6b7280' };
+    return `
+      <span class="condition-badge-inline" title="${label}: ${data.name}">
+        <span class="cond-label">${label}</span>
+        <span class="cond-icon" style="background: ${data.color}">${abbr}</span>
+        <span class="cond-name">${data.name}</span>
+      </span>
+    `;
+  }
+
   function renderListings() {
     const grid = document.getElementById('listingsGrid');
     const empty = document.getElementById('emptyState');
@@ -1141,47 +1412,183 @@ const faqs = [
     }
 
     empty.style.display = 'none';
-    grid.innerHTML = allListings.map(listing => {
-      const hasDiscount = listing.discountPercent && listing.discountPercent > 0;
-      const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : null;
-      const mediaCond = listing.mediaCondition || 'VG+';
-      const sleeveCond = listing.sleeveCondition || 'VG+';
 
-      return `
-        <article class="vinyl-card" onclick="viewListing('${listing.id}')">
-          <div class="vinyl-card-inner">
-            <div class="vinyl-artwork">
-              ${imageUrl
-                ? `<img src="${imageUrl}" alt="${listing.title}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
-                   <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
-                : '<div class="vinyl-artwork-placeholder">📀</div>'}
-              ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
-            </div>
-            <div class="vinyl-details">
-              <h3 class="vinyl-title">${listing.title || 'Untitled'}</h3>
-              <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
-              <div class="vinyl-meta">
-                <span class="vinyl-tag">${listing.format || 'LP'}</span>
-                ${listing.releaseYear ? `<span class="vinyl-tag">${listing.releaseYear}</span>` : ''}
-              </div>
-              <div class="condition-badges">
-                ${renderConditionBadge(mediaCond, 'Record')}
-                ${renderConditionBadge(sleeveCond, 'Sleeve')}
-              </div>
-              <div class="vinyl-price-row">
-                <span class="vinyl-price">£${(listing.price || 0).toFixed(2)}</span>
-                ${hasDiscount && listing.originalPrice ? `<span class="vinyl-original-price">£${listing.originalPrice.toFixed(2)}</span>` : ''}
-                <button class="vinyl-info-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">View Details</button>
-              </div>
+    // Group listings by seller
+    const listingsBySeller = {};
+    allListings.forEach(listing => {
+      const sellerKey = listing.sellerId || listing.collectionId || 'unknown';
+      const sellerName = listing.sellerName || listing.storeName || 'Unknown Seller';
+      if (!listingsBySeller[sellerKey]) {
+        listingsBySeller[sellerKey] = {
+          name: sellerName,
+          listings: []
+        };
+      }
+      listingsBySeller[sellerKey].listings.push(listing);
+    });
+
+    // Sort sellers alphabetically
+    const sortedSellers = Object.keys(listingsBySeller).sort((a, b) => {
+      const nameA = listingsBySeller[a].name.toLowerCase();
+      const nameB = listingsBySeller[b].name.toLowerCase();
+      if (nameA === 'unknown seller') return 1;
+      if (nameB === 'unknown seller') return -1;
+      return nameA.localeCompare(nameB);
+    });
+
+    // Render grouped listings
+    grid.innerHTML = sortedSellers.map(sellerKey => {
+      const seller = listingsBySeller[sellerKey];
+      const sellerListings = seller.listings;
+
+      const sellerHeader = `
+        <div class="seller-section" id="seller-${sellerKey}">
+          <div class="seller-header">
+            <div class="seller-header-inner">
+              <h3 class="seller-name">${seller.name}</h3>
+              <p class="seller-count">${sellerListings.length} release${sellerListings.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
-          <div class="vinyl-seller">
-            <span>Seller: <span class="vinyl-seller-name">${listing.sellerName || 'Unknown'}</span></span>
-            ${listing.genre ? `<span class="vinyl-genre">${listing.genre}</span>` : ''}
+          <div class="seller-listings">
+            ${sellerListings.map((listing, index) => renderVinylCard(listing, index)).join('')}
+          </div>
+        </div>
+      `;
+      return sellerHeader;
+    }).join('');
+
+    // Initialize waveforms after rendering
+    initWaveforms();
+  }
+
+  function renderVinylCard(listing, index) {
+    const hasDiscount = listing.discountPercent && listing.discountPercent > 0;
+    const imageUrl = listing.images && listing.images.length > 0 ? listing.images[0] : null;
+    const mediaCond = listing.mediaCondition || 'VG+';
+    const sleeveCond = listing.sleeveCondition || 'VG+';
+    const tracks = listing.tracks || [];
+    const trackCount = tracks.length;
+    const displayPrice = (listing.price || 0).toFixed(2);
+
+    return `
+        <article class="vinyl-card">
+          <div class="vinyl-card-inner">
+            <!-- LEFT COLUMN: Artwork + Buttons -->
+            <div class="vinyl-left-col">
+              <div class="vinyl-artwork">
+                ${imageUrl
+                  ? `<img src="${imageUrl}" alt="${listing.title}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                     <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
+                  : '<div class="vinyl-artwork-placeholder">📀</div>'}
+                ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
+              </div>
+              <div class="vinyl-buttons">
+                <button class="vinyl-buy-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                  </svg>
+                  <span class="btn-price">£${displayPrice}</span>
+                </button>
+                <button class="vinyl-view-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">
+                  VIEW
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- MIDDLE COLUMN: Details (centered) -->
+            <div class="vinyl-middle-col">
+              <h3 class="vinyl-title">${listing.title || 'Untitled'}</h3>
+              <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
+              <p class="vinyl-seller-line">© <span>${listing.sellerName || 'Unknown Seller'}</span></p>
+
+              <div class="vinyl-tags-row">
+                ${listing.catalogNumber ? `<span class="vinyl-tag">${listing.catalogNumber}</span>` : ''}
+                <span class="vinyl-tag">${listing.genre || 'Vinyl'} / ${listing.format || 'LP'}</span>
+              </div>
+              <div class="vinyl-conditions-row">
+                ${renderConditionBadgeInline(mediaCond, 'Record')}
+                ${renderConditionBadgeInline(sleeveCond, 'Sleeve')}
+              </div>
+
+              <div class="vinyl-meta-footer">
+                <span class="wishlist-link">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                  </svg>
+                  Wishlist
+                </span>
+                ${trackCount > 0 ? `<span class="track-count-label">${trackCount} track${trackCount > 1 ? 's' : ''}</span>` : ''}
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Tracklist + Waveform -->
+            <div class="vinyl-right-col">
+              <div class="tracklist-header">
+                <span class="tracklist-title">TRACKS (${trackCount})</span>
+              </div>
+
+              <div class="track-list">
+                ${trackCount > 0 ? tracks.map((track, i) => `
+                  <div class="track-item">
+                    <button class="track-play-btn">
+                      <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <span class="track-name"><span class="track-num">${i + 1}</span> ${track.name || track.title || 'Untitled'}</span>
+                  </div>
+                `).join('') : `
+                  <div class="track-item">
+                    <span class="track-name" style="color: #6b7280; font-style: italic;">No track listing</span>
+                  </div>
+                `}
+              </div>
+
+              <div class="vinyl-waveform">
+                <div class="waveform-header">
+                  <span class="waveform-label">NOW PLAYING <span>No track selected</span></span>
+                  <div class="waveform-controls">
+                    <svg fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                </div>
+                <canvas class="waveform-canvas" data-listing-id="${listing.id}" width="400" height="35"></canvas>
+              </div>
+            </div>
           </div>
         </article>
       `;
-    }).join('');
+  }
+
+  // Generate and draw static waveforms
+  function initWaveforms() {
+    const canvases = document.querySelectorAll('.waveform-canvas');
+    canvases.forEach(canvas => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Set canvas size
+      const container = canvas.parentElement;
+      canvas.width = container.offsetWidth - 24 || 300;
+      canvas.height = 50;
+
+      // Generate static waveform pattern
+      const bars = 50;
+      const barWidth = (canvas.width / bars) - 1;
+
+      for (let i = 0; i < bars; i++) {
+        // Create natural-looking waveform shape
+        const centerBoost = 1 - Math.abs((i - bars/2) / (bars/2)) * 0.25;
+        const height = (Math.random() * 0.5 + 0.3) * centerBoost * canvas.height;
+        const x = i * (barWidth + 1);
+        const y = (canvas.height - height) / 2;
+
+        ctx.fillStyle = '#6b7280';
+        ctx.fillRect(x, y, barWidth, height);
+      }
+    });
   }
 
   function selectCollection(collection) {
