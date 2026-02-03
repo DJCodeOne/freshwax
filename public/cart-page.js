@@ -141,7 +141,7 @@ function renderCart() {
             '<span style="display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; border-radius: 4px; border: 1px solid; ' + badgeStyle + '">' + displayType + '</span>' +
             (item.size ? '<span style="color: #9ca3af; font-size: 0.75rem;">Size: ' + item.size + '</span>' : '') +
             (item.color ? '<span style="color: #9ca3af; font-size: 0.75rem;">Color: ' + item.color + '</span>' : '') +
-            (item.artist ? '<span style="color: #9ca3af; font-size: 0.75rem;">by ' + item.artist + '</span>' : '') +
+            (item.artist ? '<span style="color: #9ca3af; font-size: 0.75rem;">by ' + (item.artist === 'Various Artists' && item.labelName ? item.labelName : item.artist) + '</span>' : '') +
           '</div>' +
         '</div>' +
         '<div style="display: flex; align-items: center; gap: 0.5rem;">' +

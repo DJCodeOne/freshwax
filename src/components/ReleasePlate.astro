@@ -309,6 +309,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-release-id={id}
             data-title={releaseName}
             data-artist={artistName}
+            data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-nyop-min={nyopMinPrice}
             data-nyop-suggested={nyopSuggestedPrice}
@@ -329,6 +330,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-price={digitalPrice}
             data-title={releaseName}
             data-artist={artistName}
+            data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
             class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-gray-900 hover:bg-black text-white'}`}
@@ -353,13 +355,14 @@ const totalDurationFormatted = totalDurationSeconds > 0
             </span>
           </button>
         
-        <button 
+        <button
           data-release-id={id}
           data-product-type="vinyl"
           data-price={finalVinylPrice}
           data-digital-price={digitalPrice}
           data-title={releaseName}
           data-artist={artistName}
+          data-label-name={labelName}
           data-artwork={coverArtUrl}
           data-includes-digital="true"
           data-is-preorder={isPreOrder ? 'true' : 'false'}
@@ -403,6 +406,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-digital-price={digitalPrice}
             data-title={releaseName}
             data-artist={artistName}
+            data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-includes-digital="true"
             data-is-preorder={isPreOrder ? 'true' : 'false'}
@@ -2128,8 +2132,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
       var price = parseFloat(button.getAttribute('data-price') || '0');
       var title = button.getAttribute('data-title');
       var artist = button.getAttribute('data-artist');
+      var labelName = button.getAttribute('data-label-name');
       var artwork = button.getAttribute('data-artwork');
-      
+
       // Check if user already owns this release
       try {
         var userId = null;
@@ -2201,6 +2206,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           name: artist + ' - ' + title,
           title: title,
           artist: artist,
+          labelName: labelName,
           price: price,
           image: artwork,
           artwork: artwork,
@@ -2601,6 +2607,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           releaseId: btn.dataset.releaseId,
           title: btn.dataset.title,
           artist: btn.dataset.artist,
+          labelName: btn.dataset.labelName,
           artwork: btn.dataset.artwork,
           minPrice: minPrice,
           suggestedPrice: suggestedPrice,
@@ -2717,6 +2724,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       tempBtn.dataset.price = price.toFixed(2);
       tempBtn.dataset.title = nyopCurrentReleaseData.title;
       tempBtn.dataset.artist = nyopCurrentReleaseData.artist;
+      tempBtn.dataset.labelName = nyopCurrentReleaseData.labelName || '';
       tempBtn.dataset.artwork = nyopCurrentReleaseData.artwork;
       tempBtn.dataset.isPreorder = nyopCurrentReleaseData.isPreorder ? 'true' : 'false';
       document.body.appendChild(tempBtn);

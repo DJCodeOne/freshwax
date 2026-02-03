@@ -1228,9 +1228,10 @@ document.addEventListener('click', (e) => {
   const title = button.getAttribute('data-title');
   const artist = button.getAttribute('data-artist');
   const artistId = button.getAttribute('data-artist-id');
+  const labelName = button.getAttribute('data-label-name');
   const artwork = button.getAttribute('data-artwork');
 
-  console.log('[Cart] Item data:', { releaseId, productType, price, title, artist, artistId, artwork });
+  console.log('[Cart] Item data:', { releaseId, productType, price, title, artist, artistId, labelName, artwork });
 
   // Use local cart functions
   const added = addItemToCart({
@@ -1240,6 +1241,7 @@ document.addEventListener('click', (e) => {
     title: title,
     artist: artist,
     artistId: artistId,
+    labelName: labelName,
     price: price,
     image: artwork
   });
