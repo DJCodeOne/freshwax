@@ -169,13 +169,26 @@ const finalRating = {
 // Flag to indicate if ratings came from server (non-zero means server-provided)
 const hasServerRatings = finalRating.count > 0 || finalRating.average > 0;
 
+// Parse artist from wavUrl filename (format: ArtistName_-_AlbumName_-_...)
+function parseArtistFromWavUrl(wavUrl: string): string {
+  if (!wavUrl) return '';
+  const filename = wavUrl.split('/').pop() || '';
+  const match = filename.match(/^(.+?)_-_[^_]/);
+  if (match) {
+    return match[1].replace(/_/g, ' ').replace(/  +/g, ' & ').trim();
+  }
+  return '';
+}
+
 // Process tracks with IDs and sort by track number
 const tracksWithIds = tracks.map((track, index) => {
   const displayNum = track.displayTrackNumber || track.trackNumber || (index + 1);
+  // Try explicit artist field first, then parse from wavUrl
+  const trackArtist = track.artist || track.trackArtist || parseArtistFromWavUrl(track.wavUrl);
   return {
     id: `${id}-track-${displayNum}`,
     title: track.trackName || track.title || `Track ${displayNum}`,
-    artist: track.artist || track.trackArtist || '',
+    artist: trackArtist,
     featured: track.featured || '',
     remixer: track.remixer || '',
     preview_url: track.previewUrl || track.preview_url || track.mp3Url || null,
