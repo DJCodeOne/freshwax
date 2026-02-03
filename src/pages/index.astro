@@ -14,6 +14,7 @@ import { getLiveReleases } from '../lib/firebase-rest';
 const db = (Astro.locals as any).runtime?.env?.DB;
 
 // Get the 20 most recent published releases - D1 first, Firebase fallback
+// Sorted by upload date (newest first)
 const featuredReleases = await getLiveReleases(20, db);
 ---
 
