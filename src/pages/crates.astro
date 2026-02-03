@@ -1345,15 +1345,15 @@ const faqs = [
   let allCollections = [];
   let currentCollection = 'all';
 
-  // Vinyl API Worker URL
-  const VINYL_API_URL = 'https://vinyl-api.davidhagon.workers.dev';
+  // Vinyl API - use local endpoint (fetches from D1/Firebase)
+  const VINYL_API_URL = '/api/vinyl/public';
 
   async function loadCollections() {
     const container = document.getElementById('sellerCollections');
     if (!container) return;
 
     try {
-      const res = await fetch(`${VINYL_API_URL}/listings?type=collections`);
+      const res = await fetch(`${VINYL_API_URL}?type=collections`);
       const data = await res.json();
 
       if (data.success && data.collections) {
@@ -1418,11 +1418,11 @@ const faqs = [
     empty.style.display = 'none';
 
     try {
-      let url = `${VINYL_API_URL}/listings`;
+      let url = `${VINYL_API_URL}?type=listings`;
       if (collection === 'deals') {
-        url = `${VINYL_API_URL}/listings?type=deals`;
+        url = `${VINYL_API_URL}?type=deals`;
       } else if (collection !== 'all') {
-        url = `${VINYL_API_URL}/listings?collection=${collection}`;
+        url = `${VINYL_API_URL}?type=listings&collection=${collection}`;
       }
 
       const res = await fetch(url);
