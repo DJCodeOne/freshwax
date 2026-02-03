@@ -2602,23 +2602,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
       const price = parseFloat(modalPrice.value) || 0;
 
-      // Dispatch add to cart event
-      const cartEvent = new CustomEvent('addToCart', {
-        bubbles: true,
-        detail: {
-          releaseId: currentReleaseData.releaseId,
-          productType: 'digital',
-          price: price,
-          title: currentReleaseData.title,
-          artist: currentReleaseData.artist,
-          artwork: currentReleaseData.artwork,
-          isPreorder: currentReleaseData.isPreorder,
-          nyop: true
-        }
-      });
-      document.dispatchEvent(cartEvent);
-
-      // Also trigger the existing cart system by finding/creating a temporary button
+      // Trigger the existing cart system via temporary button
       const tempBtn = document.createElement('button');
       tempBtn.className = 'add-to-cart hidden';
       tempBtn.dataset.releaseId = currentReleaseData.releaseId;
