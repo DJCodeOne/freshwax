@@ -175,6 +175,7 @@ const tracksWithIds = tracks.map((track, index) => {
   return {
     id: `${id}-track-${displayNum}`,
     title: track.trackName || track.title || `Track ${displayNum}`,
+    artist: track.artist || track.trackArtist || '',
     featured: track.featured || '',
     remixer: track.remixer || '',
     preview_url: track.previewUrl || track.preview_url || track.mp3Url || null,
@@ -576,7 +577,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
                 <span class="text-sm text-gray-400 w-6 text-center flex-shrink-0 font-body">
                   {track.track_number}
                 </span>
-                <p class="text-sm text-white truncate flex-1 min-w-0 font-body" title={track.title} data-track-title={track.title}>
+                <p class="text-sm text-white truncate flex-1 min-w-0 font-body" title={track.artist ? `${track.artist} - ${track.title}` : track.title} data-track-title={track.title}>
+                  {track.artist && <span class="text-gray-400">{track.artist} - </span>}
                   {track.title}
                   {track.featured && <span class="text-gray-400 font-normal text-xs"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>}
                   {track.remixer && <span class="text-gray-400 font-normal"> ({track.remixer} Remix)</span>}

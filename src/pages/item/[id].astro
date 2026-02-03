@@ -153,6 +153,7 @@ const tracksWithIds = tracks.map((track, index) => {
   return {
     id: `${id}-track-${displayNum}`,
     title: track.trackName || `Track ${displayNum}`,
+    artist: track.artist || track.trackArtist || '',
     preview_url: track.previewUrl || null,
     track_number: displayNum,
     mp3Url: track.mp3Url,
@@ -562,6 +563,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   
                   <div class="flex-1 min-w-0">
                     <p class="text-base md:text-xl font-black text-white truncate uppercase drop-shadow-md">
+                      {track.artist && <span class="text-gray-400 font-bold">{track.artist} - </span>}
                       {track.title}
                       {track.featured && (
                         <span class="text-xs md:text-base font-bold text-gray-300"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
