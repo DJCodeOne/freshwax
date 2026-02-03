@@ -437,10 +437,54 @@ const faqs = [
     margin: 0 auto;
   }
 
+  /* Section Header Card - match vinyl card width */
+  .section-header-card {
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 2px solid #ffffff;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+    position: relative;
+  }
+
+  .section-header-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: 0.05;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.3) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255, 255, 255, 0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .section-header-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    color: #dc2626;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .section-subtitle {
+    color: #9ca3af;
+    font-size: 1rem;
+    margin: 0.25rem 0 0 0;
+  }
+
   .sell-btn-container {
     display: flex;
     justify-content: flex-end;
     margin-bottom: 1.5rem;
+    width: 100%;
   }
 
   .sell-btn {
@@ -473,13 +517,14 @@ const faqs = [
     .collection-filter-mobile { display: none; }
   }
 
-  /* Condition Key */
+  /* Condition Key - match vinyl card width */
   .condition-key {
     margin-bottom: 1.5rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #374151;
-    border-radius: 8px;
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
+    border: 2px solid #ffffff;
+    border-radius: 0.5rem;
     overflow: hidden;
+    width: 100%;
   }
 
   .condition-key-toggle {
