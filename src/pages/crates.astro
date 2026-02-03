@@ -526,8 +526,8 @@ const faqs = [
     background: #1f2937;
     border: 1px solid #374151;
     border-radius: 12px;
-    padding: 1.25rem;
-    max-width: 320px;
+    padding: 1.5rem;
+    max-width: 700px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
@@ -563,19 +563,20 @@ const faqs = [
   }
 
   .condition-grades {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
   }
 
   .grade {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
+    text-align: center;
+    padding: 1rem 0.75rem;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid #374151;
-    border-radius: 6px;
+    border-radius: 8px;
     transition: border-color 0.2s;
   }
 
@@ -587,24 +588,27 @@ const faqs = [
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 0.5rem;
     background: #dc2626;
     color: #000;
     font-weight: 800;
-    font-size: 0.85rem;
-    border-radius: 6px;
-    flex-shrink: 0;
+    font-size: 0.9rem;
+    border-radius: 8px;
   }
 
   .grade-name {
     color: #ffffff;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
   }
 
   .grade-desc {
-    display: none;
+    color: #6b7280;
+    font-size: 0.7rem;
+    line-height: 1.3;
   }
 
   .condition-note {
@@ -617,20 +621,47 @@ const faqs = [
     text-align: center;
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 1024px) {
     .condition-grades {
-      gap: 0.4rem;
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .condition-grades {
+      grid-template-columns: repeat(3, 1fr);
     }
 
     .grade {
-      padding: 0.4rem 0.6rem;
-      gap: 0.4rem;
+      padding: 0.75rem 0.5rem;
     }
 
     .grade-abbr {
-      width: 28px;
-      height: 28px;
-      font-size: 0.7rem;
+      width: 36px;
+      height: 36px;
+      font-size: 0.8rem;
+    }
+
+    .grade-desc {
+      display: none;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .condition-grades {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+    }
+
+    .grade {
+      padding: 0.5rem 0.25rem;
+    }
+
+    .grade-abbr {
+      width: 32px;
+      height: 32px;
+      font-size: 0.75rem;
+      margin-bottom: 0.25rem;
     }
 
     .grade-name {
