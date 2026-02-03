@@ -501,28 +501,20 @@ async function initRatings() {
   if (ssrData && ssrData.releaseId === releaseId && ssrData.ratings) {
     console.log('[Ratings] Using SSR data, skipping fetch');
     const data = ssrData.ratings;
-    
+
     const ratingValue = document.querySelector('.rating-value');
     if (ratingValue) {
       ratingValue.textContent = (data.average || 0).toFixed(1);
       const countSpan = ratingValue.nextElementSibling;
       if (countSpan) countSpan.textContent = ` (${data.count || 0})`;
     }
-    
-    const stars = document.querySelectorAll('.rating-star');
-    stars.forEach(star => {
-      const starNum = parseInt(star.getAttribute('data-star') || '0');
-      const svg = star.querySelector('svg');
-      if (svg) {
-        svg.setAttribute('fill', starNum <= Math.round(data.average || 0) ? 'currentColor' : 'none');
-      }
-    });
+    // Stars stay empty - only fill when user rates (handled in click handler)
   } else {
     // Fallback: fetch from API if no SSR data
     try {
       const res = await fetch(`/api/get-ratings?releaseId=${releaseId}`);
       const data = await res.json();
-      
+
       if (data.success) {
         const ratingValue = document.querySelector('.rating-value');
         if (ratingValue) {
@@ -530,15 +522,7 @@ async function initRatings() {
           const countSpan = ratingValue.nextElementSibling;
           if (countSpan) countSpan.textContent = ` (${data.count})`;
         }
-        
-        const stars = document.querySelectorAll('.rating-star');
-        stars.forEach(star => {
-          const starNum = parseInt(star.getAttribute('data-star') || '0');
-          const svg = star.querySelector('svg');
-          if (svg) {
-            svg.setAttribute('fill', starNum <= Math.round(data.average) ? 'currentColor' : 'none');
-          }
-        });
+        // Stars stay empty - only fill when user rates (handled in click handler)
       }
     } catch (err) {
       console.error('[Ratings] Failed to fetch:', err);
@@ -585,19 +569,21 @@ async function initRatings() {
         const data = await response.json();
         
         if (data.success) {
+          // Update the average display
           const ratingValue = document.querySelector('.rating-value');
           if (ratingValue) {
             ratingValue.textContent = data.newRating.toFixed(1);
             const countSpan = ratingValue.nextElementSibling;
             if (countSpan) countSpan.textContent = ` (${data.ratingsCount})`;
           }
-          
+
+          // Fill stars based on USER's rating, not the average
           const stars = document.querySelectorAll('.rating-star');
           stars.forEach(s => {
             const starNum = parseInt(s.getAttribute('data-star') || '0');
             const svg = s.querySelector('svg');
             if (svg) {
-              svg.setAttribute('fill', starNum <= Math.round(data.newRating) ? 'currentColor' : 'none');
+              svg.setAttribute('fill', starNum <= rating ? 'currentColor' : 'none');
             }
           });
         } else {

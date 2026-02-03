@@ -1474,20 +1474,14 @@ const totalDurationFormatted = totalDurationSeconds > 0
   function updateSingleRatingUI(card, releaseId, ratingData) {
     var average = ratingData.average || 0;
     var count = ratingData.count || 0;
-    
+
     var ratingValue = card.querySelector('.rating-value[data-release-id="' + releaseId + '"]');
     var ratingCount = card.querySelector('.rating-count[data-release-id="' + releaseId + '"]');
-    
+
     if (ratingValue) ratingValue.textContent = average.toFixed(1);
     if (ratingCount) ratingCount.textContent = ' (' + count + ')';
-    
-    card.querySelectorAll('.rating-star[data-release-id="' + releaseId + '"]').forEach(function(star) {
-      var starNum = parseInt(star.getAttribute('data-star'));
-      var svg = star.querySelector('svg');
-      if (svg) {
-        svg.setAttribute('fill', starNum <= Math.round(average) ? 'currentColor' : 'none');
-      }
-    });
+
+    // Stars stay empty - only fill when user rates (handled in click handler)
   }
 
   function setupRatingClickHandlers() {
