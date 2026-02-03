@@ -159,6 +159,9 @@ function parseArtistFromWavUrl(wavUrl: string): string {
   return '';
 }
 
+// Check if this is a release with "Artist - Title" format that needs swapping
+const needsSwap = releaseName.toLowerCase().includes('vol.2') || releaseName.toLowerCase().includes('vol 2');
+
 const tracksWithIds = tracks.map((track, index) => {
   const displayNum = track.displayTrackNumber || track.trackNumber + 1 || (index + 1);
   const rawTitle = track.trackName || `Track ${displayNum}`;
@@ -169,10 +172,16 @@ const tracksWithIds = tracks.map((track, index) => {
   let trackArtist = '';
 
   if (hasEmbeddedArtist) {
-    // Keep full title as-is - different releases use different formats
-    // Display as one string in white
-    title = rawTitle;
-    trackArtist = '';
+    if (needsSwap) {
+      // Vol 2 format: "Artist - Title" → swap to show Title - Artist
+      const parts = rawTitle.split(' - ');
+      trackArtist = parts[0].trim();
+      title = parts.slice(1).join(' - ').trim();
+    } else {
+      // Vol 1 format: "Title - Artist" → keep as-is in white
+      title = rawTitle;
+      trackArtist = '';
+    }
   } else {
     // Try explicit artist field, then parse from wavUrl
     trackArtist = track.artist || track.trackArtist || parseArtistFromWavUrl(track.wavUrl);
