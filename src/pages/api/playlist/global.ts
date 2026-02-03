@@ -208,9 +208,9 @@ export async function DELETE({ request, locals }: APIContext) {
     }
 
     const body = await request.json();
-    const { itemId, userId } = body;
+    const { itemId, userId, isAdmin } = body;
 
-    if (!itemId || !userId) {
+    if (!itemId || (!userId && !isAdmin)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Missing itemId or userId'
@@ -253,8 +253,8 @@ export async function DELETE({ request, locals }: APIContext) {
     }
 
     const item = playlist.queue[itemIndex];
-    // Allow removal if user owns the item (admin check would go here too)
-    if (item.addedBy !== userId) {
+    // Allow removal if user owns the item OR if admin flag is set
+    if (!isAdmin && item.addedBy !== userId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'You can only remove your own items'
