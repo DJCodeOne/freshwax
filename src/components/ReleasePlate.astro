@@ -581,7 +581,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   {track.featured && <span class="text-gray-400 font-normal text-xs"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>}
                   {track.remixer && <span class="text-gray-400 font-normal"> ({track.remixer} Remix)</span>}
                 </p>
-                {finalTrackPrice > 0 && (
+                {finalTrackPrice > 0 && !nyopEnabled && (
                   <button
                     class="buy-track flex-shrink-0 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all px-3 py-1 rounded font-body"
                     data-track-id={track.id}

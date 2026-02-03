@@ -597,7 +597,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                     </div>
                   </div>
                   
-                  {actualTrackPrice > 0 && (
+                  {actualTrackPrice > 0 && !nyopEnabled && (
                     <button
                       class="buy-track flex-shrink-0 font-black text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 active:from-green-800 active:to-green-900 transition-all px-4 md:px-8 py-2.5 border-2 border-white shadow-lg uppercase text-sm md:text-base"
                       data-track-id={track.id}
