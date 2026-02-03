@@ -1,5 +1,6 @@
 // src/pages/api/get-user-ratings.ts
 // Get the logged-in user's ratings for specified releases
+// D1 is PRIMARY - Firebase only used as last resort fallback
 
 import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
@@ -16,14 +17,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
 
-  // Initialize Firebase
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
-
   try {
-    // Verify user is logged in
+    // Verify user is logged in (uses Firebase Auth but that's just token verification)
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
@@ -55,21 +55,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[get-user-ratings] Fetching ratings for user:', userId, 'releases:', limitedIds.length);
 
-    // Try D1 first for better performance
+    // D1 is PRIMARY - use batch query for efficiency
     if (db) {
       try {
-        for (const releaseId of limitedIds) {
-          const row = await db.prepare(
-            `SELECT rating FROM user_ratings WHERE release_id = ? AND user_id = ?`
-          ).bind(releaseId, userId).first();
+        // Build batch query with placeholders
+        const placeholders = limitedIds.map(() => '?').join(',');
+        const query = `SELECT release_id, rating FROM user_ratings WHERE user_id = ? AND release_id IN (${placeholders})`;
+        const params = [userId, ...limitedIds];
 
-          if (row) {
-            userRatings[releaseId] = (row as any).rating;
+        const result = await db.prepare(query).bind(...params).all();
+
+        if (result?.results) {
+          for (const row of result.results as any[]) {
+            userRatings[row.release_id] = row.rating;
           }
         }
 
         log.info('[get-user-ratings] D1 found:', Object.keys(userRatings).length, 'ratings');
 
+        // Return immediately - no Firebase needed
         return new Response(JSON.stringify({
           success: true,
           userRatings,
@@ -82,11 +86,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         });
       } catch (d1Error) {
-        log.error('[get-user-ratings] D1 error, falling back to Firebase:', d1Error);
+        log.error('[get-user-ratings] D1 error:', d1Error);
+        // Only fall through to Firebase if D1 completely fails
       }
     }
 
-    // Fallback to Firebase - fetch each release and check userRatings
+    // FALLBACK ONLY: Firebase - only used if D1 is unavailable
+    // This is expensive on quota, so we minimize usage
+    log.info('[get-user-ratings] D1 unavailable, falling back to Firebase');
+
     for (const releaseId of limitedIds) {
       try {
         const release = await getDocument('releases', releaseId);
