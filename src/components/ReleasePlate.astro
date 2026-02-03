@@ -1559,6 +1559,70 @@ const totalDurationFormatted = totalDurationSeconds > 0
     });
   }
 
+  // Fetch and display user's own ratings when logged in
+  var userRatingsFetched = false;
+  async function fetchUserRatings() {
+    if (userRatingsFetched) return;
+
+    // Wait for auth to be ready
+    var user = await getAuthUser();
+    if (!user) return;
+
+    userRatingsFetched = true;
+
+    // Get all release IDs on the page
+    var releaseCards = document.querySelectorAll('[data-release]');
+    var releaseIds = [];
+    releaseCards.forEach(function(card) {
+      var id = card.getAttribute('data-release');
+      if (id) releaseIds.push(id);
+    });
+
+    if (releaseIds.length === 0) return;
+
+    // Get ID token for API authentication
+    var idToken = null;
+    try {
+      if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+        idToken = await window.firebaseAuth.currentUser.getIdToken();
+      }
+    } catch (e) { /* Ignore */ }
+
+    if (!idToken) return;
+
+    try {
+      var response = await fetch('/api/get-user-ratings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + idToken
+        },
+        body: JSON.stringify({ releaseIds: releaseIds })
+      });
+
+      var data = await response.json();
+
+      if (data.success && data.userRatings) {
+        // Fill in stars for releases the user has rated
+        Object.keys(data.userRatings).forEach(function(releaseId) {
+          var userRating = data.userRatings[releaseId];
+          var card = document.querySelector('[data-release="' + releaseId + '"]');
+          if (card) {
+            card.querySelectorAll('.rating-star[data-release-id="' + releaseId + '"]').forEach(function(star) {
+              var starNum = parseInt(star.getAttribute('data-star'));
+              var svg = star.querySelector('svg');
+              if (svg) {
+                svg.setAttribute('fill', starNum <= userRating ? 'currentColor' : 'none');
+              }
+            });
+          }
+        });
+      }
+    } catch (e) {
+      console.error('[Ratings] Failed to fetch user ratings:', e);
+    }
+  }
+
   // ============================================
   // SHARE SYSTEM
   // ============================================
@@ -2461,6 +2525,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
     initWishlistSystem();
     initPreorderSystem();
     initNYOPSystem();
+    // Fetch user's own ratings (async, runs after auth is ready)
+    fetchUserRatings();
   }
 
   // NYOP (Name Your Own Price) Modal System

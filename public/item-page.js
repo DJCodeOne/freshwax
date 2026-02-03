@@ -595,6 +595,50 @@ async function initRatings() {
       }
     });
   });
+
+  // Fetch and display user's own rating if logged in
+  fetchUserRating(releaseId);
+}
+
+// Fetch user's own rating for this release
+async function fetchUserRating(releaseId) {
+  if (!releaseId) return;
+
+  // Wait for auth to be ready
+  const user = await getAuthUser();
+  if (!user) return;
+
+  try {
+    const token = await user.getIdToken();
+
+    const response = await fetch('/api/get-user-ratings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ releaseIds: [releaseId] })
+    });
+
+    const data = await response.json();
+
+    if (data.success && data.userRatings && data.userRatings[releaseId]) {
+      const userRating = data.userRatings[releaseId];
+      console.log('[Ratings] User has rated this release:', userRating);
+
+      // Fill stars based on user's rating
+      const stars = document.querySelectorAll('.rating-star');
+      stars.forEach(star => {
+        const starNum = parseInt(star.getAttribute('data-star') || '0');
+        const svg = star.querySelector('svg');
+        if (svg) {
+          svg.setAttribute('fill', starNum <= userRating ? 'currentColor' : 'none');
+        }
+      });
+    }
+  } catch (e) {
+    console.error('[Ratings] Failed to fetch user rating:', e);
+  }
 }
 
 async function initComments() {
