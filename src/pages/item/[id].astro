@@ -2301,6 +2301,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           title: btn.dataset.title,
           artist: btn.dataset.artist,
           artistId: btn.dataset.artistId,
+          labelName: btn.dataset.labelName,
           artwork: btn.dataset.artwork,
           minPrice: minPrice,
           suggestedPrice: suggestedPrice,
@@ -2403,6 +2404,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       tempBtn.dataset.title = currentReleaseData.title;
       tempBtn.dataset.artist = currentReleaseData.artist;
       tempBtn.dataset.artistId = currentReleaseData.artistId || '';
+      tempBtn.dataset.labelName = currentReleaseData.labelName || '';
       tempBtn.dataset.artwork = currentReleaseData.artwork;
       tempBtn.dataset.isPreorder = currentReleaseData.isPreorder ? 'true' : 'false';
       document.body.appendChild(tempBtn);
