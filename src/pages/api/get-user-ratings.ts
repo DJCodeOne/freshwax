@@ -73,45 +73,55 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         log.info('[get-user-ratings] D1 found:', Object.keys(userRatings).length, 'ratings');
 
-        // Return immediately - no Firebase needed
-        return new Response(JSON.stringify({
-          success: true,
-          userRatings,
-          source: 'd1'
-        }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'private, max-age=60'
-          }
-        });
+        // If D1 found all ratings, return immediately
+        if (Object.keys(userRatings).length === limitedIds.length) {
+          return new Response(JSON.stringify({
+            success: true,
+            userRatings,
+            source: 'd1'
+          }), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'Cache-Control': 'private, max-age=60'
+            }
+          });
+        }
+
+        // D1 found some but not all - check Firebase for missing ones
+        log.info('[get-user-ratings] D1 missing some ratings, checking Firebase for remaining');
       } catch (d1Error) {
         log.error('[get-user-ratings] D1 error:', d1Error);
-        // Only fall through to Firebase if D1 completely fails
+        // Fall through to Firebase
       }
     }
 
-    // FALLBACK ONLY: Firebase - only used if D1 is unavailable
-    // This is expensive on quota, so we minimize usage
-    log.info('[get-user-ratings] D1 unavailable, falling back to Firebase');
+    // FALLBACK: Firebase - check for ratings not found in D1
+    // Only query releases we don't have ratings for yet
+    const missingIds = limitedIds.filter(id => !userRatings[id]);
 
-    for (const releaseId of limitedIds) {
-      try {
-        const release = await getDocument('releases', releaseId);
-        if (release?.ratings?.userRatings?.[userId]) {
-          userRatings[releaseId] = release.ratings.userRatings[userId];
+    if (missingIds.length > 0) {
+      log.info('[get-user-ratings] Checking Firebase for', missingIds.length, 'releases');
+
+      for (const releaseId of missingIds) {
+        try {
+          const release = await getDocument('releases', releaseId);
+          if (release?.ratings?.userRatings?.[userId]) {
+            userRatings[releaseId] = release.ratings.userRatings[userId];
+          }
+        } catch (e) {
+          // Skip failed fetches
         }
-      } catch (e) {
-        // Skip failed fetches
       }
     }
 
-    log.info('[get-user-ratings] Firebase found:', Object.keys(userRatings).length, 'ratings');
+    const source = missingIds.length === limitedIds.length ? 'firebase' : 'mixed';
+    log.info('[get-user-ratings] Total found:', Object.keys(userRatings).length, 'ratings, source:', source);
 
     return new Response(JSON.stringify({
       success: true,
       userRatings,
-      source: 'firebase'
+      source
     }), {
       status: 200,
       headers: {
