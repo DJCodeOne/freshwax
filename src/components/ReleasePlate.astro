@@ -183,11 +183,26 @@ function parseArtistFromWavUrl(wavUrl: string): string {
 // Process tracks with IDs and sort by track number
 const tracksWithIds = tracks.map((track, index) => {
   const displayNum = track.displayTrackNumber || track.trackNumber || (index + 1);
-  // Try explicit artist field first, then parse from wavUrl
-  const trackArtist = track.artist || track.trackArtist || parseArtistFromWavUrl(track.wavUrl);
+  const rawTitle = track.trackName || track.title || `Track ${displayNum}`;
+
+  // Check if trackName already contains "Artist - Title" format
+  const hasEmbeddedArtist = rawTitle.includes(' - ');
+  let title = rawTitle;
+  let trackArtist = '';
+
+  if (hasEmbeddedArtist) {
+    // Split "Artist - Title" format - artist is first part
+    const parts = rawTitle.split(' - ');
+    trackArtist = parts[0].trim();
+    title = parts.slice(1).join(' - ').trim();
+  } else {
+    // Try explicit artist field, then parse from wavUrl
+    trackArtist = track.artist || track.trackArtist || parseArtistFromWavUrl(track.wavUrl);
+  }
+
   return {
     id: `${id}-track-${displayNum}`,
-    title: track.trackName || track.title || `Track ${displayNum}`,
+    title: title,
     artist: trackArtist,
     featured: track.featured || '',
     remixer: track.remixer || '',
