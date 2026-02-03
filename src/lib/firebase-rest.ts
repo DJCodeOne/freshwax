@@ -481,15 +481,15 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
   // Try D1 first if database is provided
   if (db) {
     try {
-      const query = limit
-        ? `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' ORDER BY release_date DESC LIMIT ?`
-        : `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' ORDER BY release_date DESC`;
+      // Fetch more than needed to allow for JS sorting by upload date
+      const fetchLimit = limit ? limit * 2 : 100;
+      const query = `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' LIMIT ?`;
 
-      const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
+      const stmt = db.prepare(query).bind(fetchLimit);
       const { results } = await stmt.all();
 
       if (results && results.length > 0) {
-        const releases = results.map((row: any) => {
+        let releases = results.map((row: any) => {
           try {
             const doc = JSON.parse(row.data);
             doc.id = doc.id || row.id;
@@ -498,6 +498,18 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
             return null;
           }
         }).filter(Boolean);
+
+        // Sort by upload date (newest first)
+        releases.sort((a: any, b: any) => {
+          const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
+          const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+
+        // Apply limit after sorting
+        if (limit && releases.length > limit) {
+          releases = releases.slice(0, limit);
+        }
 
         log.info(`[firebase-rest] D1: ${releases.length} releases loaded`);
         setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
