@@ -269,47 +269,27 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   </div>
                 )}
 
-                {/* NYOP Purchase UI */}
+                {/* NYOP Purchase UI - Simplified with Modal */}
                 {nyopEnabled ? (
                   <div class="nyop-container-item" data-release-id={id}>
-                    <div class="bg-gray-800 border-2 border-white p-4 mb-2">
-                      <div class="text-sm text-gray-300 uppercase tracking-wide font-black mb-3">Name Your Price</div>
-                      <div class="flex items-center gap-3 mb-3">
-                        <span class="text-white font-black text-lg">£</span>
-                        <input
-                          type="text"
-                          inputmode="decimal"
-                          class="nyop-price-input-item w-24 bg-gray-900 border-2 border-gray-600 px-3 py-2 text-white text-xl font-black focus:outline-none focus:border-red-500 transition-colors text-center"
-                          value={(nyopSuggestedPrice || nyopMinPrice || 0).toFixed(2)}
-                          data-min-price={nyopMinPrice}
-                          data-suggested-price={nyopSuggestedPrice}
-                          data-release-id={id}
-                          placeholder={(nyopSuggestedPrice || nyopMinPrice || 0).toFixed(2)}
-                        />
-                      </div>
-                      <div class="text-sm text-gray-400 mb-3">
-                        {nyopMinPrice > 0 ? `£${nyopMinPrice.toFixed(2)} minimum` : 'Pay what you want (including £0)'}
-                      </div>
-                      <p class="nyop-error-item text-sm text-red-400 hidden mb-3" data-release-id={id}></p>
-                      <button
-                        data-release-id={id}
-                        data-product-type="digital"
-                        data-price={nyopSuggestedPrice || nyopMinPrice || 0}
-                        data-title={releaseName}
-                        data-artist={artistName}
-                        data-artist-id={artistId}
-                        data-artwork={coverArtUrl}
-                        data-is-preorder={isPreOrder ? 'true' : 'false'}
-                        data-nyop="true"
-                        data-nyop-min={nyopMinPrice}
-                        class="nyop-buy-btn-item w-full add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase bg-gray-900 hover:bg-black text-white"
-                      >
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                        </svg>
-                        <span>Buy Digital Download</span>
-                      </button>
-                    </div>
+                    <div class="text-sm text-gray-400 uppercase tracking-wide font-black mb-3 text-center">Name Your Price</div>
+                    <button
+                      type="button"
+                      data-release-id={id}
+                      data-title={releaseName}
+                      data-artist={artistName}
+                      data-artist-id={artistId}
+                      data-artwork={coverArtUrl}
+                      data-nyop-min={nyopMinPrice}
+                      data-nyop-suggested={nyopSuggestedPrice}
+                      data-is-preorder={isPreOrder ? 'true' : 'false'}
+                      class="nyop-open-modal w-full px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase bg-gray-900 hover:bg-black text-white"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                      <span>Buy Digital Download</span>
+                    </button>
                   </div>
                 ) : (
                   <button
@@ -2175,82 +2155,220 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   document.addEventListener('astro:page-load', initWishlistButton);
 </script>
 
+<!-- NYOP Price Selection Modal -->
+<div id="nyop-modal-item" class="nyop-modal-item hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="nyop-modal-backdrop-item absolute inset-0 bg-black/80" data-close-modal></div>
+  <div class="nyop-modal-content-item relative bg-gray-900 rounded-xl p-6 max-w-sm w-full border border-gray-700 shadow-2xl">
+    <button type="button" class="nyop-modal-close-item absolute top-3 right-3 text-gray-400 hover:text-white transition-colors" data-close-modal>
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <div class="text-center mb-6">
+      <img id="nyop-modal-artwork-item" src="/place-holder.webp" alt="" class="w-24 h-24 mx-auto rounded-lg mb-3 object-cover" />
+      <h3 id="nyop-modal-title-item" class="text-lg font-bold text-white"></h3>
+      <p id="nyop-modal-artist-item" class="text-sm text-gray-400"></p>
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-sm text-gray-300 uppercase tracking-wide font-bold mb-3 text-center">Name Your Price</label>
+
+      <!-- Quick price buttons -->
+      <div class="grid grid-cols-4 gap-2 mb-4">
+        <button type="button" class="nyop-quick-price-item py-2 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm transition-colors" data-price="0">Free</button>
+        <button type="button" class="nyop-quick-price-item py-2 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm transition-colors" data-price="3">£3</button>
+        <button type="button" class="nyop-quick-price-item py-2 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm transition-colors" data-price="5">£5</button>
+        <button type="button" class="nyop-quick-price-item py-2 px-3 rounded-lg bg-gray-800 hover:bg-gray-700 text-white font-bold text-sm transition-colors" data-price="10">£10</button>
+      </div>
+
+      <!-- Custom price input -->
+      <div class="flex items-center gap-3 justify-center">
+        <span class="text-white font-bold text-xl">£</span>
+        <input
+          type="text"
+          inputmode="decimal"
+          id="nyop-modal-price-item"
+          class="w-28 bg-gray-800 border-2 border-gray-600 rounded-lg px-4 py-3 text-white text-2xl font-bold text-center focus:outline-none focus:border-red-500 transition-colors"
+          value="5.00"
+          placeholder="0.00"
+        />
+      </div>
+
+      <p id="nyop-modal-min-text-item" class="text-xs text-gray-400 text-center mt-2">Pay what you want (including £0)</p>
+      <p id="nyop-modal-error-item" class="text-sm text-red-400 text-center mt-2 hidden"></p>
+    </div>
+
+    <button
+      type="button"
+      id="nyop-modal-add-cart-item"
+      class="w-full py-4 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-lg transition-colors flex items-center justify-center gap-2"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+      <span>Add to Cart</span>
+    </button>
+  </div>
+</div>
+
+<style>
+  .nyop-modal-item.hidden { display: none; }
+  .nyop-modal-content-item { animation: nyop-modal-appear-item 0.2s ease-out; }
+  @keyframes nyop-modal-appear-item {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .nyop-quick-price-item.active { background-color: #dc2626; }
+  #nyop-modal-price-item { -moz-appearance: textfield; }
+  #nyop-modal-price-item::-webkit-outer-spin-button,
+  #nyop-modal-price-item::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #nyop-modal-price-item:focus { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3); }
+</style>
+
 <!-- NYOP (Name Your Own Price) Script -->
 <script is:inline>
   function initNYOPItem() {
-    // Handle NYOP price input changes
-    document.querySelectorAll('.nyop-price-input-item').forEach(function(input) {
-      const releaseId = input.dataset.releaseId;
-      const minPrice = parseFloat(input.dataset.minPrice) || 0;
-      const container = input.closest('.nyop-container-item');
-      const buyBtn = container?.querySelector('.nyop-buy-btn-item');
-      const errorEl = container?.querySelector('.nyop-error-item');
+    const modal = document.getElementById('nyop-modal-item');
+    if (!modal) return;
 
-      // Prevent double init
-      if (input.dataset.nyopInit === 'true') return;
-      input.dataset.nyopInit = 'true';
+    const modalArtwork = document.getElementById('nyop-modal-artwork-item');
+    const modalTitle = document.getElementById('nyop-modal-title-item');
+    const modalArtist = document.getElementById('nyop-modal-artist-item');
+    const modalPrice = document.getElementById('nyop-modal-price-item');
+    const modalMinText = document.getElementById('nyop-modal-min-text-item');
+    const modalError = document.getElementById('nyop-modal-error-item');
+    const modalAddCart = document.getElementById('nyop-modal-add-cart-item');
+    const quickPrices = modal.querySelectorAll('.nyop-quick-price-item');
 
-      // Sync price to button on input
-      input.addEventListener('input', function() {
-        const value = parseFloat(input.value) || 0;
+    let currentReleaseData = null;
 
-        // Validate minimum price
-        if (value < minPrice) {
-          if (errorEl) {
-            errorEl.textContent = 'Minimum price is £' + minPrice.toFixed(2);
-            errorEl.classList.remove('hidden');
-          }
-          if (buyBtn) buyBtn.disabled = true;
-        } else {
-          if (errorEl) errorEl.classList.add('hidden');
-          if (buyBtn) {
-            buyBtn.disabled = false;
-            buyBtn.dataset.price = value.toFixed(2);
-          }
-        }
-      });
+    // Open modal when Buy Digital button clicked
+    document.querySelectorAll('.nyop-open-modal').forEach(function(btn) {
+      if (btn.dataset.nyopModalInit === 'true') return;
+      btn.dataset.nyopModalInit = 'true';
 
-      // Format on blur
-      input.addEventListener('blur', function() {
-        const value = parseFloat(input.value);
-        if (!isNaN(value)) {
-          input.value = Math.max(minPrice, value).toFixed(2);
-          if (buyBtn) buyBtn.dataset.price = input.value;
-          if (errorEl) errorEl.classList.add('hidden');
-          if (buyBtn) buyBtn.disabled = false;
-        }
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const minPrice = parseFloat(btn.dataset.nyopMin) || 0;
+        const suggestedPrice = parseFloat(btn.dataset.nyopSuggested) || minPrice || 5;
+
+        currentReleaseData = {
+          releaseId: btn.dataset.releaseId,
+          title: btn.dataset.title,
+          artist: btn.dataset.artist,
+          artistId: btn.dataset.artistId,
+          artwork: btn.dataset.artwork,
+          minPrice: minPrice,
+          suggestedPrice: suggestedPrice,
+          isPreorder: btn.dataset.isPreorder === 'true'
+        };
+
+        // Populate modal
+        modalArtwork.src = currentReleaseData.artwork || '/place-holder.webp';
+        modalTitle.textContent = currentReleaseData.title;
+        modalArtist.textContent = currentReleaseData.artist;
+        modalPrice.value = suggestedPrice.toFixed(2);
+        modalMinText.textContent = minPrice > 0
+          ? '£' + minPrice.toFixed(2) + ' minimum'
+          : 'Pay what you want (including £0)';
+        modalError.classList.add('hidden');
+
+        updateQuickPriceButtons(suggestedPrice);
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
       });
     });
 
-    // Handle NYOP buy button clicks - capture price before cart system
-    document.querySelectorAll('.nyop-buy-btn-item').forEach(function(btn) {
-      if (btn.dataset.nyopBtnInit === 'true') return;
-      btn.dataset.nyopBtnInit = 'true';
+    // Close modal
+    modal.querySelectorAll('[data-close-modal]').forEach(function(el) {
+      el.addEventListener('click', closeModal);
+    });
 
-      btn.addEventListener('click', function(e) {
-        const container = btn.closest('.nyop-container-item');
-        const input = container?.querySelector('.nyop-price-input-item');
-        const minPrice = parseFloat(btn.dataset.nyopMin) || 0;
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+        closeModal();
+      }
+    });
 
-        if (input) {
-          const value = parseFloat(input.value) || 0;
+    function closeModal() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      currentReleaseData = null;
+    }
 
-          // Validate minimum
-          if (value < minPrice) {
-            e.preventDefault();
-            e.stopPropagation();
-            const errorEl = container?.querySelector('.nyop-error-item');
-            if (errorEl) {
-              errorEl.textContent = 'Minimum price is £' + minPrice.toFixed(2);
-              errorEl.classList.remove('hidden');
-            }
-            return false;
-          }
+    // Quick price buttons
+    quickPrices.forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const price = parseFloat(btn.dataset.price) || 0;
+        modalPrice.value = price.toFixed(2);
+        updateQuickPriceButtons(price);
+        validatePrice();
+      });
+    });
 
-          // Update button price before cart system picks it up
-          btn.dataset.price = value.toFixed(2);
-        }
-      }, { capture: true });
+    function updateQuickPriceButtons(selectedPrice) {
+      quickPrices.forEach(function(btn) {
+        const btnPrice = parseFloat(btn.dataset.price) || 0;
+        btn.classList.toggle('active', btnPrice === selectedPrice);
+      });
+    }
+
+    modalPrice.addEventListener('input', function() {
+      validatePrice();
+      quickPrices.forEach(function(btn) { btn.classList.remove('active'); });
+    });
+
+    modalPrice.addEventListener('blur', function() {
+      const value = parseFloat(modalPrice.value) || 0;
+      const minPrice = currentReleaseData?.minPrice || 0;
+      modalPrice.value = Math.max(minPrice, value).toFixed(2);
+      validatePrice();
+    });
+
+    function validatePrice() {
+      if (!currentReleaseData) return true;
+      const value = parseFloat(modalPrice.value) || 0;
+      const minPrice = currentReleaseData.minPrice || 0;
+
+      if (value < minPrice) {
+        modalError.textContent = 'Minimum price is £' + minPrice.toFixed(2);
+        modalError.classList.remove('hidden');
+        modalAddCart.disabled = true;
+        modalAddCart.classList.add('opacity-50', 'cursor-not-allowed');
+        return false;
+      } else {
+        modalError.classList.add('hidden');
+        modalAddCart.disabled = false;
+        modalAddCart.classList.remove('opacity-50', 'cursor-not-allowed');
+        return true;
+      }
+    }
+
+    // Add to cart
+    modalAddCart.addEventListener('click', function() {
+      if (!currentReleaseData || !validatePrice()) return;
+
+      const price = parseFloat(modalPrice.value) || 0;
+
+      // Trigger cart system via temporary button
+      const tempBtn = document.createElement('button');
+      tempBtn.className = 'add-to-cart hidden';
+      tempBtn.dataset.releaseId = currentReleaseData.releaseId;
+      tempBtn.dataset.productType = 'digital';
+      tempBtn.dataset.price = price.toFixed(2);
+      tempBtn.dataset.title = currentReleaseData.title;
+      tempBtn.dataset.artist = currentReleaseData.artist;
+      tempBtn.dataset.artistId = currentReleaseData.artistId || '';
+      tempBtn.dataset.artwork = currentReleaseData.artwork;
+      tempBtn.dataset.isPreorder = currentReleaseData.isPreorder ? 'true' : 'false';
+      document.body.appendChild(tempBtn);
+      tempBtn.click();
+      setTimeout(function() { tempBtn.remove(); }, 100);
+
+      closeModal();
     });
   }
 
