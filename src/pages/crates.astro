@@ -1353,12 +1353,38 @@ const faqs = [
     if (!container) return;
 
     try {
+      // First try the collections endpoint
       const res = await fetch(`${VINYL_API_URL}/listings?type=collections`);
       const data = await res.json();
 
-      if (data.success && data.collections) {
+      if (data.success && data.collections && data.collections.length > 0) {
         allCollections = data.collections;
         renderCollections();
+      } else {
+        // Fallback: derive collections from listings
+        const listingsRes = await fetch(`${VINYL_API_URL}/listings`);
+        const listingsData = await listingsRes.json();
+
+        if (listingsData.success && listingsData.listings) {
+          // Extract unique sellers from listings
+          const sellersMap = {};
+          listingsData.listings.forEach(listing => {
+            const sellerId = listing.sellerId || listing.collectionId;
+            if (sellerId && !sellersMap[sellerId]) {
+              sellersMap[sellerId] = {
+                id: sellerId,
+                storeName: listing.sellerName || listing.storeName || 'Unknown Seller',
+                count: 0
+              };
+            }
+            if (sellerId) {
+              sellersMap[sellerId].count++;
+            }
+          });
+
+          allCollections = Object.values(sellersMap);
+          renderCollections();
+        }
       }
     } catch (err) {
       console.error('Error loading collections:', err);
@@ -1381,6 +1407,7 @@ const faqs = [
       <button class="collection-nav-btn" data-collection="${c.id}">
         <div class="collection-nav-content">
           <span class="collection-name">${c.storeName || `Collection ${c.collectionNumber}`}</span>
+          ${c.count ? `<span class="collection-count">${c.count}</span>` : ''}
         </div>
         <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
