@@ -97,6 +97,10 @@ interface Props {
     views: number;
   };
   saleDiscount?: number;
+  // Name Your Own Price (NYOP)
+  nyopEnabled?: boolean;
+  nyopMinPrice?: number;
+  nyopSuggestedPrice?: number;
 }
 
 const { 
@@ -129,7 +133,11 @@ const {
   comments = [],
   notes = '',
   status = 'live',
-  saleDiscount = 0
+  saleDiscount = 0,
+  // NYOP
+  nyopEnabled = false,
+  nyopMinPrice = 0,
+  nyopSuggestedPrice = 0
 } = Astro.props;
 
 // Use whichever label field is available
@@ -254,36 +262,78 @@ const totalDurationFormatted = totalDurationSeconds > 0
         />
       </div>
       
-      <div class="flex gap-2 w-64">
-        <button 
-          data-release-id={id}
-          data-product-type="digital"
-          data-price={digitalPrice}
-          data-title={releaseName}
-          data-artist={artistName}
-          data-artwork={coverArtUrl}
-          data-is-preorder={isPreOrder ? 'true' : 'false'}
-          class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-gray-900 hover:bg-black text-white'}`}
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            {isPreOrder ? (
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            ) : (
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-            )}
-          </svg>
-          <span>
-            {isPreOrder ? 'Pre-order' : 'Digital EP'}
-            {hasSale ? (
-              <Fragment>
-                <span class="line-through opacity-60 mx-1">£{originalDigitalPrice.toFixed(2)}</span>
-                <span class="text-green-300 font-black">£{digitalPrice.toFixed(2)}</span>
-              </Fragment>
-            ) : (
-              <Fragment> £{digitalPrice.toFixed(2)}</Fragment>
-            )}
-          </span>
-        </button>
+      {/* NYOP Purchase UI */}
+      {nyopEnabled ? (
+        <div class="w-64 nyop-container" data-release-id={id}>
+          <div class="bg-gray-800 rounded-lg p-3 border border-gray-600 mb-2">
+            <div class="text-xs text-gray-300 uppercase tracking-wide font-bold mb-2">Name Your Price</div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-white font-bold text-sm">£</span>
+              <input
+                type="text"
+                inputmode="decimal"
+                class="nyop-price-input w-20 bg-gray-900 border border-gray-600 rounded px-2 py-1.5 text-white text-base font-bold focus:outline-none focus:border-red-500 transition-colors text-center"
+                value={(nyopSuggestedPrice || nyopMinPrice || 0).toFixed(2)}
+                data-min-price={nyopMinPrice}
+                data-suggested-price={nyopSuggestedPrice}
+                data-release-id={id}
+                placeholder={(nyopSuggestedPrice || nyopMinPrice || 0).toFixed(2)}
+              />
+            </div>
+            <div class="text-xs text-gray-400 mb-2">
+              {nyopMinPrice > 0 ? `£${nyopMinPrice.toFixed(2)} minimum` : 'Pay what you want (including £0)'}
+            </div>
+            <p class="nyop-error text-xs text-red-400 hidden mb-2" data-release-id={id}></p>
+            <button
+              data-release-id={id}
+              data-product-type="digital"
+              data-price={nyopSuggestedPrice || nyopMinPrice || 0}
+              data-title={releaseName}
+              data-artist={artistName}
+              data-artwork={coverArtUrl}
+              data-is-preorder={isPreOrder ? 'true' : 'false'}
+              data-nyop="true"
+              data-nyop-min={nyopMinPrice}
+              class="nyop-buy-btn w-full add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-gray-900 hover:bg-black text-white"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span>Buy Digital</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div class="flex gap-2 w-64">
+          <button
+            data-release-id={id}
+            data-product-type="digital"
+            data-price={digitalPrice}
+            data-title={releaseName}
+            data-artist={artistName}
+            data-artwork={coverArtUrl}
+            data-is-preorder={isPreOrder ? 'true' : 'false'}
+            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-gray-900 hover:bg-black text-white'}`}
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isPreOrder ? (
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              ) : (
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              )}
+            </svg>
+            <span>
+              {isPreOrder ? 'Pre-order' : 'Digital EP'}
+              {hasSale ? (
+                <Fragment>
+                  <span class="line-through opacity-60 mx-1">£{originalDigitalPrice.toFixed(2)}</span>
+                  <span class="text-green-300 font-black">£{digitalPrice.toFixed(2)}</span>
+                </Fragment>
+              ) : (
+                <Fragment> £{digitalPrice.toFixed(2)}</Fragment>
+              )}
+            </span>
+          </button>
         
         <button 
           data-release-id={id}
@@ -322,8 +372,33 @@ const totalDurationFormatted = totalDurationSeconds > 0
             ) : 'Vinyl Sold Out'}
           </span>
         </button>
-      </div>
-      
+        </div>
+      )}
+
+      {/* Vinyl button for NYOP mode - shown separately below the NYOP box */}
+      {nyopEnabled && vinylAvailable && (
+        <div class="w-64 mt-2">
+          <button
+            data-release-id={id}
+            data-product-type="vinyl"
+            data-price={finalVinylPrice}
+            data-digital-price={digitalPrice}
+            data-title={releaseName}
+            data-artist={artistName}
+            data-artwork={coverArtUrl}
+            data-includes-digital="true"
+            data-is-preorder={isPreOrder ? 'true' : 'false'}
+            class="add-to-cart w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-red-600 hover:bg-red-700 text-white"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+            </svg>
+            <span>Vinyl + Digital £{finalVinylPrice?.toFixed(2)}</span>
+          </button>
+        </div>
+      )}
+
       <!-- Compact Info Row -->
       <div class="flex items-center justify-between w-64 mt-auto pt-3 px-1 relative z-10">
         <!-- Wishlist Button (always visible) -->
@@ -744,6 +819,30 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
   .font-body {
     font-family: 'Inter', sans-serif;
+  }
+
+  /* NYOP (Name Your Own Price) Styles */
+  .nyop-container {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .nyop-price-input {
+    -moz-appearance: textfield;
+  }
+
+  .nyop-price-input::-webkit-outer-spin-button,
+  .nyop-price-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .nyop-price-input:focus {
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.3);
+  }
+
+  .nyop-buy-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .release-plate-container {
@@ -2306,6 +2405,79 @@ const totalDurationFormatted = totalDurationSeconds > 0
     initShareSystem();
     initWishlistSystem();
     initPreorderSystem();
+    initNYOPSystem();
+  }
+
+  // NYOP (Name Your Own Price) System
+  function initNYOPSystem() {
+    // Handle NYOP price input changes
+    document.querySelectorAll('.nyop-price-input').forEach(function(input) {
+      const releaseId = input.dataset.releaseId;
+      const minPrice = parseFloat(input.dataset.minPrice) || 0;
+      const container = input.closest('.nyop-container');
+      const buyBtn = container?.querySelector('.nyop-buy-btn');
+      const errorEl = container?.querySelector('.nyop-error');
+
+      // Sync price to button on input
+      input.addEventListener('input', function() {
+        const value = parseFloat(input.value) || 0;
+
+        // Validate minimum price
+        if (value < minPrice) {
+          if (errorEl) {
+            errorEl.textContent = `Minimum price is £${minPrice.toFixed(2)}`;
+            errorEl.classList.remove('hidden');
+          }
+          if (buyBtn) buyBtn.disabled = true;
+        } else {
+          if (errorEl) errorEl.classList.add('hidden');
+          if (buyBtn) {
+            buyBtn.disabled = false;
+            buyBtn.dataset.price = value.toFixed(2);
+          }
+        }
+      });
+
+      // Format on blur
+      input.addEventListener('blur', function() {
+        const value = parseFloat(input.value);
+        if (!isNaN(value)) {
+          input.value = Math.max(minPrice, value).toFixed(2);
+          if (buyBtn) buyBtn.dataset.price = input.value;
+          if (errorEl) errorEl.classList.add('hidden');
+          if (buyBtn) buyBtn.disabled = false;
+        }
+      });
+    });
+
+    // Handle NYOP buy button clicks - capture price before cart system
+    document.querySelectorAll('.nyop-buy-btn').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        const releaseId = btn.dataset.releaseId;
+        const container = btn.closest('.nyop-container');
+        const input = container?.querySelector('.nyop-price-input');
+        const minPrice = parseFloat(btn.dataset.nyopMin) || 0;
+
+        if (input) {
+          const value = parseFloat(input.value) || 0;
+
+          // Validate minimum
+          if (value < minPrice) {
+            e.preventDefault();
+            e.stopPropagation();
+            const errorEl = container?.querySelector('.nyop-error');
+            if (errorEl) {
+              errorEl.textContent = `Minimum price is £${minPrice.toFixed(2)}`;
+              errorEl.classList.remove('hidden');
+            }
+            return false;
+          }
+
+          // Update button price before cart system picks it up
+          btn.dataset.price = value.toFixed(2);
+        }
+      }, { capture: true });
+    });
   }
 
   if (document.readyState === 'loading') {

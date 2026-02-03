@@ -61,7 +61,11 @@ const {
   recordingYear = '',
   hasLimitedEdition = false,
   limitedEditionDetails = '',
-  vinyl = {}
+  vinyl = {},
+  // NYOP fields
+  nyopEnabled = false,
+  nyopMinPrice = 0,
+  nyopSuggestedPrice = 0
 } = release || {};
 
 // Handle pricing - use explicit checks to avoid 0 being treated as falsy
@@ -264,37 +268,82 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                     🚀 Pre-order • Releases in {daysUntilRelease} {daysUntilRelease === 1 ? 'day' : 'days'}
                   </div>
                 )}
-                <button
-                  data-release-id={id}
-                  data-product-type="digital"
-                  data-price={digitalPrice}
-                  data-title={releaseName}
-                  data-artist={artistName}
-                  data-artist-id={artistId}
-                  data-artwork={coverArtUrl}
-                  data-is-preorder={isPreOrder ? 'true' : 'false'}
-                  class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase w-full ${
-                    isPreOrder 
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' 
-                      : 'bg-gradient-to-r from-black-600 to-black-700 hover:from-green-700 hover:to-green-800 text-white'
-                  }`}
-                >
-                  {isPreOrder ? (
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  ) : (
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                    </svg>
-                  )}
-                  {isPreOrder ? `Pre-order Digital - £${digitalPrice.toFixed(2)}` : (
-                    hasSale ? (
-                      <span>Digital Download - <span class="line-through text-gray-400">£{originalDigitalPrice.toFixed(2)}</span> <span class="text-green-400 font-black">£{digitalPrice.toFixed(2)}</span></span>
-                    ) : `Digital Download - £${digitalPrice.toFixed(2)}`
-                  )}
-                </button>
-                
+
+                {/* NYOP Purchase UI */}
+                {nyopEnabled ? (
+                  <div class="nyop-container-item" data-release-id={id}>
+                    <div class="bg-gray-800 border-2 border-white p-4 mb-2">
+                      <div class="text-sm text-gray-300 uppercase tracking-wide font-black mb-3">Name Your Price</div>
+                      <div class="flex items-center gap-3 mb-3">
+                        <span class="text-white font-black text-lg">£</span>
+                        <input
+                          type="text"
+                          inputmode="decimal"
+                          class="nyop-price-input-item w-24 bg-gray-900 border-2 border-gray-600 px-3 py-2 text-white text-xl font-black focus:outline-none focus:border-red-500 transition-colors text-center"
+                          value={(nyopSuggestedPrice || nyopMinPrice || 0).toFixed(2)}
+                          data-min-price={nyopMinPrice}
+                          data-suggested-price={nyopSuggestedPrice}
+                          data-release-id={id}
+                          placeholder={(nyopSuggestedPrice || nyopMinPrice || 0).toFixed(2)}
+                        />
+                      </div>
+                      <div class="text-sm text-gray-400 mb-3">
+                        {nyopMinPrice > 0 ? `£${nyopMinPrice.toFixed(2)} minimum` : 'Pay what you want (including £0)'}
+                      </div>
+                      <p class="nyop-error-item text-sm text-red-400 hidden mb-3" data-release-id={id}></p>
+                      <button
+                        data-release-id={id}
+                        data-product-type="digital"
+                        data-price={nyopSuggestedPrice || nyopMinPrice || 0}
+                        data-title={releaseName}
+                        data-artist={artistName}
+                        data-artist-id={artistId}
+                        data-artwork={coverArtUrl}
+                        data-is-preorder={isPreOrder ? 'true' : 'false'}
+                        data-nyop="true"
+                        data-nyop-min={nyopMinPrice}
+                        class="nyop-buy-btn-item w-full add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase bg-gray-900 hover:bg-black text-white"
+                      >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                        <span>Buy Digital Download</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    data-release-id={id}
+                    data-product-type="digital"
+                    data-price={digitalPrice}
+                    data-title={releaseName}
+                    data-artist={artistName}
+                    data-artist-id={artistId}
+                    data-artwork={coverArtUrl}
+                    data-is-preorder={isPreOrder ? 'true' : 'false'}
+                    class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black text-base uppercase w-full ${
+                      isPreOrder
+                        ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white'
+                        : 'bg-gradient-to-r from-black-600 to-black-700 hover:from-green-700 hover:to-green-800 text-white'
+                    }`}
+                  >
+                    {isPreOrder ? (
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    ) : (
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                    )}
+                    {isPreOrder ? `Pre-order Digital - £${digitalPrice.toFixed(2)}` : (
+                      hasSale ? (
+                        <span>Digital Download - <span class="line-through text-gray-400">£{originalDigitalPrice.toFixed(2)}</span> <span class="text-green-400 font-black">£{digitalPrice.toFixed(2)}</span></span>
+                      ) : `Digital Download - £${digitalPrice.toFixed(2)}`
+                    )}
+                  </button>
+                )}
+
                 <button
                   data-release-id={id}
                   data-product-type="vinyl"
@@ -307,10 +356,10 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   data-includes-digital="true"
                   data-is-preorder={isPreOrder ? 'true' : 'false'}
                   disabled={!vinylRelease || !vinylAvailable}
-                 
+
                     class={`add-to-cart px-4 py-3.5 border-2 border-white shadow-lg flex items-center justify-center gap-2 transition-all font-black uppercase text-base w-full ${
                     vinylRelease && vinylAvailable
-                      ? (isPreOrder 
+                      ? (isPreOrder
                           ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white cursor-pointer'
                           : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-green-700 hover:to-green-800 text-white cursor-pointer')
                       : 'bg-gray-500 text-gray-300 cursor-not-allowed'
@@ -951,6 +1000,30 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 </div>
 
 <style>
+  /* NYOP (Name Your Own Price) Styles */
+  .nyop-container-item {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .nyop-price-input-item {
+    -moz-appearance: textfield;
+  }
+
+  .nyop-price-input-item::-webkit-outer-spin-button,
+  .nyop-price-input-item::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .nyop-price-input-item:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3);
+  }
+
+  .nyop-buy-btn-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* Sale Badge */
   .sale-badge-item {
     position: absolute;
@@ -2100,6 +2173,94 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     initWishlistButton();
   }
   document.addEventListener('astro:page-load', initWishlistButton);
+</script>
+
+<!-- NYOP (Name Your Own Price) Script -->
+<script is:inline>
+  function initNYOPItem() {
+    // Handle NYOP price input changes
+    document.querySelectorAll('.nyop-price-input-item').forEach(function(input) {
+      const releaseId = input.dataset.releaseId;
+      const minPrice = parseFloat(input.dataset.minPrice) || 0;
+      const container = input.closest('.nyop-container-item');
+      const buyBtn = container?.querySelector('.nyop-buy-btn-item');
+      const errorEl = container?.querySelector('.nyop-error-item');
+
+      // Prevent double init
+      if (input.dataset.nyopInit === 'true') return;
+      input.dataset.nyopInit = 'true';
+
+      // Sync price to button on input
+      input.addEventListener('input', function() {
+        const value = parseFloat(input.value) || 0;
+
+        // Validate minimum price
+        if (value < minPrice) {
+          if (errorEl) {
+            errorEl.textContent = 'Minimum price is £' + minPrice.toFixed(2);
+            errorEl.classList.remove('hidden');
+          }
+          if (buyBtn) buyBtn.disabled = true;
+        } else {
+          if (errorEl) errorEl.classList.add('hidden');
+          if (buyBtn) {
+            buyBtn.disabled = false;
+            buyBtn.dataset.price = value.toFixed(2);
+          }
+        }
+      });
+
+      // Format on blur
+      input.addEventListener('blur', function() {
+        const value = parseFloat(input.value);
+        if (!isNaN(value)) {
+          input.value = Math.max(minPrice, value).toFixed(2);
+          if (buyBtn) buyBtn.dataset.price = input.value;
+          if (errorEl) errorEl.classList.add('hidden');
+          if (buyBtn) buyBtn.disabled = false;
+        }
+      });
+    });
+
+    // Handle NYOP buy button clicks - capture price before cart system
+    document.querySelectorAll('.nyop-buy-btn-item').forEach(function(btn) {
+      if (btn.dataset.nyopBtnInit === 'true') return;
+      btn.dataset.nyopBtnInit = 'true';
+
+      btn.addEventListener('click', function(e) {
+        const container = btn.closest('.nyop-container-item');
+        const input = container?.querySelector('.nyop-price-input-item');
+        const minPrice = parseFloat(btn.dataset.nyopMin) || 0;
+
+        if (input) {
+          const value = parseFloat(input.value) || 0;
+
+          // Validate minimum
+          if (value < minPrice) {
+            e.preventDefault();
+            e.stopPropagation();
+            const errorEl = container?.querySelector('.nyop-error-item');
+            if (errorEl) {
+              errorEl.textContent = 'Minimum price is £' + minPrice.toFixed(2);
+              errorEl.classList.remove('hidden');
+            }
+            return false;
+          }
+
+          // Update button price before cart system picks it up
+          btn.dataset.price = value.toFixed(2);
+        }
+      }, { capture: true });
+    });
+  }
+
+  // Initialize on load
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initNYOPItem);
+  } else {
+    initNYOPItem();
+  }
+  document.addEventListener('astro:page-load', initNYOPItem);
 </script>
 
 <!-- OPTIMIZED: Pass SSR data to client to avoid duplicate API calls -->
