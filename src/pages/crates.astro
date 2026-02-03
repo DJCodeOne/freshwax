@@ -101,8 +101,14 @@ const faqs = [
           </div>
         </div>
 
-        <!-- Sell Button -->
-        <div class="sell-btn-container">
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+          <button class="condition-guide-btn" id="conditionKeyToggle">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Condition Guide
+          </button>
           <a href="/artist/vinyl" class="sell-btn">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -111,23 +117,17 @@ const faqs = [
           </a>
         </div>
 
-        <!-- Mobile Collection Filter -->
-        <div class="collection-filter-mobile">
-          <div class="filter-scroll" id="mobileFilters">
-            <button class="filter-btn active" data-collection="all">All</button>
-            <button class="filter-btn deals-filter" data-collection="deals">🔥 Deals</button>
-          </div>
-        </div>
-
-        <!-- Condition Key -->
-        <div class="condition-key">
-          <button class="condition-key-toggle" id="conditionKeyToggle">
-            <span>Condition Guide</span>
-            <svg class="toggle-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-          <div class="condition-key-content" id="conditionKeyContent">
+        <!-- Condition Guide Modal -->
+        <div class="condition-modal" id="conditionModal">
+          <div class="condition-modal-content">
+            <div class="condition-modal-header">
+              <h3>Condition Guide</h3>
+              <button class="condition-modal-close" id="conditionModalClose">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
             <div class="condition-grades">
               <div class="grade"><span class="grade-abbr">M</span><span class="grade-name">Mint</span><span class="grade-desc">Perfect, unplayed condition</span></div>
               <div class="grade"><span class="grade-abbr">NM</span><span class="grade-name">Near Mint</span><span class="grade-desc">Nearly perfect, minimal signs of handling</span></div>
@@ -138,6 +138,14 @@ const faqs = [
               <div class="grade"><span class="grade-abbr">F</span><span class="grade-name">Fair</span><span class="grade-desc">Plays but with issues, for collectors only</span></div>
             </div>
             <p class="condition-note">Conditions shown as: Media / Sleeve</p>
+          </div>
+        </div>
+
+        <!-- Mobile Collection Filter -->
+        <div class="collection-filter-mobile">
+          <div class="filter-scroll" id="mobileFilters">
+            <button class="filter-btn active" data-collection="all">All</button>
+            <button class="filter-btn deals-filter" data-collection="deals">🔥 Deals</button>
           </div>
         </div>
 
@@ -437,10 +445,32 @@ const faqs = [
     margin: 0 auto;
   }
 
-  .sell-btn-container {
+  .action-buttons {
     display: flex;
     justify-content: flex-end;
+    gap: 0.75rem;
     margin-bottom: 1.5rem;
+  }
+
+  .condition-guide-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #374151;
+    color: #9ca3af;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .condition-guide-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #dc2626;
+    color: #fff;
   }
 
   .sell-btn {
@@ -473,50 +503,63 @@ const faqs = [
     .collection-filter-mobile { display: none; }
   }
 
-  /* Condition Key */
-  .condition-key {
-    margin-bottom: 1.5rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid #374151;
-    border-radius: 8px;
-    overflow: hidden;
+  /* Condition Modal */
+  .condition-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
   }
 
-  .condition-key-toggle {
-    width: 100%;
+  .condition-modal.open {
     display: flex;
-    align-items: center;
+  }
+
+  .condition-modal-content {
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 12px;
+    padding: 1.5rem;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .condition-modal-header {
+    display: flex;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #374151;
+  }
+
+  .condition-modal-header h3 {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .condition-modal-close {
     background: transparent;
     border: none;
     color: #9ca3af;
-    font-size: 0.85rem;
     cursor: pointer;
-    transition: all 0.15s;
+    padding: 0.25rem;
+    transition: color 0.2s;
   }
 
-  .condition-key-toggle:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.05);
-  }
-
-  .condition-key-toggle .toggle-icon {
-    transition: transform 0.2s;
-  }
-
-  .condition-key.open .toggle-icon {
-    transform: rotate(180deg);
-  }
-
-  .condition-key-content {
-    display: none;
-    padding: 1rem;
-    border-top: 1px solid #374151;
-  }
-
-  .condition-key.open .condition-key-content {
-    display: block;
+  .condition-modal-close:hover {
+    color: #fff;
   }
 
   .condition-grades {
@@ -1742,12 +1785,29 @@ const faqs = [
   window.viewListing = viewListing;
   window.addVinylToCart = addVinylToCart;
 
-  // Condition key toggle
+  // Condition guide modal
   const conditionKeyToggle = document.getElementById('conditionKeyToggle');
-  const conditionKey = document.querySelector('.condition-key');
-  if (conditionKeyToggle && conditionKey) {
+  const conditionModal = document.getElementById('conditionModal');
+  const conditionModalClose = document.getElementById('conditionModalClose');
+
+  if (conditionKeyToggle && conditionModal) {
     conditionKeyToggle.addEventListener('click', () => {
-      conditionKey.classList.toggle('open');
+      conditionModal.classList.add('open');
+    });
+  }
+
+  if (conditionModalClose && conditionModal) {
+    conditionModalClose.addEventListener('click', () => {
+      conditionModal.classList.remove('open');
+    });
+  }
+
+  // Close modal on backdrop click
+  if (conditionModal) {
+    conditionModal.addEventListener('click', (e) => {
+      if (e.target === conditionModal) {
+        conditionModal.classList.remove('open');
+      }
     });
   }
 
