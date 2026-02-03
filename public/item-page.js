@@ -98,6 +98,7 @@ function addItemToCart(item) {
       title: item.title,
       artist: item.artist,
       artistId: item.artistId || null, // For Stripe Connect payouts
+      labelName: item.labelName || null,
       price: item.price,
       image: item.image,
       artwork: item.image,
