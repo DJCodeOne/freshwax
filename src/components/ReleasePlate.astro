@@ -539,7 +539,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         <h4 class="text-sm text-white uppercase tracking-wider font-heading">
           TRACKS ({tracksWithIds.length})
         </h4>
-        {finalTrackPrice > 0 && (
+        {finalTrackPrice > 0 && !nyopEnabled && (
           <div class="text-sm text-white font-body">
             {hasSale ? (
               <Fragment>

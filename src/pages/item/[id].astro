@@ -525,7 +525,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         <div class="bg-gradient-to-b from-gray-800 to-gray-900 border-2 border-white shadow-xl p-3 md:p-6 mb-4 md:mb-6">
           <div class="flex items-center justify-between mb-3 md:mb-4 pb-3 md:pb-4 border-b-2 border-red-600">
             <h2 class="text-xl md:text-3xl font-black text-white uppercase tracking-wider drop-shadow-lg">Tracklist</h2>
-            {actualTrackPrice > 0 && (
+            {actualTrackPrice > 0 && !nyopEnabled && (
               <span class="text-xs md:text-sm font-black text-white">
                 {hasSale ? (
                   <><span class="line-through text-gray-400">£{actualTrackPrice.toFixed(2)}</span> <span class="text-green-400">£{saleTrackPrice.toFixed(2)}</span> per track</>
