@@ -693,6 +693,10 @@ Astro.response.headers.set('Pragma', 'no-cache');
             <span class="action-icon">📜</span>
             <span class="action-label">History</span>
           </a>
+          <button type="button" id="startPlaylistBtn" class="livestream-action-btn playlist-btn">
+            <span class="action-icon">🎵</span>
+            <span class="action-label">Start Playlist</span>
+          </button>
         </div>
       </div>
 
@@ -1257,6 +1261,18 @@ Astro.response.headers.set('Pragma', 'no-cache');
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+  .playlist-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    border: none;
+    cursor: pointer;
+  }
+  .playlist-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  }
+  .playlist-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
   }
 </style>
 
@@ -1830,5 +1846,52 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
     // Refresh status every 30 seconds
     setInterval(checkServerStatus, 30000);
+  });
+</script>
+
+<script>
+  // Start Playlist button handler
+  document.addEventListener('DOMContentLoaded', () => {
+    const startPlaylistBtn = document.getElementById('startPlaylistBtn');
+    if (startPlaylistBtn) {
+      startPlaylistBtn.addEventListener('click', async () => {
+        const btn = startPlaylistBtn;
+        const originalHTML = btn.innerHTML;
+
+        btn.innerHTML = '<span class="action-icon">⏳</span><span class="action-label">Starting...</span>';
+        btn.setAttribute('disabled', 'true');
+
+        try {
+          const response = await fetch('/api/playlist/global', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'startAutoPlay' })
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            btn.innerHTML = '<span class="action-icon">✅</span><span class="action-label">Started!</span>';
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+              btn.removeAttribute('disabled');
+            }, 2000);
+          } else {
+            btn.innerHTML = '<span class="action-icon">❌</span><span class="action-label">Failed</span>';
+            setTimeout(() => {
+              btn.innerHTML = originalHTML;
+              btn.removeAttribute('disabled');
+            }, 2000);
+          }
+        } catch (error) {
+          console.error('Failed to start playlist:', error);
+          btn.innerHTML = '<span class="action-icon">❌</span><span class="action-label">Error</span>';
+          setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.removeAttribute('disabled');
+          }, 2000);
+        }
+      });
+    }
   });
 </script>
