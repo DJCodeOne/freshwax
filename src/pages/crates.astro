@@ -408,6 +408,59 @@ const faqs = [
     color: #dc2626;
   }
 
+  /* Collection Box Styles */
+  .collection-box {
+    background: linear-gradient(135deg, rgba(31, 41, 55, 0.8), rgba(17, 24, 39, 0.9));
+    border: 1px solid #374151;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+  }
+
+  .collection-box:hover {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.15), rgba(220, 38, 38, 0.08));
+    border-color: #dc2626;
+    transform: translateX(4px);
+  }
+
+  .collection-box.active {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(220, 38, 38, 0.1));
+    border-color: #dc2626;
+    border-left: 3px solid #dc2626;
+  }
+
+  .collection-box-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    text-align: left;
+    width: 100%;
+  }
+
+  .collection-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: #dc2626;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .collection-store {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .collection-box:hover .collection-store {
+    color: #fff;
+  }
+
+  .collection-box:hover .collection-number {
+    color: #ef4444;
+  }
+
   .loading-text {
     text-align: center;
     padding: 1rem;
@@ -1378,13 +1431,11 @@ const faqs = [
 
     // Desktop sidebar
     container.innerHTML = allCollections.map(c => `
-      <button class="collection-nav-btn" data-collection="${c.id}">
-        <div class="collection-nav-content">
-          <span class="collection-name">${c.storeName || `Collection ${c.collectionNumber}`}</span>
+      <button class="collection-nav-btn collection-box" data-collection="${c.id}">
+        <div class="collection-box-inner">
+          <span class="collection-number">Collection ${c.collectionNumber || '1'}</span>
+          <span class="collection-store">${c.storeName || 'Unknown Store'}</span>
         </div>
-        <svg class="collection-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-        </svg>
       </button>
     `).join('');
 
