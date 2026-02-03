@@ -94,7 +94,7 @@ const faqs = [
         <div class="section-header-card">
           <div class="section-header-pattern"></div>
           <div class="section-header-content">
-            <h2 class="section-title" id="sectionTitle">All Vinyl</h2>
+            <h2 class="section-title" id="sectionTitle">All Vinyl Collections</h2>
             <p class="section-subtitle">
               <span id="listingCount">0</span> records available
             </p>
@@ -827,6 +827,44 @@ const faqs = [
     gap: 0;
   }
 
+  .show-more-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .show-more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid #dc2626;
+    color: #dc2626;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .show-more-btn:hover {
+    background: #dc2626;
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+  }
+
+  .show-more-btn svg {
+    transition: transform 0.2s;
+  }
+
+  .show-more-btn:hover svg {
+    transform: translateY(2px);
+  }
+
   @media (min-width: 640px) {
     .seller-name {
       font-size: 2rem;
@@ -1491,33 +1529,86 @@ const faqs = [
       return nameA.localeCompare(nameB);
     });
 
+    // Check if showing a specific collection (not 'all')
+    const isSpecificCollection = currentCollection && currentCollection !== 'all' && currentCollection !== 'deals';
+    const maxVisible = isSpecificCollection ? Infinity : 3;
+
     // Render grouped listings
     grid.innerHTML = sortedSellers.map(sellerKey => {
       const seller = listingsBySeller[sellerKey];
       const sellerListings = seller.listings;
+      const hasMore = sellerListings.length > maxVisible;
+      const visibleListings = hasMore ? sellerListings.slice(0, maxVisible) : sellerListings;
+      const hiddenCount = sellerListings.length - maxVisible;
 
       const sellerHeader = `
-        <div class="seller-section" id="seller-${sellerKey}">
+        <div class="seller-section" id="seller-${sellerKey}" data-seller-key="${sellerKey}">
           <div class="seller-header">
             <div class="seller-header-inner">
               <h3 class="seller-name">${seller.name}</h3>
               <p class="seller-count">${sellerListings.length} release${sellerListings.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
-          <div class="seller-listings">
-            ${sellerListings.map((listing, index, arr) => {
+          <div class="seller-listings" data-expanded="false">
+            ${visibleListings.map((listing, index, arr) => {
               const card = renderVinylCard(listing, index);
               const divider = index < arr.length - 1 ? '<div class="release-divider"></div>' : '';
               return card + divider;
             }).join('')}
           </div>
+          ${hasMore ? `
+            <div class="show-more-container">
+              <button class="show-more-btn" data-seller="${sellerKey}" data-total="${sellerListings.length}">
+                <span>Show ${hiddenCount} More</span>
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="16" height="16">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </button>
+            </div>
+          ` : ''}
         </div>
       `;
       return sellerHeader;
     }).join('');
 
+    // Attach show more button listeners
+    attachShowMoreListeners(listingsBySeller);
+
     // Initialize waveforms after rendering
     initWaveforms();
+  }
+
+  function attachShowMoreListeners(listingsBySeller) {
+    document.querySelectorAll('.show-more-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sellerKey = btn.dataset.seller;
+        const seller = listingsBySeller[sellerKey];
+        if (!seller) return;
+
+        const section = document.getElementById(`seller-${sellerKey}`);
+        if (!section) return;
+
+        const listingsContainer = section.querySelector('.seller-listings');
+        const showMoreContainer = section.querySelector('.show-more-container');
+
+        // Render all listings
+        listingsContainer.innerHTML = seller.listings.map((listing, index, arr) => {
+          const card = renderVinylCard(listing, index);
+          const divider = index < arr.length - 1 ? '<div class="release-divider"></div>' : '';
+          return card + divider;
+        }).join('');
+
+        listingsContainer.dataset.expanded = 'true';
+
+        // Remove the show more button
+        if (showMoreContainer) {
+          showMoreContainer.remove();
+        }
+
+        // Re-initialize waveforms for new cards
+        initWaveforms();
+      });
+    });
   }
 
   function renderVinylCard(listing, index) {
@@ -1661,7 +1752,7 @@ const faqs = [
     // Update title
     const title = document.getElementById('sectionTitle');
     if (collection === 'all') {
-      title.textContent = 'All Vinyl';
+      title.textContent = 'All Vinyl Collections';
     } else if (collection === 'deals') {
       title.textContent = '🔥 Special Deals';
     } else {
