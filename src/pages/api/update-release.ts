@@ -117,6 +117,22 @@ export async function POST({ request, locals }: any) {
       };
     }
 
+    // Validate NYOP fields
+    if (cleanedData.nyopEnabled !== undefined) {
+      // Ensure boolean
+      cleanedData.nyopEnabled = !!cleanedData.nyopEnabled;
+    }
+    if (cleanedData.nyopMinPrice !== undefined) {
+      // Ensure non-negative number
+      const minPrice = parseFloat(cleanedData.nyopMinPrice);
+      cleanedData.nyopMinPrice = isNaN(minPrice) ? 0 : Math.max(0, minPrice);
+    }
+    if (cleanedData.nyopSuggestedPrice !== undefined) {
+      // Ensure non-negative number
+      const suggestedPrice = parseFloat(cleanedData.nyopSuggestedPrice);
+      cleanedData.nyopSuggestedPrice = isNaN(suggestedPrice) ? null : Math.max(0, suggestedPrice);
+    }
+
     // Handle per-track updates (Featured, Remixer, BPM, Key)
     if (cleanedData.trackUpdates && Array.isArray(cleanedData.trackUpdates)) {
       const existingTracks = releaseDoc.tracks || [];

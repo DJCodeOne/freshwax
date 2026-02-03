@@ -216,12 +216,37 @@ if (!release) {
                 </div>
               </div>
             </div>
+
+            <!-- Name Your Own Price (NYOP) Section -->
+            <div class="form-group" style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+              <label class="checkbox-group">
+                <input type="checkbox" name="nyopEnabled" id="nyopEnabled" checked={release.nyopEnabled || false} />
+                <span class="checkbox-label">🎯 Name Your Own Price (Digital)</span>
+              </label>
+              <p class="field-hint">Let customers choose their price for digital downloads (like Bandcamp)</p>
+            </div>
+
+            <div id="nyopOptions" style={release.nyopEnabled ? '' : 'display: none'}>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label class="form-label">Minimum Price (£) <span class="hint">nyopMinPrice</span></label>
+                  <input type="number" name="nyopMinPrice" class="form-input" step="0.01" min="0" value={Number(release.nyopMinPrice ?? 0).toFixed(2)} placeholder="0.00" />
+                  <p class="field-hint">Set to £0 for free downloads</p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Suggested Price (£) <span class="hint">nyopSuggestedPrice</span></label>
+                  <input type="number" name="nyopSuggestedPrice" class="form-input" step="0.01" min="0" value={release.nyopSuggestedPrice ? Number(release.nyopSuggestedPrice).toFixed(2) : ''} placeholder="Optional" />
+                  <p class="field-hint">Pre-filled in price input (optional)</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- VINYL OPTIONS -->
           <div class="edit-section">
             <h2 class="section-title">💿 Vinyl Release</h2>
-            
+
             <div class="form-group">
               <label class="checkbox-group">
                 <input type="checkbox" name="vinylRelease" id="vinylRelease" checked={release.vinylRelease || release.vinyl?.available || false} />
@@ -819,7 +844,8 @@ if (!release) {
       { checkbox: 'vinylRelease', target: 'vinylOptions' },
       { checkbox: 'hasLimitedEdition', target: 'limitedEditionOptions' },
       { checkbox: 'hasPreOrder', target: 'preOrderOptions' },
-      { checkbox: 'specialOffer', target: 'specialOfferPrice' }
+      { checkbox: 'specialOffer', target: 'specialOfferPrice' },
+      { checkbox: 'nyopEnabled', target: 'nyopOptions' }
     ];
 
     toggles.forEach(function(config) {
@@ -994,6 +1020,10 @@ if (!release) {
         freeDownload: formData.get('freeDownload') === 'on',
         specialOffer: formData.get('specialOffer') === 'on',
         offerPrice: parseFloat(formData.get('offerPrice')) || 0,
+        // Name Your Own Price (NYOP)
+        nyopEnabled: formData.get('nyopEnabled') === 'on',
+        nyopMinPrice: parseFloat(formData.get('nyopMinPrice')) || 0,
+        nyopSuggestedPrice: formData.get('nyopSuggestedPrice') ? parseFloat(formData.get('nyopSuggestedPrice')) : null,
         pricing: {
           digital: parseFloat(formData.get('pricePerSale')) || 0,
           track: parseFloat(formData.get('trackPrice')) || 1.00,

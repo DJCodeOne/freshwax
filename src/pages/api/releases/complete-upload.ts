@@ -1,7 +1,9 @@
 // src/pages/api/releases/complete-upload.ts
 // Called after files are uploaded to R2 - creates Firebase document with status: 'pending'
+// Uses Firebase Admin SDK to bypass security rules
 
 import type { APIRoute } from 'astro';
+import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
 
@@ -17,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any).runtime?.env;
 
-    // Initialize Firebase
+    // Initialize Firebase REST API as fallback
     initFirebaseEnv({
       FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
       FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
@@ -121,9 +123,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     try {
-      // Write to Firebase first (primary)
-      await setDocument('releases', releaseId, releaseDoc);
-      log.info(`Release document created/updated: ${releaseId}`);
+      // Try Firebase Admin SDK first (bypasses security rules)
+      const adminDb = await getAdminDb();
+
+      if (adminDb) {
+        log.info('Using Firebase Admin SDK for write...');
+        await adminDb.collection('releases').doc(releaseId).set(releaseDoc, { merge: true });
+        log.info(`Release document created/updated via Admin SDK: ${releaseId}`);
+      } else {
+        // Fallback to REST API
+        log.info('Admin SDK not available, using REST API...');
+        await setDocument('releases', releaseId, releaseDoc);
+        log.info(`Release document created/updated via REST API: ${releaseId}`);
+      }
 
       // Dual-write to D1 (secondary, non-blocking)
       const db = env?.DB;
@@ -137,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
     } catch (setError: any) {
-      log.error('Firebase setDocument failed:', setError);
+      log.error('Firebase write failed:', setError);
       // Return more detailed error
       return new Response(JSON.stringify({
         success: false,

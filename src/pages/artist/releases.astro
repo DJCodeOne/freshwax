@@ -342,6 +342,47 @@ export const prerender = false;
                     </div>
                   </div>
 
+                  <!-- Name Your Own Price (NYOP) Section -->
+                  <div class="edit-section-title">Name Your Own Price</div>
+                  <div class="edit-grid">
+                    <div class="edit-field">
+                      <label class="nyop-toggle-label">
+                        <input
+                          type="checkbox"
+                          class="nyop-toggle-input"
+                          data-release-id={release.id}
+                          checked={release.nyopEnabled || false}
+                        />
+                        <span>Enable NYOP (Digital)</span>
+                      </label>
+                      <span class="field-hint">Let customers choose their price</span>
+                    </div>
+                    <div class="edit-field">
+                      <label>Minimum Price (£)</label>
+                      <input
+                        type="number"
+                        class="edit-input nyop-min-price-input"
+                        data-release-id={release.id}
+                        value={Number(release.nyopMinPrice ?? 0).toFixed(2)}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                    <div class="edit-field">
+                      <label>Suggested Price (£)</label>
+                      <input
+                        type="number"
+                        class="edit-input nyop-suggested-price-input"
+                        data-release-id={release.id}
+                        value={release.nyopSuggestedPrice ? Number(release.nyopSuggestedPrice).toFixed(2) : ''}
+                        placeholder="Optional"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+
                   <!-- Music Details Section -->
                   <div class="edit-section-title">Music Details</div>
                   <div class="edit-grid">
@@ -1223,7 +1264,24 @@ export const prerender = false;
     color: #6b7280;
     margin-top: 0.25rem;
   }
-  
+
+  .nyop-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
+  .nyop-toggle-input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #dc2626;
+    cursor: pointer;
+  }
+
   .edit-field.full-width {
     grid-column: 1 / -1;
   }
@@ -1563,12 +1621,20 @@ export const prerender = false;
         });
       }
 
+      // Get NYOP toggle value
+      const nyopToggle = card.querySelector(`.nyop-toggle-input[data-release-id="${releaseId}"]`);
+      const nyopEnabled = nyopToggle ? nyopToggle.checked : false;
+
       const data = {
         id: releaseId,
         // Pricing
         trackPrice: getValue('.track-price-input') ? parseFloat(getValue('.track-price-input')) : null,
         pricePerSale: getValue('.price-input') ? parseFloat(getValue('.price-input')) : null,
         saleDiscount: parseInt(getValue('.sale-discount-input')) || 0,
+        // NYOP
+        nyopEnabled: nyopEnabled,
+        nyopMinPrice: getValue('.nyop-min-price-input') ? parseFloat(getValue('.nyop-min-price-input')) : 0,
+        nyopSuggestedPrice: getValue('.nyop-suggested-price-input') ? parseFloat(getValue('.nyop-suggested-price-input')) : null,
         // Music details
         genre: getValue('.genre-input') || null,
         trackUpdates: trackUpdates.length > 0 ? trackUpdates : null,

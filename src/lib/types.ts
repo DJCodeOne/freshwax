@@ -136,6 +136,11 @@ export interface Release extends Timestamps {
   pricePerSale: number;
   trackPrice: number;
 
+  // Name Your Own Price (NYOP) - digital album only
+  nyopEnabled?: boolean;        // Toggle NYOP on/off
+  nyopMinPrice?: number;        // Minimum price (can be 0 for free)
+  nyopSuggestedPrice?: number;  // Pre-filled suggested price (optional)
+
   // Copyright
   copyrightYear?: string;
   copyrightHolder?: string;

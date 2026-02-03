@@ -1,0 +1,31 @@
+name = "vinyl-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat_v2"]
+
+# Use the same D1 database as the main site
+[[d1_databases]]
+binding = "DB"
+database_name = "freshwax-db"
+database_id = "909e1932-1e20-4081-a37e-32cf355dec8f"
+
+# R2 bucket for vinyl images and audio
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "freshwax-releases"
+
+# KV for rate limiting and caching
+[[kv_namespaces]]
+binding = "CACHE"
+id = "349d1fd00f3d4de9811529cc96fd4d8b"
+
+[vars]
+ENVIRONMENT = "production"
+R2_PUBLIC_DOMAIN = "https://cdn.freshwax.co.uk"
+
+# Development overrides
+[env.dev]
+name = "vinyl-api-dev"
+
+[env.dev.vars]
+ENVIRONMENT = "development"

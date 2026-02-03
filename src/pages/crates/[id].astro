@@ -113,36 +113,48 @@ const { id } = Astro.params;
             </div>
 
             <div class="condition-notes" id="conditionNotesSection" style="display: none;">
-              <h3>Condition Notes</h3>
-              <p id="conditionNotes"></p>
+              <div class="section-header-bar">
+                <h3>Condition Notes</h3>
+              </div>
+              <div class="section-content">
+                <p id="conditionNotes"></p>
+              </div>
             </div>
 
             <div class="description-section" id="descriptionSection" style="display: none;">
-              <h3>Description</h3>
-              <p id="vinylDescription"></p>
-            </div>
-
-            <!-- Waveform Player (always visible like ReleasePlate) -->
-            <div class="waveform-section" id="waveformSection">
-              <div class="waveform-header">
-                <span class="now-playing" id="nowPlayingText">Select a track</span>
-                <span class="track-time" id="trackTime">0:00 / 0:00</span>
+              <div class="section-header-bar">
+                <h3>Description</h3>
               </div>
-              <div class="waveform-wrapper">
-                <canvas class="waveform-canvas" id="waveformCanvas" width="400" height="50"></canvas>
-              </div>
-              <div class="volume-control">
-                <svg class="volume-icon" fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
-                  <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
-                </svg>
-                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" />
+              <div class="section-content">
+                <p id="vinylDescription"></p>
               </div>
             </div>
 
             <!-- Tracklist -->
             <div class="tracklist-section" id="tracklistSection" style="display: none;">
-              <h3>Tracklist</h3>
+              <div class="section-header-bar">
+                <h3>Tracklist</h3>
+                <span class="track-count" id="trackCount"></span>
+              </div>
               <div class="tracklist" id="tracklist"></div>
+
+              <!-- Waveform Player (below tracklist) -->
+              <div class="waveform-section" id="waveformSection">
+                <div class="waveform-title">NOW PLAYING</div>
+                <div class="waveform-header">
+                  <span class="now-playing" id="nowPlayingText">Select a track</span>
+                  <span class="track-time" id="trackTime">0:00 / 0:00</span>
+                </div>
+                <div class="waveform-wrapper">
+                  <canvas class="waveform-canvas" id="waveformCanvas" width="400" height="50"></canvas>
+                </div>
+                <div class="volume-control">
+                  <svg class="volume-icon" fill="currentColor" viewBox="0 0 20 20" width="16" height="16">
+                    <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
+                  </svg>
+                  <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70" />
+                </div>
+              </div>
             </div>
 
             <!-- Deal Description -->
@@ -161,30 +173,41 @@ const { id } = Astro.params;
 
 <style>
   .vinyl-detail-main {
-    background: linear-gradient(to bottom, #111827, #0f172a);
+    background: #000000;
     min-height: 100vh;
-    padding: 2rem 0 4rem;
+    padding: 1rem 0 4rem;
   }
 
   .container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 1.5rem;
+    padding: 0 1rem;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding: 0 1.5rem;
+    }
   }
 
   .back-link {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    color: #9ca3af;
+    color: #fff;
     text-decoration: none;
-    font-size: 0.9rem;
-    margin-bottom: 2rem;
-    transition: color 0.15s;
+    font-size: 0.875rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem 1rem;
+    border: 2px solid #fff;
+    transition: all 0.15s;
   }
 
   .back-link:hover {
-    color: #f97316;
+    background: #fff;
+    color: #000;
   }
 
   .loading-state, .error-state {
@@ -197,7 +220,7 @@ const { id } = Astro.params;
     width: 50px;
     height: 50px;
     border: 3px solid #374151;
-    border-top-color: #f97316;
+    border-top-color: #dc2626;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 1.5rem;
@@ -221,16 +244,41 @@ const { id } = Astro.params;
     display: inline-block;
     margin-top: 1.5rem;
     padding: 0.75rem 1.5rem;
-    background: linear-gradient(135deg, #f97316, #ea580c);
+    background: #dc2626;
     color: #fff;
     text-decoration: none;
-    border-radius: 8px;
-    font-weight: 600;
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 2px solid #fff;
+  }
+
+  .back-btn:hover {
+    background: #b91c1c;
+  }
+
+  .vinyl-content {
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #fff;
+    padding: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .vinyl-content {
+      padding: 2rem;
+    }
   }
 
   .vinyl-grid {
     display: flex;
-    gap: 2.5rem;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  @media (min-width: 900px) {
+    .vinyl-grid {
+      flex-direction: row;
+      gap: 2.5rem;
+    }
   }
 
   .details-section {
@@ -238,40 +286,32 @@ const { id } = Astro.params;
     min-width: 0;
   }
 
-  @media (max-width: 900px) {
-    .vinyl-grid {
-      flex-direction: column;
-      gap: 2rem;
-      align-items: center;
-    }
-  }
-
-  /* LEFT COLUMN: Images + Buy Button (ReleasePlate style) */
+  /* LEFT COLUMN: Images + Buy Button */
   .images-section {
-    position: sticky;
-    top: 100px;
-    align-self: start;
     flex-shrink: 0;
-    width: 280px;
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
   }
 
-  @media (max-width: 900px) {
+  @media (min-width: 900px) {
     .images-section {
-      position: static;
-      width: 100%;
-      max-width: 350px;
-      margin: 0 auto;
+      position: sticky;
+      top: 100px;
+      align-self: start;
+      width: 300px;
+      max-width: none;
+      margin: 0;
     }
   }
 
   .main-image {
     width: 100%;
     aspect-ratio: 1;
-    background: #1f2937;
-    border: 2px solid #374151;
-    border-radius: 12px;
+    background: #000;
+    border: 4px solid #fff;
     overflow: hidden;
     position: relative;
     margin-bottom: 1rem;
@@ -295,25 +335,23 @@ const { id } = Astro.params;
     justify-content: center;
     gap: 0.75rem;
     padding: 1rem 1.5rem;
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    border: none;
-    border-radius: 10px;
+    background: #16a34a;
+    border: 2px solid #fff;
     color: #fff;
     font-size: 1rem;
-    font-weight: 700;
+    font-weight: 900;
+    text-transform: uppercase;
     cursor: pointer;
     transition: all 0.2s;
   }
 
   .purchase-section-left .add-to-bag-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(249, 115, 22, 0.4);
+    background: #166534;
   }
 
   .purchase-section-left .add-to-bag-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
   }
 
   .purchase-section-left .seller-info {
@@ -325,15 +363,20 @@ const { id } = Astro.params;
 
   .main-image .sale-badge {
     position: absolute;
-    top: 1rem;
-    left: 1rem;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
     color: #fff;
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.875rem;
+    font-weight: 900;
     padding: 0.5rem 1rem;
-    border-radius: 6px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.5);
+    border: 2px solid #fff;
     animation: pulse-badge 2s ease-in-out infinite;
+    z-index: 10;
   }
 
   @keyframes pulse-badge {
@@ -348,17 +391,16 @@ const { id } = Astro.params;
   }
 
   .thumbnail {
-    width: 80px;
-    height: 80px;
-    border: 2px solid #374151;
-    border-radius: 8px;
+    width: 70px;
+    height: 70px;
+    border: 2px solid #fff;
     overflow: hidden;
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .thumbnail:hover, .thumbnail.active {
-    border-color: #f97316;
+    border-color: #dc2626;
   }
 
   .thumbnail img {
@@ -367,53 +409,136 @@ const { id } = Astro.params;
     object-fit: cover;
   }
 
-  /* Waveform Section (ReleasePlate style) */
-  .waveform-section {
-    background: linear-gradient(to bottom, #2a2a2a, #1a1a1a);
-    border: 2px solid #374151;
-    border-radius: 8px;
+  /* Section Header Bar */
+  .section-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #000;
+    border-left: 4px solid #dc2626;
     padding: 0.75rem 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
+  }
+
+  .section-header-bar h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
+    color: #fff;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .track-count {
+    font-size: 0.75rem;
+    color: #fff;
+    font-weight: 900;
+    background: #dc2626;
+    padding: 0.25rem 0.5rem;
+    border-radius: 9999px;
+  }
+
+  @media (min-width: 768px) {
+    .track-count {
+      font-size: 0.875rem;
+      padding: 0.25rem 0.75rem;
+    }
+  }
+
+  .section-content {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #374151;
+    border-top: none;
+    padding: 1.25rem;
+  }
+
+  .section-content p {
+    color: #d1d5db;
+    line-height: 1.7;
+    margin: 0;
+  }
+
+  /* Waveform Section - Now Playing */
+  .waveform-section {
+    background: linear-gradient(to right, #374151, #1f2937);
+    border: 2px solid #4b5563;
+    padding: 1rem;
+    margin-top: 1rem;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  }
+
+  @media (min-width: 768px) {
+    .waveform-section {
+      padding: 1.25rem;
+      margin-top: 1.25rem;
+    }
+  }
+
+  .waveform-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
   }
 
   .waveform-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    gap: 1rem;
   }
 
   .now-playing {
-    color: #f97316;
-    font-size: 0.85rem;
-    font-weight: 600;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 900;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 70%;
+    flex: 1;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  @media (min-width: 768px) {
+    .now-playing {
+      font-size: 1rem;
+    }
   }
 
   .track-time {
-    color: #9ca3af;
-    font-size: 0.8rem;
+    color: #dc2626;
+    font-size: 0.75rem;
     font-family: monospace;
+    font-weight: 700;
+    flex-shrink: 0;
   }
 
   .waveform-wrapper {
     overflow: hidden;
-    border-radius: 4px;
     position: relative;
+    border-radius: 4px;
   }
 
   .waveform-canvas {
     width: 100%;
-    height: 50px;
+    height: 40px;
     display: block;
     max-width: 100%;
+    border: 2px solid #4b5563;
     border-radius: 4px;
-    border: 2px solid #374151;
     cursor: pointer;
-    background: linear-gradient(to bottom, #1a1a1a, #0a0a0a);
+    background: #111827;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+
+  @media (min-width: 768px) {
+    .waveform-canvas {
+      height: 50px;
+    }
   }
 
   .volume-control {
@@ -442,39 +567,50 @@ const { id } = Astro.params;
     -webkit-appearance: none;
     width: 14px;
     height: 14px;
-    background: #f97316;
+    background: #dc2626;
     border-radius: 50%;
     cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
   .volume-slider::-moz-range-thumb {
     width: 14px;
     height: 14px;
-    background: #f97316;
+    background: #dc2626;
     border-radius: 50%;
-    border: none;
+    border: 2px solid #fff;
     cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
   /* Details */
   .listing-header {
     margin-bottom: 1.5rem;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid #374151;
+    border-bottom: 2px solid #dc2626;
   }
 
   .listing-header h1 {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    color: #fff;
+    font-size: 2rem;
+    color: #dc2626;
     margin: 0 0 0.5rem 0;
-    letter-spacing: 0.02em;
+    letter-spacing: 0.05em;
     line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 768px) {
+    .listing-header h1 {
+      font-size: 2.75rem;
+    }
   }
 
   .vinyl-artist {
     font-size: 1.25rem;
-    color: #f97316;
+    font-weight: 700;
+    color: #fff;
     margin: 0;
   }
 
@@ -490,29 +626,30 @@ const { id } = Astro.params;
   }
 
   .current-price {
-    font-size: 2.5rem;
-    font-weight: 700;
+    font-size: 2.25rem;
+    font-weight: 900;
     color: #22c55e;
   }
 
   .original-price {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     color: #6b7280;
     text-decoration: line-through;
   }
 
   .discount-badge {
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
     color: #fff;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: 0.875rem;
+    font-weight: 900;
     padding: 0.375rem 0.75rem;
-    border-radius: 6px;
+    border: 2px solid #fff;
+    text-transform: uppercase;
   }
 
   .shipping-info {
     color: #9ca3af;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     margin: 0.5rem 0 0 0;
   }
 
@@ -521,9 +658,8 @@ const { id } = Astro.params;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
     margin-bottom: 2rem;
-    background: rgba(31, 41, 55, 0.5);
-    border: 1px solid #374151;
-    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid #374151;
     padding: 1.5rem;
   }
 
@@ -540,21 +676,22 @@ const { id } = Astro.params;
   }
 
   .meta-label {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: #6b7280;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-weight: 700;
   }
 
   .meta-value {
     font-size: 1rem;
     color: #fff;
-    font-weight: 500;
+    font-weight: 600;
   }
 
   .meta-value.condition {
-    color: #f97316;
-    font-weight: 600;
+    color: #dc2626;
+    font-weight: 700;
   }
 
   /* Condition Badges */
@@ -619,124 +756,220 @@ const { id } = Astro.params;
     padding: 0.5rem 0.75rem;
   }
 
-  .condition-notes, .description-section, .tracklist-section {
+  .condition-notes, .description-section {
     margin-bottom: 2rem;
   }
 
-  .condition-notes h3, .description-section h3, .tracklist-section h3 {
-    font-size: 1.1rem;
+  .tracklist-section {
+    margin-bottom: 2rem;
+    background: linear-gradient(to bottom, #1f2937, #111827);
+    border: 2px solid #fff;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    padding: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .tracklist-section {
+      padding: 1.5rem;
+    }
+  }
+
+  .tracklist-section .section-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 2px solid #dc2626;
+    border-left: none;
+    background: transparent;
+  }
+
+  @media (min-width: 768px) {
+    .tracklist-section .section-header-bar {
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+  }
+
+  .tracklist-section .section-header-bar h3 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.25rem;
     color: #fff;
-    margin: 0 0 0.75rem 0;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .condition-notes p, .description-section p {
-    color: #d1d5db;
-    line-height: 1.7;
     margin: 0;
-    white-space: pre-wrap;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   }
 
+  @media (min-width: 768px) {
+    .tracklist-section .section-header-bar h3 {
+      font-size: 1.875rem;
+    }
+  }
+
+  /* Tracklist Container - matches releases page */
   .tracklist {
-    background: rgba(31, 41, 55, 0.5);
-    border: 1px solid #374151;
-    border-radius: 8px;
-    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .track-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.625rem 1rem;
-    border-bottom: 1px solid #374151;
+    padding: 0.75rem 0.5rem;
+    background: linear-gradient(to right, #374151, #1f2937);
+    border: 2px solid #4b5563;
+    transition: all 0.15s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
-  .track-item:last-child {
-    border-bottom: none;
+  @media (min-width: 768px) {
+    .track-item {
+      gap: 1.5rem;
+      padding: 1rem;
+    }
   }
 
   .track-item:hover {
-    background: rgba(249, 115, 22, 0.05);
+    background: linear-gradient(to right, #4b5563, #374151);
+    border-color: #dc2626;
   }
 
   .track-number {
-    color: #6b7280;
-    font-size: 0.85rem;
+    color: #dc2626;
+    font-size: 1rem;
     min-width: 1.5rem;
+    font-weight: 900;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  @media (min-width: 768px) {
+    .track-number {
+      font-size: 1.125rem;
+      min-width: 2rem;
+    }
   }
 
   .track-play-btn {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #f97316, #ea580c);
-    border: none;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px;
+    min-height: 32px;
+    border-radius: 50% !important;
+    background: linear-gradient(to bottom right, #dc2626, #991b1b) !important;
+    border: 2px solid #fff !important;
     cursor: pointer;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     transition: all 0.15s;
     padding: 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  @media (min-width: 768px) {
+    .track-play-btn {
+      width: 40px !important;
+      height: 40px !important;
+      min-width: 40px;
+      min-height: 40px;
+    }
   }
 
   .track-play-btn:hover {
-    transform: scale(1.15);
-    box-shadow: 0 2px 10px rgba(249, 115, 22, 0.4);
+    transform: scale(1.1);
+    background: linear-gradient(to bottom right, #b91c1c, #7f1d1d) !important;
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.5);
   }
 
   .track-play-btn svg {
-    width: 12px;
-    height: 12px;
-    color: #fff;
-  }
-
-  .track-play-btn .pause-icon {
-    display: none;
-  }
-
-  .track-play-btn.playing .play-icon {
-    display: none;
-  }
-
-  .track-play-btn.playing .pause-icon {
+    width: 12px !important;
+    height: 12px !important;
+    color: #fff !important;
     display: block;
   }
 
+  @media (min-width: 768px) {
+    .track-play-btn svg {
+      width: 16px !important;
+      height: 16px !important;
+    }
+  }
+
+  .track-play-btn .pause-icon {
+    display: none !important;
+  }
+
+  .track-play-btn.playing .play-icon {
+    display: none !important;
+  }
+
+  .track-play-btn.playing .pause-icon {
+    display: block !important;
+  }
+
   .track-play-btn:disabled {
-    background: #374151;
-    cursor: not-allowed;
-    opacity: 0.5;
+    background: linear-gradient(to bottom right, #4b5563, #374151) !important;
+    border-color: #6b7280 !important;
+    cursor: default;
+    opacity: 0.6;
   }
 
   .track-play-btn:disabled:hover {
     transform: none;
-    box-shadow: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(to bottom right, #4b5563, #374151) !important;
   }
 
   .track-side {
-    color: #f97316;
-    font-weight: 600;
-    font-size: 0.9rem;
+    color: #dc2626;
+    font-weight: 900;
+    font-size: 0.875rem;
+  }
+
+  @media (min-width: 768px) {
+    .track-side {
+      font-size: 1rem;
+    }
   }
 
   .track-name {
     color: #fff;
-    font-size: 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  @media (min-width: 768px) {
+    .track-name {
+      font-size: 1.125rem;
+    }
   }
 
   .track-text {
     display: flex;
     align-items: center;
-    gap: 0.35rem;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .track-text .track-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .seller-link {
-    color: #f97316;
+    color: #dc2626;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 700;
   }
 
   .seller-link:hover {
@@ -746,22 +979,21 @@ const { id } = Astro.params;
   .deal-section {
     margin-top: 1.5rem;
     padding: 1.25rem;
-    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(220, 38, 38, 0.05));
+    border: 2px solid rgba(220, 38, 38, 0.3);
   }
 
   .deal-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
+    background: linear-gradient(135deg, #dc2626, #b91c1c);
     color: #fff;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 900;
     padding: 0.25rem 0.75rem;
-    border-radius: 4px;
     margin-bottom: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    border: 2px solid #fff;
   }
 
   .deal-section p {
@@ -772,6 +1004,9 @@ const { id } = Astro.params;
 </style>
 
 <script is:inline define:vars={{ listingId: id }}>
+  // Vinyl API Worker URL
+  const VINYL_API_URL = 'https://vinyl-api.davidhagon.workers.dev';
+
   let listing = null;
 
   async function loadListing() {
@@ -780,7 +1015,7 @@ const { id } = Astro.params;
     const content = document.getElementById('vinylContent');
 
     try {
-      const res = await fetch(`/api/vinyl/public?type=single&id=${listingId}`);
+      const res = await fetch(`${VINYL_API_URL}/listings/${listingId}`);
       const data = await res.json();
 
       if (!data.success || !data.listing) {
@@ -902,22 +1137,23 @@ const { id } = Astro.params;
 
       tracklistEl.innerHTML = listing.tracks.map((track, index) => `
         <div class="track-item" data-track-index="${index}">
-          <span class="track-number">${index + 1}.</span>
+          <span class="track-number">${index + 1}</span>
           <button class="track-play-btn" data-track-index="${index}" data-audio-url="${track.audioSampleUrl || ''}" data-track-name="${track.name || 'Untitled'}" ${!track.audioSampleUrl ? 'disabled' : ''}>
             <svg class="play-icon" fill="currentColor" viewBox="0 0 24 24">
               <path d="M8 5v14l11-7z"/>
             </svg>
             <svg class="pause-icon" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
             </svg>
           </button>
           <span class="track-text">
-            <span class="track-side">${track.side}${track.position}:</span>
+            ${track.side || track.position ? `<span class="track-side">${track.side || ''}${track.position || ''}</span>` : ''}
             <span class="track-name">${track.name || 'Untitled'}</span>
           </span>
         </div>
       `).join('');
       document.getElementById('tracklistSection').style.display = 'block';
+      document.getElementById('trackCount').textContent = `${listing.tracks.length} track${listing.tracks.length !== 1 ? 's' : ''}`;
 
       // Initialize track play buttons if there are samples
       if (hasSamples) {
@@ -1108,11 +1344,11 @@ const { id } = Astro.params;
       const x = i * (barWidth + 1);
       const y = (waveformCanvas.height - height) / 2;
 
-      // Played = orange, Unplayed = white when playing, gray when stopped
+      // Played = red, Unplayed = white when playing, gray when stopped
       if (isPlaying) {
-        waveformCtx.fillStyle = i / BARS < progress ? '#f97316' : '#ffffff';
+        waveformCtx.fillStyle = i / BARS < progress ? '#dc2626' : '#ffffff';
       } else {
-        waveformCtx.fillStyle = i / BARS < progress ? '#f97316' : '#4b5563';
+        waveformCtx.fillStyle = i / BARS < progress ? '#dc2626' : '#4b5563';
       }
       waveformCtx.fillRect(x, y, barWidth, height);
     }

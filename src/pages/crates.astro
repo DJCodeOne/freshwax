@@ -659,84 +659,6 @@ const faqs = [
     color: #22c55e;
   }
 
-  /* Seller Section Headers (matches releases.astro label style) */
-  .seller-section {
-    margin-bottom: 4rem;
-    scroll-margin-top: 6rem;
-  }
-
-  .seller-header {
-    margin-bottom: 1.5rem;
-  }
-
-  .seller-header-inner {
-    display: inline-flex;
-    align-items: flex-start;
-    background: #000;
-    border-left: 4px solid #dc2626;
-    padding: 0.75rem 1.5rem 0.75rem 1rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-  }
-
-  .seller-name {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 900;
-    color: #fff;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin: 0;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-    line-height: 1.2;
-  }
-
-  .seller-count {
-    font-size: 0.875rem;
-    color: #dc2626;
-    margin: 0.125rem 0 0 0;
-  }
-
-  .seller-listings {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  /* Individual release items with border */
-  .seller-listings .vinyl-card {
-    padding: 1.5rem;
-    border: 2px solid #374151;
-    border-radius: 0.5rem;
-    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
-    margin-bottom: 1.5rem;
-  }
-
-  .seller-listings .vinyl-card:hover {
-    border-color: #dc2626;
-  }
-
-  .seller-listings .vinyl-card:last-child {
-    margin-bottom: 0;
-  }
-
-  /* Red divider line between releases */
-  .release-divider {
-    height: 2px;
-    background: #dc2626;
-    margin: 0 0 1.5rem 0;
-  }
-
-  @media (min-width: 640px) {
-    .seller-name {
-      font-size: 1.75rem;
-    }
-  }
-
-  @media (min-width: 768px) {
-    .seller-name {
-      font-size: 2rem;
-    }
-  }
 
   /* Listings Grid */
   .listings-grid {
@@ -792,20 +714,92 @@ const faqs = [
   /* Vinyl Card Styles - Global for JS-generated content */
   /* ReleasePlate-style 3-column layout */
   .vinyl-card {
-    background: linear-gradient(to bottom, #000000 0%, #1a1a1a 50%, #2d2d2d 100%);
-    border-radius: 0;
+    background: linear-gradient(to bottom, #1f2937 0%, #111827 100%);
+    border-radius: 0.5rem;
     overflow: hidden;
-    border: none;
-    box-shadow: none;
+    border: 2px solid #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
-    padding: 1.5rem 0;
+    padding: 1.5rem;
     margin-bottom: 0;
     width: 100%;
   }
 
   .vinyl-card:hover {
-    border-color: rgba(220, 38, 38, 0.5);
-    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px rgba(220, 38, 38, 0.1);
+    border-color: #dc2626;
+    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px rgba(220, 38, 38, 0.2);
+  }
+
+  /* Red divider line between releases */
+  .release-divider {
+    height: 3px;
+    background: #dc2626;
+    margin: 1.5rem 0;
+    width: 100%;
+  }
+
+  /* Seller Section Headers */
+  .seller-section {
+    margin-bottom: 4rem;
+    scroll-margin-top: 6rem;
+  }
+
+  .seller-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .seller-header-inner {
+    display: inline-flex;
+    flex-direction: column;
+    background: #000;
+    border-left: 4px solid #dc2626;
+    padding: 0.75rem 1.5rem 0.75rem 1rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  }
+
+  .seller-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+    line-height: 1.2;
+  }
+
+  .seller-count {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    color: #dc2626;
+    letter-spacing: 0.05em;
+    margin: 0.25rem 0 0 0;
+  }
+
+  .seller-listings {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  @media (min-width: 640px) {
+    .seller-name {
+      font-size: 2rem;
+    }
+    .seller-count {
+      font-size: 1.1rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .seller-name {
+      font-size: 2.25rem;
+    }
+    .seller-count {
+      font-size: 1.15rem;
+    }
   }
 
   /* Main 3-column layout */
@@ -899,24 +893,26 @@ const faqs = [
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem 1rem;
-    background: #111827;
-    border: none;
+    background: #16a34a;
+    border: 2px solid #16a34a;
     border-radius: 0.5rem;
     color: #fff;
     font-size: 0.875rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.15s;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   }
 
   .vinyl-buy-btn:hover {
-    background: #000;
+    background: #166534;
+    border-color: #166534;
   }
 
   .vinyl-buy-btn svg {
     width: 20px;
     height: 20px;
+    color: #fff;
   }
 
   .vinyl-buy-btn .btn-price {
@@ -1230,14 +1226,16 @@ const faqs = [
   }
 
   .waveform-label {
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.7rem;
+    font-weight: 600;
     color: #fff;
     text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .waveform-label span {
     color: #dc2626;
+    font-size: 0.65rem;
   }
 
   .waveform-controls {
@@ -1266,12 +1264,15 @@ const faqs = [
   let allCollections = [];
   let currentCollection = 'all';
 
+  // Vinyl API Worker URL
+  const VINYL_API_URL = 'https://vinyl-api.davidhagon.workers.dev';
+
   async function loadCollections() {
     const container = document.getElementById('sellerCollections');
     if (!container) return;
 
     try {
-      const res = await fetch('/api/vinyl/public?type=collections');
+      const res = await fetch(`${VINYL_API_URL}/listings?type=collections`);
       const data = await res.json();
 
       if (data.success && data.collections) {
@@ -1336,11 +1337,11 @@ const faqs = [
     empty.style.display = 'none';
 
     try {
-      let url = '/api/vinyl/public?type=listings';
+      let url = `${VINYL_API_URL}/listings`;
       if (collection === 'deals') {
-        url = '/api/vinyl/public?type=deals';
+        url = `${VINYL_API_URL}/listings?type=deals`;
       } else if (collection !== 'all') {
-        url += `&collection=${collection}`;
+        url = `${VINYL_API_URL}/listings?collection=${collection}`;
       }
 
       const res = await fetch(url);
@@ -1498,7 +1499,7 @@ const faqs = [
                 ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
               </div>
               <div class="vinyl-buttons">
-                <button class="vinyl-buy-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">
+                <button class="vinyl-buy-btn" onclick="event.stopPropagation(); addVinylToCart('${listing.id}')">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                   </svg>
@@ -1632,8 +1633,114 @@ const faqs = [
     window.location.href = `/crates/${id}`;
   }
 
-  // Make viewListing available globally
+  // Cart functionality
+  function getCustomerId() {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'customerId' && value) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  function getCart() {
+    const customerId = getCustomerId();
+    if (!customerId) return { items: [] };
+
+    try {
+      const stored = localStorage.getItem('freshwax_cart_' + customerId);
+      if (stored) {
+        const data = JSON.parse(stored);
+        return data.items ? data : { items: data };
+      }
+    } catch (e) {}
+
+    return { items: [] };
+  }
+
+  function saveCart(items) {
+    const customerId = getCustomerId();
+    if (!customerId) return;
+
+    const cartData = {
+      items: items,
+      updatedAt: new Date().toISOString()
+    };
+    localStorage.setItem('freshwax_cart_' + customerId, JSON.stringify(cartData));
+    window.dispatchEvent(new CustomEvent('cart-updated', { detail: cartData }));
+    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cartData }));
+
+    if (window.FreshWaxCart) {
+      window.FreshWaxCart.updateBadge();
+    }
+  }
+
+  function showToast(message) {
+    const existing = document.getElementById('vinyl-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'vinyl-toast';
+    toast.textContent = message;
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:16px 28px;border-radius:12px;font-size:15px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  function addVinylToCart(listingId) {
+    const customerId = getCustomerId();
+    if (!customerId) {
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      return;
+    }
+
+    // Find the listing in allListings
+    const listing = allListings.find(l => l.id === listingId);
+    if (!listing) {
+      showToast('Error: Listing not found');
+      return;
+    }
+
+    const cart = getCart();
+    let items = cart.items || [];
+
+    // Check if already in cart
+    const existingIndex = items.findIndex(item => item.id === listingId && item.type === 'vinyl');
+    if (existingIndex !== -1) {
+      showToast('Already in cart!');
+      return;
+    }
+
+    // Add vinyl to cart
+    items.push({
+      id: listing.id,
+      type: 'vinyl',
+      format: 'vinyl',
+      name: (listing.artist || 'Unknown Artist') + ' - ' + (listing.title || 'Untitled'),
+      title: listing.title || 'Untitled',
+      artist: listing.artist || 'Unknown Artist',
+      price: listing.price || 0,
+      image: listing.images && listing.images.length > 0 ? listing.images[0] : '/place-holder.webp',
+      artwork: listing.images && listing.images.length > 0 ? listing.images[0] : '/place-holder.webp',
+      quantity: 1,
+      sellerId: listing.sellerId,
+      sellerName: listing.sellerName
+    });
+
+    saveCart(items);
+    showToast('Added to cart!');
+  }
+
+  // Make functions available globally
   window.viewListing = viewListing;
+  window.addVinylToCart = addVinylToCart;
 
   // Condition key toggle
   const conditionKeyToggle = document.getElementById('conditionKeyToggle');
