@@ -2470,31 +2470,35 @@ const totalDurationFormatted = totalDurationSeconds > 0
   }
 
   // NYOP (Name Your Own Price) Modal System
+  var nyopModalInitialized = false;
+  var nyopCurrentReleaseData = null;
+
   function initNYOPSystem() {
-    const modal = document.getElementById('nyop-modal');
+    var modal = document.getElementById('nyop-modal');
     if (!modal) return;
 
-    const modalArtwork = document.getElementById('nyop-modal-artwork');
-    const modalTitle = document.getElementById('nyop-modal-title');
-    const modalArtist = document.getElementById('nyop-modal-artist');
-    const modalPrice = document.getElementById('nyop-modal-price');
-    const modalMinText = document.getElementById('nyop-modal-min-text');
-    const modalError = document.getElementById('nyop-modal-error');
-    const modalAddCart = document.getElementById('nyop-modal-add-cart');
-    const quickPrices = modal.querySelectorAll('.nyop-quick-price');
+    var modalArtwork = document.getElementById('nyop-modal-artwork');
+    var modalTitle = document.getElementById('nyop-modal-title');
+    var modalArtist = document.getElementById('nyop-modal-artist');
+    var modalPrice = document.getElementById('nyop-modal-price');
+    var modalMinText = document.getElementById('nyop-modal-min-text');
+    var modalError = document.getElementById('nyop-modal-error');
+    var modalAddCart = document.getElementById('nyop-modal-add-cart');
+    var quickPrices = modal.querySelectorAll('.nyop-quick-price');
 
-    let currentReleaseData = null;
-
-    // Open modal when Buy Digital button clicked
+    // Attach open modal listeners to buttons (with guard)
     document.querySelectorAll('.nyop-open-modal').forEach(function(btn) {
+      if (btn.dataset.nyopInit === 'true') return;
+      btn.dataset.nyopInit = 'true';
+
       btn.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
 
-        const minPrice = parseFloat(btn.dataset.nyopMin) || 0;
-        const suggestedPrice = parseFloat(btn.dataset.nyopSuggested) || minPrice || 5;
+        var minPrice = parseFloat(btn.dataset.nyopMin) || 0;
+        var suggestedPrice = parseFloat(btn.dataset.nyopSuggested) || minPrice || 5;
 
-        currentReleaseData = {
+        nyopCurrentReleaseData = {
           releaseId: btn.dataset.releaseId,
           title: btn.dataset.title,
           artist: btn.dataset.artist,
@@ -2505,12 +2509,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
         };
 
         // Populate modal
-        modalArtwork.src = currentReleaseData.artwork || '/place-holder.webp';
-        modalTitle.textContent = currentReleaseData.title;
-        modalArtist.textContent = currentReleaseData.artist;
+        modalArtwork.src = nyopCurrentReleaseData.artwork || '/place-holder.webp';
+        modalTitle.textContent = nyopCurrentReleaseData.title;
+        modalArtist.textContent = nyopCurrentReleaseData.artist;
         modalPrice.value = suggestedPrice.toFixed(2);
         modalMinText.textContent = minPrice > 0
-          ? `£${minPrice.toFixed(2)} minimum`
+          ? '£' + minPrice.toFixed(2) + ' minimum'
           : 'Pay what you want (including £0)';
         modalError.classList.add('hidden');
 
@@ -2522,6 +2526,16 @@ const totalDurationFormatted = totalDurationSeconds > 0
         document.body.style.overflow = 'hidden';
       });
     });
+
+    // Skip rest if already initialized
+    if (nyopModalInitialized) return;
+    nyopModalInitialized = true;
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      document.body.style.overflow = '';
+      nyopCurrentReleaseData = null;
+    }
 
     // Close modal
     modal.querySelectorAll('[data-close-modal]').forEach(function(el) {
@@ -2535,16 +2549,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
       }
     });
 
-    function closeModal() {
-      modal.classList.add('hidden');
-      document.body.style.overflow = '';
-      currentReleaseData = null;
-    }
-
     // Quick price buttons
     quickPrices.forEach(function(btn) {
       btn.addEventListener('click', function() {
-        const price = parseFloat(btn.dataset.price) || 0;
+        var price = parseFloat(btn.dataset.price) || 0;
         modalPrice.value = price.toFixed(2);
         updateQuickPriceButtons(price);
         validatePrice();
@@ -2553,7 +2561,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
     function updateQuickPriceButtons(selectedPrice) {
       quickPrices.forEach(function(btn) {
-        const btnPrice = parseFloat(btn.dataset.price) || 0;
+        var btnPrice = parseFloat(btn.dataset.price) || 0;
         if (btnPrice === selectedPrice) {
           btn.classList.add('active');
         } else {
@@ -2566,24 +2574,24 @@ const totalDurationFormatted = totalDurationSeconds > 0
     modalPrice.addEventListener('input', function() {
       validatePrice();
       // Remove active state from quick buttons when typing
-      quickPrices.forEach(btn => btn.classList.remove('active'));
+      quickPrices.forEach(function(b) { b.classList.remove('active'); });
     });
 
     modalPrice.addEventListener('blur', function() {
-      const value = parseFloat(modalPrice.value) || 0;
-      const minPrice = currentReleaseData?.minPrice || 0;
+      var value = parseFloat(modalPrice.value) || 0;
+      var minPrice = nyopCurrentReleaseData ? nyopCurrentReleaseData.minPrice : 0;
       modalPrice.value = Math.max(minPrice, value).toFixed(2);
       validatePrice();
     });
 
     function validatePrice() {
-      if (!currentReleaseData) return true;
+      if (!nyopCurrentReleaseData) return true;
 
-      const value = parseFloat(modalPrice.value) || 0;
-      const minPrice = currentReleaseData.minPrice || 0;
+      var value = parseFloat(modalPrice.value) || 0;
+      var minPrice = nyopCurrentReleaseData.minPrice || 0;
 
       if (value < minPrice) {
-        modalError.textContent = `Minimum price is £${minPrice.toFixed(2)}`;
+        modalError.textContent = 'Minimum price is £' + minPrice.toFixed(2);
         modalError.classList.remove('hidden');
         modalAddCart.disabled = true;
         modalAddCart.classList.add('opacity-50', 'cursor-not-allowed');
@@ -2598,23 +2606,23 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
     // Add to cart
     modalAddCart.addEventListener('click', function() {
-      if (!currentReleaseData || !validatePrice()) return;
+      if (!nyopCurrentReleaseData || !validatePrice()) return;
 
-      const price = parseFloat(modalPrice.value) || 0;
+      var price = parseFloat(modalPrice.value) || 0;
 
       // Trigger the existing cart system via temporary button
-      const tempBtn = document.createElement('button');
+      var tempBtn = document.createElement('button');
       tempBtn.className = 'add-to-cart hidden';
-      tempBtn.dataset.releaseId = currentReleaseData.releaseId;
+      tempBtn.dataset.releaseId = nyopCurrentReleaseData.releaseId;
       tempBtn.dataset.productType = 'digital';
       tempBtn.dataset.price = price.toFixed(2);
-      tempBtn.dataset.title = currentReleaseData.title;
-      tempBtn.dataset.artist = currentReleaseData.artist;
-      tempBtn.dataset.artwork = currentReleaseData.artwork;
-      tempBtn.dataset.isPreorder = currentReleaseData.isPreorder ? 'true' : 'false';
+      tempBtn.dataset.title = nyopCurrentReleaseData.title;
+      tempBtn.dataset.artist = nyopCurrentReleaseData.artist;
+      tempBtn.dataset.artwork = nyopCurrentReleaseData.artwork;
+      tempBtn.dataset.isPreorder = nyopCurrentReleaseData.isPreorder ? 'true' : 'false';
       document.body.appendChild(tempBtn);
       tempBtn.click();
-      setTimeout(() => tempBtn.remove(), 100);
+      setTimeout(function() { tempBtn.remove(); }, 100);
 
       // Close modal
       closeModal();
