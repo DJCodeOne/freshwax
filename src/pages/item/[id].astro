@@ -576,13 +576,13 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   
                   <div class="flex-1 min-w-0">
                     <p class="text-base md:text-xl font-black text-white truncate uppercase drop-shadow-md">
-                      {track.artist && <span class="text-gray-400 font-bold">{track.artist} - </span>}
                       {track.title}
-                      {track.featured && (
-                        <span class="text-xs md:text-base font-bold text-gray-300"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
-                      )}
                       {track.remixer && (
                         <span class="text-sm md:text-lg font-bold text-gray-400"> ({track.remixer} Remix)</span>
+                      )}
+                      {track.artist && <span class="text-gray-400 font-bold"> - {track.artist}</span>}
+                      {track.featured && (
+                        <span class="text-xs md:text-base font-bold text-gray-300"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
                       )}
                     </p>
                   </div>
