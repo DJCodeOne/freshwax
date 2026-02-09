@@ -13,9 +13,9 @@ export default defineConfig({
   // For hybrid behavior, use 'server' + prerender on individual pages
   output: 'server',
 
-  // Disable CSRF check for API routes (needed for Pusher auth)
+  // Enable CSRF protection (validates request origin)
   security: {
-    checkOrigin: false
+    checkOrigin: true
   },
   
   adapter: isProduction 

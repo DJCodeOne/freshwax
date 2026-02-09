@@ -3,9 +3,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Helper function to check if user is admin
+    // Checks: 1) admins collection, 2) users doc isAdmin field, 3) users doc roles.admin field
     function isAdmin() {
-      return request.auth != null &&
-             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return request.auth != null && (
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.admin == true
+      );
     }
 
     // Helper function to check if user is authenticated
@@ -25,8 +29,8 @@ service cloud.firestore {
     }
 
     // Users collection (for role management)
-    // Note: Public read required for admin REST API (API validates admin key server-side)
-    // Sensitive fields should not be stored here - use customers collection with proper masking
+    // Note: Read allowed for admin REST API (validates admin key server-side)
+    // Sensitive data (passwords, tokens) should NOT be stored here
     match /users/{userId} {
       allow read: if true;
       // Allow create from authenticated user OR for bypass grants (REST API with key protection)
@@ -79,8 +83,8 @@ service cloud.firestore {
 
     // Customers collection
     match /customers/{customerId} {
-      // Note: Public read required for admin REST API and wishlist checks
-      // API validates userId/adminKey server-side for sensitive operations
+      // Note: Read allowed for admin REST API (validates admin key server-side)
+      // API filters sensitive data before returning to client
       allow read: if true;
       // Allow create from authenticated user OR REST API (for wishlist)
       allow create: if (isAuthenticated() && request.auth.uid == customerId) ||
@@ -102,8 +106,8 @@ service cloud.firestore {
     }
 
     // Orders collection
-    // Note: Public read required for admin REST API (API validates admin key server-side)
-    // Order details protected by requiring authentication in API layer
+    // Note: Read allowed for admin REST API (validates admin key server-side)
+    // Individual order access controlled by API layer
     match /orders/{orderId} {
       allow read: if true;
       // Allow authenticated users OR test/paypal orders from API (API validates on server-side)

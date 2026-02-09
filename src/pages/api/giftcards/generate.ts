@@ -5,6 +5,23 @@ import type { APIRoute } from 'astro';
 import { getDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
 
+// Timing-safe string comparison to prevent timing attacks
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Compare against itself to maintain constant time even for length mismatch
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+      result |= a.charCodeAt(i) ^ a.charCodeAt(i);
+    }
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
@@ -30,11 +47,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 503, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Use timing-safe comparison to prevent timing attacks
-    const keyMatch = validSystemKey.length === (systemKey || '').length &&
-      validSystemKey.split('').every((char, i) => char === (systemKey || '')[i]);
-
-    if (!systemKey || !keyMatch) {
+    // SECURITY: Use proper timing-safe comparison to prevent timing attacks
+    if (!systemKey || !timingSafeEqual(validSystemKey, systemKey)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

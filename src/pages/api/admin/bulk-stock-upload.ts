@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { requireAdminAuth } from '../../../lib/admin';
+import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -62,9 +62,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const adminKey = formData.get('adminKey') as string;
   const operation = (formData.get('operation') as string) || 'set';
 
-  // Admin auth check
-  const ADMIN_KEY = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-  if (!adminKey || adminKey !== ADMIN_KEY) {
+  // SECURITY: Use timing-safe admin key verification
+  if (!adminKey || !verifyAdminKey(adminKey, locals)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }

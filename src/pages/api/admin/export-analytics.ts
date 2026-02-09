@@ -11,17 +11,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
   const type = url.searchParams.get('type') || 'orders';
   const period = parseInt(url.searchParams.get('period') || '30', 10);
-  const adminKey = url.searchParams.get('adminKey');
 
   const env = (locals as any)?.runtime?.env;
 
-  // Simple admin key check for GET requests
-  const ADMIN_KEY = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-  if (!adminKey || adminKey !== ADMIN_KEY) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+  // SECURITY: Use timing-safe admin auth via headers (not query params to avoid logging)
+  const authError = requireAdminAuth(request, locals);
+  if (authError) {
+    return authError;
   }
 
   initFirebaseEnv({
