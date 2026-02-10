@@ -438,14 +438,35 @@ const firebaseConfig = {
 </style>
 
 <style is:global>
-  /* Hide Google Translate top banner and popups */
+  /* Hide Google Translate top banner, toolbar, and popups */
   .goog-te-banner-frame,
   #goog-gt-tt,
-  .goog-te-balloon-frame {
+  .goog-te-balloon-frame,
+  .goog-te-menu-value,
+  #google_translate_element2,
+  .skiptranslate iframe,
+  .VIpgJd-ZVi9od-ORHb-OEVmcd,
+  .VIpgJd-ZVi9od-aZ2wEe-wOHMyf,
+  .VIpgJd-ZVi9od-SmfZ-OEVmcd,
+  .VIpgJd-ZVi9od-xl07Ob-OEVmcd {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
   body {
     top: 0 !important;
+    position: static !important;
+  }
+  html.translated-ltr body,
+  html.translated-rtl body {
+    top: 0 !important;
+  }
+  .skiptranslate {
+    display: none !important;
+  }
+  #google_translate_element .skiptranslate {
+    display: block !important;
   }
 </style>
 
