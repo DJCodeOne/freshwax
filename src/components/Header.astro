@@ -434,28 +434,43 @@ const firebaseConfig = {
     height: 1.25rem;
   }
 
-  /* Hide Google Translate top banner frame only */
-  .goog-te-banner-frame {
+
+</style>
+
+<style is:global>
+  /* Hide Google Translate top banner and popups */
+  .goog-te-banner-frame,
+  #goog-gt-tt,
+  .goog-te-balloon-frame {
     display: none !important;
   }
-
   body {
     top: 0 !important;
+  }
+  .skiptranslate.goog-te-gadget {
+    display: none !important;
   }
 </style>
 
 <script is:inline>
   // Google Translate — lazy-loaded on first button click
+  // Uses localStorage for persistent language across View Transitions
   var _gtLoading = false;
   var _gtReady = false;
+  var _gtConfig = {
+    pageLanguage: 'en',
+    includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
+    autoDisplay: false
+  };
 
   function googleTranslateElementInit() {
-    new google.translate.TranslateElement({
-      pageLanguage: 'en',
-      includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
-      autoDisplay: false
-    }, 'google_translate_element');
+    new google.translate.TranslateElement(_gtConfig, 'google_translate_element');
     _gtReady = true;
+    // If user had a saved language, apply it now
+    var saved = localStorage.getItem('fw_translate_lang');
+    if (saved) {
+      watchSelectAndApply(saved);
+    }
   }
 
   function loadGoogleTranslate() {
@@ -468,11 +483,46 @@ const firebaseConfig = {
     document.head.appendChild(s);
   }
 
+  // Poll for the select element and apply a language
+  function watchSelectAndApply(lang, callback) {
+    var attempts = 0;
+    var poll = setInterval(function() {
+      attempts++;
+      var sel = document.querySelector('select.goog-te-combo');
+      if (sel) {
+        clearInterval(poll);
+        if (lang && sel.value !== lang) {
+          sel.value = lang;
+          sel.dispatchEvent(new Event('change'));
+        }
+        if (callback) callback(sel);
+      } else if (attempts > 50) {
+        clearInterval(poll);
+      }
+    }, 150);
+  }
+
+  // Save language to localStorage when user picks one
+  function hookSelectSave(sel) {
+    if (sel._fwHooked) return;
+    sel._fwHooked = true;
+    sel.addEventListener('change', function() {
+      var val = sel.value;
+      if (val && val !== 'en') {
+        localStorage.setItem('fw_translate_lang', val);
+      } else {
+        localStorage.removeItem('fw_translate_lang');
+      }
+    });
+  }
+
   function showTranslateDropdown() {
     var el = document.getElementById('google_translate_element');
     if (!el) return;
     var sel = el.querySelector('select.goog-te-combo') || el.querySelector('select') || document.querySelector('select.goog-te-combo');
     if (!sel) return;
+
+    hookSelectSave(sel);
 
     // Position the widget container visibly
     el.style.position = 'fixed';
@@ -527,41 +577,32 @@ const firebaseConfig = {
         showTranslateDropdown();
       } else {
         loadGoogleTranslate();
-        var attempts = 0;
-        var poll = setInterval(function() {
-          attempts++;
-          var el = document.getElementById('google_translate_element');
-          var hasSel = el && (el.querySelector('select.goog-te-combo') || el.querySelector('select'));
-          if (hasSel || (_gtReady && el && el.querySelector('select'))) {
-            clearInterval(poll);
-            showTranslateDropdown();
-          } else if (attempts > 50) {
-            clearInterval(poll);
-          }
-        }, 150);
+        watchSelectAndApply(null, function() {
+          showTranslateDropdown();
+        });
       }
     });
   }
 
-  // Get active translation language from cookie
-  function getTranslateLang() {
-    var match = document.cookie.split(';').find(function(c) {
-      return c.trim().startsWith('googtrans=');
-    });
-    if (!match) return null;
-    var parts = match.split('=')[1].split('/');
-    var lang = parts[parts.length - 1];
-    return (lang && lang !== 'en') ? lang : null;
+  // Ensure googtrans cookie is set (Google Translate reads it on init)
+  function setGoogTransCookie(lang) {
+    if (lang) {
+      document.cookie = 'googtrans=/en/' + lang + ';path=/';
+    }
   }
 
   // Re-apply translation after Astro View Transition page swap
   function reapplyTranslation() {
-    var lang = getTranslateLang();
+    var lang = localStorage.getItem('fw_translate_lang');
     if (!lang) return;
+
+    // Ensure cookie is set for Google Translate
+    setGoogTransCookie(lang);
 
     var sel = document.querySelector('select.goog-te-combo');
     if (sel) {
-      // Select survived, just re-trigger
+      // Select survived the page swap
+      hookSelectSave(sel);
       if (sel.value !== lang) {
         sel.value = lang;
         sel.dispatchEvent(new Event('change'));
@@ -571,29 +612,14 @@ const firebaseConfig = {
       var el = document.getElementById('google_translate_element');
       if (!el) return;
       el.innerHTML = '';
-      new google.translate.TranslateElement({
-        pageLanguage: 'en',
-        includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
-        autoDisplay: false
-      }, 'google_translate_element');
-
-      // Poll for the new select, then set language
-      var attempts = 0;
-      var poll = setInterval(function() {
-        attempts++;
-        var newSel = document.querySelector('select.goog-te-combo');
-        if (newSel) {
-          clearInterval(poll);
-          newSel.value = lang;
-          newSel.dispatchEvent(new Event('change'));
-        } else if (attempts > 30) {
-          clearInterval(poll);
-        }
-      }, 100);
+      new google.translate.TranslateElement(_gtConfig, 'google_translate_element');
+      watchSelectAndApply(lang, function(newSel) {
+        hookSelectSave(newSel);
+      });
     }
   }
 
-  // Run on load and Astro navigation
+  // Run on initial load and after every Astro View Transition navigation
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initLangButton);
   } else {
@@ -601,11 +627,20 @@ const firebaseConfig = {
   }
   document.addEventListener('astro:page-load', function() {
     initLangButton();
-    // Re-apply translation after page content swap (slight delay for DOM to settle)
     if (_gtReady) {
       setTimeout(reapplyTranslation, 200);
     }
   });
+
+  // Auto-load Google Translate on page load if user has a saved language
+  // This ensures translation is ready before they even click the globe
+  (function() {
+    var saved = localStorage.getItem('fw_translate_lang');
+    if (saved && !_gtLoading) {
+      setGoogTransCookie(saved);
+      loadGoogleTranslate();
+    }
+  })();
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
