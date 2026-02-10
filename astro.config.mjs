@@ -1,13 +1,13 @@
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
-import tailwind from '@astrojs/tailwind';
+import tailwindcss from '@tailwindcss/vite';
 import cloudflare from '@astrojs/cloudflare';
 import node from '@astrojs/node';
 
 const isProduction = process.env.NODE_ENV === 'production' || process.env.npm_lifecycle_event === 'build';
 
 export default defineConfig({
-  integrations: [tailwind()],
+  integrations: [],
 
   // Astro 5: use 'static' or 'server'
   // For hybrid behavior, use 'server' + prerender on individual pages
@@ -31,6 +31,7 @@ export default defineConfig({
   site: 'https://freshwax.co.uk',
   
   vite: {
+    plugins: [tailwindcss()],
     ssr: {
       external: ['firebase-admin']
     },

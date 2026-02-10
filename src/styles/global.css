@@ -1,7 +1,5 @@
 /* src/styles/global.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ============================================
    FONT SYSTEM
@@ -154,19 +152,19 @@ h1, h2, h3, h4, h5, h6 {
 .btn-digital,
 .btn-vinyl,
 .btn-vinyl-sold-out {
-  @apply w-10 h-10 rounded-full font-medium transition-colors shadow-md hover:shadow-lg flex items-center justify-center p-0 backdrop-blur-sm bg-opacity-90;
+  @apply w-10 h-10 rounded-full font-medium transition-colors shadow-md hover:shadow-lg flex items-center justify-center p-0 backdrop-blur-sm;
 }
 
 .btn-digital {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
+  @apply bg-blue-600/90 text-white hover:bg-blue-700;
 }
 
 .btn-vinyl {
-  @apply bg-green-600 text-white hover:bg-green-700;
+  @apply bg-green-600/90 text-white hover:bg-green-700;
 }
 
 .btn-vinyl-sold-out {
-  @apply bg-gray-400 text-white cursor-not-allowed;
+  @apply bg-gray-400/90 text-white cursor-not-allowed;
 }
 
 .btn-view-details {
