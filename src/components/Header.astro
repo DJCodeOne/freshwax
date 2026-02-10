@@ -632,15 +632,9 @@ const firebaseConfig = {
     }
   });
 
-  // Auto-load Google Translate on page load if user has a saved language
-  // This ensures translation is ready before they even click the globe
-  (function() {
-    var saved = localStorage.getItem('fw_translate_lang');
-    if (saved && !_gtLoading) {
-      setGoogTransCookie(saved);
-      loadGoogleTranslate();
-    }
-  })();
+  // If user had a saved language and GT is already loaded (View Transition),
+  // the astro:page-load handler above will re-apply it.
+  // We do NOT eagerly load GT on page load to avoid tracking prevention warnings.
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
