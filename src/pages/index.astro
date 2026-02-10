@@ -38,13 +38,13 @@ const featuredReleases = await getLiveReleases(20, db);
             Jungle & Drum and Bass
           </p>
           <div class="glass-panel animate-fade-up" style="animation-delay: 0.4s;">
-            <span class="nav-item">Vinyl</span>
+            <a href="/crates" class="nav-item">Vinyl</a>
             <span class="dot-separator">●</span>
-            <span class="nav-item">Digital</span>
+            <a href="/releases" class="nav-item">Digital</a>
             <span class="dot-separator">●</span>
-            <span class="nav-item">DJ Mixes</span>
+            <a href="/dj-mixes" class="nav-item">DJ Mixes</a>
             <span class="dot-separator">●</span>
-            <span class="nav-item">Merch</span>
+            <a href="/merch" class="nav-item">Merch</a>
             <span class="dot-separator">●</span>
             <a href="/live" class="nav-item">Live</a>
           </div>
@@ -290,6 +290,12 @@ const featuredReleases = await getLiveReleases(20, db);
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
+    transition: color 0.15s;
+    cursor: pointer;
+  }
+
+  .glass-panel .nav-item:hover {
+    color: #dc2626;
   }
 
   .glass-panel .dot-separator {
