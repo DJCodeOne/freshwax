@@ -269,8 +269,8 @@ const firebaseConfig = {
   </div>
 </header>
 
-<!-- Google Translate (hidden widget, triggered by button) -->
-<div id="google_translate_element" style="display:none;"></div>
+<!-- Google Translate (offscreen until triggered by button) -->
+<div id="google_translate_element" style="position:fixed;top:-9999px;left:-9999px;opacity:0;"></div>
 
 <!-- Mobile Bottom Navigation -->
 <nav id="fwx-mobile-nav" class="fwx-bottom-nav">
@@ -434,8 +434,8 @@ const firebaseConfig = {
     height: 1.25rem;
   }
 
-  /* Hide Google Translate top bar */
-  .goog-te-banner-frame, .skiptranslate {
+  /* Hide Google Translate top banner frame only */
+  .goog-te-banner-frame {
     display: none !important;
   }
 
@@ -462,22 +462,50 @@ const firebaseConfig = {
     langBtn._langInit = true;
 
     langBtn.addEventListener('click', () => {
-      // Trigger the Google Translate dropdown
-      const translateEl = document.querySelector('#google_translate_element select');
-      if (translateEl) {
-        translateEl.style.position = 'fixed';
-        translateEl.style.top = '70px';
-        translateEl.style.right = '1rem';
-        translateEl.style.zIndex = '999999';
-        translateEl.style.fontSize = '1rem';
-        translateEl.style.padding = '0.5rem';
-        translateEl.style.background = '#1a1a1a';
-        translateEl.style.color = '#fff';
-        translateEl.style.border = '1px solid #dc2626';
-        translateEl.style.borderRadius = '8px';
-        translateEl.style.display = 'block';
-        translateEl.focus();
-        translateEl.click();
+      const el = document.getElementById('google_translate_element');
+      if (!el) return;
+
+      const sel = el.querySelector('select');
+      if (sel) {
+        // Position the translate widget container visibly near the button
+        el.style.position = 'fixed';
+        el.style.top = '70px';
+        el.style.right = '1rem';
+        el.style.left = 'auto';
+        el.style.opacity = '1';
+        el.style.zIndex = '999999';
+
+        // Style the select
+        sel.style.fontSize = '1rem';
+        sel.style.padding = '0.5rem 1rem';
+        sel.style.background = '#1a1a1a';
+        sel.style.color = '#fff';
+        sel.style.border = '1px solid #dc2626';
+        sel.style.borderRadius = '8px';
+        sel.style.cursor = 'pointer';
+        sel.style.outline = 'none';
+
+        // Open the native select dropdown
+        sel.focus();
+        if (typeof sel.showPicker === 'function') {
+          try { sel.showPicker(); } catch(e) {}
+        }
+
+        // Hide again after selection or blur
+        function hideTranslate() {
+          el.style.top = '-9999px';
+          el.style.left = '-9999px';
+          el.style.opacity = '0';
+          sel.removeEventListener('change', hideTranslate);
+          sel.removeEventListener('blur', hideOnBlur);
+        }
+        function hideOnBlur() {
+          setTimeout(hideTranslate, 200);
+        }
+        sel.addEventListener('change', hideTranslate);
+        sel.addEventListener('blur', hideOnBlur);
+      } else {
+        console.warn('Google Translate not ready yet. Try again in a moment.');
       }
     });
   }
