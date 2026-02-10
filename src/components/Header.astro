@@ -453,7 +453,6 @@ const firebaseConfig = {
     new google.translate.TranslateElement({
       pageLanguage: 'en',
       includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
       autoDisplay: false
     }, 'google_translate_element');
     _gtReady = true;
@@ -465,22 +464,32 @@ const firebaseConfig = {
     var s = document.createElement('script');
     s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     s.async = true;
+    s.onerror = function() { _gtLoading = false; };
     document.head.appendChild(s);
   }
 
   function showTranslateDropdown() {
     var el = document.getElementById('google_translate_element');
     if (!el) return;
-    var sel = el.querySelector('select');
+    // Default layout uses a <select> with class .goog-te-combo
+    var sel = el.querySelector('select.goog-te-combo') || el.querySelector('select') || document.querySelector('select.goog-te-combo');
     if (!sel) return;
 
-    // Position visibly near the button
+    // Position the widget container visibly
     el.style.position = 'fixed';
     el.style.top = '70px';
     el.style.right = '1rem';
     el.style.left = 'auto';
     el.style.opacity = '1';
     el.style.zIndex = '999999';
+
+    // Make sure parent wrappers are visible
+    var p = sel.parentElement;
+    while (p && p !== el) {
+      p.style.display = '';
+      p.style.visibility = 'visible';
+      p = p.parentElement;
+    }
 
     // Style the select
     sel.style.fontSize = '1rem';
@@ -518,16 +527,16 @@ const firebaseConfig = {
       if (_gtReady) {
         showTranslateDropdown();
       } else {
-        // Load script, then poll for the select to appear
         loadGoogleTranslate();
         var attempts = 0;
         var poll = setInterval(function() {
           attempts++;
           var el = document.getElementById('google_translate_element');
-          if (el && el.querySelector('select')) {
+          var hasSel = el && (el.querySelector('select.goog-te-combo') || el.querySelector('select'));
+          if (hasSel || (_gtReady && el && el.querySelector('select'))) {
             clearInterval(poll);
             showTranslateDropdown();
-          } else if (attempts > 40) {
+          } else if (attempts > 50) {
             clearInterval(poll);
           }
         }, 150);
