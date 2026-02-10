@@ -86,8 +86,7 @@ export const GET: APIRoute = async ({ request }) => {
     log.error('[get-dj-mix] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
-      error: 'Failed to fetch mix',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch mix'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

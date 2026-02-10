@@ -254,8 +254,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[get-user-type] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch user type',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch user type'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

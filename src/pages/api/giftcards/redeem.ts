@@ -2,7 +2,7 @@
 // Redeem a gift card code and add to user's credit balance
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv, verifyRequestUser, updateDocumentConditional } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -118,13 +118,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
     expiryDate.setFullYear(expiryDate.getFullYear() + 1);
     const creditExpiresAt = expiryDate.toISOString();
 
-    // Update gift card as redeemed
-    await updateDocument('giftCards', giftCardId, {
-      redeemedBy: userId,
-      redeemedAt: nowISO,
-      currentBalance: 0,
-      isActive: false
-    });
+    // Atomically mark gift card as redeemed using conditional update.
+    // This prevents two concurrent requests from redeeming the same card.
+    try {
+      if (giftCard._updateTime) {
+        await updateDocumentConditional('giftCards', giftCardId, {
+          redeemedBy: userId,
+          redeemedAt: nowISO,
+          currentBalance: 0,
+          isActive: false
+        }, giftCard._updateTime);
+      } else {
+        await updateDocument('giftCards', giftCardId, {
+          redeemedBy: userId,
+          redeemedAt: nowISO,
+          currentBalance: 0,
+          isActive: false
+        });
+      }
+    } catch (redeemErr: any) {
+      if (redeemErr.message?.includes('CONFLICT')) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'This gift card was just redeemed. Please try again.'
+        }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw redeemErr;
+    }
 
     // Get or create user credit document
     const creditDoc = await getDocument('userCredits', userId);

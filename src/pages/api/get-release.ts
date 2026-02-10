@@ -109,8 +109,7 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     log.error('[get-release] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
-      error: 'Failed to fetch release',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch release'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

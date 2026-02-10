@@ -6,6 +6,15 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length;
+  for (let i = 0; i < maxLen; i++) {
+    result |= (a.charCodeAt(i % a.length) || 0) ^ (b.charCodeAt(i % b.length) || 0);
+  }
+  return result === 0;
+}
+
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase
   const env = locals?.runtime?.env;
@@ -17,11 +26,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
     const streamKey = url.searchParams.get('streamKey');
-    const serverKey = url.searchParams.get('serverKey') || request.headers.get('x-server-key');
+    // SECURITY: Only accept server key from headers - never query params (they appear in logs)
+    const serverKey = request.headers.get('x-server-key');
 
-    // SECURITY: Require server key for access to Twitch credentials
+    // SECURITY: Require server key for access to Twitch credentials (timing-safe comparison)
     const expectedServerKey = env?.STREAM_SERVER_KEY || import.meta.env.STREAM_SERVER_KEY;
-    if (!expectedServerKey || serverKey !== expectedServerKey) {
+    if (!expectedServerKey || !serverKey || !timingSafeEqual(serverKey, expectedServerKey)) {
       console.warn('[dj-twitch-key] Unauthorized access attempt');
       return new Response(JSON.stringify({
         success: false,

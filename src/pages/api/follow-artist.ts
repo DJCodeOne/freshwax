@@ -123,7 +123,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     console.error('[FOLLOW API] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get followed artists'
+      error: 'Failed to get followed artists'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -288,7 +288,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[FOLLOW API] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to update follow status'
+      error: 'Failed to update follow status'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

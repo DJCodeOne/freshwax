@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[playlist/get] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get playlist'
+      error: 'Failed to get playlist'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

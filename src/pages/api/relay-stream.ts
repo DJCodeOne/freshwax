@@ -103,9 +103,6 @@ export const GET: APIRoute = async ({ url }) => {
     console.error('Relay stream error:', err);
     const errorDetails = {
       error: 'Stream connection failed',
-      message: err.message,
-      name: err.name,
-      url: station.streamUrl
     };
     return new Response(JSON.stringify(errorDetails), {
       status: 502,

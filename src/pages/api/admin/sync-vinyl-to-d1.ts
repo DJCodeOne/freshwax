@@ -186,8 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[sync-vinyl-to-d1] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Migration failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Migration failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

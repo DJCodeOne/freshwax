@@ -54,9 +54,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Get their products if requested
       let products: any[] = [];
       if (includeProducts) {
-        const allMerch = await queryCollection('merch', { limit: 500 });
-        products = allMerch
-          .filter((item: any) => item.supplierId === supplierId)
+        const supplierMerch = await queryCollection('merch', {
+          filters: [{ field: 'supplierId', op: 'EQUAL', value: supplierId }],
+          limit: 200
+        });
+        products = supplierMerch
           .map((data: any) => ({
             id: data.id,
             name: data.name,
@@ -87,8 +89,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Supplier portal access via code
     if (accessCode) {
-      const allSuppliers = await queryCollection('merch-suppliers', { limit: 100 });
-      const supplierDoc = allSuppliers.find((s: any) => s.accessCode === accessCode);
+      const matchedSuppliers = await queryCollection('merch-suppliers', {
+        filters: [{ field: 'accessCode', op: 'EQUAL', value: accessCode }],
+        limit: 1
+      });
+      const supplierDoc = matchedSuppliers[0] || null;
 
       if (!supplierDoc) {
         return new Response(JSON.stringify({
@@ -99,10 +104,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
       const supplier: any = supplierDoc;
 
-      // Get their products
-      const allMerch = await queryCollection('merch', { limit: 500 });
-      const products = allMerch
-        .filter((item: any) => item.supplierId === supplier.id)
+      // Get their products (server-side filter by supplierId)
+      const supplierMerch = await queryCollection('merch', {
+        filters: [{ field: 'supplierId', op: 'EQUAL', value: supplier.id }],
+        limit: 200
+      });
+      const products = supplierMerch
         .map((data: any) => ({
           id: data.id,
           name: data.name,
@@ -243,7 +250,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch suppliers',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -327,7 +333,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to create supplier',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -384,7 +389,6 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update supplier',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -447,7 +451,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to delete supplier',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

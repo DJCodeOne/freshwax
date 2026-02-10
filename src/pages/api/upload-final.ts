@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { verifyAdminKey } from '../../lib/admin';
 import AdmZip from 'adm-zip';
 
 //============================================================================
@@ -89,8 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require authentication - either admin key or user token with ownership verification
   const adminKey = request.headers.get('x-admin-key');
-  const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-  const isAdmin = adminKey && expectedAdminKey && adminKey === expectedAdminKey;
+  const isAdmin = adminKey ? verifyAdminKey(adminKey, locals) : false;
 
   let uploaderUserId: string | null = null;
 
@@ -308,8 +308,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('[upload-final] Upload failed:', error);
     
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Upload failed',
-      details: error instanceof Error ? error.stack : String(error),
+      error: 'Upload failed',
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

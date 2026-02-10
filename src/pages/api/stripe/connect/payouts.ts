@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     console.error('[Stripe Connect] Payouts error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to fetch payouts'
+      error: 'Failed to fetch payouts'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

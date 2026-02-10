@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToWebP } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -53,6 +54,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
+
+  // Require authenticated user
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+  const { userId, error: authError } = await verifyRequestUser(request);
+  if (authError || !userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Authentication required'
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   const r2Config = getR2Config(env);
   const s3Client = createS3Client(r2Config);
 
@@ -76,6 +91,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Seller ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Verify seller owns this upload
+    if (sellerId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only upload images for your own listings'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Validate image index
@@ -148,8 +171,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[vinyl/upload-image] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to process and upload image',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process and upload image'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

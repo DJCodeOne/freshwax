@@ -35,7 +35,7 @@ export const GET: APIRoute = async () => {
     console.error('[get-settings] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get settings'
+      error: 'Failed to get settings'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

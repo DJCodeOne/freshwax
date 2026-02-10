@@ -168,7 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[playlist/add] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to add to playlist'
+      error: 'Failed to add to playlist'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

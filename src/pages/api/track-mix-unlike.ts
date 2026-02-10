@@ -79,8 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[track-mix-unlike] Error:', error);
     return new Response(JSON.stringify({
-      error: 'Failed to track unlike',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to track unlike'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -103,7 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: any) {
     console.error('Chat cleanup error:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -169,10 +169,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         } catch (error: any) {
           await updateDocument('chatCleanupSchedule', job.id, {
             status: 'failed',
-            error: error.message
+            error: 'Internal error'
           });
 
-          return { streamId: job.streamId, success: false, error: error.message };
+          return { streamId: job.streamId, success: false, error: 'Internal error' };
         }
       })
     );
@@ -186,7 +186,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: any) {
     console.error('Chat cleanup check error:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

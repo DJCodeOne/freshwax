@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('Clear chat error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to clear chat'
+      error: 'Failed to clear chat'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -183,7 +183,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('Get chat count error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Failed to get chat count'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -213,7 +213,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[admin] Record payout error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to record payout'
+      error: 'Failed to record payout'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

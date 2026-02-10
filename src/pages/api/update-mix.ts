@@ -142,8 +142,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       console.error('[update-mix] updateDocument error:', updateError);
       return new Response(JSON.stringify({
         success: false,
-        error: 'Database update failed',
-        details: updateError?.message || 'Unknown error'
+        error: 'Database update failed'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -178,8 +177,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     console.error('Error updating mix:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to update mix',
-      details: error?.message || 'Unknown error'
+      error: 'Failed to update mix'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

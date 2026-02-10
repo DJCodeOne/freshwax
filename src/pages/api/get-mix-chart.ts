@@ -60,7 +60,7 @@ export const GET: APIRoute = async () => {
     console.error('[get-mix-chart] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get chart'
+      error: 'Failed to get chart'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

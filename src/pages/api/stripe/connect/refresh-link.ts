@@ -86,7 +86,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     console.error('[Stripe Connect] Refresh link error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to generate onboarding link'
+      error: 'Failed to generate onboarding link'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

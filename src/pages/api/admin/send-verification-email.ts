@@ -2,14 +2,26 @@
 // Admin endpoint to send email verification link to a user
 
 import type { APIRoute } from 'astro';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env || {};
 
+  // SECURITY: Require admin authentication
+  initAdminEnv({
+    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
   try {
-    const body = await request.json();
+    const body = await parseJsonBody(request);
+
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { email } = body;
 
     if (!email) {
@@ -147,8 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!resendResponse.ok) {
       console.error('[SendVerification] Resend error:', resendResult);
       return new Response(JSON.stringify({
-        error: 'Failed to send email',
-        details: resendResult
+        error: 'Failed to send email'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -169,7 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     console.error('[SendVerification] Error:', error);
     return new Response(JSON.stringify({
-      error: error.message || 'Failed to send verification email'
+      error: 'Failed to send verification email'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

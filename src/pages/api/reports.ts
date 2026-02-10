@@ -54,10 +54,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (status !== 'all') filters.push({ field: 'status', op: 'EQUAL', value: status });
     if (type) filters.push({ field: 'type', op: 'EQUAL', value: type });
 
-    const allReports = await queryCollection('reports', {
-      filters: filters.length > 0 ? filters : undefined,
-      limit
-    });
+    // Run all queries in parallel instead of sequentially
+    const [allReports, pendingReports, reviewingReports] = await Promise.all([
+      queryCollection('reports', {
+        filters: filters.length > 0 ? filters : undefined,
+        limit
+      }),
+      queryCollection('reports', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
+      }),
+      queryCollection('reports', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'reviewing' }]
+      }),
+    ]);
 
     // Sort by createdAt client-side (descending)
     const reports = allReports
@@ -72,21 +81,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })
       .slice(0, limit);
 
-    // Get counts
-    const pendingReports = await queryCollection('reports', {
-      filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
-    });
-    const reviewingReports = await queryCollection('reports', {
-      filters: [{ field: 'status', op: 'EQUAL', value: 'reviewing' }]
-    });
-
     return new Response(JSON.stringify({
       success: true,
       reports,
       counts: { pending: pendingReports.length, reviewing: reviewingReports.length }
     }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' }
     });
   }
@@ -111,23 +112,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (reporterId && targetId) {
-      // Check for existing reports - need to check for pending or reviewing separately since REST API doesn't support 'in' operator
-      const pendingReports = await queryCollection('reports', {
-        filters: [
-          { field: 'reporterId', op: 'EQUAL', value: reporterId },
-          { field: 'targetId', op: 'EQUAL', value: targetId },
-          { field: 'status', op: 'EQUAL', value: 'pending' }
-        ],
-        limit: 1
-      });
-      const reviewingReports = await queryCollection('reports', {
-        filters: [
-          { field: 'reporterId', op: 'EQUAL', value: reporterId },
-          { field: 'targetId', op: 'EQUAL', value: targetId },
-          { field: 'status', op: 'EQUAL', value: 'reviewing' }
-        ],
-        limit: 1
-      });
+      // Check for existing reports in parallel
+      const [pendingReports, reviewingReports] = await Promise.all([
+        queryCollection('reports', {
+          filters: [
+            { field: 'reporterId', op: 'EQUAL', value: reporterId },
+            { field: 'targetId', op: 'EQUAL', value: targetId },
+            { field: 'status', op: 'EQUAL', value: 'pending' }
+          ],
+          limit: 1
+        }),
+        queryCollection('reports', {
+          filters: [
+            { field: 'reporterId', op: 'EQUAL', value: reporterId },
+            { field: 'targetId', op: 'EQUAL', value: targetId },
+            { field: 'status', op: 'EQUAL', value: 'reviewing' }
+          ],
+          limit: 1
+        }),
+      ]);
       if (pendingReports.length > 0 || reviewingReports.length > 0) {
         return new Response(JSON.stringify({ success: false, error: 'You have already reported this content' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
@@ -153,7 +156,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
@@ -193,7 +196,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     await updateDocument('reports', reportId, updates);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
 
@@ -221,6 +224,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     await deleteDocument('reports', reportId);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: any) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

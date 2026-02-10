@@ -2,6 +2,7 @@
 // Debug endpoint to directly update user roles with verbose logging
 
 import type { APIRoute } from 'astro';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -52,6 +53,10 @@ async function getToken(serviceAccountKey: string): Promise<string> {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const userId = url.searchParams.get('userId') || 'JueT7q9eKjQk4iFRg2tXa4ZP8642';
   const confirm = url.searchParams.get('confirm');
@@ -177,8 +182,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+      error: 'Unknown error'
     }, null, 2), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

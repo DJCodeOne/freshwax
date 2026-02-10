@@ -141,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('Fix URLs error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed'
+      error: 'Failed'
     }), { status: 500 });
   }
 };

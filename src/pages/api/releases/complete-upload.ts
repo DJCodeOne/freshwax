@@ -177,7 +177,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('Failed to complete upload:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to complete upload'
+      error: 'Failed to complete upload'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

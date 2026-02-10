@@ -31,7 +31,7 @@ async function checkStreamHealth(streamKey: string): Promise<{ isLive: boolean; 
     });
     return { isLive: response.ok || response.status === 200 };
   } catch (error: any) {
-    return { isLive: false, error: error.message || 'Connection failed' };
+    return { isLive: false, error: 'Connection failed' };
   }
 }
 
@@ -106,7 +106,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to list streams'
+      error: 'Failed to list streams'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -225,7 +225,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to clean up streams'
+      error: 'Failed to clean up streams'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

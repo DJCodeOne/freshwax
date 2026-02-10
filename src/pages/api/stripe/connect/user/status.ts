@@ -107,7 +107,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[Stripe Connect] User status error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get status'
+      error: 'Failed to get status'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

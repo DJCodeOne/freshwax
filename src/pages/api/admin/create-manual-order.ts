@@ -417,7 +417,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[admin] Error creating manual order:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to create order'
+      error: 'Failed to create order'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

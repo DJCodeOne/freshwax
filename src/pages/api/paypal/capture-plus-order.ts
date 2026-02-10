@@ -92,24 +92,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get pending order data from Firebase (same collection as regular orders)
     let pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
-    let useClientData = false;
-
     if (!pendingOrder || pendingOrder.type !== 'plus_subscription') {
-      // Fall back to client-provided data if Firebase lookup failed
-      if (clientOrderData && clientOrderData.userId && clientOrderData.email) {
-        console.log('[PayPal Plus] Using client-provided order data (Firebase lookup failed)');
-        pendingOrder = {
-          ...clientOrderData,
-          amount: expectedAmount || 10.00, // Default to full price
-          type: 'plus_subscription'
-        };
-        useClientData = true;
-      } else {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Plus order not found or expired'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-      }
+      // SECURITY: Reject if no server-side pending order exists.
+      // Never trust client-provided order data for payment captures.
+      console.error('[PayPal Plus] No valid pending order found for:', paypalOrderId);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Plus order not found or expired. Please try again.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     const { userId, email, amount, promoCode, isKvCode, referralCardId, referredBy } = pendingOrder;
@@ -281,8 +271,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[PayPal Plus] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to process payment',
-      details: error.toString()
+      error: 'Failed to process payment',
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

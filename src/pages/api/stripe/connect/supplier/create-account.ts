@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Stripe Connect] Supplier create account error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to create Stripe account'
+      error: 'Failed to create Stripe account'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

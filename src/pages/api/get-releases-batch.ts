@@ -141,8 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch releases',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch releases'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

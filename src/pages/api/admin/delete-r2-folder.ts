@@ -91,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[delete-r2-folder] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to delete folder'
+      error: 'Failed to delete folder'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

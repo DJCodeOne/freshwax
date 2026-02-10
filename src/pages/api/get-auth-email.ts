@@ -18,7 +18,7 @@ if (!getApps().length) {
   });
 }
 
-export const GET: APIRoute = async ({ request, cookies }) => {
+export const GET: APIRoute = async ({ request }) => {
   // Rate limit to prevent enumeration attacks
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`get-auth-email:${clientId}`, RateLimiters.auth);
@@ -39,16 +39,34 @@ export const GET: APIRoute = async ({ request, cookies }) => {
     });
   }
 
-  // Check if requester is authenticated - get from cookies
-  const adminId = cookies.get('adminId')?.value;
-  const firebaseUid = cookies.get('firebaseUid')?.value;
-  const customerId = cookies.get('customerId')?.value;
-  const authenticatedUid = adminId || firebaseUid || customerId;
+  // Verify caller identity via Firebase ID token (not unsigned cookies)
+  const authHeader = request.headers.get('Authorization');
+  let authenticatedUid: string | null = null;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const idToken = authHeader.slice(7);
+      const auth = getAuth();
+      const decoded = await auth.verifyIdToken(idToken);
+      authenticatedUid = decoded.uid;
+    } catch (e) {
+      // Token verification failed
+    }
+  }
+
+  if (!authenticatedUid) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Authentication required - provide a valid Firebase ID token'
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   // Security: Only allow fetching own data, or admin fetching any data
   const adminUids = getAdminUids();
-  const isAdmin = adminId ? adminUids.includes(adminId) :
-                  firebaseUid ? adminUids.includes(firebaseUid) : false;
+  const isAdmin = adminUids.includes(authenticatedUid);
   const isOwnData = authenticatedUid === uid;
 
   if (!isAdmin && !isOwnData) {

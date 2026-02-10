@@ -57,7 +57,7 @@ export async function GET({ locals }: APIContext) {
     console.error('[PlaylistHistory] GET error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: 'Internal error',
       items: []
     }), {
       status: 500,
@@ -150,7 +150,7 @@ export async function POST({ request, locals }: APIContext) {
     console.error('[PlaylistHistory] POST error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 200, // Non-critical operation
       headers: { 'Content-Type': 'application/json' }
@@ -232,7 +232,7 @@ export async function DELETE({ request, locals }: APIContext) {
     console.error('[PlaylistHistory] DELETE error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

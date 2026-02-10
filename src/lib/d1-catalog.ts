@@ -214,6 +214,59 @@ export async function d1GetAllPublishedReleases(db: D1Database): Promise<any[]> 
   }
 }
 
+export async function d1SearchPublishedReleases(db: D1Database, query: string, limit: number = 50): Promise<any[]> {
+  try {
+    const pattern = `%${query}%`;
+    const { results } = await db.prepare(
+      `SELECT id, data FROM releases_v2 WHERE published = 1 AND (
+        title LIKE ?1 COLLATE NOCASE OR
+        artist_name LIKE ?1 COLLATE NOCASE OR
+        genre LIKE ?1 COLLATE NOCASE
+      ) ORDER BY release_date DESC LIMIT ?2`
+    ).bind(pattern, limit).all();
+
+    return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error searching releases:', e);
+    return [];
+  }
+}
+
+export async function d1SearchPublishedMixes(db: D1Database, query: string, limit: number = 50): Promise<any[]> {
+  try {
+    const pattern = `%${query}%`;
+    const { results } = await db.prepare(
+      `SELECT id, data FROM dj_mixes WHERE published = 1 AND (
+        title LIKE ?1 COLLATE NOCASE OR
+        dj_name LIKE ?1 COLLATE NOCASE OR
+        genre LIKE ?1 COLLATE NOCASE
+      ) ORDER BY upload_date DESC LIMIT ?2`
+    ).bind(pattern, limit).all();
+
+    return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error searching mixes:', e);
+    return [];
+  }
+}
+
+export async function d1SearchPublishedMerch(db: D1Database, query: string, limit: number = 50): Promise<any[]> {
+  try {
+    const pattern = `%${query}%`;
+    const { results } = await db.prepare(
+      `SELECT id, data FROM merch WHERE published = 1 AND (
+        name LIKE ?1 COLLATE NOCASE OR
+        type LIKE ?1 COLLATE NOCASE
+      ) ORDER BY created_at DESC LIMIT ?2`
+    ).bind(pattern, limit).all();
+
+    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+  } catch (e) {
+    console.error('[D1] Error searching merch:', e);
+    return [];
+  }
+}
+
 export async function d1GetReleaseById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(

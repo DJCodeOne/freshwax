@@ -79,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Stripe Connect] Supplier refresh link error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to create onboarding link'
+      error: 'Failed to create onboarding link'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

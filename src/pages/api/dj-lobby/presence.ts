@@ -355,8 +355,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[dj-lobby/presence] GET Error:', error?.message || error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to get online DJs',
-      details: error?.message || 'Unknown error'
+      error: 'Failed to get online DJs'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

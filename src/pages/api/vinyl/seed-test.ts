@@ -311,7 +311,6 @@ export const GET: APIRoute = async ({ locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to seed test data',
-      details: String(error)
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

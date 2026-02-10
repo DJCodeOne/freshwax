@@ -220,7 +220,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Handle specific Stripe errors
     if (error.type === 'StripeCardError' || error.type === 'StripeInvalidRequestError') {
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: 'Refund request failed' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });

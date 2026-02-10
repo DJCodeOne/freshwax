@@ -141,7 +141,7 @@ export const GET: APIRoute = async ({ url }) => {
     });
   } catch (error) {
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

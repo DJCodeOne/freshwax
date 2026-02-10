@@ -254,7 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[update-partner] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update partner'
+      error: 'Failed to update partner'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

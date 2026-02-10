@@ -193,7 +193,7 @@ export const GET: APIRoute = async ({ request }) => {
     log.error('[check-dj-eligibility] Error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message || 'Failed to check eligibility'
+      error: 'Failed to check eligibility'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

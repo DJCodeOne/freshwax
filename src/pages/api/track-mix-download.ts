@@ -54,8 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[track-mix-download] Error:', error);
     return new Response(JSON.stringify({
-      error: 'Failed to track download',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to track download'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -145,7 +145,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('Failed to update tracks:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update tracks'
+      error: 'Failed to update tracks'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

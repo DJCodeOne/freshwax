@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ locals }) => {
   } catch (error) {
     console.error('[list-submissions] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to list submissions',
+      error: 'Failed to list submissions',
       submissions: []
     }), {
       status: 500,

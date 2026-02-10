@@ -141,17 +141,29 @@ export function validateAdminKey(
   const expectedKey = env?.ADMIN_KEY;
   if (!expectedKey) return false;
 
-  // Check body first
-  if (body?.adminKey === expectedKey) return true;
+  // Check body first - timing-safe comparison
+  if (body?.adminKey && timingSafeCompare(body.adminKey, expectedKey)) return true;
 
-  // Check Authorization header
+  // Check Authorization header - timing-safe comparison
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    if (token === expectedKey) return true;
+    if (timingSafeCompare(token, expectedKey)) return true;
   }
 
   return false;
+}
+
+/**
+ * Timing-safe string comparison to prevent timing attacks
+ */
+function timingSafeCompare(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length;
+  for (let i = 0; i < maxLen; i++) {
+    result |= (a.charCodeAt(i % a.length) || 0) ^ (b.charCodeAt(i % b.length) || 0);
+  }
+  return result === 0;
 }
 
 /**

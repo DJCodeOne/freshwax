@@ -312,7 +312,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to send bot message',
-      details: error?.message || String(error)
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

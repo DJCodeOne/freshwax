@@ -202,8 +202,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     log.error('[get-merch] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
-      error: 'Failed to fetch merch',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch merch'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -92,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       online: false,
       status: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Server status check failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

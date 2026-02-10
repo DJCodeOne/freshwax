@@ -268,8 +268,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[PayPal Plus] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to create PayPal order',
-      details: error.toString()
+      error: 'Failed to create PayPal order',
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

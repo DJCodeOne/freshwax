@@ -3,8 +3,12 @@
 
 import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { requireAdminAuth } from '../../lib/admin';
 
-export const GET = async ({ url, locals }: any) => {
+export const GET = async ({ url, locals, request }: any) => {
+  // Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const releaseId = url.searchParams.get('releaseId');
     
@@ -82,7 +86,7 @@ export const GET = async ({ url, locals }: any) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to list files'
+      error: 'Failed to list files'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -188,8 +188,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Failed to delete mix',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to delete mix'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

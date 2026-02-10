@@ -58,7 +58,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     console.error('[playlist/clear] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to clear playlist'
+      error: 'Failed to clear playlist'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

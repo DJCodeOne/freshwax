@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('[send-order-email] ❌ Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send email'
+      error: 'Failed to send email'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

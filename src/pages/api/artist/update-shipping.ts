@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Artist] Update shipping error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to update shipping rates'
+      error: 'Failed to update shipping rates'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

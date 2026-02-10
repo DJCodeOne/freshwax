@@ -79,8 +79,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch movements',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch movements'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

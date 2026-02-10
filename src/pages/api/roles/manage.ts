@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     console.error('Roles API GET error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: 'Internal error' 
     }), { status: 500 });
   }
 };
@@ -517,7 +517,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('Roles API POST error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: 'Internal error' 
     }), { status: 500 });
   }
 };

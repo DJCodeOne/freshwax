@@ -142,8 +142,14 @@ const formatCurrency = (amount) => {
               </td>
             </tr>
           ) : (
-            releases.map(release => (
-              <tr 
+            releases.map(release => {
+              // Detect audio processed: check flag OR if all tracks have mp3Url+wavUrl
+              const hasProcessedFlag = !!release.audioProcessed;
+              const tracks = release.tracks || [];
+              const allTracksProcessed = tracks.length > 0 && tracks.every((t: any) => t.mp3Url && t.wavUrl);
+              const isAudioProcessed = hasProcessedFlag || allTracksProcessed;
+              return (
+              <tr
                 data-status={release.status || 'draft'}
                 data-format={release.vinylRelease ? 'vinyl' : 'digital'}
                 data-search={`${release.releaseName || ''} ${release.artistName || ''}`.toLowerCase()}
@@ -204,13 +210,13 @@ const formatCurrency = (amount) => {
                       ✏️
                     </a>
                     <button
-                      class={`btn btn-sm process-audio-btn ${release.audioProcessed ? 'btn-audio-done' : 'btn-outline'}`}
+                      class={`btn btn-sm process-audio-btn ${isAudioProcessed ? 'btn-audio-done' : 'btn-outline'}`}
                       data-id={release.id}
                       data-name={release.releaseName}
-                      data-processed={release.audioProcessed ? 'true' : 'false'}
-                      title={release.audioProcessed ? 'Audio processed (MP3+WAV ready) - Click to reprocess' : 'Process Audio (generate MP3+WAV)'}
+                      data-processed={isAudioProcessed ? 'true' : 'false'}
+                      title={isAudioProcessed ? 'Audio processed (MP3+WAV ready) - Click to reprocess' : 'Process Audio (generate MP3+WAV)'}
                     >
-                      {release.audioProcessed ? '✓' : '🎵'}
+                      {isAudioProcessed ? '✓' : '🎵'}
                     </button>
                     {release.status !== 'live' && (
                       <button
@@ -232,7 +238,7 @@ const formatCurrency = (amount) => {
                   </div>
                 </td>
               </tr>
-            ))
+            );})
           )}
         </tbody>
       </table>

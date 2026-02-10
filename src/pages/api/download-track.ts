@@ -117,7 +117,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   } catch (error) {
     console.error('[download] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Download failed'
+      error: 'Download failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -169,8 +169,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (isDev) console.error('[get-dj-mixes] Error:', error);
     return new Response(JSON.stringify({ 
       success: false,
-      error: 'Failed to fetch DJ mixes',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch DJ mixes'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

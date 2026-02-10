@@ -141,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('[delete-account] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete account'
+      error: 'Failed to delete account'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

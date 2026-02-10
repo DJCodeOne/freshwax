@@ -3,18 +3,27 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const runtimeEnv = (locals as any)?.runtime?.env;
+  initFirebaseEnv(runtimeEnv);
+  initAdminEnv({
+    ADMIN_UIDS: runtimeEnv?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
+    ADMIN_EMAILS: runtimeEnv?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
+  });
+
+  // SECURITY: Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const search = url.searchParams.get('search') || 'ultron';
 
-  const runtimeEnv = (locals as any)?.runtime?.env;
-  initFirebaseEnv(runtimeEnv);
-
   try {
-    const releases = await queryCollection('releases', { limit: 100, skipCache: true });
+    const releases = await queryCollection('releases', { limit: 100, cacheTime: 60000 });
 
     // Find releases matching search
     const matches = releases.filter((r: any) =>
@@ -44,7 +53,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }));
 
     // Also look up artists/users to find y2
-    const artists = await queryCollection('artists', { limit: 100, skipCache: true });
+    const artists = await queryCollection('artists', { limit: 100, cacheTime: 60000 });
     const y2Artist = artists.filter((a: any) =>
       (a.name || '').toLowerCase().includes('y2') ||
       (a.displayName || '').toLowerCase().includes('y2')
@@ -69,7 +78,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to check releases'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

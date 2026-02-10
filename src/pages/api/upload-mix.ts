@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const formData = await request.formData();
-    
+
     // Get all form fields with character limits
     const audioFile = formData.get('audioFile') as File;
     const artworkFile = formData.get('artworkFile') as File | null;
@@ -93,19 +93,72 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const tracklistRaw = (formData.get('tracklist') as string || '').trim().slice(0, 1500);
     const durationSeconds = parseInt(formData.get('durationSeconds') as string || '0', 10) || 0;
     const userId = (formData.get('userId') as string || '').trim();
+
+    // Verify the authenticated user matches the claimed userId
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required to upload mixes'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (userId && userId !== verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'User ID mismatch - you can only upload mixes for your own account'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate audio file type
+    const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
+    if (audioFile && !allowedAudioTypes.includes(audioFile.type) && !audioFile.name.toLowerCase().match(/\.(mp3|wav)$/)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid audio format. Only MP3 and WAV files are allowed.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate audio file size (500MB max for DJ mixes)
+    const MAX_MIX_SIZE = 500 * 1024 * 1024;
+    if (audioFile && audioFile.size > MAX_MIX_SIZE) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Audio file too large. Maximum 500MB allowed.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate artwork file type if provided
+    if (artworkFile && artworkFile.size > 0) {
+      const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+      if (!allowedImageTypes.includes(artworkFile.type)) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid artwork format. Only JPEG, PNG, and WebP are allowed.'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (artworkFile.size > 10 * 1024 * 1024) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Artwork too large. Maximum 10MB allowed.'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
     
+    // Use verified userId (from auth token, not form data)
+    const authenticatedUserId = verifiedUserId;
+
     // Fetch the user's preferred displayName from their profile
     let displayName = djNameFromForm;
-    if (userId) {
+    if (authenticatedUserId) {
       try {
         // Check customers collection first (preferred display name)
-        let userData = await getDocument('users', userId);
+        let userData = await getDocument('users', authenticatedUserId);
         if (userData?.displayName) {
           displayName = userData.displayName;
           log.info(`[upload-mix] Using displayName from customers: ${displayName}`);
         } else {
           // Fallback to users collection
-          userData = await getDocument('users', userId);
+          userData = await getDocument('users', authenticatedUserId);
           if (userData) {
             displayName = userData.displayName || userData.partnerInfo?.displayName || djNameFromForm;
             log.info(`[upload-mix] Using displayName from users: ${displayName}`);
@@ -188,7 +241,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Save to Firebase
     const mixData = {
       id: mixId,
-      userId: userId,
+      userId: authenticatedUserId,
       displayName: displayName, // User's preferred display name for public views
       dj_name: djName,
       djName: djName,
@@ -250,8 +303,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to upload mix',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to upload mix'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -136,7 +136,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get account status'
+      error: 'Failed to get account status'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

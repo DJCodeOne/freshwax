@@ -84,8 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[track-mix-play] Error:', error);
     return new Response(JSON.stringify({
-      error: 'Failed to track play',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to track play'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

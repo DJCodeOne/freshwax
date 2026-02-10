@@ -3,10 +3,14 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
   const url = new URL(request.url);
   const name = url.searchParams.get('name') || '';
 
@@ -22,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   try {
     // Get all releases and filter by name (case-insensitive)
-    const releases = await queryCollection('releases', { limit: 500 });
+    const releases = await queryCollection('releases', { limit: 500, cacheTime: 60000 });
     
     const searchTerm = name.toLowerCase();
     const matches = releases.filter((r: any) => {
@@ -47,7 +51,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   } catch (error) {
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to search releases'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

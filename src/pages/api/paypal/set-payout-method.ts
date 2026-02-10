@@ -135,7 +135,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Payout] Set method error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to set payout method'
+      error: 'Failed to set payout method'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

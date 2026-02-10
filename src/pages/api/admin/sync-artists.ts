@@ -110,8 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[sync-artists] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to sync artists',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to sync artists'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

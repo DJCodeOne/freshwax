@@ -439,7 +439,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[admin] Trigger payout error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to trigger payout'
+      error: 'Failed to trigger payout'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -9,6 +9,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getAdminKey } from '../../../lib/api-utils';
+import { verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -37,10 +38,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
 
-  // Check for admin key first (for admin upload page)
+  // Check for admin key first (for admin upload page) - timing-safe comparison
   const adminKey = getAdminKey(request);
-  const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-  const isAdmin = adminKey && expectedAdminKey && adminKey === expectedAdminKey;
+  const isAdmin = adminKey ? verifyAdminKey(adminKey, locals) : false;
 
   // If not admin, require authenticated user
   if (!isAdmin) {
@@ -58,6 +58,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!key || !contentType) {
       return new Response(JSON.stringify({ error: 'key and contentType are required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // SECURITY: Validate the key to prevent path traversal and uploading to arbitrary locations
+    const ALLOWED_PREFIXES = ['releases/', 'submissions/', 'dj-mixes/', 'vinyl/', 'merch/', 'avatars/'];
+    const normalizedKey = key.replace(/\\/g, '/'); // Normalize backslashes
+    if (
+      normalizedKey.includes('..') ||
+      normalizedKey.startsWith('/') ||
+      !ALLOWED_PREFIXES.some((prefix: string) => normalizedKey.startsWith(prefix))
+    ) {
+      return new Response(JSON.stringify({ error: 'Invalid upload path' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -107,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[Presign] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to generate upload URL'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -29,8 +29,8 @@ service cloud.firestore {
     }
 
     // Users collection (for role management)
-    // Note: Read allowed for admin REST API (validates admin key server-side)
-    // Sensitive data (passwords, tokens) should NOT be stored here
+    // TODO: Migrate firebase-rest.ts to use service account auth, then restrict to isAdmin() || isOwner(userId)
+    // Currently open because REST API uses API key auth (request.auth == null)
     match /users/{userId} {
       allow read: if true;
       // Allow create from authenticated user OR for bypass grants (REST API with key protection)
@@ -83,8 +83,7 @@ service cloud.firestore {
 
     // Customers collection
     match /customers/{customerId} {
-      // Note: Read allowed for admin REST API (validates admin key server-side)
-      // API filters sensitive data before returning to client
+      // TODO: Migrate firebase-rest.ts to use service account auth, then restrict to isAdmin() || isOwner(customerId)
       allow read: if true;
       // Allow create from authenticated user OR REST API (for wishlist)
       allow create: if (isAuthenticated() && request.auth.uid == customerId) ||
@@ -106,8 +105,7 @@ service cloud.firestore {
     }
 
     // Orders collection
-    // Note: Read allowed for admin REST API (validates admin key server-side)
-    // Individual order access controlled by API layer
+    // TODO: Migrate firebase-rest.ts to use service account auth, then restrict to isAdmin() || order owner
     match /orders/{orderId} {
       allow read: if true;
       // Allow authenticated users OR test/paypal orders from API (API validates on server-side)
@@ -151,7 +149,8 @@ service cloud.firestore {
     match /tracks/{trackId} {
       allow read: if true;
       allow create, update: if isAdmin();
-      // Allow delete from admin or REST API (API has its own protection)
+      // SECURITY NOTE: request.auth == null allows REST API (uses API key, not user token) to delete
+      // TODO: Migrate to service account auth to remove this bypass
       allow delete: if isAdmin() || request.auth == null;
     }
 
@@ -170,7 +169,8 @@ service cloud.firestore {
                                   'pricing', 'pricePerSale', 'trackPrice', 'vinylPrice', 'freeDownload',
                                   'releaseName', 'releaseDescription', 'artist', 'labelName', 'copyrightHolder',
                                   'releaseDate', 'genre', 'subgenre', 'coverUrl', 'tracks', 'metadata']);
-      // Allow delete from admin or REST API (API has its own protection)
+      // SECURITY NOTE: request.auth == null allows REST API to delete
+      // TODO: Migrate to service account auth to remove this bypass
       allow delete: if isAdmin() || request.auth == null;
     }
 
@@ -189,7 +189,8 @@ service cloud.firestore {
                                   'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
                                   'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
                                   'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
-      // Allow delete from admin, mix owner, or REST API (API validates adminKey server-side)
+      // SECURITY NOTE: request.auth == null allows REST API to delete
+      // TODO: Migrate to service account auth to remove this bypass
       allow delete: if isAdmin() ||
                       (isAuthenticated() && resource.data.userId == request.auth.uid) ||
                       request.auth == null;
@@ -210,7 +211,8 @@ service cloud.firestore {
                                   'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
                                   'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
                                   'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
-      // Allow delete from admin, mix owner, or REST API (API validates adminKey server-side)
+      // SECURITY NOTE: request.auth == null allows REST API to delete
+      // TODO: Migrate to service account auth to remove this bypass
       allow delete: if isAdmin() ||
                       (isAuthenticated() && resource.data.userId == request.auth.uid) ||
                       request.auth == null;
@@ -426,12 +428,16 @@ service cloud.firestore {
     }
 
     // Pending PayPal Orders - temporary storage for PayPal checkout flow
-    // Server-side API creates and reads these during checkout (no auth token)
+    // SECURITY NOTE: Open because REST API uses API key auth (no user token)
+    // TODO: Migrate to service account auth, then restrict to server-only access
+    // Risk mitigated by PayPal capture amount validation in capture-order.ts
     match /pendingPayPalOrders/{orderId} {
       allow read, write: if true;
     }
 
     // Pending Gift Card Orders - temporary storage for gift card PayPal flow
+    // SECURITY NOTE: Same as pendingPayPalOrders - open due to REST API auth model
+    // TODO: Migrate to service account auth
     match /pendingGiftCardOrders/{orderId} {
       allow read, write: if true;
     }

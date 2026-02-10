@@ -167,7 +167,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       return new Response(JSON.stringify({
         success: false,
-        error: `Transfer failed: ${transferError.message}`
+        error: 'Transfer failed'
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -175,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[retry-payout] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to retry payout'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

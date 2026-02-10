@@ -212,7 +212,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[payment/status] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get payment status'
+      error: 'Failed to get payment status'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[save-user-badge] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save badge'
+      error: 'Failed to save badge'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

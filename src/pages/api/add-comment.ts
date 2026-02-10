@@ -112,6 +112,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[add-comment] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to add comment', details: error instanceof Error ? error.message : 'Unknown error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: false, error: 'Failed to add comment' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

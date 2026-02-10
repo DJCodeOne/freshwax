@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[PayPal] Link account error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to link PayPal account'
+      error: 'Failed to link PayPal account'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
@@ -202,7 +202,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[PayPal] Get status error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get PayPal status'
+      error: 'Failed to get PayPal status'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

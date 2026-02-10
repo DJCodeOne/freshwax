@@ -151,8 +151,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     log.error('[gift-cards] GET Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to process request',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process request'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -367,8 +366,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('[gift-cards] POST Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to process request',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process request'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

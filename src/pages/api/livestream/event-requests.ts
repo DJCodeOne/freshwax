@@ -75,7 +75,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     console.error('[event-requests] GET error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch event requests'
+      error: 'Failed to fetch event requests'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -303,7 +303,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[event-requests] POST error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to process request'
+      error: 'Failed to process request'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

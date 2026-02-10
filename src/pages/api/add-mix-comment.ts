@@ -262,8 +262,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('[add-mix-comment] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to save comment',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to save comment'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

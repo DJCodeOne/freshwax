@@ -124,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[admin/delete-user] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to delete user'
+      error: 'Failed to delete user'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

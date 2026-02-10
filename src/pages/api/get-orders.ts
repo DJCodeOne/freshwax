@@ -40,18 +40,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   try {
     log.info('[get-orders] Fetching orders for user:', userId);
 
-    // Fetch all orders and filter client-side (REST API has limited query support)
-    const allOrders = await queryCollection('orders', {
-      limit: 200,
+    // Query orders filtered by customer.userId (server-side Firestore filter)
+    const userOrders = await queryCollection('orders', {
+      filters: [{ field: 'customer.userId', op: 'EQUAL', value: userId }],
+      limit: 100,
       skipCache: true
     });
-
-    // Filter orders for this user
-    const userOrders = allOrders.filter((order: any) =>
-      order.customer?.userId === userId ||
-      order.userId === userId ||
-      order.customerId === userId
-    );
 
     // OPTIMIZATION: Collect all unique release IDs first, then batch fetch
     const releaseIds = new Set<string>();
@@ -212,7 +206,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch orders',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

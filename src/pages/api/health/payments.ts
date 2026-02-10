@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     } catch (error: any) {
       result.checks.stripe = {
         status: 'error',
-        error: error.message
+        error: 'Internal error'
       };
       issues.push('Stripe API unreachable');
     }
@@ -89,7 +89,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     result.checks.firebase = {
       status: 'error',
-      error: error.message
+      error: 'Internal error'
     };
     issues.push('Firebase unreachable');
   }

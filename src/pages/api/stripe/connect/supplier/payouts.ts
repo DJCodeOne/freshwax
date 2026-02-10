@@ -116,7 +116,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[Stripe Connect] Supplier payouts error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get payouts'
+      error: 'Failed to get payouts'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

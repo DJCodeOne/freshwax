@@ -135,8 +135,7 @@ export const POST = async ({ request, locals }: any) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Sync failed',
-      details: error instanceof Error ? error.stack : String(error),
+      error: 'Sync failed',
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

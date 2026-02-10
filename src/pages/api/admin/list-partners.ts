@@ -102,8 +102,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[list-partners] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to fetch partners',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch partners'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

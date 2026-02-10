@@ -194,7 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[finalize-upload] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

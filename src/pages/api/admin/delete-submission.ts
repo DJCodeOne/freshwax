@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[delete-submission] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to delete'
+      error: 'Failed to delete'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

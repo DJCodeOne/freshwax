@@ -71,8 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('[extract-text] Error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: 'Failed to process file. Try copy-pasting content manually.',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process file. Try copy-pasting content manually.'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

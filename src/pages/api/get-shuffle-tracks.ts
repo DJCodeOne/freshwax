@@ -119,7 +119,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to fetch tracks',
+      error: 'Failed to fetch tracks',
       tracks: []
     }), {
       status: 500,

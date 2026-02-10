@@ -22,17 +22,14 @@
     "adm-zip": "^0.5.16",
     "astro": "^5.14.4",
     "aws4fetch": "^1.0.20",
-    "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
     "firebase": "^12.6.0",
     "firebase-admin": "^13.5.0",
-    "googleapis": "^164.1.0",
     "lucide-react": "^0.546.0",
     "nanostores": "^1.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "resend": "^6.5.2",
-    "sharp": "^0.34.5",
     "stripe": "^19.1.0",
     "tailwindcss": "^3.4.1",
     "zod": "^3.25.76"
@@ -41,7 +38,6 @@
     "@types/adm-zip": "^0.5.7",
     "@vitest/coverage-v8": "^4.0.16",
     "husky": "^9.1.7",
-    "puppeteer": "^24.34.0",
     "vitest": "^4.0.16"
   }
 }

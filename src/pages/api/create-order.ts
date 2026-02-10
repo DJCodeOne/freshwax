@@ -2,9 +2,10 @@
 // Creates order in Firebase and sends confirmation email
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, incrementField, initFirebaseEnv, clearCache } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, incrementField, initFirebaseEnv, clearCache, atomicIncrement, updateDocumentConditional } from '../../lib/firebase-rest';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { generateOrderNumber } from '../../lib/order-utils';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -13,14 +14,80 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-// Generate order number
-function generateOrderNumber(): string {
-  const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `FW-${year}${month}${day}-${random}`;
+// Validate item prices server-side to prevent manipulation
+async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[], serverSubtotal: number, hasMismatch: boolean }> {
+  const validatedItems: any[] = [];
+  let serverSubtotal = 0;
+  let hasMismatch = false;
+
+  for (const item of items) {
+    let serverPrice = item.price;
+    const itemType = item.type || 'digital';
+    const quantity = item.quantity || 1;
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
+        }
+      } else if (itemType === 'vinyl') {
+        if (item.sellerId && !item.releaseId) {
+          // Vinyl crates item
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (listing) {
+              serverPrice = listing.price || item.price;
+            }
+          }
+        } else {
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              serverPrice = release.vinylPrice || release.price || item.price;
+            }
+          }
+        }
+      } else if (itemType === 'track' && item.trackId) {
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId) {
+          const release = await getDocument('releases', releaseId);
+          if (release) {
+            const track = (release.tracks || []).find((t: any) =>
+              t.id === item.trackId || t.trackId === item.trackId
+            );
+            serverPrice = track?.price || release.trackPrice || 0.99;
+          }
+        }
+      } else if (itemType === 'digital' || itemType === 'release') {
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId) {
+          const release = await getDocument('releases', releaseId);
+          if (release) {
+            serverPrice = release.price || release.digitalPrice || item.price;
+          }
+        }
+      }
+
+      // Check for price mismatch (allow 1p rounding difference)
+      if (Math.abs(serverPrice - item.price) > 0.01) {
+        console.warn('[create-order] SECURITY: Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
+        hasMismatch = true;
+      }
+
+      serverSubtotal += serverPrice * quantity;
+      validatedItems.push({ ...item, price: serverPrice, originalClientPrice: item.price });
+    } catch (err) {
+      console.error('[create-order] Error validating price for', item.name, err);
+      // On error, use client price but flag it
+      serverSubtotal += item.price * quantity;
+      validatedItems.push({ ...item, priceValidationFailed: true });
+    }
+  }
+
+  return { validatedItems, serverSubtotal: Math.round(serverSubtotal * 100) / 100, hasMismatch };
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -106,8 +173,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const orderNumber = generateOrderNumber();
     const now = new Date().toISOString();
 
+    // Server-side price validation - prevent client-side price manipulation
+    const { validatedItems: pricedItems, serverSubtotal, hasMismatch } = await validateOrderPrices(orderData.items);
+
+    // Reject if client total is significantly lower than server-calculated total
+    const clientTotal = orderData.totals?.total || 0;
+    if (serverSubtotal > 0 && clientTotal < serverSubtotal * 0.95) {
+      console.error('[create-order] SECURITY: Client total', clientTotal, 'is below server subtotal', serverSubtotal);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Price validation failed. Please refresh and try again.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Use server-validated prices
+    const serverShipping = orderData.totals?.shipping || 0;
+    const serverTotal = Math.round((serverSubtotal + serverShipping) * 100) / 100;
+
     // Get download URLs for digital items
-    const itemsWithDownloads = await Promise.all(orderData.items.map(async (item: any) => {
+    const itemsWithDownloads = await Promise.all(pricedItems.map(async (item: any) => {
       // Get the release ID (could be stored as id, productId, or releaseId)
       const releaseId = item.releaseId || item.productId || item.id;
 
@@ -265,9 +349,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       shipping: orderData.shipping || null,
       items: itemsWithDownloads,
       totals: {
-        subtotal: orderData.totals.subtotal,
-        shipping: orderData.totals.shipping,
-        total: orderData.totals.total
+        subtotal: serverSubtotal,
+        shipping: serverShipping,
+        total: serverTotal,
+        ...(hasMismatch ? { clientSubmittedTotal: clientTotal, priceValidated: true } : {})
       },
       hasPhysicalItems: orderData.hasPhysicalItems,
       hasPreOrderItems,
@@ -285,168 +370,202 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[create-order] ✓ Order created:', orderNumber, orderRef.id);
 
-    // Update stock for merch items
+    // Update stock for merch items (with optimistic concurrency to prevent overselling)
+    const MAX_STOCK_RETRIES = 3;
     for (const item of order.items) {
       if (item.type === 'merch' && item.productId) {
         try {
           log.info('[create-order] Updating stock for merch item:', item.name, 'qty:', item.quantity);
 
-          // Get the product to find variant key
-          const productData = await getDocument('merch', item.productId);
+          let stockUpdated = false;
+          let previousStock = 0;
+          let newStock = 0;
+          let variantKey = '';
+          let productData: any = null;
 
-          if (productData) {
-            const variantStock = productData.variantStock || {};
+          for (let attempt = 0; attempt < MAX_STOCK_RETRIES; attempt++) {
+            // Clear cache on retry to get fresh data
+            if (attempt > 0) {
+              clearCache(`doc:merch:${item.productId}`);
+              log.info(`[create-order] Stock update retry ${attempt + 1}/${MAX_STOCK_RETRIES} for ${item.name}`);
+            }
+
+            productData = await getDocument('merch', item.productId);
+            if (!productData) break;
+
+            // Deep clone variantStock to avoid mutating cached data
+            const variantStock: Record<string, any> = {};
+            for (const [k, v] of Object.entries(productData.variantStock || {})) {
+              variantStock[k] = { ...(v as any) };
+            }
 
             // Build variant key from size and color
             const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
             const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-            let variantKey = size + '_' + color;
+            variantKey = size + '_' + color;
 
             // Check if variant exists, otherwise try default
             if (!variantStock[variantKey]) {
-              // Try to find matching variant
               const keys = Object.keys(variantStock);
               if (keys.length === 1) {
                 variantKey = keys[0];
               } else {
-                // Try matching by size only
                 const sizeMatch = keys.find(k => k.startsWith(size + '_'));
                 if (sizeMatch) variantKey = sizeMatch;
               }
             }
 
             const variant = variantStock[variantKey];
-
-            if (variant) {
-              const previousStock = variant.stock || 0;
-              const newStock = Math.max(0, previousStock - item.quantity);
-
-              // ALERT: Check for overselling (stock would have gone negative)
-              if (previousStock < item.quantity) {
-                console.error('[create-order] ⚠️ OVERSOLD ALERT:', item.name, variantKey,
-                  '- Ordered:', item.quantity, '- Available:', previousStock,
-                  '- Shortfall:', item.quantity - previousStock);
-                // Order still processes but admin should be alerted
-              }
-
-              variant.stock = newStock;
-              variant.sold = (variant.sold || 0) + item.quantity;
-              variantStock[variantKey] = variant;
-
-              // Calculate totals
-              let totalStock = 0;
-              let totalSold = 0;
-              Object.values(variantStock).forEach((v: any) => {
-                totalStock += v.stock || 0;
-                totalSold += v.sold || 0;
-              });
-
-              // Update product
-              await updateDocument('merch', item.productId, {
-                variantStock: variantStock,
-                totalStock: totalStock,
-                soldStock: totalSold,
-                isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
-                isOutOfStock: totalStock === 0,
-                updatedAt: now
-              });
-
-              // Record stock movement
-              await addDocument('merch-stock-movements', {
-                productId: item.productId,
-                productName: item.name,
-                sku: productData.sku,
-                variantKey: variantKey,
-                variantSku: variant.sku,
-                type: 'sell',
-                quantity: item.quantity,
-                stockDelta: -item.quantity,
-                previousStock: previousStock,
-                newStock: newStock,
-                orderId: orderRef.id,
-                orderNumber: orderNumber,
-                notes: 'Order ' + orderNumber,
-                createdAt: now,
-                createdBy: 'system'
-              }, idToken);
-
-              log.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
-
-              // Sync to D1 so public merch page shows updated stock
-              const db = env?.DB;
-              if (db) {
-                try {
-                  clearCache(`doc:merch:${item.productId}`);
-                  const updatedProduct = await getDocument('merch', item.productId);
-                  if (updatedProduct) {
-                    await d1UpsertMerch(db, item.productId, updatedProduct);
-                    log.info('[create-order] ✓ D1 synced for:', item.name);
-                  }
-                } catch (d1Error) {
-                  log.error('[create-order] D1 sync failed (non-critical):', d1Error);
-                }
-              }
-
-              // Update supplier stats and get seller email for notifications
-              if (productData.supplierId) {
-                try {
-                  const supplierRevenue = (productData.retailPrice || item.price) * item.quantity * ((productData.supplierCut || 0) / 100);
-
-                  // Fetch current supplier data from merch-suppliers
-                  const supplierData = await getDocument('merch-suppliers', productData.supplierId);
-                  if (supplierData) {
-                    await updateDocument('merch-suppliers', productData.supplierId, {
-                      totalStock: (supplierData.totalStock || 0) - item.quantity,
-                      totalSold: (supplierData.totalSold || 0) + item.quantity,
-                      totalRevenue: (supplierData.totalRevenue || 0) + supplierRevenue,
-                      updatedAt: now
-                    });
-                    log.info('[create-order] ✓ Supplier stats updated');
-
-                    // Attach seller email to item for notification
-                    if (supplierData.email) {
-                      item.sellerEmail = supplierData.email;
-                      item.supplierId = productData.supplierId;
-                      log.info('[create-order] ✓ Attached seller email from merch-suppliers:', supplierData.email);
-                    }
-                  }
-
-                  // If no email yet, try users collection
-                  if (!item.sellerEmail) {
-                    const userData = await getDocument('users', productData.supplierId);
-                    if (userData?.email) {
-                      item.sellerEmail = userData.email;
-                      item.supplierId = productData.supplierId;
-                      log.info('[create-order] ✓ Attached seller email from users:', userData.email);
-                    }
-                  }
-
-                  // If still no email, try artists collection
-                  if (!item.sellerEmail) {
-                    const artistData = await getDocument('artists', productData.supplierId);
-                    if (artistData?.email) {
-                      item.sellerEmail = artistData.email;
-                      item.supplierId = productData.supplierId;
-                      log.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
-                    }
-                  }
-                } catch (supplierErr) {
-                  log.info('[create-order] Could not update supplier stats:', supplierErr);
-                }
-              }
-
-              // Also attach supplierId/sellerId to item for sales ledger
-              if (productData.supplierId && !item.supplierId) {
-                item.supplierId = productData.supplierId;
-                item.sellerId = productData.supplierId;
-              }
-              if (productData.sellerId && !item.sellerId) {
-                item.sellerId = productData.sellerId;
-              }
-            } else {
+            if (!variant) {
               log.info('[create-order] ⚠️ Variant not found:', variantKey, 'for product:', item.productId);
+              break;
             }
-          } else {
+
+            previousStock = variant.stock || 0;
+            newStock = Math.max(0, previousStock - item.quantity);
+
+            if (previousStock < item.quantity) {
+              console.error('[create-order] ⚠️ OVERSOLD ALERT:', item.name, variantKey,
+                '- Ordered:', item.quantity, '- Available:', previousStock,
+                '- Shortfall:', item.quantity - previousStock);
+            }
+
+            variant.stock = newStock;
+            variant.sold = (variant.sold || 0) + item.quantity;
+            variantStock[variantKey] = variant;
+
+            let totalStock = 0;
+            let totalSold = 0;
+            Object.values(variantStock).forEach((v: any) => {
+              totalStock += v.stock || 0;
+              totalSold += v.sold || 0;
+            });
+
+            try {
+              // Conditional update - fails if document was modified since we read it
+              if (productData._updateTime) {
+                await updateDocumentConditional('merch', item.productId, {
+                  variantStock: variantStock,
+                  totalStock: totalStock,
+                  soldStock: totalSold,
+                  isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
+                  isOutOfStock: totalStock === 0,
+                  updatedAt: now
+                }, productData._updateTime);
+              } else {
+                // Fallback to non-conditional update if no updateTime available
+                await updateDocument('merch', item.productId, {
+                  variantStock: variantStock,
+                  totalStock: totalStock,
+                  soldStock: totalSold,
+                  isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
+                  isOutOfStock: totalStock === 0,
+                  updatedAt: now
+                });
+              }
+              stockUpdated = true;
+              log.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
+              break; // Success - exit retry loop
+            } catch (conflictErr: any) {
+              if (conflictErr.message?.includes('CONFLICT') && attempt < MAX_STOCK_RETRIES - 1) {
+                log.info(`[create-order] Stock conflict for ${item.name}, retrying...`);
+                continue;
+              }
+              throw conflictErr;
+            }
+          }
+
+          // Only record stock movement and do post-update work if stock was actually updated
+          if (stockUpdated && productData) {
+            // Record stock movement
+            await addDocument('merch-stock-movements', {
+              productId: item.productId,
+              productName: item.name,
+              sku: productData.sku,
+              variantKey: variantKey,
+              variantSku: productData.variantStock?.[variantKey]?.sku,
+              type: 'sell',
+              quantity: item.quantity,
+              stockDelta: -item.quantity,
+              previousStock: previousStock,
+              newStock: newStock,
+              orderId: orderRef.id,
+              orderNumber: orderNumber,
+              notes: 'Order ' + orderNumber,
+              createdAt: now,
+              createdBy: 'system'
+            }, idToken);
+
+            // Sync to D1 so public merch page shows updated stock
+            const db = env?.DB;
+            if (db) {
+              try {
+                clearCache(`doc:merch:${item.productId}`);
+                const updatedProduct = await getDocument('merch', item.productId);
+                if (updatedProduct) {
+                  await d1UpsertMerch(db, item.productId, updatedProduct);
+                  log.info('[create-order] ✓ D1 synced for:', item.name);
+                }
+              } catch (d1Error) {
+                log.error('[create-order] D1 sync failed (non-critical):', d1Error);
+              }
+            }
+
+            // Update supplier stats atomically and get seller email for notifications
+            if (productData.supplierId) {
+              try {
+                const supplierRevenue = (productData.retailPrice || item.price) * item.quantity * ((productData.supplierCut || 0) / 100);
+
+                // Use atomic increment for supplier counters to prevent race conditions
+                await atomicIncrement('merch-suppliers', productData.supplierId, {
+                  totalStock: -item.quantity,
+                  totalSold: item.quantity,
+                  totalRevenue: supplierRevenue,
+                });
+                await updateDocument('merch-suppliers', productData.supplierId, { updatedAt: now });
+                log.info('[create-order] ✓ Supplier stats updated (atomic)');
+
+                // Fetch supplier data for email (read-only, no race concern)
+                const supplierData = await getDocument('merch-suppliers', productData.supplierId);
+                if (supplierData?.email) {
+                  item.sellerEmail = supplierData.email;
+                  item.supplierId = productData.supplierId;
+                  log.info('[create-order] ✓ Attached seller email from merch-suppliers:', supplierData.email);
+                }
+
+                // If no email yet, try users collection
+                if (!item.sellerEmail) {
+                  const userData = await getDocument('users', productData.supplierId);
+                  if (userData?.email) {
+                    item.sellerEmail = userData.email;
+                    item.supplierId = productData.supplierId;
+                    log.info('[create-order] ✓ Attached seller email from users:', userData.email);
+                  }
+                }
+
+                // If still no email, try artists collection
+                if (!item.sellerEmail) {
+                  const artistData = await getDocument('artists', productData.supplierId);
+                  if (artistData?.email) {
+                    item.sellerEmail = artistData.email;
+                    item.supplierId = productData.supplierId;
+                    log.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
+                  }
+                }
+              } catch (supplierErr) {
+                log.info('[create-order] Could not update supplier stats:', supplierErr);
+              }
+            }
+
+            // Also attach supplierId/sellerId to item for sales ledger
+            if (productData.supplierId && !item.supplierId) {
+              item.supplierId = productData.supplierId;
+              item.sellerId = productData.supplierId;
+            }
+            if (productData.sellerId && !item.sellerId) {
+              item.sellerId = productData.sellerId;
+            }
+          } else if (!productData) {
             log.info('[create-order] ⚠️ Product not found for stock update:', item.productId);
           }
         } catch (stockErr) {
@@ -653,16 +772,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Update customer's order count if they have an account
+    // Update customer's order count atomically if they have an account
     if (orderData.customer.userId) {
       try {
-        const customerDoc = await getDocument('users', orderData.customer.userId);
-        if (customerDoc) {
-          await updateDocument('users', orderData.customer.userId, {
-            orderCount: (customerDoc.orderCount || 0) + 1,
-            lastOrderAt: now
-          });
-        }
+        await atomicIncrement('users', orderData.customer.userId, { orderCount: 1 });
+        await updateDocument('users', orderData.customer.userId, { lastOrderAt: now });
       } catch (e) {
         console.error('[create-order] Error updating customer:', e);
       }

@@ -82,7 +82,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     console.error('[WISHLIST API] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to get wishlist'
+      error: 'Failed to get wishlist'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -243,8 +243,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[WISHLIST API] Error stack:', error.stack);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to update wishlist',
-      details: error.stack?.split('\n')[0] || 'Unknown'
+      error: 'Failed to update wishlist',
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

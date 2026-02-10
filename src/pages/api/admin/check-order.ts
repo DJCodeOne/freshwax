@@ -3,10 +3,15 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const orderId = url.searchParams.get('id') || 'fRh0piRRDvBtXaOYOIdD';
 
@@ -62,7 +67,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

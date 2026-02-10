@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { verifyRequestUser, initFirebaseEnv, queryCollection, getDocument } from '../../lib/firebase-rest';
+import { verifyRequestUser, initFirebaseEnv, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
@@ -110,8 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
 
     // SECURITY: Fetch and verify order ownership
-    const allOrders = await queryCollection('orders', { limit: 200, skipCache: true });
-    const order = allOrders.find((o: any) => o.id === orderId);
+    const order = await getDocument('orders', orderId);
 
     if (!order) {
       return new Response(JSON.stringify({
@@ -297,7 +296,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to generate download URL',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

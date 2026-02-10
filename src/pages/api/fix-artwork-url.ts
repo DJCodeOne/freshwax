@@ -108,7 +108,7 @@ export const POST = async ({ request, locals }: any) => {
     
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to fix artwork URL'
+      error: 'Failed to fix artwork URL'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

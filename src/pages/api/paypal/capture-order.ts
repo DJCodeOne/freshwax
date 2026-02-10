@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;
@@ -112,8 +112,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Continue with capture attempt
     }
 
-    // SECURITY: Retrieve order data from Firebase instead of trusting client
-    let orderData = clientOrderData;
+    // SECURITY: Retrieve order data from Firebase - never trust client-submitted data
+    let orderData: any;
     let usedServerData = false;
 
     try {
@@ -125,7 +125,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           shipping: pendingOrder.shipping,
           items: pendingOrder.items,
           totals: pendingOrder.totals,
-          hasPhysicalItems: pendingOrder.hasPhysicalItems
+          hasPhysicalItems: pendingOrder.hasPhysicalItems,
+          appliedCredit: pendingOrder.appliedCredit || 0
         };
         usedServerData = true;
 
@@ -137,11 +138,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.log('[PayPal] Could not delete pending order:', delErr);
         }
       } else {
-        console.log('[PayPal] No server-side order data found, using client data with validation');
+        // SECURITY: Reject if no server-side order exists.
+        // The pending order is created during create-order and must exist for a legitimate flow.
+        console.error('[PayPal] SECURITY: No pending order found for', paypalOrderId, '- rejecting capture');
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Order session expired or invalid. Please try again.'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     } catch (fetchErr) {
       console.error('[PayPal] Error fetching pending order:', fetchErr);
-      // Fall back to client data but will validate amount after capture
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Could not verify order data. Please try again.'
+      }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Get access token
@@ -399,18 +415,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Deduct applied credit from user's balance
+    // Deduct applied credit from user's balance atomically
     const userId = orderData.customer?.userId;
     if (appliedCredit > 0 && userId) {
       console.log('[PayPal] Deducting applied credit:', appliedCredit, 'from user:', userId);
       try {
         const creditData = await getDocument('userCredits', userId);
         if (creditData && creditData.balance >= appliedCredit) {
-          const newBalance = creditData.balance - appliedCredit;
           const now = new Date().toISOString();
 
-          // Create transaction record
+          // Atomically decrement the balance to prevent race conditions
+          await atomicIncrement('userCredits', userId, { balance: -appliedCredit });
+
+          // Create transaction record (append separately)
           const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const newBalance = creditData.balance - appliedCredit;
           const transaction = {
             id: transactionId,
             type: 'purchase',
@@ -426,18 +445,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           existingTransactions.push(transaction);
 
           await updateDocument('userCredits', userId, {
-            balance: newBalance,
             lastUpdated: now,
             transactions: existingTransactions
           });
 
-          // Also update user document
-          await updateDocument('users', userId, {
-            creditBalance: newBalance,
-            creditUpdatedAt: now
-          });
+          // Also update user document atomically
+          await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
+          await updateDocument('users', userId, { creditUpdatedAt: now });
 
-          console.log('[PayPal] Credit deducted, new balance:', newBalance);
+          console.log('[PayPal] Credit deducted atomically, approx new balance:', newBalance);
         } else {
           console.warn('[PayPal] Insufficient credit balance for deduction');
         }
@@ -568,15 +584,14 @@ async function processArtistPayments(params: {
         updatedAt: new Date().toISOString()
       });
 
-      // Update artist's pending balance
+      // Update artist's pending balance atomically
       try {
-        const artist = await getDocument('artists', payment.artistId);
-        if (artist) {
-          await updateDocument('artists', payment.artistId, {
-            pendingBalance: (artist.pendingBalance || 0) + payment.amount,
-            updatedAt: new Date().toISOString()
-          });
-        }
+        await atomicIncrement('artists', payment.artistId, {
+          pendingBalance: payment.amount,
+        });
+        await updateDocument('artists', payment.artistId, {
+          updatedAt: new Date().toISOString()
+        });
       } catch (e) {
         console.log('[PayPal] Could not update artist pending balance');
       }
@@ -744,13 +759,13 @@ async function processMerchSupplierPayments(params: {
               completedAt: new Date().toISOString()
             });
 
-            const supplier = await getDocument('merch-suppliers', payment.supplierId);
-            if (supplier) {
-              await updateDocument('merch-suppliers', payment.supplierId, {
-                totalEarnings: (supplier.totalEarnings || 0) + paypalAmount,
-                lastPayoutAt: new Date().toISOString()
-              });
-            }
+            // Atomically update supplier earnings to prevent race conditions
+            await atomicIncrement('merch-suppliers', payment.supplierId, {
+              totalEarnings: paypalAmount,
+            });
+            await updateDocument('merch-suppliers', payment.supplierId, {
+              lastPayoutAt: new Date().toISOString()
+            });
 
             console.log('[PayPal] ✓ Supplier PayPal payout created:', paypalResult.batchId);
           } else {
@@ -818,13 +833,13 @@ async function processMerchSupplierPayments(params: {
             completedAt: new Date().toISOString()
           });
 
-          const supplier = await getDocument('merch-suppliers', payment.supplierId);
-          if (supplier) {
-            await updateDocument('merch-suppliers', payment.supplierId, {
-              totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
-              lastPayoutAt: new Date().toISOString()
-            });
-          }
+          // Atomically update supplier earnings to prevent race conditions
+          await atomicIncrement('merch-suppliers', payment.supplierId, {
+            totalEarnings: payment.amount,
+          });
+          await updateDocument('merch-suppliers', payment.supplierId, {
+            lastPayoutAt: new Date().toISOString()
+          });
 
           console.log('[PayPal] ✓ Supplier Stripe transfer created:', transfer.id);
 
@@ -1034,13 +1049,13 @@ async function processVinylCrateSellerPayments(params: {
               completedAt: new Date().toISOString()
             });
 
-            const sellerUser = await getDocument('users', payment.sellerId);
-            if (sellerUser) {
-              await updateDocument('users', payment.sellerId, {
-                crateEarnings: (sellerUser.crateEarnings || 0) + paypalAmount,
-                lastCratePayoutAt: new Date().toISOString()
-              });
-            }
+            // Atomically update crate seller earnings
+            await atomicIncrement('users', payment.sellerId, {
+              crateEarnings: paypalAmount,
+            });
+            await updateDocument('users', payment.sellerId, {
+              lastCratePayoutAt: new Date().toISOString()
+            });
 
             console.log('[PayPal] ✓ Crate seller PayPal payout created:', paypalResult.batchId);
           } else {
@@ -1108,13 +1123,13 @@ async function processVinylCrateSellerPayments(params: {
             completedAt: new Date().toISOString()
           });
 
-          const sellerUser = await getDocument('users', payment.sellerId);
-          if (sellerUser) {
-            await updateDocument('users', payment.sellerId, {
-              crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
-              lastCratePayoutAt: new Date().toISOString()
-            });
-          }
+          // Atomically update crate seller earnings
+          await atomicIncrement('users', payment.sellerId, {
+            crateEarnings: payment.amount,
+          });
+          await updateDocument('users', payment.sellerId, {
+            lastCratePayoutAt: new Date().toISOString()
+          });
 
           console.log('[PayPal] ✓ Crate seller Stripe transfer created:', transfer.id);
 

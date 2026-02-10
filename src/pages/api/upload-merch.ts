@@ -507,8 +507,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to upload product',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to upload product'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

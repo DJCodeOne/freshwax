@@ -46,15 +46,19 @@ async function isSlotAvailable(startTime: Date, duration: number): Promise<{ ava
   const dayEnd = new Date(startTime);
   dayEnd.setHours(23, 59, 59, 999);
 
-  // Get bookings with limit to prevent runaway (filter by date locally)
+  // Query bookings for this day only (server-side date filter)
   const bookings = await queryCollection('livestream-bookings', {
+    filters: [
+      { field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: dayStart.toISOString() },
+      { field: 'startTime', op: 'LESS_THAN_OR_EQUAL', value: dayEnd.toISOString() },
+    ],
     skipCache: true,
-    limit: 200  // Max 200 bookings to prevent runaway
+    limit: 100
   });
 
   for (const booking of bookings) {
     const bookingStart = booking.startTime ? new Date(booking.startTime) : null;
-    if (!bookingStart || bookingStart < dayStart || bookingStart > dayEnd) continue;
+    if (!bookingStart) continue;
 
     const bookingEnd = new Date(bookingStart);
     bookingEnd.setHours(bookingEnd.getHours() + (booking.duration || 1));
@@ -103,17 +107,17 @@ export const GET: APIRoute = async ({ url }) => {
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
-      // Limit to prevent runaway - filter by date locally
-      const allBookings = await queryCollection('livestream-bookings', {
+      // Query bookings for this day only (server-side date filter)
+      const dayBookings = await queryCollection('livestream-bookings', {
+        filters: [
+          { field: 'startTime', op: 'GREATER_THAN_OR_EQUAL', value: startOfDay.toISOString() },
+          { field: 'startTime', op: 'LESS_THAN_OR_EQUAL', value: endOfDay.toISOString() },
+        ],
         skipCache: true,
-        limit: 200  // Max 200 bookings to prevent runaway
+        limit: 100
       });
 
-      const bookings = allBookings
-        .filter(b => {
-          const bookingDate = b.startTime ? new Date(b.startTime) : null;
-          return bookingDate && bookingDate >= startOfDay && bookingDate <= endOfDay;
-        })
+      const bookings = dayBookings
         .map(b => ({
           id: b.id,
           djName: b.djName,
@@ -171,7 +175,7 @@ export const GET: APIRoute = async ({ url }) => {
     console.error('Bookings API GET error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Unknown error'
+      error: 'Internal error'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
@@ -356,7 +360,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('Bookings API POST error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Unknown error'
+      error: 'Internal error'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[update-slot-title] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message || 'Failed to update title'
+      error: 'Failed to update title'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

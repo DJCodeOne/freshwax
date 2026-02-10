@@ -421,8 +421,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('[process-order] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to process order',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to process order'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

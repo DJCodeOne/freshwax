@@ -97,7 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[ServerControl] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Server control action failed'
+      error: 'Server control action failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

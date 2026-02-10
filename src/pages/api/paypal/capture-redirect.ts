@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -352,15 +352,14 @@ async function processArtistPayments(params: {
         updatedAt: new Date().toISOString()
       });
 
-      // Update artist's pending balance
+      // Update artist's pending balance atomically
       try {
-        const artist = await getDocument('artists', payment.artistId);
-        if (artist) {
-          await updateDocument('artists', payment.artistId, {
-            pendingBalance: (artist.pendingBalance || 0) + payment.amount,
-            updatedAt: new Date().toISOString()
-          });
-        }
+        await atomicIncrement('artists', payment.artistId, {
+          pendingBalance: payment.amount,
+        });
+        await updateDocument('artists', payment.artistId, {
+          updatedAt: new Date().toISOString()
+        });
       } catch (e) {
         console.log('[PayPal Redirect] Could not update artist pending balance');
       }
@@ -506,13 +505,13 @@ async function processMerchSupplierPayments(params: {
               completedAt: new Date().toISOString()
             });
 
-            const supplier = await getDocument('merch-suppliers', payment.supplierId);
-            if (supplier) {
-              await updateDocument('merch-suppliers', payment.supplierId, {
-                totalEarnings: (supplier.totalEarnings || 0) + paypalAmount,
-                lastPayoutAt: new Date().toISOString()
-              });
-            }
+            // Atomically update supplier earnings
+            await atomicIncrement('merch-suppliers', payment.supplierId, {
+              totalEarnings: paypalAmount,
+            });
+            await updateDocument('merch-suppliers', payment.supplierId, {
+              lastPayoutAt: new Date().toISOString()
+            });
           } else {
             throw new Error(paypalResult.error || 'PayPal payout failed');
           }
@@ -575,13 +574,13 @@ async function processMerchSupplierPayments(params: {
             completedAt: new Date().toISOString()
           });
 
-          const supplier = await getDocument('merch-suppliers', payment.supplierId);
-          if (supplier) {
-            await updateDocument('merch-suppliers', payment.supplierId, {
-              totalEarnings: (supplier.totalEarnings || 0) + payment.amount,
-              lastPayoutAt: new Date().toISOString()
-            });
-          }
+          // Atomically update supplier earnings
+          await atomicIncrement('merch-suppliers', payment.supplierId, {
+            totalEarnings: payment.amount,
+          });
+          await updateDocument('merch-suppliers', payment.supplierId, {
+            lastPayoutAt: new Date().toISOString()
+          });
         } catch (transferError: any) {
           console.error('[PayPal Redirect] Supplier transfer failed:', transferError.message);
           await addDocument('pendingSupplierPayouts', {
@@ -763,13 +762,13 @@ async function processVinylCrateSellerPayments(params: {
               completedAt: new Date().toISOString()
             });
 
-            const sellerUser = await getDocument('users', payment.sellerId);
-            if (sellerUser) {
-              await updateDocument('users', payment.sellerId, {
-                crateEarnings: (sellerUser.crateEarnings || 0) + paypalAmount,
-                lastCratePayoutAt: new Date().toISOString()
-              });
-            }
+            // Atomically update crate seller earnings
+            await atomicIncrement('users', payment.sellerId, {
+              crateEarnings: paypalAmount,
+            });
+            await updateDocument('users', payment.sellerId, {
+              lastCratePayoutAt: new Date().toISOString()
+            });
           } else {
             throw new Error(paypalResult.error || 'PayPal payout failed');
           }
@@ -832,13 +831,13 @@ async function processVinylCrateSellerPayments(params: {
             completedAt: new Date().toISOString()
           });
 
-          const sellerUser = await getDocument('users', payment.sellerId);
-          if (sellerUser) {
-            await updateDocument('users', payment.sellerId, {
-              crateEarnings: (sellerUser.crateEarnings || 0) + payment.amount,
-              lastCratePayoutAt: new Date().toISOString()
-            });
-          }
+          // Atomically update crate seller earnings
+          await atomicIncrement('users', payment.sellerId, {
+            crateEarnings: payment.amount,
+          });
+          await updateDocument('users', payment.sellerId, {
+            lastCratePayoutAt: new Date().toISOString()
+          });
         } catch (transferError: any) {
           console.error('[PayPal Redirect] Crate seller transfer failed:', transferError.message);
           await addDocument('pendingCrateSellerPayouts', {

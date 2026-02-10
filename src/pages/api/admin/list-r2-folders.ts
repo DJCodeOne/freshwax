@@ -86,7 +86,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[list-r2-folders] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to list folders'
+      error: 'Failed to list folders'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

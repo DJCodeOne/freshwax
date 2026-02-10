@@ -271,7 +271,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     console.error('[bulk-stock-upload] Error:', error);
     return new Response(JSON.stringify({
-      error: error.message || 'Failed to process CSV'
+      error: 'Failed to process CSV'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -342,7 +342,7 @@ SKU003,2,subtract`;
     });
 
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

@@ -6,9 +6,10 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv, updateDocumentConditional, clearCache, atomicIncrement } from '../../../lib/firebase-rest';
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
+import { verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -28,12 +29,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const cronSecret = env?.CRON_SECRET || import.meta.env.CRON_SECRET;
 
   // Allow if: bearer token matches cron secret, or x-admin-key matches admin key
-  const adminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
   const xAdminKey = request.headers.get('X-Admin-Key');
 
   const isAuthorized =
     (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-    (adminKey && xAdminKey === adminKey);
+    (xAdminKey ? verifyAdminKey(xAdminKey, locals) : false);
 
   if (!isAuthorized) {
     console.log('[Retry Payouts] Unauthorized - missing or invalid credentials');
@@ -184,12 +184,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
       results.retried++;
 
       try {
-        // Mark as processing
-        await updateDocument('pendingPayouts', pending.id, {
-          status: 'processing',
-          retryAttemptedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+        // Atomically mark as processing using conditional update to prevent duplicate processing.
+        // If another cron run already grabbed this payout, the conditional update will fail.
+        try {
+          if (pending._updateTime) {
+            await updateDocumentConditional('pendingPayouts', pending.id, {
+              status: 'processing',
+              retryAttemptedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }, pending._updateTime);
+          } else {
+            await updateDocument('pendingPayouts', pending.id, {
+              status: 'processing',
+              retryAttemptedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+        } catch (lockErr: any) {
+          if (lockErr.message?.includes('CONFLICT')) {
+            console.log('[Retry Payouts] Skipping payout (already being processed by another run):', pending.id);
+            results.skipped++;
+            continue;
+          }
+          throw lockErr;
+        }
 
         let payoutResult: any = {};
 
@@ -268,10 +286,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           completedAt: new Date().toISOString()
         });
 
-        // Update entity's total earnings
+        // Update entity's total earnings atomically to prevent race conditions
+        await atomicIncrement(collection, entity.id, {
+          totalEarnings: pending.amount || 0,
+          pendingBalance: -(pending.amount || 0),
+        });
         await updateDocument(collection, entity.id, {
-          totalEarnings: (entity.totalEarnings || 0) + (pending.amount || 0),
-          pendingBalance: Math.max(0, (entity.pendingBalance || 0) - (pending.amount || 0)),
           lastPayoutAt: new Date().toISOString()
         });
 
@@ -349,7 +369,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Retry Payouts] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

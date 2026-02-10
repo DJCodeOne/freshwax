@@ -60,7 +60,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[list-payouts] Error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to list payouts'
+      error: 'Failed to list payouts'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -101,7 +101,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[list-payouts] Delete error:', error);
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Failed to delete payout'
+      error: 'Failed to delete payout'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

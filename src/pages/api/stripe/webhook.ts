@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { redeemReferralCode } from '../../../lib/referral-codes';
@@ -195,7 +195,7 @@ async function sendPendingEarningsEmail(
 
   } catch (error) {
     console.error('[Stripe Webhook] Error sending pending earnings email:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: 'Unknown error' };
   }
 }
 
@@ -346,7 +346,7 @@ async function sendPayoutCompletedEmail(
 
   } catch (error) {
     console.error('[Stripe Webhook] Error sending payout completed email:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: 'Unknown error' };
   }
 }
 
@@ -507,7 +507,7 @@ async function sendRefundNotificationEmail(
 
   } catch (error) {
     console.error('[Stripe Webhook] Error sending refund notification email:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: 'Unknown error' };
   }
 }
 
@@ -1715,15 +1715,14 @@ async function processArtistPayments(params: {
         updatedAt: new Date().toISOString()
       });
 
-      // Update artist's pending balance
+      // Update artist's pending balance atomically
       try {
-        const artist = await getDocument('artists', payment.artistId);
-        if (artist) {
-          await updateDocument('artists', payment.artistId, {
-            pendingBalance: (artist.pendingBalance || 0) + payment.amount,
-            updatedAt: new Date().toISOString()
-          });
-        }
+        await atomicIncrement('artists', payment.artistId, {
+          pendingBalance: payment.amount,
+        });
+        await updateDocument('artists', payment.artistId, {
+          updatedAt: new Date().toISOString()
+        });
       } catch (e) {
         console.log('[Stripe Webhook] Could not update artist pending balance');
       }
@@ -1869,13 +1868,10 @@ async function processSupplierPayments(params: {
         updatedAt: new Date().toISOString()
       });
 
-      // Update supplier's pending balance
-      const supplier = await getDocument('merch-suppliers', payment.supplierId);
-      if (supplier) {
-        await updateDocument('merch-suppliers', payment.supplierId, {
-          pendingBalance: (supplier.pendingBalance || 0) + payment.amount
-        });
-      }
+      // Update supplier's pending balance atomically
+      await atomicIncrement('merch-suppliers', payment.supplierId, {
+        pendingBalance: payment.amount,
+      });
 
       console.log('[Stripe Webhook] ✓ Pending supplier payout created for', payment.supplierName);
     }
@@ -2182,7 +2178,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
       currency: dispute.currency || 'gbp',
       reason: dispute.reason,
       status: 'open',
-      error: error.message,
+      error: 'Internal error',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -2293,9 +2289,11 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
             completedAt: new Date().toISOString()
           });
 
-          // Restore artist's earnings
+          // Restore artist's earnings atomically
+          await atomicIncrement('artists', reversedTransfer.artistId, {
+            totalEarnings: reversedTransfer.amount,
+          });
           await updateDocument('artists', reversedTransfer.artistId, {
-            totalEarnings: (artist.totalEarnings || 0) + reversedTransfer.amount,
             updatedAt: new Date().toISOString()
           });
 

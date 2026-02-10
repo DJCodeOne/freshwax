@@ -1,6 +1,7 @@
 // Fix spelling in submission metadata
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
+import { requireAdminAuth } from '../../lib/admin';
 
 function getR2Config(env: any) {
   return {
@@ -11,7 +12,11 @@ function getR2Config(env: any) {
   };
 }
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Require admin authentication
+  const authError = requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   try {
     const env = (locals as any)?.runtime?.env;
     const R2_CONFIG = getR2Config(env);
@@ -92,7 +97,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   } catch (error) {
     return new Response(JSON.stringify({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

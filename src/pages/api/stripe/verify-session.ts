@@ -355,7 +355,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     console.error('[verify-session] Stack:', error instanceof Error ? error.stack : 'no stack');
     return new Response(JSON.stringify({
       success: false,
-      error: errorMessage
+      error: 'Session verification failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

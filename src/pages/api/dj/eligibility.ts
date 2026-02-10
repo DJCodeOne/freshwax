@@ -164,7 +164,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     console.error('DJ Eligibility API GET error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: 'Internal error' 
     }), { status: 500 });
   }
 };
@@ -325,7 +325,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('DJ Eligibility API POST error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error.message 
+      error: 'Internal error' 
     }), { status: 500 });
   }
 };

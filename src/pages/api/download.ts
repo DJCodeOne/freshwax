@@ -2,6 +2,7 @@
 // Server-side download proxy to bypass CORS for R2 files
 
 import type { APIRoute } from 'astro';
+import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -11,7 +12,24 @@ const log = {
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+
+  // Initialize Firebase for auth verification
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
+  // SECURITY: Require authentication - downloads are for purchased content
+  const { userId, error: authError } = await verifyRequestUser(request);
+  if (authError || !userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: authError || 'Authentication required'
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   const fileUrl = url.searchParams.get('url');
   const filename = url.searchParams.get('filename') || 'download';
   
@@ -103,7 +121,6 @@ export const GET: APIRoute = async ({ url }) => {
     log.error('[download] Error:', error);
     return new Response(JSON.stringify({
       error: 'Download failed',
-      details: error instanceof Error ? error.message : 'Unknown error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

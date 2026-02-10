@@ -229,21 +229,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit
     });
 
-    // Get counts by status
-    const allReturns = await queryCollection('returns', { limit: 500 });
+    // Get counts by status using parallel filtered queries
+    const [pendingReturns, approvedReturns, receivedReturns, refundedReturns, rejectedReturns] = await Promise.all([
+      queryCollection('returns', { filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }], limit: 500 }),
+      queryCollection('returns', { filters: [{ field: 'status', op: 'EQUAL', value: 'approved' }], limit: 500 }),
+      queryCollection('returns', { filters: [{ field: 'status', op: 'EQUAL', value: 'received' }], limit: 500 }),
+      queryCollection('returns', { filters: [{ field: 'status', op: 'EQUAL', value: 'refunded' }], limit: 500 }),
+      queryCollection('returns', { filters: [{ field: 'status', op: 'EQUAL', value: 'rejected' }], limit: 500 }),
+    ]);
     const counts = {
-      pending: 0,
-      approved: 0,
-      received: 0,
-      refunded: 0,
-      rejected: 0
+      pending: pendingReturns.length,
+      approved: approvedReturns.length,
+      received: receivedReturns.length,
+      refunded: refundedReturns.length,
+      rejected: rejectedReturns.length
     };
-
-    for (const r of allReturns) {
-      if (counts.hasOwnProperty(r.status)) {
-        counts[r.status as keyof typeof counts]++;
-      }
-    }
 
     return new Response(JSON.stringify({
       returns,

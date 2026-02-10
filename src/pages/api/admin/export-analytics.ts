@@ -258,7 +258,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error: any) {
     console.error('[export-analytics] Error:', error);
     return new Response(JSON.stringify({
-      error: error.message || 'Export failed'
+      error: 'Export failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

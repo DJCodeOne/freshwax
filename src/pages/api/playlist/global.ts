@@ -71,7 +71,7 @@ export async function GET({ request, locals }: APIContext) {
     console.error('[GlobalPlaylist] GET error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -188,7 +188,7 @@ export async function POST({ request, locals }: APIContext) {
     console.error('[GlobalPlaylist] POST error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -309,7 +309,7 @@ export async function DELETE({ request, locals }: APIContext) {
     console.error('[GlobalPlaylist] DELETE error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -571,7 +571,7 @@ export async function PUT({ request, locals }: APIContext) {
     console.error('[GlobalPlaylist] PUT error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

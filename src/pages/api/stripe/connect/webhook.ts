@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv, atomicIncrement } from '../../../../lib/firebase-rest';
 import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
 import { logConnectEvent } from '../../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../../lib/paypal-payouts';
@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[Connect Webhook] ✓ Signature verified');
       } catch (err: any) {
         console.error('[Connect Webhook] Signature verification failed:', err.message);
-        return new Response(`Webhook signature verification failed: ${err.message}`, { status: 401 });
+        return new Response('Webhook signature verification failed', { status: 401 });
       }
     } else if (!isDevelopment) {
       // SECURITY: In production, REQUIRE webhook secret - reject without it
@@ -112,10 +112,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logConnectEvent('connect_webhook_error', 'unknown', false, {
       message: 'Connect webhook processing error',
-      error: error.message
+      error: 'Internal error'
     }).catch(() => {});
 
-    return new Response(`Webhook error: ${error.message}`, { status: 500 });
+    return new Response('Webhook processing error', { status: 500 });
   }
 };
 
@@ -390,14 +390,14 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
         completedAt: new Date().toISOString()
       });
 
-      // Update entity's total earnings
-      if (entity) {
-        await updateDocument(collection, entityId, {
-          totalEarnings: (entity.totalEarnings || 0) + (pending.amount || 0),
-          pendingBalance: Math.max(0, (entity.pendingBalance || 0) - (pending.amount || 0)),
-          lastPayoutAt: new Date().toISOString()
-        });
-      }
+      // Update entity's total earnings atomically
+      await atomicIncrement(collection, entityId, {
+        totalEarnings: pending.amount || 0,
+        pendingBalance: -(pending.amount || 0),
+      });
+      await updateDocument(collection, entityId, {
+        lastPayoutAt: new Date().toISOString()
+      });
 
       // Mark pending payout as completed
       await updateDocument('pendingPayouts', pending.id, {

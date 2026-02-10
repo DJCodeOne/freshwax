@@ -138,7 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[generate-referral-code] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate code'
+      error: 'Failed to generate code'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

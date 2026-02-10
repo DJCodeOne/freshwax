@@ -272,7 +272,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     console.error('[FixSubmitterIds] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Migration failed'
+      error: 'Migration failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -113,7 +113,7 @@ export async function POST({ request, locals }) {
     console.error('[Master JSON] ✗ Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: 'Internal error',
       details: error.stack
     }), {
       status: 500,
@@ -149,7 +149,7 @@ export async function GET() {
   } catch (error) {
     console.error('[Master JSON] ✗ GET Error:', error);
     return new Response(JSON.stringify({
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

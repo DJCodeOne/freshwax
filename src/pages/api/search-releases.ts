@@ -1,7 +1,7 @@
 // src/pages/api/search-releases.ts
 // OPTIMIZED: Uses D1 for search data - zero Firebase reads
 import type { APIRoute } from 'astro';
-import { d1GetAllPublishedReleases, d1GetAllPublishedMixes, d1GetAllPublishedMerch } from '../../lib/d1-catalog';
+import { d1SearchPublishedReleases, d1SearchPublishedMixes, d1SearchPublishedMerch } from '../../lib/d1-catalog';
 
 export const prerender = false;
 
@@ -32,35 +32,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
   log.info('[search] Searching for:', query);
 
   try {
-    // Use D1 for all search data - zero Firebase reads
-    const [allReleases, allMixes, allMerch] = await Promise.all([
-      d1GetAllPublishedReleases(db),
-      d1GetAllPublishedMixes(db),
-      d1GetAllPublishedMerch(db)
+    // Use D1 SQL LIKE for server-side search - much faster than fetching all records
+    const [releases, mixes, merch] = await Promise.all([
+      d1SearchPublishedReleases(db, query, limit),
+      d1SearchPublishedMixes(db, query, limit),
+      d1SearchPublishedMerch(db, query, limit)
     ]);
 
-    log.info('[search] Searching', allReleases.length, 'releases,', allMixes.length, 'mixes,', allMerch.length, 'merch');
+    log.info('[search] D1 search found', releases.length, 'releases,', mixes.length, 'mixes,', merch.length, 'merch');
 
-    // Search releases
-    const releaseSearchFields = ['releaseName', 'artistName', 'label', 'labelName', 'recordLabel', 'catalogNumber', 'title', 'artist'];
-
-    const matchedReleases = allReleases.filter((release: any) => {
-      for (const field of releaseSearchFields) {
-        const value = release[field];
-        if (value && typeof value === 'string' && value.toLowerCase().includes(query)) return true;
-      }
-      for (const track of (release.tracks || [])) {
-        const trackName = track.trackName || track.title || track.name;
-        if (trackName && trackName.toLowerCase().includes(query)) return true;
-      }
-      const genres = release.genres || release.genre || [];
-      if (Array.isArray(genres)) {
-        for (const genre of genres) {
-          if (typeof genre === 'string' && genre.toLowerCase().includes(query)) return true;
-        }
-      }
-      return false;
-    }).map((release: any) => ({
+    const matchedReleases = releases.map((release: any) => ({
       id: release.id,
       type: 'release',
       title: release.releaseName || release.title || 'Untitled',
@@ -68,22 +49,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       artwork_url: release.artwork?.cover || release.coverArtUrl || release.artworkUrl || '/place-holder.webp'
     }));
 
-    // Search mixes
-    const mixSearchFields = ['title', 'name', 'artist', 'djName', 'dj_name', 'genre', 'description'];
-
-    const matchedMixes = allMixes.filter((mix: any) => {
-      for (const field of mixSearchFields) {
-        const value = mix[field];
-        if (value && typeof value === 'string' && value.toLowerCase().includes(query)) return true;
-      }
-      const genres = mix.genres || mix.genre || [];
-      if (Array.isArray(genres)) {
-        for (const genre of genres) {
-          if (typeof genre === 'string' && genre.toLowerCase().includes(query)) return true;
-        }
-      }
-      return false;
-    }).map((mix: any) => ({
+    const matchedMixes = mixes.map((mix: any) => ({
       id: mix.id,
       type: 'mix',
       title: mix.title || mix.name || 'Untitled Mix',
@@ -91,21 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       artwork_url: mix.artwork || mix.artworkUrl || mix.artwork_url || mix.coverImage || '/place-holder.webp'
     }));
 
-    // Search merch
-    const merchSearchFields = ['name', 'description', 'category', 'categoryName', 'supplierName', 'sku'];
-
-    const matchedMerch = allMerch.filter((item: any) => {
-      for (const field of merchSearchFields) {
-        const value = item[field];
-        if (value && typeof value === 'string' && value.toLowerCase().includes(query)) return true;
-      }
-      // Search colors and sizes (with type guards)
-      const colors = item.colors || [];
-      const sizes = item.sizes || [];
-      if (Array.isArray(colors) && colors.some((c: any) => typeof c === 'string' && c.toLowerCase().includes(query))) return true;
-      if (Array.isArray(sizes) && sizes.some((s: any) => typeof s === 'string' && s.toLowerCase().includes(query))) return true;
-      return false;
-    }).map((item: any) => ({
+    const matchedMerch = merch.map((item: any) => ({
       id: item.id,
       type: 'merch',
       title: item.name || 'Untitled Product',
@@ -140,6 +92,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[search] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Search failed', details: error instanceof Error ? error.message : 'Unknown error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ success: false, error: 'Search failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

@@ -89,7 +89,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       djs: [],
-      error: error.message
+      error: 'Internal error'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

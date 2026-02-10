@@ -229,7 +229,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: any) {
     console.error('Error checking relay sources:', error);
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

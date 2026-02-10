@@ -6,14 +6,32 @@ import type { APIRoute } from 'astro';
 
 export const prerender = false;
 
+const ALLOWED_ORIGINS = [
+  'https://freshwax.co.uk',
+  'https://www.freshwax.co.uk',
+  'https://freshwax.pages.dev',
+  'http://localhost:4321',
+  'http://localhost:3000',
+  'http://127.0.0.1:4321',
+];
+
+function getAllowedOrigin(request: Request): string | null {
+  const origin = request.headers.get('origin');
+  if (!origin) return null;
+  if (origin.endsWith('.freshwax.pages.dev')) return origin;
+  return ALLOWED_ORIGINS.includes(origin) ? origin : null;
+}
+
 // Handle CORS preflight
-export const OPTIONS: APIRoute = async () => {
+export const OPTIONS: APIRoute = async ({ request }) => {
+  const origin = getAllowedOrigin(request);
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      ...(origin ? { 'Access-Control-Allow-Origin': origin } : {}),
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-user-id, x-user-name, x-user-avatar'
+      'Access-Control-Allow-Headers': 'Content-Type, x-user-id, x-user-name, x-user-avatar',
+      ...(origin ? { 'Access-Control-Allow-Credentials': 'true' } : {}),
     }
   });
 };
@@ -107,8 +125,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, x-user-id, x-user-name, x-user-avatar'
+        ...(getAllowedOrigin(request) ? {
+          'Access-Control-Allow-Origin': getAllowedOrigin(request)!,
+          'Access-Control-Allow-Credentials': 'true',
+        } : {}),
       }
     });
 

@@ -206,8 +206,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[upload-avatar] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to upload avatar',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to upload avatar'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

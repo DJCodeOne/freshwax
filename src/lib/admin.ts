@@ -9,19 +9,11 @@ import type { APIContext } from 'astro';
  * Uses constant-time comparison regardless of where strings differ
  */
 function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    // Compare against itself to maintain constant time even for length mismatch
-    const dummy = a;
-    let result = 0;
-    for (let i = 0; i < dummy.length; i++) {
-      result |= dummy.charCodeAt(i) ^ dummy.charCodeAt(i);
-    }
-    return false;
-  }
-
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  // Always compare full length of the longer string to prevent length leaking
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length; // Non-zero if lengths differ
+  for (let i = 0; i < maxLen; i++) {
+    result |= (a.charCodeAt(i % a.length) || 0) ^ (b.charCodeAt(i % b.length) || 0);
   }
   return result === 0;
 }

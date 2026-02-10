@@ -1803,17 +1803,6 @@ const faqs = [
       btn.classList.toggle('active', btn.dataset.collection === collection);
     });
 
-    // Update title
-    const title = document.getElementById('sectionTitle');
-    if (collection === 'all') {
-      title.textContent = 'All Vinyl Collections';
-    } else if (collection === 'deals') {
-      title.textContent = '🔥 Special Deals';
-    } else {
-      const col = allCollections.find(c => c.id === collection);
-      title.textContent = col ? (col.storeName || `Collection ${col.collectionNumber}`) : 'Collection';
-    }
-
     loadListings(collection);
   }
 

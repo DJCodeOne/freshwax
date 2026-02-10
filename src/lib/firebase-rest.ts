@@ -192,6 +192,9 @@ function parseDocument(doc: any): any {
   for (const [key, val] of Object.entries(fields)) {
     parsed[key] = fromFirestoreValue(val);
   }
+  // Preserve Firestore metadata for optimistic concurrency control
+  if (doc.updateTime) parsed._updateTime = doc.updateTime;
+  if (doc.createTime) parsed._createTime = doc.createTime;
   return parsed;
 }
 
@@ -986,6 +989,120 @@ export async function incrementField(
   await updateDocument(collection, docId, { [fieldName]: newValue });
 
   return { success: true, newValue };
+}
+
+/**
+ * Atomically increment numeric fields using Firestore's commit API with fieldTransforms.
+ * Unlike incrementField, this does NOT do read-modify-write and is safe against race conditions.
+ * @param collection - Firestore collection
+ * @param docId - Document ID
+ * @param increments - Map of field paths to increment values (negative for decrement)
+ */
+export async function atomicIncrement(
+  collection: string,
+  docId: string,
+  increments: Record<string, number>
+): Promise<{ success: boolean }> {
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
+  }
+
+  const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
+  const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
+
+  const fieldTransforms = Object.entries(increments).map(([field, value]) => ({
+    fieldPath: field,
+    increment: Number.isInteger(value)
+      ? { integerValue: String(value) }
+      : { doubleValue: value }
+  }));
+
+  const response = await fetch(commitUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      writes: [{
+        transform: {
+          document: documentPath,
+          fieldTransforms
+        }
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    log.error('atomicIncrement error:', error);
+    throw new Error(`Atomic increment failed: ${response.status}`);
+  }
+
+  // Invalidate cache for this document
+  cache.delete(`doc:${collection}:${docId}`);
+
+  return { success: true };
+}
+
+/**
+ * Update a document only if it hasn't been modified since expectedUpdateTime.
+ * Uses Firestore's commit API with currentDocument precondition for optimistic concurrency.
+ * Throws an error containing 'CONFLICT' if the document was modified by another request.
+ */
+export async function updateDocumentConditional(
+  collection: string,
+  docId: string,
+  data: Record<string, any>,
+  expectedUpdateTime: string
+): Promise<{ success: boolean }> {
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
+  }
+
+  const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
+  const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
+
+  const fields: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    fields[key] = toFirestoreValue(value);
+  }
+
+  const response = await fetch(commitUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      writes: [{
+        update: {
+          name: documentPath,
+          fields
+        },
+        updateMask: {
+          fieldPaths: Object.keys(data)
+        },
+        currentDocument: {
+          updateTime: expectedUpdateTime
+        }
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    if (response.status === 409 || error.includes('FAILED_PRECONDITION')) {
+      throw new Error('CONFLICT: Document was modified by another request');
+    }
+    log.error('updateDocumentConditional error:', error);
+    throw new Error(`Conditional update failed: ${response.status}`);
+  }
+
+  // Invalidate cache
+  cache.delete(`doc:${collection}:${docId}`);
+
+  return { success: true };
 }
 
 // Append to an array field

@@ -7,6 +7,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getAdminKey } from '../../../lib/api-utils';
+import { verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -72,10 +73,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
 
-  // Check for admin key first (for admin upload page)
+  // Check for admin key first (for admin upload page) - timing-safe comparison
   const adminKey = getAdminKey(request);
-  const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-  const isAdmin = adminKey && expectedAdminKey && adminKey === expectedAdminKey;
+  const isAdmin = adminKey ? verifyAdminKey(adminKey, locals) : false;
 
   // If not admin, require authenticated user
   if (!isAdmin) {
@@ -201,7 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('Failed to generate presigned URLs:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate upload URLs'
+      error: 'Failed to generate upload URLs'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
