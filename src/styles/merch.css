@@ -900,9 +900,10 @@
   background: rgba(0, 0, 0, 0.85);
   z-index: 9999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 1rem;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 .gc-modal-overlay.hidden {
   display: none;
@@ -1005,22 +1006,22 @@
 }
 .gc-code-input-wrapper input {
   flex: 1;
-  padding: 0.5rem 0.75rem;
+  padding: 0.75rem 1rem;
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   font-family: monospace;
-  font-size: 0.8rem;
+  font-size: 1rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 .gc-code-input-wrapper input:focus {
   outline: none;
   border-color: #dc2626;
 }
 .gc-code-input-wrapper button {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   background: #dc2626;
   color: #fff;
   border: none;
