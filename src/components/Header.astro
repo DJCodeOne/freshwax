@@ -568,27 +568,32 @@ const firebaseConfig = {
     });
   })();
 
-  // When translation is active, force full page reload on navigation
-  // so Google Translate reads the googtrans cookie and translates natively.
-  // Also eagerly load GT on page load if user has a saved language.
+  // When translation is active, force full page reload on all internal
+  // navigation so Google Translate reads the googtrans cookie and translates.
+  // Uses capture phase to fire BEFORE Astro's View Transition router.
   if (!window._gtNavHooked) {
     window._gtNavHooked = true;
 
-    // Intercept View Transition navigations — force full page reload if
-    // translating, so GT reads the googtrans cookie and translates natively.
-    // preventDefault() on astro:before-preparation falls back to MPA navigation.
-    document.addEventListener('astro:before-preparation', function(e) {
-      if (localStorage.getItem('fw_translate_lang')) {
-        e.preventDefault();
-      }
-    });
+    document.addEventListener('click', function(e) {
+      if (!localStorage.getItem('fw_translate_lang')) return;
+      var a = e.target.closest('a[href]');
+      if (!a) return;
+      var href = a.getAttribute('href');
+      if (!href || href.charAt(0) === '#' || href.startsWith('javascript:')) return;
+      // Only intercept same-origin navigation
+      if (a.origin !== window.location.origin) return;
+      // Force full page reload instead of View Transition
+      e.preventDefault();
+      e.stopPropagation();
+      window.location.href = a.href;
+    }, true);
+  }
 
-    // On page load, if there's a saved language, set cookie and load GT
-    var savedLang = localStorage.getItem('fw_translate_lang');
-    if (savedLang) {
-      document.cookie = 'googtrans=/en/' + savedLang + ';path=/';
-      loadGoogleTranslate();
-    }
+  // On page load, if there's a saved language, set cookie and load GT
+  var savedLang = localStorage.getItem('fw_translate_lang');
+  if (savedLang) {
+    document.cookie = 'googtrans=/en/' + savedLang + ';path=/';
+    loadGoogleTranslate();
   }
 </script>
 
