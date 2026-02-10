@@ -574,11 +574,12 @@ const firebaseConfig = {
   if (!window._gtNavHooked) {
     window._gtNavHooked = true;
 
-    // Intercept View Transition navigations — force full reload if translating
+    // Intercept View Transition navigations — force full page reload if
+    // translating, so GT reads the googtrans cookie and translates natively.
+    // preventDefault() on astro:before-preparation falls back to MPA navigation.
     document.addEventListener('astro:before-preparation', function(e) {
       if (localStorage.getItem('fw_translate_lang')) {
         e.preventDefault();
-        window.location.href = e.to.href;
       }
     });
 
