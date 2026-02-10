@@ -544,13 +544,38 @@ const firebaseConfig = {
     });
   }
 
+  // Re-apply translation after Astro View Transition page swap
+  function reapplyTranslation() {
+    // Google Translate stores language in a cookie like googtrans=/en/fr
+    var match = document.cookie.split(';').find(function(c) {
+      return c.trim().startsWith('googtrans=');
+    });
+    if (!match) return;
+    var parts = match.split('=')[1].split('/');
+    var lang = parts[parts.length - 1];
+    if (!lang || lang === 'en') return;
+
+    // Find the translate select and re-trigger it
+    var sel = document.querySelector('select.goog-te-combo');
+    if (sel && sel.value !== lang) {
+      sel.value = lang;
+      sel.dispatchEvent(new Event('change'));
+    }
+  }
+
   // Run on load and Astro navigation
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initLangButton);
   } else {
     initLangButton();
   }
-  document.addEventListener('astro:page-load', initLangButton);
+  document.addEventListener('astro:page-load', function() {
+    initLangButton();
+    // Re-apply translation after page content swap (slight delay for DOM to settle)
+    if (_gtReady) {
+      setTimeout(reapplyTranslation, 200);
+    }
+  });
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
