@@ -452,8 +452,12 @@ const firebaseConfig = {
 <script is:inline>
   // Google Translate — lazy-loaded on first button click
   // Uses localStorage for persistent language across View Transitions
-  var _gtLoading = false;
-  var _gtReady = false;
+  // IMPORTANT: Use window.* properties so values survive script re-execution
+  // during Astro View Transitions (inline scripts re-run on each navigation)
+  if (!window._gtInit) {
+    window._gtLoading = false;
+    window._gtReady = false;
+  }
   var _gtConfig = {
     pageLanguage: 'en',
     includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
@@ -462,7 +466,7 @@ const firebaseConfig = {
 
   function googleTranslateElementInit() {
     new google.translate.TranslateElement(_gtConfig, 'google_translate_element');
-    _gtReady = true;
+    window._gtReady = true;
     var saved = localStorage.getItem('fw_translate_lang');
     if (saved) {
       watchSelectAndApply(saved);
@@ -470,16 +474,15 @@ const firebaseConfig = {
   }
 
   function loadGoogleTranslate() {
-    if (_gtLoading) return;
-    _gtLoading = true;
+    if (window._gtLoading) return;
+    window._gtLoading = true;
     var s = document.createElement('script');
     s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     s.async = true;
-    s.onerror = function() { _gtLoading = false; };
+    s.onerror = function() { window._gtLoading = false; };
     document.head.appendChild(s);
   }
 
-  // Poll for the select element and apply a language
   function watchSelectAndApply(lang, callback) {
     var attempts = 0;
     var poll = setInterval(function() {
@@ -498,7 +501,6 @@ const firebaseConfig = {
     }, 150);
   }
 
-  // Save language to localStorage when user picks one
   function hookSelectSave(sel) {
     if (sel._fwHooked) return;
     sel._fwHooked = true;
@@ -520,7 +522,6 @@ const firebaseConfig = {
 
     hookSelectSave(sel);
 
-    // Position the widget container visibly
     el.style.position = 'fixed';
     el.style.top = '70px';
     el.style.right = '1rem';
@@ -528,7 +529,6 @@ const firebaseConfig = {
     el.style.opacity = '1';
     el.style.zIndex = '999999';
 
-    // Make sure parent wrappers are visible
     var p = sel.parentElement;
     while (p && p !== el) {
       p.style.display = '';
@@ -536,7 +536,6 @@ const firebaseConfig = {
       p = p.parentElement;
     }
 
-    // Style the select
     sel.style.fontSize = '1rem';
     sel.style.padding = '0.5rem 1rem';
     sel.style.background = '#1a1a1a';
@@ -569,7 +568,7 @@ const firebaseConfig = {
     langBtn._langInit = true;
 
     langBtn.addEventListener('click', function() {
-      if (_gtReady) {
+      if (window._gtReady) {
         showTranslateDropdown();
       } else {
         loadGoogleTranslate();
@@ -580,31 +579,26 @@ const firebaseConfig = {
     });
   }
 
-  // Ensure googtrans cookie is set (Google Translate reads it on init)
   function setGoogTransCookie(lang) {
     if (lang) {
       document.cookie = 'googtrans=/en/' + lang + ';path=/';
     }
   }
 
-  // Re-apply translation after Astro View Transition page swap
   function reapplyTranslation() {
     var lang = localStorage.getItem('fw_translate_lang');
     if (!lang) return;
 
-    // Ensure cookie is set for Google Translate
     setGoogTransCookie(lang);
 
     var sel = document.querySelector('select.goog-te-combo');
     if (sel) {
-      // Select survived the page swap
       hookSelectSave(sel);
       if (sel.value !== lang) {
         sel.value = lang;
         sel.dispatchEvent(new Event('change'));
       }
     } else if (typeof google !== 'undefined' && google.translate) {
-      // Select was destroyed by View Transition — re-create widget
       var el = document.getElementById('google_translate_element');
       if (!el) return;
       el.innerHTML = '';
@@ -615,22 +609,19 @@ const firebaseConfig = {
     }
   }
 
-  // Run on initial load and after every Astro View Transition navigation
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLangButton);
-  } else {
-    initLangButton();
-  }
-  document.addEventListener('astro:page-load', function() {
-    initLangButton();
-    if (_gtReady) {
-      setTimeout(reapplyTranslation, 200);
-    }
-  });
+  // Init button on current DOM
+  initLangButton();
 
-  // If user had a saved language and GT is already loaded (View Transition),
-  // the astro:page-load handler above will re-apply it.
-  // We do NOT eagerly load GT on page load to avoid tracking prevention warnings.
+  // Register astro:page-load listener only once
+  if (!window._gtInit) {
+    window._gtInit = true;
+    document.addEventListener('astro:page-load', function() {
+      initLangButton();
+      if (window._gtReady) {
+        setTimeout(reapplyTranslation, 200);
+      }
+    });
+  }
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
