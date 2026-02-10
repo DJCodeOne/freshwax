@@ -931,10 +931,9 @@
 }
 .gc-modal-content {
   padding: 1.25rem 1.5rem 1.5rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  align-items: start;
 }
 .gc-header {
   grid-column: 1 / -1;
@@ -1289,9 +1288,6 @@
 
 /* Gift Card Modal Responsive */
 @media (max-width: 700px) {
-  .gc-modal-content {
-    grid-template-columns: 1fr;
-  }
   .gc-modal-box {
     max-width: 95%;
   }
