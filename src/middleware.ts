@@ -58,6 +58,16 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   }
 
   const url = new URL(request.url);
+
+  // WWW canonicalization — redirect www to non-www
+  if (url.hostname === 'www.freshwax.co.uk') {
+    url.hostname = 'freshwax.co.uk';
+    return new Response(null, {
+      status: 301,
+      headers: { 'Location': url.toString() }
+    });
+  }
+
   const isApiRoute = url.pathname.startsWith('/api/');
   const origin = request.headers.get('origin');
 
