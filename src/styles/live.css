@@ -6933,19 +6933,19 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    transform: translateY(100%);
-    transition: transform 0.3s ease;
+    translate: 0 100%;
+    transition: translate 0.3s ease;
     /* Safe area for iPhone notch/home indicator */
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
   }
-  
+
   .mini-player.visible {
-    transform: translateY(0);
+    translate: 0;
   }
-  
+
   .mini-player.hidden {
     display: flex !important;
-    transform: translateY(100%);
+    translate: 0 100%;
   }
   
   .mini-player-info {
