@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!isValidCodeFormat(normalizedCode)) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Invalid gift card code format'
+        error: 'Invalid Gift Card Code'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
