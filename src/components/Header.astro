@@ -451,76 +451,67 @@ const firebaseConfig = {
 
 <script is:inline>
   // Google Translate — lazy-loaded on first button click
-  // Uses localStorage for persistent language across View Transitions
-  // IMPORTANT: Use window.* properties so values survive script re-execution
-  // during Astro View Transitions (inline scripts re-run on each navigation)
-  if (!window._gtInit) {
-    window._gtLoading = false;
-    window._gtReady = false;
-  }
+  // When translation is active, navigations use full page reload so GT
+  // can read the googtrans cookie and translate automatically.
   var _gtConfig = {
     pageLanguage: 'en',
     includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
     autoDisplay: false
   };
 
+  if (!window._gtState) {
+    window._gtState = { loading: false, ready: false };
+  }
+
   function googleTranslateElementInit() {
     new google.translate.TranslateElement(_gtConfig, 'google_translate_element');
-    window._gtReady = true;
-    var saved = localStorage.getItem('fw_translate_lang');
-    if (saved) {
-      watchSelectAndApply(saved);
-    }
+    window._gtState.ready = true;
   }
 
   function loadGoogleTranslate() {
-    if (window._gtLoading) return;
-    window._gtLoading = true;
+    if (window._gtState.loading) return;
+    window._gtState.loading = true;
     var s = document.createElement('script');
     s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     s.async = true;
-    s.onerror = function() { window._gtLoading = false; };
+    s.onerror = function() { window._gtState.loading = false; };
     document.head.appendChild(s);
   }
 
-  function watchSelectAndApply(lang, callback) {
+  function waitForSelect(callback) {
     var attempts = 0;
     var poll = setInterval(function() {
       attempts++;
       var sel = document.querySelector('select.goog-te-combo');
       if (sel) {
         clearInterval(poll);
-        if (lang && sel.value !== lang) {
-          sel.value = lang;
-          sel.dispatchEvent(new Event('change'));
-        }
-        if (callback) callback(sel);
+        callback(sel);
       } else if (attempts > 50) {
         clearInterval(poll);
       }
     }, 150);
   }
 
-  function hookSelectSave(sel) {
-    if (sel._fwHooked) return;
-    sel._fwHooked = true;
-    sel.addEventListener('change', function() {
-      var val = sel.value;
-      if (val && val !== 'en') {
-        localStorage.setItem('fw_translate_lang', val);
-      } else {
-        localStorage.removeItem('fw_translate_lang');
-      }
-    });
-  }
-
   function showTranslateDropdown() {
     var el = document.getElementById('google_translate_element');
     if (!el) return;
-    var sel = el.querySelector('select.goog-te-combo') || el.querySelector('select') || document.querySelector('select.goog-te-combo');
+    var sel = el.querySelector('select.goog-te-combo') || document.querySelector('select.goog-te-combo');
     if (!sel) return;
 
-    hookSelectSave(sel);
+    // Save language choice + set cookie for persistence on reload
+    if (!sel._fwHooked) {
+      sel._fwHooked = true;
+      sel.addEventListener('change', function() {
+        var val = sel.value;
+        if (val && val !== 'en') {
+          localStorage.setItem('fw_translate_lang', val);
+          document.cookie = 'googtrans=/en/' + val + ';path=/';
+        } else {
+          localStorage.removeItem('fw_translate_lang');
+          document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        }
+      });
+    }
 
     el.style.position = 'fixed';
     el.style.top = '70px';
@@ -562,65 +553,41 @@ const firebaseConfig = {
     sel.addEventListener('blur', hideOnBlur);
   }
 
-  function initLangButton() {
+  // Globe button click handler
+  (function() {
     var langBtn = document.getElementById('langBtn');
     if (!langBtn || langBtn._langInit) return;
     langBtn._langInit = true;
-
     langBtn.addEventListener('click', function() {
-      if (window._gtReady) {
+      if (window._gtState.ready) {
         showTranslateDropdown();
       } else {
         loadGoogleTranslate();
-        watchSelectAndApply(null, function() {
-          showTranslateDropdown();
-        });
+        waitForSelect(function() { showTranslateDropdown(); });
       }
     });
-  }
+  })();
 
-  function setGoogTransCookie(lang) {
-    if (lang) {
-      document.cookie = 'googtrans=/en/' + lang + ';path=/';
-    }
-  }
+  // When translation is active, force full page reload on navigation
+  // so Google Translate reads the googtrans cookie and translates natively.
+  // Also eagerly load GT on page load if user has a saved language.
+  if (!window._gtNavHooked) {
+    window._gtNavHooked = true;
 
-  function reapplyTranslation() {
-    var lang = localStorage.getItem('fw_translate_lang');
-    if (!lang) return;
-
-    setGoogTransCookie(lang);
-
-    var sel = document.querySelector('select.goog-te-combo');
-    if (sel) {
-      hookSelectSave(sel);
-      if (sel.value !== lang) {
-        sel.value = lang;
-        sel.dispatchEvent(new Event('change'));
-      }
-    } else if (typeof google !== 'undefined' && google.translate) {
-      var el = document.getElementById('google_translate_element');
-      if (!el) return;
-      el.innerHTML = '';
-      new google.translate.TranslateElement(_gtConfig, 'google_translate_element');
-      watchSelectAndApply(lang, function(newSel) {
-        hookSelectSave(newSel);
-      });
-    }
-  }
-
-  // Init button on current DOM
-  initLangButton();
-
-  // Register astro:page-load listener only once
-  if (!window._gtInit) {
-    window._gtInit = true;
-    document.addEventListener('astro:page-load', function() {
-      initLangButton();
-      if (window._gtReady) {
-        setTimeout(reapplyTranslation, 200);
+    // Intercept View Transition navigations — force full reload if translating
+    document.addEventListener('astro:before-preparation', function(e) {
+      if (localStorage.getItem('fw_translate_lang')) {
+        e.preventDefault();
+        window.location.href = e.to.href;
       }
     });
+
+    // On page load, if there's a saved language, set cookie and load GT
+    var savedLang = localStorage.getItem('fw_translate_lang');
+    if (savedLang) {
+      document.cookie = 'googtrans=/en/' + savedLang + ';path=/';
+      loadGoogleTranslate();
+    }
   }
 </script>
 
