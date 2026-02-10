@@ -445,7 +445,10 @@ const firebaseConfig = {
 </style>
 
 <script is:inline>
-  // Google Translate initialization
+  // Google Translate — lazy-loaded on first button click
+  var _gtLoading = false;
+  var _gtReady = false;
+
   function googleTranslateElementInit() {
     new google.translate.TranslateElement({
       pageLanguage: 'en',
@@ -453,59 +456,81 @@ const firebaseConfig = {
       layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
       autoDisplay: false
     }, 'google_translate_element');
+    _gtReady = true;
   }
 
-  // Language button click handler
+  function loadGoogleTranslate() {
+    if (_gtLoading) return;
+    _gtLoading = true;
+    var s = document.createElement('script');
+    s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+    s.async = true;
+    document.head.appendChild(s);
+  }
+
+  function showTranslateDropdown() {
+    var el = document.getElementById('google_translate_element');
+    if (!el) return;
+    var sel = el.querySelector('select');
+    if (!sel) return;
+
+    // Position visibly near the button
+    el.style.position = 'fixed';
+    el.style.top = '70px';
+    el.style.right = '1rem';
+    el.style.left = 'auto';
+    el.style.opacity = '1';
+    el.style.zIndex = '999999';
+
+    // Style the select
+    sel.style.fontSize = '1rem';
+    sel.style.padding = '0.5rem 1rem';
+    sel.style.background = '#1a1a1a';
+    sel.style.color = '#fff';
+    sel.style.border = '1px solid #dc2626';
+    sel.style.borderRadius = '8px';
+    sel.style.cursor = 'pointer';
+    sel.style.outline = 'none';
+
+    sel.focus();
+    if (typeof sel.showPicker === 'function') {
+      try { sel.showPicker(); } catch(e) {}
+    }
+
+    function hideTranslate() {
+      el.style.top = '-9999px';
+      el.style.left = '-9999px';
+      el.style.opacity = '0';
+      sel.removeEventListener('change', hideTranslate);
+      sel.removeEventListener('blur', hideOnBlur);
+    }
+    function hideOnBlur() { setTimeout(hideTranslate, 200); }
+    sel.addEventListener('change', hideTranslate);
+    sel.addEventListener('blur', hideOnBlur);
+  }
+
   function initLangButton() {
-    const langBtn = document.getElementById('langBtn');
+    var langBtn = document.getElementById('langBtn');
     if (!langBtn || langBtn._langInit) return;
     langBtn._langInit = true;
 
-    langBtn.addEventListener('click', () => {
-      const el = document.getElementById('google_translate_element');
-      if (!el) return;
-
-      const sel = el.querySelector('select');
-      if (sel) {
-        // Position the translate widget container visibly near the button
-        el.style.position = 'fixed';
-        el.style.top = '70px';
-        el.style.right = '1rem';
-        el.style.left = 'auto';
-        el.style.opacity = '1';
-        el.style.zIndex = '999999';
-
-        // Style the select
-        sel.style.fontSize = '1rem';
-        sel.style.padding = '0.5rem 1rem';
-        sel.style.background = '#1a1a1a';
-        sel.style.color = '#fff';
-        sel.style.border = '1px solid #dc2626';
-        sel.style.borderRadius = '8px';
-        sel.style.cursor = 'pointer';
-        sel.style.outline = 'none';
-
-        // Open the native select dropdown
-        sel.focus();
-        if (typeof sel.showPicker === 'function') {
-          try { sel.showPicker(); } catch(e) {}
-        }
-
-        // Hide again after selection or blur
-        function hideTranslate() {
-          el.style.top = '-9999px';
-          el.style.left = '-9999px';
-          el.style.opacity = '0';
-          sel.removeEventListener('change', hideTranslate);
-          sel.removeEventListener('blur', hideOnBlur);
-        }
-        function hideOnBlur() {
-          setTimeout(hideTranslate, 200);
-        }
-        sel.addEventListener('change', hideTranslate);
-        sel.addEventListener('blur', hideOnBlur);
+    langBtn.addEventListener('click', function() {
+      if (_gtReady) {
+        showTranslateDropdown();
       } else {
-        console.warn('Google Translate not ready yet. Try again in a moment.');
+        // Load script, then poll for the select to appear
+        loadGoogleTranslate();
+        var attempts = 0;
+        var poll = setInterval(function() {
+          attempts++;
+          var el = document.getElementById('google_translate_element');
+          if (el && el.querySelector('select')) {
+            clearInterval(poll);
+            showTranslateDropdown();
+          } else if (attempts > 40) {
+            clearInterval(poll);
+          }
+        }, 150);
       }
     });
   }
@@ -518,7 +543,6 @@ const firebaseConfig = {
   }
   document.addEventListener('astro:page-load', initLangButton);
 </script>
-<script is:inline src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
