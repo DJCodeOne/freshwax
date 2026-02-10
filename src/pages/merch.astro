@@ -1253,10 +1253,11 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
       btn.disabled = true;
 
       try {
+        const gcToken = await gcCurrentUser.getIdToken();
         const response = await fetch('/api/giftcards/redeem', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, userId: gcCurrentUser.uid })
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gcToken}` },
+          body: JSON.stringify({ code })
         });
         const result = await response.json();
 
