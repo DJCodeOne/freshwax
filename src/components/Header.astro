@@ -257,9 +257,20 @@ const firebaseConfig = {
         <span class="live-dot"></span>
         <span class="live-text">LIVE</span>
       </a>
+
+      <!-- Language Selector -->
+      <button id="langBtn" class="fwx-lang-btn" aria-label="Change language">
+        <svg class="fwx-lang-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
+        </svg>
+      </button>
     </div>
   </div>
 </header>
+
+<!-- Google Translate (hidden widget, triggered by button) -->
+<div id="google_translate_element" style="display:none;"></div>
 
 <!-- Mobile Bottom Navigation -->
 <nav id="fwx-mobile-nav" class="fwx-bottom-nav">
@@ -397,7 +408,89 @@ const firebaseConfig = {
       height: 1.75rem;
     }
   }
+
+  /* Language Button */
+  #freshwax-header .fwx-lang-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e5e5;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  #freshwax-header .fwx-lang-btn:hover {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #fff;
+  }
+
+  .fwx-lang-icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  /* Hide Google Translate top bar */
+  .goog-te-banner-frame, .skiptranslate {
+    display: none !important;
+  }
+
+  body {
+    top: 0 !important;
+  }
 </style>
+
+<script is:inline>
+  // Google Translate initialization
+  function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+      pageLanguage: 'en',
+      includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
+      layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+      autoDisplay: false
+    }, 'google_translate_element');
+  }
+
+  // Language button click handler
+  function initLangButton() {
+    const langBtn = document.getElementById('langBtn');
+    if (!langBtn || langBtn._langInit) return;
+    langBtn._langInit = true;
+
+    langBtn.addEventListener('click', () => {
+      // Trigger the Google Translate dropdown
+      const translateEl = document.querySelector('#google_translate_element select');
+      if (translateEl) {
+        translateEl.style.position = 'fixed';
+        translateEl.style.top = '70px';
+        translateEl.style.right = '1rem';
+        translateEl.style.zIndex = '999999';
+        translateEl.style.fontSize = '1rem';
+        translateEl.style.padding = '0.5rem';
+        translateEl.style.background = '#1a1a1a';
+        translateEl.style.color = '#fff';
+        translateEl.style.border = '1px solid #dc2626';
+        translateEl.style.borderRadius = '8px';
+        translateEl.style.display = 'block';
+        translateEl.focus();
+        translateEl.click();
+      }
+    });
+  }
+
+  // Run on load and Astro navigation
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLangButton);
+  } else {
+    initLangButton();
+  }
+  document.addEventListener('astro:page-load', initLangButton);
+</script>
+<script is:inline src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <script type="module" define:vars={{ firebaseConfig }}>
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
