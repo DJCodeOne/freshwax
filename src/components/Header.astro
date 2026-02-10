@@ -971,11 +971,11 @@ const firebaseConfig = {
     left: 0 !important;
     right: 0 !important;
     z-index: 99999 !important;
-    background: rgba(255, 255, 255, 0.85) !important;
+    background: linear-gradient(135deg, rgba(10, 10, 10, 0.95) 0%, rgba(20, 5, 5, 0.95) 50%, rgba(10, 10, 15, 0.95) 100%) !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
-    border-bottom: 2px solid rgba(0, 0, 0, 0.8) !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    border-bottom: 2px solid #dc2626 !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
@@ -1088,18 +1088,20 @@ const firebaseConfig = {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: #f3f4f6;
-    color: #000000;
-    border: 1px solid #d1d5db;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e5e5;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
     text-decoration: none;
-    transition: background 0.15s;
+    transition: all 0.15s;
   }
-  
+
   #freshwax-header .fwx-nav-btn:hover {
-    background: #e5e7eb;
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #fff;
   }
   
   #freshwax-header .fwx-nav-icon {
@@ -1113,8 +1115,8 @@ const firebaseConfig = {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 700;
@@ -1142,7 +1144,7 @@ const firebaseConfig = {
   }
   
   #freshwax-header .fwx-live-btn.is-live {
-    background: #fef2f2;
+    background: rgba(220, 38, 38, 0.15);
     border-color: #dc2626;
     animation: fwx-btn-glow 2s ease-in-out infinite alternate;
   }
@@ -1179,23 +1181,27 @@ const firebaseConfig = {
   #freshwax-header .fwx-search-icon {
     width: 1.25rem;
     height: 1.25rem;
-    color: #6b7280;
+    color: #888;
   }
-  
+
   #freshwax-header .fwx-search-input {
     width: 100%;
     padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-    border: 2px solid #d1d5db;
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 0.5rem;
     font-size: 0.875rem;
-    background: #ffffff;
-    color: #000000;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e5e5;
   }
-  
+
+  #freshwax-header .fwx-search-input::placeholder {
+    color: #888;
+  }
+
   #freshwax-header .fwx-search-input:focus {
     outline: none;
-    border-color: #000000;
-    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+    border-color: #dc2626;
+    box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
   }
   
   #freshwax-header .fwx-search-results {
@@ -1237,19 +1243,21 @@ const firebaseConfig = {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: #f3f4f6;
-    color: #000000;
-    border: 1px solid #d1d5db;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e5e5;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s;
     max-width: 180px;
   }
 
   #freshwax-header .fwx-account-btn:hover {
-    background: #e5e7eb;
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #fff;
   }
 
   /* Account name truncation */
@@ -1370,27 +1378,30 @@ const firebaseConfig = {
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    background: #f3f4f6;
-    color: #000000;
-    border: 1px solid #d1d5db;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e5e5;
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 0.5rem;
     font-size: 0.875rem;
     text-decoration: none;
-    transition: background 0.15s;
+    transition: all 0.15s;
   }
 
   #freshwax-header .fwx-cart-btn:hover {
-    background: #e5e7eb;
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #fff;
   }
 
   #freshwax-header .fwx-cart-btn.fwx-cart-black {
-    background: #000000;
+    background: rgba(255, 255, 255, 0.12);
     color: #ffffff;
-    border-color: #000000;
+    border-color: rgba(255, 255, 255, 0.2);
   }
 
   #freshwax-header .fwx-cart-btn.fwx-cart-black:hover {
-    background: #1f2937;
+    background: rgba(220, 38, 38, 0.2);
+    border-color: rgba(220, 38, 38, 0.4);
   }
 
   #freshwax-header .fwx-cart-icon {
@@ -1411,7 +1422,7 @@ const firebaseConfig = {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid #ffffff;
+    border: 2px solid #0a0a0a;
   }
 
   /* Mobile: hide cart text */
