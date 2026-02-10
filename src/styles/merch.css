@@ -939,8 +939,8 @@
 .gc-header {
   text-align: center;
   margin: -1.25rem -1.5rem 0.5rem;
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #1a1a1a 0%, #000 50%, #1a0a0a 100%);
+  padding: 1.5rem 1.5rem;
+  background: linear-gradient(135deg, #2d0a0a 0%, #1a0505 40%, #0a0a1a 100%);
   border-bottom: 2px solid #dc2626;
   border-radius: 12px 12px 0 0;
 }
