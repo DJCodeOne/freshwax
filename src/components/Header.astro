@@ -471,7 +471,6 @@ const firebaseConfig = {
   function showTranslateDropdown() {
     var el = document.getElementById('google_translate_element');
     if (!el) return;
-    // Default layout uses a <select> with class .goog-te-combo
     var sel = el.querySelector('select.goog-te-combo') || el.querySelector('select') || document.querySelector('select.goog-te-combo');
     if (!sel) return;
 
@@ -544,22 +543,53 @@ const firebaseConfig = {
     });
   }
 
-  // Re-apply translation after Astro View Transition page swap
-  function reapplyTranslation() {
-    // Google Translate stores language in a cookie like googtrans=/en/fr
+  // Get active translation language from cookie
+  function getTranslateLang() {
     var match = document.cookie.split(';').find(function(c) {
       return c.trim().startsWith('googtrans=');
     });
-    if (!match) return;
+    if (!match) return null;
     var parts = match.split('=')[1].split('/');
     var lang = parts[parts.length - 1];
-    if (!lang || lang === 'en') return;
+    return (lang && lang !== 'en') ? lang : null;
+  }
 
-    // Find the translate select and re-trigger it
+  // Re-apply translation after Astro View Transition page swap
+  function reapplyTranslation() {
+    var lang = getTranslateLang();
+    if (!lang) return;
+
     var sel = document.querySelector('select.goog-te-combo');
-    if (sel && sel.value !== lang) {
-      sel.value = lang;
-      sel.dispatchEvent(new Event('change'));
+    if (sel) {
+      // Select survived, just re-trigger
+      if (sel.value !== lang) {
+        sel.value = lang;
+        sel.dispatchEvent(new Event('change'));
+      }
+    } else if (typeof google !== 'undefined' && google.translate) {
+      // Select was destroyed by View Transition — re-create widget
+      var el = document.getElementById('google_translate_element');
+      if (!el) return;
+      el.innerHTML = '';
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,fr,de,es,it,pt,nl,ja,zh-CN,ko,ru,pl,sv,da,no',
+        autoDisplay: false
+      }, 'google_translate_element');
+
+      // Poll for the new select, then set language
+      var attempts = 0;
+      var poll = setInterval(function() {
+        attempts++;
+        var newSel = document.querySelector('select.goog-te-combo');
+        if (newSel) {
+          clearInterval(poll);
+          newSel.value = lang;
+          newSel.dispatchEvent(new Event('change'));
+        } else if (attempts > 30) {
+          clearInterval(poll);
+        }
+      }, 100);
     }
   }
 
