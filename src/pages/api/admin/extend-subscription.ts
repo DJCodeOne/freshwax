@@ -76,15 +76,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const extensionHistory = user.subscription?.extensionHistory || [];
     extensionHistory.push(extensionLog);
 
-    // Build complete subscription object to replace
+    // Build complete subscription object, preserving all existing fields
     const subscriptionObj = {
+      ...user.subscription,
       tier: 'pro',
       expiresAt: newExpiry.toISOString(),
       subscribedAt: user.subscription?.subscribedAt || new Date().toISOString(),
       extensionHistory: extensionHistory,
-      // Preserve existing fields
-      ...(user.subscription?.source && { source: user.subscription.source }),
-      ...(user.subscription?.startedAt && { startedAt: user.subscription.startedAt }),
     };
 
     // Update entire subscription object

@@ -298,6 +298,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const expiresAt = new Date(now);
       expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year subscription
 
+      // Generate Plus ID
+      const year = now.getFullYear().toString().slice(-2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const userHash = userId.slice(-4).toUpperCase();
+      const plusId = `FWP-${year}${month}${day}-${userHash}`;
+
       const userDoc = await getDocument('users', userId) || {};
 
       // Generate a referral code for this Pro user (one-time, 50% off for a friend)
@@ -316,7 +323,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           tier: SUBSCRIPTION_TIERS.PRO,
           subscribedAt: now.toISOString(),
           expiresAt: expiresAt.toISOString(),
-          paymentId,
+          subscriptionId: paymentId,
+          plusId,
           paymentMethod: paymentMethod || 'stripe',
         },
         referralCode: referralGiftCard.code, // Store the referral code for easy access
