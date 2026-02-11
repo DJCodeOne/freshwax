@@ -209,7 +209,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       try {
         // Get user type/roles from existing API
         console.log('[PaymentSettings] Fetching user type...');
-        const userRes = await fetch(`/api/get-user-type?uid=${user.uid}`);
+        const _idToken = await user.getIdToken();
+        const userRes = await fetch(`/api/get-user-type?uid=${user.uid}`, {
+          headers: { 'Authorization': `Bearer ${_idToken}` }
+        });
         const userTypeData = await userRes.json();
         console.log('[PaymentSettings] User type data:', userTypeData);
 

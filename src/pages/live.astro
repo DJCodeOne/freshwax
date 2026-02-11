@@ -3070,7 +3070,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   
   async function checkUserStatus(userId) {
     try {
-      const response = await fetch(`/api/get-user-type?uid=${userId}`);
+      const _token = await currentUser?.getIdToken();
+      const response = await fetch(`/api/get-user-type?uid=${userId}`, {
+        headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
+      });
       const result = await response.json();
       
       if (result.success) {
@@ -4482,7 +4485,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Fetch latest avatar URL before booking
       let freshAvatarUrl = userInfo?.avatar || null;
       try {
-        const userTypeRes = await fetch(`/api/get-user-type?uid=${currentUser.uid}`);
+        const _tkn = await currentUser.getIdToken();
+        const userTypeRes = await fetch(`/api/get-user-type?uid=${currentUser.uid}`, {
+          headers: { 'Authorization': `Bearer ${_tkn}` }
+        });
         const userTypeData = await userTypeRes.json();
         if (userTypeData.success && userTypeData.avatarUrl) {
           freshAvatarUrl = userTypeData.avatarUrl;
@@ -4605,7 +4611,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       // Fetch latest avatar URL before going live
       let freshAvatarUrl = userInfo?.avatar || null;
       try {
-        const userTypeRes = await fetch(`/api/get-user-type?uid=${currentUser.uid}`);
+        const _tkn2 = await currentUser.getIdToken();
+        const userTypeRes = await fetch(`/api/get-user-type?uid=${currentUser.uid}`, {
+          headers: { 'Authorization': `Bearer ${_tkn2}` }
+        });
         const userTypeData = await userTypeRes.json();
         if (userTypeData.success && userTypeData.avatarUrl) {
           freshAvatarUrl = userTypeData.avatarUrl;

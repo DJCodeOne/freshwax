@@ -1485,7 +1485,10 @@ export const prerender = false;
       
       try {
         // Fetch user profile to check if they're a partner
-        const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
+        const _idToken = await user.getIdToken();
+        const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+          headers: { 'Authorization': `Bearer ${_idToken}` }
+        });
         const profile = await response.json();
         
         console.log('[Partner Dashboard Client] Profile:', profile);

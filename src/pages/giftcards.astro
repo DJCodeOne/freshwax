@@ -444,7 +444,10 @@ const faqs = [
   // Fetch user name from Firestore
   async function fetchUserName(userId) {
     try {
-      const response = await fetch(`/api/get-user-type?userId=${userId}`);
+      const _token = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/get-user-type?uid=${userId}`, {
+        headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
+      });
       const result = await response.json();
       if (result.success && result.displayName) {
         currentUserName = result.displayName;

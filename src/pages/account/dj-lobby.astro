@@ -1710,7 +1710,10 @@ const runtime = (Astro.locals as any).runtime;
       const userEmail = currentUser?.email ? encodeURIComponent(currentUser.email) : '';
       let response;
       try {
-        response = await fetchWithTimeout(`/api/get-user-type?uid=${userId}&email=${userEmail}`);
+        const _idToken = await currentUser?.getIdToken();
+        response = await fetchWithTimeout(`/api/get-user-type?uid=${userId}&email=${userEmail}`, {
+          headers: _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {}
+        });
       } catch (e) {
         console.error('[DJ Lobby] get-user-type fetch failed:', e);
         showAccessDenied();

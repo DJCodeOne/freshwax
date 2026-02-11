@@ -56,9 +56,15 @@ export async function getUserProfile(uid: string, forceRefresh = false): Promise
     }
   }
   
-  // Fetch from API
+  // Fetch from API (requires auth token)
   try {
-    const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(uid)}`);
+    const headers: Record<string, string> = {};
+    try {
+      const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      const token = await getAuth()?.currentUser?.getIdToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch { /* no auth available */ }
+    const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(uid)}`, { headers });
     if (!response.ok) {
       throw new Error('API request failed');
     }

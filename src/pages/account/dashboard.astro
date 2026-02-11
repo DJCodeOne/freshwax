@@ -1334,7 +1334,10 @@ export const prerender = false;
     if (!proDashboardBtn) return;
 
     try {
-      const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(userId)}`);
+      const _token = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(userId)}`, {
+        headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
+      });
       const data = await response.json();
 
       console.log('[Dashboard] Partner status check:', data);

@@ -420,7 +420,10 @@ export const prerender = false;
 
     // Fetch seller info
     try {
-      const response = await fetch(`/api/get-user-type?uid=${user.uid}`);
+      const _idToken = await user.getIdToken();
+      const response = await fetch(`/api/get-user-type?uid=${user.uid}`, {
+        headers: { 'Authorization': `Bearer ${_idToken}` }
+      });
       const data = await response.json();
       if (!data.isVinylSeller) {
         alert('You need to be an approved vinyl seller to list records.');

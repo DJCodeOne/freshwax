@@ -1250,7 +1250,10 @@ export const prerender = false;
   // Check if logged-in user is a customer (only customers can buy)
   async function checkUserType(uid) {
     try {
-      const response = await fetch('/api/get-user-type?uid=' + uid);
+      const _token = await auth.currentUser?.getIdToken();
+      const response = await fetch('/api/get-user-type?uid=' + uid, {
+        headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
+      });
       const data = await response.json();
       return data;
     } catch (e) {

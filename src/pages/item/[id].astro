@@ -1429,7 +1429,10 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           }
           
           // Fetch from consolidated API endpoint
-          const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`);
+          const _idToken = await user.getIdToken();
+          const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+            headers: { 'Authorization': `Bearer ${_idToken}` }
+          });
           if (response.ok) {
             const profile = await response.json();
             if (profile.success) {

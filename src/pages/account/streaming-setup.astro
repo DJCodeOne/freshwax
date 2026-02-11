@@ -1378,7 +1378,10 @@ export const prerender = false;
     
     // Check DJ access
     try {
-      const response = await fetch(`/api/get-user-type?uid=${user.uid}`);
+      const _idToken = await user.getIdToken();
+      const response = await fetch(`/api/get-user-type?uid=${user.uid}`, {
+        headers: { 'Authorization': `Bearer ${_idToken}` }
+      });
       const result = await response.json();
       
       const isDj = result.roles?.dj === true || result.roles?.artist === true;
