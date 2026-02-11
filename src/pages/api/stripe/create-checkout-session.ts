@@ -335,8 +335,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Note: Service fees are NOT added as line items anymore (Bandcamp-style)
     // Fees are deducted from artist payout instead of being charged to customer
 
-    // Get applied credit from order data
-    const appliedCredit = orderData.appliedCredit || 0;
+    // Credit is only applied via the free order flow (complete-free-order.ts)
+    // which validates prices and credit balance server-side.
+    // Stripe sessions always charge the full validated amount.
+    const appliedCredit = 0;
 
     // Prepare metadata - store order data for webhook
     // Stripe metadata has 500 char limit per value, so we'll compress

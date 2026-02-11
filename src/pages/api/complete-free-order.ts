@@ -3,11 +3,65 @@
 
 import type { APIRoute } from 'astro';
 import { createOrder } from '../../lib/order-utils';
-import { initFirebaseEnv, getDocument, updateDocument } from '../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, updateDocument, atomicIncrement, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
 
 export const prerender = false;
+
+// SECURITY: Validate item prices server-side to prevent getting items for free
+async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], validatedSubtotal: number }> {
+  const validatedItems: any[] = [];
+
+  for (const item of items) {
+    let serverPrice = item.price;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
+        }
+      } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
+        if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (listing) serverPrice = listing.price || item.price;
+          }
+        } else {
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              if (itemType === 'vinyl') {
+                serverPrice = release.vinylPrice || release.price || item.price;
+              } else if (itemType === 'track' && item.trackId) {
+                const track = (release.tracks || []).find((t: any) =>
+                  t.id === item.trackId || t.trackId === item.trackId
+                );
+                serverPrice = track?.price || release.trackPrice || 0.99;
+              } else {
+                serverPrice = release.price || release.digitalPrice || item.price;
+              }
+            }
+          }
+        }
+      }
+
+      validatedItems.push({ ...item, price: serverPrice });
+    } catch (err) {
+      console.error('[FreeOrder] Price validation error for', item.name, err);
+      validatedItems.push({ ...item, priceValidationFailed: true });
+    }
+  }
+
+  const validatedSubtotal = validatedItems.reduce((sum: number, item: any) =>
+    sum + ((item.price || 0) * (item.quantity || 1)), 0);
+
+  return { validatedItems, validatedSubtotal };
+}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: strict - 5 per minute (prevent order abuse)
@@ -32,22 +86,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Parse request body
     const orderData = await request.json();
 
-    // Calculate final payment amount (total minus any applied credit)
-    const originalTotal = orderData.totals?.total || 0;
-    const appliedCredit = orderData.appliedCredit || 0;
-    const paymentDue = Math.max(0, originalTotal - appliedCredit);
-
-    // Verify this is actually a free/credit-paid order (no payment due)
-    if (paymentDue > 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This endpoint is only for free or fully credit-paid orders'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
     // Validate required fields
     if (!orderData.customer?.email || !orderData.customer?.firstName || !orderData.customer?.lastName) {
       return new Response(JSON.stringify({
@@ -69,11 +107,63 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Keep original totals for record keeping, add applied credit info
+    // SECURITY: Validate item prices server-side (prevent getting items for free)
+    const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
+    const hasPhysicalItems = validatedItems.some((item: any) =>
+      item.type === 'vinyl' || item.type === 'merch');
+    const shipping = hasPhysicalItems ? (validatedSubtotal >= 50 ? 0 : 4.99) : 0;
+    const validatedTotal = validatedSubtotal + shipping;
+
+    const appliedCredit = orderData.appliedCredit || 0;
+
+    // SECURITY: If credit is applied, verify authentication and balance BEFORE creating order
+    if (appliedCredit > 0) {
+      const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+      if (!verifiedUserId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: authError || 'Authentication required to use store credit'
+        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Verify the userId in the order matches the authenticated user
+      if (orderData.customer?.userId && orderData.customer.userId !== verifiedUserId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'User mismatch'
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Verify credit balance covers the validated total
+      const creditData = await getDocument('userCredits', verifiedUserId);
+      const actualBalance = creditData?.balance || 0;
+      if (actualBalance < validatedTotal) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Insufficient credit balance'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // Verify this is actually a free/credit-paid order (no payment due)
+    const paymentDue = Math.max(0, validatedTotal - appliedCredit);
+    if (paymentDue > 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'This endpoint is only for free or fully credit-paid orders'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Use validated totals, not client-sent values
     const totals = appliedCredit > 0 ? {
-      ...orderData.totals,
+      subtotal: validatedSubtotal,
+      shipping,
+      total: validatedTotal,
       appliedCredit,
-      amountPaid: 0 // Paid via credit
+      amountPaid: 0
     } : {
       subtotal: 0,
       shipping: 0,
@@ -90,9 +180,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       orderData: {
         customer: orderData.customer,
         shipping: orderData.shipping || null,
-        items: orderData.items,
+        items: validatedItems,
         totals,
-        hasPhysicalItems: orderData.hasPhysicalItems || false,
+        hasPhysicalItems: hasPhysicalItems || false,
         paymentMethod: appliedCredit > 0 ? 'credit' : 'free',
         paymentIntentId: null,
         paypalOrderId: null
@@ -103,22 +193,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (result.success) {
       // Record to sales ledger (even for free/credit orders for accurate tracking)
-      // Look up seller info for ALL items so multi-seller orders are handled correctly
       try {
-        // Enrich items with seller info from release lookup
-        const enrichedItems = await Promise.all((orderData.items || []).map(async (item: any) => {
+        const enrichedItems = await Promise.all((validatedItems || []).map(async (item: any) => {
           const releaseId = item.releaseId || item.productId || item.id;
           let submitterId = null;
           let submitterEmail = null;
           let artistName = item.artist || item.artistName || null;
 
-          // Look up release to get submitter info
           if (releaseId && (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.releaseId)) {
             try {
               const release = await getDocument('releases', releaseId);
               if (release) {
                 submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
-                // Email field - release stores it as 'email', not 'submitterEmail'
                 submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
                 console.log(`[FreeOrder] Item ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
@@ -136,40 +222,41 @@ export const POST: APIRoute = async ({ request, locals }) => {
           };
         }));
 
-        // Use multi-seller recording to create per-seller ledger entries
-        // Dual-write: D1 (primary) + Firebase (backup)
         await recordMultiSellerSale({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
           customerId: orderData.customer?.userId || null,
           customerEmail: orderData.customer?.email || '',
           customerName: orderData.customer?.displayName || orderData.customer?.firstName || null,
-          grossTotal: originalTotal,
+          grossTotal: validatedTotal,
           shipping: totals.shipping || 0,
           paymentMethod: appliedCredit > 0 ? 'giftcard' : 'free',
           paymentId: null,
-          hasPhysical: orderData.hasPhysicalItems || false,
+          hasPhysical: hasPhysicalItems || false,
           hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
           items: enrichedItems,
-          db: env?.DB  // D1 database for dual-write
+          db: env?.DB
         });
         console.log('[FreeOrder] Sale recorded to ledger (D1 + Firebase)');
       } catch (ledgerErr) {
         console.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
       }
 
-      // If credit was applied, deduct it from user's balance
+      // If credit was applied, deduct atomically from user's balance
       if (appliedCredit > 0 && orderData.customer?.userId) {
         try {
           const userId = orderData.customer.userId;
           const creditData = await getDocument('userCredits', userId);
 
           if (creditData && creditData.balance >= appliedCredit) {
-            const newBalance = creditData.balance - appliedCredit;
             const now = new Date().toISOString();
+
+            // Atomically decrement balance to prevent race conditions
+            await atomicIncrement('userCredits', userId, { balance: -appliedCredit });
 
             // Create transaction record
             const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            const newBalance = creditData.balance - appliedCredit;
             const transaction = {
               id: transactionId,
               type: 'purchase',
@@ -185,18 +272,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
             existingTransactions.push(transaction);
 
             await updateDocument('userCredits', userId, {
-              balance: newBalance,
               lastUpdated: now,
               transactions: existingTransactions
             });
 
-            // Also update user document
-            await updateDocument('users', userId, {
-              creditBalance: newBalance,
-              creditUpdatedAt: now
-            });
+            // Also update user document atomically
+            await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
+            await updateDocument('users', userId, { creditUpdatedAt: now });
 
-            console.log('[FreeOrder] Deducted credit:', appliedCredit, 'from user:', userId, 'new balance:', newBalance);
+            console.log('[FreeOrder] Deducted credit atomically:', appliedCredit, 'from user:', userId, 'new balance:', newBalance);
           }
         } catch (creditErr) {
           console.error('[FreeOrder] Failed to deduct credit:', creditErr);

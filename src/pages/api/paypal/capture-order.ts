@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;

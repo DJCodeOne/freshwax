@@ -409,10 +409,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           paymentProcessingFee: paymentProcessingFee,
           serviceFees: serviceFees,
           total: validatedTotal,
-          appliedCredit: orderData.appliedCredit || 0
+          appliedCredit: 0
         },
         hasPhysicalItems: hasPhysicalItems,
-        appliedCredit: orderData.appliedCredit || 0,
+        appliedCredit: 0,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hour expiry
       };
