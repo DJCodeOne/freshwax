@@ -487,16 +487,32 @@ const firebaseConfig = {
   function googleTranslateElementInit() {
     new google.translate.TranslateElement(_gtConfig, 'google_translate_element');
     window._gtState.ready = true;
+
+    // After widget is created, apply saved language by selecting it in the dropdown.
+    // This is more reliable than the googtrans cookie alone (especially on prerendered pages).
+    var lang = localStorage.getItem('fw_translate_lang');
+    if (lang) {
+      waitForSelect(function(sel) {
+        if (sel.value !== lang) {
+          sel.value = lang;
+          sel.dispatchEvent(new Event('change'));
+        }
+      });
+    }
   }
 
   function loadGoogleTranslate() {
-    if (window._gtState.loading) return;
+    if (window._gtState.loading || window._gtState.ready) return;
     window._gtState.loading = true;
     var s = document.createElement('script');
     s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     s.async = true;
     s.onerror = function() { window._gtState.loading = false; };
     document.head.appendChild(s);
+    // Safety timeout: reset loading flag after 10s so button can be retried
+    setTimeout(function() {
+      if (!window._gtState.ready) { window._gtState.loading = false; }
+    }, 10000);
   }
 
   function waitForSelect(callback) {
@@ -524,12 +540,15 @@ const firebaseConfig = {
       sel._fwHooked = true;
       sel.addEventListener('change', function() {
         var val = sel.value;
+        var domainCookie = location.hostname.indexOf('.') !== -1 ? ';domain=.' + location.hostname : '';
         if (val && val !== 'en') {
           localStorage.setItem('fw_translate_lang', val);
           document.cookie = 'googtrans=/en/' + val + ';path=/';
+          if (domainCookie) document.cookie = 'googtrans=/en/' + val + ';path=/' + domainCookie;
         } else {
           localStorage.removeItem('fw_translate_lang');
           document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+          if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
         }
       });
     }
@@ -613,7 +632,11 @@ const firebaseConfig = {
   // On page load, if there's a saved language, set cookie and load GT
   var savedLang = localStorage.getItem('fw_translate_lang');
   if (savedLang) {
+    // Set cookie on both path and domain for maximum compatibility
     document.cookie = 'googtrans=/en/' + savedLang + ';path=/';
+    if (location.hostname.indexOf('.') !== -1) {
+      document.cookie = 'googtrans=/en/' + savedLang + ';path=/;domain=.' + location.hostname;
+    }
     loadGoogleTranslate();
   }
 </script>
