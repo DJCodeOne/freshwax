@@ -93,17 +93,18 @@ export async function requireAdminAuth(request: Request, locals: any, bodyData?:
     return null; // Auth successful via X-Admin-Key header
   }
 
-  // Check Authorization: Bearer header
+  // Collect token candidates: X-Admin-Key (as Firebase token) and Authorization Bearer
   const authHeader = request.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-    // Try as admin key first (timing-safe)
-    if (expectedKey && timingSafeEqual(token, expectedKey)) {
-      return null; // Auth successful via admin key in Bearer header
-    }
+  // Try Bearer token as admin key first (timing-safe)
+  if (bearerToken && expectedKey && timingSafeEqual(bearerToken, expectedKey)) {
+    return null; // Auth successful via admin key in Bearer header
+  }
 
-    // Try as Firebase ID token from admin user
+  // Try any available token as Firebase ID token from admin user
+  const tokenCandidates = [bearerToken, adminKeyHeader].filter(Boolean) as string[];
+  for (const token of tokenCandidates) {
     try {
       const env = locals?.runtime?.env;
       const { initFirebaseEnv, verifyUserToken } = await import('./firebase-rest');
@@ -116,7 +117,7 @@ export async function requireAdminAuth(request: Request, locals: any, bodyData?:
         return null; // Auth successful via Firebase admin token
       }
     } catch {
-      // Token verification failed, continue to error
+      // Token verification failed, try next candidate
     }
   }
 
