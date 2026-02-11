@@ -3,7 +3,7 @@
 // Only accessible to users with approved Artist or Merch Seller roles
 // Shows sections based on approved roles
 import '../styles/global.css';
-import { getAdminUids } from '../lib/admin';
+// Admin UID check moved to Firestore admins collection (no client exposure)
 
 interface Props {
   title: string;
@@ -11,7 +11,6 @@ interface Props {
 }
 
 const { title, activeSection } = Astro.props;
-const adminUids = getAdminUids();
 ---
 <html lang="en">
 <head>
@@ -440,8 +439,8 @@ const adminUids = getAdminUids();
     }
   </style>
 
-  <script is:inline define:vars={{ adminUids }}>
-    window.ADMIN_UIDS = adminUids;
+  <script is:inline>
+    // Admin check moved server-side - no UIDs exposed to client
   </script>
   <script type="module" is:inline>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -565,9 +564,6 @@ const adminUids = getAdminUids();
       userRoles.innerHTML = badges;
     }
 
-    // Admin UIDs from server (injected via define:vars)
-    const ADMIN_UIDS = window.ADMIN_UIDS || [];
-
     // Auth state listener
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -578,7 +574,13 @@ const adminUids = getAdminUids();
 
       try {
         let roles = {};
-        const isAdmin = ADMIN_UIDS.includes(user.uid);
+        let isAdmin = false;
+
+        // Check admin status from Firestore admins collection
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+          if (adminDoc.exists()) isAdmin = true;
+        } catch (e) {}
 
         // Try to get user document from users collection
         const userDoc = await getDoc(doc(db, 'users', user.uid));

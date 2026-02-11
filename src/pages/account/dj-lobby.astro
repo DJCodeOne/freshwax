@@ -3978,11 +3978,11 @@ const runtime = (Astro.locals as any).runtime;
 
     if (!username && !streamKey) {
       // Clear settings
-      localStorage.removeItem('freshwax_twitch_username');
-      localStorage.removeItem('freshwax_twitch_key');
+      sessionStorage.removeItem('freshwax_twitch_username');
+      sessionStorage.removeItem('freshwax_twitch_key');
     } else {
-      if (username) localStorage.setItem('freshwax_twitch_username', username);
-      if (streamKey) localStorage.setItem('freshwax_twitch_key', streamKey);
+      if (username) sessionStorage.setItem('freshwax_twitch_username', username);
+      if (streamKey) sessionStorage.setItem('freshwax_twitch_key', streamKey);
     }
 
     // Show success feedback
@@ -3999,8 +3999,8 @@ const runtime = (Astro.locals as any).runtime;
 
   // Load saved Twitch settings
   function loadTwitchSettings() {
-    const username = localStorage.getItem('freshwax_twitch_username');
-    const streamKey = localStorage.getItem('freshwax_twitch_key');
+    const username = sessionStorage.getItem('freshwax_twitch_username');
+    const streamKey = sessionStorage.getItem('freshwax_twitch_key');
 
     if (username) {
       const usernameInput = document.getElementById('twitchUsername');

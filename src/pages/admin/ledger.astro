@@ -505,8 +505,8 @@ const formatDate = (dateStr: string) => {
   });
 </script>
 
-<script is:inline define:vars={{ adminUids }}>
-  window.ADMIN_UIDS = adminUids;
+<script is:inline>
+  // Admin check uses Firestore admins collection
 </script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -527,8 +527,9 @@ const formatDate = (dateStr: string) => {
   const db = getFirestore(app);
 
   async function checkIsAdmin(uid) {
-    if (window.ADMIN_UIDS?.includes(uid)) return true;
     try {
+      const adminDoc = await getDoc(doc(db, 'admins', uid));
+      if (adminDoc.exists()) return true;
       const userDoc = await getDoc(doc(db, 'users', uid));
       if (userDoc.exists()) {
         const data = userDoc.data();

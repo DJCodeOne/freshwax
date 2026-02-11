@@ -2,7 +2,7 @@
 // Vinyl Dashboard Layout
 // Separate dashboard for Vinyl Crates sellers - no music releases navigation
 import '../styles/global.css';
-import { getAdminUids } from '../lib/admin';
+// Admin UID check moved to Firestore admins collection (no client exposure)
 
 interface Props {
   title: string;
@@ -10,7 +10,6 @@ interface Props {
 }
 
 const { title, activeSection } = Astro.props;
-const adminUids = getAdminUids();
 ---
 <html lang="en">
 <head>
@@ -437,8 +436,8 @@ const adminUids = getAdminUids();
     }
   </style>
 
-  <script is:inline define:vars={{ adminUids }}>
-    window.ADMIN_UIDS = adminUids;
+  <script is:inline>
+    // Admin check moved server-side - no UIDs exposed to client
   </script>
   <script type="module" is:inline>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -480,8 +479,15 @@ const adminUids = getAdminUids();
       try {
         let isVinylSeller = false;
         let sellerData = null;
-        const ADMIN_UIDS = window.ADMIN_UIDS || [];
-        const isAdmin = ADMIN_UIDS.includes(user.uid);
+        let isAdmin = false;
+
+        // Check admin status from Firestore user document
+        try {
+          const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+          if (adminDoc.exists()) {
+            isAdmin = true;
+          }
+        } catch (e) {}
 
         // Admin override - skip Firestore checks entirely for admins
         if (isAdmin) {

@@ -291,8 +291,8 @@ const adminUids = getAdminUids();
     }
   </style>
 
-  <script is:inline define:vars={{ adminUids }}>
-    window.ADMIN_UIDS = adminUids;
+  <script is:inline>
+    // Admin check uses Firestore admins collection
   </script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
@@ -310,9 +310,6 @@ const adminUids = getAdminUids();
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
-    // Admin UIDs from server (injected via define:vars)
-    const ADMIN_UIDS = window.ADMIN_UIDS || [];
 
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -334,8 +331,8 @@ const adminUids = getAdminUids();
         return;
       }
 
-      // Check admin status
-      if (!ADMIN_UIDS.includes(user.uid)) {
+      // Check admin status via Firestore
+      {
         const adminDoc = await getDoc(doc(db, 'admins', user.uid));
         if (!adminDoc.exists()) {
           window.location.href = '/';

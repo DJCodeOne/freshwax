@@ -53,13 +53,13 @@ export const prerender = false;
           </tr>
         ))}</tbody></table></div></div>
   )}
-  <Fragment slot="scripts"><script is:inline define:vars={{ adminUids }}>window.ADMIN_UIDS=adminUids;</script><script type="module">
+  <Fragment slot="scripts"><script is:inline>/* Admin check via Firestore */</script><script type="module">
     import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import{getFirestore,doc,updateDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import{getFirestore,doc,getDoc,updateDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     const app=initializeApp({apiKey:'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
-    const auth=getAuth(app),db=getFirestore(app),ADMINS=window.ADMIN_UIDS||[];
-    onAuthStateChanged(auth,u=>{if(!u||!ADMINS.includes(u.uid))window.location.href='/admin/login';});
+    const auth=getAuth(app),db=getFirestore(app);
+    onAuthStateChanged(auth,async u=>{if(!u){window.location.href='/admin/login';return;}try{const a=await getDoc(doc(db,'admins',u.uid));if(!a.exists())window.location.href='/admin/login';}catch(e){window.location.href='/admin/login';}});
     const tbl=document.getElementById('tbl');
     document.querySelectorAll('.filter-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.filter-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');const f=t.dataset.filter;tbl?.querySelectorAll('tr').forEach(r=>{const rl=JSON.parse(r.dataset.roles||'{}');r.style.display=(f==='all'||(f==='artist'&&rl.artist)||(f==='merch'&&rl.merch))?'':'none';});});
     document.querySelectorAll('.approve-btn').forEach(b=>b.onclick=async()=>{const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}'),email=row.dataset.email,name=row.dataset.name;b.disabled=true;b.textContent='Approving...';try{const u={updatedAt:serverTimestamp(),approved:true};if(rl.artist){u['roles.artist']=true;u['pendingRoles.artist.status']='approved';}if(rl.merch){u['roles.merchSeller']=true;u['pendingRoles.merchSeller.status']='approved';}await updateDoc(doc(db,'users',id),u);b.textContent='Sending email...';try{await fetch('/api/admin/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':window.ADMIN_KEY},body:JSON.stringify({email,name,type:(rl.artist && rl.merch) ? 'both' : (rl.artist ? 'artist' : 'merch')})});}catch(emailErr){console.warn('Email failed:',emailErr);}row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Approved! Confirmation email sent.');}catch(e){alert(e.message);b.disabled=false;b.textContent='Approve';}});

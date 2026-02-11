@@ -2839,10 +2839,11 @@ export const prerender = false;
       }, 500);
     }
     
+    function escPdf(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
     function generateOrdersPdfHtml() {
-      const fullName = customerData?.displayName || 
-                       (customerData?.firstName && customerData?.lastName ? 
-                        `${customerData.firstName} ${customerData.lastName}` : 
+      const fullName = customerData?.displayName ||
+                       (customerData?.firstName && customerData?.lastName ?
+                        `${customerData.firstName} ${customerData.lastName}` :
                         customerData?.firstName || 'Customer');
       const email = currentUser?.email || '';
       
@@ -2860,11 +2861,11 @@ export const prerender = false;
       
       const orderRows = orders.map((order, index) => `
         <tr>
-          <td>${formatOrderId(order, index)}</td>
+          <td>${escPdf(formatOrderId(order, index))}</td>
           <td>${new Date(order.createdAt || order.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-          <td>${(order.items || []).map(i => i.title || i.name).join(', ') || 'N/A'}</td>
-          <td>£${(order.total || 0).toFixed(2)}</td>
-          <td>${order.status || order.orderStatus || 'Completed'}</td>
+          <td>${escPdf((order.items || []).map(i => i.title || i.name).join(', ') || 'N/A')}</td>
+          <td>&pound;${(order.total || 0).toFixed(2)}</td>
+          <td>${escPdf(order.status || order.orderStatus || 'Completed')}</td>
         </tr>
       `).join('');
       
@@ -2892,8 +2893,8 @@ export const prerender = false;
           <div class="header">
             <div class="logo"><span class="fresh">Fresh</span> <span class="wax">Wax</span></div>
             <div class="order-history-title">Order History</div>
-            <p class="customer-info"><strong>${fullName}</strong></p>
-            <p class="customer-info">${email}</p>
+            <p class="customer-info"><strong>${escPdf(fullName)}</strong></p>
+            <p class="customer-info">${escPdf(email)}</p>
             <p class="generated">Generated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
           

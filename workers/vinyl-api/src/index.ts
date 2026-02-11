@@ -15,18 +15,30 @@ export interface Env {
   ENVIRONMENT: string;
 }
 
-// CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+// CORS origin whitelist
+const ALLOWED_ORIGINS = [
+  'https://freshwax.co.uk',
+  'https://www.freshwax.co.uk',
+  'https://freshwax.pages.dev',
+];
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin.endsWith('.freshwax.pages.dev'));
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+}
+
+// Track current request origin for response helpers
+let _currentOrigin: string | null = null;
 
 // JSON response helper
 function json(data: any, status = 200): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    headers: { 'Content-Type': 'application/json', ...getCorsHeaders(_currentOrigin) },
   });
 }
 
@@ -795,9 +807,10 @@ async function handleDeleteListing(request: Request, env: Env, id: string): Prom
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    _currentOrigin = request.headers.get('Origin');
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { headers: getCorsHeaders(_currentOrigin) });
     }
 
     const url = new URL(request.url);

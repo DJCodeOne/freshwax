@@ -276,8 +276,11 @@ async function listSubmissions(env: Env): Promise<string[]> {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+    const origin = request.headers.get('Origin');
+    const ALLOWED = ['https://freshwax.co.uk', 'https://www.freshwax.co.uk', 'https://freshwax.pages.dev'];
+    const allowed = origin && (ALLOWED.includes(origin) || origin.endsWith('.freshwax.pages.dev'));
     const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': allowed ? origin! : ALLOWED[0],
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };

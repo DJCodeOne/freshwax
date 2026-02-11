@@ -8,8 +8,9 @@ response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-
 response.headers.set('Pragma', 'no-cache');
 response.headers.set('Expires', '0');
 
-// Get redirect URL from query params - always default to customer dashboard
-const redirectTo = Astro.url.searchParams.get('redirect') || '/account/dashboard';
+// Get redirect URL from query params - only allow safe relative paths
+const rawRedirect = Astro.url.searchParams.get('redirect') || '/account/dashboard';
+const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/account/dashboard';
 
 // Firebase config for client-side auth (with fallback)
 const firebaseConfig = {

@@ -285,6 +285,7 @@ const { userId } = Astro.props;
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
   let bookings = [];
   let bookingToCancel = null;
 
@@ -376,7 +377,7 @@ const { userId } = Astro.props;
         <div class="booking-card ${isPast ? 'past' : ''}">
           <div class="booking-info">
             <div class="booking-title">
-              ${booking.streamTitle}
+              ${esc(booking.streamTitle || '')}
               <span class="booking-status ${statusClass}">${statusText}</span>
             </div>
             <div class="booking-time">${dateStr} • ${formatHour(startHour)} - ${formatHour(endHour)}</div>

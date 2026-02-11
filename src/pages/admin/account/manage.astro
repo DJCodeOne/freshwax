@@ -344,8 +344,8 @@ const adminUids = getAdminUids();
   }
 </style>
 
-<script is:inline define:vars={{ adminUids }}>
-  window.ADMIN_UIDS = adminUids;
+<script is:inline>
+  // Admin check uses Firestore admins collection - no UIDs exposed to client
 </script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -389,14 +389,7 @@ const adminUids = getAdminUids();
   // Check if user is admin
   async function checkIsAdmin(uid) {
     try {
-      // Admin UIDs from server (injected via define:vars)
-      const ADMIN_UIDS = window.ADMIN_UIDS || [];
-      if (ADMIN_UIDS.includes(uid)) {
-        console.log('[Admin Check] Admin by env UID');
-        return true;
-      }
-      
-      // Check admins collection first (legacy)
+      // Check admins collection first
       const adminDoc = await getDoc(doc(db, 'admins', uid));
       if (adminDoc.exists()) {
         console.log('[Admin Check] Admin found in admins collection');

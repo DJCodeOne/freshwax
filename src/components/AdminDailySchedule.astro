@@ -442,6 +442,7 @@
 <script>
   // Admin Daily Schedule Logic
   (function() {
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
     const container = document.getElementById('adminDailySchedule');
     const dateLabel = document.getElementById('adminDateLabel');
     const timeGrid = document.getElementById('adminTimeGrid');
@@ -552,8 +553,8 @@
           slotBlock.className = `slot-block ${booking.status}`;
           slotBlock.innerHTML = `
             <div class="slot-dj">
-              ${booking.djName}
-              <span class="slot-status">${booking.status}</span>
+              ${esc(booking.djName)}
+              <span class="slot-status">${esc(booking.status)}</span>
             </div>
             <div class="slot-time">
               ${startTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - 
@@ -616,11 +617,11 @@
         details.innerHTML = `
           <div class="detail-row">
             <span class="detail-label">DJ Name</span>
-            <span class="detail-value">${booking.djName}</span>
+            <span class="detail-value">${esc(booking.djName)}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Title</span>
-            <span class="detail-value">${booking.title || 'Untitled'}</span>
+            <span class="detail-value">${esc(booking.title || 'Untitled')}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Date</span>
@@ -636,11 +637,11 @@
           </div>
           <div class="detail-row">
             <span class="detail-label">Status</span>
-            <span class="detail-value">${booking.status}</span>
+            <span class="detail-value">${esc(booking.status)}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">DJ ID</span>
-            <span class="detail-value" style="font-family: monospace; font-size: 0.75rem;">${booking.djId || 'N/A'}</span>
+            <span class="detail-value" style="font-family: monospace; font-size: 0.75rem;">${esc(booking.djId || 'N/A')}</span>
           </div>
         `;
       }

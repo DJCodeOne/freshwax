@@ -1486,8 +1486,8 @@ export const prerender = false;
       const streamKey = document.getElementById('twitchStreamKey').value;
 
       // Save to localStorage for now
-      localStorage.setItem('freshwax_twitch_username', username);
-      localStorage.setItem('freshwax_twitch_key', streamKey);
+      sessionStorage.setItem('freshwax_twitch_username', username);
+      sessionStorage.setItem('freshwax_twitch_key', streamKey);
 
       const btn = document.getElementById('saveTwitchBtn');
       btn.textContent = 'Saved!';
@@ -1495,8 +1495,8 @@ export const prerender = false;
     });
 
     // Load saved Twitch settings
-    const savedUsername = localStorage.getItem('freshwax_twitch_username');
-    const savedKey = localStorage.getItem('freshwax_twitch_key');
+    const savedUsername = sessionStorage.getItem('freshwax_twitch_username');
+    const savedKey = sessionStorage.getItem('freshwax_twitch_key');
     if (savedUsername) document.getElementById('twitchUsername').value = savedUsername;
     if (savedKey) document.getElementById('twitchStreamKey').value = savedKey;
   }
@@ -1510,12 +1510,14 @@ export const prerender = false;
       const data = await response.json();
 
       if (data.sources && data.sources.length > 0) {
+        function escAttr(s) { return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+        function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         listEl.innerHTML = data.sources.map(source => `
-          <div class="relay-source-item" data-url="${source.url}" data-name="${source.name}">
-            <img src="${source.logo || '/place-holder.webp'}" alt="${source.name}" class="source-logo" onerror="this.src='/place-holder.webp'" />
+          <div class="relay-source-item" data-url="${escAttr(source.url)}" data-name="${escAttr(source.name)}">
+            <img src="${escAttr(source.logo || '/place-holder.webp')}" alt="${escAttr(source.name)}" class="source-logo" onerror="this.src='/place-holder.webp'" />
             <div class="source-info">
-              <span class="source-name">${source.name}</span>
-              <span class="source-url-preview">${source.url.substring(0, 40)}...</span>
+              <span class="source-name">${escHtml(source.name)}</span>
+              <span class="source-url-preview">${escHtml(source.url.substring(0, 40))}...</span>
             </div>
           </div>
         `).join('');
