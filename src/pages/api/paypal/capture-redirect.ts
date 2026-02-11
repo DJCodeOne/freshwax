@@ -201,7 +201,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       }
     }
 
-    // Deduct applied credit from user's balance
+    // Deduct applied credit from user's balance (atomic to prevent race conditions)
     const userId = pendingOrder.customer?.userId;
     const appliedCredit = pendingOrder.appliedCredit || pendingOrder.totals?.appliedCredit || 0;
     if (appliedCredit > 0 && userId) {
@@ -209,6 +209,9 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       try {
         const creditData = await getDocument('userCredits', userId);
         if (creditData && creditData.balance >= appliedCredit) {
+          // Use atomicIncrement for race-safe balance deduction
+          await atomicIncrement('userCredits', userId, { balance: -appliedCredit });
+
           const newBalance = creditData.balance - appliedCredit;
           const now = new Date().toISOString();
 
@@ -228,17 +231,13 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           existingTransactions.push(transaction);
 
           await updateDocument('userCredits', userId, {
-            balance: newBalance,
             lastUpdated: now,
             transactions: existingTransactions
           });
 
-          await updateDocument('users', userId, {
-            creditBalance: newBalance,
-            creditUpdatedAt: now
-          });
+          await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
 
-          console.log('[PayPal Redirect] Credit deducted, new balance:', newBalance);
+          console.log('[PayPal Redirect] Credit deducted atomically, new balance:', newBalance);
         }
       } catch (creditErr) {
         console.error('[PayPal Redirect] Failed to deduct credit:', creditErr);

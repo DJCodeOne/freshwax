@@ -1037,7 +1037,7 @@ const firebaseConfig = {
             document.cookie = 'customerId=; path=/; max-age=0';
             document.cookie = 'partnerId=; path=/; max-age=0';
             // Clear auth cache for live page
-            localStorage.removeItem('fw_auth_cache');
+            sessionStorage.removeItem('fw_auth_cache');
             await signOut(auth);
             window.location.href = '/';
           } catch (e) {
@@ -1062,8 +1062,8 @@ const firebaseConfig = {
       // Always ensure userId and customerId cookies are set for authenticated users
       // This enables wishlist and other features that check cookies
       const cookieMaxAge = 30 * 24 * 60 * 60; // 30 days
-      document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
-      document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+      document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+      document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
 
       let cachedData = getCachedUserType();
       // Force refresh if no cache OR cache has no avatarUrl (might have been uploaded since)
@@ -1079,7 +1079,7 @@ const firebaseConfig = {
             setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null);
             // Also set fw_auth_cache for instant auth on other pages (comments, ratings, etc.)
             try {
-              localStorage.setItem('fw_auth_cache', JSON.stringify({
+              sessionStorage.setItem('fw_auth_cache', JSON.stringify({
                 loggedIn: true,
                 id: user.uid,
                 name: data.displayName || data.name || user.displayName || user.email?.split('@')[0] || 'User',
@@ -1099,9 +1099,9 @@ const firebaseConfig = {
       } else {
         // Even with cached data, ensure fw_auth_cache is set
         try {
-          const existing = localStorage.getItem('fw_auth_cache');
+          const existing = sessionStorage.getItem('fw_auth_cache');
           if (!existing || JSON.parse(existing).id !== user.uid) {
-            localStorage.setItem('fw_auth_cache', JSON.stringify({
+            sessionStorage.setItem('fw_auth_cache', JSON.stringify({
               loggedIn: true,
               id: user.uid,
               name: user.displayName || user.email?.split('@')[0] || 'User',
@@ -1116,7 +1116,7 @@ const firebaseConfig = {
       }
     } else {
       // User logged out - clear the auth cache
-      try { localStorage.removeItem('fw_auth_cache'); } catch (e) {}
+      try { sessionStorage.removeItem('fw_auth_cache'); } catch (e) {}
     }
     // Update UI AFTER any fetch is complete
     updateAuthUI();

@@ -1273,7 +1273,7 @@ Artist - Track Title
   // Try to restore from localStorage cache first (for instant auth on page reload)
   // This matches the pattern used on live.astro for consistent auth across pages
   try {
-    const cached = localStorage.getItem('fw_auth_cache');
+    const cached = sessionStorage.getItem('fw_auth_cache');
     if (cached) {
       const cachedAuth = JSON.parse(cached);
       // Only use cache if less than 24 hours old
@@ -1291,7 +1291,7 @@ Artist - Track Title
           commentUsername.classList.add('cursor-default', 'bg-gray-700');
         }
       } else if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt >= 86400000) {
-        localStorage.removeItem('fw_auth_cache');
+        sessionStorage.removeItem('fw_auth_cache');
       }
     }
   } catch (e) { /* Ignore cache errors */ }

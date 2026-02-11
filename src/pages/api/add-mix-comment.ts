@@ -118,7 +118,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { mixId, comment, userName, gifUrl, avatarUrl } = await request.json();
+    const { mixId, comment, userName: bodyUserName, gifUrl, avatarUrl } = await request.json();
+
+    // SECURITY: Get verified display name from user document instead of trusting body
+    let userName = bodyUserName?.trim() || 'User';
+    try {
+      const userDoc = await getDocument('users', userId);
+      if (userDoc?.displayName) {
+        userName = userDoc.displayName;
+      } else if (userDoc?.name) {
+        userName = userDoc.name;
+      }
+    } catch {
+      // Fall back to body userName if user doc lookup fails
+    }
 
     log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
 

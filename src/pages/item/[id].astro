@@ -1322,7 +1322,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   // This matches the pattern used on live.astro for consistent auth across pages
   function checkAuthCache() {
     try {
-      const cached = localStorage.getItem('fw_auth_cache');
+      const cached = sessionStorage.getItem('fw_auth_cache');
       if (cached) {
         const cachedAuth = JSON.parse(cached);
         // Only use cache if less than 24 hours old
@@ -1341,7 +1341,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           }
           return true;
         } else if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt >= 86400000) {
-          localStorage.removeItem('fw_auth_cache');
+          sessionStorage.removeItem('fw_auth_cache');
         }
       }
     } catch (e) { /* Ignore cache errors */ }

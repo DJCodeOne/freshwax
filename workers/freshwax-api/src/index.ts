@@ -21,7 +21,7 @@ import {
 // CORS headers
 function corsHeaders(origin: string, env: Env): HeadersInit {
   const allowedOrigins = env.CORS_ORIGIN.split(',').map(o => o.trim());
-  const isAllowed = allowedOrigins.includes(origin) || allowedOrigins.includes('*');
+  const isAllowed = allowedOrigins.includes(origin);
 
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],

@@ -1365,7 +1365,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
   async function getAuthUser() {
     // Check localStorage cache first for instant auth (prevents race condition)
     try {
-      const cached = localStorage.getItem('fw_auth_cache');
+      const cached = sessionStorage.getItem('fw_auth_cache');
       if (cached) {
         const cachedAuth = JSON.parse(cached);
         if (cachedAuth && cachedAuth.id && cachedAuth.timestamp) {

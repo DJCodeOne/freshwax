@@ -3476,11 +3476,11 @@ export const prerender = false;
           }
 
           // Update localStorage cache so it's immediately reflected
-          const cached = localStorage.getItem('fw_auth_cache');
+          const cached = sessionStorage.getItem('fw_auth_cache');
           if (cached) {
             const cachedAuth = JSON.parse(cached);
             cachedAuth.plusBadge = selectedBadge;
-            localStorage.setItem('fw_auth_cache', JSON.stringify(cachedAuth));
+            sessionStorage.setItem('fw_auth_cache', JSON.stringify(cachedAuth));
           }
         } else {
           badgeSaveStatus.textContent = result.error || 'Failed to save';
