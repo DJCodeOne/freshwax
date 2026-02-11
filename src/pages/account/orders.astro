@@ -358,8 +358,9 @@ export const prerender = false;
     return 'status-pending';
   }
   
-  function fetchOrders(userId) {
-    return fetch('/api/get-orders?userId=' + userId)
+  function fetchOrders(userId, idToken) {
+    var headers = idToken ? { 'Authorization': 'Bearer ' + idToken } : {};
+    return fetch('/api/get-orders?userId=' + userId, { headers: headers })
       .then(function(response) { return response.json(); })
       .then(function(data) {
         if (data.success) {
@@ -480,8 +481,8 @@ export const prerender = false;
         
         if (user) {
           currentUser = user;
-          
-          fetchOrders(user.uid).then(function(orders) {
+
+          user.getIdToken().then(function(idToken) { return fetchOrders(user.uid, idToken); }).then(function(orders) {
             
             renderOrders(orders);
             

@@ -1047,6 +1047,9 @@ export const prerender = false;
     modal.style.display = 'flex';
 
     try {
+      // Get auth token for API calls
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+
       // Upload images
       const imageUrls = [];
       const imagesToUpload = uploadedImages.filter(img => img && img.file && !img.uploaded);
@@ -1062,6 +1065,7 @@ export const prerender = false;
 
         const response = await fetch('/api/vinyl/upload-image', {
           method: 'POST',
+          headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {},
           body: imgData
         });
 
@@ -1092,6 +1096,7 @@ export const prerender = false;
 
           const response = await fetch('/api/vinyl/upload-audio', {
             method: 'POST',
+            headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {},
             body: audioData
           });
 
@@ -1140,7 +1145,7 @@ export const prerender = false;
 
       const createResponse = await fetch('/api/vinyl/listing', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify(listingData)
       });
 
@@ -1156,7 +1161,7 @@ export const prerender = false;
 
         await fetch('/api/vinyl/listing', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
           body: JSON.stringify({
             action: 'publish',
             sellerId: sellerInfo.id,

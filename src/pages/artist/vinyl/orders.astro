@@ -122,7 +122,10 @@ export const prerender = false;
   async function loadOrders() {
     try {
       // Use API endpoint instead of direct Firestore
-      const response = await fetch(`/api/vinyl/orders?sellerId=${encodeURIComponent(currentUser.uid)}`);
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(`/api/vinyl/orders?sellerId=${encodeURIComponent(currentUser.uid)}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
       const result = await response.json();
 
       if (!result.success) {

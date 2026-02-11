@@ -207,18 +207,20 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       }
 
       currentUserId = user.uid;
+      const idToken = await user.getIdToken();
+      const authHeaders = { 'Authorization': `Bearer ${idToken}` };
 
       try {
         // Get Stripe Connect status
-        const stripeRes = await fetch(`/api/stripe/connect/user/status?userId=${user.uid}`);
+        const stripeRes = await fetch(`/api/stripe/connect/user/status?userId=${user.uid}`, { headers: authHeaders });
         const stripeData = await stripeRes.json();
 
         // Get PayPal status
-        const paypalRes = await fetch(`/api/paypal/link-account?entityType=user&entityId=${user.uid}`);
+        const paypalRes = await fetch(`/api/paypal/link-account?entityType=user&entityId=${user.uid}`, { headers: authHeaders });
         const paypalData = await paypalRes.json();
 
         // Get payouts
-        const payoutsRes = await fetch(`/api/stripe/connect/user/payouts?userId=${user.uid}`);
+        const payoutsRes = await fetch(`/api/stripe/connect/user/payouts?userId=${user.uid}`, { headers: authHeaders });
         const payoutsData = await payoutsRes.json();
 
         // Store combined data
@@ -422,9 +424,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
 
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/stripe/connect/user/create-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ userId: currentUserId })
       });
 
@@ -458,9 +461,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     btn.disabled = true;
 
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/paypal/link-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, paypalEmail: email })
       });
       const data = await res.json();
@@ -487,9 +491,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
 
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/paypal/link-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, paypalEmail: newEmail })
       });
       const data = await res.json();
@@ -502,9 +507,10 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
   async function setPreferred(method) {
     try {
+      const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/paypal/set-payout-method', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, payoutMethod: method })
       });
       const data = await res.json();
