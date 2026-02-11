@@ -4,6 +4,9 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv, getAdminKey } from '../../lib/admin';
 
+// HTML-escape user-derived strings to prevent injection in emails
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
 const log = {
@@ -141,14 +144,14 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
         <table cellpadding="0" cellspacing="0" border="0" width="100%">
           <tr>
             <td width="56" style="padding-right: 14px; vertical-align: top;">
-              <img src="${item.image || 'https://freshwax.co.uk/logo.webp'}" alt="${item.name}" width="56" height="56" style="border-radius: 6px; object-fit: cover; border: 1px solid #eee;">
+              <img src="${esc(item.image || 'https://freshwax.co.uk/logo.webp')}" alt="${esc(item.name)}" width="56" height="56" style="border-radius: 6px; object-fit: cover; border: 1px solid #eee;">
             </td>
             <td style="vertical-align: top;">
-              <div style="font-weight: 600; color: #111; margin-bottom: 3px; font-size: 14px;">${item.name}</div>
+              <div style="font-weight: 600; color: #111; margin-bottom: 3px; font-size: 14px;">${esc(item.name)}</div>
               <div style="font-size: 12px; color: #888;">
-                ${item.type === 'merch' ? 'Merchandise' : item.type === 'release' || item.type === 'digital' ? 'Digital Download' : item.type || ''}
-                ${item.size ? ` • Size: ${item.size}` : ''}
-                ${item.color ? ` • ${item.color}` : ''}
+                ${item.type === 'merch' ? 'Merchandise' : item.type === 'release' || item.type === 'digital' ? 'Digital Download' : esc(item.type || '')}
+                ${item.size ? ` • Size: ${esc(item.size)}` : ''}
+                ${item.color ? ` • ${esc(item.color)}` : ''}
                 ${item.quantity > 1 ? ` • Qty: ${item.quantity}` : ''}
               </div>
             </td>
@@ -186,12 +189,12 @@ function buildOrderEmailHtml(orderId: string, orderNumber: string, order: any): 
       <td style="background: #fff; padding: 0 24px 24px;">
         <div style="font-weight: 700; color: #333; margin-bottom: 10px; font-size: 14px;">Shipping To</div>
         <div style="color: #555; line-height: 1.6; font-size: 14px;">
-          ${order.customer.firstName} ${order.customer.lastName}<br>
-          ${order.shipping.address1}<br>
-          ${order.shipping.address2 ? order.shipping.address2 + '<br>' : ''}
-          ${order.shipping.city}, ${order.shipping.postcode}<br>
-          ${order.shipping.county ? order.shipping.county + '<br>' : ''}
-          ${order.shipping.country}
+          ${esc(order.customer.firstName)} ${esc(order.customer.lastName)}<br>
+          ${esc(order.shipping.address1)}<br>
+          ${order.shipping.address2 ? esc(order.shipping.address2) + '<br>' : ''}
+          ${esc(order.shipping.city)}, ${esc(order.shipping.postcode)}<br>
+          ${order.shipping.county ? esc(order.shipping.county) + '<br>' : ''}
+          ${esc(order.shipping.country)}
         </div>
       </td>
     </tr>
@@ -342,7 +345,7 @@ async function sendArtistEmail(orderId: string, orderNumber: string, artistPayme
 
   const itemsHtml = artistPayment.items.map((item: any) => `
     <tr>
-      <td style="padding: 6px 8px; border-bottom: 1px solid #eee;">${item.name}</td>
+      <td style="padding: 6px 8px; border-bottom: 1px solid #eee;">${esc(item.name)}</td>
       <td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right;">£${item.price.toFixed(2)}</td>
       <td style="padding: 6px 8px; border-bottom: 1px solid #eee; text-align: right; color: #16a34a; font-weight: 600;">£${item.artistShare.toFixed(2)}</td>
     </tr>
@@ -485,9 +488,9 @@ async function sendStockistEmail(orderId: string, orderNumber: string, stockistO
 
   const itemsHtml = stockistOrder.items.map((item: any) => `
     <tr>
-      <td style="padding: 10px; border: 1px solid #ddd;">${item.name}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${esc(item.name)}</td>
       <td style="padding: 10px; border: 1px solid #ddd; text-align: center;">${item.quantity}</td>
-      <td style="padding: 10px; border: 1px solid #ddd;">${item.vinylColor || 'Standard'}</td>
+      <td style="padding: 10px; border: 1px solid #ddd;">${esc(item.vinylColor || 'Standard')}</td>
     </tr>
   `).join('');
 
@@ -522,12 +525,12 @@ async function sendStockistEmail(orderId: string, orderNumber: string, stockistO
 
               <h3 style="color: #333; margin: 0 0 12px;">Ship To</h3>
               <div style="background: #f8f8f8; padding: 16px; border-radius: 6px; margin-bottom: 24px;">
-                <strong>${customer.firstName} ${customer.lastName}</strong><br>
-                ${shipping?.address1 || ''}<br>
-                ${shipping?.address2 ? shipping.address2 + '<br>' : ''}
-                ${shipping?.city || ''}, ${shipping?.postcode || ''}<br>
-                ${shipping?.county ? shipping.county + '<br>' : ''}
-                ${shipping?.country || 'United Kingdom'}
+                <strong>${esc(customer.firstName)} ${esc(customer.lastName)}</strong><br>
+                ${esc(shipping?.address1 || '')}<br>
+                ${shipping?.address2 ? esc(shipping.address2) + '<br>' : ''}
+                ${esc(shipping?.city || '')}, ${esc(shipping?.postcode || '')}<br>
+                ${shipping?.county ? esc(shipping.county) + '<br>' : ''}
+                ${esc(shipping?.country || 'United Kingdom')}
               </div>
 
               <p style="color: #888; font-size: 13px; text-align: center;">

@@ -2,7 +2,7 @@
 // Creates Stripe checkout session for Plus subscription upgrade
 // Supports unique referral codes from KV (new) and Firebase giftCards (legacy)
 import type { APIRoute } from 'astro';
-import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
 
 export const prerender = false;
@@ -17,6 +17,19 @@ function initFirebase(locals: any) {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    // Initialize Firebase for auth verification
+    const env = (locals as any)?.runtime?.env;
+    initFirebase(locals);
+
+    // Verify user authentication
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
     const { type, priceId, userId, email, promoCode, successUrl, cancelUrl } = body;
 
@@ -28,8 +41,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Get Stripe key from environment
-    const env = (locals as any)?.runtime?.env;
+    // Verify the authenticated user matches the userId in the request
+    if (verifiedUserId !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only create checkouts for your own account'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
     const kv = env?.CACHE as KVNamespace | undefined;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 

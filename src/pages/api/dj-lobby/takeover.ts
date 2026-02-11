@@ -35,7 +35,14 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
 }
 
 // GET: Get takeover request status
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for auth verification
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
@@ -46,6 +53,24 @@ export const GET: APIRoute = async ({ request }) => {
         success: false,
         error: 'User ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the requesting user matches the userId
+    const { verifyUserToken } = await import('../../../lib/firebase-rest');
+    const authHeader = request.headers.get('Authorization');
+    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+    if (!idToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+    const verifiedUid = await verifyUserToken(idToken);
+    if (!verifiedUid || verifiedUid !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only check your own takeover requests'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     if (type === 'incoming') {

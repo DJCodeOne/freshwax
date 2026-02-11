@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { mixId, title, description, tracklist, artworkUrl } = await request.json();
+    const { mixId, title, description, tracklist, artworkUrl, partnerId } = await request.json();
 
     if (!mixId) {
       return new Response(JSON.stringify({

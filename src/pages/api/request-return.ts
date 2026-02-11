@@ -7,6 +7,9 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 export const prerender = false;
 
+// HTML-escape user-derived strings to prevent injection in emails
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 // Generate RMA number
 function generateRMA(): string {
   const date = new Date();
@@ -159,12 +162,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0a0a0a; padding: 40px; color: #fff;">
                 <h1 style="color: #3b82f6;">Return Request Received</h1>
-                <p>Hi ${order.customer.firstName || 'there'},</p>
-                <p>We've received your return request for order <strong>${order.orderNumber}</strong>.</p>
+                <p>Hi ${esc(order.customer.firstName || 'there')},</p>
+                <p>We've received your return request for order <strong>${esc(order.orderNumber)}</strong>.</p>
 
                 <div style="background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 0 0 10px;"><strong>RMA Number:</strong> ${rmaNumber}</p>
-                  <p style="margin: 0 0 10px;"><strong>Reason:</strong> ${reason}</p>
+                  <p style="margin: 0 0 10px;"><strong>RMA Number:</strong> ${esc(rmaNumber)}</p>
+                  <p style="margin: 0 0 10px;"><strong>Reason:</strong> ${esc(reason)}</p>
                   <p style="margin: 0;"><strong>Estimated Refund:</strong> £${refundAmount.toFixed(2)}</p>
                 </div>
 
@@ -206,12 +209,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px;">
                 <h2>New Return Request</h2>
-                <p><strong>RMA:</strong> ${rmaNumber}</p>
-                <p><strong>Order:</strong> ${order.orderNumber}</p>
-                <p><strong>Customer:</strong> ${order.customer.email}</p>
-                <p><strong>Reason:</strong> ${reason}</p>
+                <p><strong>RMA:</strong> ${esc(rmaNumber)}</p>
+                <p><strong>Order:</strong> ${esc(order.orderNumber)}</p>
+                <p><strong>Customer:</strong> ${esc(order.customer.email)}</p>
+                <p><strong>Reason:</strong> ${esc(reason)}</p>
                 <p><strong>Amount:</strong> £${refundAmount.toFixed(2)}</p>
-                ${details ? `<p><strong>Details:</strong> ${details}</p>` : ''}
+                ${details ? `<p><strong>Details:</strong> ${esc(details)}</p>` : ''}
                 <p><a href="https://freshwax.co.uk/admin/returns">Review in Admin</a></p>
               </div>
             `

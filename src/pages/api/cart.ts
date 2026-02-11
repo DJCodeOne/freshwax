@@ -3,12 +3,26 @@
 // Uses the CACHE KV namespace with cart:{userId} keys
 
 import type { APIRoute } from 'astro';
+import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-// Helper to get user ID from cookie or header
-function getUserId(request: Request): string | null {
-  // Check cookie first
+// Helper to get user ID - prefers verified Firebase auth, falls back to cookie for anonymous carts
+async function getUserId(request: Request, locals: any): Promise<string | null> {
+  // Try Firebase auth first (secure, verified identity)
+  try {
+    const env = (locals as any)?.runtime?.env;
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+    const { userId: verifiedUserId } = await verifyRequestUser(request);
+    if (verifiedUserId) return verifiedUserId;
+  } catch {
+    // No auth token - fall through to cookie for anonymous carts
+  }
+
+  // Fallback to cookie for anonymous/pre-auth cart persistence
   const cookieHeader = request.headers.get('cookie') || '';
   const cookies = cookieHeader.split(';').map(c => c.trim());
 
@@ -19,13 +33,12 @@ function getUserId(request: Request): string | null {
     }
   }
 
-  // Fallback to header
-  return request.headers.get('X-User-Id');
+  return null;
 }
 
 // GET /api/cart - Retrieve cart from KV
 export const GET: APIRoute = async ({ request, locals }) => {
-  const userId = getUserId(request);
+  const userId = await getUserId(request, locals);
 
   if (!userId) {
     return new Response(JSON.stringify({
@@ -79,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST /api/cart - Save cart to KV
 export const POST: APIRoute = async ({ request, locals }) => {
-  const userId = getUserId(request);
+  const userId = await getUserId(request, locals);
 
   if (!userId) {
     return new Response(JSON.stringify({
@@ -154,7 +167,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE /api/cart - Clear cart from KV
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  const userId = getUserId(request);
+  const userId = await getUserId(request, locals);
 
   if (!userId) {
     return new Response(JSON.stringify({

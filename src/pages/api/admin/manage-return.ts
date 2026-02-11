@@ -9,6 +9,9 @@ import { refundOrderStock } from '../../../lib/order-utils';
 
 export const prerender = false;
 
+// HTML-escape user-derived strings to prevent injection in emails
+const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
@@ -46,13 +49,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updateData.status = 'approved';
         updateData.approvedAt = now;
         updateData.adminNotes = notes || null;
-        emailSubject = `Return Approved - ${returnRequest.rmaNumber}`;
+        emailSubject = `Return Approved - ${esc(returnRequest.rmaNumber)}`;
         emailContent = `
           <p>Great news! Your return request has been approved.</p>
           <h3>Return Instructions:</h3>
           <ol>
             <li>Pack items securely in original packaging if possible</li>
-            <li>Include a note with your RMA number: <strong>${returnRequest.rmaNumber}</strong></li>
+            <li>Include a note with your RMA number: <strong>${esc(returnRequest.rmaNumber)}</strong></li>
             <li>Send to:<br>
               <strong>Fresh Wax Returns</strong><br>
               [Your return address here]
@@ -66,10 +69,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updateData.status = 'rejected';
         updateData.rejectedAt = now;
         updateData.rejectionReason = notes || 'Return request does not meet our return policy requirements';
-        emailSubject = `Return Request Update - ${returnRequest.rmaNumber}`;
+        emailSubject = `Return Request Update - ${esc(returnRequest.rmaNumber)}`;
         emailContent = `
           <p>Unfortunately, we are unable to approve your return request at this time.</p>
-          <p><strong>Reason:</strong> ${updateData.rejectionReason}</p>
+          <p><strong>Reason:</strong> ${esc(updateData.rejectionReason)}</p>
           <p>If you believe this is an error or have questions, please contact us at contact@freshwax.co.uk</p>
         `;
         break;
@@ -78,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updateData.status = 'received';
         updateData.receivedAt = now;
         updateData.adminNotes = notes || null;
-        emailSubject = `Items Received - ${returnRequest.rmaNumber}`;
+        emailSubject = `Items Received - ${esc(returnRequest.rmaNumber)}`;
         emailContent = `
           <p>We've received your returned items and are inspecting them now.</p>
           <p>Your refund will be processed within 3-5 business days once inspection is complete.</p>
@@ -136,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        emailSubject = `Refund Processed - ${returnRequest.rmaNumber}`;
+        emailSubject = `Refund Processed - ${esc(returnRequest.rmaNumber)}`;
         emailContent = `
           <p>Your refund has been processed!</p>
           <div style="background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -172,9 +175,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             subject: emailSubject,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0a0a0a; padding: 40px; color: #fff;">
-                <h1 style="color: #3b82f6;">${emailSubject.split(' - ')[0]}</h1>
-                <p>Hi ${returnRequest.customerName || 'there'},</p>
-                <p>Update for return request <strong>${returnRequest.rmaNumber}</strong>:</p>
+                <h1 style="color: #3b82f6;">${esc(emailSubject.split(' - ')[0])}</h1>
+                <p>Hi ${esc(returnRequest.customerName || 'there')},</p>
+                <p>Update for return request <strong>${esc(returnRequest.rmaNumber)}</strong>:</p>
                 ${emailContent}
                 <p style="color: #737373; font-size: 12px; margin-top: 30px;">Fresh Wax - Underground Music</p>
               </div>

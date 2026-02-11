@@ -3,7 +3,7 @@
 // Uses service account for writes to ensure Firebase security rules don't block
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
@@ -36,6 +36,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // SECURITY: Verify user authentication
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
     const { artistId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShipsFrom } = body;
 
@@ -44,6 +53,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Artist ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Verify the authenticated user matches the artistId
+    if (verifiedUserId !== artistId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only update your own shipping rates'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Validate shipping rates (must be non-negative if provided)
