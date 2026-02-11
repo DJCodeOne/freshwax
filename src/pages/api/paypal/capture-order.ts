@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createOrder } from '../../../lib/order-utils';
+import { createOrder, validateStock } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 
@@ -91,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // IDEMPOTENCY CHECK: Check if order with this PayPal ID already exists
     try {
       const existingOrders = await queryCollection('orders', {
-        filters: [{ field: 'paymentId', op: 'EQUAL', value: paypalOrderId }],
+        filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
         limit: 1
       });
       if (existingOrders && existingOrders.length > 0) {
@@ -158,6 +158,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // P0 FIX: Validate stock BEFORE capturing payment to prevent overselling
+    // Unlike Stripe webhooks, PayPal capture hasn't happened yet so we can reject
+    try {
+      const stockCheck = await validateStock(orderData.items || []);
+      if (!stockCheck.available) {
+        console.error('[PayPal] Stock unavailable before capture:', stockCheck.unavailableItems);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Some items are no longer available',
+          unavailableItems: stockCheck.unavailableItems
+        }), {
+          status: 409,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } catch (stockErr) {
+      console.error('[PayPal] Stock validation error:', stockErr);
+      // If stock check fails, don't block the purchase - fail open
+      // The alternative (fail closed) would block legitimate purchases
     }
 
     // Get access token

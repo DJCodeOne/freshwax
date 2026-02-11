@@ -5,6 +5,14 @@ import { getDocument, updateDocument, addDocument, clearCache, setDocument, atom
 import { d1UpsertMerch } from './d1-catalog';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
 
+// Escape user data for safe HTML embedding in emails
+function escapeHtml(text: string | null | undefined): string {
+  if (!text) return '';
+  const str = String(text);
+  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return str.replace(/[&<>"']/g, m => map[m]);
+}
+
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
 const log = {
@@ -311,16 +319,25 @@ export async function processVinylCratesOrders(
             soldTo: customer.email,
             updatedAt: now
           }, listing._updateTime);
-        } else if (listing && listing.status !== 'sold') {
-          // Fallback if no _updateTime
-          await updateDocument('vinylListings', listingId, {
-            status: 'sold',
-            soldAt: now,
-            soldOrderNumber: orderNumber,
-            soldOrderId: orderId,
-            soldTo: customer.email,
-            updatedAt: now
-          });
+        } else if (listing && listing.status !== 'sold' && !listing._updateTime) {
+          // No _updateTime means no concurrency protection - re-read and verify before updating
+          console.error('[order-utils] CRITICAL: Listing missing _updateTime, cannot guarantee concurrency protection:', listingId);
+          // Re-read the document to get fresh status
+          const freshListing = await getDocument('vinylListings', listingId);
+          if (freshListing && freshListing.status === 'published' && freshListing._updateTime) {
+            // Got _updateTime on re-read, use conditional update
+            await updateDocumentConditional('vinylListings', listingId, {
+              status: 'sold',
+              soldAt: now,
+              soldOrderNumber: orderNumber,
+              soldOrderId: orderId,
+              soldTo: customer.email,
+              updatedAt: now
+            }, freshListing._updateTime);
+          } else if (freshListing && freshListing.status === 'published') {
+            // Still no _updateTime after re-read - skip to prevent double-sell
+            console.error('[order-utils] CRITICAL: Skipping listing update - no concurrency protection available for:', listingId);
+          }
         } else {
           console.error('[order-utils] Listing already sold or missing:', listingId);
         }
@@ -455,11 +472,11 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
           const variantStock = productData.variantStock || {};
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-          let variantKey = size + '_' + color;
+          const variantKey = size + '_' + color;
 
+          // Exact match only - no heuristic guessing to avoid refunding wrong variant
           if (!variantStock[variantKey]) {
-            const keys = Object.keys(variantStock);
-            if (keys.length === 1) variantKey = keys[0];
+            console.error('[order-utils] Refund: variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
           }
 
           const variant = variantStock[variantKey];
@@ -633,17 +650,12 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
           // Build variant key from size and color
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-          let variantKey = size + '_' + color;
+          const variantKey = size + '_' + color;
 
-          // Check if variant exists, otherwise try default
+          // Exact match only - no heuristic guessing to avoid updating wrong variant
           if (!variantStock[variantKey]) {
-            const keys = Object.keys(variantStock);
-            if (keys.length === 1) {
-              variantKey = keys[0];
-            } else {
-              const sizeMatch = keys.find(k => k.startsWith(size + '_'));
-              if (sizeMatch) variantKey = sizeMatch;
-            }
+            console.error('[order-utils] Variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
+            break;
           }
 
           const variant = variantStock[variantKey];
@@ -703,11 +715,7 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
           const productData = await getDocument('merch', item.productId);
           const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
           const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
-          let variantKey = size + '_' + color;
-          if (productData?.variantStock && !productData.variantStock[variantKey]) {
-            const keys = Object.keys(productData.variantStock);
-            if (keys.length === 1) variantKey = keys[0];
-          }
+          const variantKey = size + '_' + color;
           const variant = productData?.variantStock?.[variantKey];
 
           await addDocument('merch-stock-movements', {
@@ -1180,19 +1188,19 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     else if (item.type === 'track') typeLabel = 'Single Track';
     else if (item.type === 'vinyl') typeLabel = 'Vinyl Record';
     else if (item.type === 'merch') typeLabel = 'Merchandise';
-    else typeLabel = item.type || '';
+    else typeLabel = escapeHtml(item.type) || '';
 
-    const imageHtml = itemImage ? '<img src="' + itemImage + '" alt="' + item.name + '" width="70" height="70" style="border-radius: 8px; display: block; margin: 0 auto;">' : '';
+    const imageHtml = itemImage ? '<img src="' + escapeHtml(itemImage) + '" alt="' + escapeHtml(item.name) + '" width="70" height="70" style="border-radius: 8px; display: block; margin: 0 auto;">' : '';
 
     itemsHtml += '<tr><td style="padding: 16px 0; border-bottom: 1px solid #e5e7eb;">' +
       '<table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>' +
       (itemImage ? '<td width="86" style="padding-right: 16px; vertical-align: middle; text-align: center;">' + imageHtml + '</td>' : '') +
       '<td style="vertical-align: middle; text-align: left;">' +
-      '<div style="font-weight: 600; color: #111; font-size: 15px; margin-bottom: 4px; text-align: left;">' + item.name + '</div>' +
+      '<div style="font-weight: 600; color: #111; font-size: 15px; margin-bottom: 4px; text-align: left;">' + escapeHtml(item.name) + '</div>' +
       '<div style="font-size: 13px; color: #6b7280; text-align: left;">' +
       typeLabel +
-      (item.size ? ' • Size: ' + item.size : '') +
-      (item.color ? ' • ' + item.color : '') +
+      (item.size ? ' • Size: ' + escapeHtml(item.size) : '') +
+      (item.color ? ' • ' + escapeHtml(item.color) : '') +
       (item.quantity > 1 ? ' • Qty: ' + item.quantity : '') +
       '</div></td>' +
       '<td width="80" style="text-align: right; font-weight: 600; color: #111; vertical-align: middle;">£' + (item.price * item.quantity).toFixed(2) + '</td>' +
@@ -1203,12 +1211,12 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<tr><td style="padding: 20px 24px; background: #f9fafb; border-radius: 8px; margin-top: 16px;">' +
     '<div style="font-weight: 700; color: #111; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Shipping To</div>' +
     '<div style="color: #374151; line-height: 1.6; font-size: 14px;">' +
-    order.customer.firstName + ' ' + order.customer.lastName + '<br>' +
-    order.shipping.address1 + '<br>' +
-    (order.shipping.address2 ? order.shipping.address2 + '<br>' : '') +
-    order.shipping.city + ', ' + order.shipping.postcode + '<br>' +
-    (order.shipping.county ? order.shipping.county + '<br>' : '') +
-    order.shipping.country +
+    escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '<br>' +
+    escapeHtml(order.shipping.address1) + '<br>' +
+    (order.shipping.address2 ? escapeHtml(order.shipping.address2) + '<br>' : '') +
+    escapeHtml(order.shipping.city) + ', ' + escapeHtml(order.shipping.postcode) + '<br>' +
+    (order.shipping.county ? escapeHtml(order.shipping.county) + '<br>' : '') +
+    escapeHtml(order.shipping.country) +
     '</div></td></tr><tr><td style="height: 16px;"></td></tr>' : '';
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Order Confirmation</title></head>' +
@@ -1230,7 +1238,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<tr><td align="center" style="padding-bottom: 24px;">' +
     '<div style="display: inline-block; background: #f3f4f6; padding: 12px 24px; border-radius: 8px;">' +
     '<div style="color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Order Number</div>' +
-    '<div style="color: #dc2626; font-size: 18px; font-weight: 700; margin-top: 4px;">' + orderNumber + '</div>' +
+    '<div style="color: #dc2626; font-size: 18px; font-weight: 700; margin-top: 4px;">' + escapeHtml(orderNumber) + '</div>' +
     '</div></td></tr>' +
     '<tr><td style="border-top: 1px solid #e5e7eb; padding-top: 24px;"></td></tr>' +
     '<tr><td style="padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">' +
@@ -1274,7 +1282,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
   let itemsHtml = '';
   for (const item of vinylItems) {
     itemsHtml += '<tr>' +
-      '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">' + item.name + '</td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">' + escapeHtml(item.name) + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">' + (item.quantity || 1) + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">£' + (item.price * (item.quantity || 1)).toFixed(2) + '</td>' +
       '</tr>';
@@ -1324,21 +1332,21 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px;">' +
     '<tr><td style="padding: 16px;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #991b1b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Order Details</div>' +
-    '<div style="font-size: 24px; font-weight: 800; color: #000; margin-bottom: 4px;">' + orderNumber + '</div>' +
+    '<div style="font-size: 24px; font-weight: 800; color: #000; margin-bottom: 4px;">' + escapeHtml(orderNumber) + '</div>' +
     '<div style="font-size: 14px; color: #666;">' + orderDate + '</div>' +
     '</td></tr></table></td></tr>' +
     '<tr><td style="padding-bottom: 24px;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #dc2626; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; border-bottom: 2px solid #dc2626; padding-bottom: 8px;">📍 Ship To</div>' +
     '<div style="font-size: 16px; line-height: 1.6; color: #111;">' +
-    '<strong>' + order.customer.firstName + ' ' + order.customer.lastName + '</strong><br>' +
-    (order.shipping?.address1 || '') + '<br>' +
-    (order.shipping?.address2 ? order.shipping.address2 + '<br>' : '') +
-    (order.shipping?.city || '') + '<br>' +
-    (order.shipping?.postcode || '') + '<br>' +
-    (order.shipping?.county ? order.shipping.county + '<br>' : '') +
-    (order.shipping?.country || 'United Kingdom') +
+    '<strong>' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</strong><br>' +
+    escapeHtml(order.shipping?.address1 || '') + '<br>' +
+    (order.shipping?.address2 ? escapeHtml(order.shipping.address2) + '<br>' : '') +
+    escapeHtml(order.shipping?.city || '') + '<br>' +
+    escapeHtml(order.shipping?.postcode || '') + '<br>' +
+    (order.shipping?.county ? escapeHtml(order.shipping.county) + '<br>' : '') +
+    escapeHtml(order.shipping?.country || 'United Kingdom') +
     '</div>' +
-    (order.customer.phone ? '<div style="margin-top: 8px; font-size: 14px; color: #666;">📞 ' + order.customer.phone + '</div>' : '') +
+    (order.customer.phone ? '<div style="margin-top: 8px; font-size: 14px; color: #666;">📞 ' + escapeHtml(order.customer.phone) + '</div>' : '') +
     '</td></tr>' +
     '<tr><td style="padding-bottom: 24px;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #000; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px;">Vinyl to Pack & Ship</div>' +
@@ -1355,7 +1363,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     '</tr></table></td></tr>' +
     '<tr><td style="padding: 16px; background: #f9fafb; border-radius: 8px;">' +
     '<div style="font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Customer Email</div>' +
-    '<div style="font-size: 14px; color: #111;">' + order.customer.email + '</div>' +
+    '<div style="font-size: 14px; color: #111;">' + escapeHtml(order.customer.email) + '</div>' +
     '</td></tr>' +
     '<tr><td style="padding-top: 24px;">' +
     '<div style="padding: 16px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 0 8px 8px 0;">' +
@@ -1384,7 +1392,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
   for (const item of digitalItems) {
     const typeLabel = item.type === 'track' ? 'Single Track' : 'Digital Release';
     itemsHtml += '<tr>' +
-      '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' + item.name + '<br><span style="font-size: 12px; color: #9ca3af;">' + typeLabel + '</span></td>' +
+      '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' + escapeHtml(item.name) + '<br><span style="font-size: 12px; color: #9ca3af;">' + typeLabel + '</span></td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">£' + (item.price * item.quantity).toFixed(2) + '</td>' +
       '</tr>';
@@ -1400,13 +1408,13 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
     '</td></tr>' +
     '<tr><td style="background: #dc2626; padding: 20px 24px; text-align: center; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626;">' +
     '<div style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 1px;">🎵 DIGITAL SALE!</div>' +
-    '<div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 6px;">Order ' + orderNumber + '</div>' +
+    '<div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 6px;">Order ' + escapeHtml(orderNumber) + '</div>' +
     '</td></tr>' +
     '<tr><td style="background: #111; padding: 24px; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; border-bottom: 2px solid #dc2626; border-radius: 0 0 12px 12px;">' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your music!</div>' +
-    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + order.customer.firstName + ' ' + order.customer.lastName + '</div>' +
+    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
     '</td></tr>' +
     '<tr><td>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
@@ -1452,11 +1460,11 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
 
   let itemsHtml = '';
   for (const item of merchItems) {
-    const details = [item.size ? 'Size: ' + item.size : '', item.color || ''].filter(Boolean).join(' • ');
+    const details = [item.size ? 'Size: ' + escapeHtml(item.size) : '', escapeHtml(item.color) || ''].filter(Boolean).join(' • ');
     itemsHtml += '<tr>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; color: #fff;">' +
-      (item.image ? '<img src="' + item.image + '" width="50" height="50" style="border-radius: 4px; margin-right: 10px; vertical-align: middle;">' : '') +
-      item.name + (details ? '<br><span style="font-size: 12px; color: #9ca3af;">' + details + '</span>' : '') + '</td>' +
+      (item.image ? '<img src="' + escapeHtml(item.image) + '" width="50" height="50" style="border-radius: 4px; margin-right: 10px; vertical-align: middle;">' : '') +
+      escapeHtml(item.name) + (details ? '<br><span style="font-size: 12px; color: #9ca3af;">' + details + '</span>' : '') + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: center; color: #fff;">' + item.quantity + '</td>' +
       '<td style="padding: 12px; border-bottom: 1px solid #374151; text-align: right; font-weight: 600; color: #fff;">£' + (item.price * item.quantity).toFixed(2) + '</td>' +
       '</tr>';
@@ -1467,11 +1475,11 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; color: #9ca3af; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">Ship To</div>' +
     '<div style="color: #fff; line-height: 1.5; font-size: 14px;">' +
-    order.customer.firstName + ' ' + order.customer.lastName + '<br>' +
-    order.shipping.address1 + '<br>' +
-    (order.shipping.address2 ? order.shipping.address2 + '<br>' : '') +
-    order.shipping.city + ', ' + order.shipping.postcode + '<br>' +
-    order.shipping.country +
+    escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '<br>' +
+    escapeHtml(order.shipping.address1) + '<br>' +
+    (order.shipping.address2 ? escapeHtml(order.shipping.address2) + '<br>' : '') +
+    escapeHtml(order.shipping.city) + ', ' + escapeHtml(order.shipping.postcode) + '<br>' +
+    escapeHtml(order.shipping.country) +
     '</div></div></td></tr>' : '';
 
   return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>' +
@@ -1484,13 +1492,13 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '</td></tr>' +
     '<tr><td style="background: #dc2626; padding: 20px 24px; text-align: center; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626;">' +
     '<div style="font-size: 22px; font-weight: 800; color: #fff; letter-spacing: 1px;">👕 MERCH ORDER!</div>' +
-    '<div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 6px;">Order ' + orderNumber + '</div>' +
+    '<div style="font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 6px;">Order ' + escapeHtml(orderNumber) + '</div>' +
     '</td></tr>' +
     '<tr><td style="background: #111; padding: 24px; border-left: 2px solid #dc2626; border-right: 2px solid #dc2626; border-bottom: 2px solid #dc2626; border-radius: 0 0 12px 12px;">' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding-bottom: 20px; text-align: center;">' +
     '<div style="font-size: 18px; font-weight: 700; color: #16a34a;">Someone bought your merch!</div>' +
-    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + order.customer.firstName + ' ' + order.customer.lastName + '</div>' +
+    '<div style="font-size: 14px; color: #9ca3af; margin-top: 4px;">Customer: ' + escapeHtml(order.customer.firstName) + ' ' + escapeHtml(order.customer.lastName) + '</div>' +
     '</td></tr>' +
     '<tr><td>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%" style="border: 1px solid #374151; border-radius: 8px; overflow: hidden; background: #1f2937;">' +
@@ -1523,7 +1531,7 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '<div style="font-size: 14px; color: #78350f; line-height: 1.5;">Please package and dispatch this order. Once shipped, send tracking info to <a href="mailto:orders@freshwax.co.uk" style="color: #92400e;">orders@freshwax.co.uk</a></div>' +
     '</div></td></tr>' +
     '<tr><td style="padding-top: 16px;">' +
-    '<div style="font-size: 12px; color: #9ca3af;">Customer email: <strong style="color: #fff;">' + order.customer.email + '</strong></div>' +
+    '<div style="font-size: 12px; color: #9ca3af;">Customer email: <strong style="color: #fff;">' + escapeHtml(order.customer.email) + '</strong></div>' +
     '</td></tr>' +
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +

@@ -1,22 +1,11 @@
 // src/lib/admin.ts
 // Shared admin utilities for API routes
 import { getDocument } from './firebase-rest';
-import { ApiErrors } from './api-utils';
+import { ApiErrors, timingSafeCompare } from './api-utils';
 import type { APIContext } from 'astro';
 
-/**
- * Timing-safe string comparison to prevent timing attacks
- * Uses constant-time comparison regardless of where strings differ
- */
-function timingSafeEqual(a: string, b: string): boolean {
-  // Always compare full length of the longer string to prevent length leaking
-  const maxLen = Math.max(a.length, b.length);
-  let result = a.length ^ b.length; // Non-zero if lengths differ
-  for (let i = 0; i < maxLen; i++) {
-    result |= (a.charCodeAt(i % a.length) || 0) ^ (b.charCodeAt(i % b.length) || 0);
-  }
-  return result === 0;
-}
+// Use timingSafeCompare from api-utils (shared timing-safe string comparison)
+const timingSafeEqual = timingSafeCompare;
 
 // Admin configuration - loaded from environment variables
 // Fallback to defaults only in development
@@ -54,10 +43,6 @@ export function getAdminUids(): string[] {
 export function getAdminEmails(): string[] {
   return getAdminConfig().emails;
 }
-
-// Backward compatibility - deprecated, use getAdminUids() instead
-export const ADMIN_UIDS: string[] = [];
-export const ADMIN_EMAILS: string[] = [];
 
 // Get admin key from environment
 export function getAdminKey(locals: any): string {

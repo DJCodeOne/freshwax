@@ -2,7 +2,7 @@
 // Redeem a gift card code and add to user's credit balance
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv, verifyRequestUser, updateDocumentConditional } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -146,18 +146,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       throw redeemErr;
     }
 
-    // Get or create user credit document
+    // Atomically increment user credit balance (prevents race conditions)
     const creditDoc = await getDocument('userCredits', userId);
-
-    let newBalance: number;
-    let previousBalance: number = 0;
-
-    if (creditDoc) {
-      previousBalance = creditDoc.balance || 0;
-      newBalance = previousBalance + amountToCredit;
-    } else {
-      newBalance = amountToCredit;
+    if (!creditDoc) {
+      // Create the document first if it doesn't exist
+      await setDocument('userCredits', userId, {
+        userId,
+        balance: 0,
+        lastUpdated: nowISO,
+        transactions: []
+      });
     }
+
+    await atomicIncrement('userCredits', userId, { balance: amountToCredit });
+
+    // Read back the new balance after atomic increment
+    const updatedCreditDoc = await getDocument('userCredits', userId);
+    const newBalance = updatedCreditDoc?.balance || amountToCredit;
 
     // Create transaction record
     const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -171,23 +176,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       balanceAfter: newBalance
     };
 
-    // Update or create credit document
-    if (creditDoc) {
-      // Get existing transactions and add the new one
-      const existingTransactions = creditDoc.transactions || [];
-      await updateDocument('userCredits', userId, {
-        balance: newBalance,
-        lastUpdated: nowISO,
-        transactions: [...existingTransactions, transaction]
-      });
-    } else {
-      await setDocument('userCredits', userId, {
-        userId,
-        balance: newBalance,
-        lastUpdated: nowISO,
-        transactions: [transaction]
-      });
-    }
+    // Append the transaction record
+    const existingTransactions = updatedCreditDoc?.transactions || [];
+    await updateDocument('userCredits', userId, {
+      lastUpdated: nowISO,
+      transactions: [...existingTransactions, transaction]
+    });
 
     // Also update the customer document with the new balance for quick access
     await updateDocument('users', userId, {

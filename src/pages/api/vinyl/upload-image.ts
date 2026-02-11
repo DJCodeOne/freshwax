@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToWebP } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { verifyRequestUser, initFirebaseEnv, getDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -99,6 +99,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'You can only upload images for your own listings'
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // If listingId is a real listing (not temp), verify ownership
+    if (listingId && !listingId.startsWith('temp_')) {
+      const listing = await getDocument('vinylListings', listingId);
+      if (!listing) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Listing not found'
+        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (listing.sellerId !== userId) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'You can only upload images for your own listings'
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
     }
 
     // Validate image index

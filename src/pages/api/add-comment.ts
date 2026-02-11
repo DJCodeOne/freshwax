@@ -3,6 +3,7 @@
 // Dual-write: Firebase + D1
 import type { APIRoute } from 'astro';
 import { getDocument, arrayUnion, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { containsProfanity } from '../../lib/validation';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1AddComment } from '../../lib/d1-catalog';
 
@@ -66,6 +67,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try { const u = new URL(gifUrl); validGif = u.hostname === 'giphy.com' || u.hostname.endsWith('.giphy.com'); } catch {}
       if (!validGif) {
         return new Response(JSON.stringify({ success: false, error: 'Invalid GIF URL' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // Content validation: profanity check on comment text
+    if (comment?.trim()) {
+      const profanityCheck = containsProfanity(comment);
+      if (profanityCheck.found) {
+        return new Response(JSON.stringify({ success: false, error: 'Please keep comments clean and respectful' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
+    // Content validation: profanity check on username
+    if (userName?.trim()) {
+      const userNameCheck = containsProfanity(userName);
+      if (userNameCheck.found) {
+        return new Response(JSON.stringify({ success: false, error: 'Username contains inappropriate content' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
     }
 

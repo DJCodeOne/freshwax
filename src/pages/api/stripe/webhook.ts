@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { createOrder } from '../../../lib/order-utils';
+import { createOrder, validateStock } from '../../../lib/order-utils';
 import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
@@ -1112,11 +1112,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[Stripe Webhook] No shipping details (digital order)');
       }
 
+      // P0 FIX: Validate stock BEFORE creating order to prevent overselling
+      // Payment is already captured at this point, so we can't reject it.
+      // If stock is unavailable, flag the order for admin attention.
+      let stockIssue = false;
+      try {
+        const stockCheck = await validateStock(items);
+        if (!stockCheck.available) {
+          console.error('[Stripe Webhook] Stock unavailable after payment:', stockCheck.unavailableItems);
+          stockIssue = true;
+        }
+      } catch (stockErr) {
+        console.error('[Stripe Webhook] Stock validation error (proceeding with order):', stockErr);
+        // Don't block order creation if stock check itself fails
+      }
+
       console.log('[Stripe Webhook] Calling createOrder with:');
       console.log('[Stripe Webhook]   - Customer:', metadata.customer_email);
       console.log('[Stripe Webhook]   - Items:', items.length);
       console.log('[Stripe Webhook]   - Total:', session.amount_total / 100);
       console.log('[Stripe Webhook]   - PaymentIntent:', session.payment_intent);
+      if (stockIssue) {
+        console.log('[Stripe Webhook]   - STOCK ISSUE: Order will be flagged for admin review');
+      }
 
       // Create order using shared utility
       const result = await createOrder({
@@ -1140,7 +1158,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           },
           hasPhysicalItems: metadata.hasPhysicalItems === 'true',
           paymentMethod: 'stripe',
-          paymentIntentId: session.payment_intent
+          paymentIntentId: session.payment_intent,
+          ...(stockIssue && { stockIssue: true, stockIssueNote: 'Stock was unavailable when payment completed. Requires admin review for potential refund.' })
         },
         env
       });

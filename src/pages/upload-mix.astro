@@ -1144,7 +1144,6 @@ Artist - Track Title
       const result = await response.json();
       if (result.success && result.settings?.djMixes) {
         uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
-        console.log('Upload settings loaded:', uploadSettings);
       }
     } catch (err) {
       console.warn('Could not load upload settings, using defaults');
@@ -1448,7 +1447,6 @@ Artist - Track Title
 
       if (fileSizeMB > LARGE_FILE_THRESHOLD_MB) {
         // LARGE FILE: Use presigned URL for direct R2 upload
-        console.log(`Quick Drop: Large file detected (${fileSizeMB.toFixed(1)}MB), using direct R2 upload`);
         quickDropStatus.textContent = 'Preparing upload...';
 
         // Step 1: Get presigned URL (requires auth)
@@ -1472,7 +1470,6 @@ Artist - Track Title
         }
 
         const { uploadUrl, publicUrl, mixId, folderPath } = await presignResponse.json();
-        console.log('Got presigned URL, starting direct upload...');
 
         // Step 2: Upload directly to R2 with progress tracking
         quickDropStatus.textContent = 'Uploading to cloud storage...';
@@ -1528,7 +1525,10 @@ Artist - Track Title
         // Step 3: Finalize - save metadata to Firebase
         const finalizeResponse = await fetch('/api/mix/finalize-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
           body: JSON.stringify({
             mixId,
             audioUrl: publicUrl,
@@ -1755,7 +1755,6 @@ Artist - Track Title
 
       if (fileSizeMB > LARGE_FILE_THRESHOLD_MB) {
         // LARGE FILE: Use presigned URL for direct R2 upload
-        console.log(`Large file detected (${fileSizeMB.toFixed(1)}MB), using direct R2 upload`);
         statusText.textContent = 'Preparing upload...';
 
         // Step 1: Get presigned URL (including artwork if selected)
@@ -1788,7 +1787,6 @@ Artist - Track Title
         }
 
         const { uploadUrl, publicUrl, mixId, folderPath, artworkUploadUrl, artworkPublicUrl } = await presignResponse.json();
-        console.log('Got presigned URL, starting direct upload...');
 
         // Step 2: Upload directly to R2 with progress tracking
         statusText.textContent = 'Uploading to cloud storage...';
@@ -1851,13 +1849,15 @@ Artist - Track Title
             artworkXhr.send(selectedArtworkFile);
           });
           finalArtworkUrl = artworkPublicUrl;
-          console.log('Artwork uploaded successfully:', finalArtworkUrl);
         }
 
         // Step 3: Finalize - save metadata to Firebase
         const finalizeResponse = await fetch('/api/mix/finalize-upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+          },
           body: JSON.stringify({
             mixId,
             audioUrl: publicUrl,

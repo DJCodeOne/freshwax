@@ -120,7 +120,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // SECURITY: Reject orders with items that failed price validation
     const failedItems = validatedItems.filter((item: any) => item.priceValidationFailed);
-    if (failedItems.length > 0 && validatedTotal === 0) {
+    if (failedItems.length > 0) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unable to verify item prices. Please try again.'
@@ -178,6 +178,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // SECURITY: Deduct credit BEFORE creating order to prevent race condition
+    let creditDeducted = false;
+    if (appliedCredit > 0) {
+      try {
+        await atomicIncrement('userCredits', verifiedUserId, { balance: -appliedCredit });
+        await atomicIncrement('users', verifiedUserId, { creditBalance: -appliedCredit });
+        creditDeducted = true;
+        console.log('[FreeOrder] Credit deducted before order creation:', appliedCredit, 'from user:', verifiedUserId);
+      } catch (creditErr) {
+        console.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Failed to apply credit. Please try again.'
+        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
     // Use validated totals, not client-sent values
     const totals = appliedCredit > 0 ? {
       subtotal: validatedSubtotal,
@@ -197,20 +214,35 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Create the order using the shared order creation utility
-    const result = await createOrder({
-      orderData: {
-        customer: orderData.customer,
-        shipping: orderData.shipping || null,
-        items: validatedItems,
-        totals,
-        hasPhysicalItems: hasPhysicalItems || false,
-        paymentMethod: appliedCredit > 0 ? 'credit' : 'free',
-        paymentIntentId: null,
-        paypalOrderId: null
-      },
-      env,
-      idToken: orderData.idToken
-    });
+    let result: any;
+    try {
+      result = await createOrder({
+        orderData: {
+          customer: orderData.customer,
+          shipping: orderData.shipping || null,
+          items: validatedItems,
+          totals,
+          hasPhysicalItems: hasPhysicalItems || false,
+          paymentMethod: appliedCredit > 0 ? 'credit' : 'free',
+          paymentIntentId: null,
+          paypalOrderId: null
+        },
+        env,
+        idToken: orderData.idToken
+      });
+    } catch (orderErr) {
+      // If credit was deducted but order creation failed, refund the credit
+      if (creditDeducted) {
+        try {
+          await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
+          await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
+          console.log('[FreeOrder] Refunded credit after order creation failure:', appliedCredit);
+        } catch (refundErr) {
+          console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
+        }
+      }
+      throw orderErr;
+    }
 
     if (result.success) {
       // Record to sales ledger (even for free/credit orders for accurate tracking)
@@ -263,49 +295,39 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
       }
 
-      // If credit was applied, deduct atomically from user's balance
-      if (appliedCredit > 0 && orderData.customer?.userId) {
+      // If credit was applied (already deducted before order creation), record the transaction
+      if (creditDeducted && appliedCredit > 0) {
         try {
-          const userId = orderData.customer.userId;
-          const creditData = await getDocument('userCredits', userId);
+          const now = new Date().toISOString();
+          const creditData = await getDocument('userCredits', verifiedUserId);
+          const currentBalance = creditData?.balance || 0;
 
-          if (creditData && creditData.balance >= appliedCredit) {
-            const now = new Date().toISOString();
+          const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const transaction = {
+            id: transactionId,
+            type: 'purchase',
+            amount: -appliedCredit,
+            description: `Applied to order ${result.orderNumber || result.orderId}`,
+            orderId: result.orderId,
+            orderNumber: result.orderNumber,
+            createdAt: now,
+            balanceAfter: currentBalance
+          };
 
-            // Atomically decrement balance to prevent race conditions
-            await atomicIncrement('userCredits', userId, { balance: -appliedCredit });
+          const existingTransactions = creditData?.transactions || [];
+          existingTransactions.push(transaction);
 
-            // Create transaction record
-            const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            const newBalance = creditData.balance - appliedCredit;
-            const transaction = {
-              id: transactionId,
-              type: 'purchase',
-              amount: -appliedCredit,
-              description: `Applied to order ${result.orderNumber || result.orderId}`,
-              orderId: result.orderId,
-              orderNumber: result.orderNumber,
-              createdAt: now,
-              balanceAfter: newBalance
-            };
+          await updateDocument('userCredits', verifiedUserId, {
+            lastUpdated: now,
+            transactions: existingTransactions
+          });
 
-            const existingTransactions = creditData.transactions || [];
-            existingTransactions.push(transaction);
+          await updateDocument('users', verifiedUserId, { creditUpdatedAt: now });
 
-            await updateDocument('userCredits', userId, {
-              lastUpdated: now,
-              transactions: existingTransactions
-            });
-
-            // Also update user document atomically
-            await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
-            await updateDocument('users', userId, { creditUpdatedAt: now });
-
-            console.log('[FreeOrder] Deducted credit atomically:', appliedCredit, 'from user:', userId, 'new balance:', newBalance);
-          }
-        } catch (creditErr) {
-          console.error('[FreeOrder] Failed to deduct credit:', creditErr);
-          // Don't fail the order, just log the error
+          console.log('[FreeOrder] Credit transaction recorded:', appliedCredit, 'from user:', verifiedUserId, 'balance:', currentBalance);
+        } catch (txnErr) {
+          console.error('[FreeOrder] Failed to record credit transaction:', txnErr);
+          // Credit already deducted, transaction record is non-critical
         }
       }
 
@@ -318,6 +340,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     } else {
+      // Order creation returned failure - refund credit if it was deducted
+      if (creditDeducted) {
+        try {
+          await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
+          await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
+          console.log('[FreeOrder] Refunded credit after order failure:', appliedCredit);
+        } catch (refundErr) {
+          console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
+        }
+      }
       return new Response(JSON.stringify({
         success: false,
         error: result.error || 'Failed to create order'

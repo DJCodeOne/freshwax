@@ -257,8 +257,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Process discount/deal info
         const discountPercent = Math.min(Math.max(parseInt(data.discountPercent) || 0, 0), MAX_DISCOUNT);
         const dealType = VALID_DEAL_TYPES.includes(data.dealType) ? data.dealType : 'none';
-        const originalPrice = Math.round(data.price * 100) / 100;
-        const salePrice = discountPercent > 0 ? Math.round(originalPrice * (1 - discountPercent / 100) * 100) / 100 : originalPrice;
+        const originalPrice = parseFloat(data.price.toFixed(2));
+        const salePrice = discountPercent > 0
+          ? parseFloat((originalPrice * (1 - discountPercent / 100)).toFixed(2))
+          : parseFloat(originalPrice.toFixed(2));
 
         const listing = {
           id: newId,
@@ -269,7 +271,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           label: (data.label || '').trim().slice(0, 100),
           catalogNumber: (data.catalogNumber || '').trim().slice(0, 50),
           format: data.format || 'LP',
-          releaseYear: data.releaseYear ? parseInt(data.releaseYear) : null,
+          releaseYear: (() => {
+            const year = data.releaseYear ? parseInt(data.releaseYear) : null;
+            if (year && (year < 1900 || year > new Date().getFullYear() + 5)) return null;
+            return year;
+          })(),
           genre: (data.genre || '').trim().slice(0, 50),
           mediaCondition: data.mediaCondition,
           sleeveCondition: data.sleeveCondition,
@@ -364,6 +370,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
+        // Validate releaseYear bounds if provided
+        if (updateData.releaseYear !== undefined) {
+          const year = updateData.releaseYear ? parseInt(updateData.releaseYear) : null;
+          if (year && (year < 1900 || year > new Date().getFullYear() + 5)) {
+            updateData.releaseYear = null;
+          } else {
+            updateData.releaseYear = year;
+          }
+        }
+
         // Handle price and discount updates together
         if (data.price !== undefined || data.discountPercent !== undefined) {
           const newPrice = data.price !== undefined ? parseFloat(data.price) : existing.originalPrice || existing.price;
@@ -371,11 +387,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             ? Math.min(Math.max(parseInt(data.discountPercent) || 0, 0), MAX_DISCOUNT)
             : existing.discountPercent || 0;
 
-          updateData.originalPrice = Math.round(newPrice * 100) / 100;
+          updateData.originalPrice = parseFloat(newPrice.toFixed(2));
           updateData.discountPercent = newDiscount;
           updateData.price = newDiscount > 0
-            ? Math.round(newPrice * (1 - newDiscount / 100) * 100) / 100
-            : Math.round(newPrice * 100) / 100;
+            ? parseFloat((newPrice * (1 - newDiscount / 100)).toFixed(2))
+            : parseFloat(newPrice.toFixed(2));
         }
 
         // Validate deal type if provided

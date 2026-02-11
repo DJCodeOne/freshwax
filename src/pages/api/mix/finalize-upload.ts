@@ -3,7 +3,8 @@
 // Saves metadata to Firebase
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 
 export const prerender = false;
@@ -21,11 +22,27 @@ function parseTracklist(tracklist: string): string[] {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: upload operations - 10 per hour
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`finalize-mix:${clientId}`, RateLimiters.upload);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+
+  // Require authenticated user
+  const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+  if (authError || !verifiedUserId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: authError || 'Authentication required'
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
 
   try {
     const body = await request.json();
@@ -42,6 +59,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       durationSeconds,
       userId,
     } = body;
+
+    // Verify the authenticated user matches the claimed userId
+    if (userId && userId !== verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'User ID mismatch - you can only finalize uploads for your own account'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
 
     if (!mixId || !audioUrl) {
       return new Response(JSON.stringify({
@@ -95,18 +120,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Use verified userId from auth token (not the untrusted body value)
+    const authenticatedUserId = verifiedUserId;
+
     // Get user's display name from profile
     let displayName = djName || 'Unknown DJ';
-    if (userId) {
+    if (authenticatedUserId) {
       try {
-        let userData = await getDocument('users', userId);
+        const userData = await getDocument('users', authenticatedUserId);
         if (userData?.displayName) {
           displayName = userData.displayName;
-        } else {
-          userData = await getDocument('users', userId);
-          if (userData?.displayName) {
-            displayName = userData.displayName;
-          }
         }
       } catch (e) {
         console.log('[finalize-upload] Could not fetch user data, using provided name');
@@ -143,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       imageUrl: finalArtworkUrl,
       artwork_url: finalArtworkUrl,
       folder_path: folderPath,
-      userId: userId || '',
+      userId: authenticatedUserId,
       upload_date: uploadDate,
       uploadedAt: uploadDate,
       createdAt: uploadDate,

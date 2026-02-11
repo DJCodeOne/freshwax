@@ -1,8 +1,8 @@
 // src/pages/api/update-release.ts
 // Firebase-based release update API - uses service account for writes
-import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
-import { requireAdminAuth } from '../../lib/admin';
+import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 
@@ -94,6 +94,23 @@ export async function POST({ request, locals }: any) {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Verify ownership: authenticated user must own the release or be a super admin
+    const { userId: currentUserId } = await verifyRequestUser(request);
+    if (currentUserId) {
+      const isOwner = releaseDoc.submitterId === currentUserId || releaseDoc.userId === currentUserId;
+      if (!isOwner) {
+        const userIsAdmin = await isAdmin(currentUserId);
+        if (!userIsAdmin) {
+          return new Response(JSON.stringify({
+            error: 'Not authorized to edit this release'
+          }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
     }
 
     // Clean up undefined values (Firestore doesn't like them)

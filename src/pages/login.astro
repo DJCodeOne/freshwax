@@ -200,7 +200,6 @@ const firebaseConfig = {
         document.cookie = 'customerId=; path=/; max-age=0';
         document.cookie = 'partnerId=; path=/; max-age=0';
         
-        console.log('[Login] Cleared cached data, rememberMe:', rememberMe);
       } catch (e) {
         console.warn('[Login] Cache clear error:', e);
       }
@@ -229,7 +228,6 @@ const firebaseConfig = {
         } else {
           sessionStorage.removeItem('fw_email_unverified');
         }
-        console.log('[Login] User already logged in, redirecting to:', redirectTo);
         window.location.href = redirectTo;
       }
     });
@@ -402,8 +400,7 @@ const firebaseConfig = {
         const isNewUser = createdAt >= EMAIL_VERIFY_CUTOFF;
 
         if (!user.emailVerified && isNewUser) {
-          console.log('[Login] Email not verified - blocking login for new user');
-          // Sign them out immediately
+            // Sign them out immediately
           await signOut(auth);
           // Show error and redirect to verify page
           errorMessage.innerHTML = `
@@ -438,13 +435,8 @@ const firebaseConfig = {
           });
           const profile = await profileResponse.json();
 
-          console.log('[Login] User profile response:', profile);
-          console.log('[Login] User UID:', user.uid);
-          console.log('[Login] isAdmin:', profile.isAdmin);
-
           // If user doesn't exist in Firestore, create them (handles orphaned Auth accounts)
           if (!profile.success || profile.error === 'User not found') {
-            console.log('[Login] User not found in Firestore, creating document...');
             const userData = {
               email: user.email,
               displayName: user.displayName || user.email.split('@')[0],
@@ -469,7 +461,6 @@ const firebaseConfig = {
               syncedFromAuth: true
             };
             await setDoc(doc(db, 'users', user.uid), userData);
-            console.log('[Login] Created missing user document');
           }
 
           // Cache the profile in sessionStorage for future use
@@ -491,10 +482,7 @@ const firebaseConfig = {
 
           // If admin, redirect to admin dashboard (unless a specific redirect was requested)
           if (profile.success && profile.isAdmin && redirectTo === '/account/dashboard') {
-            console.log('[Login] Redirecting to admin dashboard');
             finalRedirect = '/admin';
-          } else {
-            console.log('[Login] Redirecting to:', finalRedirect);
           }
           
         } catch (err) {
@@ -513,10 +501,6 @@ const firebaseConfig = {
         }, 1000);
         
       } catch (error) {
-        console.error('Login error:', error);
-        console.error('Error code:', error.code);
-        console.error('Error message:', error.message);
-        
         let message = 'Login failed. Please try again.';
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
           message = 'Invalid email or password.';
@@ -526,12 +510,6 @@ const firebaseConfig = {
           message = 'This account has been disabled.';
         } else if (error.code === 'auth/network-request-failed') {
           message = 'Network error. Please check your connection.';
-        } else if (error.code) {
-          message = `Login failed: ${error.code}`;
-        } else if (error.message) {
-          message = `Login failed: ${error.message}`;
-        } else {
-          message = `Login failed: ${JSON.stringify(error)}`;
         }
         
         errorMessage.textContent = message;

@@ -339,17 +339,46 @@ export async function recordMultiSellerSale(params: {
       sum + (item.price * (item.quantity || 1)), 0);
     const totalFees = (params.stripeFee || 0) + (params.paypalFee || 0) + (params.freshWaxFee || 0);
 
+    // Pre-compute fee distribution using largest-remainder method to avoid rounding errors
+    // This ensures the sum of individual rounded fees equals the total fee exactly
+    const sellerIds = [...sellerGroups.keys()];
+    const sellerSubtotals = new Map<string, number>();
+    for (const [sellerId, sellerItems] of sellerGroups) {
+      sellerSubtotals.set(sellerId, sellerItems.reduce((sum, item) =>
+        sum + (item.price * (item.quantity || 1)), 0));
+    }
+
+    function distributeWithLargestRemainder(total: number, sellerIds: string[]): Map<string, number> {
+      const totalCents = Math.round(total * 100);
+      const proportions = sellerIds.map(id => {
+        const proportion = orderSubtotal > 0 ? (sellerSubtotals.get(id) || 0) / orderSubtotal : 0;
+        const exact = totalCents * proportion;
+        return { id, exact, floored: Math.floor(exact), remainder: exact - Math.floor(exact) };
+      });
+      let sumFloored = proportions.reduce((s, p) => s + p.floored, 0);
+      // Sort by largest remainder descending, distribute leftover pennies
+      proportions.sort((a, b) => b.remainder - a.remainder);
+      for (const p of proportions) {
+        if (sumFloored < totalCents) { p.floored++; sumFloored++; }
+      }
+      const result = new Map<string, number>();
+      for (const p of proportions) { result.set(p.id, p.floored / 100); }
+      return result;
+    }
+
+    const distributedStripeFees = distributeWithLargestRemainder(params.stripeFee || 0, sellerIds);
+    const distributedPaypalFees = distributeWithLargestRemainder(params.paypalFee || 0, sellerIds);
+    const distributedFreshWaxFees = distributeWithLargestRemainder(params.freshWaxFee || 0, sellerIds);
+
     // Create ledger entry for each seller
     for (const [sellerId, sellerItems] of sellerGroups) {
       // Calculate this seller's portion
-      const sellerSubtotal = sellerItems.reduce((sum, item) =>
-        sum + (item.price * (item.quantity || 1)), 0);
-      const sellerProportion = orderSubtotal > 0 ? sellerSubtotal / orderSubtotal : 0;
+      const sellerSubtotal = sellerSubtotals.get(sellerId) || 0;
 
-      // Proportional fees
-      const sellerStripeFee = (params.stripeFee || 0) * sellerProportion;
-      const sellerPaypalFee = (params.paypalFee || 0) * sellerProportion;
-      const sellerFreshWaxFee = (params.freshWaxFee || 0) * sellerProportion;
+      // Use pre-distributed fees (largest-remainder method ensures they sum correctly)
+      const sellerStripeFee = distributedStripeFees.get(sellerId) || 0;
+      const sellerPaypalFee = distributedPaypalFees.get(sellerId) || 0;
+      const sellerFreshWaxFee = distributedFreshWaxFees.get(sellerId) || 0;
       const sellerTotalFees = sellerStripeFee + sellerPaypalFee + sellerFreshWaxFee;
       const sellerNetRevenue = sellerSubtotal - sellerTotalFees;
 
@@ -395,9 +424,9 @@ export async function recordMultiSellerSale(params: {
         shipping: 0, // Shipping handled separately or by platform
         discount: 0,
         grossTotal: sellerSubtotal, // Seller's gross is their item total
-        stripeFee: Math.round(sellerStripeFee * 100) / 100,
-        paypalFee: Math.round(sellerPaypalFee * 100) / 100,
-        freshWaxFee: Math.round(sellerFreshWaxFee * 100) / 100,
+        stripeFee: sellerStripeFee,
+        paypalFee: sellerPaypalFee,
+        freshWaxFee: sellerFreshWaxFee,
         totalFees: Math.round(sellerTotalFees * 100) / 100,
         netRevenue: Math.round(sellerNetRevenue * 100) / 100,
         // Artist payout

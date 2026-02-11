@@ -53,7 +53,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const env = (locals as any)?.runtime?.env;
+    // Validate file size (500MB max for large file upload path)
+    const MAX_LARGE_FILE_SIZE = 500 * 1024 * 1024; // 500MB
+    if (fileSize && fileSize > MAX_LARGE_FILE_SIZE) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'File too large. Maximum file size is 500MB.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate content type is audio
+    const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
+    if (!allowedAudioTypes.includes(contentType) && !fileName.toLowerCase().match(/\.(mp3|wav)$/)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid audio format. Only MP3 and WAV files are allowed.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Validate filename has a valid extension
+    const validExtensions = /\.(mp3|wav)$/i;
+    if (!validExtensions.test(fileName)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid file extension. Only .mp3 and .wav files are allowed.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const config = getR2Config(env);
 
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {

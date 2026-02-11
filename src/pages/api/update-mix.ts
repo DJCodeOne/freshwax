@@ -3,8 +3,17 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
+import { isAdmin } from '../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: write operations - 30 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-mix:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -33,8 +42,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    console.log('[update-mix] Auth check:', { currentUserId });
-
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);
 
@@ -48,32 +55,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Check ownership - allow if:
-    // 1. userId matches, OR
-    // 2. Mix has no userId (backfill scenario - allow if user ID is passed)
+    // Check ownership - allow if userId matches
     const isOwner = mixData?.userId === currentUserId;
-    const canBackfillOwnership = !mixData?.userId && currentUserId;
 
-    console.log('[update-mix] Ownership check:', {
-      mixUserId: mixData?.userId,
-      currentUserId,
-      isOwner,
-      canBackfillOwnership
-    });
-
-    // Also check by artist name if partnerId is set
-    let isPartnerOwner = false;
-    if (!isOwner && !canBackfillOwnership && partnerId) {
-      const partnerDoc = await getDocument('artists', partnerId);
-      const partnerName = partnerDoc?.artistName?.toLowerCase().trim() || null;
-      const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
-
-      if (partnerName && mixDjName === partnerName) {
-        isPartnerOwner = true;
-      }
+    // Orphaned mixes (no userId) can only be backfilled by admins
+    let canBackfillOwnership = false;
+    if (!mixData?.userId && currentUserId) {
+      canBackfillOwnership = await isAdmin(currentUserId);
     }
 
-    if (!isOwner && !canBackfillOwnership && !isPartnerOwner) {
+    if (!isOwner && !canBackfillOwnership) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Not authorized to edit this mix'
@@ -149,7 +140,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const updatedMix = await getDocument('dj-mixes', mixId);
         if (updatedMix) {
           await d1UpsertMix(db, mixId, updatedMix);
-          console.log('[update-mix] Also updated in D1');
         }
       } catch (d1Error) {
         // Log D1 error but don't fail the request

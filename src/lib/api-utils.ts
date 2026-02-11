@@ -157,7 +157,7 @@ export function validateAdminKey(
 /**
  * Timing-safe string comparison to prevent timing attacks
  */
-function timingSafeCompare(a: string, b: string): boolean {
+export function timingSafeCompare(a: string, b: string): boolean {
   const maxLen = Math.max(a.length, b.length);
   let result = a.length ^ b.length;
   for (let i = 0; i < maxLen; i++) {

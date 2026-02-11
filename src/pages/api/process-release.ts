@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
 import { saSetDocument, saQueryCollection } from '../../lib/firebase-service-account';
+import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -145,10 +146,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const listResponse = await awsClient.fetch(listUrl);
     const listXml = await listResponse.text();
 
+    // Parse keys and sizes from R2 listing XML
     const keyMatches = listXml.matchAll(/<Key>([^<]+)<\/Key>/g);
+    const sizeMatches = listXml.matchAll(/<Size>([^<]+)<\/Size>/g);
     const files: string[] = [];
-    for (const match of keyMatches) {
-      files.push(match[1]);
+    const fileSizes: Map<string, number> = new Map();
+    const keys = [...keyMatches];
+    const sizes = [...sizeMatches];
+    for (let idx = 0; idx < keys.length; idx++) {
+      const key = keys[idx][1];
+      files.push(key);
+      if (idx < sizes.length) {
+        fileSizes.set(key, parseInt(sizes[idx][1], 10) || 0);
+      }
     }
 
     // Find artwork and audio files
@@ -171,6 +181,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
         audioFiles.push(file);
         log.debug(`Found audio: ${file}`);
       }
+    }
+
+    // Server-side file size validation
+    const MAX_SINGLE_AUDIO_SIZE = 200 * 1024 * 1024; // 200MB per file
+    const MAX_TOTAL_UPLOAD_SIZE = 2 * 1024 * 1024 * 1024; // 2GB total
+    let totalUploadSize = 0;
+
+    for (const audioFile of audioFiles) {
+      const fileSize = fileSizes.get(audioFile) || 0;
+      totalUploadSize += fileSize;
+
+      if (fileSize > MAX_SINGLE_AUDIO_SIZE) {
+        const sizeMB = (fileSize / (1024 * 1024)).toFixed(1);
+        const filename = audioFile.split('/').pop() || audioFile;
+        log.error(`Audio file too large: ${filename} (${sizeMB}MB, max 200MB)`);
+        return ApiErrors.badRequest(`Audio file "${filename}" is ${sizeMB}MB which exceeds the 200MB limit per file`);
+      }
+    }
+
+    if (totalUploadSize > MAX_TOTAL_UPLOAD_SIZE) {
+      const totalGB = (totalUploadSize / (1024 * 1024 * 1024)).toFixed(2);
+      log.error(`Total upload size too large: ${totalGB}GB (max 2GB)`);
+      return ApiErrors.badRequest(`Total upload size is ${totalGB}GB which exceeds the 2GB limit`);
     }
 
     log.info(`Found ${audioFiles.length} audio files, artwork: ${artworkKey || 'none'}`);
@@ -203,9 +236,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return copyResponse.ok;
     }
 
-    // Copy artwork
+    // Copy artwork (with magic byte validation)
     let artworkUrl = `${R2_CONFIG.publicDomain}/place-holder.webp`;
     if (artworkKey) {
+      // Validate artwork magic bytes before copying to releases folder
+      const artworkFetchUrl = `${bucketUrl}/${encodeURIComponent(artworkKey)}`;
+      const artworkHeadResp = await awsClient.fetch(artworkFetchUrl, {
+        headers: { 'Range': 'bytes=0-11' }
+      });
+      if (artworkHeadResp.ok) {
+        const artworkBytes = new Uint8Array(await artworkHeadResp.arrayBuffer());
+        let magicValid = false;
+        if (artworkBytes[0] === 0xFF && artworkBytes[1] === 0xD8 && artworkBytes[2] === 0xFF) {
+          magicValid = true; // JPEG
+        } else if (artworkBytes[0] === 0x89 && artworkBytes[1] === 0x50 && artworkBytes[2] === 0x4E && artworkBytes[3] === 0x47) {
+          magicValid = true; // PNG
+        } else if (artworkBytes[0] === 0x52 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x46
+          && artworkBytes[8] === 0x57 && artworkBytes[9] === 0x45 && artworkBytes[10] === 0x42 && artworkBytes[11] === 0x50) {
+          magicValid = true; // WebP (RIFF....WEBP)
+        } else if (artworkBytes[0] === 0x47 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x38) {
+          magicValid = true; // GIF
+        }
+        if (!magicValid) {
+          log.error(`Artwork file failed magic byte validation: ${artworkKey}`);
+          return ApiErrors.badRequest('Artwork file content does not match a valid image format (JPEG, PNG, WebP, GIF).');
+        }
+      }
+
       const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
       const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
 
@@ -416,8 +473,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       masteredBy: metadata.masteredBy || '',
 
       // Pricing
-      pricePerSale: parseFloat(metadata.pricePerSale) || 7.99,
-      trackPrice: parseFloat(metadata.trackPrice) || 1.99,
+      pricePerSale: Math.max(0, parseFloat(metadata.pricePerSale) || 0) || 7.99,
+      trackPrice: Math.max(0, parseFloat(metadata.trackPrice) || 0) || 1.99,
 
       // Copyright
       copyrightYear: metadata.copyrightYear || new Date().getFullYear().toString(),
@@ -427,7 +484,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Vinyl
       vinylRelease: metadata.vinylRelease || false,
-      vinylPrice: parseFloat(metadata.vinylPrice) || 0,
+      vinylPrice: Math.max(0, parseFloat(metadata.vinylPrice) || 0),
 
       // Status
       status: 'pending',
@@ -461,6 +518,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Save to Firebase using service account auth
     await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, releaseData);
+
+    // Invalidate releases cache so new release appears in listings
+    invalidateReleasesCache();
+    clearCache(`doc:releases:${releaseId}`);
 
     log.info(`Created release: ${releaseId}`);
 

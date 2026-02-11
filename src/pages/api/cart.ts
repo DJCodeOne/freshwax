@@ -7,7 +7,7 @@ import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-// Helper to get user ID - prefers verified Firebase auth, falls back to cookie for anonymous carts
+// Helper to get user ID - prefers verified Firebase auth, falls back to cookie for anonymous carts (GET only)
 async function getUserId(request: Request, locals: any): Promise<string | null> {
   // Try Firebase auth first (secure, verified identity)
   try {
@@ -19,10 +19,15 @@ async function getUserId(request: Request, locals: any): Promise<string | null> 
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId) return verifiedUserId;
   } catch {
-    // No auth token - fall through to cookie for anonymous carts
+    // No auth token - fall through to cookie for GET requests only
   }
 
-  // Fallback to cookie for anonymous/pre-auth cart persistence
+  // Cookie fallback only allowed for GET (read-only) requests to prevent IDOR on writes
+  if (request.method !== 'GET') {
+    return null;
+  }
+
+  // Fallback to cookie for anonymous/pre-auth cart persistence (GET only)
   const cookieHeader = request.headers.get('cookie') || '';
   const cookies = cookieHeader.split(';').map(c => c.trim());
 

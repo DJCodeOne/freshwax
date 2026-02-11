@@ -772,7 +772,6 @@ export function clearAllMerchCache(): void {
 
 export function invalidateUsersCache(): void {
   clearCache('users');
-  clearCache('users');
   clearCache('artists');
 }
 

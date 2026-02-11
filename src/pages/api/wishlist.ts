@@ -1,7 +1,7 @@
 // src/pages/api/wishlist.ts
 // Wishlist management API - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument , initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, getDocumentsBatch, setDocument, updateDocument , initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
   // Initialize Firebase from runtime env
@@ -32,28 +32,27 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // If wishlist has items, fetch release details
     if (wishlist.length > 0) {
-      const releases: any[] = [];
+      // Cap at 50 items to prevent runaway queries
+      const itemsToFetch = wishlist.slice(0, 50);
 
-      // Fetch each release individually (REST API doesn't support __name__ in)
-      for (const releaseId of wishlist) {
-        try {
-          const releaseData = await getDocument('releases', releaseId);
-          if (releaseData) {
-            releases.push({
-              id: releaseId,
-              ...releaseData,
-              addedToWishlist: true
-            });
-          }
-        } catch (e) {
-          // Release might have been deleted
-          console.warn('[WISHLIST] Release not found:', releaseId);
+      // Batch fetch all releases in one call instead of N+1 individual queries
+      const releaseMap = await getDocumentsBatch('releases', itemsToFetch);
+
+      const releases: any[] = [];
+      for (const releaseId of itemsToFetch) {
+        const releaseData = releaseMap.get(releaseId);
+        if (releaseData) {
+          releases.push({
+            id: releaseId,
+            ...releaseData,
+            addedToWishlist: true
+          });
         }
       }
 
       // Sort by wishlist order (most recently added first - reverse of array order)
       releases.sort((a, b) => {
-        return wishlist.indexOf(b.id) - wishlist.indexOf(a.id);
+        return itemsToFetch.indexOf(b.id) - itemsToFetch.indexOf(a.id);
       });
 
       // Return actual found releases count (not stored IDs count)

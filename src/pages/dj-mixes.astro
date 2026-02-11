@@ -597,6 +597,13 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
 </Layout>
 
 <script>
+  function escapeHtml(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
   // Floating chart functionality
   document.addEventListener('DOMContentLoaded', async function() {
     const floatingChart = document.getElementById('floatingChart');
@@ -641,10 +648,10 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
           chartList.innerHTML = data.chart.slice(0, 10).map((mix, index) => `
             <a href="/dj-mix/${mix.id}" class="chart-item">
               <span class="chart-position">${index + 1}</span>
-              <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${mix.title}" class="chart-artwork" width="48" height="48" />
+              <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)}" class="chart-artwork" width="48" height="48" />
               <div class="chart-info">
-                <span class="chart-title">${mix.title || 'Untitled'}</span>
-                <span class="chart-dj">${mix.dj_name || mix.djName || 'Unknown DJ'}</span>
+                <span class="chart-title">${escapeHtml(mix.title || 'Untitled')}</span>
+                <span class="chart-dj">${escapeHtml(mix.dj_name || mix.djName || 'Unknown DJ')}</span>
               </div>
               <span class="chart-score">${mix.score || 0}</span>
             </a>

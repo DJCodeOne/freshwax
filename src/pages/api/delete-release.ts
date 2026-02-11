@@ -1,10 +1,10 @@
 // src/pages/api/delete-release.ts
 // Deletes a release from Firebase (releases collection + master list)
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { requireAdminAuth } from '../../lib/admin';
+import { requireAdminAuth, isAdmin } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -98,6 +98,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const releaseData = releaseDoc;
+
+    // Verify ownership: authenticated user must own the release or be a super admin
+    const { userId: currentUserId } = await verifyRequestUser(request);
+    if (currentUserId) {
+      const isOwner = releaseData.submitterId === currentUserId || releaseData.userId === currentUserId;
+      if (!isOwner) {
+        const userIsAdmin = await isAdmin(currentUserId);
+        if (!userIsAdmin) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Not authorized to delete this release'
+          }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      }
+    }
 
     // Delete the release document using service account auth
     await saDeleteDocument(serviceAccountKey, projectId, 'releases', releaseId);

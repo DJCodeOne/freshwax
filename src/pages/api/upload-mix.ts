@@ -2,9 +2,12 @@
 // Uploads DJ mixes to R2 and Firebase with production-ready logging
 
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+export const prerender = false;
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -80,6 +83,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const R2_CONFIG = getR2Config(env);
   const s3Client = createS3Client(R2_CONFIG);
 
+  // Track uploaded R2 keys for cleanup on failure
+  const uploadedR2Keys: string[] = [];
+
   try {
     const formData = await request.formData();
 
@@ -118,12 +124,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Validate audio file size (500MB max for DJ mixes)
-    const MAX_MIX_SIZE = 500 * 1024 * 1024;
+    // Validate audio file size (100MB max for FormData uploads to avoid Worker memory limits)
+    // Files over 100MB should use the large file upload flow via /api/mix/presign-upload
+    const MAX_MIX_SIZE = 100 * 1024 * 1024;
     if (audioFile && audioFile.size > MAX_MIX_SIZE) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Audio file too large. Maximum 500MB allowed.'
+        error: 'Audio file too large for this upload method. Maximum 100MB allowed via direct upload. For files up to 500MB, please use the large file upload option which uploads directly to cloud storage.'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -140,6 +147,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return new Response(JSON.stringify({
           success: false,
           error: 'Artwork too large. Maximum 10MB allowed.'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      // Magic byte validation: verify file content matches claimed MIME type
+      const artworkBytes = new Uint8Array(await artworkFile.slice(0, 12).arrayBuffer());
+      let magicValid = false;
+      if (artworkBytes[0] === 0xFF && artworkBytes[1] === 0xD8 && artworkBytes[2] === 0xFF) {
+        magicValid = true; // JPEG
+      } else if (artworkBytes[0] === 0x89 && artworkBytes[1] === 0x50 && artworkBytes[2] === 0x4E && artworkBytes[3] === 0x47) {
+        magicValid = true; // PNG
+      } else if (artworkBytes[0] === 0x52 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x46
+        && artworkBytes[8] === 0x57 && artworkBytes[9] === 0x45 && artworkBytes[10] === 0x42 && artworkBytes[11] === 0x50) {
+        magicValid = true; // WebP (RIFF....WEBP)
+      } else if (artworkBytes[0] === 0x47 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x38) {
+        magicValid = true; // GIF
+      }
+      if (!magicValid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Artwork file content does not match its claimed type. Please upload a valid image.'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
     }
@@ -212,17 +239,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         CacheControl: 'public, max-age=31536000',
       })
     );
+    uploadedR2Keys.push(audioKey);
 
     const audioUrl = `${R2_CONFIG.publicDomain}/${audioKey}`;
 
     // Upload artwork to R2 (or use default)
     let artworkUrl: string;
-    
+
     if (artworkFile && artworkFile.size > 0) {
       const artworkBuffer = await artworkFile.arrayBuffer();
       const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
       const artworkKey = `${folderPath}/artwork.${artworkExt}`;
-      
+
       await s3Client.send(
         new PutObjectCommand({
           Bucket: R2_CONFIG.bucketName,
@@ -232,6 +260,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           CacheControl: 'public, max-age=31536000',
         })
       );
+      uploadedR2Keys.push(artworkKey);
 
       artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
     } else {
@@ -279,6 +308,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('dj-mixes', mixId, mixData);
 
+    // Dual-write to D1 (non-blocking)
+    const db = env?.DB;
+    if (db) {
+      try {
+        await d1UpsertMix(db, mixId, mixData);
+        log.info('[upload-mix] Also written to D1');
+      } catch (d1Error) {
+        log.error('[upload-mix] D1 dual-write failed (non-critical):', d1Error);
+      }
+    }
+
     log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 
     return new Response(JSON.stringify({
@@ -300,7 +340,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[upload-mix] Error:', error);
-    
+
+    // Clean up any R2 objects that were uploaded before the failure
+    if (uploadedR2Keys.length > 0) {
+      try {
+        for (const key of uploadedR2Keys) {
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: R2_CONFIG.bucketName,
+            Key: key,
+          }));
+          log.info(`[upload-mix] Cleaned up R2 object: ${key}`);
+        }
+      } catch (cleanupError) {
+        log.error('[upload-mix] R2 cleanup error (original error preserved):', cleanupError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to upload mix'

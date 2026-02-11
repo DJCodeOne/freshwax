@@ -292,6 +292,13 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
     const releasesList = document.getElementById('releasesList');
     const emptyState = document.getElementById('emptyState');
     const filterTabs = document.querySelectorAll('.filter-tab');
@@ -364,10 +371,10 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         
         return `
           <div class="release-card" data-id="${release.id}">
-            <img src="${release.artwork || '/images/placeholder-album.jpg'}" alt="${release.title}" class="release-artwork">
+            <img src="${release.artwork || '/images/placeholder-album.jpg'}" alt="${escapeHtml(release.title)}" class="release-artwork">
             <div class="release-info">
-              <div class="release-title">${release.title || 'Untitled'}</div>
-              <div class="release-meta">${release.artistName || 'Unknown Artist'} • ${release.trackCount || 0} tracks</div>
+              <div class="release-title">${escapeHtml(release.title || 'Untitled')}</div>
+              <div class="release-meta">${escapeHtml(release.artistName || 'Unknown Artist')} • ${release.trackCount || 0} tracks</div>
               <div class="release-stats">
                 <span>💰 ${release.salesCount || 0} sales</span>
                 <span>▶️ ${release.plays || 0} plays</span>

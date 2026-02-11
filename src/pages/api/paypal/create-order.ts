@@ -123,7 +123,7 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
         }
       }
 
-      if (Math.abs(serverPrice - item.price) > 0.02) {
+      if (Math.abs(serverPrice - item.price) > 0.01) {
         console.warn('[PayPal] Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
         hasPriceMismatch = true;
       }

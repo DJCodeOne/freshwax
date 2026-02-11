@@ -64,9 +64,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Validate the key to prevent path traversal and uploading to arbitrary locations
+    // Decode URL-encoded characters first to prevent bypass via %2e%2e etc.
+    const decodedKey = decodeURIComponent(key);
     const ALLOWED_PREFIXES = ['releases/', 'submissions/', 'dj-mixes/', 'vinyl/', 'merch/', 'avatars/'];
-    const normalizedKey = key.replace(/\\/g, '/'); // Normalize backslashes
+    const normalizedKey = decodedKey.replace(/\\/g, '/'); // Normalize backslashes
     if (
+      normalizedKey.includes('\0') ||
       normalizedKey.includes('..') ||
       normalizedKey.startsWith('/') ||
       !ALLOWED_PREFIXES.some((prefix: string) => normalizedKey.startsWith(prefix))

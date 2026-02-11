@@ -1397,6 +1397,13 @@ const faqs = [
 </style>
 
 <script is:inline>
+  function escapeHtml(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
   let allListings = [];
   let allCollections = [];
   let currentCollection = 'all';
@@ -1599,7 +1606,7 @@ const faqs = [
         <div class="seller-section" id="seller-${sellerKey}" data-seller-key="${sellerKey}">
           <div class="seller-header">
             <div class="seller-header-inner">
-              <h3 class="seller-name">${seller.name}</h3>
+              <h3 class="seller-name">${escapeHtml(seller.name)}</h3>
               <p class="seller-count">${sellerListings.length} release${sellerListings.length !== 1 ? 's' : ''}</p>
             </div>
           </div>
@@ -1681,7 +1688,7 @@ const faqs = [
             <div class="vinyl-left-col">
               <div class="vinyl-artwork">
                 ${imageUrl
-                  ? `<img src="${imageUrl}" alt="${listing.title}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                  ? `<img src="${imageUrl}" alt="${escapeHtml(listing.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
                      <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
                   : '<div class="vinyl-artwork-placeholder">📀</div>'}
                 ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
@@ -1704,13 +1711,13 @@ const faqs = [
 
             <!-- MIDDLE COLUMN: Details (centered) -->
             <div class="vinyl-middle-col">
-              <h3 class="vinyl-title">${listing.title || 'Untitled'}</h3>
-              <p class="vinyl-artist">${listing.artist || 'Unknown Artist'}</p>
-              <p class="vinyl-seller-line">© <span>${listing.sellerName || 'Unknown Seller'}</span></p>
+              <h3 class="vinyl-title">${escapeHtml(listing.title || 'Untitled')}</h3>
+              <p class="vinyl-artist">${escapeHtml(listing.artist || 'Unknown Artist')}</p>
+              <p class="vinyl-seller-line">© <span>${escapeHtml(listing.sellerName || 'Unknown Seller')}</span></p>
 
               <div class="vinyl-tags-row">
-                ${listing.catalogNumber ? `<span class="vinyl-tag">${listing.catalogNumber}</span>` : ''}
-                <span class="vinyl-tag">${listing.genre || 'Vinyl'} / ${listing.format || 'LP'}</span>
+                ${listing.catalogNumber ? `<span class="vinyl-tag">${escapeHtml(listing.catalogNumber)}</span>` : ''}
+                <span class="vinyl-tag">${escapeHtml(listing.genre || 'Vinyl')} / ${escapeHtml(listing.format || 'LP')}</span>
               </div>
               <div class="vinyl-conditions-row">
                 ${renderConditionBadgeInline(mediaCond, 'Record')}
@@ -1740,7 +1747,7 @@ const faqs = [
                     <button class="track-play-btn">
                       <svg fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     </button>
-                    <span class="track-name"><span class="track-num">${i + 1}</span> ${track.name || track.title || 'Untitled'}</span>
+                    <span class="track-name"><span class="track-num">${i + 1}</span> ${escapeHtml(track.name || track.title || 'Untitled')}</span>
                   </div>
                 `).join('') : `
                   <div class="track-item">
