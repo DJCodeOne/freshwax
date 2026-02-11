@@ -77,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: `Account updated: ${(event.data.object as Stripe.Account).id}`,
           metadata: { accountId: (event.data.object as Stripe.Account).id },
           processingTimeMs: Date.now() - startTime
-        }).catch(() => {});
+        }).catch(e => console.error('[Connect Webhook] Log error:', e));
         break;
 
       case 'transfer.created':
@@ -86,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: `Transfer created: ${(event.data.object as Stripe.Transfer).id}`,
           metadata: { transferId: (event.data.object as Stripe.Transfer).id },
           processingTimeMs: Date.now() - startTime
-        }).catch(() => {});
+        }).catch(e => console.error('[Connect Webhook] Log error:', e));
         break;
 
       case 'transfer.reversed':
@@ -95,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: `Transfer reversed: ${(event.data.object as Stripe.Transfer).id}`,
           metadata: { transferId: (event.data.object as Stripe.Transfer).id },
           processingTimeMs: Date.now() - startTime
-        }).catch(() => {});
+        }).catch(e => console.error('[Connect Webhook] Log error:', e));
         break;
 
       default:
@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     logConnectEvent('connect_webhook_error', 'unknown', false, {
       message: 'Connect webhook processing error',
       error: 'Internal error'
-    }).catch(() => {});
+    }).catch(e => console.error('[Connect Webhook] Log error:', e));
 
     return new Response('Webhook processing error', { status: 500 });
   }

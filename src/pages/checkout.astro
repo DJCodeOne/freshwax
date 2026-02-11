@@ -371,13 +371,6 @@ export const prerender = false;
     }
   }
   
-  // Handle address selection (kept for backwards compatibility)
-  function handleAddressSelect(event) {
-    const value = event.target.value;
-    const manualEntry = document.getElementById('manualAddressFields');
-    manualEntry.style.display = 'block';
-  }
-  
   function renderCheckout() {
     const container = document.getElementById('checkout-content');
     loadCart();
@@ -1041,7 +1034,7 @@ export const prerender = false;
       },
 
       onCancel: function() {
-        console.log('PayPal payment cancelled');
+        // PayPal payment cancelled by user
       }
     }).render('#paypal-button-container').then(() => {
       // Force full width on all PayPal elements after render
@@ -1069,13 +1062,7 @@ export const prerender = false;
   
   async function handleSubmit(e) {
     e.preventDefault();
-    console.log('[Checkout] Form submitted');
-
-    // Skip email verification on checkout - let them buy!
-    // Email verification can be enforced elsewhere if needed
-
     const { subtotal, shipping, hasPhysicalItems, freshWaxFee, stripeFee, serviceFees, total } = calculateTotals();
-    console.log('[Checkout] Totals calculated:', { subtotal, shipping, total, hasPhysicalItems });
 
     // If PayPal is selected and not a free order, don't process here (PayPal buttons handle it)
     if (selectedPaymentMethod === 'paypal' && total > 0) {
@@ -1166,13 +1153,13 @@ export const prerender = false;
       // Get Firebase ID token for authenticated write (with timeout)
       if (currentUser) {
         try {
-          console.log('[Checkout] Getting ID token...');
+          // Get Firebase ID token for auth
           const tokenPromise = currentUser.getIdToken();
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Token timeout')), 5000)
           );
           orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);
-          console.log('[Checkout] Got ID token');
+          // Got ID token successfully
         } catch (tokenErr) {
           console.warn('[Checkout] Could not get ID token:', tokenErr);
           // Continue without token - API will handle unauthenticated request
@@ -1181,7 +1168,7 @@ export const prerender = false;
 
       // Handle free orders (total = 0) differently
       if (isFreeOrder) {
-        console.log('[Checkout] Processing free order...');
+        // Processing free order (credit covers total)
 
         const freeOrderHeaders = { 'Content-Type': 'application/json' };
         if (orderData.idToken) {
@@ -1196,7 +1183,7 @@ export const prerender = false;
         const result = await response.json();
 
         if (result.success && result.orderId) {
-          console.log('[Checkout] Free order completed:', result.orderNumber);
+          // Free order completed successfully
 
           // Clear cart
           const customerId = getCustomerIdFromCookie();
@@ -1211,20 +1198,15 @@ export const prerender = false;
         }
       } else {
         // Create Stripe checkout session
-        console.log('[Checkout] Creating Stripe session...', orderData);
         const response = await fetch('/api/stripe/create-checkout-session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData)
         });
-        console.log('[Checkout] Stripe response status:', response.status);
-
         const result = await response.json();
-        console.log('[Checkout] Stripe result:', result);
 
         if (result.success && result.checkoutUrl) {
           // Redirect to Stripe checkout
-          console.log('[Checkout] Redirecting to:', result.checkoutUrl);
           window.location.href = result.checkoutUrl;
         } else {
           throw new Error(result.error || 'Failed to create checkout session');
@@ -1286,13 +1268,10 @@ export const prerender = false;
   // Timeout to handle cases where Firebase auth hangs
   const authTimeout = setTimeout(() => {
     if (!authInitialized) {
-      console.log('[Checkout] Auth timeout - checking for customerId cookie');
       const customerId = getCustomerIdFromCookie();
       if (customerId) {
-        console.log('[Checkout] Found customerId cookie, proceeding with checkout');
         initCheckoutWithUser(null, customerId);
       } else {
-        console.log('[Checkout] No auth and no cookie - redirecting to login');
         window.location.href = '/login?redirect=/checkout';
       }
     }

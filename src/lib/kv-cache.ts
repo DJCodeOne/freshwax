@@ -30,7 +30,6 @@ export function initKVCache(env: any): void {
  */
 export async function kvGet<T>(key: string, options: CacheOptions = {}): Promise<T | null> {
   if (!kvNamespace) {
-    console.log('[KVCache] KV not initialized, skipping cache');
     return null;
   }
 
@@ -39,11 +38,9 @@ export async function kvGet<T>(key: string, options: CacheOptions = {}): Promise
     const cached = await kvNamespace.get(fullKey, { type: 'json' });
 
     if (cached) {
-      console.log('[KVCache] HIT:', fullKey);
       return cached as T;
     }
 
-    console.log('[KVCache] MISS:', fullKey);
     return null;
   } catch (error) {
     console.error('[KVCache] Get error:', error);
@@ -66,8 +63,6 @@ export async function kvSet(key: string, value: any, options: CacheOptions = {})
     await kvNamespace.put(fullKey, JSON.stringify(value), {
       expirationTtl: ttl
     });
-
-    console.log('[KVCache] SET:', fullKey, 'TTL:', ttl);
   } catch (error) {
     console.error('[KVCache] Set error:', error);
   }
@@ -84,7 +79,6 @@ export async function kvDelete(key: string, options: CacheOptions = {}): Promise
   try {
     const fullKey = options.prefix ? `${options.prefix}:${key}` : key;
     await kvNamespace.delete(fullKey);
-    console.log('[KVCache] DELETE:', fullKey);
   } catch (error) {
     console.error('[KVCache] Delete error:', error);
   }
@@ -109,7 +103,7 @@ export async function kvCacheThrough<T>(
   const freshData = await fetcher();
 
   // Cache the result (don't await to avoid blocking)
-  kvSet(key, freshData, options).catch(() => {});
+  kvSet(key, freshData, options).catch((e) => console.error('[KVCache] Background set error:', e));
 
   return freshData;
 }

@@ -215,7 +215,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     };
 
     // Cache the result (don't await to avoid blocking response)
-    kvSet(cacheKey, responseData, { prefix: CACHE_PREFIX, ttl: CACHE_TTL }).catch(() => {});
+    kvSet(cacheKey, responseData, { prefix: CACHE_PREFIX, ttl: CACHE_TTL }).catch(e => console.error('[Payment Status] Cache error:', e));
 
     return new Response(JSON.stringify(responseData), {
       status: 200,

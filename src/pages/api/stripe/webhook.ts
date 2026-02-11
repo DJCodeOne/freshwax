@@ -722,7 +722,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   message: `Plus subscription activated for ${userId}`,
                   metadata: { userId, plusId, promoCode: promoCode || null },
                   processingTimeMs: Date.now() - startTime
-                }).catch(() => {});
+                }).catch(e => console.error('[Stripe Webhook] Log error:', e));
               } catch (emailError) {
                 console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
               }
@@ -731,14 +731,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               logStripeEvent(event.type, event.id, false, {
                 message: 'Failed to update user subscription',
                 error: 'Firestore update failed'
-              }).catch(() => {});
+              }).catch(e => console.error('[Stripe Webhook] Log error:', e));
             }
           } catch (updateError) {
             console.error('[Stripe Webhook] Error updating subscription:', updateError);
             logStripeEvent(event.type, event.id, false, {
               message: 'Error updating subscription',
               error: updateError instanceof Error ? updateError.message : 'Unknown error'
-            }).catch(() => {});
+            }).catch(e => console.error('[Stripe Webhook] Log error:', e));
           }
         }
 
@@ -874,7 +874,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   message: `Plus subscription activated via promo for ${userId}`,
                   metadata: { userId, plusId, promoCode },
                   processingTimeMs: Date.now() - startTime
-                }).catch(() => {});
+                }).catch(e => console.error('[Stripe Webhook] Log error:', e));
               } else {
                 console.error('[Stripe Webhook] Failed to update user subscription (promo)');
               }
@@ -1155,7 +1155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: 'Order creation failed',
           error: result.error || 'Unknown error',
           processingTimeMs: Date.now() - startTime
-        }).catch(() => {});
+        }).catch(e => console.error('[Stripe Webhook] Log error:', e));
 
         return new Response(JSON.stringify({
           error: result.error || 'Failed to create order'
@@ -1373,7 +1373,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Order ${result.orderNumber} created successfully`,
         metadata: { orderId: result.orderId, orderNumber: result.orderNumber, amount: session.amount_total / 100 },
         processingTimeMs: Date.now() - startTime
-      }).catch(() => {}); // Don't let logging failures affect response
+      }).catch(e => console.error('[Stripe Webhook] Log error:', e)); // Don't let logging failures affect response
     }
 
     // Handle payment_intent.succeeded (backup for session complete)
@@ -1529,7 +1529,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Dispute created: ${dispute.reason}`,
         metadata: { disputeId: dispute.id, chargeId: dispute.charge, amount: dispute.amount / 100 },
         processingTimeMs: Date.now() - startTime
-      }).catch(() => {});
+      }).catch(e => console.error('[Stripe Webhook] Log error:', e));
     }
 
     // Handle dispute closed - track outcome
@@ -1545,7 +1545,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Dispute closed: ${dispute.status}`,
         metadata: { disputeId: dispute.id, status: dispute.status },
         processingTimeMs: Date.now() - startTime
-      }).catch(() => {});
+      }).catch(e => console.error('[Stripe Webhook] Log error:', e));
     }
 
     // Handle refund - reverse artist transfers proportionally
@@ -1562,7 +1562,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Refund processed: £${(charge.amount_refunded / 100).toFixed(2)}`,
         metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded / 100 },
         processingTimeMs: Date.now() - startTime
-      }).catch(() => {});
+      }).catch(e => console.error('[Stripe Webhook] Log error:', e));
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -1578,7 +1578,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     logStripeEvent('webhook_error', 'unknown', false, {
       message: 'Webhook processing error',
       error: errorMessage
-    }).catch(() => {});
+    }).catch(e => console.error('[Stripe Webhook] Log error:', e));
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

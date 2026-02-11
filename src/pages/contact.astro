@@ -414,6 +414,7 @@ const faqs = [
           throw new Error(result.error || 'Failed to send message');
         }
       } catch (err) {
+        console.error('[Contact] Form error:', err);
         // Fallback: open mailto link
         const subjectLine = isReport 
           ? `[REPORT] ${data.reportType}`
