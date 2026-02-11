@@ -10,6 +10,8 @@ const log = {
   error: (...args: any[]) => console.error('[firebase-rest]', ...args),
 };
 
+import { kvCacheThrough, CACHE_CONFIG } from './kv-cache';
+
 const PROJECT_ID = 'freshwax-store';
 
 // ==========================================
@@ -486,81 +488,93 @@ export async function getDocumentsBatch(
 
 // Get releases with extended cache for quota optimization
 // Now supports D1 as primary source with Firebase fallback
+// Cache tiers: 1) in-memory (~0ms) → 2) KV (~30ms) → 3) D1/Firebase (~300-900ms)
 export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> {
   const cacheKey = `live-releases:${limit || 'all'}`;
+
+  // Tier 1: in-memory cache (same worker process, ~0ms)
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // Try D1 first if database is provided
-  if (db) {
-    try {
-      // Fetch more than needed to allow for JS sorting by upload date
-      const fetchLimit = limit ? limit * 2 : 100;
-      const query = `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' LIMIT ?`;
+  // Tier 2: KV cache (cross-edge, ~30ms) → Tier 3: D1/Firebase
+  const result = await kvCacheThrough(
+    cacheKey,
+    async () => {
+      // Try D1 first if database is provided
+      if (db) {
+        try {
+          // Fetch more than needed to allow for JS sorting by upload date
+          const fetchLimit = limit ? limit * 2 : 100;
+          const query = `SELECT data FROM releases_v2 WHERE published = 1 OR status = 'live' LIMIT ?`;
 
-      const stmt = db.prepare(query).bind(fetchLimit);
-      const { results } = await stmt.all();
+          const stmt = db.prepare(query).bind(fetchLimit);
+          const { results } = await stmt.all();
 
-      if (results && results.length > 0) {
-        let releases = results.map((row: any) => {
-          try {
-            const doc = JSON.parse(row.data);
-            doc.id = doc.id || row.id;
-            return doc;
-          } catch (e) {
-            return null;
+          if (results && results.length > 0) {
+            let releases = results.map((row: any) => {
+              try {
+                const doc = JSON.parse(row.data);
+                doc.id = doc.id || row.id;
+                return doc;
+              } catch (e) {
+                return null;
+              }
+            }).filter(Boolean);
+
+            // Sort by upload date (newest first)
+            releases.sort((a: any, b: any) => {
+              const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
+              const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+              return dateB - dateA;
+            });
+
+            // Apply limit after sorting
+            if (limit && releases.length > limit) {
+              releases = releases.slice(0, limit);
+            }
+
+            log.info(`[firebase-rest] D1: ${releases.length} releases loaded`);
+            return releases;
           }
-        }).filter(Boolean);
-
-        // Sort by upload date (newest first)
-        releases.sort((a: any, b: any) => {
-          const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
-          const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
-          return dateB - dateA;
-        });
-
-        // Apply limit after sorting
-        if (limit && releases.length > limit) {
-          releases = releases.slice(0, limit);
+        } catch (e) {
+          log.error('[firebase-rest] D1 releases error, falling back to Firebase:', e);
         }
-
-        log.info(`[firebase-rest] D1: ${releases.length} releases loaded`);
-        setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
-        return releases;
       }
-    } catch (e) {
-      log.error('[firebase-rest] D1 releases error, falling back to Firebase:', e);
-    }
-  }
 
-  // Fallback to Firebase
-  // Try 'status' field first
-  let releases = await queryCollection('releases', {
-    filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
-    limit,
-    cacheKey: `releases-status-live:${limit}`,
-    cacheTTL: CACHE_TTL.RELEASES_LIST
-  });
+      // Fallback to Firebase
+      // Try 'status' field first
+      let releases = await queryCollection('releases', {
+        filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+        limit,
+        cacheKey: `releases-status-live:${limit}`,
+        cacheTTL: CACHE_TTL.RELEASES_LIST
+      });
 
-  // If no results, try 'published' field
-  if (releases.length === 0) {
-    releases = await queryCollection('releases', {
-      filters: [{ field: 'published', op: 'EQUAL', value: true }],
-      limit,
-      cacheKey: `releases-published:${limit}`,
-      cacheTTL: CACHE_TTL.RELEASES_LIST
-    });
-  }
+      // If no results, try 'published' field
+      if (releases.length === 0) {
+        releases = await queryCollection('releases', {
+          filters: [{ field: 'published', op: 'EQUAL', value: true }],
+          limit,
+          cacheKey: `releases-published:${limit}`,
+          cacheTTL: CACHE_TTL.RELEASES_LIST
+        });
+      }
 
-  // Sort by upload date (newest first)
-  releases.sort((a, b) => {
-    const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
-    const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
-    return dateB - dateA;
-  });
+      // Sort by upload date (newest first)
+      releases.sort((a, b) => {
+        const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
 
-  setCache(cacheKey, releases, CACHE_TTL.RELEASES_LIST);
-  return releases;
+      return releases;
+    },
+    CACHE_CONFIG.RELEASES
+  );
+
+  // Backfill in-memory cache
+  setCache(cacheKey, result, CACHE_TTL.RELEASES_LIST);
+  return result;
 }
 
 // Get DJ mixes with extended cache

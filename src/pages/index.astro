@@ -16,6 +16,8 @@ const db = (Astro.locals as any).runtime?.env?.DB;
 // Get the 20 most recent published releases - D1 first, Firebase fallback
 // Sorted by upload date (newest first)
 const featuredReleases = await getLiveReleases(20, db);
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 ---
 
 <Layout title="Home" description="Buy jungle and drum & bass music at Fresh Wax. Digital downloads, vinyl records, DJ mixes, and live streams from the UK underground scene.">

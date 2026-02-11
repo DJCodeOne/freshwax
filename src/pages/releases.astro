@@ -41,6 +41,8 @@ const sortedLabels = Object.keys(releasesByLabel).sort((a, b) => {
 });
 
 const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => sum + releases.length, 0);
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 ---
 
 <Layout title="All Releases">

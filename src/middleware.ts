@@ -3,6 +3,7 @@
 // Add security headers and CORS to all responses
 import { defineMiddleware } from 'astro:middleware';
 import { initFirebaseEnv } from './lib/firebase-rest';
+import { initKVCache } from './lib/kv-cache';
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -55,6 +56,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   const runtime = (locals as any).runtime;
   if (runtime?.env) {
     initFirebaseEnv(runtime.env);
+    initKVCache(runtime.env);
   }
 
   const url = new URL(request.url);

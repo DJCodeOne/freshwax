@@ -191,13 +191,6 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
       breadcrumbs={breadcrumbs}
     />
     
-    <!-- Analytics - Google Analytics 4 + enhanced tracking -->
-    <Analytics 
-      ga4Id={GA4_ID}
-      gtmId={GTM_ID}
-      ecommerce={true}
-    />
-    
     <ViewTransitions />
     
     <style is:global>
@@ -322,5 +315,12 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
         });
       }
     </script>
+
+    <!-- Analytics - moved to end of body to defer JS execution past paint -->
+    <Analytics
+      ga4Id={GA4_ID}
+      gtmId={GTM_ID}
+      ecommerce={true}
+    />
   </body>
 </html>
