@@ -388,9 +388,10 @@
       }
       
       try {
+        const _idToken = await window.firebaseAuth?.currentUser?.getIdToken();
         const response = await fetch('/api/livestream/slots', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(_idToken && { 'Authorization': `Bearer ${_idToken}` }) },
           body: JSON.stringify({
             action: 'cancel',
             slotId: bookingId,

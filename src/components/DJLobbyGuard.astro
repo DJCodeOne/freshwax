@@ -245,7 +245,10 @@ const { redirectTo = '/account/request-role', showProgress = true } = Astro.prop
 
     try {
       // Check eligibility via API
-      const response = await fetch(`/api/dj/eligibility?action=checkEligibility&uid=${user.uid}`);
+      const idToken = await user.getIdToken();
+      const response = await fetch(`/api/dj/eligibility?action=checkEligibility&uid=${user.uid}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
       const data = await response.json();
 
       if (data.success && data.eligible) {

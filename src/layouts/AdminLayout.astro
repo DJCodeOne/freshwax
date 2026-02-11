@@ -1615,6 +1615,20 @@ const navItems = [
       authResolve();
     });
 
+    // Auto-inject X-Admin-Key header for all /api/admin/ fetch calls
+    const _origFetch = window.fetch;
+    window.fetch = function(input, init) {
+      const url = typeof input === 'string' ? input : input?.url || '';
+      if (url.includes('/api/admin/') && window.ADMIN_KEY) {
+        init = init || {};
+        init.headers = new Headers(init.headers || {});
+        if (!init.headers.has('X-Admin-Key')) {
+          init.headers.set('X-Admin-Key', window.ADMIN_KEY);
+        }
+      }
+      return _origFetch.call(this, input, init);
+    };
+
     /**
      * Get Firebase ID token for admin API calls
      * Returns the token string, or redirects to home if not logged in

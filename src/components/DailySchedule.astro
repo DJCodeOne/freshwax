@@ -1448,11 +1448,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
                 const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
                 const response = await fetch('/api/livestream/slots', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
                   body: JSON.stringify({
                     action: 'early_start',
-                    djId: currentUserId,
-                    idToken
+                    djId: currentUserId
                   })
                 });
 

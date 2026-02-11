@@ -1188,7 +1188,7 @@ export const prerender = false;
         try {
           const response = await fetch('/api/admin/retry-payout', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
             body: JSON.stringify({ payoutId })
           });
 

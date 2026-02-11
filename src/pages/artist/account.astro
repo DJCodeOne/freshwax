@@ -2699,6 +2699,15 @@ export const prerender = false;
 </style>
 
 <script type="module">
+  async function getAuthToken() {
+    try {
+      if (window.firebaseAuth?.currentUser) return await window.firebaseAuth.currentUser.getIdToken();
+      const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+      const auth = getAuth();
+      return auth.currentUser ? await auth.currentUser.getIdToken() : null;
+    } catch { return null; }
+  }
+
   function initArtistAccount() {
     // Prevent multiple initializations
     if (window._artistAccountInitialized) {
@@ -2835,9 +2844,10 @@ export const prerender = false;
     stripeConnectBtn.disabled = true;
 
     try {
+      const _token = await getAuthToken();
       const response = await fetch('/api/stripe/connect/create-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) }
       });
 
       const result = await response.json();
@@ -2866,9 +2876,10 @@ export const prerender = false;
     stripeContinueBtn.disabled = true;
 
     try {
+      const _token = await getAuthToken();
       const response = await fetch('/api/stripe/connect/refresh-link', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) }
       });
 
       const result = await response.json();
@@ -2952,9 +2963,10 @@ export const prerender = false;
     paypalLinkBtn.disabled = true;
 
     try {
+      const _token = await getAuthToken();
       const response = await fetch('/api/paypal/link-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
         body: JSON.stringify({
           entityType: 'artist',
           entityId: partnerId,
@@ -2993,15 +3005,15 @@ export const prerender = false;
     paypalChangeBtn.textContent = 'Updating...';
     paypalChangeBtn.disabled = true;
 
-    fetch('/api/paypal/link-account', {
+    getAuthToken().then(_token => fetch('/api/paypal/link-account', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
       body: JSON.stringify({
         entityType: 'artist',
         entityId: partnerId,
         paypalEmail: newEmail
       })
-    })
+    }))
     .then(res => res.json())
     .then(result => {
       if (result.success) {
@@ -3029,9 +3041,10 @@ export const prerender = false;
       btn.disabled = true;
 
       try {
+        const _token = await getAuthToken();
         const response = await fetch('/api/paypal/set-payout-method', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
           body: JSON.stringify({
             entityType: 'artist',
             entityId: partnerId,
@@ -3070,9 +3083,10 @@ export const prerender = false;
     saveArtistMethodBtn.disabled = true;
 
     try {
+      const _token = await getAuthToken();
       const response = await fetch('/api/paypal/set-payout-method', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
         body: JSON.stringify({
           entityType: 'artist',
           entityId: partnerId,

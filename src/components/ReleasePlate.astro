@@ -2148,13 +2148,15 @@ const totalDurationFormatted = totalDurationSeconds > 0
           var cachedOwnership = ownershipCache[releaseId];
           
           if (!cachedOwnership) {
-            var checkRes = await fetch('/api/check-ownership?userId=' + userId + '&releaseId=' + releaseId);
+            var _token = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
+            var _headers = _token ? { 'Authorization': 'Bearer ' + _token } : {};
+            var checkRes = await fetch('/api/check-ownership?userId=' + userId + '&releaseId=' + releaseId, { headers: _headers });
             cachedOwnership = await checkRes.json();
             // Cache the result
             ownershipCache[releaseId] = cachedOwnership;
             FWCache.set('ownership_' + userId, ownershipCache, FWCache.TTL.OWNERSHIP);
           }
-          
+
           if (cachedOwnership.ownsFullRelease) {
             alert('You already own this release! Check your order history for download links.');
             return;
@@ -2283,7 +2285,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
           var cachedOwnership = ownershipCache[releaseId];
           
           if (!cachedOwnership) {
-            var checkRes = await fetch('/api/check-ownership?userId=' + userId + '&releaseId=' + releaseId + '&trackId=' + trackId);
+            var _token2 = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
+            var _headers2 = _token2 ? { 'Authorization': 'Bearer ' + _token2 } : {};
+            var checkRes = await fetch('/api/check-ownership?userId=' + userId + '&releaseId=' + releaseId + '&trackId=' + trackId, { headers: _headers2 });
             cachedOwnership = await checkRes.json();
             // Cache the result
             ownershipCache[releaseId] = cachedOwnership;
