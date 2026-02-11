@@ -478,7 +478,6 @@ export const prerender = false;
                 </div>
                 <span style="font-size: 1.25rem; font-weight: 700; color: #22c55e;">£${creditBalance.toFixed(2)}</span>
               </div>
-              ${creditExpiry ? `<p style="font-size: 0.8125rem; color: #6b7280; margin: 0 0 0.75rem 0;">Expires: ${creditExpiry.toLocaleDateString('en-GB')}</p>` : ''}
               <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; user-select: none;">
                 <input type="checkbox" id="applyCreditCheckbox" onchange="toggleApplyCredit(this.checked)" style="width: 1.25rem; height: 1.25rem; accent-color: #22c55e; cursor: pointer;">
                 <span style="font-size: 0.9375rem; color: #374151;">Apply £${Math.min(creditBalance, total).toFixed(2)} credit to this order</span>

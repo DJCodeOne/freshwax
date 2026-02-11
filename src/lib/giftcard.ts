@@ -356,7 +356,7 @@ export async function sendGiftCardEmail(
               </div>
 
               <p style="color: #888; font-size: 13px; text-align: center; margin: 30px 0 0 0;">
-                Your gift card credit expires 1 year from redemption. Use it to buy digital releases, vinyl records, and merchandise.
+                Your gift card credit never expires. Use it to buy digital releases, vinyl records, and merchandise.
               </p>
             </td>
           </tr>

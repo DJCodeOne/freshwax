@@ -113,11 +113,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const now = new Date();
     const nowISO = now.toISOString();
 
-    // Credit expires 1 year from redemption
-    const expiryDate = new Date(now);
-    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
-    const creditExpiresAt = expiryDate.toISOString();
-
     // Atomically mark gift card as redeemed using conditional update.
     // This prevents two concurrent requests from redeeming the same card.
     // Always use conditional update - if _updateTime is missing, re-fetch the document.
@@ -164,7 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       newBalance = amountToCredit;
     }
 
-    // Create transaction record with expiry
+    // Create transaction record
     const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const transaction = {
       id: transactionId,
@@ -173,7 +168,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       description: `Redeemed gift card ${normalizedCode} - ${giftCard.description || ''}`,
       giftCardCode: normalizedCode,
       createdAt: nowISO,
-      expiresAt: creditExpiresAt,
       balanceAfter: newBalance
     };
 
@@ -198,11 +192,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Also update the customer document with the new balance for quick access
     await updateDocument('users', userId, {
       creditBalance: newBalance,
-      creditUpdatedAt: nowISO,
-      creditExpiresAt: creditExpiresAt
+      creditUpdatedAt: nowISO
     });
 
-    console.log('[giftcards/redeem] Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit, 'expires:', creditExpiresAt);
+    console.log('[giftcards/redeem] Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit);
 
     return new Response(JSON.stringify({
       success: true,
