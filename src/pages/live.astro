@@ -1672,7 +1672,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
               emoji: '❤️,💖,💗,💓,💕',
               emojiType: 'like'
             })
-          });
+          }).catch(() => {});
 
           // Increment like count in database
           const response = await fetch('/api/livestream/react', {

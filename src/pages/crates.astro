@@ -1810,49 +1810,7 @@ const faqs = [
     window.location.href = `/crates/${id}`;
   }
 
-  // Cart functionality
-  function getCustomerId() {
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-      const [name, value] = cookie.trim().split('=');
-      if (name === 'customerId' && value) {
-        return value;
-      }
-    }
-    return null;
-  }
-
-  function getCart() {
-    const customerId = getCustomerId();
-    if (!customerId) return { items: [] };
-
-    try {
-      const stored = localStorage.getItem('freshwax_cart_' + customerId);
-      if (stored) {
-        const data = JSON.parse(stored);
-        return data.items ? data : { items: data };
-      }
-    } catch (e) {}
-
-    return { items: [] };
-  }
-
-  function saveCart(items) {
-    const customerId = getCustomerId();
-    if (!customerId) return;
-
-    const cartData = {
-      items: items,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem('freshwax_cart_' + customerId, JSON.stringify(cartData));
-    window.dispatchEvent(new CustomEvent('cart-updated', { detail: cartData }));
-    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cartData }));
-
-    if (window.FreshWaxCart) {
-      window.FreshWaxCart.updateBadge();
-    }
-  }
+  // Cart functionality — uses global FreshWaxCart from freshwax-cart.js
 
   function showToast(message) {
     const existing = document.getElementById('vinyl-toast');
@@ -1872,8 +1830,7 @@ const faqs = [
   }
 
   function addVinylToCart(listingId) {
-    const customerId = getCustomerId();
-    if (!customerId) {
+    if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
@@ -1885,7 +1842,7 @@ const faqs = [
       return;
     }
 
-    const cart = getCart();
+    const cart = FreshWaxCart.get();
     let items = cart.items || [];
 
     // Check if already in cart
@@ -1911,7 +1868,8 @@ const faqs = [
       sellerName: listing.sellerName
     });
 
-    saveCart(items);
+    FreshWaxCart.save({items: items});
+    FreshWaxCart.updateBadge();
     showToast('Added to cart!');
   }
 

@@ -2058,59 +2058,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
   // Uses customer-specific cart (freshwax_cart_${customerId})
   // ============================================
   
-  // Cart helper functions
-  function getCustomerId() {
-    var cookies = document.cookie.split(';');
-    for (var i = 0; i < cookies.length; i++) {
-      var cookie = cookies[i].trim();
-      var parts = cookie.split('=');
-      if (parts[0] === 'customerId' && parts[1]) {
-        return parts[1];
-      }
-    }
-    return null;
-  }
-  
-  function getCartKey() {
-    var customerId = getCustomerId();
-    if (!customerId) return null;
-    return 'freshwax_cart_' + customerId;
-  }
-  
-  function getCart() {
-    var key = getCartKey();
-    if (!key) return { items: [] };
-    
-    try {
-      var stored = localStorage.getItem(key);
-      if (stored) {
-        var data = JSON.parse(stored);
-        return data.items ? data : { items: data };
-      }
-    } catch (e) {
-      console.error('[Cart] Error parsing cart:', e);
-    }
-    
-    return { items: [] };
-  }
-  
-  function saveCart(items) {
-    var key = getCartKey();
-    if (!key) return;
-    
-    var cartData = {
-      items: items,
-      updatedAt: new Date().toISOString()
-    };
-    localStorage.setItem(key, JSON.stringify(cartData));
-    window.dispatchEvent(new CustomEvent('cart-updated', { detail: cartData }));
-    window.dispatchEvent(new CustomEvent('cartUpdated', { detail: cartData }));
-    
-    // Update cart badge
-    if (window.FreshWaxCart) {
-      window.FreshWaxCart.updateBadge();
-    }
-  }
+  // Cart helper functions — uses global FreshWaxCart from freshwax-cart.js
   
   if (!window.cartListenersAttached) {
     window.cartListenersAttached = true;
@@ -2123,8 +2071,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       e.preventDefault();
       
       // Check for customer login
-      var customerId = getCustomerId();
-      if (!customerId) {
+      if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
@@ -2167,7 +2114,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       } catch (err) {
       }
       
-      var cart = getCart();
+      var cart = FreshWaxCart.get();
       var items = cart.items || [];
       
       // If adding vinyl, remove digital version (vinyl includes digital)
@@ -2218,7 +2165,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
         });
       }
       
-      saveCart(items);
+      FreshWaxCart.save({items: items});
+      FreshWaxCart.updateBadge();
       
       var originalHTML = button.innerHTML;
       button.innerHTML = '<span>✓ Added!</span>';
@@ -2238,8 +2186,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       e.preventDefault();
       
       // Check for customer login
-      var customerId = getCustomerId();
-      if (!customerId) {
+      if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
         window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
@@ -2251,7 +2198,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       var artist = button.getAttribute('data-artist');
       var artwork = button.getAttribute('data-artwork');
       
-      var cart = getCart();
+      var cart = FreshWaxCart.get();
       var items = cart.items || [];
       
       // Check if full release already in cart
@@ -2326,7 +2273,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
         quantity: 1
       });
       
-      saveCart(items);
+      FreshWaxCart.save({items: items});
+      FreshWaxCart.updateBadge();
       
       var originalHTML = button.innerHTML;
       button.innerHTML = '✓';
@@ -2496,8 +2444,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         e.preventDefault();
         
         // Check for customer login
-        var customerId = getCustomerId();
-        if (!customerId) {
+        if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
           window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
           return;
         }
@@ -2509,7 +2456,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         var price = parseFloat(btn.getAttribute('data-price') || '0');
         var releaseDate = btn.getAttribute('data-release-date');
         
-        var cart = getCart();
+        var cart = FreshWaxCart.get();
         var items = cart.items || [];
         
         // Check if already in cart
@@ -2548,7 +2495,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
           releaseDate: releaseDate
         });
         
-        saveCart(items);
+        FreshWaxCart.save({items: items});
+      FreshWaxCart.updateBadge();
         
         // Show success state
         var originalHTML = btn.innerHTML;
