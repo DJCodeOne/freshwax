@@ -1002,12 +1002,27 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           return;
         }
 
-        // New user - create account with normalized email
+        // New user - check if display name is already taken
+        const googleDisplayName = user.displayName || normalizedEmail.split('@')[0];
+        const googleNameLower = googleDisplayName.toLowerCase();
+        const nameCheckRef = collection(db, 'users');
+        const nameCheckQuery = query(nameCheckRef, where('displayNameLower', '==', googleNameLower));
+        const nameCheckSnapshot = await getDocs(nameCheckQuery);
+
+        if (!nameCheckSnapshot.empty) {
+          // Sign out the Google user since we can't complete registration
+          await signOut(auth);
+          formError.textContent = 'The display name "' + googleDisplayName + '" is already taken. Please register with email and choose a different display name.';
+          formError.style.display = 'block';
+          return;
+        }
+
+        // Create account with normalized email
         const userData = {
           uid: user.uid,
           email: normalizedEmail,
-          displayName: user.displayName || normalizedEmail.split('@')[0],
-          displayNameLower: (user.displayName || normalizedEmail.split('@')[0]).toLowerCase(),
+          displayName: googleDisplayName,
+          displayNameLower: googleNameLower,
           photoURL: user.photoURL || null,
           provider: 'Google',
           emailVerified: true, // Google accounts are pre-verified
@@ -1115,8 +1130,8 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 
       // Check password strength
       const pwChecks = checkPasswordStrength(password);
-      if (!pwChecks.length) {
-        formError.textContent = 'Password must be at least 8 characters';
+      if (!pwChecks.length || !pwChecks.upper || !pwChecks.number || !pwChecks.special) {
+        formError.textContent = 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character';
         formError.style.display = 'block';
         return;
       }
@@ -1265,12 +1280,19 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         sessionStorage.setItem('fw_email_unverified', 'true');
         sessionStorage.setItem('fw_pending_verification', email);
 
-        // Show success message
-        formSuccess.innerHTML = `
-          <strong>Account created!</strong><br>
-          We've sent a verification email to <strong>${email}</strong>.<br>
-          Please check your inbox and click the link to verify your email.
-        `;
+        // Show success message (avoid innerHTML with user-controlled email to prevent XSS)
+        formSuccess.textContent = '';
+        const successTitle = document.createElement('strong');
+        successTitle.textContent = 'Account created!';
+        const emailBold = document.createElement('strong');
+        emailBold.textContent = email;
+        formSuccess.appendChild(successTitle);
+        formSuccess.appendChild(document.createElement('br'));
+        formSuccess.appendChild(document.createTextNode('We\'ve sent a verification email to '));
+        formSuccess.appendChild(emailBold);
+        formSuccess.appendChild(document.createTextNode('.'));
+        formSuccess.appendChild(document.createElement('br'));
+        formSuccess.appendChild(document.createTextNode('Please check your inbox and click the link to verify your email.'));
         formSuccess.style.display = 'block';
 
         // Redirect to verify-email page

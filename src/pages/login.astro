@@ -277,7 +277,7 @@ const firebaseConfig = {
               customer: true,
               dj: true,
               artist: false,
-              merchSeller: false,
+              merchSupplier: false,
               vinylSeller: false
             },
             pendingRoles: {}
@@ -288,8 +288,8 @@ const firebaseConfig = {
 
         // Set cookies
         const cookieMaxAge = 2592000; // 30 days
-        document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
-        document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+        document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+        document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
 
         // Social login users are considered verified
         sessionStorage.removeItem('fw_email_unverified');
@@ -406,15 +406,15 @@ const firebaseConfig = {
           // Sign them out immediately
           await signOut(auth);
           // Show error and redirect to verify page
-          formError.innerHTML = `
+          errorMessage.innerHTML = `
             <strong>Email verification required</strong><br>
             Please verify your email address before logging in.<br>
             <a href="/verify-email" style="color: #22c55e; text-decoration: underline;">Click here to verify</a>
           `;
-          formError.style.display = 'block';
+          errorMessage.style.display = 'block';
           submitBtn.disabled = false;
-          btnText.style.display = 'inline';
-          btnLoading.style.display = 'none';
+          submitBtn.querySelector('.btn-text').classList.remove('hidden');
+          submitBtn.querySelector('.btn-loading').classList.add('hidden');
           return;
         }
 
@@ -482,13 +482,13 @@ const firebaseConfig = {
           
           // Set partnerId cookie if they're an approved partner (needed for pro dashboard)
           if (profile.success && profile.isPro) {
-            document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+            document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
           }
           
           // Always set userId and customerId cookies
-          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
-          
+          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+
           // If admin, redirect to admin dashboard (unless a specific redirect was requested)
           if (profile.success && profile.isAdmin && redirectTo === '/account/dashboard') {
             console.log('[Login] Redirecting to admin dashboard');
@@ -499,8 +499,8 @@ const firebaseConfig = {
           
         } catch (err) {
           console.error('[Login] Error fetching user profile:', err);
-          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax`;
+          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
         }
         
         // Show success
@@ -518,14 +518,8 @@ const firebaseConfig = {
         console.error('Error message:', error.message);
         
         let message = 'Login failed. Please try again.';
-        if (error.code === 'auth/user-not-found') {
-          message = 'No account found with this email.';
-        } else if (error.code === 'auth/wrong-password') {
-          message = 'Incorrect password.';
-        } else if (error.code === 'auth/invalid-credential') {
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
           message = 'Invalid email or password.';
-        } else if (error.code === 'auth/invalid-email') {
-          message = 'Please enter a valid email address.';
         } else if (error.code === 'auth/too-many-requests') {
           message = 'Too many failed attempts. Please try again later.';
         } else if (error.code === 'auth/user-disabled') {
