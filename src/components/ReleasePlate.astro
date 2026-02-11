@@ -101,6 +101,7 @@ interface Props {
   nyopEnabled?: boolean;
   nyopMinPrice?: number;
   nyopSuggestedPrice?: number;
+  priority?: boolean;
 }
 
 const { 
@@ -137,7 +138,8 @@ const {
   // NYOP
   nyopEnabled = false,
   nyopMinPrice = 0,
-  nyopSuggestedPrice = 0
+  nyopSuggestedPrice = 0,
+  priority = false
 } = Astro.props;
 
 // Use whichever label field is available
@@ -297,7 +299,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
           class="w-full h-full object-cover"
           width="256"
           height="256"
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchpriority={priority ? "high" : undefined}
+          decoding={priority ? undefined : "async"}
           onerror="this.src='/place-holder.webp'"
         />
       </div>

@@ -166,14 +166,9 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
     
-    <!-- GIF API preconnects for faster loading -->
-    <link rel="dns-prefetch" href="https://api.giphy.com" />
-    <link rel="dns-prefetch" href="https://tenor.googleapis.com" />
-    <link rel="dns-prefetch" href="https://api.gfycat.com" />
-    <link rel="dns-prefetch" href="https://www.reddit.com" />
-    
-    <!-- Critical fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Bebas+Neue&display=swap" rel="stylesheet" />
+    <!-- Fonts (non-render-blocking preload + swap) -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Bebas+Neue&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Bebas+Neue&display=swap" /></noscript>
     
     <!-- SEO Component - comprehensive meta tags and structured data -->
     <SEO 
@@ -323,9 +318,7 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
     <script is:inline>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((reg) => console.log('[PWA] Service worker registered'))
-            .catch((err) => console.log('[PWA] Service worker failed:', err));
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
         });
       }
     </script>

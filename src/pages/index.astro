@@ -126,9 +126,9 @@ const featuredReleases = await getLiveReleases(20, db);
         </div>
       ) : (
         <div style="margin-top: 1.5rem;">
-          {featuredReleases.map((release) => (
+          {featuredReleases.map((release, i) => (
             <div id={release.id} style="scroll-margin-top: 1.5rem;" class="release-item">
-              <ReleasePlate {...release} />
+              <ReleasePlate {...release} priority={i === 0} />
             </div>
           ))}
         </div>
