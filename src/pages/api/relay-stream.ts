@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ url }) => {
 
   const station = getStationById(stationId);
   if (!station) {
-    return new Response(JSON.stringify({ error: 'Unknown station', stationId }), {
+    return new Response(JSON.stringify({ error: 'Unknown station' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -43,18 +43,11 @@ export const GET: APIRoute = async ({ url }) => {
 
     clearTimeout(timeoutId);
 
-    // Test mode - just return info about the connection
+    // Test mode - just return connection status (no internal details)
     if (testMode) {
-      const headers: Record<string, string> = {};
-      response.headers.forEach((value, key) => {
-        headers[key] = value;
-      });
       return new Response(JSON.stringify({
-        success: true,
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-        url: station.streamUrl
+        success: response.ok,
+        status: response.status
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
@@ -63,10 +56,7 @@ export const GET: APIRoute = async ({ url }) => {
 
     if (!response.ok) {
       return new Response(JSON.stringify({
-        error: 'Stream unavailable',
-        status: response.status,
-        statusText: response.statusText,
-        url: station.streamUrl
+        error: 'Stream unavailable'
       }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' }

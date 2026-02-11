@@ -132,15 +132,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Validate gifUrl if provided (must be from Giphy)
-    if (gifUrl && !gifUrl.includes('giphy.com')) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Invalid GIF URL' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Validate gifUrl if provided (must be from Giphy domain)
+    if (gifUrl) {
+      let validGif = false;
+      try { const u = new URL(gifUrl); validGif = u.hostname === 'giphy.com' || u.hostname.endsWith('.giphy.com'); } catch {}
+      if (!validGif) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid GIF URL'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     if (userName.trim().length > 30) {

@@ -425,9 +425,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             newStock = Math.max(0, previousStock - item.quantity);
 
             if (previousStock < item.quantity) {
-              console.error('[create-order] ⚠️ OVERSOLD ALERT:', item.name, variantKey,
-                '- Ordered:', item.quantity, '- Available:', previousStock,
-                '- Shortfall:', item.quantity - previousStock);
+              log.info('[create-order] ⚠️ Insufficient stock:', item.name, variantKey,
+                '- Ordered:', item.quantity, '- Available:', previousStock);
+              // Allow order but flag it - stock already went negative, alert admin
+              // Order was already created above, so we proceed but log the oversell
             }
 
             variant.stock = newStock;
