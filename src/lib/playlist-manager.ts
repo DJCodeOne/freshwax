@@ -3,6 +3,7 @@
 
 import type { GlobalPlaylistItem, GlobalPlaylist } from './types';
 import { EmbedPlayerManager } from './embed-player';
+import { parseMediaUrl } from './url-parser';
 
 const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
 const RECENTLY_PLAYED_KEY = 'freshwax_recently_played';
@@ -413,7 +414,6 @@ export class PlaylistManager {
 
     try {
       // Parse URL locally first
-      const { parseMediaUrl } = await import('./url-parser');
       const parsed = parseMediaUrl(url.trim());
 
       if (!parsed.isValid) {
@@ -1793,7 +1793,6 @@ export class PlaylistManager {
 
     try {
       // Parse URL
-      const { parseMediaUrl } = await import('./url-parser');
       const parsed = parseMediaUrl(url.trim());
 
       if (!parsed.isValid) {
