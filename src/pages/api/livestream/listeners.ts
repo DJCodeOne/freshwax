@@ -3,7 +3,7 @@
 // Uses Cloudflare KV for fast, edge-cached listener tracking (no Firebase)
 
 import type { APIRoute } from 'astro';
-import { initKVCache, kvGet, kvSet, kvDelete, kvList } from '../../../lib/kv-cache';
+import { initKVCache, kvGet, kvSet, kvDelete } from '../../../lib/kv-cache';
 
 export const prerender = false;
 

@@ -264,6 +264,11 @@ const GTM_ID = ''; // Optional: Google Tag Manager ID
 
     <!-- Cart functionality -->
     <script is:inline src="/freshwax-cart.js?v=4"></script>
+
+    <!-- Shared toast notification -->
+    <script is:inline>
+    window.showToast=function(t,e){var o=document.getElementById('fw-toast');if(o)o.remove();var s=document.createElement('div');s.id='fw-toast';s.textContent=t;s.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:'+(e==='error'?'#dc2626':'#16a34a')+';color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.3s;';document.body.appendChild(s);setTimeout(function(){s.style.opacity='0';setTimeout(function(){s.remove()},300)},3000)};
+    </script>
     
     <!-- Pusher config for real-time features -->
     <script define:vars={{ pusherConfig }}>

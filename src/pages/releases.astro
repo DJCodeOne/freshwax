@@ -232,23 +232,6 @@ const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => s
 
     // Buy All Discography functionality — uses global FreshWaxCart from freshwax-cart.js
 
-    function showToast(message) {
-      const existing = document.getElementById('discography-toast');
-      if (existing) existing.remove();
-
-      const toast = document.createElement('div');
-      toast.id = 'discography-toast';
-      toast.textContent = message;
-      toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;padding:16px 28px;border-radius:12px;font-size:15px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.4);';
-      document.body.appendChild(toast);
-
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-      }, 3000);
-    }
-
     document.querySelectorAll('.buy-discography-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
