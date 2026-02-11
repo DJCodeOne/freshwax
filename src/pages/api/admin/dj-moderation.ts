@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
   });
 
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) {
     return authError;
   }
@@ -100,13 +100,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const data = await request.json();
     const { action, email, userId, reason, adminKey, targetUserId, targetUserName } = data;
 
-    // Simple admin key check
-    if (adminKey !== getAdminKey(locals)) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    // SECURITY: Use requireAdminAuth for consistent timing-safe comparison
+    const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+    const env = locals?.runtime?.env;
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const postAuthError = await requireAdminAuth(request, locals, data);
+    if (postAuthError) return postAuthError;
 
     // Note: getUserByEmail requires Firebase Admin SDK which doesn't work on Cloudflare
     // Instead, the admin interface should provide userId directly

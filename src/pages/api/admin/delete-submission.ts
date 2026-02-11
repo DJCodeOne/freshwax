@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { submissionId, location } = bodyData;
 
     // Admin auth - pass body for adminKey check
-    const authError = requireAdminAuth(request, locals, bodyData);
+    const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
     if (!submissionId) {

@@ -3,14 +3,9 @@
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
-
-// Helper to get admin key from environment
-function getAdminKey(locals: any): string {
-  const env = locals?.runtime?.env;
-  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -22,18 +17,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { mixId, adminKey } = body;
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
-    // Verify admin key
-    if (adminKey !== getAdminKey(locals)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { mixId } = body;
 
     if (!mixId) {
       return new Response(JSON.stringify({

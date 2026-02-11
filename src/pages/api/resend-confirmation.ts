@@ -4,24 +4,20 @@
 import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { sendOrderConfirmationEmail, getShortOrderNumber } from '../../lib/order-utils';
+import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
-    const adminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
     const body = await request.json();
-    const { orderId, key } = body;
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
-    // Simple admin check
-    if (key !== adminKey) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { orderId } = body;
 
     if (!orderId) {
       return new Response(JSON.stringify({ error: 'Missing orderId' }), {

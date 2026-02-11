@@ -3,9 +3,6 @@
 // Manage merch suppliers/consignment partners
 export const prerender = false;
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <!DOCTYPE html>
@@ -259,8 +256,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
   <div class="toast" id="toast"></div>
 
-  <script define:vars={{ adminKey }}>
-    const ADMIN_KEY = adminKey;
+  <script>
     let suppliers = [];
     let newSupplierCode = '';
 
@@ -269,7 +265,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     async function loadSuppliers() {
       try {
         const response = await fetch('/api/suppliers', {
-          headers: { 'X-Admin-Key': ADMIN_KEY }
+          headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
         
@@ -404,9 +400,9 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       try {
         const response = await fetch('/api/suppliers', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({
-            name, type, code, defaultCut, contactName, email, phone, notes, adminKey: ADMIN_KEY
+            name, type, code, defaultCut, contactName, email, phone, notes, adminKey: window.ADMIN_KEY
           })
         });
         
@@ -480,8 +476,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       try {
         const response = await fetch('/api/suppliers', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
-          body: JSON.stringify({ ...updates, adminKey: ADMIN_KEY })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
+          body: JSON.stringify({ ...updates, adminKey: window.ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to update');
@@ -500,8 +496,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       try {
         const response = await fetch('/api/suppliers', {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
-          body: JSON.stringify({ supplierId: id, adminKey: ADMIN_KEY })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
+          body: JSON.stringify({ supplierId: id, adminKey: window.ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to deactivate');
@@ -517,8 +513,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       try {
         const response = await fetch('/api/suppliers', {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
-          body: JSON.stringify({ supplierId: id, active: true, adminKey: ADMIN_KEY })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
+          body: JSON.stringify({ supplierId: id, active: true, adminKey: window.ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to activate');
@@ -539,8 +535,8 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       try {
         const response = await fetch('/api/suppliers?id=' + id, {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
-          body: JSON.stringify({ supplierId: id, hardDelete: true, adminKey: ADMIN_KEY })
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
+          body: JSON.stringify({ supplierId: id, hardDelete: true, adminKey: window.ADMIN_KEY })
         });
         
         if (!response.ok) throw new Error('Failed to delete');

@@ -1,7 +1,7 @@
 // src/pages/api/get-user-type.ts
 // Returns user type info - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 import { createReferralGiftCard } from '../../lib/giftcard';
 
@@ -27,6 +27,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // SECURITY: Require authentication and verify uid matches token
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  if (authUserId !== uid) {
+    return new Response(JSON.stringify({ success: false, error: 'Not authorized to query this user' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' }
     });
   }
 

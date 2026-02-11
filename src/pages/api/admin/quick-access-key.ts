@@ -5,12 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { saSetDocument } from '../../../lib/firebase-service-account';
-
-// Helper to get admin key from environment
-function getAdminKey(locals: any): string {
-  const env = locals?.runtime?.env;
-  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-}
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -54,19 +49,10 @@ function generateCode(): string {
 // GET: Get current quick access key (admin only)
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-
-  // Check X-Admin-Key header (preferred) or Authorization header
-  const adminKeyHeader = request.headers.get('X-Admin-Key');
-  const authHeader = request.headers.get('Authorization');
-  const providedKey = adminKeyHeader || (authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null);
-
-  // Admin key check
-  if (providedKey !== getAdminKey(locals)) {
-    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
 
   try {
     const keyDoc = await getDocument('system', 'quickAccessKey');
@@ -123,15 +109,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { action, adminKey, expiresAt } = data;
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const postAuthError = await requireAdminAuth(request, locals, data);
+    if (postAuthError) return postAuthError;
 
-    // Admin key check
-    if (adminKey !== getAdminKey(locals)) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { action, expiresAt } = data;
 
     if (action === 'generate') {
       // Generate a new quick access key

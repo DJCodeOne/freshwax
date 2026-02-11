@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
 
   // SECURITY: Use timing-safe admin auth via headers (not query params to avoid logging)
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) {
     return authError;
   }

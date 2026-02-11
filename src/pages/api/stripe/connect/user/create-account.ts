@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -24,16 +24,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
+  // SECURITY: Verify user authentication via Firebase token
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const body = await request.json();
-    const { userId, returnUrl, refreshUrl } = body;
+    const { returnUrl, refreshUrl } = body;
 
-    if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    // Use authenticated user ID instead of trusting body
+    const userId = authUserId;
 
     // Use custom return URLs if provided, otherwise defaults
     const baseUrl = getBaseUrl(request);

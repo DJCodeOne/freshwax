@@ -2,7 +2,7 @@
 // Get crate selling payout history for a user
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../../../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -23,6 +23,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+
+  // SECURITY: Verify user authentication via Firebase token
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // SECURITY: Verify the authenticated user matches the requested userId
+  if (authUserId !== userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Forbidden'
+    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
 
   try {
     const user = await getDocument('users', userId);

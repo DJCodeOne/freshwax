@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { initFirebaseEnv, queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { sendOrderConfirmationEmail } from '../../../lib/order-utils';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -29,6 +30,11 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const orderNumber = url.searchParams.get('orderNumber');
   const testEmail = url.searchParams.get('email');
@@ -44,7 +50,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const env = (locals as any)?.runtime?.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
   initFirebaseEnv({

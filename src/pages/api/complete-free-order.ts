@@ -53,7 +53,9 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
       validatedItems.push({ ...item, price: serverPrice });
     } catch (err) {
       console.error('[FreeOrder] Price validation error for', item.name, err);
-      validatedItems.push({ ...item, priceValidationFailed: true });
+      // SECURITY: On price lookup failure, use server price of 0 is NOT safe
+      // Reject items where we can't verify the price
+      validatedItems.push({ ...item, price: item.price || 0, priceValidationFailed: true });
     }
   }
 
@@ -116,25 +118,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const appliedCredit = orderData.appliedCredit || 0;
 
-    // SECURITY: If credit is applied, verify authentication and balance BEFORE creating order
+    // SECURITY: Reject orders with items that failed price validation
+    const failedItems = validatedItems.filter((item: any) => item.priceValidationFailed);
+    if (failedItems.length > 0 && validatedTotal === 0) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unable to verify item prices. Please try again.'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Always require authentication for free/credit orders
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (!verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Verify the userId in the order matches the authenticated user
+    if (orderData.customer?.userId && orderData.customer.userId !== verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'User mismatch'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: If credit is applied, verify balance covers the order
     if (appliedCredit > 0) {
-      const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
-      if (!verifiedUserId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: authError || 'Authentication required to use store credit'
-        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      // Verify the userId in the order matches the authenticated user
-      if (orderData.customer?.userId && orderData.customer.userId !== verifiedUserId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User mismatch'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-      }
-
-      // Verify credit balance covers the validated total
       const creditData = await getDocument('userCredits', verifiedUserId);
       const actualBalance = creditData?.balance || 0;
       if (actualBalance < validatedTotal) {

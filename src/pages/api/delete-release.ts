@@ -35,7 +35,7 @@ function getServiceAccountKey(env: any): string | null {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   // Rate limit: destructive operations - 3 per hour

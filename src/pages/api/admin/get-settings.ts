@@ -2,11 +2,16 @@
 // Get public settings (feature flags) - no auth required
 import type { APIRoute } from 'astro';
 import { getSettings } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
-export const GET: APIRoute = async () => {
-  // No auth required - these are public feature flags
+export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   try {
     const settingsData = await getSettings();
 

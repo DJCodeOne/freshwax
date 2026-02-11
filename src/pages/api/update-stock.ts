@@ -70,7 +70,7 @@ interface StockUpdate {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   // Initialize Firebase for Cloudflare runtime
@@ -345,7 +345,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 export const GET: APIRoute = async ({ url, request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   // Initialize Firebase for Cloudflare runtime

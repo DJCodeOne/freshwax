@@ -3,9 +3,10 @@
 // Uses Pusher for real-time delivery (reduces Firebase reads)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { isAdmin } from '../../../lib/admin';
 
 // ============================================
 // CONTENT MODERATION
@@ -463,10 +464,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime and get env for Pusher
   const env = initFirebase(locals);
 
+  // Verify authenticated user
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const data = await request.json();
-    const { streamId, userId, userName, userAvatar, isPro, badge, message, type, giphyUrl, giphyId, replyTo, replyToUserName, replyToPreview } = data;
-    
+    const { streamId, userName, userAvatar, isPro, badge, message, type, giphyUrl, giphyId, replyTo, replyToUserName, replyToPreview } = data;
+    // Use verified userId from token, not from body
+    const userId = authUserId;
+
     if (!streamId || !userId || !message) {
       return new Response(JSON.stringify({
         success: false,
@@ -711,33 +720,49 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
+  // Verify authenticated user
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');
-    const moderatorId = url.searchParams.get('moderatorId');
-    
+
     if (!messageId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Message ID is required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    
+
+    // Check if the verified user is admin or owns the message
+    const chatMessage = await getDocument('livestream-chat', messageId);
+    const userIsAdmin = await isAdmin(authUserId);
+
+    if (!userIsAdmin && chatMessage?.userId !== authUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Not authorized to delete this message'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Mark as moderated rather than delete
     await updateDocument('livestream-chat', messageId, {
       isModerated: true,
-      moderatedBy: moderatorId || 'system',
+      moderatedBy: authUserId,
       moderatedAt: new Date().toISOString()
     });
-    
+
     return new Response(JSON.stringify({
       success: true,
       message: 'Message removed'
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
     });
-    
+
   } catch (error) {
     console.error('[livestream/chat] DELETE Error:', error);
     return new Response(JSON.stringify({

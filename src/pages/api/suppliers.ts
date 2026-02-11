@@ -36,7 +36,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     // Supplier portal access via code - no admin auth needed
     // But listing all suppliers or getting by ID requires admin auth
     if (!accessCode) {
-      const authError = requireAdminAuth(request, locals);
+      const authError = await requireAdminAuth(request, locals);
       if (authError) return authError;
     }
 
@@ -265,7 +265,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await parseJsonBody(request);
 
     // Verify admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const {
@@ -348,7 +348,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const body = await parseJsonBody(request);
 
     // Verify admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { supplierId, ...updates } = body;
@@ -404,7 +404,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const body = await parseJsonBody(request);
 
     // Verify admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { supplierId, hardDelete } = body;

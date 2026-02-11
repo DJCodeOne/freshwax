@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -34,7 +34,7 @@ async function getSettings() {
   return DEFAULT_REQUIREMENTS;
 }
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
   initFirebase(locals);
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
@@ -42,6 +42,14 @@ export const GET: APIRoute = async ({ url, locals }) => {
   try {
     // Check DJ eligibility
     if (action === 'checkEligibility' && uid) {
+      // SECURITY: Verify the user is checking their own eligibility
+      const { userId: verifiedUid } = await verifyRequestUser(request).catch(() => ({ userId: null }));
+      if (!verifiedUid || verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Authentication required'
+        }), { status: 401 });
+      }
       const settings = await getSettings();
 
       // Check for bypass in djLobbyBypass collection first (publicly readable)
@@ -172,16 +180,33 @@ export const GET: APIRoute = async ({ url, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
   try {
+    // SECURITY: Verify Firebase token for all POST actions
+    const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUid) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401 });
+    }
+
     const body = await request.json();
     const { action, uid, reason } = body;
 
     // Check and update eligibility (called after a mix gets likes)
     if (action === 'checkAndUpdate') {
       if (!uid) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Missing uid' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing uid'
         }), { status: 400 });
+      }
+
+      // SECURITY: Verify the user is checking their own eligibility
+      if (verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Cannot update eligibility for another user'
+        }), { status: 403 });
       }
 
       const settings = await getSettings();
@@ -260,10 +285,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Request bypass
     if (action === 'requestBypass') {
       if (!uid) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Missing uid' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing uid'
         }), { status: 400 });
+      }
+
+      // SECURITY: Verify the user is requesting bypass for themselves
+      if (verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Cannot request bypass for another user'
+        }), { status: 403 });
       }
 
       const settings = await getSettings();

@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   // Verify admin authentication for GET as well (sensitive seller data)
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   const url = new URL(request.url);
@@ -87,7 +87,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
 
     // Verify admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { action, sellerId, source } = body;

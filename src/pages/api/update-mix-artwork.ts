@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -28,7 +28,7 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -40,48 +40,39 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const s3Client = createS3Client(R2_CONFIG);
 
   try {
+    // SECURITY: Verify authentication via token (not cookies/form data which are spoofable)
+    const { userId: currentUserId, error: authError } = await verifyRequestUser(request);
+    if (!currentUserId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const formData = await request.formData();
     const mixId = formData.get('mixId') as string;
     const artworkFile = formData.get('artwork') as File;
-    const userIdFromForm = formData.get('userId') as string;
-    
-    console.log('[update-mix-artwork] Received:', { 
-      mixId, 
-      hasArtwork: !!artworkFile, 
+
+    console.log('[update-mix-artwork] Received:', {
+      mixId,
+      hasArtwork: !!artworkFile,
       artworkName: artworkFile?.name,
       artworkSize: artworkFile?.size,
       artworkType: artworkFile?.type,
-      userIdFromForm 
+      currentUserId
     });
-    
+
     if (!mixId || !artworkFile) {
       console.log('[update-mix-artwork] Missing required fields:', { mixId: !!mixId, artworkFile: !!artworkFile });
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: `Missing ${!mixId ? 'mixId' : 'artwork file'}` 
+      return new Response(JSON.stringify({
+        success: false,
+        error: `Missing ${!mixId ? 'mixId' : 'artwork file'}`
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    // Get user ID from cookies or form data
-    const partnerId = cookies.get('partnerId')?.value || '';
-    const customerId = cookies.get('customerId')?.value || '';
-    const firebaseUid = cookies.get('firebaseUid')?.value || '';
-    const currentUserId = partnerId || customerId || firebaseUid || userIdFromForm;
-    
-    console.log('[update-mix-artwork] Auth check:', { partnerId, customerId, firebaseUid, userIdFromForm, currentUserId });
-    
-    if (!currentUserId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Not authenticated' 
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+
+    console.log('[update-mix-artwork] Auth check:', { currentUserId });
     
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);

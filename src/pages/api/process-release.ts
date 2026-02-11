@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Admin authentication required - pass body data for adminKey check
-    const authError = requireAdminAuth(request, locals, bodyData);
+    const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
   // Rate limit: write operations - 30 per minute

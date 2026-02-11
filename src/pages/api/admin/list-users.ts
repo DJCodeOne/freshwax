@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     // SECURITY: Require admin authentication via admin key (not spoofable UID)
     // For GET requests, check X-Admin-Key header
-    const authError = requireAdminAuth(request, locals);
+    const authError = await requireAdminAuth(request, locals);
     if (authError) return authError;
 
     // Pagination params - SECURITY: No UID from query params (appears in logs)

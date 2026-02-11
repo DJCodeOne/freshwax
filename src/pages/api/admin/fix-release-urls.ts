@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { releaseId, oldPrefix, newPrefix, createNew, releaseData, collection, docId, updateData } = body;
 
     // SECURITY: Require admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     // Generic document update mode (for any collection)

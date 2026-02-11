@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   initServices(locals);
 
   // Check admin authentication
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   const url = new URL(request.url);
@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }>(request);
 
     // Check admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     // Parse body parameters

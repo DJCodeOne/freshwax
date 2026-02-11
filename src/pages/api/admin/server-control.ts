@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action } = body;
 
     // SECURITY: Require admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     if (!action) {

@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Admin authentication required for listing all requests
     // User status checks (action=status with userId) are allowed without auth
     if (action !== 'status' || !userId) {
-      const authError = requireAdminAuth(request, locals);
+      const authError = await requireAdminAuth(request, locals);
       if (authError) return authError;
     }
 
@@ -418,7 +418,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
   });
 
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) {
     return authError;
   }

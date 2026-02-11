@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -17,6 +18,11 @@ function initFirebase(locals: any) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // SECURITY: Rate limit to prevent brute-force of promo/referral codes
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`validate-promo:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfter!);
+
   try {
     const env = (locals as any)?.runtime?.env;
     const kv = env?.CACHE as KVNamespace | undefined;

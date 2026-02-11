@@ -2,6 +2,7 @@
 // Sends order confirmation email to customer
 
 import type { APIRoute } from 'astro';
+import { requireAdminAuth, initAdminEnv, getAdminKey } from '../../lib/admin';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -10,9 +11,16 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const { type, orderId, orderNumber, order, artistPayment, stockistOrder, customer, shipping } = await request.json();
+    // SECURITY: Require admin/internal authentication
+    const env = (locals as any)?.runtime?.env || {};
+    initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
+    const body = await request.json();
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    const { type, orderId, orderNumber, order, artistPayment, stockistOrder, customer, shipping } = body;
 
     // Route to appropriate email handler based on type
     if (type === 'artist' && artistPayment) {

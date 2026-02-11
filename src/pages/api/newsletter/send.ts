@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   try {
     // Check admin auth via X-Admin-Key header or body
     const body = await request.json();
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const {

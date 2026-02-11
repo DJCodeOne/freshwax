@@ -2,14 +2,18 @@
 // Check what's stored in D1 for a release
 
 import type { APIRoute } from 'astro';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const releaseId = url.searchParams.get('releaseId');
-
-  const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
 
   if (!db) {

@@ -10,7 +10,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   const env = (locals as any)?.runtime?.env;

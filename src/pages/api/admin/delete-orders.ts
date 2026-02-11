@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Check admin auth (supports Authorization header, X-Admin-Key header, or adminKey in body)
-  const authError = requireAdminAuth(request, locals, body);
+  const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
   try {

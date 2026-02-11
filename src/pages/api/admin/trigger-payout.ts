@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const bodyData = await request.json();
 
     // Admin auth required
-    const authError = requireAdminAuth(request, locals, bodyData);
+    const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
     // Rate limit

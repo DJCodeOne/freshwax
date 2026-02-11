@@ -6,9 +6,6 @@ import '../../styles/admin/giftcards.css';
 
 export const prerender = false;
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Gift Cards - Admin">
@@ -265,9 +262,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 </AdminLayout>
 
 
-<script define:vars={{ adminKey }}>
-  const ADMIN_KEY = adminKey;
-  
+<script>
   // Load analytics
   async function loadAnalytics() {
     try {
@@ -445,12 +440,10 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     btn.textContent = 'Creating...';
     
     try {
-      const response = await fetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'createCard',
-          adminKey: ADMIN_KEY,
           value: parseFloat(document.getElementById('cardValue').value),
           type: document.getElementById('cardType').value,
           description: document.getElementById('cardDescription').value,
@@ -487,12 +480,10 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     try {
       const amount = parseFloat(document.getElementById('adjustAmount').value);
       
-      const response = await fetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'adjustBalance',
-          adminKey: ADMIN_KEY,
           userId: document.getElementById('adjustUserId').value,
           amount,
           reason: document.getElementById('adjustReason').value
@@ -539,12 +530,10 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     if (!confirm('Are you sure you want to cancel this gift card? The code will no longer be redeemable.')) return;
     
     try {
-      const response = await fetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'deactivateCard',
-          adminKey: ADMIN_KEY,
           cardId
         })
       });
@@ -569,12 +558,10 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     if (!confirm('Reactivate this gift card? It will become redeemable again.')) return;
     
     try {
-      const response = await fetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'reactivateCard',
-          adminKey: ADMIN_KEY,
           cardId
         })
       });
@@ -719,12 +706,10 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     const code = document.getElementById('resendCardCode').value;
     
     try {
-      const response = await fetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'resendEmail',
-          adminKey: ADMIN_KEY,
           cardId,
           code,
           recipientEmail: email,

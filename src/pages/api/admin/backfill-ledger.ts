@@ -5,16 +5,21 @@
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const runtimeEnv = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: runtimeEnv?.ADMIN_UIDS, ADMIN_EMAILS: runtimeEnv?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const confirm = url.searchParams.get('confirm');
   const dryRun = confirm !== 'yes';
 
   // Initialize Firebase env
-  const runtimeEnv = (locals as any)?.runtime?.env;
   initFirebaseEnv(runtimeEnv);
 
   // Get service account credentials

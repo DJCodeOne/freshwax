@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { saSetDocument, saGetDocument } from '../../../lib/firebase-service-account';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -33,6 +34,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     const body = await request.json();
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { uid, email, displayName } = body;
 
     if (!uid || !email) {

@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -54,6 +55,11 @@ async function getToken(serviceAccountKey: string): Promise<string> {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const body = await request.json();
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals, body);
+  if (authError) return authError;
+
   const { releaseId, trackFixes } = body;
   // trackFixes: [{ trackIndex: 0, mp3Url: "...", wavUrl: "..." }, ...]
 
@@ -67,7 +73,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const env = (locals as any)?.runtime?.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;

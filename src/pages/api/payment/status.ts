@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
 
 export const prerender = false;
@@ -30,6 +30,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
   initKVCache(env);
+
+  // SECURITY: Verify user authentication via Firebase token
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // SECURITY: Verify the authenticated user matches the requested userId
+  if (authUserId !== userId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Forbidden'
+    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
 
   // Check cache first (unless refresh requested)
   const cacheKey = `status:${userId}`;

@@ -1,7 +1,7 @@
 // src/pages/api/get-release.ts
 // Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { getDocument, clearCache } from '../../lib/firebase-rest';
+import { getDocument, clearCache, verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 import { normalizeRelease } from '../../lib/releases';
 import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
 
@@ -13,17 +13,28 @@ const log = {
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, cookies }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+  });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
   const url = new URL(request.url);
   const releaseId = url.searchParams.get('id');
-  const noCache = url.searchParams.get('nocache'); // Bypass cache if present
+  const noCache = url.searchParams.get('nocache');
 
-  // Check admin status from authenticated cookie (not query params - that's insecure)
-  const adminId = cookies.get('adminId')?.value;
-  const firebaseUid = cookies.get('firebaseUid')?.value;
-  const adminUids = getAdminUids();
-  const isAdminUser = adminId ? adminUids.includes(adminId) :
-                      firebaseUid ? adminUids.includes(firebaseUid) : false;
+  // SECURITY: Check admin status via verified Firebase token (not spoofable cookies)
+  let isAdminUser = false;
+  try {
+    const { userId: verifiedUid } = await verifyRequestUser(request);
+    if (verifiedUid) {
+      isAdminUser = await checkIsAdmin(verifiedUid);
+    }
+  } catch {
+    // Not authenticated - that's OK for public release viewing
+  }
 
   if (!releaseId) {
     return new Response(JSON.stringify({

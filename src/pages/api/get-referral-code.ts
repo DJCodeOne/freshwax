@@ -33,23 +33,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Optional auth verification (for security, but code itself isn't sensitive)
+    // SECURITY: Require authentication and verify userId matches
     const authHeader = request.headers.get('Authorization');
-    const idToken = authHeader?.replace('Bearer ', '') || undefined;
+    const idToken = authHeader?.replace('Bearer ', '') || '';
 
-    if (idToken) {
-      try {
-        const tokenUserId = await verifyUserToken(idToken);
-        if (tokenUserId !== userId) {
-          return new Response(JSON.stringify({ success: false, error: 'User mismatch' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-      } catch (e) {
-        // Allow unauthenticated access but log warning
-        console.warn('[get-referral-code] Token verification failed, continuing anyway');
-      }
+    if (!idToken) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const tokenUserId = await verifyUserToken(idToken);
+    if (!tokenUserId || tokenUserId !== userId) {
+      return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Get user's code from KV

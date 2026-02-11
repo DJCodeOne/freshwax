@@ -200,7 +200,7 @@ async function getQuickStats(): Promise<HealthCheckResponse['stats']> {
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Require admin authentication
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) {
     return authError;
   }

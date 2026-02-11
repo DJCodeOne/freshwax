@@ -1,10 +1,10 @@
 // src/pages/api/update-mix.ts
 // API endpoint to update mix description and backfill userId - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
@@ -13,6 +13,14 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   });
 
   try {
+    // SECURITY: Verify authentication via token (not cookies which are spoofable)
+    const { userId: currentUserId, error: authError } = await verifyRequestUser(request);
+    if (!currentUserId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const { mixId, title, description, tracklist, artworkUrl } = await request.json();
 
     if (!mixId) {
@@ -25,23 +33,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       });
     }
 
-    // Get user ID from cookies only - never trust request body for auth
-    const partnerId = cookies.get('partnerId')?.value || '';
-    const customerId = cookies.get('customerId')?.value || '';
-    const firebaseUid = cookies.get('firebaseUid')?.value || '';
-    const currentUserId = partnerId || customerId || firebaseUid;
-
-    console.log('[update-mix] Auth check:', { partnerId, customerId, firebaseUid, currentUserId });
-
-    if (!currentUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authenticated'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    console.log('[update-mix] Auth check:', { currentUserId });
 
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);

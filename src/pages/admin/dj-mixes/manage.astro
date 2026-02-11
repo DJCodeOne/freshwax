@@ -6,9 +6,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { d1GetAllMixes } from '../../../lib/d1-catalog';
 import { queryCollection } from '../../../lib/firebase-rest';
 
-// Get admin key for API calls
 const runtime = (Astro.locals as any)?.runtime;
-const ADMIN_KEY = runtime?.env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 const db = runtime?.env?.DB;
 
 // Fetch all DJ mixes - prefer D1, fallback to Firebase
@@ -269,7 +267,7 @@ export const prerender = false;
   </div>
 
   <Fragment slot="scripts">
-    <script define:vars={{ ADMIN_KEY }}>
+    <script>
       // Filter functionality
       const filterTabs = document.querySelectorAll('.filter-tab');
       const searchInput = document.getElementById('searchInput');
@@ -315,7 +313,7 @@ export const prerender = false;
             const response = await fetch('/api/admin/toggle-mix-publish', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ mixId: id, published: newStatus, adminKey: ADMIN_KEY })
+              body: JSON.stringify({ mixId: id, published: newStatus, adminKey: window.ADMIN_KEY })
             });
             
             if (!response.ok) throw new Error('Failed to update');
@@ -385,7 +383,7 @@ export const prerender = false;
           const response = await fetch('/api/admin/delete-mix', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mixId: id, adminKey: ADMIN_KEY })
+            body: JSON.stringify({ mixId: id, adminKey: window.ADMIN_KEY })
           });
 
           const result = await response.json();

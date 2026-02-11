@@ -3,7 +3,7 @@
 // Uses service account for writes to ensure Firebase security rules don't block
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 
 // Build service account key from individual env vars
@@ -26,37 +26,37 @@ function getServiceAccountKey(env: any): string | null {
   });
 }
 
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const data = await request.json();
-    const { id, ...updateFields } = data;
-
     // Get runtime env
     const env = (locals as any)?.runtime?.env || {};
 
-    // Initialize Firebase for reads
+    // Initialize Firebase for reads and auth verification
     initFirebaseEnv({
       FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
       FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
     });
 
-    // Verify the user is updating their own profile
-    const partnerId = cookies.get('partnerId')?.value || '';
-    
-    if (!partnerId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Not authenticated' 
+    // SECURITY: Verify Firebase token instead of trusting cookies
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
       }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
+    const data = await request.json();
+    const { id, ...updateFields } = data;
+    const partnerId = verifiedUserId;
+
     if (id !== partnerId) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Not authorized' 
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Not authorized to update this profile'
       }), {
         status: 403,
         headers: { 'Content-Type': 'application/json' }

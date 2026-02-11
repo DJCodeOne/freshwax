@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -44,16 +45,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  // Simple admin check via header
-  const adminKey = request.headers.get('X-Admin-Key');
-  const expectedKey = env.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-
-  if (!adminKey || adminKey !== expectedKey) {
-    return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
 
   try {
     const serviceAccountKey = getServiceAccountKey(env);

@@ -2,6 +2,7 @@
 // Check daily email stats and retry skipped emails
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -13,7 +14,7 @@ const DAILY_LIMIT = 100;
 const MAX_SKIPPED_TO_CLEAR = 500; // Limit on how many old emails to clear at once
 
 // GET: Check today's email stats
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
   try {
     // Initialize Firebase environment
     const env = locals?.runtime?.env || {};
@@ -21,6 +22,11 @@ export const GET: APIRoute = async ({ url, locals }) => {
       FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
       FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
     });
+    initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
+
+    // SECURITY: Require admin authentication
+    const authError = await requireAdminAuth(request, locals);
+    if (authError) return authError;
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -83,8 +89,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
       FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
     });
+    initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
 
-    const { action } = await request.json();
+    // SECURITY: Require admin authentication
+    const body = await request.json();
+    const postAuthError = await requireAdminAuth(request, locals, body);
+    if (postAuthError) return postAuthError;
+
+    const { action } = body;
 
     if (action === 'retry-skipped') {
       // Get today's count first
@@ -125,10 +137,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       for (const skippedEmail of skippedEmails) {
         try {
-          // Retry sending via the main endpoint
+          // Retry sending via the main endpoint (forward admin key for auth)
+          const adminKey = request.headers.get('X-Admin-Key') || request.headers.get('Authorization')?.slice(7) || '';
+          const retryHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (adminKey) retryHeaders['X-Admin-Key'] = adminKey;
           const response = await fetch(new URL('/api/send-order-emails', request.url).toString(), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: retryHeaders,
             body: JSON.stringify(skippedEmail.data),
           });
 

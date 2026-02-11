@@ -9,10 +9,6 @@ export const prerender = false;
 
 const { id } = Astro.params;
 
-// Get admin key from environment
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-
 let mix: any = null;
 let errorMessage = '';
 
@@ -666,7 +662,7 @@ const mixDuration = getDuration(mix);
   }
 </style>
 
-<script define:vars={{ mixId: mix.id, adminKey }}>
+<script define:vars={{ mixId: mix.id }}>
   const form = document.getElementById('editForm');
   const saveBtn = document.getElementById('saveBtn');
   const descriptionField = document.getElementById('descriptionField');
@@ -735,7 +731,7 @@ const mixDuration = getDuration(mix);
 
     const updates = {
       mixId: mixId,
-      adminKey: adminKey,
+      adminKey: window.ADMIN_KEY,
       title: formData.get('title'),
       djName: formData.get('djName'),
       genre: formData.get('genre'),

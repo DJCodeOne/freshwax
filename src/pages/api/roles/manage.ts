@@ -1,16 +1,31 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
 
   try {
-    // Get user's roles
+    // Get user's roles — require auth and verify uid matches
     if (action === 'getUserRoles' && uid) {
+      const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
+      if (authError || !verifiedUid || verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Unauthorized'
+        }), { status: 401 });
+      }
+
       const userData = await getDocument('users', uid);
 
       if (!userData) {
@@ -27,12 +42,9 @@ export const GET: APIRoute = async ({ request, url }) => {
     }
 
     // Get pending requests (admin only)
-    // Uses pendingRoleRequests collection which is publicly readable (for REST API access)
     if (action === 'getPendingRequests') {
-      const authHeader = request.headers.get('Authorization');
-      const adminUid = authHeader?.replace('Bearer ', '');
-
-      if (!adminUid || !(await isAdmin(adminUid))) {
+      const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
+      if (authError || !verifiedUid || !(await isAdmin(verifiedUid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Unauthorized'
@@ -86,18 +98,42 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
   try {
+    // SECURITY: Verify Firebase token for all POST actions
+    const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUid) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401 });
+    }
+
     const body = await request.json();
-    const { action, uid, roleType, reason, adminUid, artistName, bio, links, businessName, description, website, storeName, location, discogsUrl } = body;
+    const { action, uid, roleType, reason, artistName, bio, links, businessName, description, website, storeName, location, discogsUrl } = body;
 
     // Request a role (user action)
     if (action === 'requestRole') {
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Missing uid or roleType' 
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Missing uid or roleType'
         }), { status: 400 });
+      }
+
+      // SECURITY: Verify the requesting user matches the uid
+      if (verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Cannot request roles for another user'
+        }), { status: 403 });
       }
 
       const validRoles = ['artist', 'merchSeller', 'vinylSeller', 'djBypass'];
@@ -185,12 +221,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Approve role (admin action)
     if (action === 'approveRole') {
-      if (!adminUid || !(await isAdmin(adminUid))) {
+      if (!(await isAdmin(verifiedUid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Unauthorized'
         }), { status: 403 });
       }
+      const adminUid = verifiedUid;
 
       if (!uid || !roleType) {
         return new Response(JSON.stringify({
@@ -373,12 +410,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Deny role (admin action)
     if (action === 'denyRole') {
-      if (!adminUid || !(await isAdmin(adminUid))) {
+      if (!(await isAdmin(verifiedUid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Unauthorized'
         }), { status: 403 });
       }
+      const adminUid = verifiedUid;
 
       if (!uid || !roleType) {
         return new Response(JSON.stringify({
@@ -424,12 +462,13 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Revoke role (admin action)
     if (action === 'revokeRole') {
-      if (!adminUid || !(await isAdmin(adminUid))) {
+      if (!(await isAdmin(verifiedUid))) {
         return new Response(JSON.stringify({
           success: false,
           error: 'Unauthorized'
         }), { status: 403 });
       }
+      const adminUid = verifiedUid;
 
       if (!uid || !roleType) {
         return new Response(JSON.stringify({

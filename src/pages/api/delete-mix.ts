@@ -114,7 +114,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const r2FolderPath = folderPath || mixData?.folder_path || 'dj-mixes/' + mixId;
+    // SECURITY: Always derive R2 path from verified mix document, never from client input
+    const r2FolderPath = mixData?.folder_path || 'dj-mixes/' + mixId;
 
     log.info('[delete-mix] R2 folder:', r2FolderPath);
 

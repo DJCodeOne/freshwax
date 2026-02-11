@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // SECURITY: Require admin authentication via header
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   try {

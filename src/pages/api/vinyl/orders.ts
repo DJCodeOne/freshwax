@@ -60,6 +60,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   }
 
+  // SECURITY: Verify authentication and that user is the seller
+  const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+  if (authError || !verifiedUserId) {
+    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (verifiedUserId !== sellerId) {
+    return new Response(JSON.stringify({ success: false, error: 'You can only view your own orders' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   // Rate limit
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`vinyl-orders-read:${clientId}`, {

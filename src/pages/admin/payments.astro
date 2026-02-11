@@ -1233,15 +1233,12 @@ export const prerender = false;
         btn.innerHTML = '⏳...';
 
         try {
-          let adminKey = localStorage.getItem('adminKey');
+          const adminKey = window.ADMIN_KEY;
           if (!adminKey) {
-            adminKey = prompt('Enter admin key:');
-            if (!adminKey) {
-              btn.disabled = false;
-              btn.innerHTML = originalText;
-              return;
-            }
-            localStorage.setItem('adminKey', adminKey);
+            showToast('Not authenticated - please refresh the page', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
           }
 
           const response = await fetch('/api/admin/trigger-payout', {
@@ -1305,15 +1302,12 @@ export const prerender = false;
 
         try {
           // Get admin key from localStorage or prompt
-          let adminKey = localStorage.getItem('adminKey');
+          const adminKey = window.ADMIN_KEY;
           if (!adminKey) {
-            adminKey = prompt('Enter admin key:');
-            if (!adminKey) {
-              btn.disabled = false;
-              btn.innerHTML = originalText;
-              return;
-            }
-            localStorage.setItem('adminKey', adminKey);
+            showToast('Not authenticated - please refresh the page', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
           }
 
           const response = await fetch('/api/admin/trigger-payout', {
@@ -1377,15 +1371,12 @@ export const prerender = false;
         btn.innerHTML = '⏳...';
 
         try {
-          let adminKey = localStorage.getItem('adminKey');
+          const adminKey = window.ADMIN_KEY;
           if (!adminKey) {
-            adminKey = prompt('Enter admin key:');
-            if (!adminKey) {
-              btn.disabled = false;
-              btn.innerHTML = originalText;
-              return;
-            }
-            localStorage.setItem('adminKey', adminKey);
+            showToast('Not authenticated - please refresh the page', 'error');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            return;
           }
 
           const response = await fetch('/api/admin/record-payout', {

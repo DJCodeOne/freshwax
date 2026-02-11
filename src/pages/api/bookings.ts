@@ -80,14 +80,28 @@ function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 }
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
   const dateStr = url.searchParams.get('date');
 
   try {
-    // Get user's daily bookings and allowance
+    // Get user's daily bookings and allowance — requires auth
     if (action === 'getDailyInfo' && uid && dateStr) {
+      const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
+      if (authError || !verifiedUid || verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Authentication required'
+        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      }
+
       const date = new Date(dateStr);
       const usedHours = await getUserDailyHours(uid, date);
 
@@ -99,7 +113,7 @@ export const GET: APIRoute = async ({ url }) => {
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Get schedule for a day
+    // Get schedule for a day (public — shows who's streaming when)
     if (action === 'getSchedule' && dateStr) {
       const date = new Date(dateStr);
       const startOfDay = new Date(date);
@@ -134,8 +148,15 @@ export const GET: APIRoute = async ({ url }) => {
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Get user's upcoming bookings
+    // Get user's upcoming bookings — requires auth
     if (action === 'getMyBookings' && uid) {
+      const { userId: verifiedUid, error: authErr } = await verifyRequestUser(request);
+      if (authErr || !verifiedUid || verifiedUid !== uid) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Authentication required'
+        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      }
       const now = new Date();
       now.setHours(now.getHours() - 2); // Include currently live
 

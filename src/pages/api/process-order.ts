@@ -2,6 +2,7 @@
 // Comprehensive order processing: payment splits, digital delivery, vinyl dropship
 import type { APIRoute } from 'astro';
 import { getDocument, getDocumentsBatch, addDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv, getAdminKey } from '../../lib/admin';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -168,9 +169,15 @@ async function getStockistInfo(releaseId: string, cachedRelease?: any) {
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
+  const env = locals?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
+  // SECURITY: Require admin/internal authentication
+  const orderData = await request.json();
+  const authError = await requireAdminAuth(request, locals, orderData);
+  if (authError) return authError;
 
   try {
-    const orderData = await request.json();
     log.info('[process-order] Processing order for:', orderData.customer?.email);
 
     // Validation
@@ -350,12 +357,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Send all notification emails in parallel for better performance
     const emailPromises: Promise<void>[] = [];
     const emailUrl = new URL('/api/send-order-emails', request.url).toString();
+    const adminKey = getAdminKey(locals);
+    const emailHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (adminKey) emailHeaders['X-Admin-Key'] = adminKey;
 
     // Customer confirmation email
     emailPromises.push(
       fetch(emailUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: emailHeaders,
         body: JSON.stringify({ type: 'customer', orderId: orderRef.id, orderNumber, order })
       }).then(() => {}).catch(e => log.error('[process-order] Customer email failed:', e))
     );
@@ -365,7 +375,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       emailPromises.push(
         fetch(emailUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: emailHeaders,
           body: JSON.stringify({ type: 'artist', orderId: orderRef.id, orderNumber, artistPayment })
         }).then(() => {}).catch(e => log.error('[process-order] Artist email failed:', e))
       );
@@ -376,7 +386,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       emailPromises.push(
         fetch(emailUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: emailHeaders,
           body: JSON.stringify({
             type: 'stockist', orderId: orderRef.id, orderNumber, stockistOrder,
             customer: order.customer, shipping: order.shipping

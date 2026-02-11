@@ -23,7 +23,7 @@ function initFirebase(locals: any) {
 // POST - Schedule chat cleanup for a stream
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   // Rate limit: chat cleanup operations - 20 per hour
@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // GET - Check and execute pending cleanups (call this periodically)
 export const GET: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   // Rate limit: chat cleanup check - 60 per hour

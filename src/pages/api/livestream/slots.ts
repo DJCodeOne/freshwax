@@ -1,13 +1,14 @@
 // src/pages/api/livestream/slots.ts
 // DJ livestream schedule - uses Firebase REST API + D1 sync
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv, clearCache, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
 import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 import { invalidateStatusCache } from './status';
+import { isAdmin } from '../../../lib/admin';
 
 // Helper to initialize services
 function initServices(locals: any) {
@@ -432,6 +433,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? authHeader.slice(7)
       : data.idToken; // Fall back to body for backwards compatibility
 
+    // Verify authenticated user
+    const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+    if (!authUserId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     console.log('[livestream/slots] POST action:', action, 'hasToken:', !!idToken);
 
     const settings = await getSettings();
@@ -439,6 +446,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // BOOK A SLOT
     if (action === 'book') {
       const { djId, djName, djAvatar, startTime, duration, title, genre, description } = data;
+
+      // Verify the authenticated user matches the DJ booking
+      if (authUserId !== djId) {
+        return new Response(JSON.stringify({ success: false, error: 'Not authorized to book for this DJ' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
 
       console.log('[livestream/slots] Booking request:', { djId, djName, startTime, duration, title, hasIdToken: !!idToken });
 
@@ -652,6 +664,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
+      // Verify the authenticated user matches the DJ going live
+      if (authUserId !== djId) {
+        return new Response(JSON.stringify({ success: false, error: 'Not authorized to go live as this DJ' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
+
       // Check if anyone is live
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -837,7 +854,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // CANCEL SLOT
     if (action === 'cancel') {
-      const { slotId, djId } = data;
+      const { slotId } = data;
 
       if (!slotId) {
         return new Response(JSON.stringify({ success: false, error: 'Slot ID required' }), {
@@ -853,7 +870,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      if (slot.djId !== djId && !data.adminCancel) {
+      // Verify the authenticated user owns the slot OR is admin
+      const cancelIsAdmin = await isAdmin(authUserId);
+      if (slot.djId !== authUserId && !cancelIsAdmin) {
         return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
           status: 403, headers: { 'Content-Type': 'application/json' }
         });
@@ -883,7 +902,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // END STREAM
     if (action === 'endStream') {
-      const { slotId, djId, isAdmin } = data;
+      const { slotId, djId } = data;
+
+      // Check admin status server-side instead of trusting body
+      const endStreamIsAdmin = await isAdmin(authUserId);
 
       let slot;
       let targetSlotId = slotId;
@@ -891,7 +913,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // If slotId provided, use it directly
       if (slotId) {
         slot = await getDocument('livestreamSlots', slotId);
-      } else if (djId) {
+      } else if (djId || authUserId) {
         // Otherwise find the current live slot for this DJ
         const liveSlots = await queryCollection('livestreamSlots', {
           filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -899,10 +921,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         // Admin can end any stream, otherwise must be the DJ's own stream
-        if (isAdmin) {
+        if (endStreamIsAdmin) {
           slot = liveSlots[0]; // End the current live stream
         } else {
-          slot = liveSlots.find(s => s.djId === djId);
+          slot = liveSlots.find(s => s.djId === authUserId);
         }
 
         if (slot) {
@@ -916,7 +938,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      if (slot.djId !== djId && !isAdmin) {
+      if (slot.djId !== authUserId && !endStreamIsAdmin) {
         return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
           status: 403, headers: { 'Content-Type': 'application/json' }
         });
@@ -1148,6 +1170,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
+      // Verify the authenticated user matches the DJ going live
+      if (authUserId !== djId) {
+        return new Response(JSON.stringify({ success: false, error: 'Not authorized to go live as this DJ' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
+
       // Check if anyone is currently live (including this DJ - prevent duplicate sessions)
       const liveSlots = await queryCollection('livestreamSlots', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
@@ -1276,7 +1303,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // UPDATE SLOT - Update DJ name, title, genre for scheduled/live slots
     // Useful for long events with multiple DJs taking turns
     if (action === 'update_slot') {
-      const { slotId, djId, djName, title, genre, description } = data;
+      const { slotId, djName, title, genre, description } = data;
 
       if (!slotId) {
         return new Response(JSON.stringify({ success: false, error: 'Slot ID required' }), {
@@ -1292,8 +1319,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      // Only the slot owner can update it (check original booker)
-      if (slot.djId !== djId && !data.isAdmin) {
+      // Only the slot owner or admin can update it - check server-side
+      const updateIsAdmin = await isAdmin(authUserId);
+      if (slot.djId !== authUserId && !updateIsAdmin) {
         return new Response(JSON.stringify({ success: false, error: 'Not authorized to update this slot' }), {
           status: 403, headers: { 'Content-Type': 'application/json' }
         });
@@ -1487,9 +1515,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE: Cancel slot
 export const DELETE: APIRoute = async ({ request, locals }) => {
   initServices(locals);
+
+  // Verify authenticated user
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const data = await request.json();
-    const { slotId, adminCancel } = data;
+    const { slotId } = data;
 
     if (!slotId) {
       return new Response(JSON.stringify({ success: false, error: 'Slot ID required' }), {
@@ -1505,11 +1540,19 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Verify the authenticated user owns the slot OR is admin
+    const deleteIsAdmin = await isAdmin(authUserId);
+    if (slot.djId !== authUserId && !deleteIsAdmin) {
+      return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const cancelledAt = new Date().toISOString();
     await updateDocument('livestreamSlots', slotId, {
       status: 'cancelled',
       cancelledAt,
-      cancelledByAdmin: adminCancel || false
+      cancelledByAdmin: deleteIsAdmin
     });
 
     invalidateCache();

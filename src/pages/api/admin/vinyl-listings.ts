@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { initFirebaseEnv } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -48,6 +49,10 @@ function initFirebase(locals: any) {
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
   const env = (locals as any)?.runtime?.env || {};
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
 
   // Rate limit
   const clientId = getClientId(request);
@@ -118,6 +123,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { action, listingId } = body;
 
     if (!listingId) {

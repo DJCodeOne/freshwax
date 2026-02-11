@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
     // Check admin auth via X-Admin-Key header
-    const authError = requireAdminAuth(request, locals);
+    const authError = await requireAdminAuth(request, locals);
     if (authError) return authError;
 
     // Get pagination params
@@ -81,7 +81,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
     const body = await request.json();
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { email, name, source } = body;
@@ -149,7 +149,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
     const body = await request.json();
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { subscriberId } = body;
@@ -191,7 +191,7 @@ export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
   initFirebase(locals);
   try {
     const body = await request.json();
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { subscriberId, status } = body;

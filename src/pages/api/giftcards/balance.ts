@@ -2,7 +2,7 @@
 // Get user's credit balance and transaction history - uses Firebase REST API
 // SECURITY: Requires authentication - user can only view their own balance
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, updateDocumentConditional, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -94,67 +94,85 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Get current balance
-    const creditData = await getDocument('userCredits', userId);
+    // SECURITY: Use conditional update to prevent double-spend race conditions
+    // Retry up to 3 times in case of concurrent modification
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      // Get current balance (fresh read each attempt)
+      const creditData = await getDocument('userCredits', userId);
 
-    if (!creditData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No credit balance found'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      if (!creditData) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'No credit balance found'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      const currentBalance = creditData.balance || 0;
+
+      if (amount > currentBalance) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Insufficient credit balance'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      const newBalance = currentBalance - amount;
+      const now = new Date().toISOString();
+
+      // Create transaction record
+      const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const transaction = {
+        id: transactionId,
+        type: 'purchase',
+        amount: -amount,
+        description: `Applied to order ${orderNumber || orderId}`,
+        orderId,
+        createdAt: now,
+        balanceAfter: newBalance
+      };
+
+      const existingTransactions = creditData.transactions || [];
+      existingTransactions.push(transaction);
+
+      try {
+        // Conditional update: only succeeds if document hasn't changed since our read
+        await updateDocumentConditional('userCredits', userId, {
+          balance: newBalance,
+          lastUpdated: now,
+          transactions: existingTransactions
+        }, creditData._updateTime);
+
+        // Also update customer document
+        await updateDocument('users', userId, {
+          creditBalance: newBalance,
+          creditUpdatedAt: now
+        });
+
+        console.log('[giftcards/balance] Applied credit:', amount, 'for user:', userId, 'order:', orderId);
+
+        return new Response(JSON.stringify({
+          success: true,
+          amountApplied: amount,
+          newBalance,
+          transactionId
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (condError: any) {
+        if (attempt < MAX_RETRIES - 1 && condError?.message?.includes('condition')) {
+          console.warn('[giftcards/balance] Concurrent modification, retrying...', attempt + 1);
+          continue;
+        }
+        throw condError;
+      }
     }
-
-    const currentBalance = creditData.balance || 0;
-
-    if (amount > currentBalance) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Insufficient credit balance'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    const newBalance = currentBalance - amount;
-    const now = new Date().toISOString();
-
-    // Create transaction record
-    const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const transaction = {
-      id: transactionId,
-      type: 'purchase',
-      amount: -amount, // negative for debit
-      description: `Applied to order ${orderNumber || orderId}`,
-      orderId,
-      createdAt: now,
-      balanceAfter: newBalance
-    };
-
-    // Update credit balance
-    const existingTransactions = creditData.transactions || [];
-    existingTransactions.push(transaction);
-
-    await updateDocument('userCredits', userId, {
-      balance: newBalance,
-      lastUpdated: now,
-      transactions: existingTransactions
-    });
-
-    // Also update customer document
-    await updateDocument('users', userId, {
-      creditBalance: newBalance,
-      creditUpdatedAt: now
-    });
-
-    console.log('[giftcards/balance] Applied credit:', amount, 'for user:', userId, 'order:', orderId);
 
     return new Response(JSON.stringify({
-      success: true,
-      amountApplied: amount,
-      newBalance,
-      transactionId
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      success: false,
+      error: 'Could not apply credit due to concurrent access. Please try again.'
+    }), { status: 409, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
     console.error('[giftcards/balance] Error applying credit:', error);

@@ -35,7 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, sourceCollection, updates } = body;
 
     // SECURITY: Require admin authentication via admin key (not spoofable UID)
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     if (!userId || !updates) {

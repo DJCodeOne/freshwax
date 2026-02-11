@@ -251,7 +251,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Require admin authentication
     // This endpoint is for promotional/complimentary gift cards only
     // Customer purchases must go through Stripe or PayPal payment flow
-    const authError = requireAdminAuth(request, locals, data);
+    const authError = await requireAdminAuth(request, locals, data);
     if (authError) {
       return authError;
     }

@@ -5,9 +5,6 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 
 export const prerender = false;
 
-// Get admin key from environment (server-side only)
-const runtime = (Astro.locals as any).runtime;
-const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Admin Settings">
@@ -742,9 +739,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   }
 </style>
 
-<script define:vars={{ ADMIN_KEY }}>
-  // Admin key passed from server-side environment
-
+<script>
   // Default values
   const defaultSettings = {
     artistEditableFields: {
@@ -979,7 +974,7 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'save',
           settings,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
 

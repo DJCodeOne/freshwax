@@ -4,7 +4,7 @@
 // Uses Web Crypto API for Cloudflare Workers compatibility
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 // Helper to initialize Firebase and return env for Pusher
@@ -263,7 +263,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { action, streamId, userId, userName, rating, sessionId, emoji, emojiType } = data;
+    const { action, streamId, userId: bodyUserId, userName, rating, sessionId, emoji, emojiType } = data;
+
+    // SECURITY: Use verified userId when auth header is present
+    const { userId: verifiedUserId } = await verifyRequestUser(request).catch(() => ({ userId: null }));
+    const userId = verifiedUserId || bodyUserId;
 
     if (!streamId) {
       return new Response(JSON.stringify({
@@ -665,12 +669,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
     const userId = url.searchParams.get('userId');
-    
+
     if (!streamId || !userId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Stream ID and User ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the user is querying their own reactions
+    const { userId: verifiedUid } = await verifyRequestUser(request).catch(() => ({ userId: null }));
+    if (!verifiedUid || verifiedUid !== userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
     
     const reactions = await queryCollection('livestream-reactions', {

@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const body = await parseJsonBody(request);
-  const authError = requireAdminAuth(request, locals, body);
+  const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
   try {

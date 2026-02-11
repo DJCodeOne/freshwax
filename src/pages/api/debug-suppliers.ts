@@ -15,7 +15,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     request = new Request(request.url, { ...request, headers });
   }
 
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   const env = (locals as any)?.runtime?.env;

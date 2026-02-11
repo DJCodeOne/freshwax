@@ -3,16 +3,20 @@
 
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv, getDocument, queryCollection } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const releaseId = url.searchParams.get('releaseId');
   const all = url.searchParams.get('all') === 'true';
   const confirm = url.searchParams.get('confirm');
-
-  const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
 
   if (!db) {

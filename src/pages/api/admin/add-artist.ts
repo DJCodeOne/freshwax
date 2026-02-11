@@ -2,7 +2,7 @@
 // Manually add an artist to the artists collection
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv } from '../../../lib/firebase-rest';
-import { verifyAdminKey } from '../../../lib/admin';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -59,15 +59,12 @@ async function writeToFirestore(collection: string, docId: string, data: Record<
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
-    const { adminKey, userId, artistName, email, bio, links, isArtist, isDJ, isMerchSupplier } = body;
+    const env = (locals as any)?.runtime?.env;
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
 
-    // SECURITY: Use timing-safe admin key verification
-    if (!adminKey || !verifyAdminKey(adminKey, locals)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid admin key' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { userId, artistName, email, bio, links, isArtist, isDJ, isMerchSupplier } = body;
 
     if (!userId || !artistName) {
       return new Response(JSON.stringify({ success: false, error: 'userId and artistName are required' }), {

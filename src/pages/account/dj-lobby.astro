@@ -24,9 +24,7 @@ const firebaseConfig = {
 // HLS URL for preview player - always use production stream URL
 const hlsBaseUrl = 'https://stream.freshwax.co.uk';
 
-// Get admin key from environment (server-side only) for bypass requests
 const runtime = (Astro.locals as any).runtime;
-const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
 ---
 
 <!DOCTYPE html>
@@ -43,10 +41,9 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Configuration - must be set before scripts load -->
-  <script define:vars={{ pusherConfig, hlsBaseUrl, ADMIN_KEY, firebaseConfig }}>
+  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }}>
     window.PUSHER_CONFIG = pusherConfig;
     window.HLS_BASE_URL = hlsBaseUrl;
-    window.ADMIN_KEY = ADMIN_KEY;
     window.FIREBASE_CONFIG = firebaseConfig;
   </script>
   <!-- Email verification check (loaded early so FreshWax object exists) -->
@@ -2019,16 +2016,16 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
     if (!confirm('Cancel your bypass request?')) return;
 
     try {
+      const token = await window.firebaseAuth.currentUser?.getIdToken();
       const response = await fetch('/api/admin/bypass-requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
         body: JSON.stringify({
           action: 'cancel',
-          userId: userInfo.uid,
-          adminKey: window.ADMIN_KEY
+          userId: userInfo.uid
         })
       });
-      
+
       const result = await response.json();
       if (result.success) {
         await checkBypassStatus(currentBypassStatus || {});
@@ -2039,22 +2036,22 @@ const ADMIN_KEY = runtime?.env?.ADMIN_KEY || '';
       console.error('[Bypass] Cancel error:', error);
     }
   });
-  
+
   // Continue with bypass (after approval)
   document.getElementById('continueWithBypass')?.addEventListener('click', () => {
     location.reload();
   });
-  
+
   // Resubmit after denial
   document.getElementById('resubmitBypassRequest')?.addEventListener('click', async () => {
     try {
+      const token2 = await window.firebaseAuth.currentUser?.getIdToken();
       await fetch('/api/admin/bypass-requests', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token2 || '') },
         body: JSON.stringify({
           action: 'cancel',
-          userId: userInfo.uid,
-          adminKey: window.ADMIN_KEY
+          userId: userInfo.uid
         })
       });
       await checkBypassStatus(currentBypassStatus || {});

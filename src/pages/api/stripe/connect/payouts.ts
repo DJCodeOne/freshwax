@@ -26,17 +26,14 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     // SECURITY: Verify user authentication via Firebase token
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
 
-    // Fall back to cookies if no Authorization header (for browser requests)
-    const partnerId = cookies.get('partnerId')?.value;
-    const firebaseUid = cookies.get('firebaseUid')?.value;
-    const artistId = verifiedUserId || partnerId || firebaseUid;
-
-    if (!artistId) {
+    if (!verifiedUserId || authError) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Authentication required'
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const artistId = verifiedUserId;
 
     // Get artist document for summary stats
     const artist = await getDocument('artists', artistId);

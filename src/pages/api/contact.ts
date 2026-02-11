@@ -56,34 +56,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // SECURITY: Escape HTML in user inputs to prevent injection
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     // Build subject line
     const isReport = subject === 'report';
     const subjectLine = isReport
       ? `[REPORT] ${reportType || 'Issue'} - Fresh Wax Contact`
       : `[${subject.toUpperCase()}] Fresh Wax Contact Form`;
 
-    // Build message body
+    // Build message body with escaped user inputs
     let messageBody = `
       <h2>New Contact Form Submission</h2>
-      <p><strong>From:</strong> ${name}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Subject:</strong> ${subject}</p>
+      <p><strong>From:</strong> ${esc(name)}</p>
+      <p><strong>Email:</strong> ${esc(email)}</p>
+      <p><strong>Subject:</strong> ${esc(subject)}</p>
     `;
 
     if (orderNumber) {
-      messageBody += `<p><strong>Order Number:</strong> ${orderNumber}</p>`;
+      messageBody += `<p><strong>Order Number:</strong> ${esc(orderNumber)}</p>`;
     }
 
     if (isReport) {
-      messageBody += `<p><strong>Report Type:</strong> ${reportType || 'Not specified'}</p>`;
+      messageBody += `<p><strong>Report Type:</strong> ${esc(reportType || 'Not specified')}</p>`;
       if (reportedUser) {
-        messageBody += `<p><strong>Reported User/URL:</strong> ${reportedUser}</p>`;
+        messageBody += `<p><strong>Reported User/URL:</strong> ${esc(reportedUser)}</p>`;
       }
     }
 
     messageBody += `
       <h3>Message:</h3>
-      <p style="white-space: pre-wrap;">${message}</p>
+      <p style="white-space: pre-wrap;">${esc(message)}</p>
       <hr>
       <p style="color: #888; font-size: 12px;">Sent from Fresh Wax contact form</p>
     `;

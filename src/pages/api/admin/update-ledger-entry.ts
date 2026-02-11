@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { saUpdateDocument, saQueryCollection, saDeleteDocument } from '../../../lib/firebase-service-account';
 import { d1GetLedgerEntries, d1UpdateLedgerEntry, d1DeleteLedgerEntry } from '../../../lib/d1-catalog';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -34,6 +35,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     const body = await request.json();
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { action, ledgerId, updates } = body;
 
     const db = env?.DB;

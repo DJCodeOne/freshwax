@@ -4,9 +4,6 @@
 import '../../../styles/admin/merch/upload.css';
 export const prerender = false;
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <!DOCTYPE html>
@@ -380,8 +377,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     </div>
   </div>
 
-  <script define:vars={{ adminKey }}>
-    const ADMIN_KEY = adminKey;
+  <script>
 
     // State
     let uploadedImages = [];
@@ -1069,7 +1065,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
     async function loadSuppliers() {
       try {
         const response = await fetch('/api/suppliers', {
-          headers: { 'X-Admin-Key': ADMIN_KEY }
+          headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
         
@@ -1167,7 +1163,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         // Submit
         const response = await fetch('/api/upload-merch', {
           method: 'POST',
-          headers: { 'X-Admin-Key': ADMIN_KEY },
+          headers: { 'X-Admin-Key': window.ADMIN_KEY },
           body: formData
         });
         

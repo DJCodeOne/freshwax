@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await parseJsonBody(request);
 
     // Check admin authentication
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     // Get users with limit to prevent runaway (admin operation)

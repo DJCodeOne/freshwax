@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   initServices(locals);
 
   // Verify admin authentication using secure admin key
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   try {

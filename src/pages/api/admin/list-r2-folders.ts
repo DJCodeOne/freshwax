@@ -15,7 +15,7 @@ function getR2Config(env: any) {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   try {

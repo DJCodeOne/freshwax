@@ -2,9 +2,6 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 export const prerender = false;
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 <AdminLayout title="Upload Release" activeNav="releases">
 <div class="card"><div class="card-body">
@@ -73,9 +70,6 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 </div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script define:vars={{ adminKey }}>
-  window.ADMIN_KEY = adminKey;
-</script>
 <script is:inline>
 // Elements
 const dropZone = document.getElementById("dropZone");

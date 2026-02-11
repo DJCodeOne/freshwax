@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { requireAdminAuth } from '../../../lib/admin';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 
@@ -11,7 +11,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const body = await parseJsonBody(request);
-  const authError = requireAdminAuth(request, locals, body);
+  const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
   const env = (locals as any)?.runtime?.env;
@@ -205,13 +205,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// GET endpoint to list returns
+// GET endpoint to list returns (admin only)
 export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const status = url.searchParams.get('status');
   const limit = parseInt(url.searchParams.get('limit') || '50', 10);
 
-  const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,

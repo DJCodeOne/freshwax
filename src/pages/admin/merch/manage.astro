@@ -8,9 +8,7 @@ import { queryCollection, clearCache } from '../../../lib/firebase-rest';
 // Clear cache to ensure fresh data
 clearCache();
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
 let products = [];
 let errorMessage = '';
@@ -314,8 +312,7 @@ export const prerender = false;
   }
 </style>
 
-<script define:vars={{ adminKey }}>
-  const ADMIN_KEY = adminKey;
+<script>
 
   // Filter functionality
   document.addEventListener('DOMContentLoaded', () => {
@@ -399,7 +396,7 @@ export const prerender = false;
 
     fetch('/api/delete-merch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify({ productId: id })
     })
     .then(res => res.json())

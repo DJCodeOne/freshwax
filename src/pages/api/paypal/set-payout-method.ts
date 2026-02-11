@@ -2,7 +2,7 @@
 // Set preferred payout method (stripe or paypal)
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
@@ -17,6 +17,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     FIREBASE_PROJECT_ID: projectId,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+
+  // SECURITY: Verify user authentication via Firebase token
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  }
 
   if (!clientEmail || !privateKey) {
     console.error('[Payout] Service account not configured');
@@ -41,6 +47,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
     const { entityType, entityId, payoutMethod, accessCode } = body;
+
+    // SECURITY: Verify the authenticated user matches the entity being modified
+    if ((entityType === 'user' || entityType === 'artist') && entityId && authUserId !== entityId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Forbidden'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
 
     // Validate
     if (!['artist', 'supplier', 'user'].includes(entityType)) {

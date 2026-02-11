@@ -74,34 +74,54 @@ export function verifyAdminKey(key: string, locals: any): boolean {
 
 /**
  * Centralized admin authentication check
- * Validates admin key from request body, Authorization header, or X-Admin-Key header
+ * Validates admin key from request body, Authorization header, X-Admin-Key header,
+ * OR a valid Firebase ID token from an admin user.
  * SECURITY: Query params are NOT supported to prevent keys appearing in logs
  * Returns error response if auth fails, null if auth succeeds
  */
-export function requireAdminAuth(request: Request, locals: any, bodyData?: any): Response | null {
+export async function requireAdminAuth(request: Request, locals: any, bodyData?: any): Promise<Response | null> {
   const expectedKey = getAdminKey(locals);
-  if (!expectedKey) {
-    return ApiErrors.serverError('Admin key not configured');
-  }
 
   // Check body (for POST requests) - timing-safe comparison
-  if (bodyData?.adminKey && timingSafeEqual(bodyData.adminKey, expectedKey)) {
-    return null; // Auth successful
+  if (expectedKey && bodyData?.adminKey && timingSafeEqual(bodyData.adminKey, expectedKey)) {
+    return null; // Auth successful via admin key in body
   }
 
-  // Check Authorization header (preferred method) - timing-safe comparison
+  // Check X-Admin-Key header - timing-safe comparison
+  const adminKeyHeader = request.headers.get('X-Admin-Key');
+  if (expectedKey && adminKeyHeader && timingSafeEqual(adminKeyHeader, expectedKey)) {
+    return null; // Auth successful via X-Admin-Key header
+  }
+
+  // Check Authorization: Bearer header
   const authHeader = request.headers.get('Authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7);
-    if (timingSafeEqual(token, expectedKey)) {
-      return null; // Auth successful
+
+    // Try as admin key first (timing-safe)
+    if (expectedKey && timingSafeEqual(token, expectedKey)) {
+      return null; // Auth successful via admin key in Bearer header
+    }
+
+    // Try as Firebase ID token from admin user
+    try {
+      const env = locals?.runtime?.env;
+      const { initFirebaseEnv, verifyUserToken } = await import('./firebase-rest');
+      initFirebaseEnv({
+        FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+        FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      });
+      const userId = await verifyUserToken(token);
+      if (userId && await isAdmin(userId)) {
+        return null; // Auth successful via Firebase admin token
+      }
+    } catch {
+      // Token verification failed, continue to error
     }
   }
 
-  // Check X-Admin-Key header (alternative for GET requests) - timing-safe comparison
-  const adminKeyHeader = request.headers.get('X-Admin-Key');
-  if (adminKeyHeader && timingSafeEqual(adminKeyHeader, expectedKey)) {
-    return null; // Auth successful
+  if (!expectedKey) {
+    return ApiErrors.serverError('Admin key not configured');
   }
 
   return ApiErrors.unauthorized('Invalid or missing admin credentials');

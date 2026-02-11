@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
-import { initAdminEnv } from '../../../lib/admin';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -22,7 +22,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
   });
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS || '',
+    ADMIN_EMAILS: env?.ADMIN_EMAILS,
   });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
 
   // Require confirmation
   if (confirm !== 'yes') {

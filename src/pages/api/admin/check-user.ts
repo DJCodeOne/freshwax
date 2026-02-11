@@ -9,7 +9,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Require admin authentication
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   const url = new URL(request.url);

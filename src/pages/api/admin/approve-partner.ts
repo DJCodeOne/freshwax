@@ -9,7 +9,7 @@ import { parseJsonBody } from '../../../lib/api-utils';
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication
   const body = await parseJsonBody(request);
-  const authError = requireAdminAuth(request, locals, body);
+  const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
   // Initialize Firebase for Cloudflare runtime

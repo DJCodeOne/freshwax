@@ -3,7 +3,7 @@
 // Messages stored in Firebase, delivered via Pusher
 
 import type { APIRoute } from 'astro';
-import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit as checkGlobalRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
 
@@ -413,14 +413,21 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // SECURITY: Verify user identity via Firebase token
+    const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+    if (!authUserId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');
-    const userId = url.searchParams.get('userId');
 
-    if (!messageId || !userId) {
+    if (!messageId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Message ID and User ID required'
+        error: 'Message ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -434,10 +441,9 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // SECURITY: Check authorization server-side (not from client param)
-    // User can delete their own message OR admin can delete any message
-    const userIsAdmin = await isAdmin(userId);
-    const isOwner = messageData?.odamiMa === userId;
+    // SECURITY: Use verified userId for authorization check
+    const userIsAdmin = await isAdmin(authUserId);
+    const isOwner = messageData?.odamiMa === authUserId;
 
     if (!userIsAdmin && !isOwner) {
       return new Response(JSON.stringify({

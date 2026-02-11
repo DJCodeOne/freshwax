@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await parseJsonBody(request);
 
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { email } = body;

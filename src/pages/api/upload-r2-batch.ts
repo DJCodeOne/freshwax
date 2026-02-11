@@ -3,6 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -35,6 +37,26 @@ function getContentType(filename: string): string {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env || {};
+
+    // SECURITY: Rate limit uploads
+    const clientId = getClientId(request);
+    const rateLimit = checkRateLimit(`upload:${clientId}`, RateLimiters.standard);
+    if (!rateLimit.allowed) {
+      return rateLimitResponse(rateLimit.retryAfter!);
+    }
+
+    // SECURITY: Require authentication
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+    const { userId, error: authError } = await verifyRequestUser(request);
+    if (!userId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const R2_CONFIG = getR2Config(env);
 
     // Validate R2 config
@@ -47,14 +69,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const filename = formData.get('filename') as string;
-    const releaseId = formData.get('releaseId') as string;
+    const rawFilename = formData.get('filename') as string;
+    const rawReleaseId = formData.get('releaseId') as string;
     const fileType = formData.get('fileType') as string; // metadata, track, preview, artwork
 
-    if (!file || !releaseId) {
+    if (!file || !rawReleaseId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Missing file or releaseId'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Sanitize releaseId and filename to prevent path traversal
+    const releaseId = rawReleaseId.replace(/[^a-zA-Z0-9_\-]/g, '');
+    const sanitizedName = (rawFilename || file.name).replace(/\.\./g, '').replace(/[\/\\]/g, '_');
+    const filename = sanitizedName;
+
+    if (!releaseId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid releaseId'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 

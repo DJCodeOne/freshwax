@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -13,9 +14,13 @@ function initFirebase(locals: any) {
   });
 }
 
-// POST: Check and perform auto-switchover
+// POST: Check and perform auto-switchover (admin/system only)
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const now = new Date();
     const nowISO = now.toISOString();

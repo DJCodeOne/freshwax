@@ -1575,6 +1575,75 @@ const navItems = [
     });
   </script>
   
+  <!-- Firebase Auth for admin token-based API authentication -->
+  <script type="module" is:inline>
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+    const firebaseConfig = {
+      apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+      authDomain: 'freshwax-store.firebaseapp.com',
+      projectId: 'freshwax-store'
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Promise that resolves when auth state is known
+    let authResolve;
+    const authReady = new Promise(r => { authResolve = r; });
+
+    onAuthStateChanged(auth, async (user) => {
+      window._firebaseUser = user || null;
+      if (user) {
+        // Set ADMIN_KEY to Firebase token for backward compatibility
+        // Old code using X-Admin-Key or adminKey in body will send this token
+        // Server-side requireAdminAuth now accepts Firebase tokens from admin UIDs
+        try {
+          const token = await user.getIdToken();
+          window.ADMIN_KEY = token;
+          // Refresh token before it expires (every 45 min)
+          setInterval(async () => {
+            if (window._firebaseUser) {
+              window.ADMIN_KEY = await window._firebaseUser.getIdToken();
+            }
+          }, 45 * 60 * 1000);
+        } catch (e) {
+          console.error('[AdminLayout] Failed to get token:', e);
+        }
+      }
+      authResolve();
+    });
+
+    /**
+     * Get Firebase ID token for admin API calls
+     * Returns the token string, or redirects to home if not logged in
+     */
+    window.getAdminToken = async function() {
+      await authReady;
+      const user = window._firebaseUser;
+      if (!user) {
+        window.location.href = '/';
+        throw new Error('Not authenticated');
+      }
+      return user.getIdToken();
+    };
+
+    /**
+     * Fetch wrapper that automatically adds admin auth token
+     * Use this instead of fetch() for admin API calls
+     */
+    window.adminFetch = async function(url, options = {}) {
+      const token = await window.getAdminToken();
+      const headers = new Headers(options.headers || {});
+      headers.set('Authorization', 'Bearer ' + token);
+      if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
+        headers.set('Content-Type', 'application/json');
+      }
+      return fetch(url, { ...options, headers });
+    };
+  </script>
+
   <slot name="scripts" />
 </body>
 </html>

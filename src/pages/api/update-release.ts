@@ -56,7 +56,7 @@ export async function POST({ request, locals }: any) {
   }
 
   // Admin authentication required - pass body data for adminKey check
-  const authError = requireAdminAuth(request, locals, updates);
+  const authError = await requireAdminAuth(request, locals, updates);
   if (authError) return authError;
 
   try {

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv, queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -125,6 +126,11 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, items: any[], ar
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const orderNumber = url.searchParams.get('orderNumber');
   const send = url.searchParams.get('send') === 'yes';
@@ -139,7 +145,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  const env = (locals as any)?.runtime?.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   const serviceAccountKey = getServiceAccountKey(env);

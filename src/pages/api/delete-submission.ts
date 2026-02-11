@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
+import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
 
 function getR2Config(env: any) {
   return {
@@ -16,6 +17,13 @@ function getR2Config(env: any) {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+
+    // SECURITY: Require admin authentication
+    const body = await request.json();
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const R2_CONFIG = getR2Config(env);
 
     if (!R2_CONFIG.accessKeyId || !R2_CONFIG.secretAccessKey) {
@@ -25,7 +33,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const body = await request.json();
     const { submission } = body;
 
     if (!submission) {

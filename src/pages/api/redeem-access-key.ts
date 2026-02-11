@@ -2,7 +2,7 @@
 // API for users to redeem a quick access key and gain DJ lobby access
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Helper to initialize Firebase
@@ -35,6 +35,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // SECURITY: Verify authentication matches userId
+    const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+    if (!authUserId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    if (authUserId !== userId) {
+      return new Response(JSON.stringify({ success: false, error: 'User ID does not match authentication' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' }
       });
     }
 

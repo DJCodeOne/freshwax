@@ -38,7 +38,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ success: false, error: 'You must be logged in to comment' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const { releaseId, comment, userName, gifUrl, avatarUrl } = await request.json();
+    const { releaseId, comment, userName: bodyUserName, gifUrl, avatarUrl } = await request.json();
+
+    // SECURITY: Get verified display name from user document instead of trusting body
+    let userName = bodyUserName?.trim() || 'User';
+    try {
+      const userDoc = await getDocument('users', userId);
+      if (userDoc?.displayName) {
+        userName = userDoc.displayName;
+      } else if (userDoc?.name) {
+        userName = userDoc.name;
+      }
+    } catch {
+      // Fall back to body userName if user doc lookup fails
+    }
 
     log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
 

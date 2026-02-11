@@ -9,11 +9,8 @@ import '../../../../styles/admin/merch/edit.css';
 
 export const prerender = false;
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-
 // Firebase API key fallback (same as in firebase-rest.ts)
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 // Initialize Firebase env for Cloudflare runtime
@@ -491,11 +488,10 @@ const getStockBadgeClass = (stock) => {
   </div>
 </div>
 
-<script define:vars={{ id, product, adminKey }}>
+<script define:vars={{ id, product }}>
   console.log('EDIT PAGE SCRIPT LOADED - v4');
   console.log('product.stock:', product.stock, typeof product.stock);
   console.log('product.totalStock:', product.totalStock, typeof product.totalStock);
-  const ADMIN_KEY = adminKey;
 
   // Get initial images array
   let images = [];
@@ -593,7 +589,7 @@ const getStockBadgeClass = (stock) => {
     }
     fetch('/api/update-merch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify(updateData)
     }).then(r => r.json()).then(result => {
       if (result.success) {
@@ -866,7 +862,7 @@ const getStockBadgeClass = (stock) => {
     try {
       const response = await fetch('/api/update-merch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
         body: JSON.stringify({
           productId: id,
           colors: colors,
@@ -1503,7 +1499,7 @@ const getStockBadgeClass = (stock) => {
     try {
       const response = await fetch('/api/update-merch', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
         body: JSON.stringify({
           productId: id,
           images: images.map((img, idx) => ({
@@ -1538,7 +1534,7 @@ const getStockBadgeClass = (stock) => {
 
     fetch('/api/delete-merch', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY },
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify({ productId: id })
     })
     .then(res => res.json())

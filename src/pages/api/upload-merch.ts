@@ -114,7 +114,7 @@ function sanitizeForPath(str: string): string {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   // Rate limit: upload operations - 10 per hour

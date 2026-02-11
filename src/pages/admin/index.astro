@@ -9,11 +9,8 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 import { AwsClient } from 'aws4fetch';
 import '../../styles/admin/index.css';
 
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-
 // R2 config for pending submissions count
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const r2Config = {
   accountId: runtimeEnv?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
   accessKeyId: runtimeEnv?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -1811,9 +1808,8 @@ Astro.response.headers.set('Pragma', 'no-cache');
   setInterval(updateRequestTimes, 1000); // Update every second
 </script>
 
-<script define:vars={{ adminKey }}>
+<script>
   // System Monitor - Real-time health checks
-  const ADMIN_KEY = adminKey;
   let monitorInterval = null;
   let streamDurationInterval = null;
   let currentStreamStartTime = null;
@@ -1832,7 +1828,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   async function fetchHealthData() {
     try {
       const response = await fetch('/api/admin/health-check', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const data = await response.json();
 

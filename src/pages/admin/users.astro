@@ -5,9 +5,6 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import '../../styles/admin/users.css';
 export const prerender = false;
-
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="User Management" activeNav="users">
@@ -334,8 +331,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
   </Fragment>
 
   <Fragment slot="scripts">
-    <script define:vars={{ adminKey }}>
-      window.ADMIN_KEY = adminKey;
+    <script>
     </script>
     <script type="module">
       import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';

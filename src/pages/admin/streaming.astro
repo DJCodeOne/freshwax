@@ -4,10 +4,6 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import '../../styles/admin/streaming.css';
 
 export const prerender = false;
-
-// Get admin key from Cloudflare runtime env (production) or import.meta.env (dev)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <style is:global>
@@ -1773,8 +1769,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 </AdminLayout>
 
 
-<script define:vars={{ adminKey }}>
-  const ADMIN_KEY = adminKey;
+<script>
   const STREAM_SERVER = 'https://stream.freshwax.co.uk';
   let serverCheckInterval = null;
 
@@ -2192,7 +2187,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 
       try {
         const response = await fetch('/api/admin/server-logs', {
-          headers: { 'X-Admin-Key': ADMIN_KEY }
+          headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
         logsEl.textContent = data.logs || 'No logs available';
@@ -2226,7 +2221,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
       const response = await fetch('/api/admin/server-control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, adminKey: ADMIN_KEY })
+        body: JSON.stringify({ action, adminKey: window.ADMIN_KEY })
       });
       return await response.json();
     } catch (error) {
@@ -2274,7 +2269,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         const response = await fetch('/api/admin/clear-chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ adminKey: ADMIN_KEY })
+          body: JSON.stringify({ adminKey: window.ADMIN_KEY })
         });
 
         const result = await response.json();
@@ -2450,7 +2445,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
             action: 'grant',
             email,
             reason,
-            adminKey: ADMIN_KEY
+            adminKey: window.ADMIN_KEY
           })
         });
         
@@ -2486,7 +2481,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
           body: JSON.stringify({
             email,
             isApproved: true,
-            adminKey: ADMIN_KEY
+            adminKey: window.ADMIN_KEY
           })
         });
 
@@ -2548,7 +2543,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
             action: 'ban',
             email,
             reason,
-            adminKey: ADMIN_KEY
+            adminKey: window.ADMIN_KEY
           })
         });
         
@@ -2595,7 +2590,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
             action: 'hold',
             email,
             reason,
-            adminKey: ADMIN_KEY
+            adminKey: window.ADMIN_KEY
           })
         });
         
@@ -2650,7 +2645,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'revoke',
           userId,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
       
@@ -2794,7 +2789,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'revoke',
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
 
@@ -2826,7 +2821,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'setExpiry',
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
 
@@ -2853,7 +2848,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'generate',
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
 
@@ -2885,7 +2880,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'revoke',
           userId,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
       
@@ -2975,7 +2970,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'unban',
           userId,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
       
@@ -3001,7 +2996,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'release',
           userId,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
       
@@ -3027,7 +3022,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'kick',
           userId,
-          adminKey: ADMIN_KEY
+          adminKey: window.ADMIN_KEY
         })
       });
       
@@ -3138,7 +3133,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
         body: JSON.stringify({
           action: 'approve',
           requestId,
-          adminKey: ADMIN_KEY,
+          adminKey: window.ADMIN_KEY,
           adminEmail: currentAdminEmail || 'admin'
         })
       });
@@ -3196,7 +3191,7 @@ const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
           action: 'deny',
           requestId,
           reason: reason || null,
-          adminKey: ADMIN_KEY,
+          adminKey: window.ADMIN_KEY,
           adminEmail: currentAdminEmail || 'admin'
         })
       });

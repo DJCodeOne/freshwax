@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -21,6 +22,10 @@ export const MAX_BOOKING_DAYS_AHEAD = 30; // 1 month
 // GET: Fetch all allowances or check specific DJ's allowance
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const url = new URL(request.url);
     const djId = url.searchParams.get('djId');
@@ -85,8 +90,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Create/update DJ allowance
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const postEnv = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: postEnv?.ADMIN_UIDS, ADMIN_EMAILS: postEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();
+    const postAuthError = await requireAdminAuth(request, locals, body);
+    if (postAuthError) return postAuthError;
     const { djId, weeklySlots, maxHoursPerDay, reason, djName } = body;
 
     if (!djId) {
@@ -165,8 +174,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE: Remove DJ allowance (revert to defaults)
 export const DELETE: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const delEnv = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: delEnv?.ADMIN_UIDS, ADMIN_EMAILS: delEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();
+    const delAuthError = await requireAdminAuth(request, locals, body);
+    if (delAuthError) return delAuthError;
     const { djId } = body;
 
     if (!djId) {

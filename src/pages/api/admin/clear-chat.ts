@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json().catch(() => ({}));
 
     // Check admin auth (pass body for adminKey check)
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { streamId, limit } = body;

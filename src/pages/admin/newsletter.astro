@@ -4,9 +4,6 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 export const prerender = false;
 
-// Get admin key for API authentication
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const adminKey = runtimeEnv?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 ---
 
 <AdminLayout title="Newsletter" activeNav="newsletter">
@@ -517,10 +514,6 @@ Stay fresh! 🎵
     .steps-indicator { flex-direction: column; gap: 1rem; align-items: flex-start; }
   }
 </style>
-
-<script define:vars={{ adminKey }}>
-  const ADMIN_KEY = adminKey;
-</script>
 
 <script type="module">
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';

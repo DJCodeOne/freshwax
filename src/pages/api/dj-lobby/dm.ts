@@ -3,7 +3,7 @@
 // Private messages between DJs in the lobby
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
 // Simple MD5 implementation for Cloudflare Workers
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -238,6 +238,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    // SECURITY: Require authentication and verify userId matches
+    const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+    if (!authUserId || authError) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
     const targetId = url.searchParams.get('targetId');
@@ -249,6 +257,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'User ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    if (authUserId !== userId) {
+      return new Response(JSON.stringify({ success: false, error: 'Access denied' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Get list of conversations for this user

@@ -3,7 +3,7 @@
 // Check if a customer already owns a release or track
 
 import type { APIRoute } from 'astro';
-import { queryCollection } from '../../lib/firebase-rest';
+import { queryCollection, verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -67,7 +67,21 @@ export function clearOwnershipCache(userId: string) {
   ownershipCache.delete(userId);
 }
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+  });
+
+  // SECURITY: Require authentication and verify userId matches
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    return new Response(JSON.stringify({ error: 'Authentication required' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const url = new URL(request.url);
   const userId = url.searchParams.get('userId');
   const releaseId = url.searchParams.get('releaseId');
@@ -77,6 +91,12 @@ export const GET: APIRoute = async ({ request }) => {
     return new Response(JSON.stringify({ error: 'userId and releaseId are required' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (authUserId !== userId) {
+    return new Response(JSON.stringify({ error: 'Access denied' }), {
+      status: 403, headers: { 'Content-Type': 'application/json' }
     });
   }
   

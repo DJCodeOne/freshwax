@@ -3,12 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
-
-// Helper to get admin key from environment
-function getAdminKey(locals: any): string {
-  const env = locals?.runtime?.env;
-  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-}
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -19,24 +14,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
+    const env2 = (locals as any)?.runtime?.env;
+    initAdminEnv({ ADMIN_UIDS: env2?.ADMIN_UIDS, ADMIN_EMAILS: env2?.ADMIN_EMAILS });
+
     const data = await request.json();
-    const { userId, amount, reason, adminKey, isWelcomeCredit } = data;
+    const authError = await requireAdminAuth(request, locals, data);
+    if (authError) return authError;
+
+    const { userId, amount, reason, isWelcomeCredit } = data;
 
     if (!userId || !amount) {
       return new Response(JSON.stringify({
         success: false,
         error: 'User ID and amount are required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // SECURITY: Always require admin key - no bypass allowed
-    // The isWelcomeCredit flag only affects transaction type labeling, not authorization
-    const validAdminKey = getAdminKey(locals);
-    if (!validAdminKey || adminKey !== validAdminKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     const creditAmount = parseFloat(amount);

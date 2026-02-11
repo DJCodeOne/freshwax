@@ -6,6 +6,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -28,10 +29,23 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   }
 
   try {
+    // SECURITY: Require authentication - use verified userId instead of query param
+    const envDt = (locals as any)?.runtime?.env;
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: envDt?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: envDt?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+    const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+    if (!authUserId || authError) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const releaseId = url.searchParams.get('releaseId');
     const trackIndex = parseInt(url.searchParams.get('track') || '0', 10);
     const format = (url.searchParams.get('format') || 'mp3').toLowerCase() as 'mp3' | 'wav';
-    const userId = url.searchParams.get('userId');
+    const userId = authUserId; // Use authenticated userId, not query param
 
     if (!releaseId) {
       return new Response(JSON.stringify({ error: 'releaseId required' }), {

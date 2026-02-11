@@ -7,7 +7,7 @@ import { requireAdminAuth } from '../../lib/admin';
 
 export const GET = async ({ url, locals, request }: any) => {
   // Require admin authentication
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
   try {
     const releaseId = url.searchParams.get('releaseId');

@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
-import { isAdmin, initAdminEnv } from '../../../lib/admin';
+import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -23,6 +23,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
+    const authError = requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { adminUid, idToken, partnerId, updates } = body;
 
     console.log('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
@@ -32,14 +35,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Missing adminUid or partnerId'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Verify admin status
-    const authorized = await isAdmin(adminUid);
-    if (!authorized) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' }
-      });
     }
 
     const now = new Date().toISOString();

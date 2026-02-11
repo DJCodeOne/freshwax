@@ -3,6 +3,7 @@
 // Replaces Firebase heartbeat polling with Pusher's built-in presence tracking
 
 import type { APIRoute } from 'astro';
+import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -40,19 +41,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
 
-    // Get Pusher credentials - check both runtime env and build-time env (with PUBLIC_ fallback)
+    // Initialize Firebase for auth verification
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+
+    // Get Pusher credentials
     const appId = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
     const key = env?.PUSHER_KEY || env?.PUBLIC_PUSHER_KEY || import.meta.env.PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
     const secret = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
 
-    // Debug logging
-    console.log('[Pusher Auth] env exists:', !!env);
-    console.log('[Pusher Auth] appId exists:', !!appId);
-    console.log('[Pusher Auth] key exists:', !!key);
-    console.log('[Pusher Auth] secret exists:', !!secret);
-
     if (!appId || !key || !secret) {
-      console.error('[Pusher Auth] Missing credentials - appId:', !!appId, 'key:', !!key, 'secret:', !!secret);
+      console.error('[Pusher Auth] Missing credentials');
       return new Response(JSON.stringify({ error: 'Pusher not configured' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -79,11 +80,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Get user info from request headers (set by client)
+    // SECURITY: Use verified Firebase token for user identity when available
+    // Falls back to anon for unauthenticated viewers (livestream is public)
     const oderId = socketId.split('.').join('_');
-    const userId = request.headers.get('x-user-id') || ('anon_' + oderId);
-    const userName = request.headers.get('x-user-name') || 'Viewer';
+    let userId: string;
+    let userName = request.headers.get('x-user-name') || 'Viewer';
     const userAvatar = request.headers.get('x-user-avatar') || '';
+
+    const { userId: verifiedUserId } = await verifyRequestUser(request).catch(() => ({ userId: null }));
+    if (verifiedUserId) {
+      userId = verifiedUserId;
+    } else {
+      userId = 'anon_' + oderId;
+      userName = 'Viewer';
+    }
 
     // Build presence data
     const presenceData = {
