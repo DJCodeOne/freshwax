@@ -45,6 +45,7 @@ const {
   saleDiscount = 0,
   vinylRelease = false,
   vinylRecordCount = '',
+  vinylStock = 0,
   vinylPrice = 0,
   vinylShippingUK = null,
   vinylShippingEU = null,
@@ -211,7 +212,7 @@ const formattedDate = release ? new Date(releaseDate).toLocaleDateString('en-GB'
   year: 'numeric'
 }) : '';
 
-const vinylAvailable = vinylRelease && parseInt(vinylRecordCount || '0') > 0;
+const vinylAvailable = vinylRelease && (vinylStock > 0 || parseInt(vinylRecordCount || '0') > 0);
 const originalDigitalPrice = actualPricePerSale || actualTrackPrice * tracksWithIds.length;
 const hasSale = saleDiscount > 0;
 const digitalPrice = hasSale ? originalDigitalPrice * (1 - saleDiscount / 100) : originalDigitalPrice;
@@ -242,7 +243,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   product={release && actualPricePerSale > 0 ? {
     price: actualPricePerSale,
     currency: 'GBP',
-    availability: 'InStock',
+    availability: vinylRelease && !vinylAvailable ? 'OutOfStock' : 'InStock',
     brand: artistName,
     category: 'Music > Digital Downloads'
   } : undefined}

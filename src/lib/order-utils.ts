@@ -1,7 +1,7 @@
 // src/lib/order-utils.ts
 // Shared order creation utilities for PayPal and Stripe payment flows
 
-import { getDocument, updateDocument, addDocument, clearCache, setDocument } from './firebase-rest';
+import { getDocument, updateDocument, addDocument, clearCache, setDocument, atomicIncrement, updateDocumentConditional } from './firebase-rest';
 import { d1UpsertMerch } from './d1-catalog';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
 
@@ -28,6 +28,68 @@ export function getShortOrderNumber(orderNumber: string): string {
   return orderParts.length >= 3
     ? (orderParts[0] + '-' + orderParts[orderParts.length - 1]).toUpperCase()
     : orderNumber.toUpperCase();
+}
+
+// Validate stock availability before checkout
+export async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
+  const unavailableItems: string[] = [];
+
+  for (const item of items) {
+    const quantity = item.quantity || 1;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        const product = await getDocument('merch', item.productId);
+        if (product) {
+          if (item.size || item.color) {
+            const variantKey = item.size && item.color
+              ? `${item.size.toLowerCase()}_${item.color.toLowerCase()}`
+              : item.size?.toLowerCase() || item.color?.toLowerCase() || 'default';
+            const variantStock = product.variantStock?.[variantKey]?.stock ?? product.stock ?? 0;
+            if (variantStock < quantity) {
+              unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStock} available`);
+            }
+          } else {
+            const totalStock = product.totalStock ?? product.stock ?? 0;
+            if (totalStock < quantity) {
+              unavailableItems.push(`${item.name} - only ${totalStock} available`);
+            }
+          }
+        }
+      } else if (itemType === 'vinyl') {
+        if (item.sellerId && !item.releaseId) {
+          const listingId = item.id || item.productId;
+          if (listingId) {
+            const listing = await getDocument('vinylListings', listingId);
+            if (!listing) {
+              unavailableItems.push(`${item.name} - listing no longer exists`);
+            } else if (listing.status === 'sold') {
+              unavailableItems.push(`${item.name} - already sold`);
+            } else if (listing.status !== 'published') {
+              unavailableItems.push(`${item.name} - no longer available`);
+            }
+          }
+        } else {
+          const releaseId = item.releaseId || item.productId || item.id;
+          if (releaseId) {
+            const release = await getDocument('releases', releaseId);
+            if (release) {
+              const vinylStock = release.vinylStock ?? 0;
+              if (vinylStock < quantity) {
+                unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
+              }
+            }
+          }
+        }
+      }
+      // Digital items have unlimited stock - no check needed
+    } catch (err) {
+      console.error('[order-utils] Error checking stock for', item.name, err);
+    }
+  }
+
+  return { available: unavailableItems.length === 0, unavailableItems };
 }
 
 // Process cart items to add download URLs
@@ -149,46 +211,54 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
   }));
 }
 
-// Update stock for vinyl items
+// Update stock for vinyl items (atomic)
 export async function updateVinylStock(items: any[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
   const now = new Date().toISOString();
 
   for (const item of items) {
     if (item.type === 'vinyl' && (item.releaseId || item.productId)) {
+      // Skip crates items (handled by processVinylCratesOrders)
+      if (item.sellerId && !item.releaseId) continue;
+
       const releaseId = item.releaseId || item.productId;
       try {
-        log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', item.quantity);
+        const qty = item.quantity || 1;
+        log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', qty);
 
+        // Read current stock for the movement log
         const releaseData = await getDocument('releases', releaseId);
+        const previousStock = releaseData?.vinylStock || 0;
 
-        if (releaseData && releaseData.vinylStock !== undefined) {
-          const previousStock = releaseData.vinylStock || 0;
-          const newStock = Math.max(0, previousStock - (item.quantity || 1));
+        // Atomic decrement - prevents race conditions on concurrent purchases
+        await atomicIncrement('releases', releaseId, {
+          vinylStock: -qty,
+          vinylSold: qty
+        });
 
-          await updateDocument('releases', releaseId, {
-            vinylStock: newStock,
-            vinylSold: (releaseData.vinylSold || 0) + (item.quantity || 1),
-            updatedAt: now
-          });
+        // Sync vinylRecordCount (string field used by frontend display)
+        const newStock = Math.max(0, previousStock - qty);
+        await updateDocument('releases', releaseId, {
+          vinylRecordCount: String(newStock),
+          updatedAt: now
+        });
 
-          // Record stock movement
-          await addDocument('vinyl-stock-movements', {
-            releaseId: releaseId,
-            releaseName: item.name || releaseData.releaseName,
-            type: 'sell',
-            quantity: item.quantity || 1,
-            stockDelta: -(item.quantity || 1),
-            previousStock: previousStock,
-            newStock: newStock,
-            orderId: orderId,
-            orderNumber: orderNumber,
-            notes: 'Order ' + orderNumber,
-            createdAt: now,
-            createdBy: 'system'
-          }, idToken);
+        // Record stock movement
+        await addDocument('vinyl-stock-movements', {
+          releaseId: releaseId,
+          releaseName: item.name || releaseData?.releaseName,
+          type: 'sell',
+          quantity: qty,
+          stockDelta: -qty,
+          previousStock: previousStock,
+          newStock: newStock,
+          orderId: orderId,
+          orderNumber: orderNumber,
+          notes: 'Order ' + orderNumber,
+          createdAt: now,
+          createdBy: 'system'
+        }, idToken);
 
-          log.info('[order-utils] ✓ Vinyl stock updated:', item.name, previousStock, '->', newStock);
-        }
+        log.info('[order-utils] ✓ Vinyl stock updated atomically:', item.name, previousStock, '->', newStock);
       } catch (stockErr) {
         console.error('[order-utils] Vinyl stock update error:', stockErr);
       }
@@ -229,19 +299,38 @@ export async function processVinylCratesOrders(
 
       log.info('[order-utils] Processing crates item:', item.title, 'from seller:', sellerName);
 
-      // 1. Mark the listing as sold
+      // 1. Mark the listing as sold (with optimistic concurrency to prevent double-sell)
       try {
-        await updateDocument('vinylListings', listingId, {
-          status: 'sold',
-          soldAt: now,
-          soldOrderNumber: orderNumber,
-          soldOrderId: orderId,
-          soldTo: customer.email,
-          updatedAt: now
-        });
+        const listing = await getDocument('vinylListings', listingId);
+        if (listing && listing.status === 'published' && listing._updateTime) {
+          await updateDocumentConditional('vinylListings', listingId, {
+            status: 'sold',
+            soldAt: now,
+            soldOrderNumber: orderNumber,
+            soldOrderId: orderId,
+            soldTo: customer.email,
+            updatedAt: now
+          }, listing._updateTime);
+        } else if (listing && listing.status !== 'sold') {
+          // Fallback if no _updateTime
+          await updateDocument('vinylListings', listingId, {
+            status: 'sold',
+            soldAt: now,
+            soldOrderNumber: orderNumber,
+            soldOrderId: orderId,
+            soldTo: customer.email,
+            updatedAt: now
+          });
+        } else {
+          console.error('[order-utils] Listing already sold or missing:', listingId);
+        }
         log.info('[order-utils] ✓ Listing marked as sold:', listingId);
-      } catch (markSoldErr) {
-        console.error('[order-utils] Failed to mark listing as sold:', markSoldErr);
+      } catch (markSoldErr: any) {
+        if (markSoldErr.message?.includes('CONFLICT')) {
+          console.error('[order-utils] Listing was modified concurrently (possible double-sell prevented):', listingId);
+        } else {
+          console.error('[order-utils] Failed to mark listing as sold:', markSoldErr);
+        }
       }
 
       // 2. Create vinyl order record for the seller
@@ -390,14 +479,26 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
               totalSold += v.sold || 0;
             });
 
-            await updateDocument('merch', item.productId, {
-              variantStock: variantStock,
-              totalStock: totalStock,
-              soldStock: totalSold,
-              isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
-              isOutOfStock: totalStock === 0,
-              updatedAt: now
-            });
+            // Use conditional update if available for concurrency safety
+            if (productData._updateTime) {
+              await updateDocumentConditional('merch', item.productId, {
+                variantStock: variantStock,
+                totalStock: totalStock,
+                soldStock: totalSold,
+                isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
+                isOutOfStock: totalStock === 0,
+                updatedAt: now
+              }, productData._updateTime);
+            } else {
+              await updateDocument('merch', item.productId, {
+                variantStock: variantStock,
+                totalStock: totalStock,
+                soldStock: totalSold,
+                isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
+                isOutOfStock: totalStock === 0,
+                updatedAt: now
+              });
+            }
 
             // Record refund movement
             await addDocument('merch-stock-movements', {
@@ -451,11 +552,18 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
 
         if (releaseData) {
           const previousStock = releaseData.vinylStock || 0;
-          const newStock = previousStock + (item.quantity || 1);
+          const qty = item.quantity || 1;
+          const newStock = previousStock + qty;
 
+          // Atomic increment for stock restoration
+          await atomicIncrement('releases', releaseId, {
+            vinylStock: qty,
+            vinylSold: -qty
+          });
+
+          // Sync vinylRecordCount display field
           await updateDocument('releases', releaseId, {
-            vinylStock: newStock,
-            vinylSold: Math.max(0, (releaseData.vinylSold || 0) - (item.quantity || 1)),
+            vinylRecordCount: String(newStock),
             updatedAt: now
           });
 
@@ -480,21 +588,46 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
         console.error('[order-utils] Vinyl refund error:', refundErr);
       }
     }
+
+    // Restore vinyl crates listings
+    if (item.type === 'vinyl' && item.sellerId && !item.releaseId) {
+      const listingId = item.id || item.productId;
+      if (listingId) {
+        try {
+          await updateDocument('vinylListings', listingId, {
+            status: 'published',
+            soldAt: null,
+            soldOrderNumber: null,
+            soldOrderId: null,
+            soldTo: null,
+            updatedAt: now
+          });
+          log.info('[order-utils] ✓ Vinyl crates listing restored:', listingId);
+        } catch (restoreErr) {
+          console.error('[order-utils] Failed to restore vinyl crates listing:', restoreErr);
+        }
+      }
+    }
   }
 }
 
-// Update stock for merch items
+// Update stock for merch items (with optimistic concurrency)
 export async function updateMerchStock(items: any[], orderNumber: string, orderId: string, idToken?: string, env?: any): Promise<void> {
   const now = new Date().toISOString();
+  const MAX_RETRIES = 3;
 
   for (const item of items) {
     if (item.type === 'merch' && item.productId) {
-      try {
-        log.info('[order-utils] Updating stock for merch item:', item.name, 'qty:', item.quantity);
+      let stockUpdated = false;
 
-        const productData = await getDocument('merch', item.productId);
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          log.info('[order-utils] Updating stock for merch item:', item.name, 'qty:', item.quantity, 'attempt:', attempt + 1);
 
-        if (productData) {
+          const productData = await getDocument('merch', item.productId);
+
+          if (!productData) break;
+
           const variantStock = productData.variantStock || {};
 
           // Build variant key from size and color
@@ -514,90 +647,119 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
           }
 
           const variant = variantStock[variantKey];
+          if (!variant) break;
 
-          if (variant) {
-            const previousStock = variant.stock || 0;
-            const newStock = Math.max(0, previousStock - item.quantity);
+          const previousStock = variant.stock || 0;
+          const newStock = Math.max(0, previousStock - item.quantity);
 
-            variant.stock = newStock;
-            variant.sold = (variant.sold || 0) + item.quantity;
-            variantStock[variantKey] = variant;
+          variant.stock = newStock;
+          variant.sold = (variant.sold || 0) + item.quantity;
+          variantStock[variantKey] = variant;
 
-            // Calculate totals
-            let totalStock = 0;
-            let totalSold = 0;
-            Object.values(variantStock).forEach((v: any) => {
-              totalStock += v.stock || 0;
-              totalSold += v.sold || 0;
-            });
+          // Calculate totals
+          let totalStock = 0;
+          let totalSold = 0;
+          Object.values(variantStock).forEach((v: any) => {
+            totalStock += v.stock || 0;
+            totalSold += v.sold || 0;
+          });
 
-            // Update product
-            await updateDocument('merch', item.productId, {
-              variantStock: variantStock,
-              totalStock: totalStock,
-              soldStock: totalSold,
-              isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
-              isOutOfStock: totalStock === 0,
-              updatedAt: now
-            });
+          const updateData = {
+            variantStock: variantStock,
+            totalStock: totalStock,
+            soldStock: totalSold,
+            isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
+            isOutOfStock: totalStock === 0,
+            updatedAt: now
+          };
 
-            // Record stock movement
-            await addDocument('merch-stock-movements', {
-              productId: item.productId,
-              productName: item.name,
-              sku: productData.sku,
-              variantKey: variantKey,
-              variantSku: variant.sku,
-              type: 'sell',
-              quantity: item.quantity,
-              stockDelta: -item.quantity,
-              previousStock: previousStock,
-              newStock: newStock,
-              orderId: orderId,
-              orderNumber: orderNumber,
-              notes: 'Order ' + orderNumber,
-              createdAt: now,
-              createdBy: 'system'
-            }, idToken);
-
+          try {
+            // Conditional update - fails if document was modified since we read it
+            if (productData._updateTime) {
+              await updateDocumentConditional('merch', item.productId, updateData, productData._updateTime);
+            } else {
+              await updateDocument('merch', item.productId, updateData);
+            }
+            stockUpdated = true;
             log.info('[order-utils] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
-
-            // Sync to D1 so public merch page shows updated stock
-            const db = env?.DB;
-            if (db) {
-              try {
-                clearCache(`doc:merch:${item.productId}`);
-                const updatedProduct = await getDocument('merch', item.productId);
-                if (updatedProduct) {
-                  await d1UpsertMerch(db, item.productId, updatedProduct);
-                  log.info('[order-utils] ✓ D1 synced for:', item.name);
-                }
-              } catch (d1Error) {
-                log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
-              }
+            break; // Success - exit retry loop
+          } catch (conflictErr: any) {
+            if (conflictErr.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) {
+              log.info('[order-utils] Stock conflict for', item.name, '- retrying...');
+              continue;
             }
-
-            // Update supplier stats if applicable
-            if (productData.supplierId) {
-              try {
-                const supplierRevenue = (productData.retailPrice || item.price) * item.quantity * ((productData.supplierCut || 0) / 100);
-                const supplierData = await getDocument('merch-suppliers', productData.supplierId);
-                if (supplierData) {
-                  await updateDocument('merch-suppliers', productData.supplierId, {
-                    totalStock: (supplierData.totalStock || 0) - item.quantity,
-                    totalSold: (supplierData.totalSold || 0) + item.quantity,
-                    totalRevenue: (supplierData.totalRevenue || 0) + supplierRevenue,
-                    updatedAt: now
-                  });
-                }
-              } catch (supplierErr) {
-                log.info('[order-utils] Could not update supplier stats');
-              }
-            }
+            throw conflictErr;
+          }
+        } catch (stockErr) {
+          if (attempt === MAX_RETRIES - 1) {
+            console.error('[order-utils] Stock update error after', MAX_RETRIES, 'attempts:', stockErr);
           }
         }
-      } catch (stockErr) {
-        console.error('[order-utils] Stock update error:', stockErr);
+      }
+
+      if (stockUpdated) {
+        // Record stock movement
+        try {
+          const productData = await getDocument('merch', item.productId);
+          const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
+          const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
+          let variantKey = size + '_' + color;
+          if (productData?.variantStock && !productData.variantStock[variantKey]) {
+            const keys = Object.keys(productData.variantStock);
+            if (keys.length === 1) variantKey = keys[0];
+          }
+          const variant = productData?.variantStock?.[variantKey];
+
+          await addDocument('merch-stock-movements', {
+            productId: item.productId,
+            productName: item.name,
+            sku: productData?.sku,
+            variantKey: variantKey,
+            variantSku: variant?.sku,
+            type: 'sell',
+            quantity: item.quantity,
+            stockDelta: -item.quantity,
+            previousStock: (variant?.stock || 0) + item.quantity,
+            newStock: variant?.stock || 0,
+            orderId: orderId,
+            orderNumber: orderNumber,
+            notes: 'Order ' + orderNumber,
+            createdAt: now,
+            createdBy: 'system'
+          }, idToken);
+        } catch (movementErr) {
+          console.error('[order-utils] Stock movement log error:', movementErr);
+        }
+
+        // Sync to D1
+        const db = env?.DB;
+        if (db) {
+          try {
+            clearCache(`doc:merch:${item.productId}`);
+            const updatedProduct = await getDocument('merch', item.productId);
+            if (updatedProduct) {
+              await d1UpsertMerch(db, item.productId, updatedProduct);
+              log.info('[order-utils] ✓ D1 synced for:', item.name);
+            }
+          } catch (d1Error) {
+            log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
+          }
+        }
+
+        // Update supplier stats atomically
+        try {
+          const productData = await getDocument('merch', item.productId);
+          if (productData?.supplierId) {
+            const supplierRevenue = (productData.retailPrice || item.price) * item.quantity * ((productData.supplierCut || 0) / 100);
+            await atomicIncrement('merch-suppliers', productData.supplierId, {
+              totalStock: -item.quantity,
+              totalSold: item.quantity,
+              totalRevenue: supplierRevenue
+            });
+          }
+        } catch (supplierErr) {
+          log.info('[order-utils] Could not update supplier stats');
+        }
       }
     }
   }

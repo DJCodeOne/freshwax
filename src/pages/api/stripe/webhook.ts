@@ -720,7 +720,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 // Log successful subscription
                 logStripeEvent(event.type, event.id, true, {
                   message: `Plus subscription activated for ${userId}`,
-                  metadata: { userId, plusId, promoCode: promoCode || null },
+                  metadata: { userId, plusId, promoCode: promoCodeUsed || null },
                   processingTimeMs: Date.now() - startTime
                 }).catch(e => console.error('[Stripe Webhook] Log error:', e));
               } catch (emailError) {

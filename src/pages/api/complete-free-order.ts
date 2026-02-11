@@ -2,7 +2,7 @@
 // Handles free orders (total = 0) and credit-paid orders without payment processing
 
 import type { APIRoute } from 'astro';
-import { createOrder } from '../../lib/order-utils';
+import { createOrder, validateStock } from '../../lib/order-utils';
 import { initFirebaseEnv, getDocument, updateDocument, atomicIncrement, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
@@ -154,6 +154,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           error: 'Insufficient credit balance'
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
+    }
+
+    // SECURITY: Validate stock availability before processing order
+    const stockCheck = await validateStock(validatedItems);
+    if (!stockCheck.available) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Some items are no longer available',
+        unavailableItems: stockCheck.unavailableItems
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Verify this is actually a free/credit-paid order (no payment due)
