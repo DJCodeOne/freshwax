@@ -358,11 +358,8 @@
     var miniPlayerInitialized = false;
 
     function initMiniPlayer() {
-      console.log('[MINI-PLAYER] initMiniPlayer called, already initialized:', miniPlayerInitialized);
-
       // Prevent multiple initializations
       if (miniPlayerInitialized && window.startShuffle) {
-        console.log('[MINI-PLAYER] Already initialized, skipping');
         return;
       }
 
@@ -376,14 +373,7 @@
       var miniClose = document.getElementById('mini-close');
       var miniShuffleBtn = document.getElementById('mini-shuffle-btn');
 
-      console.log('[MINI-PLAYER] Elements found:', {
-        globalAudio: !!globalAudio,
-        miniPlayer: !!miniPlayer,
-        miniShuffleBtn: !!miniShuffleBtn
-      });
-
       if (!globalAudio || !miniPlayer) {
-        console.error('[MINI-PLAYER] Missing required elements, aborting init');
         return;
       }
 
@@ -530,7 +520,7 @@
         });
 
         globalAudio.addEventListener('waiting', function() {
-          console.log('[MINI-PLAYER] Audio buffering...');
+          // Audio buffering - no action needed
         });
 
         // Handle network issues with retry logic
@@ -543,7 +533,6 @@
 
         // Recover from temporary network issues
         window.addEventListener('online', function() {
-          console.log('[MINI-PLAYER] Network restored, resuming playback...');
           if (globalAudio.src && globalAudio.paused && !globalAudio.ended) {
             globalAudio.play().catch(function(err) {
               console.error('[MINI-PLAYER] Resume after network restore failed:', err);
@@ -744,7 +733,6 @@
       // === SHUFFLE FUNCTIONS ===
       
       function startShuffle() {
-        console.log('[MINI-PLAYER] startShuffle called');
         var shuffleBtn = document.getElementById('mini-shuffle-btn');
         var floatingBtn = document.getElementById('floating-shuffle-btn');
         if (shuffleBtn) shuffleBtn.classList.add('loading');
@@ -795,7 +783,6 @@
       
       // Expose startShuffle globally
       window.startShuffle = startShuffle;
-      console.log('[MINI-PLAYER] startShuffle exposed globally');
       
       function initShufflePlayback() {
         var tracks = window.FreshWaxPlayer.shuffleTracks;

@@ -265,8 +265,6 @@ function setCachedOnlineDjs(djs: any[]): void {
 
 // GET: Get online DJs list (initial load and polling fallback)
 export const GET: APIRoute = async ({ request, locals }) => {
-  console.log('[DEBUG] presence.ts GET called');
-
   // Rate limit: 30 requests per minute per client
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`presence-get:${clientId}`, {
@@ -281,13 +279,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
   const firebaseApiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
   const firebaseProjectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-
-  console.log('[DEBUG] Firebase config:', {
-    hasApiKey: !!firebaseApiKey,
-    apiKeyLength: firebaseApiKey?.length || 0,
-    hasProjectId: !!firebaseProjectId,
-    projectId: firebaseProjectId
-  });
 
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: firebaseProjectId,

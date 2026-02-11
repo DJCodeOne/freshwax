@@ -1456,31 +1456,24 @@ export const prerender = false;
   }
   
   onAuthStateChanged(auth, async (user) => {
-    console.log('[Partner Dashboard Client] Auth state changed, user:', user?.uid || 'NOT LOGGED IN');
-    
     if (!user) {
       // Not logged in - show login prompt
-      console.log('[Partner Dashboard Client] No user, showing login prompt');
       document.cookie = 'partnerId=; path=/; max-age=0';
       showLogin();
       return;
     }
     
     // User is logged in
-    console.log('[Partner Dashboard Client] User logged in:', user.uid);
-    
+
     // Always ensure userId cookie is set
     if (!hasCookie('userId')) {
       document.cookie = `userId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
-      console.log('[Partner Dashboard Client] Set userId cookie');
     }
     
     // Check if partnerId cookie exists and is valid
     const hasPartnerCookie = hasCookie('partnerId');
-    console.log('[Partner Dashboard Client] hasPartnerCookie:', hasPartnerCookie);
-    
+
     if (!hasPartnerCookie) {
-      console.log('[Partner Dashboard Client] No partnerId cookie, checking profile...');
       showLoading();
       
       try {
@@ -1490,17 +1483,13 @@ export const prerender = false;
           headers: { 'Authorization': `Bearer ${_idToken}` }
         });
         const profile = await response.json();
-        
-        console.log('[Partner Dashboard Client] Profile:', profile);
-        
+
         // If they have any partner role, set the cookie and reload
         if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
           document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
-          console.log('[Partner Dashboard Client] Set partnerId cookie, reloading...');
           window.location.reload();
         } else {
           // They're logged in but not a partner - show login prompt with message
-          console.log('[Partner Dashboard Client] User has no partner roles, showing login');
           showLogin();
         }
       } catch (e) {

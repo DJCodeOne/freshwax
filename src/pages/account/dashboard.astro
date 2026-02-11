@@ -716,20 +716,16 @@ export const prerender = false;
 <script is:inline>
   // Go Plus button handler - separate script to avoid module loading issues
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('[GoPlusInit] Setting up Go Plus button');
     var btn = document.getElementById('goPlusHeaderBtn');
     var modal = document.getElementById('goPlusModal');
-    console.log('[GoPlusInit] Button:', btn, 'Modal:', modal);
     if (btn) {
       btn.onclick = function(e) {
         e.preventDefault();
-        console.log('[GoPlusInit] Button clicked!');
         if (modal) {
           modal.classList.remove('hidden');
           document.body.style.overflow = 'hidden';
         }
       };
-      console.log('[GoPlusInit] Click handler attached');
     }
   });
 </script>
@@ -1340,8 +1336,6 @@ export const prerender = false;
       });
       const data = await response.json();
 
-      console.log('[Dashboard] Partner status check:', data);
-
       if (data.success) {
         // Partner Dashboard is only for artists and merch sellers (NOT DJs)
         const isArtist = data.roles?.artist === true;
@@ -1350,8 +1344,6 @@ export const prerender = false;
         const isArtistOrMerchSeller = isArtist || isMerchSupplier;
         const isAnyVendor = isArtist || isMerchSupplier || isVinylSeller;
         const isApprovedPartner = data.isApproved && isArtistOrMerchSeller;
-
-        console.log('[Dashboard] isArtistOrMerchSeller:', isArtistOrMerchSeller, 'isApproved:', data.isApproved, 'isApprovedPartner:', isApprovedPartner, 'isVinylSeller:', isVinylSeller);
 
         // Show selling section for any vendor type
         const sellingSection = document.getElementById('sellingSection');
@@ -1376,7 +1368,6 @@ export const prerender = false;
 
           // Set partnerId cookie for partner dashboard (30 days)
           document.cookie = `partnerId=${userId}; path=/; max-age=2592000; SameSite=Lax`;
-          console.log('[Dashboard] partnerId cookie set for:', userId);
         } else if (isArtistOrMerchSeller) {
           // They have artist/merch roles but not approved yet
           proDashboardBtn.title = 'Pending approval - available for artists & merch sellers';
@@ -3054,14 +3045,10 @@ export const prerender = false;
       // Get auth token for authenticated API call (use module-level currentUser)
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
-      console.log('[Subscription] Loading status for', userId, 'hasToken:', !!idToken);
-
       const response = await fetch(`/api/subscription?userId=${userId}`, {
         headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
       });
       const result = await response.json();
-
-      console.log('[Subscription] API response:', result.success, result.subscription?.isPro, result.error);
 
       if (!result.success) {
         console.warn('[Subscription] API failed:', result.error);
@@ -3077,7 +3064,6 @@ export const prerender = false;
 
       // Update tier badge
       if (result.subscription.isPro) {
-        console.log('[Subscription] User is Plus - updating UI');
         tierBadge.textContent = 'Plus';
         tierBadge.classList.remove('free');
         tierBadge.classList.add('plus');
@@ -3194,12 +3180,9 @@ export const prerender = false;
   // Load and display referral code for Pro users (from KV storage)
   async function loadReferralCode(userId) {
     try {
-      console.log('[Dashboard] Loading referral code for:', userId);
-
       // Fetch referral code from KV-based API
       const response = await fetch(`/api/get-referral-code?userId=${userId}`);
       const data = await response.json();
-      console.log('[Dashboard] Referral data:', data);
 
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       const copyReferralBtn = document.getElementById('copyReferralBtn');
@@ -3208,14 +3191,7 @@ export const prerender = false;
       const referralUsed = document.getElementById('referralUsed');
       const referralSection = document.getElementById('referralSection');
 
-      console.log('[Dashboard] Referral elements:', {
-        referralCodeDisplay: !!referralCodeDisplay,
-        referralSection: !!referralSection,
-        hasCode: data.hasCode
-      });
-
       if (!referralSection) {
-        console.log('[Dashboard] No referral section found');
         return;
       }
 
@@ -3308,7 +3284,6 @@ export const prerender = false;
               const user = auth.currentUser;
               const idToken = user ? await user.getIdToken() : null;
 
-              console.log('[Referral] Generating code for userId:', userId);
               const res = await fetch('/api/generate-referral-code', {
                 method: 'POST',
                 headers: {
@@ -3318,7 +3293,6 @@ export const prerender = false;
                 body: JSON.stringify({ userId })
               });
               const result = await res.json();
-              console.log('[Referral] API response:', res.status, result);
 
               if (result.success && result.code) {
                 animateCodeReveal(result.code);
@@ -3719,7 +3693,6 @@ export const prerender = false;
               window.location.href = '/account/dashboard?upgraded=true';
             } else {
               // Payment was cancelled or failed
-              console.log('PayPal payment not completed:', captureResult.error);
               resetPaymentButtons();
             }
           } catch (captureError) {
@@ -3738,7 +3711,6 @@ export const prerender = false;
 
   // Go Plus Modal functionality
   function initGoPlusModal() {
-    console.log('[Dashboard] initGoPlusModal called');
     const goPlusHeaderBtn = document.getElementById('goPlusHeaderBtn');
     const modal = document.getElementById('goPlusModal');
     const closeBtn = document.getElementById('goPlusModalClose');
@@ -3746,17 +3718,12 @@ export const prerender = false;
     const stripeBtn = document.getElementById('goPlusStripeBtn');
     const paypalBtn = document.getElementById('goPlusPayPalBtn');
 
-    console.log('[Dashboard] Go Plus button:', goPlusHeaderBtn);
-    console.log('[Dashboard] Go Plus modal:', modal);
-
     if (!goPlusHeaderBtn || !modal) {
-      console.log('[Dashboard] Missing elements, cannot init Go Plus modal');
       return;
     }
 
     // Open modal when header button is clicked
     goPlusHeaderBtn.addEventListener('click', () => {
-      console.log('[Dashboard] Go Plus button clicked!');
       modal.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
     });
@@ -3983,7 +3950,6 @@ export const prerender = false;
   window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
       // Page was restored from bfcache
-      console.log('[Dashboard] Page restored from cache, resetting state');
       resetLoadedFlags();
       
       // Re-fetch data for current tab if needed

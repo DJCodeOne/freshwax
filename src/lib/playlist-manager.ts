@@ -106,7 +106,6 @@ export class PlaylistManager {
             this.recentlyPlayed.set(url, timestamp as number);
           }
         }
-        console.log('[PlaylistManager] Loaded recently played:', this.recentlyPlayed.size, 'tracks');
       }
     } catch (error) {
       console.error('[PlaylistManager] Error loading recently played:', error);
@@ -164,10 +163,8 @@ export class PlaylistManager {
   private startTrackTimer(): void {
     this.clearTrackTimer();
     this.trackTimer = window.setTimeout(() => {
-      console.log('[PlaylistManager] Track exceeded 10 minute limit, auto-skipping');
       this.handleTrackEnded();
     }, MAX_TRACK_DURATION_MS);
-    console.log('[PlaylistManager] Track timer started (10 min limit)');
   }
 
   /**
@@ -189,8 +186,6 @@ export class PlaylistManager {
     this.userName = userName || null;
     this.isAuthenticated = !!userId;
 
-    console.log('[PlaylistManager] Initializing, authenticated:', this.isAuthenticated);
-
     // Load global playlist from server
     await this.loadFromServer();
 
@@ -207,7 +202,6 @@ export class PlaylistManager {
       await this.playCurrent();
     } else if (this.playlist.queue.length === 0 && !(window as any).isLiveStreamActive) {
       // Queue is empty and no live stream - try to auto-start playlist
-      console.log('[PlaylistManager] Queue empty on init, attempting auto-play...');
       // Small delay to ensure page is ready
       setTimeout(() => this.startAutoPlay(), 500);
     }
@@ -256,16 +250,10 @@ export class PlaylistManager {
       this.pusherChannel = pusher.subscribe('live-playlist');
 
       this.pusherChannel.bind('playlist-update', (data: GlobalPlaylist) => {
-        console.log('[PlaylistManager] Received playlist update via Pusher');
         this.handleRemoteUpdate(data);
       });
 
-      this.pusherChannel.bind('pusher:subscription_succeeded', () => {
-        console.log('[PlaylistManager] Subscribed to live-playlist channel');
-      });
-
       this.isSubscribed = true;
-      console.log('[PlaylistManager] Pusher subscription active');
     } catch (error) {
       console.error('[PlaylistManager] Pusher subscription error:', error);
     }
@@ -275,16 +263,9 @@ export class PlaylistManager {
    * Handle remote playlist update from Pusher
    */
   private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: any[] }): Promise<void> {
-    console.log('[PlaylistManager] handleRemoteUpdate received:', JSON.stringify({
-      newQueueLength: newPlaylist.queue.length,
-      newIsPlaying: newPlaylist.isPlaying,
-      newCurrentId: newPlaylist.queue[0]?.id
-    }));
-
     // If live stream is active, ignore "isPlaying" from remote updates
     const liveStreamActive = (window as any).isLiveStreamActive;
     if (liveStreamActive && newPlaylist.isPlaying) {
-      console.log('[PlaylistManager] Remote update blocked - live stream is active');
       newPlaylist.isPlaying = false; // Force playlist to not play
     }
 
@@ -318,7 +299,6 @@ export class PlaylistManager {
 
     // Case 1: Queue became empty (all tracks finished)
     if (hadItems && !hasItems) {
-      console.log('[PlaylistManager] Queue is now empty, stopping playback');
       this.clearTrackTimer();
       this.stopCountdown();
       await this.player.destroy();
@@ -341,38 +321,17 @@ export class PlaylistManager {
     const shouldStartPlaying = !wasPlaying && this.playlist.isPlaying && hasItems;
     const currentItemChanged = oldCurrentItem?.id !== newCurrentItem?.id && newCurrentItem != null;
 
-    console.log('[PlaylistManager] Remote update decision:', JSON.stringify({
-      wasPlaying,
-      isPlaying: this.playlist.isPlaying,
-      oldCurrentId: oldCurrentItem?.id,
-      newCurrentId: newCurrentItem?.id,
-      currentItemChanged,
-      shouldStartPlaying
-    }));
-
     if (shouldStartPlaying) {
       // Starting playback for the first time
-      console.log('[PlaylistManager] Remote update: starting playback');
-      console.log('[PlaylistManager] DEBUG: Remote triggered playCurrent (shouldStartPlaying)');
       await this.playCurrent();
     } else if (this.playlist.isPlaying && currentItemChanged) {
       // The current track changed (next/skip was triggered, not just queue addition)
-      console.log('[PlaylistManager] Remote update: track changed, playing new track');
-      console.log('[PlaylistManager] DEBUG: Remote triggered playCurrent (currentItemChanged)', {
-        oldId: oldCurrentItem?.id,
-        newId: newCurrentItem?.id,
-        oldTitle: oldCurrentItem?.title?.substring(0, 30),
-        newTitle: newCurrentItem?.title?.substring(0, 30)
-      });
       await this.playCurrent();
     } else if (!this.playlist.isPlaying && wasPlaying) {
       // Playlist was paused remotely
-      console.log('[PlaylistManager] Remote update: pausing');
       this.stopCountdown();
       await this.player.pause();
       this.disableEmojis();
-    } else {
-      console.log('[PlaylistManager] Remote update: no action needed');
     }
     // If just adding items to queue while playing, do nothing - let current track continue
 
@@ -552,7 +511,6 @@ export class PlaylistManager {
   async play(): Promise<void> {
     // Don't play if live stream is active
     if ((window as any).isLiveStreamActive) {
-      console.log('[PlaylistManager] Play blocked - live stream is active');
       return;
     }
 
@@ -572,11 +530,9 @@ export class PlaylistManager {
     this.isPausedLocally = true; // Set local pause flag
     this.clearTrackTimer();
     this.stopCountdown();
-    console.log('[PlaylistManager] Calling player.pause(), player exists:', !!this.player);
     await this.player.pause();
     this.stopPlaylistMeters();
     this.disableEmojis();
-    console.log('[PlaylistManager] Paused locally, isPausedLocally set to true');
   }
 
   /**
@@ -606,14 +562,12 @@ export class PlaylistManager {
     // Seek to current global position
     const syncPosition = this.calculateSyncPosition();
     if (syncPosition > 2) {
-      console.log('[PlaylistManager] Resuming at position:', syncPosition, 'seconds');
       await this.player.seekTo(syncPosition);
     }
 
     // Restart countdown display
     this.updateDurationDisplay();
 
-    console.log('[PlaylistManager] Resumed locally, meters started');
   }
 
   /**
@@ -632,7 +586,6 @@ export class PlaylistManager {
       console.warn('[PlaylistManager] Cannot skip - queue is empty');
       return;
     }
-    console.log('[PlaylistManager] Admin skip triggered');
     await this.handleTrackEnded();
   }
 
@@ -644,13 +597,11 @@ export class PlaylistManager {
   async startAutoPlay(): Promise<boolean> {
     // Don't start if live stream is active
     if ((window as any).isLiveStreamActive) {
-      console.log('[PlaylistManager] Auto-play skipped - live stream is active');
       return false;
     }
 
     // Don't start if already playing or queue has items
     if (this.playlist.isPlaying || this.playlist.queue.length > 0) {
-      console.log('[PlaylistManager] Auto-play skipped - already playing or queue not empty');
       return false;
     }
 
@@ -660,8 +611,6 @@ export class PlaylistManager {
       console.warn('[PlaylistManager] Auto-play skipped - player container not found');
       return false;
     }
-
-    console.log('[PlaylistManager] Requesting auto-play track from server...');
 
     // Ask SERVER to pick a track - ensures all clients get the same track
     try {
@@ -679,14 +628,12 @@ export class PlaylistManager {
         this.playlist = result.playlist;
 
         if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
-          console.log('[PlaylistManager] Auto-play starting:', this.playlist.queue[0]?.title || this.playlist.queue[0]?.url);
           await this.playCurrent();
           this.renderUI();
           return true;
         }
       }
 
-      console.log('[PlaylistManager] Server could not start auto-play');
       return false;
     } catch (error) {
       console.error('[PlaylistManager] Error requesting auto-play from server:', error);
@@ -747,16 +694,13 @@ export class PlaylistManager {
    * Calculate sync position based on trackStartedAt timestamp
    */
   private calculateSyncPosition(): number {
-    console.log('[PlaylistManager] calculateSyncPosition called, trackStartedAt:', this.playlist.trackStartedAt);
     if (!this.playlist.trackStartedAt) {
-      console.log('[PlaylistManager] No trackStartedAt, returning 0');
       return 0;
     }
 
     const startedAt = new Date(this.playlist.trackStartedAt).getTime();
     const now = Date.now();
     const elapsedSeconds = Math.floor((now - startedAt) / 1000);
-    console.log('[PlaylistManager] Calculated elapsed time:', elapsedSeconds, 'seconds');
 
     // Cap at 10 minutes (max track duration)
     const maxSeconds = MAX_TRACK_DURATION_MS / 1000;
@@ -769,7 +713,6 @@ export class PlaylistManager {
   private async playCurrent(): Promise<void> {
     // Don't play if live stream is active
     if ((window as any).isLiveStreamActive) {
-      console.log('[PlaylistManager] playCurrent blocked - live stream is active');
       return;
     }
 
@@ -789,7 +732,6 @@ export class PlaylistManager {
 
     // Prevent concurrent play operations (race condition fix)
     if (this.isPlayingLocked) {
-      console.log('[PlaylistManager] Play already in progress, queuing request');
       this.pendingPlayRequest = true;
       return;
     }
@@ -819,7 +761,6 @@ export class PlaylistManager {
       // Calculate sync position BEFORE loading the item
       const syncPosition = this.calculateSyncPosition();
       if (syncPosition > 2) { // Only seek if more than 2 seconds in
-        console.log('[PlaylistManager] Setting pending seek to:', syncPosition, 'seconds');
         this.player.setPendingSeek(syncPosition);
       }
 
@@ -832,7 +773,6 @@ export class PlaylistManager {
         const duration = await this.player.getDuration();
 
         if (duration > MAX_TRACK_DURATION_SECONDS) {
-          console.log(`[PlaylistManager] Track exceeds 10 minute limit (${Math.floor(duration / 60)}:${Math.floor(duration % 60).toString().padStart(2, '0')}), skipping to next`);
           this.clearTrackTimer();
           // Don't unlock yet - let handleTrackEnded handle it
           this.isPlayingLocked = false;
@@ -845,7 +785,6 @@ export class PlaylistManager {
 
       this.renderUI();
 
-      console.log('[PlaylistManager] Now playing:', currentItem.title || currentItem.url);
     } catch (error) {
       console.error('[PlaylistManager] Error playing current:', error);
       // Remove failed track and pick a new one (maintains single-track queue for autoplay)
@@ -855,7 +794,6 @@ export class PlaylistManager {
 
       // If there was a pending play request, execute it
       if (this.pendingPlayRequest) {
-        console.log('[PlaylistManager] Executing pending play request');
         this.pendingPlayRequest = false;
         // Use setTimeout to avoid stack overflow
         setTimeout(() => this.playCurrent(), 50);
@@ -879,7 +817,6 @@ export class PlaylistManager {
       existing.thumbnail = item.thumbnail || existing.thumbnail;
       this.playHistory.unshift(existing);
       this.savePlayHistory();
-      console.log('[PlaylistManager] URL already in history, moved to front:', existing.title || existing.url);
       return;
     }
 
@@ -903,8 +840,6 @@ export class PlaylistManager {
 
     // Save to localStorage
     this.savePlayHistory();
-
-    console.log('[PlaylistManager] Logged to history:', historyEntry.title || historyEntry.url);
   }
 
   /**
@@ -928,7 +863,6 @@ export class PlaylistManager {
           }
         })
       });
-      console.log('[PlaylistManager] Logged to server history');
     } catch (error) {
       console.error('[PlaylistManager] Error logging to server history:', error);
     }
@@ -961,7 +895,6 @@ export class PlaylistManager {
     if (typeof (window as any).setupChat === 'function' && !(window as any).playlistChatSetup) {
       (window as any).setupChat('playlist-global');
       (window as any).playlistChatSetup = true;
-      console.log('[PlaylistManager] Chat enabled for playlist mode');
     }
 
     // Ensure stereo meters are visible for playlist (we use the same LED elements)
@@ -976,7 +909,6 @@ export class PlaylistManager {
     }
 
     this.startPlaylistMeters();
-    console.log('[PlaylistManager] Emoji reactions, chat, and playlist meters enabled');
   }
 
   /**
@@ -1005,7 +937,6 @@ export class PlaylistManager {
 
       // Reset playlist chat setup flag
       (window as any).playlistChatSetup = false;
-      console.log('[PlaylistManager] Chat disabled (no active stream or playlist)');
     }
 
     this.stopPlaylistMeters();
@@ -1117,7 +1048,6 @@ export class PlaylistManager {
     };
 
     this.playlistMeterAnimationId = requestAnimationFrame(updateMeters);
-    console.log('[PlaylistManager] Audio meters started (BPM:', Math.round(this.meterState.bpm), ')');
   }
 
   /**
@@ -1139,8 +1069,6 @@ export class PlaylistManager {
     // Reset state
     this.meterState.leftLevel = 0;
     this.meterState.rightLevel = 0;
-
-    console.log('[PlaylistManager] Audio meters stopped');
   }
 
   /**
@@ -1256,7 +1184,6 @@ export class PlaylistManager {
       // If still no duration, check if track has stored duration
       if (duration <= 0 && currentTrack?.duration) {
         duration = currentTrack.duration;
-        console.log('[PlaylistManager] Using track stored duration:', duration);
       }
     } catch (error) {
       console.warn('[PlaylistManager] Error getting duration:', error);
@@ -1265,7 +1192,6 @@ export class PlaylistManager {
     this.isFetchingDuration = false;
 
     if (duration > 0) {
-      console.log('[PlaylistManager] Got duration:', duration, 'seconds');
       this.startCountdown(duration);
     } else {
       console.warn('[PlaylistManager] Could not get duration from any source');
@@ -1275,7 +1201,6 @@ export class PlaylistManager {
         const elapsed = (Date.now() - trackStartedAt) / 1000;
         const remaining = Math.max(0, currentTrack.duration - elapsed);
         if (remaining > 0) {
-          console.log('[PlaylistManager] Calculated remaining from trackStartedAt:', remaining);
           this.startCountdown(currentTrack.duration);
           return;
         }
@@ -1376,7 +1301,6 @@ export class PlaylistManager {
       const stored = localStorage.getItem(PLAYLIST_HISTORY_KEY);
       if (stored) {
         this.playHistory = JSON.parse(stored);
-        console.log('[PlaylistManager] Loaded play history:', this.playHistory.length, 'items');
       }
     } catch (error) {
       console.error('[PlaylistManager] Error loading play history:', error);
@@ -1412,18 +1336,15 @@ export class PlaylistManager {
     // First, try the local playlist server (H: drive MP3s) - more reliable, no bot issues
     const localTrack = await this.pickRandomFromLocalServer();
     if (localTrack) {
-      console.log('[PlaylistManager] Using local MP3:', localTrack.title);
       return localTrack;
     }
 
     // Fallback to server-side YouTube history if local server is unavailable
-    console.log('[PlaylistManager] Local server unavailable, falling back to YouTube history');
     try {
       const response = await fetch('/api/playlist/history');
       const result = await response.json();
       if (result.success && result.items && result.items.length > 0) {
         const serverHistory = result.items;
-        console.log('[PlaylistManager] Server has', serverHistory.length, 'tracks available');
 
         // Filter out recently played tracks and the last played track
         const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
@@ -1439,16 +1360,12 @@ export class PlaylistManager {
           return elapsed >= AUTO_PLAY_COOLDOWN_MS; // Available if 60+ minutes since last play
         });
 
-        console.log('[PlaylistManager]', availableTracks.length, 'tracks available after cooldown filter');
-
         if (availableTracks.length === 0) {
           // All tracks on cooldown - just pick a random one that isn't the last played
           const fallbackTracks = serverHistory.filter((entry: any) => entry.url !== this.lastPlayedUrl);
           if (fallbackTracks.length > 0) {
             const randomIndex = Math.floor(Math.random() * fallbackTracks.length);
             const selected = fallbackTracks[randomIndex];
-            console.log('[PlaylistManager] All on cooldown, picked random:', selected.title || selected.url);
-
             // Fetch real title if placeholder
             let title = selected.title;
             if (this.isPlaceholderTitle(title) && selected.embedId) {
@@ -1474,15 +1391,12 @@ export class PlaylistManager {
         const randomIndex = Math.floor(Math.random() * availableTracks.length);
         const selected = availableTracks[randomIndex];
 
-        console.log('[PlaylistManager] Selected random track:', selected.title || selected.url);
-
         // Fetch real title if it's a placeholder (e.g., "Track 1234")
         let title = selected.title;
         if (this.isPlaceholderTitle(title) && selected.embedId) {
           const realTitle = await this.fetchYouTubeTitle(selected.embedId);
           if (realTitle) {
             title = realTitle;
-            console.log('[PlaylistManager] Fetched real title:', title);
           }
         }
 
@@ -1504,7 +1418,6 @@ export class PlaylistManager {
 
     // Fallback to local history if server fails
     if (this.playHistory.length > 0) {
-      console.log('[PlaylistManager] Server failed, using local history:', this.playHistory.length, 'tracks');
       const randomIndex = Math.floor(Math.random() * this.playHistory.length);
       const selected = this.playHistory[randomIndex];
 
@@ -1528,7 +1441,6 @@ export class PlaylistManager {
       };
     }
 
-    console.log('[PlaylistManager] No tracks available for auto-play');
     return null;
   }
 
@@ -1538,7 +1450,6 @@ export class PlaylistManager {
    */
   private async pickRandomFromLocalServer(): Promise<GlobalPlaylistItem | null> {
     try {
-      console.log('[PlaylistManager] Fetching from local playlist server...');
       const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/list`, {
         signal: AbortSignal.timeout(5000)
       });
@@ -1553,8 +1464,6 @@ export class PlaylistManager {
         console.warn('[PlaylistManager] Local playlist server has no files');
         return null;
       }
-
-      console.log('[PlaylistManager] Local server has', data.files.length, 'MP3 files');
 
       // Filter out recently played tracks
       const now = Date.now();
@@ -1589,8 +1498,6 @@ export class PlaylistManager {
         ? `${LOCAL_PLAYLIST_SERVER}${selected.thumbnail}`
         : AUDIO_THUMBNAIL_FALLBACK;
 
-      console.log('[PlaylistManager] Selected local track:', selected.name, 'thumb:', !!selected.thumbnail);
-
       return {
         id: this.generateId(),
         url: url,
@@ -1614,7 +1521,6 @@ export class PlaylistManager {
   clearPlayHistory(): void {
     this.playHistory = [];
     this.savePlayHistory();
-    console.log('[PlaylistManager] Play history cleared');
   }
 
   // ============================================
@@ -1629,7 +1535,6 @@ export class PlaylistManager {
       const stored = localStorage.getItem(PERSONAL_PLAYLIST_KEY);
       if (stored) {
         this.personalPlaylist = JSON.parse(stored);
-        console.log('[PlaylistManager] Loaded personal playlist from localStorage:', this.personalPlaylist.length, 'items');
       }
     } catch (error) {
       console.error('[PlaylistManager] Error loading personal playlist:', error);
@@ -1643,7 +1548,6 @@ export class PlaylistManager {
    */
   async loadPersonalPlaylistFromServer(): Promise<void> {
     if (!this.userId) {
-      console.log('[PlaylistManager] No userId, skipping D1 playlist load');
       return;
     }
 
@@ -1653,7 +1557,6 @@ export class PlaylistManager {
 
       // Check if user has Plus for cloud sync
       if (result.isPlus === false) {
-        console.log('[PlaylistManager] User is not Plus - using local storage only');
         // Store Plus status for later use
         (window as any).userHasCloudSync = false;
         return;
@@ -1678,8 +1581,6 @@ export class PlaylistManager {
         }
 
         this.personalPlaylist = mergedItems;
-        console.log('[PlaylistManager] Loaded personal playlist from D1:', d1Items.length, 'items, merged total:', mergedItems.length);
-
         // Save merged list back to both localStorage and D1
         this.savePersonalPlaylist();
         this.savePersonalPlaylistToServer();
@@ -1695,12 +1596,7 @@ export class PlaylistManager {
    */
   private savePersonalPlaylist(): void {
     try {
-      console.log('[PlaylistManager] Saving personal playlist to localStorage, size:', this.personalPlaylist.length);
       localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(this.personalPlaylist));
-      // Verify the save worked
-      const stored = localStorage.getItem(PERSONAL_PLAYLIST_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      console.log('[PlaylistManager] Verified localStorage save, stored size:', parsed.length);
     } catch (error) {
       console.error('[PlaylistManager] Error saving personal playlist to localStorage:', error);
     }
@@ -1715,7 +1611,6 @@ export class PlaylistManager {
 
     // Skip if user doesn't have cloud sync (not Plus)
     if ((window as any).userHasCloudSync === false) {
-      console.log('[PlaylistManager] Skipping D1 save - user is not Plus');
       return;
     }
 
@@ -1747,13 +1642,9 @@ export class PlaylistManager {
       if (result.isPlus === false) {
         // User is not Plus - mark it and skip future saves
         (window as any).userHasCloudSync = false;
-        console.log('[PlaylistManager] Cloud sync is Plus-only - using local storage');
         return;
       }
 
-      if (result.success) {
-        console.log('[PlaylistManager] Personal playlist saved to D1 (cloud sync)');
-      }
     } catch (error) {
       console.error('[PlaylistManager] Error saving personal playlist to D1:', error);
     }
@@ -1829,7 +1720,6 @@ export class PlaylistManager {
       this.savePersonalPlaylistToServer(); // Save to D1 for persistence
       this.renderUI();
 
-      console.log('[PlaylistManager] Added to personal playlist:', item.title || item.url);
       return { success: true, message: 'Added to your playlist' };
     } catch (error: any) {
       console.error('[PlaylistManager] Error adding to personal playlist:', error);
@@ -1847,7 +1737,6 @@ export class PlaylistManager {
       this.savePersonalPlaylist();
       this.savePersonalPlaylistToServer(); // Save to D1 for persistence
       this.renderUI();
-      console.log('[PlaylistManager] Removed from personal playlist:', removed.title || removed.url);
     }
   }
 
@@ -1855,23 +1744,13 @@ export class PlaylistManager {
    * Add a track from personal playlist to the main DJ queue
    */
   async addPersonalItemToQueue(itemId: string): Promise<{ success: boolean; message?: string; error?: string }> {
-    console.log('[PlaylistManager] addPersonalItemToQueue called, itemId:', itemId);
-    console.log('[PlaylistManager] Personal playlist size BEFORE:', this.personalPlaylist.length);
-    console.log('[PlaylistManager] Personal playlist IDs:', this.personalPlaylist.map(i => i.id));
-
     const item = this.personalPlaylist.find(i => i.id === itemId);
     if (!item) {
-      console.log('[PlaylistManager] Item NOT FOUND in personal playlist!');
       return { success: false, error: 'Track not found in your playlist' };
     }
 
-    console.log('[PlaylistManager] Found item:', item.title || item.url);
-
     // Use the existing addItem method which handles all validation
     const result = await this.addItem(item.url);
-
-    console.log('[PlaylistManager] addItem result:', result);
-    console.log('[PlaylistManager] Personal playlist size AFTER:', this.personalPlaylist.length);
 
     // If successfully added to queue, optionally remove from personal playlist
     // (keeping it for now - user can manually remove if they want)
@@ -1894,7 +1773,6 @@ export class PlaylistManager {
     this.savePersonalPlaylist();
     this.savePersonalPlaylistToServer(); // Save to D1 for persistence
     this.renderUI();
-    console.log('[PlaylistManager] Personal playlist cleared');
   }
 
   /**
@@ -1928,7 +1806,6 @@ export class PlaylistManager {
       playlistPlayer.style.display = 'block';
     }
 
-    console.log('[PlaylistManager] Video player shown, overlays hidden');
   }
 
   /**
@@ -1952,13 +1829,6 @@ export class PlaylistManager {
    * Server is the source of truth to ensure all clients play the same track
    */
   private async handleTrackEnded(): Promise<void> {
-    console.log('[PlaylistManager] handleTrackEnded called');
-    console.log('[PlaylistManager] Current playlist state:', JSON.stringify({
-      queueLength: this.playlist.queue.length,
-      currentIndex: this.playlist.currentIndex,
-      isPlaying: this.playlist.isPlaying
-    }));
-
     // Clear all timers first
     this.clearTrackTimer();
     this.stopCountdown();
@@ -1969,25 +1839,18 @@ export class PlaylistManager {
     // RACE PREVENTION: Add small random delay (0-300ms) to stagger requests from multiple clients
     // This gives the first client time to complete and broadcast via Pusher
     const delay = Math.floor(Math.random() * 300);
-    console.log('[PlaylistManager] Waiting', delay, 'ms before sending trackEnded (race prevention)');
     await new Promise(resolve => setTimeout(resolve, delay));
 
     // Check if Pusher already updated us with a new track during the delay
     const finishedItem = this.playlist.queue[this.playlist.currentIndex];
     if (!finishedItem) {
-      console.log('[PlaylistManager] No item to remove - queue empty or index out of bounds');
-      console.log('[PlaylistManager] Queue:', this.playlist.queue);
-      console.log('[PlaylistManager] Index:', this.playlist.currentIndex);
       return;
     }
 
     // If the track changed during the delay, Pusher already synced us - don't send redundant request
     if (finishedItem.id !== trackIdBeforeDelay) {
-      console.log('[PlaylistManager] Track changed during delay (Pusher synced), skipping trackEnded');
       return;
     }
-
-    console.log('[PlaylistManager] Track ended, telling server to pick next:', finishedItem.title || finishedItem.url, 'ID:', finishedItem.id);
 
     // Tell the SERVER to handle track end - it will pick the next track
     // This ensures all clients play the same track (server is source of truth)
@@ -2003,17 +1866,9 @@ export class PlaylistManager {
       });
 
       const result = await response.json();
-      console.log('[PlaylistManager] trackEnded API response:', JSON.stringify(result));
-
       if (result.success && result.playlist) {
         // Update local state with server response (server is source of truth)
         this.playlist = result.playlist;
-
-        if (result.alreadyHandled) {
-          console.log('[PlaylistManager] trackEnded handled by another client, using server response');
-        } else {
-          console.log('[PlaylistManager] trackEnded processed, playing next track');
-        }
 
         // Play the new track (whether we were first or not - server has the correct track)
         if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
@@ -2043,11 +1898,7 @@ export class PlaylistManager {
    * Handle playback error
    */
   private async handlePlaybackError(error: string): Promise<void> {
-    const playDuration = this.playbackStartedTime > 0 ? (Date.now() - this.playbackStartedTime) / 1000 : 0;
     console.error('[PlaylistManager] Playback error:', error);
-    console.log('[PlaylistManager] DEBUG: Error after', playDuration.toFixed(1), 'seconds of playback');
-    console.log('[PlaylistManager] DEBUG: consecutiveErrors before:', this.consecutiveErrors);
-    console.trace('[PlaylistManager] DEBUG: Stack trace for error');
 
     // Check if container exists - if not, stop trying
     const container = document.getElementById(this.containerId);
@@ -2070,9 +1921,6 @@ export class PlaylistManager {
 
     // Handle blocked/unavailable videos specially
     if (errorInfo.type === 'blocked' && currentItem) {
-      console.log('[PlaylistManager] Blocked video detected:', currentItem.title || currentItem.url);
-      console.log('[PlaylistManager] Error code:', errorInfo.code, '- removing from history and skipping');
-
       // Mark video as blocked in server history (removes it so it won't be auto-played again)
       await this.markVideoAsBlocked(currentItem.url, currentItem.embedId);
 
@@ -2120,7 +1968,6 @@ export class PlaylistManager {
 
       const result = await response.json();
       if (result.success) {
-        console.log('[PlaylistManager] Blocked video removed from history:', url);
       } else {
         console.warn('[PlaylistManager] Failed to remove blocked video from history:', result.error);
       }
@@ -2133,7 +1980,6 @@ export class PlaylistManager {
    * Handle player ready
    */
   private handlePlayerReady(): void {
-    console.log('[PlaylistManager] Player ready');
     // Reset error counter on successful playback
     this.consecutiveErrors = 0;
   }
@@ -2142,7 +1988,6 @@ export class PlaylistManager {
    * Handle state change
    */
   private handleStateChange(state: string): void {
-    console.log('[PlaylistManager] State changed:', state);
     // Track when playback actually started for stable play detection
     if (state === 'playing') {
       this.playbackStartedTime = Date.now();
@@ -2170,7 +2015,6 @@ export class PlaylistManager {
   private handleTitleUpdate(title: string): void {
     const currentItem = this.playlist.queue[this.playlist.currentIndex];
     if (currentItem && this.isPlaceholderTitle(currentItem.title)) {
-      console.log('[PlaylistManager] Updating title from player:', title);
       currentItem.title = title;
       // Update the UI with the new title
       this.renderUI();
@@ -2191,18 +2035,14 @@ export class PlaylistManager {
 
         // If live stream is active, force playlist to not play
         if ((window as any).isLiveStreamActive && this.playlist.isPlaying) {
-          console.log('[PlaylistManager] Live stream active - forcing playlist to not play');
           this.playlist.isPlaying = false;
         }
-
-        console.log('[PlaylistManager] Loaded global playlist:', this.playlist.queue.length, 'items, trackStartedAt:', this.playlist.trackStartedAt, 'isPlaying:', this.playlist.isPlaying);
 
         // Check for stale or invalid playlist states
         let shouldClear = false;
 
         // Case 1: isPlaying is true but queue is empty
         if (this.playlist.isPlaying && this.playlist.queue.length === 0) {
-          console.log('[PlaylistManager] isPlaying but queue is empty - clearing stale state');
           shouldClear = true;
         }
 
@@ -2210,7 +2050,6 @@ export class PlaylistManager {
         // NOTE: Do NOT set trackStartedAt here - let the server be the source of truth
         // If server doesn't have it, the track will play from the beginning which is safer
         if (this.playlist.isPlaying && this.playlist.queue.length > 0 && !this.playlist.trackStartedAt) {
-          console.log('[PlaylistManager] isPlaying but no trackStartedAt from server - sync may not work');
         }
 
         // Case 3: trackStartedAt is more than 15 minutes old (track should have ended)
@@ -2221,7 +2060,6 @@ export class PlaylistManager {
           const maxTrackMs = 15 * 60 * 1000; // 15 minutes max (buffer over 10 min limit)
 
           if (elapsedMs > maxTrackMs) {
-            console.log('[PlaylistManager] Track has been playing for too long - clearing stale data');
             shouldClear = true;
           }
         }
@@ -2259,7 +2097,6 @@ export class PlaylistManager {
         })
       });
 
-      console.log('[PlaylistManager] Cleared stale playlist');
     } catch (error) {
       console.error('[PlaylistManager] Error clearing stale playlist:', error);
     }
@@ -2269,8 +2106,6 @@ export class PlaylistManager {
    * Render UI (dispatch event for components to update)
    */
   private renderUI(): void {
-    console.log('[PlaylistManager] renderUI called, personal playlist size:', this.personalPlaylist.length);
-
     // Update reaction count display
     const reactionCount = this.playlist.reactionCount || 0;
     const likeCountEl = document.getElementById('likeCount');
@@ -2314,7 +2149,6 @@ export class PlaylistManager {
       if (response.ok) {
         const data = await response.json();
         if (data.title) {
-          console.log('[PlaylistManager] Got title from noembed:', data.title);
           return {
             title: data.title,
             thumbnail: data.thumbnail_url || undefined,
@@ -2332,7 +2166,6 @@ export class PlaylistManager {
         const ytResponse = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
         if (ytResponse.ok) {
           const ytData = await ytResponse.json();
-          console.log('[PlaylistManager] Got title from YouTube oEmbed:', ytData.title);
           return {
             title: ytData.title || undefined,
             thumbnail: ytData.thumbnail_url || undefined,
@@ -2350,7 +2183,6 @@ export class PlaylistManager {
         const scResponse = await fetch(`https://soundcloud.com/oembed?url=${encodeURIComponent(url)}&format=json`);
         if (scResponse.ok) {
           const scData = await scResponse.json();
-          console.log('[PlaylistManager] Got title from SoundCloud oEmbed:', scData.title);
           return {
             title: scData.title || undefined,
             thumbnail: scData.thumbnail_url || undefined,
