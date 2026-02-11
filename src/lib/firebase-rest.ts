@@ -102,9 +102,19 @@ function setCache(key: string, data: any, ttl: number = CACHE_TTL.DEFAULT): void
 function pruneCache(): void {
   const now = Date.now();
   let pruned = 0;
+  // First pass: remove expired entries
   for (const [key, entry] of cache) {
     if (now >= entry.expires) {
       cache.delete(key);
+      pruned++;
+    }
+  }
+  // Second pass: if still over 150, evict oldest by fetchedAt (LRU)
+  if (cache.size > 150) {
+    const sorted = [...cache.entries()].sort((a, b) => a[1].fetchedAt - b[1].fetchedAt);
+    const toRemove = cache.size - 150;
+    for (let i = 0; i < toRemove; i++) {
+      cache.delete(sorted[i][0]);
       pruned++;
     }
   }

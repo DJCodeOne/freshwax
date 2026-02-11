@@ -709,8 +709,9 @@ const firebaseConfig = {
     }
   }
 
-  // Debounced search
+  // Debounced search with request cancellation
   let searchTimeout;
+  let searchAbortController = null;
   const SEARCH_DEBOUNCE = 300;
   const MIN_QUERY_LENGTH = 2;
   const searchCache = new Map();
@@ -723,8 +724,12 @@ const firebaseConfig = {
       return;
     }
 
+    // Cancel any in-flight search request
+    if (searchAbortController) searchAbortController.abort();
+    searchAbortController = new AbortController();
+
     try {
-      const response = await fetch(`/api/search-releases?q=${encodeURIComponent(query)}&limit=10`);
+      const response = await fetch(`/api/search-releases?q=${encodeURIComponent(query)}&limit=10`, { signal: searchAbortController.signal });
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       searchCache.set(query, data);
@@ -732,6 +737,7 @@ const firebaseConfig = {
       resultsContainer.classList.remove('fwx-hidden');
       resultsContainer.style.display = 'block';
     } catch (error) {
+      if (error.name === 'AbortError') return; // Cancelled by newer search
       console.error('Search error:', error);
       contentContainer.innerHTML = '<p style="padding: 1rem; color: #666; text-align: center;">Search unavailable</p>';
       resultsContainer.classList.remove('fwx-hidden');

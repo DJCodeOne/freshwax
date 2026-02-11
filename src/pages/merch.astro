@@ -290,7 +290,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
                 <!-- Image -->
                 <div class="card-image card-clickable">
                   {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} loading="lazy" />
+                    <img src={product.imageUrl} alt={product.name} width="400" height="400" loading="lazy" />
                   ) : (
                     <div class="placeholder">👕</div>
                   )}

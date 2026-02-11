@@ -291,10 +291,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
         </div>
       )}
       <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden">
-        <img 
-          src={coverArtUrl} 
-          alt={`${releaseName} by ${artistName}`} 
+        <img
+          src={coverArtUrl}
+          alt={`${releaseName} by ${artistName}`}
           class="w-full h-full object-cover"
+          width="256"
+          height="256"
           loading="lazy"
           onerror="this.src='/place-holder.webp'"
         />
