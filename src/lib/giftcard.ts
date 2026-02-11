@@ -203,6 +203,18 @@ export interface GiftCardPurchaseData {
 }
 
 /**
+ * Escape HTML entities to prevent XSS in email templates
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
  * Send gift card email via Resend API
  */
 export async function sendGiftCardEmail(
@@ -225,13 +237,16 @@ export async function sendGiftCardEmail(
       ? `You've received a £${amount} Fresh Wax Gift Card!`
       : `Your £${amount} Fresh Wax Gift Card`;
 
+    const safeSenderName = escapeHtml(senderName);
+    const safeMessage = escapeHtml(message);
+
     const giftSection = isGift && senderName ? `
       <p style="font-size: 16px; color: #666;">
-        <strong>${senderName}</strong> has sent you a gift!
+        <strong>${safeSenderName}</strong> has sent you a gift!
       </p>
       ${message ? `
       <div style="background: #f5f5f5; border-left: 4px solid #dc2626; padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
-        <p style="font-size: 16px; color: #333; margin: 0; font-style: italic;">"${message}"</p>
+        <p style="font-size: 16px; color: #333; margin: 0; font-style: italic;">"${safeMessage}"</p>
       </div>
       ` : ''}
     ` : '';

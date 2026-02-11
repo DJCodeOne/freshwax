@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { initFirebaseEnv, getDocument, deleteDocument, queryCollection, addDocument, updateDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, deleteDocument, queryCollection, addDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 
 export const prerender = false;
@@ -113,6 +113,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Order not found or expired'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the caller is the buyer who created this order
+    const { userId: verifiedUserId } = await verifyRequestUser(request);
+    if (verifiedUserId && verifiedUserId !== pendingOrder.buyerUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only capture your own orders'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get access token

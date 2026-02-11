@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -16,6 +17,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const env = (locals as any)?.runtime?.env;
+
+    // Initialize Firebase for auth verification
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+
+    // SECURITY: Verify the requesting user's identity
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
@@ -36,6 +53,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       recipientEmail,
       message
     } = data;
+
+    // SECURITY: Ensure the authenticated user matches the buyer
+    if (buyerUserId !== verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'You can only purchase gift cards for your own account'
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
 
     // Validate amount
     const numAmount = parseInt(amount);

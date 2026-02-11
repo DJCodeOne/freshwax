@@ -454,37 +454,50 @@ const faqs = [
     }
   }
   
+  // Escape HTML to prevent XSS
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
   // Load user's purchased gift cards
   async function loadPurchasedCards() {
     if (!currentUser) return;
-    
+
     const section = document.getElementById('myPurchasedCards');
     const list = document.getElementById('purchasedCardsList');
-    
+
     if (!section || !list) return;
-    
+
     try {
-      const response = await fetch(`/api/giftcards/purchased?userId=${currentUser.uid}`);
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch('/api/giftcards/purchased', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
       const result = await response.json();
-      
+
       if (result.success && result.purchasedCards.length > 0) {
         section.classList.remove('hidden');
-        
+
         list.innerHTML = result.purchasedCards.map(card => {
           const purchasedDate = new Date(card.purchasedAt).toLocaleDateString('en-GB');
-          const expiryDate = card.displayExpiresAt 
+          const expiryDate = card.displayExpiresAt
             ? new Date(card.displayExpiresAt).toLocaleDateString('en-GB')
             : '1 year from redemption';
-          
-          const recipient = card.recipientType === 'gift' 
-            ? `To: ${card.recipientName || card.recipientEmail}`
+
+          const safeAmount = escapeHtml(String(card.amount));
+          const safeName = escapeHtml(card.recipientName || '');
+          const safeEmail = escapeHtml(card.recipientEmail || '');
+          const recipient = card.recipientType === 'gift'
+            ? `To: ${safeName || safeEmail}`
             : 'For myself';
-          
+
           return `
             <div class="purchased-card">
               <div class="purchased-card-info">
-                <span class="purchased-card-amount">£${card.amount}</span>
-                <span class="purchased-card-meta">Purchased: ${purchasedDate} • Expires: ${expiryDate}</span>
+                <span class="purchased-card-amount">£${safeAmount}</span>
+                <span class="purchased-card-meta">Purchased: ${escapeHtml(purchasedDate)} • Expires: ${escapeHtml(expiryDate)}</span>
                 <span class="purchased-card-recipient">${recipient}</span>
               </div>
               <span class="purchased-card-status sent">Sent</span>
@@ -761,11 +774,13 @@ const faqs = [
     };
 
     try {
+      const idToken = await currentUser.getIdToken();
+
       if (paymentMethod === 'stripe') {
         // Create Stripe checkout session
         const response = await fetch('/api/giftcards/create-stripe-session', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
           body: JSON.stringify(purchaseData)
         });
         const result = await response.json();
@@ -784,7 +799,7 @@ const faqs = [
         // Create PayPal order
         const response = await fetch('/api/giftcards/create-paypal-order', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
           body: JSON.stringify(purchaseData)
         });
         const result = await response.json();

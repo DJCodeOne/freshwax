@@ -1,25 +1,33 @@
 // src/pages/api/giftcards/purchased.ts
 // Get user's purchased gift cards - uses Firebase REST API
+// SECURITY: Requires authentication - user can only view their own purchased cards
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../../lib/firebase-rest';
+import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 
-export const GET: APIRoute = async ({ request }) => {
+export const prerender = false;
+
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Initialize Firebase for Cloudflare runtime
+  const env = (locals as any)?.runtime?.env;
+  initFirebaseEnv({
+    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+  });
+
   try {
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId');
+    // SECURITY: Verify the requesting user's identity
+    const { userId, error: authError } = await verifyRequestUser(request);
 
-    if (!userId) {
+    if (authError || !userId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get customer document which may contain purchased gift cards
     const customerDoc = await getDocument('users', userId);
 
-    // The subcollection approach doesn't work with REST API directly,
-    // so we'll check if purchased cards are stored on the customer doc
     const purchasedCards = customerDoc?.purchasedGiftCards || [];
 
     return new Response(JSON.stringify({

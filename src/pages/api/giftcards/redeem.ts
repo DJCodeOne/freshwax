@@ -120,22 +120,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Atomically mark gift card as redeemed using conditional update.
     // This prevents two concurrent requests from redeeming the same card.
+    // Always use conditional update - if _updateTime is missing, re-fetch the document.
     try {
-      if (giftCard._updateTime) {
-        await updateDocumentConditional('giftCards', giftCardId, {
-          redeemedBy: userId,
-          redeemedAt: nowISO,
-          currentBalance: 0,
-          isActive: false
-        }, giftCard._updateTime);
-      } else {
-        await updateDocument('giftCards', giftCardId, {
-          redeemedBy: userId,
-          redeemedAt: nowISO,
-          currentBalance: 0,
-          isActive: false
-        });
+      let updateTime = giftCard._updateTime;
+      if (!updateTime) {
+        // Re-fetch to get _updateTime for safe conditional write
+        const refetchedCard = await getDocument('giftCards', giftCardId);
+        if (!refetchedCard || refetchedCard.redeemedBy) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'This gift card has already been redeemed'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
+        updateTime = refetchedCard._updateTime;
       }
+
+      await updateDocumentConditional('giftCards', giftCardId, {
+        redeemedBy: userId,
+        redeemedAt: nowISO,
+        currentBalance: 0,
+        isActive: false
+      }, updateTime);
     } catch (redeemErr: any) {
       if (redeemErr.message?.includes('CONFLICT')) {
         return new Response(JSON.stringify({
