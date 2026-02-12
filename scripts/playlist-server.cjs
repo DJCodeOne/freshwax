@@ -299,8 +299,9 @@ function createServer() {
       const parsedUrl = url.parse(req.url, true);
       let filePath = decodeURIComponent(parsedUrl.pathname);
 
-      // All endpoints require access token
-      if (!hasValidToken(req)) {
+      // API/metadata endpoints require access token (not media serving)
+      const isMediaPath = filePath.startsWith('/music/') || filePath.startsWith('/thumb/');
+      if (!isMediaPath && !hasValidToken(req)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Access token required' }));
         stats.activeConnections--;
