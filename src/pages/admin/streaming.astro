@@ -2239,7 +2239,7 @@ export const prerender = false;
     const countEl = document.getElementById('chatMessageCount');
     try {
       const response = await fetch('/api/admin/clear-chat', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
       if (result.success) {
@@ -2677,7 +2677,7 @@ export const prerender = false;
     
     try {
       const response = await fetch('/api/admin/lobby-bypass?action=list', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
       
@@ -2718,7 +2718,7 @@ export const prerender = false;
 
     try {
       const response = await fetch('/api/admin/quick-access-key', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
 
@@ -2908,7 +2908,7 @@ export const prerender = false;
     
     try {
       const response = await fetch('/api/admin/dj-moderation?action=list', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
       
@@ -3056,7 +3056,7 @@ export const prerender = false;
     
     try {
       const response = await fetch('/api/admin/bypass-requests?action=list', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
       
@@ -3233,7 +3233,7 @@ export const prerender = false;
 
     try {
       const response = await fetch('/api/livestream/event-requests?admin=true&status=pending', {
-        headers: { 'X-Admin-Key': ADMIN_KEY }
+        headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
 
@@ -3346,5 +3346,10 @@ export const prerender = false;
     }
   };
 
-  init();
+  // Wait for Firebase auth to resolve before loading data
+  if (window.getAdminToken) {
+    window.getAdminToken().then(() => init()).catch(() => { window.location.href = '/login'; });
+  } else {
+    init();
+  }
 </script>
