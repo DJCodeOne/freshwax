@@ -8,6 +8,30 @@ const url = require('url');
 const PORT = 8088;
 const MUSIC_DIR = 'H:\\FreshWax-Backup';
 const MAX_CONNECTIONS = 100;
+const ACCESS_TOKEN = process.env.PLAYLIST_ACCESS_TOKEN || 'bd9c9585e4a63878b2964eed5f0868350f4918d0027d2695fbf6c83d9d203b08';
+
+// Allowed CORS origins (no wildcard)
+const ALLOWED_ORIGINS = [
+  'https://freshwax.co.uk',
+  'https://www.freshwax.co.uk',
+  'http://localhost:4321',
+  'http://localhost:3000',
+];
+
+function getAllowedOrigin(req) {
+  const origin = req.headers.origin || '';
+  if (ALLOWED_ORIGINS.includes(origin)) return origin;
+  if (origin.endsWith('.freshwax.pages.dev')) return origin;
+  return null;
+}
+
+// Verify access token for protected endpoints
+function hasValidToken(req) {
+  const auth = req.headers.authorization || '';
+  if (auth.startsWith('Bearer ') && auth.slice(7) === ACCESS_TOKEN) return true;
+  if (req.headers['x-access-token'] === ACCESS_TOKEN) return true;
+  return false;
+}
 const HEALTH_CHECK_INTERVAL = 60000; // 60 seconds (reduced frequency)
 const RESTART_DELAY = 5000; // 5 seconds before restart attempt
 const AUDIO_STREAM_BUFFER = 256 * 1024; // 256KB buffer for smooth audio
@@ -243,14 +267,17 @@ function createServer() {
       res.end();
     });
 
-    // Enable CORS
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    // CORS - restrict to allowed origins (no wildcard)
+    const allowedOrigin = getAllowedOrigin(req);
+    if (allowedOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Authorization, X-Access-Token');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    }
 
     if (req.method === 'OPTIONS') {
-      res.writeHead(204);
+      res.writeHead(allowedOrigin ? 204 : 403);
       res.end();
       return;
     }
@@ -258,6 +285,15 @@ function createServer() {
     try {
       const parsedUrl = url.parse(req.url, true);
       let filePath = decodeURIComponent(parsedUrl.pathname);
+
+      // Protected endpoints require access token
+      const protectedPaths = ['/', '/health', '/list', '/random'];
+      if (protectedPaths.includes(filePath) && !hasValidToken(req)) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Access token required' }));
+        stats.activeConnections--;
+        return;
+      }
 
       // Health check endpoint
       if (filePath === '/health') {

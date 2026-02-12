@@ -26,7 +26,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
+    const playlistToken = env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
     const response = await fetch(`${PLAYLIST_SERVER}/list`, {
+      headers: { 'Authorization': `Bearer ${playlistToken}` },
       signal: AbortSignal.timeout(5000)
     });
 
