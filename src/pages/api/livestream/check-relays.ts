@@ -2,6 +2,8 @@
 // API to check if external radio streams are live
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -140,6 +142,17 @@ async function checkHttpStatus(url: string): Promise<{ isLive: boolean; nowPlayi
 
 // GET - Check all relay sources or specific one
 export const GET: APIRoute = async ({ request, locals }) => {
+  // SECURITY: Rate limit to prevent abuse
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`check-relays:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  // SECURITY: Require admin auth - relay URLs are fetched server-side
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   initFirebase(locals);
   try {
     const url = new URL(request.url);

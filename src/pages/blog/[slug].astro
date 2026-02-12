@@ -49,9 +49,15 @@ function generateExcerpt(content: string, maxLength: number = 160): string {
 }
 
 // Apply Fresh Wax branding to text (white Fresh, red Wax)
+function escapeHtmlText(text: string): string {
+  if (!text) return '';
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function brandFreshWax(text: string): string {
   if (!text) return '';
-  return text.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
+  const escaped = escapeHtmlText(text);
+  return escaped.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
 }
 
 // Sanitize HTML content - strip dangerous elements

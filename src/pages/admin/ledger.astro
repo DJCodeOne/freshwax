@@ -6,7 +6,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntries } from '../../lib/d1-catalog';
-import { getAdminUids } from '../../lib/admin';
+import { getAdminUids, requireAdminAuth } from '../../lib/admin';
 
 
 // Server-side admin auth check

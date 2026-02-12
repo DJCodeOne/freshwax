@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[Contact] Error:', error?.message || error);
     return new Response(JSON.stringify({
       success: false,
-      error: error?.message || 'Failed to send message. Please try again.'
+      error: 'Failed to send message. Please try again.'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

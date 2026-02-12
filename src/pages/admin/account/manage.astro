@@ -3,7 +3,7 @@
 // Partner Management - Artists and Merch Suppliers only
 // Customers and DJs are managed in User Management
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { getAdminUids } from '../../../lib/admin';
+import { getAdminUids, requireAdminAuth } from '../../../lib/admin';
 
 
 // Server-side admin auth check

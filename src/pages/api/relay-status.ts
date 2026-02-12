@@ -90,7 +90,7 @@ export const GET: APIRoute = async ({ url }) => {
     return new Response(JSON.stringify({
       success: false,
       isLive: false,
-      error: err.message || 'Check failed'
+      error: 'Check failed'
     }), {
       headers: { 'Content-Type': 'application/json' }
     });

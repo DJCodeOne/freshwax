@@ -33,14 +33,6 @@ function getServiceAccountKey(env: any): { key: string; projectId: string } {
 }
 
 export const POST: APIRoute = async ({ request, url, locals }) => {
-  // Allow admin key via query param
-  const keyFromQuery = url.searchParams.get('key');
-  if (keyFromQuery) {
-    const headers = new Headers(request.headers);
-    headers.set('X-Admin-Key', keyFromQuery);
-    request = new Request(request.url, { ...request, headers });
-  }
-
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 

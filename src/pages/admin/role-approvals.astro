@@ -2,7 +2,7 @@
 // Admin Role Approvals
 // Approve or deny Artist, Merch Seller, Vinyl Seller, and DJ Bypass requests
 import '../../styles/global.css';
-import { getAdminUids } from '../../lib/admin';
+import { getAdminUids, requireAdminAuth } from '../../lib/admin';
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);

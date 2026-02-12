@@ -498,7 +498,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[dj-lobby/presence] POST Error:', error?.message || error);
     return new Response(JSON.stringify({
       success: false,
-      error: error?.message || 'Failed to update presence'
+      error: 'Failed to update presence'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

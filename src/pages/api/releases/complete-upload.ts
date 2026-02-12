@@ -153,13 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Return more detailed error
       return new Response(JSON.stringify({
         success: false,
-        error: `Firebase write failed: ${setError.message}`,
-        details: {
-          releaseId,
-          collection: 'releases',
-          apiKeyPresent: !!(env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY),
-          projectId: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store'
-        }
+        error: 'Failed to save release data'
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 

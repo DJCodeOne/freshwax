@@ -7,14 +7,6 @@ import { requireAdminAuth } from '../../lib/admin';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  // Allow admin key via query param for browser access
-  const keyFromQuery = url.searchParams.get('key');
-  if (keyFromQuery) {
-    const headers = new Headers(request.headers);
-    headers.set('X-Admin-Key', keyFromQuery);
-    request = new Request(request.url, { ...request, headers });
-  }
-
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 

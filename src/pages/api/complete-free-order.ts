@@ -109,6 +109,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Validate item count and quantities
+    if (orderData.items.length > 50) {
+      return new Response(JSON.stringify({ success: false, error: 'Too many items (max 50)' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    if (orderData.items.some((item: any) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99)) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid item quantity (1-99)' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // SECURITY: Validate item prices server-side (prevent getting items for free)
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
     const hasPhysicalItems = validatedItems.some((item: any) =>

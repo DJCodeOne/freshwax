@@ -38,6 +38,12 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Escape for use inside JS string literals in onclick attributes
+function escapeJsString(str) {
+  if (!str) return '';
+  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/</g, '\\x3c');
+}
+
 // Plus badge emojis - matches dashboard.astro
 const BADGE_EMOJIS = {
   crown: '👑', fire: '🔥', headphones: '🎧', skull: '💀', lion: '🦁',
@@ -3298,11 +3304,11 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.25rem;">
               <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">${escapeHtml(msg.userName)}${plusBadge}</span>
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', 'GIF')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
+                <button class="reply-btn" onclick="window.replyToMessage('${escapeJsString(msg.id)}', '${escapeJsString(msg.userName)}', 'GIF')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
                 <span style="font-size: 0.6875rem; color: #666;">${time}</span>
               </div>
             </div>
-            <img src="${msg.giphyUrl}" alt="GIF" style="max-width: 300px; border-radius: 8px;" onload="setTimeout(() => this.scrollIntoView({ behavior: 'instant', block: 'end' }), 50);" />
+            ${msg.giphyUrl && /^https?:\/\//i.test(msg.giphyUrl) ? `<img src="${escapeHtml(msg.giphyUrl)}" alt="GIF" style="max-width: 300px; border-radius: 8px;" onload="setTimeout(() => this.scrollIntoView({ behavior: 'instant', block: 'end' }), 50);" />` : ''}
           </div>
         `;
       }
@@ -3313,7 +3319,7 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.125rem;">
             <span style="font-weight: 600; color: #dc2626; font-size: 0.8125rem; display: inline-flex; align-items: center;">${escapeHtml(msg.userName)}${plusBadge}</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <button class="reply-btn" onclick="window.replyToMessage('${msg.id}', '${escapeHtml(msg.userName)}', '${escapeHtml(msgPreview).replace(/'/g, "\\'")}')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
+              <button class="reply-btn" onclick="window.replyToMessage('${escapeJsString(msg.id)}', '${escapeJsString(msg.userName)}', '${escapeJsString(msgPreview)}')" style="opacity: 0; background: none; border: none; color: #22c55e; cursor: pointer; font-size: 0.75rem; transition: opacity 0.2s;">↩ Reply</button>
               <span style="font-size: 0.6875rem; color: #666;">${time}</span>
             </div>
           </div>

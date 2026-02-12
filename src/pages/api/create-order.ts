@@ -146,6 +146,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Validate item count and quantities
+    if (orderData.items.length > 50) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Too many items in order (max 50)'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    if (orderData.items.some((item: any) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99)) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid item quantity (1-99)'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // Validate price floor - reject zero or negative prices
     if (orderData.items.some((item: any) => typeof item.price !== 'number' || item.price <= 0)) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid item price' }), {

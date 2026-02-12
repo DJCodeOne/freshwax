@@ -137,6 +137,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
 
       if (!currentWishlist.includes(releaseId)) {
+        if (currentWishlist.length >= 500) {
+          return new Response(JSON.stringify({
+            success: false,
+            error: 'Wishlist is full (max 500 items)'
+          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        }
         currentWishlist.push(releaseId);
       }
 

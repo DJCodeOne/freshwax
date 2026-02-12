@@ -234,7 +234,7 @@ function showRelayPlayer(relay) {
         </button>
         <button class="relay-stop-btn" onclick="window.stopRelay()">Stop Relay</button>
       </div>
-      ${relay.websiteUrl ? `<a href="${escapeHtml(relay.websiteUrl)}" target="_blank" class="relay-source-link">Visit ${escapeHtml(relay.name)} →</a>` : ''}
+      ${relay.websiteUrl && /^https?:\/\//i.test(relay.websiteUrl) ? `<a href="${escapeHtml(relay.websiteUrl)}" target="_blank" rel="noopener" class="relay-source-link">Visit ${escapeHtml(relay.name)} →</a>` : ''}
     </div>
     <div class="relay-priority-notice">
       <span>⚡</span> Fresh Wax DJs have priority - auto-switching when live

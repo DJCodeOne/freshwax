@@ -31,25 +31,23 @@ function extractKeyFromUrl(url: string, publicUrl: string): string | null {
     const parsedUrl = new URL(url);
 
     // Handle R2 public URL format (from env)
+    let key: string | null = null;
     if (url.startsWith(publicUrl)) {
-      const key = url.replace(publicUrl + '/', '');
-      // Decode URI components to get the actual R2 object key
-      return decodeURIComponent(key);
-    }
-
-    // Handle cdn.freshwax.co.uk (custom domain pointing to R2)
-    if (parsedUrl.hostname === 'cdn.freshwax.co.uk') {
+      key = decodeURIComponent(url.replace(publicUrl + '/', ''));
+    } else if (parsedUrl.hostname === 'cdn.freshwax.co.uk') {
       const path = parsedUrl.pathname.startsWith('/') ? parsedUrl.pathname.slice(1) : parsedUrl.pathname;
-      return decodeURIComponent(path);
-    }
-
-    // Handle R2 dev URLs
-    if (parsedUrl.hostname.includes('r2.dev') || parsedUrl.hostname.includes('r2.cloudflarestorage.com')) {
+      key = decodeURIComponent(path);
+    } else if (parsedUrl.hostname.includes('r2.dev') || parsedUrl.hostname.includes('r2.cloudflarestorage.com')) {
       const path = parsedUrl.pathname.startsWith('/') ? parsedUrl.pathname.slice(1) : parsedUrl.pathname;
-      return decodeURIComponent(path);
+      key = decodeURIComponent(path);
     }
 
-    return null;
+    // Reject path traversal attempts
+    if (key && (key.includes('..') || key.includes('\0'))) {
+      return null;
+    }
+
+    return key;
   } catch {
     return null;
   }
