@@ -8575,11 +8575,14 @@ const runtime = (Astro.locals as any).runtime;
 
   function formatLivestreamMessage(msg) {
     const time = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-    const initial = (msg.userName || 'U').charAt(0).toUpperCase();
+    const rawInitial = (msg.userName || 'U').charAt(0).toUpperCase();
+    const initial = /^[A-Z0-9]$/.test(rawInitial) ? rawInitial : 'U';
 
     // Avatar HTML - show image if available, otherwise show letter initial
-    const avatarHtml = msg.userAvatar
-      ? `<img src="${msg.userAvatar}" alt="" class="ls-chat-avatar" onerror="this.outerHTML='<span class=\\'ls-chat-avatar-letter\\'>${initial}</span>'" />`
+    // Validate avatar URL protocol to prevent javascript: injection
+    const safeAvatar = msg.userAvatar && /^https?:\/\//i.test(msg.userAvatar) ? escapeHtml(msg.userAvatar) : '';
+    const avatarHtml = safeAvatar
+      ? `<img src="${safeAvatar}" alt="" class="ls-chat-avatar" onerror="this.outerHTML='<span class=\\'ls-chat-avatar-letter\\'>${initial}</span>'" />`
       : `<span class="ls-chat-avatar-letter">${initial}</span>`;
 
     // Plus badge - convert badge name to emoji (only show for Plus members)
@@ -8589,10 +8592,11 @@ const runtime = (Astro.locals as any).runtime;
     // Bot badge
     const botBadgeHtml = msg.type === 'bot' ? `<span class="ls-chat-bot-badge">BOT</span>` : '';
 
-    // Handle GIF messages
-    if (msg.type === 'giphy' && msg.giphyUrl) {
+    // Handle GIF messages - validate Giphy URL protocol
+    const safeGiphyUrl = msg.giphyUrl && /^https?:\/\//i.test(msg.giphyUrl) ? escapeHtml(msg.giphyUrl) : '';
+    if (msg.type === 'giphy' && safeGiphyUrl) {
       return `
-        <div class="ls-chat-message" data-message-id="${msg.id || ''}">
+        <div class="ls-chat-message" data-message-id="${escapeHtml(msg.id || '')}">
           <div class="ls-chat-header">
             <div class="ls-chat-user">
               ${avatarHtml}
@@ -8602,7 +8606,7 @@ const runtime = (Astro.locals as any).runtime;
             <span class="ls-chat-time">${time}</span>
           </div>
           <div class="ls-chat-gif">
-            <img src="${msg.giphyUrl}" alt="GIF" loading="lazy" />
+            <img src="${safeGiphyUrl}" alt="GIF" loading="lazy" />
           </div>
         </div>
       `;

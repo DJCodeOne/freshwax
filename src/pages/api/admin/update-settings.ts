@@ -147,11 +147,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { action, settings, adminKey, section, sectionData } = data;
 
-    // Validate admin key from environment
-    const expectedKey = env?.ADMIN_KEY;
-    if (!expectedKey || adminKey !== expectedKey) {
-      return ApiErrors.unauthorized('Invalid or missing admin key');
-    }
+    // Validate admin auth (timing-safe comparison)
+    const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+    initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+    const authError = await requireAdminAuth(request, locals, data);
+    if (authError) return authError;
 
     if (action === 'save') {
       // If saving a specific section

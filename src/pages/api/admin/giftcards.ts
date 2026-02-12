@@ -242,13 +242,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const data = await request.json();
     const { action, adminKey } = data;
 
-    // Validate admin key
-    if (adminKey !== getAdminKey(locals)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    }
+    // Validate admin auth (timing-safe comparison)
+    const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
+    const adminEnv = locals?.runtime?.env;
+    initAdminEnv({ ADMIN_UIDS: adminEnv?.ADMIN_UIDS, ADMIN_EMAILS: adminEnv?.ADMIN_EMAILS });
+    const authError = await requireAdminAuth(request, locals, data);
+    if (authError) return authError;
 
     const now = new Date().toISOString();
 

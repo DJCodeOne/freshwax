@@ -184,7 +184,7 @@ async function verifyPurchaseKV(env: Env, userId: string | null, releaseId: stri
           // Found purchase - cache in KV for future requests
           if (env.CACHE) {
             await env.CACHE.put(`purchase:${userId}:${releaseId}`, 'true', {
-              expirationTtl: 86400 * 365 // 1 year
+              expirationTtl: 86400 * 30 // 30 days - shorter TTL allows refund invalidation
             });
             console.log('[download] Purchase cached to KV');
           }

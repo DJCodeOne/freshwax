@@ -45,10 +45,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  // SECURITY: Validate URL is from allowed domains only
+  // SECURITY: Validate URL is from allowed domains only, https required
   let isAllowed = false;
   try {
     const parsedUrl = new URL(audioUrl);
+    if (parsedUrl.protocol !== 'https:') {
+      return new Response(JSON.stringify({ error: 'Only HTTPS URLs allowed' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
     isAllowed = ALLOWED_DOMAINS.some(domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain));
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid URL' }), {
@@ -67,7 +73,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     log.info('[download-mix] Proxying download for:', audioUrl);
 
-    const response = await fetch(audioUrl);
+    const response = await fetch(audioUrl, {
+      signal: AbortSignal.timeout(30000) // 30s timeout
+    });
 
     if (!response.ok) {
       throw new Error('Failed to fetch: ' + response.status);

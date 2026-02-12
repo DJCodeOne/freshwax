@@ -323,10 +323,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 status: 402, headers: { 'Content-Type': 'application/json' }
               });
             }
+            // Verify payment amount matches Pro price (amount is in pence)
+            if (pi.amount < PRO_ANNUAL_PRICE * 100) {
+              log.error('Payment amount too low:', pi.amount, 'expected at least', PRO_ANNUAL_PRICE * 100);
+              return new Response(JSON.stringify({ success: false, error: 'Payment amount insufficient' }), {
+                status: 402, headers: { 'Content-Type': 'application/json' }
+              });
+            }
           } else if (paymentId.startsWith('cs_')) {
             const session = await stripe.checkout.sessions.retrieve(paymentId);
             if (session.payment_status !== 'paid') {
               return new Response(JSON.stringify({ success: false, error: 'Payment not completed' }), {
+                status: 402, headers: { 'Content-Type': 'application/json' }
+              });
+            }
+            // Verify session amount matches Pro price (amount_total is in pence)
+            if ((session.amount_total || 0) < PRO_ANNUAL_PRICE * 100) {
+              log.error('Session amount too low:', session.amount_total, 'expected at least', PRO_ANNUAL_PRICE * 100);
+              return new Response(JSON.stringify({ success: false, error: 'Payment amount insufficient' }), {
                 status: 402, headers: { 'Content-Type': 'application/json' }
               });
             }
@@ -371,6 +385,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               status: 402, headers: { 'Content-Type': 'application/json' }
             });
           }
+          // Verify PayPal amount matches Pro price
+          const ppAmount = parseFloat(orderData.purchase_units?.[0]?.amount?.value || '0');
+          if (ppAmount < PRO_ANNUAL_PRICE) {
+            log.error('PayPal amount too low:', ppAmount, 'expected at least', PRO_ANNUAL_PRICE);
+            return new Response(JSON.stringify({ success: false, error: 'Payment amount insufficient' }), {
+              status: 402, headers: { 'Content-Type': 'application/json' }
+            });
+          }
         } catch (paypalErr: any) {
           log.error('PayPal verification failed:', paypalErr?.message);
           return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
@@ -379,6 +401,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       } else {
         return new Response(JSON.stringify({ success: false, error: 'Unknown payment method' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // SECURITY: Prevent payment ID reuse across users
+      const existingUsers = await queryCollection('users', {
+        filters: [{ field: 'subscription.subscriptionId', op: 'EQUAL', value: paymentId }],
+        limit: 1
+      });
+      if (existingUsers.length > 0 && existingUsers[0].id !== userId) {
+        log.error('Payment ID already used by another user:', paymentId);
+        return new Response(JSON.stringify({ success: false, error: 'Payment already used' }), {
           status: 400, headers: { 'Content-Type': 'application/json' }
         });
       }

@@ -281,7 +281,7 @@ export const prerender = false;
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>
                 </a>
-                <button class="action-btn delete" title="Delete" onclick="showDeleteModal('${post.id}', '${post.title.replace(/'/g, "\\'")}')">
+                <button class="action-btn delete" title="Delete" data-post-id="${post.id}" data-post-title="${post.title.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                   </svg>
@@ -313,8 +313,14 @@ export const prerender = false;
     modal?.classList.remove('hidden');
   }
 
-  // Make it globally available
-  (window as any).showDeleteModal = showDeleteModal;
+  // Bind delete buttons via data attributes (no inline onclick)
+  document.querySelectorAll('.action-btn.delete[data-post-id]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.postId;
+      const title = this.dataset.postTitle || '';
+      if (id) showDeleteModal(id, title);
+    });
+  });
 
   document.getElementById('delete-cancel')?.addEventListener('click', () => {
     document.getElementById('delete-modal')?.classList.add('hidden');

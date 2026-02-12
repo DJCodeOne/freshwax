@@ -136,7 +136,7 @@ function renderRelayList(relays) {
           ? `<button class="relay-btn stop" onclick="window.stopRelay()">⏹ Stop</button>`
           : `<button class="relay-btn play" onclick="window.playRelay('${escapeHtml(relay.id)}')" ${!relay.isLive && relay.checkMethod !== 'none' ? 'disabled' : ''}>▶ Listen</button>`
         }
-        ${relay.websiteUrl ? `<a href="${relay.websiteUrl}" target="_blank" class="relay-link">🔗</a>` : ''}
+        ${relay.websiteUrl && /^https?:\/\//i.test(relay.websiteUrl) ? `<a href="${escapeHtml(relay.websiteUrl)}" target="_blank" rel="noopener" class="relay-link">🔗</a>` : ''}
       </div>
     </div>
   `).join('');
