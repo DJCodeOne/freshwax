@@ -3,10 +3,18 @@
 
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Rate limit: standard (60 req/min)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`giftcard-verify:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   console.log('[giftcard-verify] ========== VERIFY SESSION REQUEST ==========');
 
   try {
@@ -77,14 +85,18 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
       if (existingCards.length > 0) {
         const card = existingCards[0];
-        console.log('[giftcard-verify] Gift card found:', card.code);
+        console.log('[giftcard-verify] Gift card found for session:', sessionId);
+        // Mask email: show first 2 chars + domain only
+        const email = card.recipientEmail || '';
+        const maskedEmail = email.includes('@')
+          ? email.substring(0, 2) + '***@' + email.split('@')[1]
+          : '***';
         return new Response(JSON.stringify({
           success: true,
           paymentStatus: 'paid',
           giftCard: {
-            code: card.code,
             amount: card.originalValue,
-            recipientEmail: card.recipientEmail
+            recipientEmail: maskedEmail
           }
         }), { headers: { 'Content-Type': 'application/json' } });
       }

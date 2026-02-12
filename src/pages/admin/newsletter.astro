@@ -534,6 +534,11 @@ Stay fresh! 🎵
   // Get admin key from define:vars script
   const ADMIN_KEY = window.ADMIN_KEY || '';
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
   let allSubscribers = [];
   let selectedIds = new Set();
   let currentFilter = 'all';
@@ -637,14 +642,14 @@ Stay fresh! 🎵
     }
     tbody.innerHTML = filtered.map(s => `
       <tr>
-        <td><input type="checkbox" ${s.status !== 'active' ? 'disabled' : ''} ${selectedIds.has(s.id) ? 'checked' : ''} onchange="toggleSubscriber('${s.id}')"></td>
-        <td><strong>${s.email}</strong></td>
-        <td>${s.name || '-'}</td>
-        <td><span class="status-badge ${s.status}">${s.status}</span></td>
-        <td>${s.source || 'footer'}</td>
+        <td><input type="checkbox" ${s.status !== 'active' ? 'disabled' : ''} ${selectedIds.has(s.id) ? 'checked' : ''} onchange="toggleSubscriber('${escapeHtml(s.id)}')"></td>
+        <td><strong>${escapeHtml(s.email)}</strong></td>
+        <td>${escapeHtml(s.name || '-')}</td>
+        <td><span class="status-badge ${escapeHtml(s.status)}">${escapeHtml(s.status)}</span></td>
+        <td>${escapeHtml(s.source || 'footer')}</td>
         <td>${s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString() : 'N/A'}</td>
         <td>${s.emailsReceived || 0}</td>
-        <td><div class="action-btns"><button class="action-btn" onclick="editSubscriber('${s.id}')" title="Edit">✏️</button><button class="action-btn danger" onclick="deleteSubscriber('${s.id}')" title="Delete">🗑️</button></div></td>
+        <td><div class="action-btns"><button class="action-btn" onclick="editSubscriber('${escapeHtml(s.id)}')" title="Edit">✏️</button><button class="action-btn danger" onclick="deleteSubscriber('${escapeHtml(s.id)}')" title="Delete">🗑️</button></div></td>
       </tr>
     `).join('');
     updateSelectedCount();

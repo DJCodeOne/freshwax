@@ -58,6 +58,8 @@ const formatDate = (dateStr) => {
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
 };
+
+const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://localhost:8089';
 ---
 
 <AdminLayout title="Releases" activeNav="releases" showStats={true} stats={stats}>
@@ -283,6 +285,9 @@ const formatCurrency = (amount) => {
     </div>
   </div>
 
+  <script is:inline define:vars={{ AUDIO_PROCESSOR_URL }}>
+    window.__AUDIO_PROCESSOR_URL = AUDIO_PROCESSOR_URL;
+  </script>
   <Fragment slot="scripts">
     <script>
       // Filter functionality
@@ -323,7 +328,7 @@ const formatCurrency = (amount) => {
       searchInput?.addEventListener('input', filterReleases);
 
       // Audio Processor Server Status
-      const AUDIO_PROCESSOR_URL = 'http://localhost:8089';
+      const AUDIO_PROCESSOR_URL = window.__AUDIO_PROCESSOR_URL || 'http://localhost:8089';
       const audioServerIcon = document.getElementById('audioServerIcon');
       const audioServerText = document.getElementById('audioServerText');
       const startAudioServerBtn = document.getElementById('startAudioServerBtn');

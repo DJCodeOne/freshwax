@@ -73,7 +73,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         { field: 'customerId', op: 'EQUAL', value: userId },
         { field: 'paymentStatus', op: 'EQUAL', value: 'completed' }
       ],
-      limit: 50
+      limit: 500
     });
 
     const hasPurchased = userOrders.some((order: any) =>

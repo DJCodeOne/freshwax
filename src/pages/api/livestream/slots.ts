@@ -17,13 +17,6 @@ function initServices(locals: any) {
   const firebaseProjectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const firebaseApiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-  console.log('[DEBUG] initServices - Firebase:', {
-    hasProjectId: !!firebaseProjectId,
-    projectId: firebaseProjectId,
-    hasApiKey: !!firebaseApiKey,
-    apiKeyLength: firebaseApiKey?.length || 0
-  });
-
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: firebaseProjectId,
     FIREBASE_API_KEY: firebaseApiKey,
@@ -32,12 +25,6 @@ function initServices(locals: any) {
   const red5RtmpUrl = env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL;
   const red5HlsUrl = env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL;
   const red5Secret = env?.RED5_SIGNING_SECRET || import.meta.env.RED5_SIGNING_SECRET;
-
-  console.log('[DEBUG] initServices - Red5:', {
-    hasRtmpUrl: !!red5RtmpUrl,
-    hasHlsUrl: !!red5HlsUrl,
-    hasSecret: !!red5Secret
-  });
 
   initRed5Env({
     RED5_RTMP_URL: red5RtmpUrl,
@@ -137,8 +124,6 @@ function generateId(): string {
 
 // GET: Fetch schedule
 export const GET: APIRoute = async ({ request, locals }) => {
-  console.log('[DEBUG] slots.ts GET called');
-
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB; // D1 database binding
 
@@ -160,8 +145,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const djId = url.searchParams.get('djId');
     const forceRefresh = url.searchParams.get('_t');
     const action = url.searchParams.get('action');
-
-    console.log('[DEBUG] slots.ts params:', { startDate, endDate, djId, action });
 
     const settings = await getSettings();
 
@@ -563,15 +546,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Check for conflicts - limit to prevent runaway
       const existingSlots = await queryCollection('livestreamSlots', { skipCache: true, limit: 200 });
 
-      console.log('[CONFLICT DEBUG] New booking request:', {
-        startTime: slotStart.toISOString(),
-        endTime: slotEnd.toISOString(),
-        duration
-      });
-
       const conflicts = existingSlots.filter(slot => {
         if (!['scheduled', 'in_lobby', 'live', 'queued'].includes(slot.status)) {
-          console.log('[CONFLICT DEBUG] Skipping slot (wrong status):', slot.id, slot.status);
           return false;
         }
         const existingStart = new Date(slot.startTime);
@@ -580,22 +556,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const check2 = slotEnd > existingStart;
         const isConflict = check1 && check2;
 
-        console.log('[CONFLICT DEBUG] Checking:', {
-          slotId: slot.id,
-          djName: slot.djName,
-          existing: `${existingStart.toISOString()} - ${existingEnd.toISOString()}`,
-          new: `${slotStart.toISOString()} - ${slotEnd.toISOString()}`,
-          'newStart < existingEnd': check1,
-          'newEnd > existingStart': check2,
-          isConflict
-        });
-
         return isConflict;
       });
 
       if (conflicts.length > 0) {
         const c = conflicts[0];
-        console.log('[CONFLICT DEBUG] CONFLICT FOUND with:', c.djName, c.id);
         return new Response(JSON.stringify({
           success: false,
           error: `Time conflicts with ${c.djName}'s booking`,

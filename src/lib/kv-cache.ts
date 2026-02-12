@@ -58,7 +58,8 @@ export async function kvSet(key: string, value: any, options: CacheOptions = {})
 
   try {
     const fullKey = options.prefix ? `${options.prefix}:${key}` : key;
-    const ttl = options.ttl || 60; // Default 60 seconds
+    const ttl = options.ttl || 60;
+    if (!options.ttl) console.warn('[kv-cache] No TTL provided, using default 60s for key:', key?.substring(0, 30));
 
     await kvNamespace.put(fullKey, JSON.stringify(value), {
       expirationTtl: ttl

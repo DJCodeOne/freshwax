@@ -3,14 +3,28 @@
 // Also creates order as fallback if webhook hasn't processed it
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ url, locals }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
   console.log('[verify-session] ========== VERIFY SESSION REQUEST ==========');
   console.log('[verify-session] Timestamp:', new Date().toISOString());
+
+  // SECURITY: Verify user authentication via Firebase token
+  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  if (!authUserId || authError) {
+    console.log('[verify-session] Authentication failed:', authError || 'No user');
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Authentication required'
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+  console.log('[verify-session] Authenticated user:', authUserId);
 
   try {
     const sessionId = url.searchParams.get('session_id');

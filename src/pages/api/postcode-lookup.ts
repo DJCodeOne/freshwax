@@ -3,6 +3,7 @@
 // This validates postcodes and returns location data (city, county, region)
 
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -14,6 +15,13 @@ const log = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
+  // Rate limit: standard (60 req/min)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`postcode-lookup:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const rawPostcode = url.searchParams.get('postcode')?.trim().toUpperCase() || '';
   // Remove all spaces for the API call

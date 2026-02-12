@@ -162,6 +162,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Validate trackIndex is a non-negative integer for non-artwork requests
+    if (fileType !== 'artwork') {
+      const idx = Number(trackIndex);
+      if (!Number.isInteger(idx) || idx < 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Invalid trackIndex: must be a non-negative integer'
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // Get the URL to presign
     // First try order's stored download data (locked at purchase time - safer)
     // Then fall back to current release data
@@ -183,7 +197,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
             fileUrl = fileType === 'mp3' ? orderTrack.mp3Url : orderTrack.wavUrl;
           }
         } else {
-          // Full release - use trackIndex
+          // Full release - validate trackIndex bounds
+          if (trackIndex >= orderTracks.length) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: `Track index ${trackIndex} out of bounds (release has ${orderTracks.length} tracks)`
+            }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
           const orderTrack = orderTracks[trackIndex];
           if (orderTrack) {
             fileUrl = fileType === 'mp3' ? orderTrack.mp3Url : orderTrack.wavUrl;
@@ -223,6 +246,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
             fileUrl = fileType === 'mp3' ? track.mp3Url : track.wavUrl;
           }
         } else {
+          // Validate trackIndex bounds against release tracks
+          if (trackIndex >= tracks.length) {
+            return new Response(JSON.stringify({
+              success: false,
+              error: `Track index ${trackIndex} out of bounds (release has ${tracks.length} tracks)`
+            }), {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
           // For full release purchases, use trackIndex
           const track = tracks[trackIndex];
           if (track) {

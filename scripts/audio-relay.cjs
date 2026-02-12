@@ -4,6 +4,8 @@
 
 const http = require('http');
 
+const ALLOWED_ORIGINS = ['https://freshwax.co.uk', 'https://www.freshwax.co.uk', 'http://localhost:4321', 'http://localhost:3000'];
+
 const STATIONS = {
   'underground-lair': {
     name: 'The Underground Lair',
@@ -18,10 +20,13 @@ const server = http.createServer((req, res) => {
 
   console.log(`[Relay] Request for station: ${stationId}`);
 
-  // CORS headers for all responses
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+  // CORS headers - only allow known origins
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  }
 
   // Handle preflight
   if (req.method === 'OPTIONS') {
@@ -53,12 +58,15 @@ const server = http.createServer((req, res) => {
     // Pass through content type
     const contentType = proxyRes.headers['content-type'] || 'audio/mpeg';
 
-    res.writeHead(200, {
+    const streamHeaders = {
       'Content-Type': contentType,
       'Cache-Control': 'no-cache, no-store',
-      'Access-Control-Allow-Origin': '*',
       'X-Relay-Station': station.name
-    });
+    };
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      streamHeaders['Access-Control-Allow-Origin'] = origin;
+    }
+    res.writeHead(200, streamHeaders);
 
     proxyRes.pipe(res);
 

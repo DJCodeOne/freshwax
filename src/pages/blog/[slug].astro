@@ -54,6 +54,16 @@ function brandFreshWax(text: string): string {
   return text.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
 }
 
+// Sanitize HTML content - strip dangerous elements
+function sanitizeHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/\bon\w+\s*=/gi, 'data-removed=')
+    .replace(/javascript\s*:/gi, 'removed:');
+}
+
 // Prepare SEO data
 const seoTitle = post?.title || 'Post Not Found';
 const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.');
@@ -135,7 +145,7 @@ const modifiedTime = publishedTime;
         </header>
 
         <!-- Article Content -->
-        <div class="article-content" set:html={post.content} />
+        <div class="article-content" set:html={sanitizeHtml(post.content)} />
 
         <!-- Tags -->
         {post.tags && post.tags.length > 0 && (

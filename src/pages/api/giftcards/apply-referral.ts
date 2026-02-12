@@ -5,11 +5,19 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 // GET: Validate a referral code
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard (60 req/min)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`apply-referral:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
@@ -82,24 +90,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Get referrer info for display
-    let referrerName = 'a friend';
-    if (giftCard.createdByUserId) {
-      const referrerDoc = await getDocument('users', giftCard.createdByUserId);
-      if (referrerDoc?.displayName) {
-        referrerName = referrerDoc.displayName;
-      }
-    }
-
     return new Response(JSON.stringify({
       success: true,
       valid: true,
+      referrerFound: true,
       discount: giftCard.currentBalance,
       discountFormatted: formatGBP(giftCard.currentBalance),
       originalPrice: PRO_ANNUAL_PRICE,
       discountedPrice: PRO_ANNUAL_PRICE - giftCard.currentBalance,
       discountedPriceFormatted: formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance),
-      referrerName,
       message: `Referral code valid! You'll pay ${formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance)} instead of ${formatGBP(PRO_ANNUAL_PRICE)}`
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
@@ -114,6 +113,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Apply referral code and activate Pro subscription
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard (60 req/min)
+  const postClientId = getClientId(request);
+  const postRateLimit = checkRateLimit(`apply-referral-post:${postClientId}`, RateLimiters.standard);
+  if (!postRateLimit.allowed) {
+    return rateLimitResponse(postRateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,

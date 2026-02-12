@@ -233,20 +233,21 @@ export async function updateVinylStock(items: any[], orderNumber: string, orderI
         const qty = item.quantity || 1;
         log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', qty);
 
-        // Read current stock for the movement log
-        const releaseData = await getDocument('releases', releaseId);
-        const previousStock = releaseData?.vinylStock || 0;
-
-        // Atomic decrement - prevents race conditions on concurrent purchases
+        // Atomic decrement first - prevents race conditions on concurrent purchases
         await atomicIncrement('releases', releaseId, {
           vinylStock: -qty,
           vinylSold: qty
         });
 
+        // Read AFTER atomic increment to get the actual current stock
+        const releaseData = await getDocument('releases', releaseId);
+        const currentStock = releaseData?.vinylStock || 0;
+        const previousStock = currentStock + qty; // Derive previous from current since we just decremented by qty
+        const newStock = currentStock;
+
         // Sync vinylRecordCount (string field used by frontend display)
-        const newStock = Math.max(0, previousStock - qty);
         await updateDocument('releases', releaseId, {
-          vinylRecordCount: String(newStock),
+          vinylRecordCount: String(Math.max(0, newStock)),
           updatedAt: now
         });
 
@@ -335,8 +336,17 @@ export async function processVinylCratesOrders(
               updatedAt: now
             }, freshListing._updateTime);
           } else if (freshListing && freshListing.status === 'published') {
-            // Still no _updateTime after re-read - skip to prevent double-sell
-            console.error('[order-utils] CRITICAL: Skipping listing update - no concurrency protection available for:', listingId);
+            // Still no _updateTime after re-read - use regular update rather than skipping entirely
+            // A non-conditional update is better than leaving the listing unsold (which allows double-selling)
+            console.error('[order-utils] WARNING: Listing missing _updateTime, using non-conditional update for:', listingId);
+            await updateDocument('vinylListings', listingId, {
+              status: 'sold',
+              soldAt: now,
+              soldOrderNumber: orderNumber,
+              soldOrderId: orderId,
+              soldTo: customer.email,
+              updatedAt: now
+            });
           }
         } else {
           console.error('[order-utils] Listing already sold or missing:', listingId);
@@ -457,8 +467,9 @@ export async function processVinylCratesOrders(
 }
 
 // Refund stock when order is cancelled
-export async function refundOrderStock(orderId: string, items: any[], orderNumber: string, idToken?: string, env?: any): Promise<void> {
+export async function refundOrderStock(orderId: string, items: any[], orderNumber: string, idToken?: string, env?: any): Promise<{ failedRefunds: Array<{ item: string; type: string; error: string }> }> {
   const now = new Date().toISOString();
+  const failedRefunds: Array<{ item: string; type: string; error: string }> = [];
 
   for (const item of items) {
     // Refund merch stock
@@ -556,6 +567,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
         }
       } catch (refundErr) {
         console.error('[order-utils] Merch refund error:', refundErr);
+        failedRefunds.push({ item: item.name || item.productId, type: 'merch', error: refundErr instanceof Error ? refundErr.message : String(refundErr) });
       }
     }
 
@@ -603,6 +615,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
         }
       } catch (refundErr) {
         console.error('[order-utils] Vinyl refund error:', refundErr);
+        failedRefunds.push({ item: item.name || releaseId, type: 'vinyl', error: refundErr instanceof Error ? refundErr.message : String(refundErr) });
       }
     }
 
@@ -622,10 +635,18 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
           log.info('[order-utils] ✓ Vinyl crates listing restored:', listingId);
         } catch (restoreErr) {
           console.error('[order-utils] Failed to restore vinyl crates listing:', restoreErr);
+          failedRefunds.push({ item: item.name || listingId, type: 'vinyl-crates', error: restoreErr instanceof Error ? restoreErr.message : String(restoreErr) });
         }
       }
     }
   }
+
+  // Report any failed refunds
+  if (failedRefunds.length > 0) {
+    console.error('[order-utils] CRITICAL: Failed to refund', failedRefunds.length, 'item(s) for order', orderNumber, ':', JSON.stringify(failedRefunds));
+  }
+
+  return { failedRefunds };
 }
 
 // Update stock for merch items (with optimistic concurrency)

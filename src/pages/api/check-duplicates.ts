@@ -3,7 +3,7 @@
 // Check if cart items are duplicates of previous purchases
 
 import type { APIRoute } from 'astro';
-import { queryCollection } from '../../lib/firebase-rest';
+import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -71,14 +71,17 @@ async function getOwnershipData(userId: string): Promise<{
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const { userId, cartItems } = await request.json();
-    
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'userId is required' }), {
-        status: 400,
+    // SECURITY: Verify the authenticated user
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { cartItems } = await request.json();
+    const userId = verifiedUserId;
     
     if (!cartItems || !Array.isArray(cartItems)) {
       return new Response(JSON.stringify({ duplicates: [] }), {

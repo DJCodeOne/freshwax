@@ -193,23 +193,11 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 
 // Trigger Pusher event using Web Crypto API
 async function triggerPusher(channel: string, event: string, data: any, env?: any): Promise<boolean> {
-  console.log('[DEBUG] triggerPusher called:', { channel, event, data });
-
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
   const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
   const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
   const PUSHER_CLUSTER = env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
-
-  console.log('[DEBUG] Pusher config:', {
-    hasAppId: !!PUSHER_APP_ID,
-    appIdLength: PUSHER_APP_ID?.length || 0,
-    hasKey: !!PUSHER_KEY,
-    keyPrefix: PUSHER_KEY?.substring(0, 8) || '',
-    hasSecret: !!PUSHER_SECRET,
-    secretLength: PUSHER_SECRET?.length || 0,
-    cluster: PUSHER_CLUSTER
-  });
 
   if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
     console.error('[Pusher] Missing configuration - cannot broadcast');

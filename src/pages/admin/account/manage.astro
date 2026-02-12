@@ -365,6 +365,11 @@ const adminUids = getAdminUids();
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
   let allUsers = [];
   let currentEditUser = null;
 
@@ -457,7 +462,7 @@ const adminUids = getAdminUids();
       document.getElementById('loadingState').innerHTML = `
         <div style="color: red; text-align: center; padding: 2rem;">
           <h3>Error loading partners</h3>
-          <p>${error.message}</p>
+          <p>${escapeHtml(error.message)}</p>
           <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">Retry</button>
         </div>
       `;
@@ -496,8 +501,8 @@ const adminUids = getAdminUids();
         <td>
           <div class="item-cell">
             <div class="item-info">
-              <h4>${user.name || user.displayName || 'No name'}</h4>
-              <p class="cell-mono">${user.email || 'No email'}</p>
+              <h4>${escapeHtml(user.name || user.displayName || 'No name')}</h4>
+              <p class="cell-mono">${escapeHtml(user.email || 'No email')}</p>
             </div>
           </div>
         </td>
@@ -513,7 +518,7 @@ const adminUids = getAdminUids();
             ${user.isApproved ? '✓ Approved' : '⏳ Pending'}
           </span>
         </td>
-        <td>${user.source || '-'}</td>
+        <td>${escapeHtml(user.source || '-')}</td>
         <td>
           <span class="${user.isDisabled ? 'status-disabled' : 'status-active'}">
             ${user.isDisabled ? '⛔ Disabled' : '✓ Active'}
@@ -521,8 +526,8 @@ const adminUids = getAdminUids();
         </td>
         <td class="text-right">
           <div class="flex gap-1 justify-end">
-            <button class="btn btn-ghost btn-sm" onclick="viewUser('${user.id}')" title="View">👁️</button>
-            <button class="btn btn-secondary btn-sm" onclick="editUser('${user.id}')" title="Edit">✏️</button>
+            <button class="btn btn-ghost btn-sm" onclick="viewUser('${escapeHtml(user.id)}')" title="View">👁️</button>
+            <button class="btn btn-secondary btn-sm" onclick="editUser('${escapeHtml(user.id)}')" title="Edit">✏️</button>
           </div>
         </td>
       </tr>
@@ -537,19 +542,19 @@ const adminUids = getAdminUids();
     document.getElementById('viewModalBody').innerHTML = `
       <div class="detail-row">
         <span class="detail-label">Name</span>
-        <span class="detail-value">${user.name || user.displayName || 'N/A'}</span>
+        <span class="detail-value">${escapeHtml(user.name || user.displayName || 'N/A')}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Email</span>
-        <span class="detail-value">${user.email || 'N/A'}</span>
+        <span class="detail-value">${escapeHtml(user.email || 'N/A')}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Phone</span>
-        <span class="detail-value">${user.phone || 'N/A'}</span>
+        <span class="detail-value">${escapeHtml(user.phone || 'N/A')}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">User ID</span>
-        <span class="detail-value" style="font-family: monospace; font-size: 0.8rem;">${user.id}</span>
+        <span class="detail-value" style="font-family: monospace; font-size: 0.8rem;">${escapeHtml(user.id)}</span>
       </div>
       <div class="detail-row">
         <span class="detail-label">Roles</span>
@@ -571,10 +576,10 @@ const adminUids = getAdminUids();
       </div>
       <div class="detail-row">
         <span class="detail-label">Source</span>
-        <span class="detail-value">${user.source || 'N/A'}</span>
+        <span class="detail-value">${escapeHtml(user.source || 'N/A')}</span>
       </div>
       <div style="margin-top: 1rem;">
-        <button class="btn btn-primary" onclick="closeViewModal(); editUser('${user.id}');">
+        <button class="btn btn-primary" onclick="closeViewModal(); editUser('${escapeHtml(user.id)}');">
           Edit Partner
         </button>
       </div>
@@ -607,16 +612,16 @@ const adminUids = getAdminUids();
 
     document.getElementById('editModalBody').innerHTML = `
       <div style="margin-bottom: 1.5rem;">
-        <h3 style="margin: 0;">${user.name || user.displayName || 'No name'}</h3>
-        <p style="color: #666; margin: 0.25rem 0 0;">${user.email || 'No email on file'}</p>
-        <p style="color: #999; font-size: 0.75rem; margin: 0.25rem 0 0;">UID: ${user.id}</p>
+        <h3 style="margin: 0;">${escapeHtml(user.name || user.displayName || 'No name')}</h3>
+        <p style="color: #666; margin: 0.25rem 0 0;">${escapeHtml(user.email || 'No email on file')}</p>
+        <p style="color: #999; font-size: 0.75rem; margin: 0.25rem 0 0;">UID: ${escapeHtml(user.id)}</p>
       </div>
 
       <div class="permission-group">
         <h3>Contact Info</h3>
         <div style="margin-bottom: 1rem;">
           <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Phone Number</label>
-          <input type="tel" id="edit_phone" value="${user.phone || ''}" placeholder="Enter phone number" 
+          <input type="tel" id="edit_phone" value="${escapeHtml(user.phone || '')}" placeholder="Enter phone number"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
       </div>
@@ -625,29 +630,29 @@ const adminUids = getAdminUids();
         <h3>Address</h3>
         <div style="margin-bottom: 0.75rem;">
           <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 1</label>
-          <input type="text" id="edit_address1" value="${user.address?.line1 || user.address?.address1 || ''}" placeholder="Street address" 
+          <input type="text" id="edit_address1" value="${escapeHtml(user.address?.line1 || user.address?.address1 || '')}" placeholder="Street address"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
         <div style="margin-bottom: 0.75rem;">
           <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Address Line 2</label>
-          <input type="text" id="edit_address2" value="${user.address?.line2 || user.address?.address2 || ''}" placeholder="Flat, unit, etc. (optional)" 
+          <input type="text" id="edit_address2" value="${escapeHtml(user.address?.line2 || user.address?.address2 || '')}" placeholder="Flat, unit, etc. (optional)"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
           <div>
             <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">City</label>
-            <input type="text" id="edit_city" value="${user.address?.city || ''}" placeholder="City" 
+            <input type="text" id="edit_city" value="${escapeHtml(user.address?.city || '')}" placeholder="City"
               style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
           </div>
           <div>
             <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Postcode</label>
-            <input type="text" id="edit_postcode" value="${user.address?.postcode || user.address?.postalCode || ''}" placeholder="Postcode" 
+            <input type="text" id="edit_postcode" value="${escapeHtml(user.address?.postcode || user.address?.postalCode || '')}" placeholder="Postcode"
               style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
           </div>
         </div>
         <div>
           <label style="display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.25rem;">Country</label>
-          <input type="text" id="edit_country" value="${user.address?.country || 'United Kingdom'}" placeholder="Country" 
+          <input type="text" id="edit_country" value="${escapeHtml(user.address?.country || 'United Kingdom')}" placeholder="Country"
             style="width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
         </div>
       </div>

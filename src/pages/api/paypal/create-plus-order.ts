@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { setDocument, getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { setDocument, getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 
 export const prerender = false;
@@ -78,11 +78,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // SECURITY: Verify the authenticated user
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const body = await request.json();
-    const { userId, email, promoCode } = body;
+    const { email, promoCode } = body;
+    const userId = verifiedUserId;
 
     // Validate required fields
-    if (!userId || !email) {
+    if (!email) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Missing required fields'

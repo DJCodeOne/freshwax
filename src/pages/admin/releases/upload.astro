@@ -2,6 +2,7 @@
 import AdminLayout from "../../../layouts/AdminLayout.astro";
 export const prerender = false;
 
+const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://localhost:8089';
 ---
 <AdminLayout title="Upload Release" activeNav="releases">
 <div class="card"><div class="card-body">
@@ -70,6 +71,9 @@ export const prerender = false;
 </div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script define:vars={{ AUDIO_PROCESSOR_URL }}>
+  window.__AUDIO_PROCESSOR_URL = AUDIO_PROCESSOR_URL;
+</script>
 <script is:inline>
 // Elements
 const dropZone = document.getElementById("dropZone");
@@ -520,7 +524,7 @@ uploadBtn.onclick = async () => {
 };
 
 // Audio processor integration
-const AUDIO_PROCESSOR_URL = 'http://localhost:8089';
+const AUDIO_PROCESSOR_URL = window.__AUDIO_PROCESSOR_URL || 'http://localhost:8089';
 
 async function checkAudioProcessor() {
   try {

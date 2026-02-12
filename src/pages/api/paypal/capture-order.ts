@@ -251,25 +251,91 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const appliedCredit = orderData.appliedCredit || 0;
 
     // Create order in Firebase using shared utility
-    const result = await createOrder({
-      orderData: {
-        customer: orderData.customer,
-        shipping: orderData.shipping,
-        items: orderData.items,
-        totals: {
-          ...orderData.totals,
-          appliedCredit,
-          amountPaid: capturedAmount
+    // Wrap in try/catch to handle race condition: if a concurrent request already
+    // created the order between our idempotency check and now, return the existing one.
+    let result: any;
+    try {
+      result = await createOrder({
+        orderData: {
+          customer: orderData.customer,
+          shipping: orderData.shipping,
+          items: orderData.items,
+          totals: {
+            ...orderData.totals,
+            appliedCredit,
+            amountPaid: capturedAmount
+          },
+          hasPhysicalItems: orderData.hasPhysicalItems,
+          paymentMethod: 'paypal',
+          paypalOrderId: paypalOrderId
         },
-        hasPhysicalItems: orderData.hasPhysicalItems,
-        paymentMethod: 'paypal',
-        paypalOrderId: paypalOrderId
-      },
-      env,
-      idToken
-    });
+        env,
+        idToken
+      });
+    } catch (createErr) {
+      console.error('[PayPal] Order creation threw:', createErr);
+      result = { success: false, error: createErr instanceof Error ? createErr.message : 'Order creation failed' };
+    }
+
+    // After creation attempt, re-check for existing order to handle race condition.
+    // If two requests passed the initial idempotency check simultaneously, one will
+    // have created the order by now. Return the existing order instead of duplicating.
+    if (result.success) {
+      try {
+        const duplicateCheck = await queryCollection('orders', {
+          filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
+          limit: 2
+        });
+        if (duplicateCheck && duplicateCheck.length > 1) {
+          // Race condition detected: multiple orders for same paypalOrderId
+          // Return the first one (earliest created) and log the duplicate
+          const firstOrder = duplicateCheck.sort((a: any, b: any) =>
+            (a.createdAt || '').localeCompare(b.createdAt || '')
+          )[0];
+          console.warn('[PayPal] RACE CONDITION: Duplicate orders detected for paypalOrderId:', paypalOrderId,
+            'Returning first order:', firstOrder.orderNumber);
+          return new Response(JSON.stringify({
+            success: true,
+            orderId: firstOrder.id,
+            orderNumber: firstOrder.orderNumber,
+            paypalOrderId: paypalOrderId,
+            message: 'Order already processed'
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (dupCheckErr) {
+        console.log('[PayPal] Post-creation duplicate check failed:', dupCheckErr);
+        // Non-fatal: continue with the order we created
+      }
+    }
 
     if (!result.success) {
+      // Before returning an error, check one more time if a concurrent request created the order
+      try {
+        const existingOrders = await queryCollection('orders', {
+          filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
+          limit: 1
+        });
+        if (existingOrders && existingOrders.length > 0) {
+          const existingOrder = existingOrders[0];
+          console.log('[PayPal] Order creation failed but existing order found (race condition):', existingOrder.orderNumber);
+          return new Response(JSON.stringify({
+            success: true,
+            orderId: existingOrder.id,
+            orderNumber: existingOrder.orderNumber,
+            paypalOrderId: paypalOrderId,
+            message: 'Order already processed'
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (fallbackErr) {
+        console.log('[PayPal] Fallback duplicate check failed:', fallbackErr);
+      }
+
       console.error('[PayPal] Order creation failed:', result.error);
       return new Response(JSON.stringify({
         success: false,

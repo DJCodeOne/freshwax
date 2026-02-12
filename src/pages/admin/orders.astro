@@ -278,6 +278,11 @@ export const prerender = false;
         return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
       };
 
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+      }
+
       // Filter functionality
       const statusFilter = document.getElementById('statusFilter');
       const typeFilter = document.getElementById('typeFilter');
@@ -319,12 +324,12 @@ export const prerender = false;
         
         const itemsHtml = (order.items || []).map(item => `
           <div style="display: flex; gap: 1rem; padding: 0.75rem; background: #f5f5f5; margin-bottom: 0.5rem;">
-            ${item.artwork || item.image ? `<img src="${item.artwork || item.image}" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #000;">` : ''}
+            ${item.artwork || item.image ? `<img src="${escapeHtml(item.artwork || item.image)}" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #000;">` : ''}
             <div style="flex: 1;">
-              <div style="font-weight: 600;">${item.title || item.name || 'Unknown Item'}</div>
-              <div style="font-size: 0.75rem; color: #666;">${item.artist || ''} ${item.type ? '• ' + item.type : ''}</div>
+              <div style="font-weight: 600;">${escapeHtml(item.title || item.name || 'Unknown Item')}</div>
+              <div style="font-size: 0.75rem; color: #666;">${escapeHtml(item.artist || '')} ${item.type ? '• ' + escapeHtml(item.type) : ''}</div>
               ${item.quantity > 1 ? `<div style="font-size: 0.75rem; color: #666;">Qty: ${item.quantity}</div>` : ''}
-              ${item.size ? `<div style="font-size: 0.75rem; color: #666;">Size: ${item.size}</div>` : ''}
+              ${item.size ? `<div style="font-size: 0.75rem; color: #666;">Size: ${escapeHtml(item.size)}</div>` : ''}
             </div>
             <div style="font-weight: 700;">${formatCurrency(item.price)}</div>
           </div>
@@ -334,12 +339,12 @@ export const prerender = false;
         const formatAddress = (addr) => {
           if (!addr) return '<span style="color: #888;">No address provided</span>';
           const parts = [];
-          if (addr.name) parts.push(`<strong>${addr.name}</strong>`);
-          if (addr.line1 || addr.address1) parts.push(addr.line1 || addr.address1);
-          if (addr.line2 || addr.address2) parts.push(addr.line2 || addr.address2);
-          const cityLine = [addr.city, addr.postcode || addr.postalCode].filter(Boolean).join(', ');
+          if (addr.name) parts.push(`<strong>${escapeHtml(addr.name)}</strong>`);
+          if (addr.line1 || addr.address1) parts.push(escapeHtml(addr.line1 || addr.address1));
+          if (addr.line2 || addr.address2) parts.push(escapeHtml(addr.line2 || addr.address2));
+          const cityLine = [addr.city, addr.postcode || addr.postalCode].filter(Boolean).map(s => escapeHtml(s)).join(', ');
           if (cityLine) parts.push(cityLine);
-          if (addr.country) parts.push(addr.country);
+          if (addr.country) parts.push(escapeHtml(addr.country));
           return parts.join('<br>') || '<span style="color: #888;">No address</span>';
         };
 
@@ -380,13 +385,13 @@ export const prerender = false;
             <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.75rem; font-weight: 600;">Customer Details</div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div>
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">${order.customerName}</div>
-                <div style="font-size: 0.875rem; color: #666;">${order.customerEmail}</div>
-                ${order.customerPhone ? `<div style="font-size: 0.875rem; color: #666;">📞 ${order.customerPhone}</div>` : ''}
+                <div style="font-weight: 600; margin-bottom: 0.25rem;">${escapeHtml(order.customerName)}</div>
+                <div style="font-size: 0.875rem; color: #666;">${escapeHtml(order.customerEmail)}</div>
+                ${order.customerPhone ? `<div style="font-size: 0.875rem; color: #666;">📞 ${escapeHtml(order.customerPhone)}</div>` : ''}
               </div>
               <div>
                 <div style="font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Payment</div>
-                <div style="font-size: 0.875rem;">${order.paymentMethod || 'Not specified'}</div>
+                <div style="font-size: 0.875rem;">${escapeHtml(order.paymentMethod || 'Not specified')}</div>
               </div>
             </div>
           </div>
@@ -402,7 +407,7 @@ export const prerender = false;
           ${order.trackingNumber ? `
             <div style="background: #e8f5e9; border: 1px solid #a5d6a7; padding: 1rem; margin-bottom: 1.5rem;">
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Tracking Number</div>
-              <div style="font-weight: 600; font-family: monospace;">${order.trackingNumber}</div>
+              <div style="font-weight: 600; font-family: monospace;">${escapeHtml(order.trackingNumber)}</div>
             </div>
           ` : ''}
           
@@ -418,7 +423,7 @@ export const prerender = false;
           ${order.notes ? `
             <div style="margin-bottom: 1.5rem;">
               <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.5rem;">Customer Notes</div>
-              <div style="padding: 0.75rem; background: #f5f5f5; font-style: italic;">${order.notes}</div>
+              <div style="padding: 0.75rem; background: #f5f5f5; font-style: italic;">${escapeHtml(order.notes)}</div>
             </div>
           ` : ''}
           

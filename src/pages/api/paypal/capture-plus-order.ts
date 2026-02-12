@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { getDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 
 export const prerender = false;
@@ -76,6 +76,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'PayPal not configured'
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify the authenticated user
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (authError || !verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
     const body = await request.json();

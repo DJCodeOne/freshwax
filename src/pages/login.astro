@@ -286,8 +286,8 @@ const firebaseConfig = {
 
         // Set cookies
         const cookieMaxAge = 2592000; // 30 days
-        document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-        document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+        document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
+        document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
 
         // Social login users are considered verified
         sessionStorage.removeItem('fw_email_unverified');
@@ -473,12 +473,12 @@ const firebaseConfig = {
           
           // Set partnerId cookie if they're an approved partner (needed for pro dashboard)
           if (profile.success && profile.isPro) {
-            document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+            document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
           }
           
           // Always set userId and customerId cookies
-          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
+          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
 
           // If admin, redirect to admin dashboard (unless a specific redirect was requested)
           if (profile.success && profile.isAdmin && redirectTo === '/account/dashboard') {
@@ -487,8 +487,8 @@ const firebaseConfig = {
           
         } catch (err) {
           console.error('[Login] Error fetching user profile:', err);
-          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
-          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Lax; Secure`;
+          document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
+          document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
         }
         
         // Show success
