@@ -574,7 +574,10 @@ async function loadChatHistory() {
 
 async function checkTakeoverStatus() {
   try {
-    const response = await fetch(`/api/dj-lobby/takeover?userId=${currentUser.uid}`);
+    const idToken = await currentUser.getIdToken();
+    const response = await fetch(`/api/dj-lobby/takeover?userId=${currentUser.uid}`, {
+      headers: { 'Authorization': `Bearer ${idToken}` }
+    });
     const result = await response.json();
     
     if (result.success) {
@@ -715,9 +718,10 @@ export async function requestTakeover(targetDjId, targetDjName) {
   if (!currentUser || !userInfo) return false;
 
   try {
+    const idToken = await currentUser.getIdToken();
     const response = await fetch('/api/dj-lobby/takeover', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
       body: JSON.stringify({
         action: 'request',
         requesterId: currentUser.uid,
@@ -792,9 +796,10 @@ function stopTakeoverCountdown() {
 
 export async function approveTakeover(requesterId, streamKey, serverUrl) {
   try {
+    const idToken = await currentUser.getIdToken();
     const response = await fetch('/api/dj-lobby/takeover', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
       body: JSON.stringify({
         action: 'approve',
         requesterId,
@@ -818,9 +823,10 @@ export async function approveTakeover(requesterId, streamKey, serverUrl) {
 
 export async function declineTakeover(requesterId) {
   try {
+    const idToken = await currentUser.getIdToken();
     const response = await fetch('/api/dj-lobby/takeover', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
       body: JSON.stringify({
         action: 'decline',
         requesterId
