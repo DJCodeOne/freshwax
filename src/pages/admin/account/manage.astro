@@ -5,6 +5,11 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { getAdminUids } from '../../../lib/admin';
 
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
 export const prerender = false;
 const adminUids = getAdminUids();
 ---

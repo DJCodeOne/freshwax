@@ -994,13 +994,10 @@ export async function updateCustomerOrderCount(userId: string): Promise<void> {
   if (!userId) return;
 
   try {
-    const customerDoc = await getDocument('users', userId);
-    if (customerDoc) {
-      await updateDocument('users', userId, {
-        orderCount: (customerDoc.orderCount || 0) + 1,
-        lastOrderAt: new Date().toISOString()
-      });
-    }
+    await atomicIncrement('users', userId, { orderCount: 1 });
+    await updateDocument('users', userId, {
+      lastOrderAt: new Date().toISOString()
+    });
   } catch (e) {
     console.error('[order-utils] Error updating customer:', e);
   }

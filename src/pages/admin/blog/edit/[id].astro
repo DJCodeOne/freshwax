@@ -2,8 +2,14 @@
 // src/pages/admin/blog/edit/[id].astro
 // Edit existing blog post
 
+import { requireAdminAuth } from '../../../../lib/admin';
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
 import { getDocument, initFirebaseEnv } from '../../../../lib/firebase-rest';
+
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 

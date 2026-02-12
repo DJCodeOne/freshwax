@@ -115,7 +115,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     console.error('[giftcard-verify] Error:', errorMessage);
     return new Response(JSON.stringify({
       success: false,
-      error: errorMessage
+      error: 'An internal error occurred'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

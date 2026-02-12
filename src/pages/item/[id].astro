@@ -1301,6 +1301,12 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 </script>
 
 <script is:inline define:vars={{ releaseId: id }}>
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   // Comments functionality - matching working dj-mix implementation
   // Get fresh DOM references (needed for View Transitions)
   function getCommentElements() {

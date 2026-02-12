@@ -114,14 +114,14 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     }
   }
 
-  // Return modified response if headers changed
-  if (isApiRoute || contentType.includes('text/html')) {
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders
-    });
-  }
+  // Add basic security headers to ALL responses (JS, CSS, SVG, etc.)
+  newHeaders.set('X-Content-Type-Options', 'nosniff');
+  newHeaders.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
 
-  return response;
+  // Return modified response
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders
+  });
 });

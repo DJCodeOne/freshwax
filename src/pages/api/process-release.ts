@@ -548,11 +548,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('Inner error:', error);
-    return errorResponse(error instanceof Error ? error.message : 'Processing failed');
+    return errorResponse('Processing failed');
   }
 
   } catch (outerError) {
     log.error('Outer error (uncaught):', outerError);
-    return errorResponse(outerError instanceof Error ? outerError.message : 'Unexpected error');
+    return errorResponse('An internal error occurred');
   }
 };

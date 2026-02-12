@@ -1,10 +1,16 @@
 ---
 // Admin Vinyl Listings Management
 // View and manage all vinyl listings
+import { requireAdminAuth } from '../../../lib/admin';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 
 // Fetch all vinyl listings
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
 let vinylListings: any[] = [];
 let vinylSellers: any[] = [];
 

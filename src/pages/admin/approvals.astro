@@ -1,6 +1,12 @@
 ---
 // src/pages/admin/approvals.astro
+import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
+
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 ---
@@ -278,6 +284,12 @@ export const prerender = false;
 </style>
 
 <script>
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   async function loadBypassRequests() {
     const container = document.getElementById('bypass-requests');
     

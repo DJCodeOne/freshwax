@@ -256,6 +256,19 @@ function parseDocument(doc: any): any {
 }
 
 // ==========================================
+// PATH VALIDATION
+// ==========================================
+
+function validatePath(segment: string, label: string): void {
+  if (!segment || typeof segment !== 'string') {
+    throw new Error(`Invalid ${label}: must be a non-empty string`);
+  }
+  if (segment.includes('/') || segment.includes('..') || segment.includes('\0') || segment.includes('\\')) {
+    throw new Error(`Invalid ${label}: contains forbidden characters`);
+  }
+}
+
+// ==========================================
 // CORE QUERY FUNCTIONS
 // ==========================================
 
@@ -263,6 +276,7 @@ export async function queryCollection(
   collection: string,
   options: QueryOptions = {}
 ): Promise<any[]> {
+  validatePath(collection, 'collection');
   // Generate cache key
   const cacheKey = options.cacheKey || `query:${collection}:${JSON.stringify(options)}`;
   
@@ -387,6 +401,8 @@ export async function queryCollection(
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 export async function getDocument(collection: string, docId: string, ttl?: number): Promise<any | null> {
+  validatePath(collection, 'collection');
+  validatePath(docId, 'docId');
   const cacheKey = `doc:${collection}:${docId}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -870,6 +886,8 @@ export async function setDocument(
   data: Record<string, any>,
   idToken?: string
 ): Promise<{ success: boolean; id: string }> {
+  validatePath(collection, 'collection');
+  validatePath(docId, 'docId');
   const projectId = getEnvVar('FIREBASE_PROJECT_ID') || PROJECT_ID;
   const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || FIREBASE_API_KEY_FALLBACK;
 
@@ -969,6 +987,8 @@ export async function updateDocument(
   data: Record<string, any>,
   idToken?: string
 ): Promise<{ success: boolean }> {
+  validatePath(collection, 'collection');
+  validatePath(docId, 'docId');
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
 
@@ -1026,6 +1046,8 @@ export async function deleteDocument(
   docId: string,
   idToken?: string
 ): Promise<{ success: boolean }> {
+  validatePath(collection, 'collection');
+  validatePath(docId, 'docId');
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
 
@@ -1089,7 +1111,7 @@ export async function atomicIncrement(
   collection: string,
   docId: string,
   increments: Record<string, number>
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; newValues: Record<string, number> }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
 
@@ -1100,6 +1122,7 @@ export async function atomicIncrement(
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
   const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
 
+  const fields = Object.keys(increments);
   const fieldTransforms = Object.entries(increments).map(([field, value]) => ({
     fieldPath: field,
     increment: Number.isInteger(value)
@@ -1126,10 +1149,23 @@ export async function atomicIncrement(
     throw new Error(`Atomic increment failed: ${response.status}`);
   }
 
+  // Parse transform results to get new values
+  const newValues: Record<string, number> = {};
+  try {
+    const result = await response.json();
+    const transformResults = result?.writeResults?.[0]?.transformResults || [];
+    for (let i = 0; i < fields.length && i < transformResults.length; i++) {
+      const tr = transformResults[i];
+      newValues[fields[i]] = Number(tr.integerValue ?? tr.doubleValue ?? 0);
+    }
+  } catch {
+    // If parsing fails, return empty newValues - callers should handle gracefully
+  }
+
   // Invalidate cache for this document
   cache.delete(`doc:${collection}:${docId}`);
 
-  return { success: true };
+  return { success: true, newValues };
 }
 
 /**
@@ -1239,6 +1275,7 @@ export async function addDocument(
   data: Record<string, any>,
   idToken?: string
 ): Promise<{ success: boolean; id: string }> {
+  validatePath(collection, 'collection');
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
 

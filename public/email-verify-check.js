@@ -7,8 +7,7 @@ window.FreshWax = window.FreshWax || {};
 // Cutoff date - users created before this date don't need email verification
 const EMAIL_VERIFY_CUTOFF = new Date('2026-01-06T00:00:00Z').getTime();
 
-// Admin emails that bypass verification
-const ADMIN_EMAILS = ['davidhagon@gmail.com'];
+// Admin status is checked via server-side API call
 
 // Check if user needs email verification for interactive features
 window.FreshWax.checkEmailVerified = function(action) {
@@ -42,14 +41,24 @@ window.FreshWax.checkEmailVerified = function(action) {
         // Debug logging
         console.log('[FreshWax] Checking user:', user.email, 'emailVerified:', user.emailVerified, 'created:', user.metadata?.creationTime);
 
-        // Admin bypass - admins never need verification (check this FIRST)
-        if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
-          sessionStorage.setItem('fw_email_grandfathered', 'true');
-          sessionStorage.removeItem('fw_email_unverified');
-          console.log('[FreshWax] Admin user - bypassing verification');
-          clearTimeout(timeout);
-          resolve(true);
-          return;
+        // Admin bypass - check via server-side API (check this FIRST)
+        try {
+          const token = await user.getIdToken();
+          const adminCheck = await fetch('/api/check-admin', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (adminCheck.ok) {
+            const adminData = await adminCheck.json();
+            if (adminData.isAdmin) {
+              sessionStorage.setItem('fw_email_grandfathered', 'true');
+              sessionStorage.removeItem('fw_email_unverified');
+              clearTimeout(timeout);
+              resolve(true);
+              return;
+            }
+          }
+        } catch (e) {
+          // Admin check failed, continue with normal flow
         }
 
         // Check if user was created before the cutoff date (grandfathered)
@@ -84,7 +93,7 @@ window.FreshWax.checkEmailVerified = function(action) {
           resolve(true);
           return;
         } else {
-          console.log('[FreshWax] Email NOT verified - blocking. User:', user.email, 'Admin list:', ADMIN_EMAILS);
+          console.log('[FreshWax] Email NOT verified - blocking');
           sessionStorage.setItem('fw_email_unverified', 'true');
           clearTimeout(timeout);
           showVerificationModal(action);

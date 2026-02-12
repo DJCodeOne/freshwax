@@ -132,8 +132,7 @@ export async function POST({ request, locals }) {
 
     return new Response(JSON.stringify({
       success: false,
-      error: 'Internal server error',
-      message: error.message
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

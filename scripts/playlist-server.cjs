@@ -4,6 +4,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const url = require('url');
+const crypto = require('crypto');
 
 const PORT = 8088;
 const MUSIC_DIR = 'H:\\FreshWax-Backup';
@@ -25,11 +26,23 @@ function getAllowedOrigin(req) {
   return null;
 }
 
+// Timing-safe token comparison
+function timingSafeCompare(a, b) {
+  if (!a || !b) return false;
+  try {
+    const bufA = Buffer.from(String(a));
+    const bufB = Buffer.from(String(b));
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch { return false; }
+}
+
 // Verify access token for protected endpoints
 function hasValidToken(req) {
+  if (!ACCESS_TOKEN) return false;
   const auth = req.headers.authorization || '';
-  if (auth.startsWith('Bearer ') && auth.slice(7) === ACCESS_TOKEN) return true;
-  if (req.headers['x-access-token'] === ACCESS_TOKEN) return true;
+  if (auth.startsWith('Bearer ') && timingSafeCompare(auth.slice(7), ACCESS_TOKEN)) return true;
+  if (timingSafeCompare(req.headers['x-access-token'], ACCESS_TOKEN)) return true;
   return false;
 }
 const HEALTH_CHECK_INTERVAL = 60000; // 60 seconds (reduced frequency)
@@ -286,9 +299,8 @@ function createServer() {
       const parsedUrl = url.parse(req.url, true);
       let filePath = decodeURIComponent(parsedUrl.pathname);
 
-      // Protected endpoints require access token
-      const protectedPaths = ['/', '/health', '/list', '/random'];
-      if (protectedPaths.includes(filePath) && !hasValidToken(req)) {
+      // All endpoints require access token
+      if (!hasValidToken(req)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Access token required' }));
         stats.activeConnections--;

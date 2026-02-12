@@ -1,7 +1,13 @@
 ---
 // src/pages/admin/newsletter.astro
 // Admin newsletter management - compose, upload, and send newsletters
+import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
 export const prerender = false;
 
 ---

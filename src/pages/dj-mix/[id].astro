@@ -806,6 +806,12 @@ Artist - Track Title
 </style>
 
 <script is:inline define:vars={{ mixId: id, mixTitle: title, mixDj: dj_name, mixArtwork: artwork_url, mixAudioUrl: audio_url }}>
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   // Mix data for global player
   const mixData = {
     id: mixId,

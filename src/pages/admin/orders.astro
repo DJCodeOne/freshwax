@@ -5,6 +5,11 @@
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { requireAdminAuth } from '../../lib/admin';
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
 
 // Fetch orders via REST API
 const allOrders = await queryCollection('orders', {

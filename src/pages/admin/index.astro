@@ -3,6 +3,7 @@
 // Fresh Wax Admin Dashboard - Unified Design
 // Central hub for all admin operations - Uses Firebase REST API
 
+import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
@@ -10,6 +11,11 @@ import { AwsClient } from 'aws4fetch';
 import '../../styles/admin/index.css';
 
 // R2 config for pending submissions count
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const r2Config = {
   accountId: runtimeEnv?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,

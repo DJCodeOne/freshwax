@@ -1,7 +1,7 @@
 // src/pages/api/newsletter/send.ts
 // Send newsletter to selected subscribers via Resend
 import type { APIRoute } from 'astro';
-import { queryCollection, addDocument, updateDocument, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, addDocument, updateDocument, atomicIncrement, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
@@ -187,9 +187,9 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
             html: generateNewsletterHTML(subject, content, subscriber.email)
           });
 
-          // Update subscriber stats using incrementField
+          // Update subscriber stats atomically
           try {
-            await incrementField('subscribers', subscriber.id, 'emailsSent', 1);
+            await atomicIncrement('subscribers', subscriber.id, { emailsSent: 1 });
             await updateDocument('subscribers', subscriber.id, {
               lastEmailSentAt: new Date()
             });

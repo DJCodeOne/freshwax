@@ -11,7 +11,7 @@
 // - viewer_leave: Viewer disconnected
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, addDocument, queryCollection, incrementField, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
 
 // Helper to initialize Firebase and Red5
@@ -208,9 +208,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       
       case 'viewer_join': {
-        // Increment viewer count
-        await incrementField('livestreamSlots', slotId, 'currentViewers', 1);
-        await incrementField('livestreamSlots', slotId, 'totalViews', 1);
+        // Atomically increment viewer count
+        await atomicIncrement('livestreamSlots', slotId, { currentViewers: 1, totalViews: 1 });
         await updateDocument('livestreamSlots', slotId, {
           lastHeartbeat: now,
           updatedAt: now,
@@ -228,10 +227,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       case 'viewer_leave': {
-        // Decrement viewer count (minimum 0)
+        // Atomically decrement viewer count (minimum 0)
         const currentSlot = await getDocument('livestreamSlots', slotId);
         if (currentSlot && currentSlot.currentViewers > 0) {
-          await incrementField('livestreamSlots', slotId, 'currentViewers', -1);
+          await atomicIncrement('livestreamSlots', slotId, { currentViewers: -1 });
           await updateDocument('livestreamSlots', slotId, {
             lastHeartbeat: now,
             updatedAt: now,

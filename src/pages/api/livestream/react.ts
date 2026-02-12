@@ -4,7 +4,7 @@
 // Uses Web Crypto API for Cloudflare Workers compatibility
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, incrementField, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, atomicIncrement, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 // Helper to initialize Firebase and return env for Pusher
@@ -307,15 +307,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
         console.log('[react.ts] Pusher broadcast result:', pusherSuccess);
 
-        // Increment total likes counter
+        // Atomically increment total likes counter
         let totalLikes = 0;
         try {
-          const result = await incrementField('livestreamSlots', streamId, 'totalLikes', 1);
-          totalLikes = result.newValue;
+          const result = await atomicIncrement('livestreamSlots', streamId, { totalLikes: 1 });
+          totalLikes = result.newValues.totalLikes ?? 0;
         } catch (e) {
           try {
-            const result = await incrementField('livestreams', streamId, 'totalLikes', 1);
-            totalLikes = result.newValue;
+            const result = await atomicIncrement('livestreams', streamId, { totalLikes: 1 });
+            totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
             console.log('[react] Stream not found for reaction counter, skipping increment');
@@ -380,17 +380,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
           createdAt: now
         });
 
-        // Increment total likes - try livestreamSlots first, fall back to livestreams
+        // Atomically increment total likes - try livestreamSlots first, fall back to livestreams
         // If neither exists (playlist mode), just skip the counter update
         let totalLikes = 0;
         try {
-          const result = await incrementField('livestreamSlots', streamId, 'totalLikes', 1);
-          totalLikes = result.newValue;
+          const result = await atomicIncrement('livestreamSlots', streamId, { totalLikes: 1 });
+          totalLikes = result.newValues.totalLikes ?? 0;
         } catch (e) {
           try {
             // Fall back to livestreams collection
-            const result = await incrementField('livestreams', streamId, 'totalLikes', 1);
-            totalLikes = result.newValue;
+            const result = await atomicIncrement('livestreams', streamId, { totalLikes: 1 });
+            totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
             console.log('[react] Stream not found for like counter, skipping increment');
@@ -511,8 +511,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           peakViewers
         });
 
-        // Increment total views
-        await incrementField(collection, streamId, 'totalViews', 1);
+        // Atomically increment total views
+        await atomicIncrement(collection, streamId, { totalViews: 1 });
 
         // Broadcast viewer count update to all viewers
         await triggerPusher(`stream-${streamId}`, 'viewer-update', {
@@ -547,9 +547,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               leftAt: now
             });
 
-            // Decrement viewer count in correct collection
+            // Atomically decrement viewer count in correct collection
             const { doc: leaveDoc, collection: leaveCollection } = await getStreamDocument(streamId);
-            await incrementField(leaveCollection, streamId, 'currentViewers', -1);
+            await atomicIncrement(leaveCollection, streamId, { currentViewers: -1 });
 
             // Broadcast updated viewer count
             const newViewerCount = Math.max(0, (leaveDoc?.currentViewers || 1) - 1);

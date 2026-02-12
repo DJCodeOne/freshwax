@@ -115,26 +115,26 @@ function renderRelayList(relays) {
   list.innerHTML = relays.map(relay => `
     <div class="relay-item ${relay.isLive ? 'is-live' : ''} ${currentRelay?.id === relay.id ? 'active' : ''}">
       <div class="relay-logo">
-        ${relay.logoUrl 
-          ? `<img src="${relay.logoUrl}" alt="${relay.name}" />`
+        ${relay.logoUrl
+          ? `<img src="${escapeHtml(relay.logoUrl)}" alt="${escapeHtml(relay.name)}" />`
           : '<span>📻</span>'
         }
       </div>
       <div class="relay-info">
-        <div class="relay-name">${relay.name}</div>
+        <div class="relay-name">${escapeHtml(relay.name)}</div>
         <div class="relay-meta">
-          ${relay.isLive 
-            ? `<span class="relay-live">🟢 Live</span>` 
+          ${relay.isLive
+            ? `<span class="relay-live">🟢 Live</span>`
             : `<span class="relay-offline">⚫ Offline</span>`
           }
-          ${relay.nowPlaying ? `<span class="now-playing">🎵 ${relay.nowPlaying}</span>` : ''}
+          ${relay.nowPlaying ? `<span class="now-playing">🎵 ${escapeHtml(relay.nowPlaying)}</span>` : ''}
         </div>
-        <div class="relay-genre">${relay.genre || ''}</div>
+        <div class="relay-genre">${escapeHtml(relay.genre || '')}</div>
       </div>
       <div class="relay-actions">
         ${currentRelay?.id === relay.id
           ? `<button class="relay-btn stop" onclick="window.stopRelay()">⏹ Stop</button>`
-          : `<button class="relay-btn play" onclick="window.playRelay('${relay.id}')" ${!relay.isLive && relay.checkMethod !== 'none' ? 'disabled' : ''}>▶ Listen</button>`
+          : `<button class="relay-btn play" onclick="window.playRelay('${escapeHtml(relay.id)}')" ${!relay.isLive && relay.checkMethod !== 'none' ? 'disabled' : ''}>▶ Listen</button>`
         }
         ${relay.websiteUrl ? `<a href="${relay.websiteUrl}" target="_blank" class="relay-link">🔗</a>` : ''}
       </div>
@@ -217,14 +217,14 @@ function showRelayPlayer(relay) {
   player.innerHTML = `
     <div class="relay-player-content">
       <div class="relay-player-info">
-        ${relay.logoUrl 
-          ? `<img src="${relay.logoUrl}" alt="${relay.name}" class="relay-player-logo" />`
+        ${relay.logoUrl
+          ? `<img src="${escapeHtml(relay.logoUrl)}" alt="${escapeHtml(relay.name)}" class="relay-player-logo" />`
           : '<div class="relay-player-logo placeholder">📻</div>'
         }
         <div>
           <div class="relay-player-label">NOW RELAYING</div>
-          <div class="relay-player-name">${relay.name}</div>
-          <div class="relay-player-genre">${relay.genre || 'External Radio'}</div>
+          <div class="relay-player-name">${escapeHtml(relay.name)}</div>
+          <div class="relay-player-genre">${escapeHtml(relay.genre || 'External Radio')}</div>
         </div>
       </div>
       <div class="relay-player-controls">
@@ -234,7 +234,7 @@ function showRelayPlayer(relay) {
         </button>
         <button class="relay-stop-btn" onclick="window.stopRelay()">Stop Relay</button>
       </div>
-      ${relay.websiteUrl ? `<a href="${relay.websiteUrl}" target="_blank" class="relay-source-link">Visit ${relay.name} →</a>` : ''}
+      ${relay.websiteUrl ? `<a href="${escapeHtml(relay.websiteUrl)}" target="_blank" class="relay-source-link">Visit ${escapeHtml(relay.name)} →</a>` : ''}
     </div>
     <div class="relay-priority-notice">
       <span>⚡</span> Fresh Wax DJs have priority - auto-switching when live

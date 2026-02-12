@@ -124,8 +124,7 @@ export async function POST({ request, locals }) {
     log.error('[publish-releases] Critical error:', error.message);
 
     return new Response(JSON.stringify({
-      error: 'Internal server error',
-      message: error.message
+      error: 'Internal server error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

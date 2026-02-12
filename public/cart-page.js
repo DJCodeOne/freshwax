@@ -1,5 +1,10 @@
 // Cart page logic - uses FreshWaxCart system with KV persistence
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function getCustomerId() {
   var cookies = document.cookie.split(';');
   for (var i = 0; i < cookies.length; i++) {
@@ -133,16 +138,16 @@ function renderCart() {
     html +=
       '<article style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 0.75rem; border: 1px solid rgba(255,255,255,0.1);">' +
         '<div style="width: 64px; height: 64px; flex-shrink: 0; border-radius: 6px; overflow: hidden; border: 2px solid rgba(255,255,255,0.2);">' +
-          '<img src="' + (item.image || item.artwork || '/place-holder.webp') + '" alt="" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src=\'/place-holder.webp\'">' +
+          '<img src="' + escapeHtml(item.image || item.artwork || '/place-holder.webp') + '" alt="" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src=\'/place-holder.webp\'">' +
         '</div>' +
         '<div style="flex: 1; min-width: 0;">' +
-          '<h3 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + (item.name || item.title || 'Item') + '</h3>' +
+          '<h3 style="margin: 0 0 0.25rem 0; font-size: 1rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">' + escapeHtml(item.name || item.title || 'Item') + '</h3>' +
           '<div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">' +
-            '<span style="display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; border-radius: 4px; border: 1px solid; ' + badgeStyle + '">' + displayType + '</span>' +
-            (item.size ? '<span style="color: #9ca3af; font-size: 0.75rem;">Size: ' + item.size + '</span>' : '') +
-            (item.color ? '<span style="color: #9ca3af; font-size: 0.75rem;">Color: ' + item.color + '</span>' : '') +
-            (item.artist ? '<span style="color: #9ca3af; font-size: 0.75rem;">by ' + item.artist + '</span>' : '') +
-            (item.labelName ? '<span style="color: #9ca3af; font-size: 0.75rem;"> on ' + item.labelName + '</span>' : '') +
+            '<span style="display: inline-block; padding: 0.125rem 0.5rem; font-size: 0.625rem; font-weight: 700; border-radius: 4px; border: 1px solid; ' + badgeStyle + '">' + escapeHtml(displayType) + '</span>' +
+            (item.size ? '<span style="color: #9ca3af; font-size: 0.75rem;">Size: ' + escapeHtml(item.size) + '</span>' : '') +
+            (item.color ? '<span style="color: #9ca3af; font-size: 0.75rem;">Color: ' + escapeHtml(item.color) + '</span>' : '') +
+            (item.artist ? '<span style="color: #9ca3af; font-size: 0.75rem;">by ' + escapeHtml(item.artist) + '</span>' : '') +
+            (item.labelName ? '<span style="color: #9ca3af; font-size: 0.75rem;"> on ' + escapeHtml(item.labelName) + '</span>' : '') +
           '</div>' +
         '</div>' +
         '<div style="display: flex; align-items: center; gap: 0.5rem;">' +

@@ -57,9 +57,6 @@ export async function initDjLobbyPusher(user, info) {
     return;
   }
 
-  // Enable Pusher debug logging
-  window.Pusher.logToConsole = true;
-
   // Initialize Pusher with custom authorizer that gets fresh token on each auth attempt
   // This fixes reconnection issues where the token might be stale
   pusher = new window.Pusher(pusherConfig.key, {
@@ -623,12 +620,12 @@ function updateOnlineDjsUI() {
     const hasAvatar = dj.avatar && dj.avatar !== '/place-holder.webp' && dj.avatar !== '/logo.webp';
     
     return `
-      <div class="dj-item ${isReady ? 'is-ready' : ''}" data-dj-id="${dj.id || dj.odamiMa}">
-        ${hasAvatar 
-          ? `<img src="${dj.avatar}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><span class="dj-avatar-letter" style="display:none;">${avatarLetter}</span>`
-          : `<span class="dj-avatar-letter">${avatarLetter}</span>`
+      <div class="dj-item ${isReady ? 'is-ready' : ''}" data-dj-id="${escapeHtml(dj.id || dj.odamiMa)}">
+        ${hasAvatar
+          ? `<img src="${escapeHtml(dj.avatar)}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><span class="dj-avatar-letter" style="display:none;">${escapeHtml(avatarLetter)}</span>`
+          : `<span class="dj-avatar-letter">${escapeHtml(avatarLetter)}</span>`
         }
-        <span>${dj.name}${isMe ? ' (you)' : ''}</span>
+        <span>${escapeHtml(dj.name)}${isMe ? ' (you)' : ''}</span>
         ${isReady ? '<span class="ready-badge">READY</span>' : ''}
       </div>
     `;

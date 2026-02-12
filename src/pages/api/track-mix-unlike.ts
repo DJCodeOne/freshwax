@@ -2,7 +2,7 @@
 // Tracks DJ mix unlikes using atomic decrements
 
 import type { APIRoute } from 'astro';
-import { incrementField, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { atomicIncrement, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -30,8 +30,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Decrement likes field and update last_unliked_date
-    const { newValue: likes } = await incrementField('dj-mixes', mixId, 'likes', -1);
+    // Atomically decrement likes field and update last_unliked_date
+    const { newValues } = await atomicIncrement('dj-mixes', mixId, { likes: -1 });
+    const likes = newValues.likes ?? 0;
 
     await updateDocument('dj-mixes', mixId, {
       last_unliked_date: new Date().toISOString()

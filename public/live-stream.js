@@ -385,7 +385,7 @@ async function init() {
 
     if (controlsDjName) {
       if (stream.isRelay && stream.title) {
-        controlsDjName.innerHTML = `<span style="color: #ef4444;">${stream.title}</span>`;
+        controlsDjName.innerHTML = `<span style="color: #ef4444;">${escapeHtml(stream.title)}</span>`;
       } else {
         controlsDjName.textContent = displayName || 'DJ';
       }
@@ -1580,8 +1580,8 @@ function showOfflineState(scheduled) {
           <div class="scheduled-item" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #1a1a1a; border-radius: 8px; margin-bottom: 0.5rem;">
             <span style="color: #dc2626; font-weight: 600; min-width: 80px; font-size: 0.875rem;">${timeStr}</span>
             <div style="min-width: 0; flex: 1;">
-              <div style="color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.title}</div>
-              <div style="color: #888; font-size: 0.875rem;">${s.djName}</div>
+              <div style="color: #fff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(s.title)}</div>
+              <div style="color: #888; font-size: 0.875rem;">${escapeHtml(s.djName)}</div>
             </div>
           </div>
         `;
@@ -3030,9 +3030,6 @@ async function setupChat(streamId) {
     }
     console.log('[Chat] Initializing Pusher with key:', pusherConfig.key.substring(0, 8) + '...');
 
-    // Enable Pusher logging for debug
-    window.Pusher.logToConsole = true;
-
     pusher = new window.Pusher(pusherConfig.key, {
       cluster: pusherConfig.cluster,
       forceTLS: true
@@ -3621,12 +3618,6 @@ function setupChatInput(streamId) {
   }
   const input = document.getElementById('chatInput');
   const sendBtn = document.getElementById('sendBtn');
-
-  // Admin UIDs for chat commands
-  const ADMIN_UIDS = [
-    'Y3TGc171cHSWTqZDRSniyu7Jxc33',  // freshwaxonline@gmail.com
-    '8WmxYeCp4PSym5iWHahgizokn5F2'   // davidhagon@gmail.com
-  ];
 
   async function sendMessage() {
     if (!currentUser || !input?.value.trim()) return;

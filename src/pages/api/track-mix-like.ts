@@ -2,7 +2,7 @@
 // Tracks DJ mix likes using atomic increments
 
 import type { APIRoute } from 'astro';
-import { getDocument, incrementField, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, atomicIncrement, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -38,8 +38,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Increment likes field and update last_liked_date
-    const { newValue: likes } = await incrementField('dj-mixes', mixId, 'likes', 1);
+    // Atomically increment likes field and update last_liked_date
+    const { newValues } = await atomicIncrement('dj-mixes', mixId, { likes: 1 });
+    const likes = newValues.likes ?? 0;
 
     await updateDocument('dj-mixes', mixId, {
       last_liked_date: new Date().toISOString()

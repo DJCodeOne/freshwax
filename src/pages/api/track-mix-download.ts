@@ -2,7 +2,7 @@
 // Tracks DJ mix downloads using atomic increments
 
 import type { APIRoute } from 'astro';
-import { incrementField, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { atomicIncrement, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -28,8 +28,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Increment downloads field and update last_downloaded_date
-    const { newValue: downloads } = await incrementField('dj-mixes', mixId, 'downloads', 1);
+    // Atomically increment downloads field and update last_downloaded_date
+    const { newValues } = await atomicIncrement('dj-mixes', mixId, { downloads: 1 });
+    const downloads = newValues.downloads ?? 0;
 
     await updateDocument('dj-mixes', mixId, {
       last_downloaded_date: new Date().toISOString()

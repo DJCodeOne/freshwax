@@ -1,7 +1,13 @@
 ---
 // src/pages/admin/inventory/index.astro
 // Stock inventory management - receive, adjust, and track merch stock
+import { requireAdminAuth } from '../../../lib/admin';
 import '../../../styles/admin/inventory.css';
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
 export const prerender = false;
 
 ---

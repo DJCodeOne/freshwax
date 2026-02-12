@@ -8,6 +8,11 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 import { getAdminUids } from '../../lib/admin';
 
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
 export const prerender = false;
 const adminUids = getAdminUids();
 

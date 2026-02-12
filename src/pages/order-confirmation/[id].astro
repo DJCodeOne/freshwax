@@ -15,6 +15,18 @@ try {
   order = await getDocument('orders', id as string);
   if (!order) {
     error = 'Order not found';
+  } else {
+    // Ownership check: verify the requester is the order owner
+    const cookies = Astro.request.headers.get('cookie') || '';
+    const userIdMatch = cookies.match(/(?:^|;\s*)userId=([^;]+)/);
+    const requestUserId = userIdMatch ? decodeURIComponent(userIdMatch[1]) : null;
+    const orderUserId = order.customer?.userId || order.userId || null;
+
+    // If order has a userId (not guest), require matching cookie
+    if (orderUserId && requestUserId !== orderUserId) {
+      order = null;
+      error = 'Order not found';
+    }
   }
 } catch (e) {
   console.error('Error fetching order:', e);

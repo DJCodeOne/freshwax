@@ -745,6 +745,11 @@ const firebaseConfig = {
     }
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   function displayResults(data, container) {
     const results = data.results || [];
 
@@ -763,11 +768,11 @@ const firebaseConfig = {
     if (releases.length > 0) {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee;">Releases</div>';
       releases.forEach(r => {
-        html += `<a href="/item/${r.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
-          <img src="${r.artwork_url || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
+        html += `<a href="/item/${encodeURIComponent(r.id)}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+          <img src="${escapeHtml(r.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
           <div>
-            <div style="font-weight: 500; font-size: 0.875rem;">${r.title}</div>
-            <div style="font-size: 0.75rem; color: #666;">${r.artist_name}</div>
+            <div style="font-weight: 500; font-size: 0.875rem;">${escapeHtml(r.title)}</div>
+            <div style="font-size: 0.75rem; color: #666;">${escapeHtml(r.artist_name)}</div>
           </div>
         </a>`;
       });
@@ -776,11 +781,11 @@ const firebaseConfig = {
     if (mixes.length > 0) {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">DJ Mixes</div>';
       mixes.forEach(m => {
-        html += `<a href="/dj-mix/${m.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
-          <img src="${m.artwork_url || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
+        html += `<a href="/dj-mix/${encodeURIComponent(m.id)}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+          <img src="${escapeHtml(m.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
           <div>
-            <div style="font-weight: 500; font-size: 0.875rem;">${m.title}</div>
-            <div style="font-size: 0.75rem; color: #666;">${m.artist_name}</div>
+            <div style="font-weight: 500; font-size: 0.875rem;">${escapeHtml(m.title)}</div>
+            <div style="font-size: 0.75rem; color: #666;">${escapeHtml(m.artist_name)}</div>
           </div>
         </a>`;
       });
@@ -792,10 +797,10 @@ const firebaseConfig = {
       merch.forEach(item => {
         const priceStr = item.price ? `£${item.price.toFixed(2)}` : '';
         const stockStr = item.stock === 0 ? '<span style="color: #dc2626;">Out of Stock</span>' : (item.stock <= 5 ? `<span style="color: #f59e0b;">Low Stock</span>` : '');
-        html += `<a href="/merch#quick-view-${item.id}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
-          <img src="${item.artwork_url || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
+        html += `<a href="/merch#quick-view-${encodeURIComponent(item.id)}" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+          <img src="${escapeHtml(item.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" onerror="this.src='/place-holder.webp'" />
           <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 500; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${item.title}</div>
+            <div style="font-weight: 500; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.title)}</div>
             <div style="font-size: 0.75rem; color: #666; display: flex; gap: 0.5rem; align-items: center;">
               ${priceStr ? `<span style="color: #16a34a; font-weight: 600;">${priceStr}</span>` : ''}
               ${stockStr}

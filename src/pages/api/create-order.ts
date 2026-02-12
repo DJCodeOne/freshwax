@@ -2,7 +2,7 @@
 // Creates order in Firebase and sends confirmation email
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, incrementField, initFirebaseEnv, clearCache, atomicIncrement, updateDocumentConditional } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, initFirebaseEnv, clearCache, atomicIncrement, updateDocumentConditional } from '../../lib/firebase-rest';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';

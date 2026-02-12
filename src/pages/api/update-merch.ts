@@ -453,8 +453,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({
       success: false,
-      error: 'Failed to update product',
-      details: errorMessage
+      error: 'Failed to update product'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

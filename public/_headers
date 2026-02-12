@@ -5,6 +5,7 @@
 # Only static asset headers are defined here to avoid dual CSP policies.
 /*
   X-Content-Type-Options: nosniff
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
 
 # Cache static assets
 /assets/*

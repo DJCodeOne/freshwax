@@ -502,6 +502,12 @@ export const prerender = false;
 </style>
 
 <script>
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   let allSlots = [];
   let selectedDate = new Date();
   selectedDate.setHours(0, 0, 0, 0);

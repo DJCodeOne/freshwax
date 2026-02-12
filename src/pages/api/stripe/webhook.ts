@@ -1598,7 +1598,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Webhook processing error',
       error: errorMessage
     }).catch(e => console.error('[Stripe Webhook] Log error:', e));
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

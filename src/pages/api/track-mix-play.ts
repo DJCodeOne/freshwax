@@ -2,7 +2,7 @@
 // Tracks DJ mix plays using atomic increments
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, incrementField, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, atomicIncrement, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -40,13 +40,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Increment plays and update last played date
-    const result = await incrementField('dj-mixes', mixId, 'plays', 1);
+    // Atomically increment plays and update last played date
+    const { newValues } = await atomicIncrement('dj-mixes', mixId, { plays: 1 });
+    const plays = newValues.plays ?? 0;
     await updateDocument('dj-mixes', mixId, {
       last_played_date: new Date().toISOString()
     });
 
-    log.info('[track-mix-play] Mix', mixId, 'plays:', result.newValue);
+    log.info('[track-mix-play] Mix', mixId, 'plays:', plays);
 
     // Invalidate cache for this mix
     clearCache(`doc:dj-mixes:${mixId}`);
@@ -58,7 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const d1Row = await db.prepare('SELECT data FROM dj_mixes WHERE id = ?').bind(mixId).first();
         if (d1Row && d1Row.data) {
           const data = JSON.parse(d1Row.data);
-          data.plays = result.newValue;
+          data.plays = plays;
           data.last_played_date = new Date().toISOString();
           await db.prepare('UPDATE dj_mixes SET data = ? WHERE id = ?')
             .bind(JSON.stringify(data), mixId)

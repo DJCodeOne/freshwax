@@ -1004,6 +1004,12 @@ const { id } = Astro.params;
 </style>
 
 <script is:inline define:vars={{ listingId: id }}>
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   // Vinyl API Worker URL
   const VINYL_API_URL = 'https://vinyl-api.davidhagon.workers.dev';
 

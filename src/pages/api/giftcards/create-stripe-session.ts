@@ -167,7 +167,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[GiftCard Stripe] Error:', errorMessage);
     return new Response(JSON.stringify({
       success: false,
-      error: errorMessage
+      error: 'An internal error occurred'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

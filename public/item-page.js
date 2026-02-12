@@ -745,7 +745,7 @@ async function initComments() {
             <div class="comment-item p-3 bg-white border-2 border-gray-300 hover:border-gray-400 transition-all rounded">
               <div class="flex items-start gap-3">
                 <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center flex-shrink-0 border-2 border-black">
-                  <span class="text-white font-black text-sm">${userInitial}</span>
+                  <span class="text-white font-black text-sm">${escapeHtml(userInitial)}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                   <div class="flex items-start gap-2">
@@ -1106,17 +1106,17 @@ async function loadSuggestions() {
           <a href="/item/${release.id}" class="suggestion-card" style="display: block; flex-shrink: 0; width: 144px; background: #1f2937; border-radius: 8px; overflow: hidden; border: 2px solid #374151; scroll-snap-align: start; text-decoration: none;">
             <div style="position: relative;">
               <img
-                src="${release.coverArtUrl || '/logo.webp'}"
-                alt="${release.releaseName}"
+                src="${escapeHtml(release.coverArtUrl || '/logo.webp')}"
+                alt="${escapeHtml(release.releaseName)}"
                 style="width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block;"
                 loading="lazy"
                 onerror="this.src='/logo.webp'"
               />
-              ${matchLabel ? `<span style="position: absolute; top: 8px; left: 8px; background: #dc2626; color: white; font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${matchLabel}</span>` : ''}
+              ${matchLabel ? `<span style="position: absolute; top: 8px; left: 8px; background: #dc2626; color: white; font-size: 12px; padding: 2px 8px; border-radius: 4px; font-weight: 600;">${escapeHtml(matchLabel)}</span>` : ''}
             </div>
             <div style="padding: 12px;">
-              <p style="font-weight: 700; color: white; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0;" title="${release.releaseName || 'Untitled'}">${release.releaseName || 'Untitled'}</p>
-              <p style="color: #9ca3af; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 4px 0 0 0;" title="${release.artistName || 'Unknown Artist'}">${release.artistName || 'Unknown Artist'}</p>
+              <p style="font-weight: 700; color: white; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0;" title="${escapeHtml(release.releaseName || 'Untitled')}">${escapeHtml(release.releaseName || 'Untitled')}</p>
+              <p style="color: #9ca3af; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 4px 0 0 0;" title="${escapeHtml(release.artistName || 'Unknown Artist')}">${escapeHtml(release.artistName || 'Unknown Artist')}</p>
               <p style="color: #ef4444; font-weight: 700; font-size: 14px; margin: 4px 0 0 0;">£${price.toFixed(2)}</p>
             </div>
           </a>

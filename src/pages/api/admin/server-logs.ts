@@ -111,7 +111,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[ServerLogs] Error:', error);
     return new Response(JSON.stringify({
-      logs: `Error fetching logs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      logs: 'Error fetching logs',
       error: true
     }), {
       status: 500,

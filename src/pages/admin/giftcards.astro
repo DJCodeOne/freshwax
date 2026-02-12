@@ -1,8 +1,14 @@
 ---
 // src/pages/admin/giftcards.astro
 // Admin dashboard for managing gift cards and user credits
+import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import '../../styles/admin/giftcards.css';
+
+
+// Server-side admin auth check
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 
@@ -263,6 +269,12 @@ export const prerender = false;
 
 
 <script>
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   // Load analytics
   async function loadAnalytics() {
     try {
