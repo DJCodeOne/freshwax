@@ -1219,7 +1219,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         body: JSON.stringify({
           streamId,
           userId: currentUser.uid,
-          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          userName: window.currentUserInfo?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
           message: '[GIF]',
           type: 'giphy',
           giphyUrl,
@@ -1564,7 +1564,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             action: 'emoji',
             streamId: 'playlist-global',
             userId: user.uid,
-            userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
+            userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'Viewer',
             emoji: emojiList.join(','),
             emojiType: emojiType,
             sessionId: reactionSessionId
@@ -1593,7 +1593,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             action: 'emoji',
             streamId,
             userId: user.uid,
-            userName: user.displayName || user.email?.split('@')[0] || 'Viewer',
+            userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'Viewer',
             emoji: emojiList.join(','),
             emojiType: emojiType,
             sessionId: reactionSessionId
@@ -1674,7 +1674,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
               action: 'emoji',
               streamId,
               userId: user.uid,
-              userName: user.displayName || 'Viewer',
+              userName: window.currentUserInfo?.name || user.displayName || 'Viewer',
               emoji: '❤️,💖,💗,💓,💕',
               emojiType: 'like'
             })
@@ -2912,21 +2912,23 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const userId = currentUser?.uid || cachedAuth?.id || getOrCreateSessionId();
       const userName = userInfo?.name || cachedAuth?.name || currentUser?.displayName || 'Viewer';
       const userAvatar = userInfo?.avatar || cachedAuth?.avatarUrl || currentUser?.photoURL || '';
+      const presenceToken = currentUser ? await currentUser.getIdToken().catch(() => null) : null;
 
       console.log('[Presence] Subscribing as:', userName, 'with ID:', userId);
 
       // Create Pusher instance with presence auth
+      const authHeaders = {
+        'x-user-id': userId,
+        'x-user-name': userName,
+        'x-user-avatar': userAvatar
+      };
+      if (presenceToken) authHeaders['Authorization'] = `Bearer ${presenceToken}`;
+
       const presencePusher = new window.Pusher(config.key, {
         cluster: config.cluster || 'eu',
         forceTLS: true,
         authEndpoint: '/api/pusher/auth',
-        auth: {
-          headers: {
-            'x-user-id': userId,
-            'x-user-name': userName,
-            'x-user-avatar': userAvatar
-          }
-        }
+        auth: { headers: authHeaders }
       });
 
       // Store for potential re-subscription
@@ -3143,14 +3145,14 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           // Unsubscribe and re-subscribe with correct auth headers
           window.presencePusher.unsubscribe(channelName);
 
-          // Update auth headers
-          window.presencePusher.config.auth = {
-            headers: {
-              'x-user-id': userId,
-              'x-user-name': displayName,
-              'x-user-avatar': result.avatarUrl || currentUser?.photoURL || ''
-            }
+          // Update auth headers (include Bearer token for server verification)
+          const resubHeaders = {
+            'x-user-id': userId,
+            'x-user-name': displayName,
+            'x-user-avatar': result.avatarUrl || currentUser?.photoURL || ''
           };
+          if (_token) resubHeaders['Authorization'] = `Bearer ${_token}`;
+          window.presencePusher.config.auth = { headers: resubHeaders };
 
           // Re-subscribe
           const newChannel = window.presencePusher.subscribe(channelName);

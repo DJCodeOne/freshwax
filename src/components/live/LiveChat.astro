@@ -139,7 +139,7 @@
         body: JSON.stringify({
           streamId: streamId,
           userId: user.uid,
-          userName: user.displayName || user.email?.split('@')[0] || 'User',
+          userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'User',
           message: '[GIF]',
           type: 'giphy',
           giphyUrl,
@@ -377,7 +377,7 @@
           body: JSON.stringify({
             streamId: window.currentStreamId,
             userId: user.uid,
-            userName: user.displayName || user.email?.split('@')[0] || 'User',
+            userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'User',
             message: `@${currentDmRecipient.name}: ${message}`,
             type: 'dm',
             recipientId: currentDmRecipient.id

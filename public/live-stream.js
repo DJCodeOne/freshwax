@@ -85,7 +85,7 @@ async function registerStreamView(streamId) {
   // Generate anonymous ID if not logged in
   const user = auth?.currentUser;
   const userId = user?.uid || 'anon-' + Math.random().toString(36).substr(2, 9);
-  const userName = user?.displayName || 'Viewer';
+  const userName = window.currentUserInfo?.name || user?.displayName || 'Viewer';
 
   try {
     const response = await fetch('/api/livestream/listeners', {
@@ -135,7 +135,7 @@ window.sendGifMessage = async function(giphyUrl, giphyId) {
       body: JSON.stringify({
         streamId: currentStream.id,
         userId: currentUser.uid,
-        userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+        userName: window.currentUserInfo?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
         message: '[GIF]',
         type: 'giphy',
         giphyUrl,
@@ -3601,7 +3601,7 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
       body: JSON.stringify({
         streamId: currentStream.id,
         userId: currentUser.uid,
-        userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+        userName: window.currentUserInfo?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
         message: '[GIF]',
         type: 'giphy',
         giphyUrl,
@@ -3744,7 +3744,7 @@ function setupChatInput(streamId) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: currentUser.uid,
-            userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            userName: window.currentUserInfo?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
             command,
             args,
             streamId: window.currentStreamId || 'playlist-global',
@@ -3817,8 +3817,8 @@ function setupChatInput(streamId) {
         body: JSON.stringify({
           streamId,
           userId: currentUser.uid,
-          userName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
-          userAvatar: currentUser.photoURL || null,
+          userName: window.currentUserInfo?.name || currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+          userAvatar: window.currentUserInfo?.avatar || currentUser.photoURL || null,
           isPro: window.userIsPro === true,
           badge: window.userBadge || 'crown',
           message,
