@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
+import { requireAdminAuth } from '../../lib/admin';
 
 function getR2Config(env: any) {
   return {
@@ -13,7 +14,11 @@ function getR2Config(env: any) {
   };
 }
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Admin-only: lists R2 submission folders containing artist names
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   try {
     const env = (locals as any)?.runtime?.env;
     const R2_CONFIG = getR2Config(env);

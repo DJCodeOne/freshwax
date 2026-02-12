@@ -5,7 +5,8 @@
 // - OR have an admin-granted bypass
 // - Also returns bypass request status
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
+import { isAdmin } from '../../lib/admin';
 
 export const prerender = false;
 const REQUIRED_LIKES = 10;
@@ -21,15 +22,37 @@ export const GET: APIRoute = async ({ request }) => {
   const userId = url.searchParams.get('userId');
   
   if (!userId) {
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Missing userId parameter' 
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Missing userId parameter'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  
+
+  // Require authentication — only allow checking own eligibility (or admin)
+  const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
+  if (!authenticatedUserId) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Authentication required'
+    }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (authenticatedUserId !== userId && !(await isAdmin(authenticatedUserId))) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'You can only check your own eligibility'
+    }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   log.info('[check-dj-eligibility] Checking eligibility for:', userId);
   
   try {
