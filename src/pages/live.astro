@@ -4304,7 +4304,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
       // Only disable play button if playlist is NOT active
       // This prevents the button from being greyed out during tab switching when playlist is playing
-      if (playBtn && !window.isPlaylistActive && !playlistIsPlaying) {
+      const playlistActive = window.playlistManager?.isPlaying || window.isPlaylistActive;
+      if (playBtn && !playlistActive) {
         playBtn.disabled = true;
       }
 
