@@ -2568,6 +2568,7 @@ const runtime = (Astro.locals as any).runtime;
         selectedRelaySource = {
           id: card.dataset.id,
           url: card.dataset.url,
+          playbackUrl: card.dataset.url,
           name: card.dataset.name,
           nowPlaying: card.dataset.nowplaying || '',
           isLive: card.dataset.live === 'true'
