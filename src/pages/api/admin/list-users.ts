@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -16,6 +17,17 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+}
+
+// Build service account query function for blocked collections
+function getSaQuery(locals: any) {
+  const env = locals?.runtime?.env || {};
+  const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+  if (!clientEmail || !privateKey) return (c: string, o?: any) => queryCollection(c, o);
+  const key = JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail });
+  return (c: string, o?: any) => saQueryCollection(key, projectId, c, o);
 }
 
 interface UserData {
@@ -73,10 +85,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const usersMap = new Map<string, UserData>();
 
     // Load users collection (source of truth) and orders in parallel
-    // 3 min cache for users - admin data doesn't need real-time updates
+    // Uses service account to bypass Firestore rules for blocked collections
+    const saQuery = getSaQuery(locals);
     const [users, orders] = await Promise.all([
-      queryCollection('users', { limit: 500, cacheTime: 180000 }), // 3 min cache
-      queryCollection('orders', { limit: 500, cacheTime: 180000 }) // 3 min cache for orders
+      saQuery('users', { limit: 500, cacheTime: 180000 }),
+      saQuery('orders', { limit: 500, cacheTime: 180000 })
     ]);
 
     // Process users collection - this is the SOURCE OF TRUTH

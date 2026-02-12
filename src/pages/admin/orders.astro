@@ -5,14 +5,22 @@
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { saQueryCollection } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail }) : '';
+const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
+
 // Fetch orders via REST API
-const allOrders = await queryCollection('orders', {
+const allOrders = await saQuery('orders', {
   orderBy: { field: 'createdAt', direction: 'DESCENDING' },
   limit: 100
 });

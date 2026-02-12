@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
@@ -18,6 +19,17 @@ function initServices(locals: any) {
   initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
 }
 
+// Build service account query function for blocked collections
+function getSaQuery(locals: any) {
+  const env = locals?.runtime?.env || {};
+  const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+  if (!clientEmail || !privateKey) return (c: string, o?: any) => queryCollection(c, o);
+  const key = JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail });
+  return (c: string, o?: any) => saQueryCollection(key, projectId, c, o);
+}
+
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase and admin config for Cloudflare runtime
   initServices(locals);
@@ -30,7 +42,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const partners: any[] = [];
 
     // Load users collection (contains all user data after migration)
-    const users = await queryCollection('users', { cacheTime: 300000, limit: 500 });
+    // Uses service account to bypass Firestore rules for blocked collections
+    const saQuery = getSaQuery(locals);
+    const users = await saQuery('users', { cacheTime: 300000, limit: 500 });
 
     // Process users - only include those with artist, merch, or vinyl seller roles
     for (const user of users) {

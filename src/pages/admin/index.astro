@@ -55,23 +55,26 @@ if (clientEmail && privateKey) {
   });
 }
 
+// Helper: use service account for restricted collections, API key for public ones
+const saQuery = (collection: string, opts: any) =>
+  serviceAccountKey
+    ? saQueryCollection(serviceAccountKey, projectId, collection, opts)
+    : queryCollection(collection, opts);
+
 try {
   const results = await Promise.allSettled([
-    queryCollection('orders', { limit: 50 }),
+    saQuery('orders', { limit: 50 }),
     queryCollection('releases', { limit: 500 }),
-    queryCollection('artists', { limit: 500 }),
+    saQuery('artists', { limit: 500 }),
     queryCollection('merch', { limit: 500 }),
     queryCollection('dj-mixes', { limit: 500 }),
     queryCollection('livestreams', { limit: 10 }),
-    queryCollection('bypassRequests', { limit: 20 }),
-    queryCollection('payouts', { limit: 200 }),
-    queryCollection('disputes', { limit: 50 }),
-    queryCollection('refunds', { limit: 50 }),
-    // Use service account for salesLedger (has restricted security rules)
-    serviceAccountKey
-      ? saQueryCollection(serviceAccountKey, projectId, 'salesLedger', { limit: 500 })
-      : queryCollection('salesLedger', { limit: 500 }),
-    queryCollection('blog-posts', { limit: 100 })
+    saQuery('bypassRequests', { limit: 20 }),
+    saQuery('payouts', { limit: 200 }),
+    saQuery('disputes', { limit: 50 }),
+    saQuery('refunds', { limit: 50 }),
+    saQuery('salesLedger', { limit: 500 }),
+    saQuery('blog-posts', { limit: 100 })
   ]);
 
   ordersData = results[0].status === 'fulfilled' ? results[0].value : [];

@@ -54,10 +54,15 @@ try {
 // Also fetch orders for top sellers (uses items data)
 let orders: any[] = [];
 try {
-  const allOrders = await queryCollection('orders', {
-    orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-    limit: 500
-  });
+  const allOrders = serviceAccountKey
+    ? await saQueryCollection(serviceAccountKey, projectId, 'orders', {
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 500
+      })
+    : await queryCollection('orders', {
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 500
+      });
   orders = allOrders.filter((o: any) =>
     o.status !== 'cancelled' &&
     o.paymentMethod !== 'test_mode'

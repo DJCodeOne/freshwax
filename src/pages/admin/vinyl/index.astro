@@ -3,11 +3,19 @@
 // Manage vinyl sellers, listings, orders, and reviews
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
+
+const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail }) : '';
+const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
 
 // Fetch vinyl data
 let vinylSellers: any[] = [];
@@ -18,14 +26,14 @@ let pendingSellerRequests: any[] = [];
 try {
   const results = await Promise.allSettled([
     // Query users with vinylSeller role (source of truth)
-    queryCollection('users', { limit: 500 }),
+    saQuery('users', { limit: 500 }),
     queryCollection('vinylListings', { limit: 200 }),
-    queryCollection('orders', {
+    saQuery('orders', {
       filters: [{ field: 'hasVinylItems', op: 'EQUAL', value: true }],
       limit: 100
     }),
     // Query customers for email/phone data
-    queryCollection('users', { limit: 500 })
+    saQuery('users', { limit: 500 })
   ]);
 
   // Build customer lookup map for merging profile data

@@ -33,13 +33,15 @@ const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({
 console.log('[payments] Service account configured:', !!serviceAccountKey);
 
 // Fetch disputes
-const disputes = await queryCollection('disputes', {
+const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
+
+const disputes = await saQuery('disputes', {
   orderBy: { field: 'createdAt', direction: 'DESCENDING' },
   limit: 50
 });
 
 // Fetch refunds
-const refunds = await queryCollection('refunds', {
+const refunds = await saQuery('refunds', {
   orderBy: { field: 'createdAt', direction: 'DESCENDING' },
   limit: 50
 });
@@ -219,7 +221,7 @@ try {
 }
 
 // Fetch recent orders to check which need payouts
-const recentOrders = await queryCollection('orders', {
+const recentOrders = await saQuery('orders', {
   orderBy: { field: 'createdAt', direction: 'DESCENDING' },
   limit: 100
 });
@@ -260,7 +262,7 @@ for (const entry of ledgerEntries) {
 }
 
 // Fetch artists to map artistId -> artist info (name + payment preferences)
-const artists = await queryCollection('artists', { limit: 200 });
+const artists = await saQuery('artists', { limit: 200 });
 const artistMap: Record<string, string> = {};
 const artistPaymentMap: Record<string, { name: string; payoutMethod: string | null; paypalEmail: string | null; stripeConnectId: string | null }> = {};
 for (const artist of artists) {
