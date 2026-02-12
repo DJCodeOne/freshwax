@@ -1376,7 +1376,7 @@ export async function verifyUserToken(idToken: string): Promise<string | null> {
  * @param request - The incoming request
  * @returns Object with userId if verified, error message if not
  */
-export async function verifyRequestUser(request: Request): Promise<{ userId: string | null; error?: string }> {
+export async function verifyRequestUser(request: Request): Promise<{ userId: string | null; email?: string; error?: string }> {
   const authHeader = request.headers.get('Authorization');
 
   if (!authHeader?.startsWith('Bearer ')) {
@@ -1384,11 +1384,37 @@ export async function verifyRequestUser(request: Request): Promise<{ userId: str
   }
 
   const idToken = authHeader.slice(7); // Remove 'Bearer ' prefix
-  const userId = await verifyUserToken(idToken);
 
-  if (!userId) {
-    return { userId: null, error: 'Invalid or expired token' };
+  // Get full user info including email from token
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+  if (!apiKey) {
+    return { userId: null, error: 'Server configuration error' };
   }
 
-  return { userId };
+  try {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      }
+    );
+
+    if (!response.ok) {
+      return { userId: null, error: 'Invalid or expired token' };
+    }
+
+    const data = await response.json();
+    const user = data.users?.[0];
+
+    if (!user?.localId) {
+      return { userId: null, error: 'Invalid or expired token' };
+    }
+
+    return { userId: user.localId, email: user.email || undefined };
+  } catch (error) {
+    log.error('verifyRequestUser error:', error);
+    return { userId: null, error: 'Token verification failed' };
+  }
 }

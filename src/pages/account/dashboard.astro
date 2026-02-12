@@ -3188,7 +3188,10 @@ export const prerender = false;
   async function loadReferralCode(userId) {
     try {
       // Fetch referral code from KV-based API
-      const response = await fetch(`/api/get-referral-code?userId=${userId}`);
+      const token = await auth.currentUser?.getIdToken();
+      const response = await fetch(`/api/get-referral-code?userId=${userId}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       const data = await response.json();
 
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');

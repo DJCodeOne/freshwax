@@ -18,7 +18,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const url = new URL(request.url);
   const uid = url.searchParams.get('uid');
-  const authEmail = url.searchParams.get('email'); // Email from Firebase Auth
 
   if (!uid) {
     return new Response(JSON.stringify({
@@ -31,7 +30,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // SECURITY: Require authentication and verify uid matches token
-  const { userId: authUserId, error: authError } = await verifyRequestUser(request);
+  // Email comes from the verified token, NOT from query params (prevents privilege escalation)
+  const { userId: authUserId, email: authEmail, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
     return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
       status: 401, headers: { 'Content-Type': 'application/json' }

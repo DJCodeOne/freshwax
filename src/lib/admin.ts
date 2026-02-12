@@ -87,8 +87,13 @@ export async function requireAdminAuth(request: Request, locals: any, bodyData?:
     return null; // Auth successful via admin key in Bearer header
   }
 
+  // Check __session cookie (for SSR page loads where browser can't send auth headers)
+  const cookieHeader = request.headers.get('Cookie') || '';
+  const sessionMatch = cookieHeader.match(/(?:^|;\s*)__session=([^;]+)/);
+  const cookieToken = sessionMatch ? sessionMatch[1] : null;
+
   // Try any available token as Firebase ID token from admin user
-  const tokenCandidates = [bearerToken, adminKeyHeader].filter(Boolean) as string[];
+  const tokenCandidates = [bearerToken, adminKeyHeader, cookieToken].filter(Boolean) as string[];
   for (const token of tokenCandidates) {
     try {
       const env = locals?.runtime?.env;
@@ -97,6 +102,8 @@ export async function requireAdminAuth(request: Request, locals: any, bodyData?:
         FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
         FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
       });
+      // Ensure admin UIDs/emails are loaded from runtime env (Cloudflare secrets)
+      initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
       const userId = await verifyUserToken(token);
       if (userId && await isAdmin(userId)) {
         return null; // Auth successful via Firebase admin token

@@ -1088,6 +1088,10 @@ const firebaseConfig = {
           const data = await response.json();
           if (data.success) {
             setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null);
+            // Set __session cookie with ID token for SSR admin page auth
+            if (data.isAdmin) {
+              document.cookie = `__session=${idToken}; path=/admin; max-age=3600; SameSite=Lax; Secure`;
+            }
             // Also set fw_auth_cache for instant auth on other pages (comments, ratings, etc.)
             try {
               sessionStorage.setItem('fw_auth_cache', JSON.stringify({
@@ -1108,6 +1112,13 @@ const firebaseConfig = {
           setCachedUserType('customer', false, null);
         }
       } else {
+        // Refresh __session cookie for admin users (tokens expire hourly)
+        if (cachedData?.isAdmin) {
+          try {
+            const freshToken = await user.getIdToken();
+            document.cookie = `__session=${freshToken}; path=/admin; max-age=3600; SameSite=Lax; Secure`;
+          } catch (e) { /* Token refresh failed, cookie will expire naturally */ }
+        }
         // Even with cached data, ensure fw_auth_cache is set
         try {
           const existing = sessionStorage.getItem('fw_auth_cache');
@@ -1126,8 +1137,9 @@ const firebaseConfig = {
         } catch (e) { /* Ignore storage errors */ }
       }
     } else {
-      // User logged out - clear the auth cache
+      // User logged out - clear the auth cache and admin session cookie
       try { sessionStorage.removeItem('fw_auth_cache'); } catch (e) {}
+      document.cookie = '__session=; path=/admin; max-age=0; SameSite=Lax; Secure';
     }
     // Update UI AFTER any fetch is complete
     updateAuthUI();
