@@ -261,7 +261,7 @@
 
     // Load GIFs from Giphy
     async function loadGifs(category, searchQuery = null) {
-      const apiKey = window.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+      const apiKey = window.GIPHY_API_KEY || document.documentElement.dataset.giphyKey || '';
       console.log('[GIF] Loading GIFs, apiKey available:', !!apiKey, 'category:', category, 'query:', searchQuery, 'gifResults:', !!gifResults);
 
       if (!gifResults) {

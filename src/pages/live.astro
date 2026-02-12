@@ -13,7 +13,7 @@ import PlaylistModal from '../components/live/PlaylistModal.astro';
 export const prerender = false;
 
 // GIPHY API key - use env var if set, otherwise fallback to public key
-const giphyApiKey = import.meta.env.GIPHY_API_KEY || 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
 
 // Firebase config for client-side scripts (with fallback)
 const firebaseConfig = {

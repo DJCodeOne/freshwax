@@ -19,7 +19,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const url = new URL(request.url);
   const limitParam = url.searchParams.get('limit');
-  const limit = limitParam ? parseInt(limitParam) : 100;
+  const rawLimit = limitParam ? parseInt(limitParam) : 100;
+  const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 100 : Math.min(rawLimit, 200);
   const skipCache = url.searchParams.get('fresh') === '1';
 
   log.info('[get-releases] Fetching up to', limit, 'releases');
@@ -64,7 +65,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return dateB - dateA;
     });
     
-    const limitedReleases = limit > 0 ? normalizedReleases.slice(0, limit) : normalizedReleases;
+    // Filter out unapproved releases from public API
+    const approvedReleases = normalizedReleases.filter(r => r.approved !== false);
+    const limitedReleases = approvedReleases.slice(0, limit);
 
     // Strip sensitive/internal fields before returning to client
     const sanitizedReleases = limitedReleases.map(({ email, submittedBy, submitterId, r2FolderName, metadata, ...safe }) => safe);

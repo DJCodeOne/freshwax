@@ -133,10 +133,11 @@ const {
 // =============================================
 const GA4_ID = 'G-MHKVCNPYBQ';
 const GTM_ID = ''; // Optional: Google Tag Manager ID
+const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
 ---
 
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-giphy-key={giphyApiKey}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

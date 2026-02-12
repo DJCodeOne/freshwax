@@ -1676,7 +1676,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   // ============================================
   // GIPHY PICKER FUNCTIONALITY
   // ============================================
-  const GIPHY_API_KEY = 'p0USqLUVxus8d82HAcPhQ2GqG6SfraYr';
+  const GIPHY_API_KEY = window.GIPHY_API_KEY || document.documentElement.dataset.giphyKey || '';
   const giphyModal = document.getElementById('giphy-modal');
   const giphyModalClose = document.getElementById('giphy-modal-close');
   const giphyModalBackdrop = document.getElementById('giphy-modal-backdrop');
