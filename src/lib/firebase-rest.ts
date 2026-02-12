@@ -15,7 +15,7 @@ import { kvCacheThrough, CACHE_CONFIG } from './kv-cache';
 const PROJECT_ID = 'freshwax-store';
 
 // Collections that require authenticated reads (PII protection)
-const PROTECTED_COLLECTIONS = ['users', 'orders', 'djLobbyBypass'];
+const PROTECTED_COLLECTIONS = ['users', 'orders', 'djLobbyBypass', 'artists', 'pendingPayPalOrders', 'livestreamSlots'];
 
 // Server auth token cache (Firebase Auth sign-in for server-side reads)
 let _serverAuthToken: string | null = null;

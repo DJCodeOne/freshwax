@@ -100,6 +100,10 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     for (const [key, value] of Object.entries(corsHeaders)) {
       newHeaders.set(key, value);
     }
+    // Add security headers to API responses
+    newHeaders.set('X-Content-Type-Options', 'nosniff');
+    newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    newHeaders.set('X-Frame-Options', 'DENY');
   }
 
   // Add security headers to HTML responses

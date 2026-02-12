@@ -66,12 +66,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     const limitedReleases = limit > 0 ? normalizedReleases.slice(0, limit) : normalizedReleases;
 
-    log.info('[get-releases] Returning', limitedReleases.length, 'of', allReleases.length);
+    // Strip sensitive/internal fields before returning to client
+    const sanitizedReleases = limitedReleases.map(({ email, submittedBy, submitterId, r2FolderName, metadata, ...safe }) => safe);
+
+    log.info('[get-releases] Returning', sanitizedReleases.length, 'of', allReleases.length);
 
     const result = {
       success: true,
-      releases: limitedReleases,
-      totalReleases: limitedReleases.length,
+      releases: sanitizedReleases,
+      totalReleases: sanitizedReleases.length,
       source: 'firebase-rest',
       limited: limit > 0
     };

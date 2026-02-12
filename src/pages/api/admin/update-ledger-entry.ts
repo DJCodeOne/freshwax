@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const body = await request.json();
     initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-    const authError = requireAdminAuth(request, locals, body);
+    const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
     const { action, ledgerId, updates } = body;

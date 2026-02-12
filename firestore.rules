@@ -62,8 +62,9 @@ service cloud.firestore {
     }
 
     // Artists collection
+    // SECURITY: Requires authentication — contains emails, phone, PayPal emails, Stripe Connect IDs
     match /artists/{artistId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       allow create: if isAuthenticated() || request.resource.data.approved == true;
       allow update: if isAdmin() || isOwner(artistId) ||
                       // Allow admin API updates (for approved artists)
@@ -320,9 +321,10 @@ service cloud.firestore {
                       request.auth == null;
     }
 
-    // Livestream slots (schedule) - public read, authenticated write
+    // Livestream slots (schedule) - authenticated read, authenticated write
+    // SECURITY: Requires authentication — contains RTMP URLs and stream keys
     match /livestreamSlots/{slotId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       // Allow test slot creation for development (slotId starts with 'test_')
       allow create: if isAuthenticated() || slotId.matches('test_.*');
       allow update: if isAdmin() ||
@@ -426,11 +428,11 @@ service cloud.firestore {
     }
 
     // Pending PayPal Orders - temporary storage for PayPal checkout flow
-    // SECURITY NOTE: Open because REST API uses API key auth (no user token)
-    // TODO: Migrate to service account auth, then restrict to server-only access
-    // Risk mitigated by PayPal capture amount validation in capture-order.ts
+    // SECURITY: Requires authentication — contains customer name, email, phone, userId
+    // Server uses FIREBASE_SERVICE_EMAIL auth token for read/write access
     match /pendingPayPalOrders/{orderId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
     // Pending Gift Card Orders - temporary storage for gift card PayPal flow

@@ -143,10 +143,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Apply limit
     const limitedMixes = limit > 0 ? normalizedMixes.slice(0, limit) : normalizedMixes;
 
+    // Strip sensitive/internal fields before returning to client
+    const sanitizedMixes = limitedMixes.map(({ userId: _uid, user_id: _uid2, uploaderId: _uid3, folder_path: _fp, ...safe }) => safe);
+
     const result = {
       success: true,
-      mixes: limitedMixes,
-      total: limitedMixes.length,
+      mixes: sanitizedMixes,
+      total: sanitizedMixes.length,
       source: 'firebase-rest'
     };
 

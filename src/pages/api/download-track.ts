@@ -154,7 +154,7 @@ async function verifyPurchaseKV(env: Env, userId: string | null, releaseId: stri
   }
 
   // 2. Fallback: Query Firebase orders (one-time per user/release)
-  const apiKey = import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+  const apiKey = import.meta.env.FIREBASE_API_KEY;
   try {
     // Query orders for this user
     const ordersUrl = `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/orders?key=${apiKey}`;
@@ -231,7 +231,7 @@ async function getTrackFromD1(env: Env, releaseId: string, trackIndex: number): 
 
   // Fall back to Firebase if D1 didn't have it
   if (!release) {
-    const apiKey = import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
+    const apiKey = import.meta.env.FIREBASE_API_KEY;
     try {
       const releaseUrl = `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/releases/${releaseId}?key=${apiKey}`;
       const response = await fetch(releaseUrl);

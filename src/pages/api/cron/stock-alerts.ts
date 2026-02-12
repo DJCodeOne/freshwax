@@ -9,23 +9,9 @@ export const prerender = false;
 const LOW_STOCK_THRESHOLD = 5;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // DISABLED - Low stock emails turned off per user request
-  console.log('[Stock Alerts] Disabled - skipping');
-  return new Response(JSON.stringify({
-    success: true,
-    skipped: true,
-    reason: 'Stock alerts disabled'
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
-
-  const startTime = Date.now();
-  console.log('[Stock Alerts] ========== CRON JOB STARTED ==========');
-
   const env = (locals as any)?.runtime?.env;
 
-  // Verify authorization
+  // Verify authorization FIRST - always enforce auth before any logic
   const authHeader = request.headers.get('Authorization');
   const cronSecret = env?.CRON_SECRET || import.meta.env.CRON_SECRET;
   const adminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
@@ -41,6 +27,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  // DISABLED - Low stock emails turned off per user request
+  console.log('[Stock Alerts] Disabled - skipping');
+  return new Response(JSON.stringify({
+    success: true,
+    skipped: true,
+    reason: 'Stock alerts disabled'
+  }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+
+  const startTime = Date.now();
+  console.log('[Stock Alerts] ========== CRON JOB STARTED ==========');
 
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,

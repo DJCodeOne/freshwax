@@ -11,7 +11,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-  const authError = requireAdminAuth(request, locals);
+  const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
   const url = new URL(request.url);
