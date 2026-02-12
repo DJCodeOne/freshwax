@@ -1569,6 +1569,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
 <script>
   // Feature toggle handling
   document.addEventListener('DOMContentLoaded', async function() {
+    // Wait for Firebase auth before making admin API calls
+    if (window.getAdminToken) {
+      try { await window.getAdminToken(); } catch(e) { return; }
+    }
+
     const toggleMixCharts = document.getElementById('toggleMixCharts');
 
     // Load current settings
@@ -1967,7 +1972,12 @@ Astro.response.headers.set('Pragma', 'no-cache');
   }
 
   // Initialize monitor
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for Firebase auth before making admin API calls
+    if (window.getAdminToken) {
+      try { await window.getAdminToken(); } catch(e) { return; }
+    }
+
     // Initial fetch
     fetchHealthData();
 
@@ -1994,7 +2004,12 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
 <script>
   // Server Control Panel
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+    // Wait for Firebase auth before making admin API calls
+    if (window.getAdminToken) {
+      try { await window.getAdminToken(); } catch(e) { return; }
+    }
+
     const serverStatus = document.getElementById('serverStatus');
     const actionResult = document.getElementById('actionResult');
     const actionResultIcon = document.getElementById('actionResultIcon');
