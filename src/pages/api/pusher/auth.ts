@@ -31,7 +31,7 @@ export const OPTIONS: APIRoute = async ({ request }) => {
     headers: {
       ...(origin ? { 'Access-Control-Allow-Origin': origin } : {}),
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-user-id, x-user-name, x-user-avatar',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-user-id, x-user-name, x-user-avatar',
       ...(origin ? { 'Access-Control-Allow-Credentials': 'true' } : {}),
     }
   });
@@ -92,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       userId = verifiedUserId;
     } else {
       userId = 'anon_' + oderId;
-      userName = 'Viewer';
+      // Keep userName from x-user-name header (don't override to 'Viewer')
     }
 
     // Build presence data

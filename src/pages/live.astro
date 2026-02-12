@@ -2912,23 +2912,22 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       const userId = currentUser?.uid || cachedAuth?.id || getOrCreateSessionId();
       const userName = userInfo?.name || cachedAuth?.name || currentUser?.displayName || 'Viewer';
       const userAvatar = userInfo?.avatar || cachedAuth?.avatarUrl || currentUser?.photoURL || '';
-      const presenceToken = currentUser ? await currentUser.getIdToken().catch(() => null) : null;
 
       console.log('[Presence] Subscribing as:', userName, 'with ID:', userId);
 
       // Create Pusher instance with presence auth
-      const authHeaders = {
-        'x-user-id': userId,
-        'x-user-name': userName,
-        'x-user-avatar': userAvatar
-      };
-      if (presenceToken) authHeaders['Authorization'] = `Bearer ${presenceToken}`;
-
+      // Note: Authorization header added only on re-subscription (after user info loads)
       const presencePusher = new window.Pusher(config.key, {
         cluster: config.cluster || 'eu',
         forceTLS: true,
         authEndpoint: '/api/pusher/auth',
-        auth: { headers: authHeaders }
+        auth: {
+          headers: {
+            'x-user-id': userId,
+            'x-user-name': userName,
+            'x-user-avatar': userAvatar
+          }
+        }
       });
 
       // Store for potential re-subscription
@@ -3120,7 +3119,8 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
           loggedIn: true,
           name: displayName,
           displayName: displayName,
-          id: userId
+          id: userId,
+          avatar: result.avatarUrl || currentUser?.photoURL || null
         };
 
         // Cache auth state to localStorage for instant restore on page reload
