@@ -2,6 +2,7 @@
 // Syncs users with artist roles to the artists collection
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 
@@ -14,6 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  const saQuery = getSaQuery(locals);
 
   try {
     const body = await parseJsonBody(request);
@@ -23,14 +25,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (authError) return authError;
 
     // Get users with limit to prevent runaway (admin operation)
-    const users = await queryCollection('users', {
+    const users = await saQuery('users', {
       skipCache: true,
       limit: 500  // Max 500 users per sync to prevent runaway
     });
     console.log(`[sync-artists] Found ${users.length} users (limited to 500)`);
 
     // Get existing artists with limit
-    const existingArtists = await queryCollection('artists', {
+    const existingArtists = await saQuery('artists', {
       skipCache: true,
       limit: 500  // Max 500 artists to prevent runaway
     });

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -24,6 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   initFirebase(locals);
+  const saQuery = getSaQuery(locals);
 
   try {
     const url = new URL(request.url);
@@ -54,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       filters.push({ field: 'status', op: 'EQUAL', value: 'draft' });
     }
 
-    const posts = await queryCollection('blog-posts', {
+    const posts = await saQuery('blog-posts', {
       filters,
       orderBy: { field: 'createdAt', direction: 'DESCENDING' },
       limit

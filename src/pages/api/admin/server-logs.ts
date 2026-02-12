@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -15,6 +16,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const saQuery = getSaQuery(locals);
 
   // Rate limit
   const clientId = getClientId(request);
@@ -76,7 +78,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Get recent bypass requests
     try {
-      const requests = await queryCollection('bypassRequests', { limit: 5 });
+      const requests = await saQuery('bypassRequests', { limit: 5 });
       logs.push(`\n[BYPASS REQUESTS]`);
 
       if (requests.length === 0) {

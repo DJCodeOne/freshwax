@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument, deleteDocument, initFirebaseEnv, clearCache as clearFirebaseCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
+import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -73,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         break;
 
       case 'cleanup-db':
-        result = await cleanupDatabase();
+        result = await cleanupDatabase(locals);
         break;
 
       case 'test-stream':
@@ -259,13 +260,14 @@ async function syncData(): Promise<{ success: boolean; message?: string; error?:
 }
 
 // Database cleanup
-async function cleanupDatabase(): Promise<{ success: boolean; message?: string; error?: string }> {
+async function cleanupDatabase(locals: any): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     let cleaned = 0;
 
     // Clean expired bypass requests (older than 24 hours) - limited
+    const saQuery = getSaQuery(locals);
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const bypassRequests = await queryCollection('bypassRequests', { limit: 200 });
+    const bypassRequests = await saQuery('bypassRequests', { limit: 200 });
     for (const req of bypassRequests) {
       if (req.createdAt && req.createdAt < oneDayAgo) {
         // Would delete here - for safety just counting

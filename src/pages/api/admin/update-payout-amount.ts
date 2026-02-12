@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -64,8 +65,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
     });
 
+    const saQuery = getSaQuery(locals);
+
     // Find order
-    const orders = await queryCollection('orders', {
+    const orders = await saQuery('orders', {
       filters: [{ field: 'orderNumber', op: 'EQUAL', value: orderNumber }],
       limit: 1
     });

@@ -3,8 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -17,42 +17,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase env
   initFirebaseEnv(runtimeEnv);
 
-  // Get service account credentials
-  const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-  let serviceAccountKey = '';
-  if (clientEmail && privateKey) {
-    serviceAccountKey = JSON.stringify({
-      type: 'service_account',
-      project_id: projectId,
-      private_key: privateKey.replace(/\\n/g, '\n'),
-      client_email: clientEmail
-    });
-  }
+  const saQuery = getSaQuery(locals);
 
   try {
-    // Get all ledger entries using service account if available
+    // Get all ledger entries using service account
     let ledgerData: any[] = [];
-    let ledgerSource = 'none';
-
-    if (serviceAccountKey) {
-      try {
-        ledgerData = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', { limit: 500 });
-        ledgerSource = 'service_account';
-      } catch (saErr) {
-        console.log('[debug-ledger] SA query failed:', saErr);
-        ledgerData = await queryCollection('salesLedger', { limit: 500, skipCache: true });
-        ledgerSource = 'public_api';
-      }
-    } else {
-      ledgerData = await queryCollection('salesLedger', { limit: 500, skipCache: true });
-      ledgerSource = 'public_api';
+    let ledgerSource = 'service_account';
+    try {
+      ledgerData = await saQuery('salesLedger', { limit: 500 });
+    } catch (err) {
+      console.log('[debug-ledger] SA query failed:', err);
+      ledgerSource = 'fallback';
+      ledgerData = [];
     }
 
     // Also get orders to compare
-    const ordersData = await queryCollection('orders', { limit: 100, skipCache: true });
+    const ordersData = await saQuery('orders', { limit: 100, skipCache: true });
 
     // Check releases status
     const releasesData = await queryCollection('releases', { limit: 500, skipCache: true });

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { initFirebaseEnv, getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -22,6 +23,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
 
+  const saQuery = getSaQuery(locals);
+
   try {
     let user: any = null;
 
@@ -29,7 +32,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       user = await getDocument('users', userId);
       if (user) user.id = userId;
     } else if (email) {
-      const users = await queryCollection('users', {
+      const users = await saQuery('users', {
         filters: [{ field: 'email', op: 'EQUAL', value: email }],
         limit: 1
       });

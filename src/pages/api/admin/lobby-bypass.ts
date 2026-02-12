@@ -5,6 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getSaQuery } from '../../../lib/admin-query';
 
 // Helper to get admin key from environment
 function getAdminKey(locals: any): string {
@@ -77,6 +78,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Grant or revoke bypass
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const saQuery = getSaQuery(locals);
   try {
     const data = await request.json();
     const { action, email, userId, reason, adminKey } = data;
@@ -102,15 +104,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Search all user collections in parallel for efficiency
       const [users, customers, artists] = await Promise.all([
-        queryCollection('users', {
+        saQuery('users', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         }),
-        queryCollection('users', {
+        saQuery('users', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         }),
-        queryCollection('artists', {
+        saQuery('artists', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         })

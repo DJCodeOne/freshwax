@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -24,6 +25,7 @@ function generateId(): string {
 // GET - List all pending bypass requests (admin) OR check status for specific user
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const saQuery = getSaQuery(locals);
   try {
     const url = new URL(request.url);
     const action = url.searchParams.get('action');
@@ -39,7 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Check status for a specific user
     if (action === 'status' && userId) {
       try {
-        const snapshot = await queryCollection('bypassRequests', {
+        const snapshot = await saQuery('bypassRequests', {
           filters: [
             { field: 'userId', op: 'EQUAL', value: userId }
           ],
@@ -86,7 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Admin: list all pending requests (action=list or no action)
     try {
-      const snapshot = await queryCollection('bypassRequests', {
+      const snapshot = await saQuery('bypassRequests', {
         filters: [
           { field: 'status', op: 'EQUAL', value: 'pending' }
         ],
@@ -189,6 +191,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST - Create a new bypass request OR approve/deny a request
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const saQuery = getSaQuery(locals);
   try {
     const body = await request.json();
     const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, stationName, relayUrl, mixCount, bestMixLikes } = body;
@@ -343,7 +346,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Check if user already has a pending request
     let existingRequests: any[] = [];
     try {
-      existingRequests = await queryCollection('bypassRequests', {
+      existingRequests = await saQuery('bypassRequests', {
         filters: [
           { field: 'userId', op: 'EQUAL', value: userId },
           { field: 'status', op: 'EQUAL', value: 'pending' }

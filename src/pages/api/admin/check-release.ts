@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -14,6 +15,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     ADMIN_UIDS: runtimeEnv?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: runtimeEnv?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
   });
+
+  const saQuery = getSaQuery(locals);
 
   // SECURITY: Require admin authentication
   const authError = await requireAdminAuth(request, locals);
@@ -53,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }));
 
     // Also look up artists/users to find y2
-    const artists = await queryCollection('artists', { limit: 100, cacheTime: 60000 });
+    const artists = await saQuery('artists', { limit: 100, cacheTime: 60000 });
     const y2Artist = artists.filter((a: any) =>
       (a.name || '').toLowerCase().includes('y2') ||
       (a.displayName || '').toLowerCase().includes('y2')

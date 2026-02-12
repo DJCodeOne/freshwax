@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -24,6 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  const saQuery = getSaQuery(locals);
 
   try {
     const startDate = new Date();
@@ -35,7 +37,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     switch (type) {
       case 'orders': {
-        const orders = await queryCollection('orders', {
+        const orders = await saQuery('orders', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
           orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
           limit: 1000
@@ -67,7 +69,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       case 'sales': {
-        const orders = await queryCollection('orders', {
+        const orders = await saQuery('orders', {
           filters: [
             { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr },
             { field: 'status', op: 'NOT_EQUAL', value: 'cancelled' }
@@ -107,7 +109,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       case 'products': {
-        const orders = await queryCollection('orders', {
+        const orders = await saQuery('orders', {
           filters: [
             { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr },
             { field: 'status', op: 'NOT_EQUAL', value: 'cancelled' }
@@ -147,7 +149,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       case 'payouts': {
-        const payouts = await queryCollection('payouts', {
+        const payouts = await saQuery('payouts', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
           orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
           limit: 1000
@@ -171,7 +173,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       case 'refunds': {
-        const refunds = await queryCollection('refunds', {
+        const refunds = await saQuery('refunds', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
           orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
           limit: 500
@@ -195,7 +197,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       case 'users': {
-        const orders = await queryCollection('orders', {
+        const orders = await saQuery('orders', {
           filters: [{ field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startDateStr }],
           limit: 1000
         });

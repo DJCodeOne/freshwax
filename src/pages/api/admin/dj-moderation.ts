@@ -7,6 +7,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getSaQuery } from '../../../lib/admin-query';
 
 // Helper to get admin key from environment
 function getAdminKey(locals: any): string {
@@ -96,6 +97,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Ban, unban, hold, release, or kick a DJ
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const saQuery = getSaQuery(locals);
   try {
     const data = await request.json();
     const { action, email, userId, reason, adminKey, targetUserId, targetUserName } = data;
@@ -113,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     async function getUserIdFromEmail(email: string): Promise<{ userId: string; name: string | null } | null> {
       // Look up user by email in users collection
       try {
-        const users = await queryCollection('users', {
+        const users = await saQuery('users', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         });
@@ -121,7 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return { userId: users[0].id, name: users[0].displayName || users[0].name || null };
         }
         // Also check customers collection
-        const customers = await queryCollection('users', {
+        const customers = await saQuery('users', {
           filters: [{ field: 'email', op: 'EQUAL', value: email }],
           limit: 1
         });
