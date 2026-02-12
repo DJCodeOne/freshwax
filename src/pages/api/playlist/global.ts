@@ -649,7 +649,7 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
 // This ensures ALL clients get the SAME track (server is source of truth)
 // Local playlist server URL (H: drive MP3s via Cloudflare tunnel)
 const LOCAL_PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
-const PLAYLIST_TOKEN = import.meta.env.PLAYLIST_ACCESS_TOKEN || 'bd9c9585e4a63878b2964eed5f0868350f4918d0027d2695fbf6c83d9d203b08';
+const PLAYLIST_TOKEN = import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
 
 // Fallback thumbnail for audio files without thumbnails
 const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';

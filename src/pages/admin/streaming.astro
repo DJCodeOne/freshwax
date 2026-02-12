@@ -1908,11 +1908,11 @@ export const prerender = false;
       document.getElementById('streamEndpoint').className = `metric-value status-indicator ${streamOk ? 'ok' : 'error'}`;
       document.getElementById('streamEndpoint').textContent = streamOk ? 'Online' : 'Offline';
 
-      // Check playlist endpoint
+      // Check playlist endpoint (401 = server online but requires auth)
       let playlistOk = false;
       try {
         const playlistCheck = await fetch('https://playlist.freshwax.co.uk/', { method: 'HEAD', signal: AbortSignal.timeout(5000) });
-        playlistOk = playlistCheck.ok || playlistCheck.status === 404;
+        playlistOk = playlistCheck.ok || playlistCheck.status === 404 || playlistCheck.status === 401;
       } catch {}
       document.getElementById('playlistEndpoint').className = `metric-value status-indicator ${playlistOk ? 'ok' : 'warning'}`;
       document.getElementById('playlistEndpoint').textContent = playlistOk ? 'Online' : 'Offline';
@@ -2007,7 +2007,7 @@ export const prerender = false;
         signal: AbortSignal.timeout(5000)
       });
 
-      if (response.ok || response.status === 404) {
+      if (response.ok || response.status === 404 || response.status === 401) {
         dot.className = 'status-dot online';
         statusText.textContent = 'Online';
         card.className = 'service-card online';

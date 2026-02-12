@@ -1616,6 +1616,12 @@ Astro.response.headers.set('Pragma', 'no-cache');
       historyCount.textContent = `${history.length} tracks in history`;
     }
 
+    function escapeHistoryHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     updateHistoryCount();
 
     viewHistoryBtn?.addEventListener('click', () => {
@@ -1627,11 +1633,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
       } else {
         historyList.innerHTML = history.map((item, i) => `
           <div class="history-item">
-            <img src="${item.thumbnail || '/place-holder.webp'}" alt="" />
+            <img src="${escapeHistoryHtml(item.thumbnail || '/place-holder.webp')}" alt="" />
             <div class="history-item-info">
-              <div class="history-item-title">${item.title || item.url}</div>
+              <div class="history-item-title">${escapeHistoryHtml(item.title || item.url)}</div>
               <div class="history-item-meta">
-                ${item.platform} • ${item.playedAt ? new Date(item.playedAt).toLocaleString() : 'Unknown date'}
+                ${escapeHistoryHtml(item.platform)} • ${item.playedAt ? new Date(item.playedAt).toLocaleString() : 'Unknown date'}
               </div>
             </div>
           </div>
@@ -1883,7 +1889,8 @@ Astro.response.headers.set('Pragma', 'no-cache');
       const streamStatus = document.getElementById('statStreamStatus');
 
       if (data.livestream && data.livestream.isLive) {
-        // Show live stream preview
+        // Show live stream preview - sanitize hlsUrl for attribute injection
+        const safeHlsUrl = (data.livestream.hlsUrl || '').replace(/[<>"'&]/g, '');
         streamPreview.innerHTML = `
           <div class="preview-live">
             <div class="live-indicator">
@@ -1891,7 +1898,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
               <span>LIVE</span>
             </div>
             <video id="streamVideo" class="stream-video" muted autoplay playsinline>
-              <source src="${data.livestream.hlsUrl}" type="application/x-mpegURL">
+              <source src="${safeHlsUrl}" type="application/x-mpegURL">
             </video>
           </div>
         `;
@@ -2222,6 +2229,10 @@ Astro.response.headers.set('Pragma', 'no-cache');
           if (data.trackCount !== undefined) {
             trackCount.textContent = `(${data.trackCount} tracks available)`;
           }
+        } else if (response.status === 401 || response.status === 403) {
+          // Server is reachable but requires auth - still online
+          serverStatus.textContent = 'ONLINE';
+          serverStatus.className = 'status-badge online';
         } else {
           throw new Error('Not OK');
         }
@@ -2285,16 +2296,18 @@ Astro.response.headers.set('Pragma', 'no-cache');
       let html = '';
       upNext.forEach((track, index) => {
         const title = track.title || track.url || 'Unknown';
-        const thumb = track.thumbnail || '/place-holder.webp';
+        const thumb = escapeHtml(track.thumbnail || '/place-holder.webp');
+        const safeId = escapeHtml(track.id || '');
+        const safeAddedBy = escapeHtml(track.addedBy || '');
         html += `
-          <div class="queue-item" data-index="${index + 1}" data-id="${track.id || ''}">
+          <div class="queue-item" data-index="${index + 1}" data-id="${safeId}">
             <span class="queue-item-num">${index + 1}</span>
             <img class="queue-item-thumb" src="${thumb}" alt="" onerror="this.src='/place-holder.webp'">
             <div class="queue-item-info">
               <div class="queue-item-title">${escapeHtml(title)}</div>
-              <div class="queue-item-added">${track.addedByName || 'Unknown'}</div>
+              <div class="queue-item-added">${escapeHtml(track.addedByName || 'Unknown')}</div>
             </div>
-            <button class="queue-item-remove" data-id="${track.id || ''}" data-added-by="${track.addedBy || ''}" title="Remove from queue">×</button>
+            <button class="queue-item-remove" data-id="${safeId}" data-added-by="${safeAddedBy}" title="Remove from queue">×</button>
           </div>
         `;
       });
