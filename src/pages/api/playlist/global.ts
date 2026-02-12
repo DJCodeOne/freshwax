@@ -699,13 +699,40 @@ async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
 }
 
 async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
-  // ONLY use local playlist server (H: drive MP3s) - no YouTube fallback
+  // Try local playlist server first (H: drive MP3s)
   const localTrack = await pickRandomFromLocalServer();
   if (localTrack) {
     return localTrack;
   }
 
-  console.log('[GlobalPlaylist] Local playlist server unavailable - no autoplay');
+  // Fallback: pick a random track from KV history
+  try {
+    if (kvCache) {
+      const data = await kvCache.get(KV_HISTORY_KEY, 'json');
+      const items = data?.items;
+      if (items && items.length > 0) {
+        const pick = items[Math.floor(Math.random() * items.length)];
+        if (pick.url) {
+          console.log('[GlobalPlaylist] Autoplay fallback from KV history:', pick.title || pick.url);
+          return {
+            id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,
+            url: pick.url,
+            platform: pick.platform || 'direct',
+            embedId: pick.embedId,
+            title: pick.title,
+            thumbnail: pick.thumbnail,
+            addedBy: 'system',
+            addedByName: 'Auto-Play',
+            addedAt: new Date().toISOString()
+          };
+        }
+      }
+    }
+  } catch (error) {
+    console.log('[GlobalPlaylist] KV history fallback error:', error);
+  }
+
+  console.log('[GlobalPlaylist] No tracks available for autoplay');
   return null;
 }
 
