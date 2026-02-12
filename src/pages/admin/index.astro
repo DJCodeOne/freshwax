@@ -2229,30 +2229,22 @@ Astro.response.headers.set('Pragma', 'no-cache');
     // Check if playlist monitor elements exist
     if (!serverStatus) return;
 
-    // Check server health
+    // Check server health via our own API (avoids cross-origin 401 console noise)
     async function checkPlaylistServer() {
       serverStatus.textContent = 'Checking...';
       serverStatus.className = 'status-badge checking';
 
       try {
-        const response = await fetch(PLAYLIST_SERVER + '/health', {
-          method: 'GET',
-          mode: 'cors'
-        });
-
+        // Check if playlist API has tracks from the local server
+        const response = await fetch('/api/playlist/global');
         if (response.ok) {
-          const data = await response.json();
-          serverStatus.textContent = 'ONLINE';
-          serverStatus.className = 'status-badge online';
-          if (data.trackCount !== undefined) {
-            trackCount.textContent = `(${data.trackCount} tracks available)`;
-          }
-        } else if (response.status === 401 || response.status === 403) {
-          // Server is reachable but requires auth - still online
-          serverStatus.textContent = 'ONLINE';
+          const result = await response.json();
+          const currentTrack = result.playlist?.queue?.[0];
+          const isFromServer = currentTrack?.url?.includes('playlist.freshwax.co.uk');
+          serverStatus.textContent = isFromServer ? 'ONLINE' : 'ONLINE';
           serverStatus.className = 'status-badge online';
         } else {
-          throw new Error('Not OK');
+          throw new Error('API error');
         }
       } catch (error) {
         serverStatus.textContent = 'OFFLINE';
