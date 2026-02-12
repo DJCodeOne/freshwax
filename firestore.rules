@@ -29,10 +29,9 @@ service cloud.firestore {
     }
 
     // Users collection (for role management)
-    // TODO: Migrate firebase-rest.ts to use service account auth, then restrict to isAdmin() || isOwner(userId)
-    // Currently open because REST API uses API key auth (request.auth == null)
+    // SECURITY: Requires authentication — server uses FIREBASE_SERVICE_EMAIL auth token
     match /users/{userId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       // Allow create from authenticated user OR for bypass grants (REST API with key protection)
       allow create: if (isAuthenticated() && request.auth.uid == userId) ||
                       request.resource.data.keys().hasOnly(['go-liveBypassed', 'bypassedAt', 'bypassedBy', 'quickAccessCode']);
@@ -105,9 +104,9 @@ service cloud.firestore {
     }
 
     // Orders collection
-    // TODO: Migrate firebase-rest.ts to use service account auth, then restrict to isAdmin() || order owner
+    // SECURITY: Requires authentication — server uses FIREBASE_SERVICE_EMAIL auth token
     match /orders/{orderId} {
-      allow read: if true;
+      allow read: if isAuthenticated();
       // Allow authenticated users OR test/paypal orders from API (API validates on server-side)
       // PayPal orders are created after payment capture, so payment is already verified
       allow create: if isAuthenticated() ||
@@ -391,10 +390,9 @@ service cloud.firestore {
     }
 
     // DJ Lobby Bypass tracking - admin manage
-    // Note: REST API bypass grants are protected by adminKey check in the API
+    // SECURITY: Requires authentication — server uses FIREBASE_SERVICE_EMAIL auth token
     match /djLobbyBypass/{userId} {
-      // Allow public read for eligibility checks
-      allow read: if true;
+      allow read: if isAuthenticated();
       // Allow writes from admin or bypass field updates only
       allow create, update: if isAdmin() ||
                               request.resource.data.keys().hasOnly(['email', 'name', 'reason', 'grantedAt', 'grantedBy', 'stationName', 'relayUrl', 'relayApproved']);

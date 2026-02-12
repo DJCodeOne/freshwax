@@ -14,6 +14,51 @@ import { kvCacheThrough, CACHE_CONFIG } from './kv-cache';
 
 const PROJECT_ID = 'freshwax-store';
 
+// Collections that require authenticated reads (PII protection)
+const PROTECTED_COLLECTIONS = ['users', 'orders', 'djLobbyBypass'];
+
+// Server auth token cache (Firebase Auth sign-in for server-side reads)
+let _serverAuthToken: string | null = null;
+let _serverAuthExpiry: number = 0;
+
+async function getServerAuthToken(): Promise<string | null> {
+  if (_serverAuthToken && Date.now() < _serverAuthExpiry) {
+    return _serverAuthToken;
+  }
+
+  const email = getEnvVar('FIREBASE_SERVICE_EMAIL');
+  const password = getEnvVar('FIREBASE_SERVICE_PASSWORD');
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
+  if (!email || !password || !apiKey) return null;
+
+  try {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true })
+      }
+    );
+
+    if (!response.ok) {
+      log.error('Server auth sign-in failed:', response.status);
+      return null;
+    }
+
+    const data: any = await response.json();
+    _serverAuthToken = data.idToken;
+    // Refresh 5 minutes before expiry (tokens last ~3600s)
+    _serverAuthExpiry = Date.now() + (parseInt(data.expiresIn || '3600') * 1000) - (5 * 60 * 1000);
+    log.info('Server auth token refreshed');
+    return _serverAuthToken;
+  } catch (err) {
+    log.error('Server auth error:', err);
+    return null;
+  }
+}
+
 // ==========================================
 // CLOUDFLARE RUNTIME ENV SUPPORT
 // ==========================================
@@ -287,9 +332,19 @@ export async function queryCollection(
   const fetchPromise = (async () => {
     try {
       log.info(`Querying ${collection}...`);
+
+      // For protected collections, add server auth token
+      const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (PROTECTED_COLLECTIONS.includes(collection)) {
+        const token = await getServerAuthToken();
+        if (token) {
+          fetchHeaders['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: fetchHeaders,
         body: JSON.stringify({ structuredQuery })
       });
       
@@ -354,8 +409,17 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
   
   const fetchPromise = (async () => {
     try {
-      const response = await fetch(url);
-      
+      // For protected collections, add server auth token
+      const headers: Record<string, string> = {};
+      if (PROTECTED_COLLECTIONS.includes(collection)) {
+        const token = await getServerAuthToken();
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
+      const response = await fetch(url, { headers });
+
       if (!response.ok) {
         if (response.status === 404) return null;
         // Treat 403 as "document not found" for collections that may have strict rules

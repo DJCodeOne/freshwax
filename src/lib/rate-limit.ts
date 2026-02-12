@@ -14,9 +14,18 @@ interface RateLimitEntry {
   blockedUntil?: number;
 }
 
-// In-memory store (works for single instance, resets on deploy)
-// For production edge deployment, this provides per-isolate limiting
+// In-memory store (first tier — fast, per-isolate)
 const rateLimitStore = new Map<string, RateLimitEntry>();
+
+// KV store reference (second tier — persistent across deploys/isolates)
+let kvStore: any = null;
+
+/**
+ * Initialize KV-backed rate limiting (call from middleware with env.CACHE or env.KV)
+ */
+export function initRateLimitKV(kv: any): void {
+  if (kv) kvStore = kv;
+}
 
 // Cleanup old entries periodically (prevent memory leak)
 const CLEANUP_INTERVAL = 60 * 1000; // 1 minute
@@ -35,8 +44,15 @@ function cleanupOldEntries() {
   }
 }
 
+// Track pending KV background syncs (prevent duplicate reads)
+const kvSyncPending = new Set<string>();
+
 /**
  * Check rate limit for a given key (e.g., IP address, user ID, endpoint)
+ * Uses in-memory as fast path. KV provides persistence across deploys:
+ * - On cold start, first request per key passes (no in-memory entry yet)
+ * - Background KV read populates in-memory for subsequent requests
+ * - Every state change writes through to KV (non-blocking)
  * Returns { allowed: true } if within limits, or { allowed: false, retryAfter } if blocked
  */
 export function checkRateLimit(
@@ -46,7 +62,18 @@ export function checkRateLimit(
   cleanupOldEntries();
 
   const now = Date.now();
-  const entry = rateLimitStore.get(key);
+  let entry = rateLimitStore.get(key);
+
+  // If no in-memory entry, trigger background KV sync for next request
+  if (!entry && kvStore && !kvSyncPending.has(key)) {
+    kvSyncPending.add(key);
+    kvStore.get(`rl:${key}`, { type: 'json' }).then((kvData: any) => {
+      kvSyncPending.delete(key);
+      if (kvData && !rateLimitStore.has(key) && (now - kvData.firstRequest) < config.windowMs) {
+        rateLimitStore.set(key, kvData as RateLimitEntry);
+      }
+    }).catch(() => { kvSyncPending.delete(key); });
+  }
 
   // Check if currently blocked
   if (entry?.blocked && entry.blockedUntil && now < entry.blockedUntil) {
@@ -58,11 +85,9 @@ export function checkRateLimit(
 
   // No existing entry or window expired - create new
   if (!entry || (now - entry.firstRequest) >= config.windowMs) {
-    rateLimitStore.set(key, {
-      count: 1,
-      firstRequest: now,
-      blocked: false
-    });
+    const newEntry: RateLimitEntry = { count: 1, firstRequest: now, blocked: false };
+    rateLimitStore.set(key, newEntry);
+    persistToKV(key, newEntry, config.windowMs);
     return { allowed: true, remaining: config.maxRequests - 1 };
   }
 
@@ -73,6 +98,7 @@ export function checkRateLimit(
     entry.blocked = true;
     entry.blockedUntil = now + blockDuration;
     rateLimitStore.set(key, entry);
+    persistToKV(key, entry, blockDuration);
 
     return {
       allowed: false,
@@ -83,8 +109,20 @@ export function checkRateLimit(
   // Increment count
   entry.count++;
   rateLimitStore.set(key, entry);
+  persistToKV(key, entry, config.windowMs);
 
   return { allowed: true, remaining: config.maxRequests - entry.count };
+}
+
+/** Write-through to KV (non-blocking) */
+function persistToKV(key: string, entry: RateLimitEntry, ttlMs: number): void {
+  if (!kvStore) return;
+  try {
+    // Fire-and-forget — don't await
+    kvStore.put(`rl:${key}`, JSON.stringify(entry), {
+      expirationTtl: Math.max(60, Math.ceil(ttlMs / 1000)) // min 60s TTL
+    });
+  } catch { /* KV write failure is non-critical */ }
 }
 
 /**
@@ -92,6 +130,9 @@ export function checkRateLimit(
  */
 export function resetRateLimit(key: string): void {
   rateLimitStore.delete(key);
+  if (kvStore) {
+    try { kvStore.delete(`rl:${key}`); } catch { /* non-critical */ }
+  }
 }
 
 /**

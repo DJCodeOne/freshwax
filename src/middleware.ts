@@ -4,6 +4,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { initFirebaseEnv } from './lib/firebase-rest';
 import { initKVCache } from './lib/kv-cache';
+import { initRateLimitKV } from './lib/rate-limit';
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -57,6 +58,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   if (runtime?.env) {
     initFirebaseEnv(runtime.env);
     initKVCache(runtime.env);
+    initRateLimitKV(runtime.env?.CACHE || runtime.env?.KV);
   }
 
   const url = new URL(request.url);

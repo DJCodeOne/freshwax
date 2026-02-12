@@ -1450,7 +1450,18 @@ export class PlaylistManager {
    */
   private async pickRandomFromLocalServer(): Promise<GlobalPlaylistItem | null> {
     try {
-      const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/list`, {
+      // Use authenticated proxy to prevent unauthenticated inventory disclosure
+      const auth = (window as any).firebase?.auth?.();
+      const currentUser = auth?.currentUser;
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+
+      const fetchHeaders: Record<string, string> = {};
+      if (idToken) {
+        fetchHeaders['Authorization'] = `Bearer ${idToken}`;
+      }
+
+      const response = await fetch('/api/playlist/server-list', {
+        headers: fetchHeaders,
         signal: AbortSignal.timeout(5000)
       });
 
