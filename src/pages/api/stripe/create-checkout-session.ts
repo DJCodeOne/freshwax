@@ -81,7 +81,7 @@ async function validateStock(items: any[]): Promise<{ available: boolean, unavai
 }
 
 // Validate item prices server-side to prevent manipulation
-async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean }> {
+async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean, validationError?: string }> {
   const validatedItems: any[] = [];
   let hasPriceMismatch = false;
 
@@ -170,11 +170,8 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
       });
     } catch (err) {
       console.error('[Stripe] Error validating price for', item.name, err);
-      // On error, use client price but flag it
-      validatedItems.push({
-        ...item,
-        priceValidationFailed: true
-      });
+      // SECURITY: Reject items where price validation fails — never trust client price
+      return { validatedItems: [], hasPriceMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
     }
   }
 
@@ -238,7 +235,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // SECURITY: Validate prices server-side to prevent manipulation
     console.log('[Stripe] Validating prices server-side...');
-    const { validatedItems, hasPriceMismatch } = await validateAndGetPrices(orderData.items);
+    const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items);
+
+    if (validationError) {
+      return new Response(JSON.stringify({ success: false, error: validationError }), {
+        status: 400, headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (hasPriceMismatch) {
       console.warn('[Stripe] SECURITY: Price manipulation detected');

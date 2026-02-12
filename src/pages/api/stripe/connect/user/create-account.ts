@@ -38,9 +38,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const userId = authUserId;
 
     // Use custom return URLs if provided, otherwise defaults
+    // SECURITY: Validate return URLs to prevent open redirect
     const baseUrl = getBaseUrl(request);
-    const finalReturnUrl = returnUrl || `${baseUrl}/account/selling?stripe_connected=true`;
-    const finalRefreshUrl = refreshUrl || `${baseUrl}/account/selling?stripe_refresh=true`;
+    const finalReturnUrl = isAllowedReturnUrl(returnUrl, baseUrl) ? returnUrl : `${baseUrl}/account/selling?stripe_connected=true`;
+    const finalRefreshUrl = isAllowedReturnUrl(refreshUrl, baseUrl) ? refreshUrl : `${baseUrl}/account/selling?stripe_refresh=true`;
 
     // Get user
     const user = await getDocument('users', userId);
@@ -138,6 +139,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
+
+function isAllowedReturnUrl(url: string | undefined, baseUrl: string): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.origin === 'https://freshwax.co.uk' || parsed.origin === baseUrl;
+  } catch {
+    return false;
+  }
+}
 
 function getBaseUrl(request: Request): string {
   const url = new URL(request.url);

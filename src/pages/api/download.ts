@@ -2,7 +2,7 @@
 // Server-side download proxy to bypass CORS for R2 files
 
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { verifyRequestUser, initFirebaseEnv, queryCollection } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -65,7 +65,39 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  
+
+  // SECURITY: Verify user has purchased content containing this URL
+  try {
+    const userOrders = await queryCollection('orders', {
+      filters: [
+        { field: 'customerId', op: 'EQUAL', value: userId },
+        { field: 'paymentStatus', op: 'EQUAL', value: 'completed' }
+      ],
+      limit: 50
+    });
+
+    const hasPurchased = userOrders.some((order: any) =>
+      (order.items || []).some((item: any) => {
+        const tracks = item.downloads?.tracks || [];
+        return tracks.some((t: any) => t.mp3Url === fileUrl || t.wavUrl === fileUrl) ||
+          item.downloads?.artworkUrl === fileUrl;
+      })
+    );
+
+    if (!hasPurchased) {
+      return new Response(JSON.stringify({ error: 'Purchase required' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  } catch (purchaseErr) {
+    log.error('[download] Purchase verification error:', purchaseErr);
+    return new Response(JSON.stringify({ error: 'Could not verify purchase' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     log.info('[download] Fetching:', fileUrl);
 

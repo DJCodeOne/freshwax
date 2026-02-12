@@ -8,10 +8,10 @@ import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/g
 // Timing-safe string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
-    // Compare against itself to maintain constant time even for length mismatch
+    // Do constant-time work against b to prevent length leakage via timing
     let result = 0;
-    for (let i = 0; i < a.length; i++) {
-      result |= a.charCodeAt(i) ^ a.charCodeAt(i);
+    for (let i = 0; i < b.length; i++) {
+      result |= a.charCodeAt(i % a.length) ^ b.charCodeAt(i);
     }
     return false;
   }

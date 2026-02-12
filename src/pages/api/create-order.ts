@@ -15,7 +15,7 @@ const log = {
 };
 
 // Validate item prices server-side to prevent manipulation
-async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[], serverSubtotal: number, hasMismatch: boolean }> {
+async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[], serverSubtotal: number, hasMismatch: boolean, validationError?: string }> {
   const validatedItems: any[] = [];
   let serverSubtotal = 0;
   let hasMismatch = false;
@@ -81,9 +81,8 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
       validatedItems.push({ ...item, price: serverPrice, originalClientPrice: item.price });
     } catch (err) {
       console.error('[create-order] Error validating price for', item.name, err);
-      // On error, use client price but flag it
-      serverSubtotal += item.price * quantity;
-      validatedItems.push({ ...item, priceValidationFailed: true });
+      // SECURITY: Reject items where price validation fails — never trust client price
+      return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
     }
   }
 
@@ -174,7 +173,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const now = new Date().toISOString();
 
     // Server-side price validation - prevent client-side price manipulation
-    const { validatedItems: pricedItems, serverSubtotal, hasMismatch } = await validateOrderPrices(orderData.items);
+    const { validatedItems: pricedItems, serverSubtotal, hasMismatch, validationError } = await validateOrderPrices(orderData.items);
+
+    if (validationError) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: validationError
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
 
     // Reject if client total is significantly lower than server-calculated total
     const clientTotal = orderData.totals?.total || 0;
@@ -358,7 +364,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       hasPreOrderItems,
       preOrderDeliveryDate: latestPreOrderDate,
       paymentMethod: orderData.paymentMethod || 'test_mode',
-      paymentStatus: 'completed',
+      paymentStatus: 'pending',
       status: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       orderStatus: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
       createdAt: now,

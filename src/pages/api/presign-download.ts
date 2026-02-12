@@ -135,6 +135,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // SECURITY: Verify payment is completed before allowing download
+    if (order.paymentStatus !== 'completed') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Payment not yet completed for this order'
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     // Find the item in the order that matches the releaseId
     const item = (order.items || []).find((i: any) => {
       const itemReleaseId = i.releaseId || i.productId || i.id;

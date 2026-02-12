@@ -294,6 +294,97 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Action: Activate Pro subscription (after payment)
     if (action === 'activatePro') {
       const { paymentId, paymentMethod, userName } = data;
+
+      if (!paymentId) {
+        return new Response(JSON.stringify({ success: false, error: 'Payment ID required' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      // SECURITY: Verify payment is real and completed before activating Pro
+      const env = (locals as any)?.runtime?.env;
+      const method = paymentMethod || 'stripe';
+
+      if (method === 'stripe') {
+        const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
+        if (!stripeSecretKey) {
+          return new Response(JSON.stringify({ success: false, error: 'Payment verification unavailable' }), {
+            status: 500, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        try {
+          const Stripe = (await import('stripe')).default;
+          const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' as any });
+
+          if (paymentId.startsWith('pi_')) {
+            const pi = await stripe.paymentIntents.retrieve(paymentId);
+            if (pi.status !== 'succeeded') {
+              return new Response(JSON.stringify({ success: false, error: 'Payment not completed' }), {
+                status: 402, headers: { 'Content-Type': 'application/json' }
+              });
+            }
+          } else if (paymentId.startsWith('cs_')) {
+            const session = await stripe.checkout.sessions.retrieve(paymentId);
+            if (session.payment_status !== 'paid') {
+              return new Response(JSON.stringify({ success: false, error: 'Payment not completed' }), {
+                status: 402, headers: { 'Content-Type': 'application/json' }
+              });
+            }
+          } else {
+            return new Response(JSON.stringify({ success: false, error: 'Invalid payment ID format' }), {
+              status: 400, headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (stripeErr: any) {
+          log.error('Stripe verification failed:', stripeErr?.message);
+          return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
+            status: 402, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } else if (method === 'paypal') {
+        const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
+        const paypalSecret = env?.PAYPAL_SECRET || import.meta.env.PAYPAL_SECRET;
+        const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
+        const paypalBase = paypalMode === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
+
+        if (!paypalClientId || !paypalSecret) {
+          return new Response(JSON.stringify({ success: false, error: 'Payment verification unavailable' }), {
+            status: 500, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        try {
+          const authResponse = await fetch(`${paypalBase}/v1/oauth2/token`, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Basic ' + btoa(`${paypalClientId}:${paypalSecret}`),
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'grant_type=client_credentials'
+          });
+          const authData = await authResponse.json();
+          const orderResponse = await fetch(`${paypalBase}/v2/checkout/orders/${paymentId}`, {
+            headers: { 'Authorization': `Bearer ${authData.access_token}` }
+          });
+          const orderData = await orderResponse.json();
+          if (orderData.status !== 'COMPLETED') {
+            return new Response(JSON.stringify({ success: false, error: 'PayPal payment not completed' }), {
+              status: 402, headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        } catch (paypalErr: any) {
+          log.error('PayPal verification failed:', paypalErr?.message);
+          return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
+            status: 402, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } else {
+        return new Response(JSON.stringify({ success: false, error: 'Unknown payment method' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+
+      log.info('Payment verified for', userId, '- paymentId:', paymentId, '- method:', method);
+
       const now = new Date();
       const expiresAt = new Date(now);
       expiresAt.setFullYear(expiresAt.getFullYear() + 1); // 1 year subscription

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getWebhookStats } from '../../../lib/webhook-logger';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -22,6 +23,10 @@ interface HealthCheckResult {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // SECURITY: Admin-only — exposes payment system status and payout data
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   const startTime = Date.now();
   const env = (locals as any)?.runtime?.env;
 

@@ -1,10 +1,14 @@
 // src/pages/api/health/index.ts
 // General health check endpoint for monitoring
 import type { APIRoute } from 'astro';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // SECURITY: Admin-only — exposes infrastructure details
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   const startTime = Date.now();
   const env = (locals as any)?.runtime?.env;
 
