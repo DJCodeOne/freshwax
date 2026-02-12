@@ -1122,7 +1122,7 @@ const getStockBadgeClass = (stock) => {
 
         const response = await fetch('/api/upload-merch-image', {
           method: 'POST',
-          headers: { 'X-Admin-Key': ADMIN_KEY },
+          headers: { 'X-Admin-Key': window.ADMIN_KEY },
           body: formData
         });
 
@@ -1191,7 +1191,7 @@ const getStockBadgeClass = (stock) => {
 
         const response = await fetch('/api/upload-merch-image', {
           method: 'POST',
-          headers: { 'X-Admin-Key': ADMIN_KEY },
+          headers: { 'X-Admin-Key': window.ADMIN_KEY },
           body: formData
         });
 
@@ -1475,7 +1475,7 @@ const getStockBadgeClass = (stock) => {
 
       const response = await fetch('/api/upload-merch-image', {
         method: 'POST',
-        headers: { 'X-Admin-Key': ADMIN_KEY },
+        headers: { 'X-Admin-Key': window.ADMIN_KEY },
         body: formData
       });
 

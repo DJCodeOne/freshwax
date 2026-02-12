@@ -94,6 +94,55 @@ async function checkStripe(): Promise<ServiceStatus> {
   }
 }
 
+// Check Playlist server
+async function checkPlaylist(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    const token = import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
+    const response = await fetch('https://playlist.freshwax.co.uk/health', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      signal: AbortSignal.timeout(5000)
+    });
+    const latency = Date.now() - start;
+
+    if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      return { name: 'Playlist Server', status: 'ok', latency, message: data.trackCount ? `${data.trackCount} tracks` : undefined, lastChecked: new Date().toISOString() };
+    }
+    // 401 means server is up but we lack auth
+    if (response.status === 401 || response.status === 403) {
+      return { name: 'Playlist Server', status: 'ok', latency, message: 'Online (auth required)', lastChecked: new Date().toISOString() };
+    }
+    return { name: 'Playlist Server', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
+  } catch (e: any) {
+    return { name: 'Playlist Server', status: 'warning', message: 'Server offline or unreachable', lastChecked: new Date().toISOString() };
+  }
+}
+
+// Check Icecast relay server
+async function checkIcecast(): Promise<ServiceStatus> {
+  const start = Date.now();
+  try {
+    const response = await fetch('https://icecast.freshwax.co.uk/status-json.xsl', {
+      signal: AbortSignal.timeout(5000)
+    });
+    const latency = Date.now() - start;
+
+    if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const sources = data.icestats?.source;
+      const mountCount = Array.isArray(sources) ? sources.length : (sources ? 1 : 0);
+      return { name: 'Icecast', status: 'ok', latency, message: `${mountCount} mount(s)`, lastChecked: new Date().toISOString() };
+    }
+    if (response.status === 401 || response.status === 403 || response.status === 400) {
+      return { name: 'Icecast', status: 'ok', latency, message: 'Online', lastChecked: new Date().toISOString() };
+    }
+    return { name: 'Icecast', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
+  } catch (e: any) {
+    return { name: 'Icecast', status: 'warning', message: 'Server offline or unreachable', lastChecked: new Date().toISOString() };
+  }
+}
+
 // Check MediaMTX/Streaming server
 async function checkStreaming(): Promise<ServiceStatus> {
   const start = Date.now();
@@ -208,16 +257,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const timestamp = new Date().toISOString();
 
   // Run all health checks in parallel
-  const [firebase, r2, stripe, streaming, livestream, stats] = await Promise.all([
+  const [firebase, r2, stripe, streaming, playlist, icecast, livestream, stats] = await Promise.all([
     checkFirebase(),
     checkR2(),
     checkStripe(),
     checkStreaming(),
+    checkPlaylist(),
+    checkIcecast(),
     getLivestreamInfo(),
     getQuickStats()
   ]);
 
-  const services = [firebase, r2, stripe, streaming];
+  const services = [firebase, r2, stripe, streaming, playlist, icecast];
 
   const response: HealthCheckResponse = {
     success: true,

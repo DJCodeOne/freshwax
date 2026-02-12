@@ -428,7 +428,7 @@ export const prerender = false;
 
     fetch('/api/admin/sync-merch-to-d1', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY }
     })
     .then(res => res.json())
     .then(data => {

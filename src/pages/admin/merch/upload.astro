@@ -419,7 +419,8 @@ export const prerender = false;
     };
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (window.getAdminToken) { try { await window.getAdminToken(); } catch(e) { return; } }
       loadSuppliers();
       setupEventListeners();
       updateTypeVisibility();

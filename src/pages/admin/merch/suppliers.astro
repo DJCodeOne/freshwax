@@ -266,7 +266,10 @@ export const prerender = false;
     let suppliers = [];
     let newSupplierCode = '';
 
-    document.addEventListener('DOMContentLoaded', loadSuppliers);
+    document.addEventListener('DOMContentLoaded', async () => {
+      if (window.getAdminToken) { try { await window.getAdminToken(); } catch(e) { return; } }
+      loadSuppliers();
+    });
 
     async function loadSuppliers() {
       try {
