@@ -8,6 +8,8 @@ import { saSetDocument, saGetDocument, saUpdateDocument } from '../../../lib/fir
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-utils';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
+import { recordSale } from '../../../lib/sales-ledger';
+import { initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -189,6 +191,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await saSetDocument(serviceAccountKey, projectId, 'orders', orderId, order);
 
     console.log('[admin] Order created:', orderId, orderNumber);
+
+    // Record to sales ledger (dual-write D1 + Firebase)
+    try {
+      initFirebaseEnv({
+        FIREBASE_PROJECT_ID: projectId,
+        FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+      });
+
+      await recordSale({
+        orderId,
+        orderNumber,
+        customerId: order.customerId,
+        customerEmail: order.customer.email,
+        customerName: `${order.customer.firstName} ${order.customer.lastName}`.trim(),
+        subtotal,
+        shipping,
+        grossTotal: total,
+        stripeFee,
+        freshWaxFee,
+        paymentMethod: 'manual',
+        paymentId: orderData.paymentIntentId || orderData.paypalOrderId || null,
+        items: processedItems,
+        hasPhysical: hasPhysicalItems,
+        hasDigital: processedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+        db: env?.DB,
+      });
+      console.log('[admin] Sales ledger entry created for:', orderNumber);
+    } catch (ledgerErr) {
+      console.error('[admin] Failed to record to sales ledger:', ledgerErr);
+      // Don't fail the order if ledger write fails
+    }
 
     // Send confirmation email
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;

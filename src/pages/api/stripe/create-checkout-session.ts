@@ -267,9 +267,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let vinylShippingTotal = 0;
     const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
 
-    // Merch shipping (platform default £4.99, free over £50 total)
+    // Merch shipping (platform default £4.99, free over £50 merch subtotal)
     if (hasMerchItems) {
-      merchShipping = validatedSubtotal >= 50 ? 0 : 4.99;
+      const merchSubtotal = validatedItems
+        .filter((item: any) => item.type === 'merch')
+        .reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+      merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
     }
 
     // Vinyl shipping (per-artist, based on release or artist defaults)

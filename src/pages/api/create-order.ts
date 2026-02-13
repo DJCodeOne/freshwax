@@ -39,6 +39,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
     let serverPrice = item.price;
     const itemType = item.type || 'digital';
     const quantity = item.quantity || 1;
+    const extraFields: Record<string, any> = {};
 
     try {
       if (itemType === 'merch' && item.productId) {
@@ -57,6 +58,8 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
               return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
             }
             serverPrice = listing.price || item.price;
+            // Pull shipping cost from listing for vinyl crates
+            extraFields.shippingCost = listing.shippingCost ?? null;
           }
         } else {
           const releaseId = item.releaseId || item.productId || item.id;
@@ -66,6 +69,23 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
               return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
             }
             serverPrice = release.vinylPrice || release.price || item.price;
+            // Pull server-side shipping rates from release
+            extraFields.serverVinylShippingUK = release.vinylShippingUK ?? null;
+            extraFields.serverVinylShippingEU = release.vinylShippingEU ?? null;
+            extraFields.serverVinylShippingIntl = release.vinylShippingIntl ?? null;
+            // Fetch artist-level shipping defaults as fallback
+            const artistId = item.artistId || release.artistId;
+            if (artistId) {
+              try {
+                const artist = await getDocument('artists', artistId);
+                if (artist) {
+                  extraFields.serverArtistShippingUK = artist.vinylShippingUK ?? null;
+                  extraFields.serverArtistShippingEU = artist.vinylShippingEU ?? null;
+                  extraFields.serverArtistShippingIntl = artist.vinylShippingIntl ?? null;
+                }
+              } catch { /* artist fetch failure is non-fatal, use defaults */ }
+              extraFields.artistId = artistId;
+            }
           }
         }
       } else if (itemType === 'track' && item.trackId) {
@@ -101,7 +121,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
       }
 
       serverSubtotal += serverPrice * quantity;
-      validatedItems.push({ ...item, price: serverPrice, originalClientPrice: item.price });
+      validatedItems.push({ ...item, price: serverPrice, originalClientPrice: item.price, ...extraFields });
     } catch (err) {
       console.error('[create-order] Error validating price for', item.name, err);
       // SECURITY: Reject items where price validation fails — never trust client price
@@ -230,19 +250,67 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Server-side shipping calculation — never trust client-submitted shipping
+    const hasMerchItems = pricedItems.some((item: any) => item.type === 'merch');
+    const hasVinylItems = pricedItems.some((item: any) => item.type === 'vinyl');
+    const customerCountry = orderData.shipping?.country || 'GB';
+    const isUK = customerCountry === 'GB' || customerCountry === 'United Kingdom' || customerCountry === 'UK';
+    const euCountries = ['DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU'];
+    const isEU = euCountries.includes(customerCountry);
+
+    let merchShipping = 0;
+    let vinylShippingTotal = 0;
+    const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
+
+    if (hasMerchItems) {
+      const merchSubtotal = pricedItems
+        .filter((item: any) => item.type === 'merch')
+        .reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+      merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
+    }
+
+    if (hasVinylItems) {
+      for (const item of pricedItems) {
+        if (item.type !== 'vinyl') continue;
+        const artistId = item.artistId;
+
+        if (item.sellerId && !item.releaseId) {
+          // Vinyl crates — seller shipping cost
+          vinylShippingTotal += item.shippingCost ?? 4.99;
+        } else if (artistId) {
+          // Per-artist vinyl shipping (one charge per artist)
+          if (!artistShippingBreakdown[artistId]) {
+            let shippingRate = 0;
+            if (isUK) {
+              shippingRate = item.serverVinylShippingUK ?? item.serverArtistShippingUK ?? 4.99;
+            } else if (isEU) {
+              shippingRate = item.serverVinylShippingEU ?? item.serverArtistShippingEU ?? 9.99;
+            } else {
+              shippingRate = item.serverVinylShippingIntl ?? item.serverArtistShippingIntl ?? 14.99;
+            }
+            artistShippingBreakdown[artistId] = {
+              artistId,
+              artistName: item.artist || item.artistName || 'Artist',
+              amount: shippingRate
+            };
+            vinylShippingTotal += shippingRate;
+          }
+        }
+      }
+    }
+
+    const serverShipping = Math.round((merchShipping + vinylShippingTotal) * 100) / 100;
+    const serverTotal = Math.round((serverSubtotal + serverShipping) * 100) / 100;
+
     // Reject if client total is significantly lower than server-calculated total
     const clientTotal = orderData.totals?.total || 0;
-    if (serverSubtotal > 0 && clientTotal < serverSubtotal * 0.95) {
-      console.error('[create-order] SECURITY: Client total', clientTotal, 'is below server subtotal', serverSubtotal);
+    if (serverTotal > 0 && clientTotal < serverTotal * 0.95) {
+      console.error('[create-order] SECURITY: Client total', clientTotal, 'is below server total', serverTotal, '(subtotal:', serverSubtotal, 'shipping:', serverShipping, ')');
       return new Response(JSON.stringify({
         success: false,
         error: 'Price validation failed. Please refresh and try again.'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-
-    // Use server-validated prices
-    const serverShipping = orderData.totals?.shipping || 0;
-    const serverTotal = Math.round((serverSubtotal + serverShipping) * 100) / 100;
 
     // Get download URLs for digital items
     const itemsWithDownloads = await Promise.all(pricedItems.map(async (item: any) => {
@@ -422,8 +490,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       totals: {
         subtotal: serverSubtotal,
         shipping: serverShipping,
+        merchShipping,
+        vinylShipping: vinylShippingTotal,
         total: serverTotal,
-        ...(hasMismatch ? { clientSubmittedTotal: clientTotal, priceValidated: true } : {})
+        ...(hasMismatch ? { clientSubmittedTotal: clientTotal, priceValidated: true } : {}),
+        ...(Object.keys(artistShippingBreakdown).length > 0 ? { artistShippingBreakdown } : {})
       },
       hasPhysicalItems: orderData.hasPhysicalItems,
       hasPreOrderItems,

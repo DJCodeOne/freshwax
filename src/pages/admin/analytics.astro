@@ -7,6 +7,7 @@ import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 // Get environment for service account
 
@@ -37,16 +38,26 @@ const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-// Fetch ledger entries (source of truth for revenue)
+// Fetch ledger entries (source of truth for revenue) - D1 primary, Firebase fallback
 let ledgerEntries: any[] = [];
 try {
-  if (serviceAccountKey) {
+  const db = env?.DB;
+  if (db) {
+    try {
+      ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
+      console.log(`[analytics] D1: ${ledgerEntries.length} ledger entries`);
+    } catch (d1Err) {
+      console.error('[analytics] D1 failed, falling back to Firebase:', d1Err);
+      ledgerEntries = [];
+    }
+  }
+  if (ledgerEntries.length === 0 && serviceAccountKey) {
     ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
       orderBy: { field: 'timestamp', direction: 'DESCENDING' },
       limit: 2000
     });
+    console.log(`[analytics] Firebase fallback: ${ledgerEntries.length} ledger entries`);
   }
-  console.log(`[analytics] Fetched ${ledgerEntries.length} ledger entries`);
 } catch (e) {
   console.error('Error fetching ledger:', e);
 }

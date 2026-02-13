@@ -256,7 +256,60 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const hasPhysicalItems = validatedItems.some((item: any) =>
       item.type === 'vinyl' || item.type === 'merch'
     );
-    const shipping = hasPhysicalItems ? (itemTotal >= 50 ? 0 : 4.99) : 0;
+    const hasMerchItems = validatedItems.some((item: any) => item.type === 'merch');
+    const hasVinylItems = validatedItems.some((item: any) => item.type === 'vinyl');
+
+    // Determine customer's shipping region
+    const customerCountry = orderData.shipping?.country || 'GB';
+    const isUK = customerCountry === 'GB' || customerCountry === 'United Kingdom' || customerCountry === 'UK';
+    const isEU = ['DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU'].includes(customerCountry);
+
+    // Calculate shipping - merch and vinyl separately (matching Stripe flow)
+    let merchShipping = 0;
+    let vinylShippingTotal = 0;
+    const artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> = {};
+
+    // Merch shipping: only count merch items toward free shipping threshold
+    if (hasMerchItems) {
+      const merchSubtotal = validatedItems
+        .filter((item: any) => item.type === 'merch')
+        .reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+      merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
+    }
+
+    // Vinyl shipping: per-artist rates based on customer region
+    if (hasVinylItems) {
+      for (const item of validatedItems) {
+        if (item.type !== 'vinyl') continue;
+        const artistId = item.artistId;
+        if (!artistId) continue;
+
+        // Determine rate based on customer region (using item data from price validation)
+        let shippingRate = 0;
+        if (item.isCratesItem) {
+          // Vinyl crates: use seller's shipping cost
+          shippingRate = item.cratesShippingCost || 4.99;
+        } else if (isUK) {
+          shippingRate = item.vinylShippingUK ?? item.artistVinylShippingUK ?? 4.99;
+        } else if (isEU) {
+          shippingRate = item.vinylShippingEU ?? item.artistVinylShippingEU ?? 9.99;
+        } else {
+          shippingRate = item.vinylShippingIntl ?? item.artistVinylShippingIntl ?? 14.99;
+        }
+
+        // Only charge shipping once per artist
+        if (!artistShippingBreakdown[artistId]) {
+          artistShippingBreakdown[artistId] = {
+            artistId,
+            artistName: item.artist || item.artistName || 'Artist',
+            amount: shippingRate
+          };
+          vinylShippingTotal += shippingRate;
+        }
+      }
+    }
+
+    const shipping = merchShipping + vinylShippingTotal;
 
     // Bandcamp-style: customer pays subtotal + shipping only
     // Fees are deducted from artist payout, not charged to customer
@@ -416,6 +469,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           appliedCredit: 0
         },
         hasPhysicalItems: hasPhysicalItems,
+        artistShippingBreakdown: Object.keys(artistShippingBreakdown).length > 0 ? artistShippingBreakdown : null,
         appliedCredit: 0,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hour expiry
