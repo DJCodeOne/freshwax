@@ -320,7 +320,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-nyop-min={nyopMinPrice}
             data-nyop-suggested={nyopSuggestedPrice}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            aria-label={`Buy ${releaseName} digital, name your own price`}
             class="nyop-open-modal w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-gradient-to-r from-gray-900 to-black hover:from-green-700 hover:to-green-800 text-white"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,7 +339,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            aria-label={`${isPreOrder ? 'Pre-order' : 'Add'} ${releaseName} digital EP to bag, ${digitalPrice.toFixed(2)} pounds`}
             class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-gray-900 hover:bg-black text-white'}`}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +373,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
           data-includes-digital="true"
           data-is-preorder={isPreOrder ? 'true' : 'false'}
           disabled={!vinylAvailable}
-          aria-label={vinylAvailable ? `${isPreOrder ? 'Pre-order' : 'Add'} ${releaseName} vinyl EP to bag, ${finalVinylPrice?.toFixed(2)} pounds` : `${releaseName} vinyl not available`}
           class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${
             vinylAvailable
               ? (isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white')
@@ -419,7 +416,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-artwork={coverArtUrl}
             data-includes-digital="true"
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            aria-label={`Add ${releaseName} vinyl plus digital to bag, ${finalVinylPrice?.toFixed(2)} pounds`}
             class="add-to-cart w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-red-600 hover:bg-red-700 text-white"
           >
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -637,7 +633,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                 </p>
                 {finalTrackPrice > 0 && !nyopEnabled && (
                   <button
-                    class="buy-track flex-shrink-0 text-sm font-bold text-white bg-green-600 hover:bg-green-700 transition-all px-3 py-1 rounded font-body"
+                    class="buy-track flex-shrink-0 text-sm font-bold text-white bg-green-700 hover:bg-green-800 transition-all px-3 py-1 rounded font-body"
                     data-track-id={track.id}
                     data-track-title={track.title}
                     data-track-price={finalTrackPrice}
@@ -2164,11 +2160,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
       
       var originalHTML = button.innerHTML;
       button.innerHTML = '<span>✓ Added!</span>';
-      button.classList.add('bg-green-600');
+      button.classList.add('bg-green-700');
       
       setTimeout(function() {
         button.innerHTML = originalHTML;
-        button.classList.remove('bg-green-600');
+        button.classList.remove('bg-green-700');
       }, 1500);
     });
 
@@ -2272,11 +2268,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
       
       var originalHTML = button.innerHTML;
       button.innerHTML = '✓';
-      button.classList.add('bg-green-600');
+      button.classList.add('bg-green-700');
       
       setTimeout(function() {
         button.innerHTML = originalHTML;
-        button.classList.remove('bg-green-600');
+        button.classList.remove('bg-green-700');
       }, 1500);
     });
   }
