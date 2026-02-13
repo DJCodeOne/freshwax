@@ -99,10 +99,14 @@ export const prerender = false;
                 {index > 2 && <span class="rank-number">{index + 1}</span>}
               </div>
               
-              <img 
-                src={mix.artworkUrl || mix.artwork_url || '/place-holder.webp'} 
-                alt={mix.title || mix.mixTitle}
+              <img
+                src={mix.artworkUrl || mix.artwork_url || '/place-holder.webp'}
+                alt={`${mix.title || mix.mixTitle} by ${mix.djName || mix.dj_name}`}
                 class="artwork"
+                width="80"
+                height="80"
+                loading="lazy"
+                decoding="async"
               />
               
               <div class="mix-info">

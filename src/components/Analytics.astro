@@ -1,7 +1,7 @@
 ---
 // src/components/Analytics.astro
 // Google Analytics 4 + additional tracking for Fresh Wax
-// Place this in your Layout.astro <head> section
+// Consent-gated: GA4 only loads after user accepts cookies (UK GDPR/PECR)
 
 interface Props {
   // Your Google Analytics 4 Measurement ID (format: G-XXXXXXXXXX)
@@ -15,291 +15,308 @@ interface Props {
 }
 
 const {
-  ga4Id = '', // Add your GA4 ID here: 'G-XXXXXXXXXX'
-  gtmId = '', // Add your GTM ID here if using Tag Manager
+  ga4Id = '',
+  gtmId = '',
   ecommerce = true,
   debug = import.meta.env.DEV
 } = Astro.props;
 
-// Only render analytics in production (or if debug is enabled)
-const shouldRender = ga4Id && (import.meta.env.PROD || debug);
+const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
 ---
 
 {shouldRender && (
   <>
-    <!-- Google Analytics 4 -->
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${ga4Id}`}></script>
-    <script define:vars={{ ga4Id, ecommerce, debug }}>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      
-      // Base configuration with privacy settings
-      gtag('config', ga4Id, {
-        'anonymize_ip': true,
-        'cookie_flags': 'SameSite=None;Secure',
-        'send_page_view': true,
-        // Enhanced measurement (scrolling, outbound clicks, etc.)
-        'enhanced_measurement': true,
-        // Debug mode
-        'debug_mode': debug,
-        // Custom dimensions for music site
-        'custom_map': {
-          'dimension1': 'user_type',
-          'dimension2': 'genre',
-          'dimension3': 'artist',
-          'dimension4': 'release_format'
-        }
-      });
+    <!-- GA4 consent-gated loader -->
+    <script define:vars={{ ga4Id, ecommerce, debug, gtmId }}>
+      // Only initialize analytics if user has consented
+      function initAnalytics() {
+        if (window._analyticsInitialized) return;
+        window._analyticsInitialized = true;
 
-      // Enhanced E-commerce setup
-      if (ecommerce) {
-        gtag('set', 'linker', {
-          'domains': ['freshwax.co.uk']
-        });
-      }
+        // Load gtag.js
+        const script = document.createElement('script');
+        script.async = true;
+        script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`;
+        document.head.appendChild(script);
 
-      // ============================================
-      // FRESH WAX CUSTOM EVENT TRACKING
-      // ============================================
-      
-      // Helper function for tracking events
-      window.trackEvent = function(eventName, parameters = {}) {
-        if (typeof gtag === 'function') {
-          gtag('event', eventName, parameters);
-        }
-      };
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        window.gtag = gtag;
+        gtag('js', new Date());
 
-      // Track audio play events (for DJ mixes)
-      window.trackAudioPlay = function(mixId, mixTitle, djName, duration) {
-        trackEvent('audio_play', {
-          'event_category': 'DJ Mix',
-          'event_label': mixTitle,
-          'mix_id': mixId,
-          'dj_name': djName,
-          'duration': duration,
-          'content_type': 'dj_mix'
-        });
-      };
-
-      // Track audio complete events
-      window.trackAudioComplete = function(mixId, mixTitle, djName) {
-        trackEvent('audio_complete', {
-          'event_category': 'DJ Mix',
-          'event_label': mixTitle,
-          'mix_id': mixId,
-          'dj_name': djName
-        });
-      };
-
-      // Track release preview plays
-      window.trackPreviewPlay = function(releaseId, releaseTitle, artist, trackName) {
-        trackEvent('preview_play', {
-          'event_category': 'Release Preview',
-          'event_label': releaseTitle,
-          'release_id': releaseId,
-          'artist': artist,
-          'track_name': trackName
-        });
-      };
-
-      // Track add to cart
-      window.trackAddToCart = function(itemId, itemName, price, itemType, quantity = 1) {
-        trackEvent('add_to_cart', {
-          'currency': 'GBP',
-          'value': price * quantity,
-          'items': [{
-            'item_id': itemId,
-            'item_name': itemName,
-            'price': price,
-            'quantity': quantity,
-            'item_category': itemType // 'vinyl', 'digital', 'merch'
-          }]
-        });
-      };
-
-      // Track remove from cart
-      window.trackRemoveFromCart = function(itemId, itemName, price, quantity = 1) {
-        trackEvent('remove_from_cart', {
-          'currency': 'GBP',
-          'value': price * quantity,
-          'items': [{
-            'item_id': itemId,
-            'item_name': itemName,
-            'price': price,
-            'quantity': quantity
-          }]
-        });
-      };
-
-      // Track view item (product page)
-      window.trackViewItem = function(itemId, itemName, price, itemType, artist = null) {
-        trackEvent('view_item', {
-          'currency': 'GBP',
-          'value': price,
-          'items': [{
-            'item_id': itemId,
-            'item_name': itemName,
-            'price': price,
-            'item_category': itemType,
-            'item_brand': artist || 'Fresh Wax'
-          }]
-        });
-      };
-
-      // Track begin checkout
-      window.trackBeginCheckout = function(cartItems, totalValue) {
-        trackEvent('begin_checkout', {
-          'currency': 'GBP',
-          'value': totalValue,
-          'items': cartItems.map(item => ({
-            'item_id': item.id,
-            'item_name': item.name,
-            'price': item.price,
-            'quantity': item.quantity
-          }))
-        });
-      };
-
-      // Track purchase
-      window.trackPurchase = function(orderId, totalValue, items, shipping = 0) {
-        trackEvent('purchase', {
-          'transaction_id': orderId,
-          'currency': 'GBP',
-          'value': totalValue,
-          'shipping': shipping,
-          'items': items.map(item => ({
-            'item_id': item.id,
-            'item_name': item.name,
-            'price': item.price,
-            'quantity': item.quantity
-          }))
-        });
-      };
-
-      // Track live stream engagement
-      window.trackLiveStreamJoin = function(streamId, djName) {
-        trackEvent('live_stream_join', {
-          'event_category': 'Live Stream',
-          'event_label': djName,
-          'stream_id': streamId
-        });
-      };
-
-      // Track live stream chat messages
-      window.trackLiveStreamChat = function(streamId) {
-        trackEvent('live_stream_chat', {
-          'event_category': 'Live Stream',
-          'stream_id': streamId
-        });
-      };
-
-      // Track newsletter signup
-      window.trackNewsletterSignup = function(location) {
-        trackEvent('newsletter_signup', {
-          'event_category': 'Engagement',
-          'event_label': location
-        });
-      };
-
-      // Track search
-      window.trackSearch = function(searchTerm, resultsCount) {
-        trackEvent('search', {
-          'search_term': searchTerm,
-          'results_count': resultsCount
-        });
-      };
-
-      // Track filter usage
-      window.trackFilter = function(filterType, filterValue) {
-        trackEvent('filter_use', {
-          'event_category': 'Navigation',
-          'filter_type': filterType,
-          'filter_value': filterValue
-        });
-      };
-
-      // Track downloads (for digital purchases)
-      window.trackDownload = function(releaseId, releaseTitle, format) {
-        trackEvent('download', {
-          'event_category': 'Downloads',
-          'event_label': releaseTitle,
-          'release_id': releaseId,
-          'format': format
-        });
-      };
-
-      // Track external link clicks
-      document.addEventListener('click', function(e) {
-        const link = e.target.closest('a');
-        if (link && link.href && !link.href.includes('freshwax.co.uk')) {
-          trackEvent('outbound_click', {
-            'event_category': 'Outbound Links',
-            'event_label': link.href
-          });
-        }
-      });
-
-      // Track scroll depth
-      let scrollDepthTracked = {};
-      window.addEventListener('scroll', function() {
-        const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
-        const milestones = [25, 50, 75, 90, 100];
-        
-        milestones.forEach(milestone => {
-          if (scrollPercent >= milestone && !scrollDepthTracked[milestone]) {
-            scrollDepthTracked[milestone] = true;
-            trackEvent('scroll_depth', {
-              'event_category': 'Engagement',
-              'event_label': milestone + '%',
-              'value': milestone
-            });
+        // Base configuration with privacy settings
+        gtag('config', ga4Id, {
+          'anonymize_ip': true,
+          'cookie_flags': 'SameSite=None;Secure',
+          'send_page_view': true,
+          'enhanced_measurement': true,
+          'debug_mode': debug,
+          'custom_map': {
+            'dimension1': 'user_type',
+            'dimension2': 'genre',
+            'dimension3': 'artist',
+            'dimension4': 'release_format'
           }
         });
-      });
 
-      // Track time on page
-      let timeOnPage = 0;
-      setInterval(function() {
-        timeOnPage += 30;
-        if (timeOnPage === 30 || timeOnPage === 60 || timeOnPage === 180 || timeOnPage === 300) {
-          trackEvent('time_on_page', {
-            'event_category': 'Engagement',
-            'event_label': timeOnPage + ' seconds',
-            'value': timeOnPage
+        // Enhanced E-commerce setup
+        if (ecommerce) {
+          gtag('set', 'linker', {
+            'domains': ['freshwax.co.uk']
           });
         }
-      }, 30000);
 
-      // Console log for debugging
-      if (debug) {
-        console.log('[Analytics] GA4 initialized:', ga4Id);
-      }
-    </script>
-
-    <!-- Google Tag Manager (if ID provided) -->
-    {gtmId && (
-      <>
-        <script define:vars={{ gtmId }}>
+        // Load GTM if configured
+        if (gtmId) {
           (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
           j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer',gtmId);
-        </script>
-      </>
-    )}
+        }
 
-    <!-- Web Vitals Tracking -->
+        // Setup tracking helpers
+        setupTrackingHelpers();
+
+        if (debug) {
+          console.log('[Analytics] GA4 initialized with consent:', ga4Id);
+        }
+      }
+
+      function setupTrackingHelpers() {
+        window.trackEvent = function(eventName, parameters = {}) {
+          if (typeof window.gtag === 'function') {
+            window.gtag('event', eventName, parameters);
+          }
+        };
+
+        window.trackAudioPlay = function(mixId, mixTitle, djName, duration) {
+          window.trackEvent('audio_play', {
+            'event_category': 'DJ Mix',
+            'event_label': mixTitle,
+            'mix_id': mixId,
+            'dj_name': djName,
+            'duration': duration,
+            'content_type': 'dj_mix'
+          });
+        };
+
+        window.trackAudioComplete = function(mixId, mixTitle, djName) {
+          window.trackEvent('audio_complete', {
+            'event_category': 'DJ Mix',
+            'event_label': mixTitle,
+            'mix_id': mixId,
+            'dj_name': djName
+          });
+        };
+
+        window.trackPreviewPlay = function(releaseId, releaseTitle, artist, trackName) {
+          window.trackEvent('preview_play', {
+            'event_category': 'Release Preview',
+            'event_label': releaseTitle,
+            'release_id': releaseId,
+            'artist': artist,
+            'track_name': trackName
+          });
+        };
+
+        window.trackAddToCart = function(itemId, itemName, price, itemType, quantity = 1) {
+          window.trackEvent('add_to_cart', {
+            'currency': 'GBP',
+            'value': price * quantity,
+            'items': [{
+              'item_id': itemId,
+              'item_name': itemName,
+              'price': price,
+              'quantity': quantity,
+              'item_category': itemType
+            }]
+          });
+        };
+
+        window.trackRemoveFromCart = function(itemId, itemName, price, quantity = 1) {
+          window.trackEvent('remove_from_cart', {
+            'currency': 'GBP',
+            'value': price * quantity,
+            'items': [{
+              'item_id': itemId,
+              'item_name': itemName,
+              'price': price,
+              'quantity': quantity
+            }]
+          });
+        };
+
+        window.trackViewItem = function(itemId, itemName, price, itemType, artist = null) {
+          window.trackEvent('view_item', {
+            'currency': 'GBP',
+            'value': price,
+            'items': [{
+              'item_id': itemId,
+              'item_name': itemName,
+              'price': price,
+              'item_category': itemType,
+              'item_brand': artist || 'Fresh Wax'
+            }]
+          });
+        };
+
+        window.trackBeginCheckout = function(cartItems, totalValue) {
+          window.trackEvent('begin_checkout', {
+            'currency': 'GBP',
+            'value': totalValue,
+            'items': cartItems.map(item => ({
+              'item_id': item.id,
+              'item_name': item.name,
+              'price': item.price,
+              'quantity': item.quantity
+            }))
+          });
+        };
+
+        window.trackPurchase = function(orderId, totalValue, items, shipping = 0) {
+          window.trackEvent('purchase', {
+            'transaction_id': orderId,
+            'currency': 'GBP',
+            'value': totalValue,
+            'shipping': shipping,
+            'items': items.map(item => ({
+              'item_id': item.id,
+              'item_name': item.name,
+              'price': item.price,
+              'quantity': item.quantity
+            }))
+          });
+        };
+
+        window.trackLiveStreamJoin = function(streamId, djName) {
+          window.trackEvent('live_stream_join', {
+            'event_category': 'Live Stream',
+            'event_label': djName,
+            'stream_id': streamId
+          });
+        };
+
+        window.trackLiveStreamChat = function(streamId) {
+          window.trackEvent('live_stream_chat', {
+            'event_category': 'Live Stream',
+            'stream_id': streamId
+          });
+        };
+
+        window.trackNewsletterSignup = function(location) {
+          window.trackEvent('newsletter_signup', {
+            'event_category': 'Engagement',
+            'event_label': location
+          });
+        };
+
+        window.trackSearch = function(searchTerm, resultsCount) {
+          window.trackEvent('search', {
+            'search_term': searchTerm,
+            'results_count': resultsCount
+          });
+        };
+
+        window.trackFilter = function(filterType, filterValue) {
+          window.trackEvent('filter_use', {
+            'event_category': 'Navigation',
+            'filter_type': filterType,
+            'filter_value': filterValue
+          });
+        };
+
+        window.trackDownload = function(releaseId, releaseTitle, format) {
+          window.trackEvent('download', {
+            'event_category': 'Downloads',
+            'event_label': releaseTitle,
+            'release_id': releaseId,
+            'format': format
+          });
+        };
+
+        // Track external link clicks
+        document.addEventListener('click', function(e) {
+          const link = e.target.closest('a');
+          if (link && link.href && !link.href.includes('freshwax.co.uk')) {
+            window.trackEvent('outbound_click', {
+              'event_category': 'Outbound Links',
+              'event_label': link.href
+            });
+          }
+        });
+
+        // Track scroll depth
+        let scrollDepthTracked = {};
+        window.addEventListener('scroll', function() {
+          const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+          const milestones = [25, 50, 75, 90, 100];
+
+          milestones.forEach(milestone => {
+            if (scrollPercent >= milestone && !scrollDepthTracked[milestone]) {
+              scrollDepthTracked[milestone] = true;
+              window.trackEvent('scroll_depth', {
+                'event_category': 'Engagement',
+                'event_label': milestone + '%',
+                'value': milestone
+              });
+            }
+          });
+        });
+
+        // Track time on page
+        let timeOnPage = 0;
+        setInterval(function() {
+          timeOnPage += 30;
+          if (timeOnPage === 30 || timeOnPage === 60 || timeOnPage === 180 || timeOnPage === 300) {
+            window.trackEvent('time_on_page', {
+              'event_category': 'Engagement',
+              'event_label': timeOnPage + ' seconds',
+              'value': timeOnPage
+            });
+          }
+        }, 30000);
+      }
+
+      // No-op tracking helpers when analytics not consented
+      // These prevent errors in code that calls trackEvent before consent
+      if (!window.trackEvent) {
+        window.trackEvent = function() {};
+        window.trackAudioPlay = function() {};
+        window.trackAudioComplete = function() {};
+        window.trackPreviewPlay = function() {};
+        window.trackAddToCart = function() {};
+        window.trackRemoveFromCart = function() {};
+        window.trackViewItem = function() {};
+        window.trackBeginCheckout = function() {};
+        window.trackPurchase = function() {};
+        window.trackLiveStreamJoin = function() {};
+        window.trackLiveStreamChat = function() {};
+        window.trackNewsletterSignup = function() {};
+        window.trackSearch = function() {};
+        window.trackFilter = function() {};
+        window.trackDownload = function() {};
+      }
+
+      // Check consent and initialize if already accepted
+      if (localStorage.getItem('cookie-consent') === 'accepted') {
+        initAnalytics();
+      }
+
+      // Listen for consent events from cookie banner
+      window.addEventListener('cookie-consent-granted', function() {
+        initAnalytics();
+      });
+    </script>
+
+    <!-- Web Vitals Tracking (consent-gated via gtag check) -->
     <script>
-      // Track Core Web Vitals
-      if ('web-vital' in window || typeof PerformanceObserver !== 'undefined') {
+      if (typeof PerformanceObserver !== 'undefined') {
         try {
-          // LCP - Largest Contentful Paint
           new PerformanceObserver((entryList) => {
             for (const entry of entryList.getEntries()) {
-              if (typeof gtag === 'function') {
-                gtag('event', 'web_vitals', {
+              if (typeof window.gtag === 'function') {
+                window.gtag('event', 'web_vitals', {
                   'event_category': 'Web Vitals',
                   'event_label': 'LCP',
                   'value': Math.round(entry.startTime),
@@ -309,11 +326,10 @@ const shouldRender = ga4Id && (import.meta.env.PROD || debug);
             }
           }).observe({ type: 'largest-contentful-paint', buffered: true });
 
-          // FID - First Input Delay
           new PerformanceObserver((entryList) => {
             for (const entry of entryList.getEntries()) {
-              if (typeof gtag === 'function') {
-                gtag('event', 'web_vitals', {
+              if (typeof window.gtag === 'function') {
+                window.gtag('event', 'web_vitals', {
                   'event_category': 'Web Vitals',
                   'event_label': 'FID',
                   'value': Math.round(entry.processingStart - entry.startTime),
@@ -323,7 +339,6 @@ const shouldRender = ga4Id && (import.meta.env.PROD || debug);
             }
           }).observe({ type: 'first-input', buffered: true });
 
-          // CLS - Cumulative Layout Shift
           let clsValue = 0;
           new PerformanceObserver((entryList) => {
             for (const entry of entryList.getEntries()) {
@@ -333,10 +348,9 @@ const shouldRender = ga4Id && (import.meta.env.PROD || debug);
             }
           }).observe({ type: 'layout-shift', buffered: true });
 
-          // Report CLS on page hide
           document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && typeof gtag === 'function') {
-              gtag('event', 'web_vitals', {
+            if (document.visibilityState === 'hidden' && typeof window.gtag === 'function') {
+              window.gtag('event', 'web_vitals', {
                 'event_category': 'Web Vitals',
                 'event_label': 'CLS',
                 'value': Math.round(clsValue * 1000),
@@ -344,21 +358,19 @@ const shouldRender = ga4Id && (import.meta.env.PROD || debug);
               });
             }
           });
-        } catch (e) {
-          console.warn('[Analytics] Web Vitals tracking failed:', e);
-        }
+        } catch (e) {}
       }
     </script>
   </>
 )}
 
-<!-- GTM noscript fallback (place after opening <body> tag) -->
+<!-- GTM noscript fallback -->
 {gtmId && shouldRender && (
   <noscript>
-    <iframe 
+    <iframe
       src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-      height="0" 
-      width="0" 
+      height="0"
+      width="0"
       style="display:none;visibility:hidden">
     </iframe>
   </noscript>

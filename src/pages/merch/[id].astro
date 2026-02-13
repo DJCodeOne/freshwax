@@ -69,11 +69,15 @@ export const prerender = false;
           <!-- Large Zoomable Image -->
           <div class="image-area" id="imageArea">
             {product.imageUrl ? (
-              <img 
-                src={product.imageUrl} 
-                alt={product.name} 
+              <img
+                src={product.imageUrl}
+                alt={product.name}
                 id="mainImage"
                 class="zoomable"
+                width="700"
+                height="700"
+                fetchpriority="high"
+                decoding="async"
               />
             ) : (
               <div class="placeholder">👕</div>
@@ -89,7 +93,7 @@ export const prerender = false;
                   class={`thumb ${i === 0 ? 'active' : ''}`}
                   data-image={img}
                 >
-                  <img src={img} alt={`View ${i + 1}`} />
+                  <img src={img} alt={`${product.name} - View ${i + 1}`} width="42" height="42" loading="lazy" decoding="async" />
                 </button>
               ))}
             </div>

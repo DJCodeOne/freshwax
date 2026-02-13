@@ -7,14 +7,16 @@
 </div>
 
 <!-- Mini Player (sticky bottom) -->
-<div 
-  id="mini-player" 
+<div
+  id="mini-player"
   class="fixed bottom-0 left-0 right-0 z-50 translate-y-full transition-[translate] duration-300 ease-out"
   transition:persist="mini-player"
+  role="region"
+  aria-label="Audio player"
 >
   <div class="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t-2 border-red-600 shadow-2xl backdrop-blur-sm">
     <!-- Progress bar (clickable + draggable) -->
-    <div id="mini-progress-container" class="h-2 bg-gray-700 cursor-pointer group relative overflow-visible hover:h-3 transition-all duration-150">
+    <div id="mini-progress-container" class="h-2 bg-gray-700 cursor-pointer group relative overflow-visible hover:h-3 transition-all duration-150" role="slider" aria-label="Seek position" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
       <div class="absolute inset-0 bg-gradient-to-r from-red-600/20 to-red-500/20 animate-pulse"></div>
       <div id="mini-progress-bar" class="h-full bg-gradient-to-r from-red-600 via-red-500 to-red-600 relative z-10 shadow-lg shadow-red-500/50 pointer-events-none" style="width: 0%">
         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
@@ -43,7 +45,7 @@
         <!-- Artwork + Track Info - FIXED WIDTH -->
         <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-[180px] sm:w-[280px]">
           <!-- Artwork -->
-          <a id="mini-artwork-link" href="#" class="flex-shrink-0 relative group">
+          <a id="mini-artwork-link" href="#" class="flex-shrink-0 relative group" aria-label="View release details">
             <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
             <img 
               id="mini-artwork" 
@@ -54,10 +56,12 @@
           </a>
           
           <!-- Track Info - Fixed width container -->
-          <a id="mini-info-link" href="#" class="group flex-1 min-w-0 overflow-hidden">
+          <a id="mini-info-link" href="#" class="group flex-1 min-w-0 overflow-hidden" aria-label="Now playing track info">
             <p id="mini-title" class="text-white font-black text-xs sm:text-sm uppercase truncate group-hover:text-red-500 transition-colors">No track loaded</p>
             <p id="mini-dj" class="text-gray-400 font-bold text-[10px] sm:text-xs uppercase truncate">--</p>
           </a>
+          <!-- ARIA live region for screen reader announcements of track changes -->
+          <div id="mini-player-live" aria-live="polite" aria-atomic="true" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;"></div>
         </div>
         
         <!-- CENTER: Controls - Fixed positioning -->
@@ -873,6 +877,9 @@
         if (titleEl) titleEl.textContent = displayTitle;
         if (djEl) djEl.textContent = trackArtist;
         if (artworkEl) artworkEl.src = trackArtwork;
+        // Announce track change to screen readers
+        var liveRegion = document.getElementById('mini-player-live');
+        if (liveRegion) liveRegion.textContent = 'Now playing: ' + trackTitle + ' by ' + trackArtist;
         
         var releaseUrl = trackReleaseId ? '/item/' + trackReleaseId : '#';
         if (artworkLink) artworkLink.href = releaseUrl;
@@ -1041,6 +1048,9 @@
           }
           if (djEl) djEl.textContent = mixData.dj_name || 'Unknown DJ';
           if (artworkEl) artworkEl.src = mixData.artwork_url || '/place-holder.webp';
+          // Announce DJ mix to screen readers
+          var liveRegion = document.getElementById('mini-player-live');
+          if (liveRegion) liveRegion.textContent = 'Now playing: ' + (mixData.title || 'Unknown Mix') + ' by ' + (mixData.dj_name || 'Unknown DJ');
           if (artworkLink) artworkLink.href = '/dj-mix/' + mixData.id;
           if (infoLink) infoLink.href = '/dj-mix/' + mixData.id;
           

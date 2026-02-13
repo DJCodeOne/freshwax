@@ -293,6 +293,10 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   src={coverArtUrl}
                   alt={`${releaseName} by ${artistName}`}
                   class="w-full border-2 md:border-4 border-white shadow-2xl mb-4 md:mb-6"
+                  width="600"
+                  height="600"
+                  fetchpriority="high"
+                  decoding="async"
                   onerror="this.src='/place-holder.webp'"
                 />
                 {hasSale && (
@@ -418,10 +422,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   <div class="text-white font-black text-sm md:text-base uppercase tracking-wide mb-2 md:mb-3 border-b-2 border-red-600 pb-2">Additional Artwork</div>
                   <div class="grid grid-cols-2 gap-2">
                     {additionalArtwork.slice(0, 4).map((img) => (
-                      <img 
-                        src={img} 
+                      <img
+                        src={img}
                         alt={`${releaseName} additional artwork`}
                         class="w-full aspect-square object-cover border-2 border-white shadow-lg cursor-pointer hover:border-red-600 transition-colors"
+                        width="300"
+                        height="300"
+                        loading="lazy"
+                        decoding="async"
                         onerror="this.src='/place-holder.webp'"
                       />
                     ))}
@@ -764,7 +772,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                 
                 <!-- GIF Preview -->
                 <div id="gif-preview-container" class="hidden mb-3 relative">
-                  <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-blue-500">
+                  <img id="gif-preview" src="" alt="Selected GIF" class="max-h-24 rounded border-2 border-blue-500" decoding="async">
                   <button type="button" id="remove-gif-btn" class="absolute -top-2 -right-2 w-6 h-6 bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold hover:bg-red-700">×</button>
                 </div>
                 
@@ -801,7 +809,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                       <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">
                           {comment.avatarUrl ? (
-                            <img src={comment.avatarUrl} alt="" class="w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
+                            <img src={comment.avatarUrl} alt="" class="w-full h-full object-cover" width="40" height="40" loading="lazy" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" />
                             <span class="text-white font-bold text-base" style="display:none;">
                               {(comment.userName || comment.username || 'A').charAt(0).toUpperCase()}
                             </span>
@@ -814,7 +822,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                         <div class="flex-1 min-w-0 pt-1">
                           <span class="text-white text-sm uppercase block mb-1">{comment.userName || comment.username || 'Anonymous'}</span>
                           {(comment.comment || comment.text) && <p class="text-gray-100 text-base md:text-lg leading-relaxed break-words">{comment.comment || comment.text}</p>}
-                          {comment.gifUrl && <img src={comment.gifUrl} alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" />}
+                          {comment.gifUrl && <img src={comment.gifUrl} alt="Comment GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" decoding="async" />}
                         </div>
                       </div>
                     </div>
@@ -903,7 +911,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
       <!-- Release Preview Card -->
       <div class="p-4">
         <div class="flex gap-4 p-3 bg-white/5 rounded-xl border border-white/10 mb-5">
-          <img id="share-modal-artwork" src="/place-holder.webp" alt="Release artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" />
+          <img id="share-modal-artwork" src="/place-holder.webp" alt="Release artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" width="96" height="96" loading="lazy" decoding="async" />
           <div class="flex-1 min-w-0">
             <div class="text-base sm:text-lg font-bold text-white break-words line-clamp-2" id="share-modal-title"></div>
             <div class="text-sm text-gray-400 mt-1">by <span class="font-semibold text-red-500" id="share-modal-artist"></span></div>
@@ -2206,7 +2214,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     </button>
 
     <div class="text-center mb-6">
-      <img id="nyop-modal-artwork-item" src="/place-holder.webp" alt="" class="w-24 h-24 mx-auto rounded-lg mb-3 object-cover" />
+      <img id="nyop-modal-artwork-item" src="/place-holder.webp" alt="Release artwork" class="w-24 h-24 mx-auto rounded-lg mb-3 object-cover" width="96" height="96" loading="lazy" decoding="async" />
       <h3 id="nyop-modal-title-item" class="text-lg font-bold text-white"></h3>
       <p id="nyop-modal-artist-item" class="text-sm text-gray-400"></p>
     </div>

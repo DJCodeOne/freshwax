@@ -156,10 +156,14 @@ export const prerender = false;
                   <div class="mix-rank">#{index + 1}</div>
                   
                   <div class="mix-info">
-                    <img 
-                      src={mix.artworkUrl || mix.artwork_url || '/place-holder.webp'} 
-                      alt={mix.title || mix.mixTitle}
+                    <img
+                      src={mix.artworkUrl || mix.artwork_url || '/place-holder.webp'}
+                      alt={`${mix.title || mix.mixTitle} artwork`}
                       class="mix-artwork"
+                      width="64"
+                      height="64"
+                      loading="lazy"
+                      decoding="async"
                     />
                     <div class="mix-details">
                       <h3>{mix.title || mix.mixTitle}</h3>

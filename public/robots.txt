@@ -35,4 +35,4 @@ Disallow: /*?page=
 Disallow: /*?_t=
 
 # Sitemap location
-Sitemap: https://freshwax.co.uk/sitemap.xml
+Sitemap: https://freshwax.co.uk/sitemap-index.xml

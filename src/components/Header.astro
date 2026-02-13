@@ -13,7 +13,7 @@ const firebaseConfig = {
 };
 ---
 
-<header id="freshwax-header">
+<header id="freshwax-header" role="banner">
   <div class="fwx-header-inner">
     
     <!-- Mobile Layout -->
@@ -27,21 +27,21 @@ const firebaseConfig = {
 
         <div class="fwx-mobile-right">
           <!-- Mobile LIVE Button -->
-          <a href="/live" id="liveButtonMobile" class="live-button fwx-live-btn" data-astro-reload>
+          <a href="/live" id="liveButtonMobile" class="live-button fwx-live-btn" data-astro-reload aria-label="Live stream">
             <span class="live-dot"></span>
             <span class="live-text">LIVE</span>
           </a>
 
-          <a href="/cart" class="fwx-cart-btn">
-            <svg class="fwx-cart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <a href="/cart" class="fwx-cart-btn" aria-label="Shopping bag">
+            <svg class="fwx-cart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
             <span class="fwx-cart-text">Bag</span>
-            <span id="cart-count-mobile" class="fwx-cart-count fwx-hidden">0</span>
+            <span id="cart-count-mobile" class="fwx-cart-count fwx-hidden" aria-label="items in bag">0</span>
           </a>
 
           <!-- Burger Menu Button -->
-          <button id="burgerMenuBtn" class="fwx-burger-btn" aria-label="Open menu">
+          <button id="burgerMenuBtn" class="fwx-burger-btn" aria-label="Open menu" aria-expanded="false" aria-controls="mobileMenu">
             <svg class="fwx-burger-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
@@ -61,6 +61,7 @@ const firebaseConfig = {
           placeholder="Search releases, artists, merch..."
           class="fwx-search-input"
           autocomplete="off"
+          aria-label="Search releases, artists, and merchandise"
         />
         <!-- Mobile Search Results Dropdown -->
         <div id="search-results-mobile" class="fwx-search-results fwx-hidden">
@@ -105,7 +106,7 @@ const firebaseConfig = {
         <div class="fwx-menu-divider"></div>
 
         <!-- Navigation Links -->
-        <nav class="fwx-menu-nav">
+        <nav class="fwx-menu-nav" aria-label="Mobile menu navigation">
           <a href="/releases" class="fwx-menu-link">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -170,6 +171,7 @@ const firebaseConfig = {
           placeholder="Search releases, artists, merch..."
           class="fwx-search-input"
           autocomplete="off"
+          aria-label="Search releases, artists, and merchandise"
         />
         <!-- Search Results Dropdown -->
         <div id="search-results" class="fwx-search-results fwx-hidden">
@@ -178,7 +180,7 @@ const firebaseConfig = {
       </div>
       
       <!-- Center section: Navigation tabs -->
-      <div class="fwx-nav">
+      <nav class="fwx-nav" aria-label="Main navigation">
         <a href="/releases" class="fwx-nav-btn">
           <svg class="fwx-nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -214,11 +216,11 @@ const firebaseConfig = {
           </svg>
           Blog
         </a>
-      </div>
+      </nav>
 
       <!-- Account Dropdown (centered between nav and bag) -->
       <div class="account-dropdown fwx-account">
-        <button class="account-button fwx-account-btn">
+        <button class="account-button fwx-account-btn" aria-label="Account menu" aria-expanded="false">
           <div class="account-avatar fwx-avatar">
             <svg class="account-avatar-icon fwx-avatar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -244,16 +246,16 @@ const firebaseConfig = {
       </div>
 
       <!-- Bag -->
-      <a href="/cart" class="fwx-cart-btn fwx-cart-black">
-        <svg class="fwx-cart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <a href="/cart" class="fwx-cart-btn fwx-cart-black" aria-label="Shopping bag">
+        <svg class="fwx-cart-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
         </svg>
         Bag
-        <span id="cart-count" class="fwx-cart-count fwx-hidden">0</span>
+        <span id="cart-count" class="fwx-cart-count fwx-hidden" aria-label="items in bag">0</span>
       </a>
 
       <!-- LIVE Button -->
-      <a href="/live" id="liveButton" class="live-button fwx-live-btn" data-astro-reload>
+      <a href="/live" id="liveButton" class="live-button fwx-live-btn" data-astro-reload aria-label="Live stream">
         <span class="live-dot"></span>
         <span class="live-text">LIVE</span>
       </a>
@@ -273,7 +275,7 @@ const firebaseConfig = {
 <div id="google_translate_element" style="position:fixed;top:-9999px;left:-9999px;opacity:0;"></div>
 
 <!-- Mobile Bottom Navigation -->
-<nav id="fwx-mobile-nav" class="fwx-bottom-nav">
+<nav id="fwx-mobile-nav" class="fwx-bottom-nav" aria-label="Mobile bottom navigation">
   <a href="/releases" class="fwx-bnav-item">
     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="fwx-bnav-icon">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -882,7 +884,9 @@ const firebaseConfig = {
         newButton.addEventListener('click', (e) => {
           e.stopPropagation();
           menu.classList.toggle('fwx-hidden');
-          menu.style.display = menu.classList.contains('fwx-hidden') ? 'none' : 'block';
+          var isOpen = !menu.classList.contains('fwx-hidden');
+          menu.style.display = isOpen ? 'block' : 'none';
+          newButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
         });
       }
     });
@@ -910,6 +914,17 @@ const firebaseConfig = {
     // Mobile burger menu functionality
     setupBurgerMenu();
 
+    // Set aria-current="page" on matching nav links
+    var currentPath = window.location.pathname;
+    document.querySelectorAll('.fwx-nav-btn, .fwx-menu-link, .fwx-bnav-item').forEach(function(link) {
+      var href = link.getAttribute('href');
+      if (href && (currentPath === href || (href !== '/' && currentPath.startsWith(href)))) {
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.removeAttribute('aria-current');
+      }
+    });
+
     // Update UI based on current auth state
     updateAuthUI();
   }
@@ -929,12 +944,16 @@ const firebaseConfig = {
       overlay.classList.add('open');
       overlay.classList.remove('fwx-hidden');
       document.body.style.overflow = 'hidden';
+      var burgerEl = document.getElementById('burgerMenuBtn');
+      if (burgerEl) burgerEl.setAttribute('aria-expanded', 'true');
     }
 
     function closeMenu() {
       mobileMenu.classList.remove('open');
       overlay.classList.remove('open');
       document.body.style.overflow = '';
+      var burgerEl = document.getElementById('burgerMenuBtn');
+      if (burgerEl) burgerEl.setAttribute('aria-expanded', 'false');
       // Hide after animation
       setTimeout(() => {
         if (!mobileMenu.classList.contains('open')) {

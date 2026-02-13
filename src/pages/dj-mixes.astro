@@ -259,10 +259,13 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
               <!-- Artwork -->
               <div class="mix-artwork-container">
                 <img
-                  src={mix.artwork_url || mix.artworkUrl || '/place-holder.webp'} 
-                  alt={mix.title}
+                  src={mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}
+                  alt={`${mix.title} by ${mix.dj_name || mix.djName}`}
                   class="mix-artwork"
+                  width="260"
+                  height="260"
                   loading="lazy"
+                  decoding="async"
                   onerror="this.src='/place-holder.webp'"
                 />
               </div>
@@ -436,10 +439,14 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
                   {index === 2 && '🥉'}
                   {index > 2 && `#${index + 1}`}
                 </span>
-                <img 
-                  src={mix.imageUrl || mix.artworkUrl || mix.artwork_url || '/place-holder.webp'} 
-                  alt={mix.title}
+                <img
+                  src={mix.imageUrl || mix.artworkUrl || mix.artwork_url || '/place-holder.webp'}
+                  alt={`${mix.title} artwork`}
                   class="chart-artwork"
+                  width="36"
+                  height="36"
+                  loading="lazy"
+                  decoding="async"
                 />
                 <div class="chart-info">
                   <span class="chart-mix-title">{mix.title}</span>
@@ -476,7 +483,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
         <!-- Mix Preview Card -->
         <div class="p-4">
           <div class="flex gap-4 p-3 bg-white/5 rounded-xl border border-white/10 mb-5">
-            <img id="shareModalArtwork" src="/place-holder.webp" alt="Mix artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" />
+            <img id="shareModalArtwork" src="/place-holder.webp" alt="Mix artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" width="96" height="96" loading="lazy" decoding="async" />
             <div class="flex-1 min-w-0">
               <div class="text-base sm:text-lg font-bold text-white break-words line-clamp-2" id="shareModalTitle"></div>
               <div class="text-sm text-gray-400 mt-1">by <span class="font-semibold text-red-400" id="shareModalDJ"></span></div>
@@ -648,7 +655,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
           chartList.innerHTML = data.chart.slice(0, 10).map((mix, index) => `
             <a href="/dj-mix/${mix.id}" class="chart-item">
               <span class="chart-position">${index + 1}</span>
-              <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)}" class="chart-artwork" width="48" height="48" />
+              <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)} artwork" class="chart-artwork" width="48" height="48" loading="lazy" decoding="async" />
               <div class="chart-info">
                 <span class="chart-title">${escapeHtml(mix.title || 'Untitled')}</span>
                 <span class="chart-dj">${escapeHtml(mix.dj_name || mix.djName || 'Unknown DJ')}</span>
