@@ -9,7 +9,11 @@ const crypto = require('crypto');
 const PORT = 8088;
 const MUSIC_DIR = 'H:\\FreshWax-Backup';
 const MAX_CONNECTIONS = 100;
-const ACCESS_TOKEN = process.env.PLAYLIST_ACCESS_TOKEN || 'bd9c9585e4a63878b2964eed5f0868350f4918d0027d2695fbf6c83d9d203b08';
+const ACCESS_TOKEN = process.env.PLAYLIST_ACCESS_TOKEN;
+if (!ACCESS_TOKEN) {
+  console.error('[FATAL] PLAYLIST_ACCESS_TOKEN environment variable is required. Set it before starting.');
+  process.exit(1);
+}
 
 // Allowed CORS origins (no wildcard)
 const ALLOWED_ORIGINS = [
@@ -45,6 +49,52 @@ function hasValidToken(req) {
   if (timingSafeCompare(req.headers['x-access-token'], ACCESS_TOKEN)) return true;
   return false;
 }
+
+// Signed URL generation and verification (HMAC-SHA256)
+// Media paths use signed URLs so browsers can access files without leaking the token
+const SIGNED_URL_TTL = 4 * 60 * 60; // 4 hours
+
+function generateSignedUrl(urlPath, ttlSeconds) {
+  ttlSeconds = ttlSeconds || SIGNED_URL_TTL;
+  const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
+  const payload = urlPath + ':' + expires;
+  const sig = crypto.createHmac('sha256', ACCESS_TOKEN).update(payload).digest('hex');
+  return urlPath + '?expires=' + expires + '&sig=' + sig;
+}
+
+function verifySignedUrl(pathname, query) {
+  if (!query || !query.expires || !query.sig) return false;
+  const expiresInt = parseInt(query.expires, 10);
+  if (isNaN(expiresInt) || Math.floor(Date.now() / 1000) > expiresInt) return false;
+  const payload = pathname + ':' + query.expires;
+  const expected = crypto.createHmac('sha256', ACCESS_TOKEN).update(payload).digest('hex');
+  return timingSafeCompare(expected, query.sig);
+}
+
+// Build a file entry with signed URLs for media and thumbnail paths
+function buildFileEntry(f, webpFiles, jpgFiles) {
+  const baseName = getBaseName(f);
+  const displayName = baseName.replace(/\s*\[[^\]]+\]$/, '');
+
+  let thumbnailPath = null;
+  if (webpFiles.has(baseName)) {
+    thumbnailPath = '/thumb/' + encodeURIComponent(baseName + '.webp');
+  } else if (jpgFiles.has(baseName)) {
+    thumbnailPath = '/thumb/' + encodeURIComponent(baseName + '.jpg');
+  }
+
+  const urlPath = '/music/' + encodeURIComponent(f);
+
+  return {
+    name: displayName,
+    file: f,
+    url: generateSignedUrl(urlPath),
+    thumbnail: thumbnailPath ? generateSignedUrl(thumbnailPath) : null,
+    duration: null,
+    uploader: null
+  };
+}
+
 const HEALTH_CHECK_INTERVAL = 60000; // 60 seconds (reduced frequency)
 const RESTART_DELAY = 5000; // 5 seconds before restart attempt
 const AUDIO_STREAM_BUFFER = 256 * 1024; // 256KB buffer for smooth audio
@@ -139,26 +189,7 @@ function buildFileListSync() {
     const webpFiles = new Set(allFiles.filter(f => f.endsWith('.webp')).map(getBaseName));
     const jpgFiles = new Set(allFiles.filter(f => f.endsWith('.jpg')).map(getBaseName));
 
-    const files = mp3Files.map(f => {
-      const baseName = getBaseName(f);
-      const displayName = baseName.replace(/\s*\[[^\]]+\]$/, '');
-
-      let thumbnail = null;
-      if (webpFiles.has(baseName)) {
-        thumbnail = `/thumb/${encodeURIComponent(baseName + '.webp')}`;
-      } else if (jpgFiles.has(baseName)) {
-        thumbnail = `/thumb/${encodeURIComponent(baseName + '.jpg')}`;
-      }
-
-      return {
-        name: displayName,
-        file: f,
-        url: `/music/${encodeURIComponent(f)}`,
-        thumbnail,
-        duration: null,
-        uploader: null
-      };
-    });
+    const files = mp3Files.map(f => buildFileEntry(f, webpFiles, jpgFiles));
 
     fileCache = files;
     fileCacheTime = Date.now();
@@ -192,26 +223,7 @@ function rebuildFileCacheAsync() {
         const webpFiles = new Set(allFiles.filter(f => f.endsWith('.webp')).map(getBaseName));
         const jpgFiles = new Set(allFiles.filter(f => f.endsWith('.jpg')).map(getBaseName));
 
-        const files = mp3Files.map(f => {
-          const baseName = getBaseName(f);
-          const displayName = baseName.replace(/\s*\[[^\]]+\]$/, '');
-
-          let thumbnail = null;
-          if (webpFiles.has(baseName)) {
-            thumbnail = `/thumb/${encodeURIComponent(baseName + '.webp')}`;
-          } else if (jpgFiles.has(baseName)) {
-            thumbnail = `/thumb/${encodeURIComponent(baseName + '.jpg')}`;
-          }
-
-          return {
-            name: displayName,
-            file: f,
-            url: `/music/${encodeURIComponent(f)}`,
-            thumbnail,
-            duration: null,
-            uploader: null
-          };
-        });
+        const files = mp3Files.map(f => buildFileEntry(f, webpFiles, jpgFiles));
 
         fileCache = files;
         fileCacheTime = Date.now();
@@ -299,13 +311,24 @@ function createServer() {
       const parsedUrl = url.parse(req.url, true);
       let filePath = decodeURIComponent(parsedUrl.pathname);
 
-      // API/metadata endpoints require access token (not media serving)
+      // API/metadata endpoints require access token
       const isMediaPath = filePath.startsWith('/music/') || filePath.startsWith('/thumb/');
       if (!isMediaPath && !hasValidToken(req)) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Access token required' }));
         stats.activeConnections--;
         return;
+      }
+
+      // Media paths: require HMAC-signed URL or Bearer token
+      if (isMediaPath) {
+        const isSignedValid = verifySignedUrl(parsedUrl.pathname, parsedUrl.query || {});
+        if (!isSignedValid && !hasValidToken(req)) {
+          res.writeHead(403, { 'Content-Type': 'text/plain' });
+          res.end('Forbidden');
+          stats.activeConnections--;
+          return;
+        }
       }
 
       // Health check endpoint
@@ -358,7 +381,7 @@ function createServer() {
         const filesToPickFrom = filesWithThumbs.length > 0 ? filesWithThumbs : files;
         const randomIndex = Math.floor(Math.random() * filesToPickFrom.length);
         const selected = filesToPickFrom[randomIndex];
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify({ success: true, track: selected, totalCount: files.length }));
         return;
       }
@@ -444,25 +467,10 @@ function createServer() {
         return;
       }
 
-      // Root - status page
+      // Root - minimal status (no info leakage)
       if (filePath === '/') {
-        const uptime = Math.floor((Date.now() - stats.startTime) / 1000);
-        const count = fileCache ? fileCache.length : 0;
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`
-          <html>
-            <head><title>FreshWax Playlist Server</title></head>
-            <body style="font-family: system-ui; background: #111; color: #fff; padding: 2rem;">
-              <h1>🎵 FreshWax Playlist Server</h1>
-              <p><strong>${count}</strong> MP3 files available</p>
-              <p>Drive: <span style="color: ${stats.driveAvailable ? '#0f0' : '#f00'}">${stats.driveAvailable ? '✓ Online' : '✗ Offline'}</span></p>
-              <p>Uptime: ${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m ${uptime % 60}s</p>
-              <p>Requests: ${stats.requestsServed} | Errors: ${stats.errors} | Active: ${stats.activeConnections}</p>
-              <p>Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB</p>
-              <p><a href="/list" style="color: #0af;">View file list (JSON)</a> | <a href="/random" style="color: #0af;">Random track</a> | <a href="/health" style="color: #0af;">Health check</a></p>
-            </body>
-          </html>
-        `);
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('FreshWax Playlist Server');
         return;
       }
 

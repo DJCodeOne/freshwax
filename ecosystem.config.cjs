@@ -17,7 +17,9 @@ module.exports = {
       restart_delay: 5000, // Wait 5 seconds between restarts
       exp_backoff_restart_delay: 100, // Exponential backoff on crashes
       env: {
-        NODE_ENV: 'production'
+        NODE_ENV: 'production',
+        // IMPORTANT: Rotate this token and update Cloudflare PLAYLIST_ACCESS_TOKEN secret to match
+        PLAYLIST_ACCESS_TOKEN: process.env.PLAYLIST_ACCESS_TOKEN || 'bd9c9585e4a63878b2964eed5f0868350f4918d0027d2695fbf6c83d9d203b08'
       },
       // Logging
       error_file: 'logs/playlist-server-error.log',

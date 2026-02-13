@@ -101,13 +101,31 @@ function removeViewer(streamId: string, sessionId: string): number {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json();
-    const { streamId, sessionId, action, userId, userName, userAvatar } = body;
+    const { streamId, sessionId, action } = body;
 
     if (!streamId || !sessionId) {
       return new Response(JSON.stringify({ error: 'Missing streamId or sessionId' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // SECURITY: Only use user info from verified auth, not from body
+    // This prevents spoofing usernames/avatars in the online users list
+    let userId: string | undefined;
+    let userName: string | undefined;
+    let userAvatar: string | undefined;
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+        const { userId: verifiedId, email } = await verifyRequestUser(request);
+        if (verifiedId) {
+          userId = verifiedId;
+          userName = body.userName; // Allow display name from body only when auth is verified
+          userAvatar = body.userAvatar;
+        }
+      } catch { /* no auth = anonymous viewer, still count them */ }
     }
 
     let count: number;

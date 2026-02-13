@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { initKVCache, kvGet, kvSet, kvDelete } from '../../../lib/kv-cache';
+import { triggerPusher } from '../../../lib/pusher';
 
 export const prerender = false;
 
@@ -14,35 +15,6 @@ function initKV(locals: any) {
   const env = locals?.runtime?.env;
   initKVCache(env);
   return env;
-}
-
-// Pusher helper for real-time updates
-async function triggerPusher(channel: string, event: string, data: any, env: any) {
-  try {
-    const appId = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
-    const key = env?.PUSHER_KEY || import.meta.env.PUSHER_KEY;
-    const secret = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
-    const cluster = env?.PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
-
-    if (!appId || !key || !secret) return false;
-
-    const timestamp = Math.floor(Date.now() / 1000);
-    const body = JSON.stringify({ name: event, channel, data: JSON.stringify(data) });
-    const bodyMd5 = await crypto.subtle.digest('MD5', new TextEncoder().encode(body))
-      .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
-
-    const stringToSign = `POST\n/apps/${appId}/events\nauth_key=${key}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}`;
-    const signature = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
-      .then(k => crypto.subtle.sign('HMAC', k, new TextEncoder().encode(stringToSign)))
-      .then(buf => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''));
-
-    const url = `https://api-${cluster}.pusher.com/apps/${appId}/events?auth_key=${key}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}&auth_signature=${signature}`;
-    const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
-    return resp.ok;
-  } catch (e) {
-    console.error('[Pusher] Error:', e);
-    return false;
-  }
 }
 
 // Get listener count from KV
@@ -204,13 +176,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
       body = JSON.parse(text);
     }
 
-    const { action, streamId, userId, userName, avatarUrl } = body;
+    const { action, streamId, userId: bodyUserId, userName, avatarUrl } = body;
 
-    if (!streamId || !userId) {
+    if (!streamId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Stream ID and User ID required'
+        error: 'Stream ID required'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SECURITY: Verify userId from auth token when present, fall back to body for anonymous tracking
+    let userId = bodyUserId;
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+        const { userId: verifiedId } = await verifyRequestUser(request);
+        if (verifiedId) userId = verifiedId;
+      } catch { /* anonymous viewer */ }
+    }
+
+    // Require some form of userId for tracking
+    if (!userId) {
+      // Generate anonymous ID from request for basic tracking
+      userId = `anon_${Date.now().toString(36)}`;
     }
 
     let activeCount: number;

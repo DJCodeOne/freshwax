@@ -501,8 +501,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       preOrderDeliveryDate: latestPreOrderDate,
       paymentMethod: orderData.paymentMethod || 'test_mode',
       paymentStatus: 'pending',
-      status: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
-      orderStatus: hasPreOrderItems ? 'awaiting_release' : (orderData.hasPhysicalItems ? 'processing' : 'completed'),
+      status: hasPreOrderItems ? 'awaiting_release' : 'pending',
+      orderStatus: hasPreOrderItems ? 'awaiting_release' : 'pending',
       createdAt: now,
       updatedAt: now
     };

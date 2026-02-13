@@ -29,9 +29,9 @@ service cloud.firestore {
     }
 
     // Users collection (for role management)
-    // SECURITY: Requires authentication — server uses FIREBASE_SERVICE_EMAIL auth token
+    // SECURITY: Only own document or admin — prevents PII leakage across users
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAdmin() || isOwner(userId);
       // Allow create from authenticated user OR for bypass grants (REST API with key protection)
       allow create: if (isAuthenticated() && request.auth.uid == userId) ||
                       request.resource.data.keys().hasOnly(['go-liveBypassed', 'bypassedAt', 'bypassedBy', 'quickAccessCode']);
@@ -105,9 +105,10 @@ service cloud.firestore {
     }
 
     // Orders collection
-    // SECURITY: Requires authentication — server uses FIREBASE_SERVICE_EMAIL auth token
+    // SECURITY: Only order owner or admin can read — prevents PII leakage across users
     match /orders/{orderId} {
-      allow read: if isAuthenticated();
+      allow read: if isAdmin() ||
+                    (isAuthenticated() && resource.data.customerId == request.auth.uid);
       // Allow authenticated users OR test/paypal orders from API (API validates on server-side)
       // PayPal orders are created after payment capture, so payment is already verified
       allow create: if isAuthenticated() ||
@@ -139,9 +140,9 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // Merch suppliers - public read, admin write
+    // Merch suppliers - admin only (contains supplier contacts/credentials)
     match /merch-suppliers/{supplierId} {
-      allow read: if true;
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
@@ -149,9 +150,7 @@ service cloud.firestore {
     match /tracks/{trackId} {
       allow read: if true;
       allow create, update: if isAdmin();
-      // SECURITY NOTE: request.auth == null allows REST API (uses API key, not user token) to delete
-      // TODO: Migrate to service account auth to remove this bypass
-      allow delete: if isAdmin() || request.auth == null;
+      allow delete: if isAdmin();
     }
 
     // Releases collection - public read, admin write
@@ -169,9 +168,7 @@ service cloud.firestore {
                                   'pricing', 'pricePerSale', 'trackPrice', 'vinylPrice', 'freeDownload',
                                   'releaseName', 'releaseDescription', 'artist', 'labelName', 'copyrightHolder',
                                   'releaseDate', 'genre', 'subgenre', 'coverUrl', 'tracks', 'metadata']);
-      // SECURITY NOTE: request.auth == null allows REST API to delete
-      // TODO: Migrate to service account auth to remove this bypass
-      allow delete: if isAdmin() || request.auth == null;
+      allow delete: if isAdmin();
     }
 
     // DJ Mixes collection (hyphenated) - public read
@@ -189,11 +186,8 @@ service cloud.firestore {
                                   'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
                                   'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
                                   'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
-      // SECURITY NOTE: request.auth == null allows REST API to delete
-      // TODO: Migrate to service account auth to remove this bypass
       allow delete: if isAdmin() ||
-                      (isAuthenticated() && resource.data.userId == request.auth.uid) ||
-                      request.auth == null;
+                      (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
     // DJ Mixes collection (underscore) - public read
@@ -211,11 +205,8 @@ service cloud.firestore {
                                   'title', 'name', 'djName', 'dj_name', 'displayName', 'genre',
                                   'description', 'shoutOuts', 'artworkUrl', 'imageUrl', 'artwork_url',
                                   'tracklist', 'tracklistArray', 'trackCount', 'published', 'allowDownload', 'featured', 'userId']);
-      // SECURITY NOTE: request.auth == null allows REST API to delete
-      // TODO: Migrate to service account auth to remove this bypass
       allow delete: if isAdmin() ||
-                      (isAuthenticated() && resource.data.userId == request.auth.uid) ||
-                      request.auth == null;
+                      (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
     // DJ Mixes Pending - authenticated create, admin manage
@@ -291,10 +282,9 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
-    // Newsletter subscribers - public create for signup
-    // Note: Read allowed for admin API (API validates admin status via cookie)
+    // Newsletter subscribers - public create for signup, admin read
     match /subscribers/{subscriberId} {
-      allow read: if true;
+      allow read: if isAdmin();
       allow create, update: if true;  // Allow subscribe, resubscribe, unsubscribe
       allow delete: if isAdmin();
     }
@@ -315,10 +305,8 @@ service cloud.firestore {
       // Allow creating chat messages if userId is provided (for REST API)
       allow create: if isAuthenticated() || request.resource.data.userId != null;
       allow update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      // Allow delete from admin, message owner, or REST API (API validates adminKey)
       allow delete: if isAdmin() ||
-                      (isAuthenticated() && resource.data.userId == request.auth.uid) ||
-                      request.auth == null;
+                      (isAuthenticated() && resource.data.userId == request.auth.uid);
     }
 
     // Livestream slots (schedule) - authenticated read, authenticated write
@@ -391,10 +379,10 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
-    // DJ Lobby Bypass tracking - admin manage
-    // SECURITY: Requires authentication — server uses FIREBASE_SERVICE_EMAIL auth token
+    // DJ Lobby Bypass tracking - admin only
+    // SECURITY: Contains admin emails and bypass grant info — admin-only read
     match /djLobbyBypass/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAdmin() || isOwner(userId);
       // Allow writes from admin or bypass field updates only
       allow create, update: if isAdmin() ||
                               request.resource.data.keys().hasOnly(['email', 'name', 'reason', 'grantedAt', 'grantedBy', 'stationName', 'relayUrl', 'relayApproved']);
@@ -436,10 +424,11 @@ service cloud.firestore {
     }
 
     // Pending Gift Card Orders - temporary storage for gift card PayPal flow
-    // SECURITY NOTE: Same as pendingPayPalOrders - open due to REST API auth model
-    // TODO: Migrate to service account auth
+    // SECURITY: Restrict to authenticated users (REST API passes idToken when available)
     match /pendingGiftCardOrders/{orderId} {
-      allow read, write: if true;
+      allow read: if isAuthenticated() || isAdmin();
+      allow create, update: if isAuthenticated() || request.resource.data.customer != null;
+      allow delete: if isAdmin();
     }
 
     // Quick access keys - admin only
@@ -448,12 +437,11 @@ service cloud.firestore {
     }
 
     // Pending Role Requests - for admin API access to pending approvals
-    // This collection mirrors pendingRoles from users for REST API access
     match /pendingRoleRequests/{requestId} {
-      allow read: if true;  // Admin APIs need to read pending requests
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       // Allow create from authenticated users OR REST API (for migration/registration)
       allow create: if isAuthenticated() || request.resource.data.status == 'pending';
-      allow update, delete: if isAdmin() || request.resource.data.status != 'pending';
+      allow update, delete: if isAdmin();
     }
 
     // User Playlists - personal saved playlists

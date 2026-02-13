@@ -102,10 +102,30 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
   }
 }
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length;
+  for (let i = 0; i < maxLen; i++) {
+    result |= (a.charCodeAt(i % a.length) || 0) ^ (b.charCodeAt(i % b.length) || 0);
+  }
+  return result === 0;
+}
+
 // POST - Called when a stream starts to fetch and store YouTube live ID
+// SECURITY: Requires server key (called by MediaMTX/Red5, not by clients)
 export const POST: APIRoute = async ({ request, locals }) => {
   initServices(locals);
   const env = (locals as any).runtime?.env;
+
+  // SECURITY: Require server key for write operations
+  const serverKey = request.headers.get('x-server-key');
+  const expectedServerKey = env?.STREAM_SERVER_KEY || import.meta.env.STREAM_SERVER_KEY;
+  if (!expectedServerKey || !serverKey || !timingSafeEqual(serverKey, expectedServerKey)) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Unauthorized'
+    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
 
   try {
     const body = await request.json();

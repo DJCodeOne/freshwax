@@ -4,6 +4,15 @@
 import type { APIRoute } from 'astro';
 import { saUpdateDocument, getServiceAccountToken } from '../../../lib/firebase-service-account';
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const maxLen = Math.max(a.length, b.length);
+  let result = a.length ^ b.length;
+  for (let i = 0; i < maxLen; i++) {
+    result |= (a.charCodeAt(i % a.length) || 0) ^ (b.charCodeAt(i % b.length) || 0);
+  }
+  return result === 0;
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
 
@@ -11,9 +20,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const data = await request.json();
     const { slotId, title, startTime, endTime, adminKey } = data;
 
-    // Require admin key for security
+    // Require admin key for security (timing-safe comparison)
     const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
-    if (!adminKey || adminKey !== expectedAdminKey) {
+    if (!adminKey || !expectedAdminKey || !timingSafeEqual(adminKey, expectedAdminKey)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'

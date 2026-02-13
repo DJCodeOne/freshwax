@@ -17,13 +17,125 @@ const PROJECT_ID = 'freshwax-store';
 // Collections that require authenticated reads (PII protection)
 const PROTECTED_COLLECTIONS = ['users', 'orders', 'djLobbyBypass', 'artists', 'pendingPayPalOrders', 'livestreamSlots'];
 
-// Server auth token cache (Firebase Auth sign-in for server-side reads)
-let _serverAuthToken: string | null = null;
-let _serverAuthExpiry: number = 0;
+// Service account auth token cache (Google OAuth2 access token)
+let _serviceAccountToken: string | null = null;
+let _serviceAccountExpiry: number = 0;
 
-async function getServerAuthToken(): Promise<string | null> {
-  if (_serverAuthToken && Date.now() < _serverAuthExpiry) {
-    return _serverAuthToken;
+// Legacy auth token cache (Firebase Auth sign-in fallback)
+let _legacyAuthToken: string | null = null;
+let _legacyAuthExpiry: number = 0;
+
+// Base64url encode a Uint8Array
+function base64urlEncode(data: Uint8Array): string {
+  let binary = '';
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+// Base64url encode a string
+function base64urlEncodeString(str: string): string {
+  return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Get a Google OAuth2 access token using service account credentials (RS256 JWT).
+ * This token bypasses Firestore security rules, giving admin-level access.
+ * Falls back to legacy email/password auth if service account is not configured.
+ */
+async function getServiceAccountToken(): Promise<string | null> {
+  // Return cached token if still valid
+  if (_serviceAccountToken && Date.now() < _serviceAccountExpiry) {
+    return _serviceAccountToken;
+  }
+
+  const clientEmail = getEnvVar('FIREBASE_CLIENT_EMAIL');
+  const privateKeyPem = getEnvVar('FIREBASE_PRIVATE_KEY');
+
+  if (!clientEmail || !privateKeyPem) {
+    // Fall back to legacy email/password auth
+    return getLegacyAuthToken();
+  }
+
+  try {
+    const now = Math.floor(Date.now() / 1000);
+
+    // JWT Header
+    const header = base64urlEncodeString(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+
+    // JWT Payload
+    const payload = base64urlEncodeString(JSON.stringify({
+      iss: clientEmail,
+      sub: clientEmail,
+      aud: 'https://oauth2.googleapis.com/token',
+      scope: 'https://www.googleapis.com/auth/datastore',
+      iat: now,
+      exp: now + 3600,
+    }));
+
+    const unsignedToken = `${header}.${payload}`;
+
+    // Parse PEM private key (handle both literal \n and real newlines)
+    const pemContents = privateKeyPem
+      .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+      .replace(/-----END PRIVATE KEY-----/g, '')
+      .replace(/\\n/g, '')
+      .replace(/\s/g, '');
+
+    const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+    // Import as PKCS8 RSA key for signing
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8',
+      binaryKey,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    // Sign the JWT
+    const signatureBuffer = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      cryptoKey,
+      new TextEncoder().encode(unsignedToken)
+    );
+
+    const signature = base64urlEncode(new Uint8Array(signatureBuffer));
+    const jwt = `${unsignedToken}.${signature}`;
+
+    // Exchange JWT for OAuth2 access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${encodeURIComponent(jwt)}`,
+    });
+
+    if (!tokenResponse.ok) {
+      const errorText = await tokenResponse.text();
+      log.error('Service account token exchange failed:', tokenResponse.status, errorText);
+      return getLegacyAuthToken();
+    }
+
+    const tokenData: any = await tokenResponse.json();
+    _serviceAccountToken = tokenData.access_token;
+    // Refresh 5 minutes before expiry (tokens last 3600s)
+    _serviceAccountExpiry = Date.now() + ((tokenData.expires_in || 3600) * 1000) - (5 * 60 * 1000);
+    log.info('Service account token acquired');
+    return _serviceAccountToken;
+  } catch (err) {
+    log.error('Service account auth error:', err);
+    return getLegacyAuthToken();
+  }
+}
+
+/**
+ * Legacy email/password auth fallback.
+ * Used when FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY are not configured.
+ */
+async function getLegacyAuthToken(): Promise<string | null> {
+  if (_legacyAuthToken && Date.now() < _legacyAuthExpiry) {
+    return _legacyAuthToken;
   }
 
   const email = getEnvVar('FIREBASE_SERVICE_EMAIL');
@@ -43,20 +155,32 @@ async function getServerAuthToken(): Promise<string | null> {
     );
 
     if (!response.ok) {
-      log.error('Server auth sign-in failed:', response.status);
+      log.error('Legacy auth sign-in failed:', response.status);
       return null;
     }
 
     const data: any = await response.json();
-    _serverAuthToken = data.idToken;
+    _legacyAuthToken = data.idToken;
     // Refresh 5 minutes before expiry (tokens last ~3600s)
-    _serverAuthExpiry = Date.now() + (parseInt(data.expiresIn || '3600') * 1000) - (5 * 60 * 1000);
-    log.info('Server auth token refreshed');
-    return _serverAuthToken;
+    _legacyAuthExpiry = Date.now() + (parseInt(data.expiresIn || '3600') * 1000) - (5 * 60 * 1000);
+    log.info('Legacy auth token refreshed');
+    return _legacyAuthToken;
   } catch (err) {
-    log.error('Server auth error:', err);
+    log.error('Legacy auth error:', err);
     return null;
   }
+}
+
+/**
+ * Get Authorization headers for server-side Firestore operations.
+ * Returns { Authorization: 'Bearer <token>' } when service account is available, or {} otherwise.
+ */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = await getServiceAccountToken();
+  if (token) {
+    return { 'Authorization': `Bearer ${token}` };
+  }
+  return {};
 }
 
 // ==========================================
@@ -347,14 +471,9 @@ export async function queryCollection(
     try {
       log.info(`Querying ${collection}...`);
 
-      // For protected collections, add server auth token
-      const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (PROTECTED_COLLECTIONS.includes(collection)) {
-        const token = await getServerAuthToken();
-        if (token) {
-          fetchHeaders['Authorization'] = `Bearer ${token}`;
-        }
-      }
+      // Add server auth for all Firestore operations
+      const authHeaders = await getAuthHeaders();
+      const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...authHeaders };
 
       const response = await fetch(url, {
         method: 'POST',
@@ -425,14 +544,8 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
   
   const fetchPromise = (async () => {
     try {
-      // For protected collections, add server auth token
-      const headers: Record<string, string> = {};
-      if (PROTECTED_COLLECTIONS.includes(collection)) {
-        const token = await getServerAuthToken();
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-      }
+      // Add server auth for all Firestore operations
+      const headers: Record<string, string> = await getAuthHeaders();
 
       const response = await fetch(url, { headers });
 
@@ -532,9 +645,10 @@ export async function getDocumentsBatch(
         `projects/${PROJECT_ID}/databases/(default)/documents/${collection}/${id}`
       );
       
+      const batchAuthHeaders = await getAuthHeaders();
       const response = await fetch(`${FIRESTORE_BASE}:batchGet`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...batchAuthHeaders },
         body: JSON.stringify({ documents })
       });
       
@@ -905,6 +1019,8 @@ export async function setDocument(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (idToken) {
     headers['Authorization'] = `Bearer ${idToken}`;
+  } else {
+    Object.assign(headers, await getAuthHeaders());
   }
 
   const response = await fetch(url, {
@@ -955,9 +1071,10 @@ export async function createDocumentIfNotExists(
     fields[key] = toFirestoreValue(value);
   }
 
+  const cdinHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
   const response = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: cdinHeaders,
     body: JSON.stringify({ fields })
   });
 
@@ -1019,6 +1136,8 @@ export async function updateDocument(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (idToken) {
     headers['Authorization'] = `Bearer ${idToken}`;
+  } else {
+    Object.assign(headers, await getAuthHeaders());
   }
 
   const response = await fetch(url, {
@@ -1060,6 +1179,8 @@ export async function deleteDocument(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (idToken) {
     headers['Authorization'] = `Bearer ${idToken}`;
+  } else {
+    Object.assign(headers, await getAuthHeaders());
   }
 
   const response = await fetch(url, {
@@ -1130,9 +1251,10 @@ export async function atomicIncrement(
       : { doubleValue: value }
   }));
 
+  const atomicHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
   const response = await fetch(commitUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: atomicHeaders,
     body: JSON.stringify({
       writes: [{
         transform: {
@@ -1194,9 +1316,10 @@ export async function updateDocumentConditional(
     fields[key] = toFirestoreValue(value);
   }
 
+  const conditionalHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
   const response = await fetch(commitUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: conditionalHeaders,
     body: JSON.stringify({
       writes: [{
         update: {
@@ -1293,6 +1416,8 @@ export async function addDocument(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (idToken) {
     headers['Authorization'] = `Bearer ${idToken}`;
+  } else {
+    Object.assign(headers, await getAuthHeaders());
   }
 
   const response = await fetch(url, {

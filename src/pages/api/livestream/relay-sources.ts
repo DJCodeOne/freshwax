@@ -2,6 +2,7 @@
 // API for managing external radio relay sources
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
@@ -12,6 +13,7 @@ function initFirebase(locals: any) {
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
 
 // GET - List all relay sources or check specific one
@@ -52,9 +54,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// POST - Create new relay source
+// POST - Create new relay source (admin only)
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const data = await request.json();
     
@@ -103,9 +107,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// PUT - Update relay source
+// PUT - Update relay source (admin only)
 export const PUT: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const data = await request.json();
     const { id, ...updates } = data;
@@ -135,9 +141,11 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// DELETE - Remove relay source
+// DELETE - Remove relay source (admin only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const url = new URL(request.url);
     const id = url.searchParams.get('id');

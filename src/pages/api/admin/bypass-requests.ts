@@ -2,19 +2,21 @@
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
-import { requireAdminAuth } from '../../../lib/admin';
+import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
+// Helper to initialize Firebase and admin env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
   });
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  return env;
 }
 
 // Helper to generate a unique ID
@@ -31,9 +33,23 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const action = url.searchParams.get('action');
     const userId = url.searchParams.get('userId');
 
-    // Admin authentication required for listing all requests
-    // User status checks (action=status with userId) are allowed without auth
-    if (action !== 'status' || !userId) {
+    // Status check: user must be authenticated and can only check their own status
+    if (action === 'status' && userId) {
+      const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+      try {
+        const { userId: verifiedId } = await verifyRequestUser(request);
+        if (!verifiedId || verifiedId !== userId) {
+          return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
+            status: 403, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } catch {
+        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+          status: 401, headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    } else {
+      // All other GET actions require admin auth
       const authError = await requireAdminAuth(request, locals);
       if (authError) return authError;
     }
@@ -196,8 +212,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, stationName, relayUrl, mixCount, bestMixLikes } = body;
 
-    // Admin action: approve, deny, or expire
+    // Admin action: approve, deny, or expire — REQUIRES admin auth
     if (action === 'approve' || action === 'deny' || action === 'expire') {
+      const authError = await requireAdminAuth(request, locals, body);
+      if (authError) return authError;
+
       if (!requestId) {
         return new Response(JSON.stringify({
           success: false,
@@ -332,23 +351,41 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // User action: create new request
-    if (!userId) {
+    // User action: create new request — verify auth
+    let verifiedUserId: string | undefined;
+    try {
+      const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+      const { userId: vId } = await verifyRequestUser(request);
+      verifiedUserId = vId;
+    } catch {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID required'
+        error: 'Authentication required'
       }), {
-        status: 400,
+        status: 401,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    if (!verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Use verified userId, not body-supplied userId
+    const authenticatedUserId = verifiedUserId;
 
     // Check if user already has a pending request
     let existingRequests: any[] = [];
     try {
       existingRequests = await saQuery('bypassRequests', {
         filters: [
-          { field: 'userId', op: 'EQUAL', value: userId },
+          { field: 'userId', op: 'EQUAL', value: authenticatedUserId },
           { field: 'status', op: 'EQUAL', value: 'pending' }
         ],
         limit: 1,
@@ -372,7 +409,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Create new request
     const newRequestId = generateId();
     const newRequest = {
-      userId,
+      userId: authenticatedUserId,
       userEmail: userEmail || email || '',
       userName: userName || djName || 'Unknown',
       requestType: requestType || 'go-live',
@@ -413,18 +450,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 export const DELETE: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
-  // SECURITY: Require admin authentication for deleting bypass requests
-  const { initAdminEnv } = await import('../../../lib/admin');
-  const env = (locals as any)?.runtime?.env;
-  initAdminEnv({
-    ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
-    ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
-  });
-
   const authError = await requireAdminAuth(request, locals);
-  if (authError) {
-    return authError;
-  }
+  if (authError) return authError;
 
   try {
     const url = new URL(request.url);

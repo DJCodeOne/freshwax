@@ -277,15 +277,19 @@ export function verifyWebhookSignature(
 ): boolean {
   const { webhookSecret } = RED5_CONFIG.security;
 
+  // SECURITY: Require signature when webhook secret is configured
+  if (!signature) return false;
+
   // Simple signature verification using hash
-  // For production with Red5 Pro, use proper HMAC verification
   const expectedSignature = simpleHash(payload + webhookSecret);
 
-  // Simple comparison (MediaMTX doesn't send signatures by default)
-  // If no signature provided, skip verification
-  if (!signature) return true;
-
-  return signature === expectedSignature;
+  // Timing-safe comparison to prevent timing attacks
+  if (signature.length !== expectedSignature.length) return false;
+  let result = 0;
+  for (let i = 0; i < signature.length; i++) {
+    result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 // =============================================================================

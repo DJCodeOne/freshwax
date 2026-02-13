@@ -30,7 +30,6 @@ interface HealthCheckResponse {
     title?: string;
     viewers?: number;
     duration?: number;
-    hlsUrl?: string;
   } | null;
 }
 
@@ -50,7 +49,7 @@ async function checkFirebase(): Promise<ServiceStatus> {
     }
     return { name: 'Firebase', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
   } catch (e: any) {
-    return { name: 'Firebase', status: 'error', message: e.message || 'Connection failed', lastChecked: new Date().toISOString() };
+    return { name: 'Firebase', status: 'error', message: 'Connection failed', lastChecked: new Date().toISOString() };
   }
 }
 
@@ -69,7 +68,7 @@ async function checkR2(): Promise<ServiceStatus> {
     }
     return { name: 'R2 Storage', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
   } catch (e: any) {
-    return { name: 'R2 Storage', status: 'error', message: e.message || 'Connection failed', lastChecked: new Date().toISOString() };
+    return { name: 'R2 Storage', status: 'error', message: 'Connection failed', lastChecked: new Date().toISOString() };
   }
 }
 
@@ -90,7 +89,7 @@ async function checkStripe(): Promise<ServiceStatus> {
     }
     return { name: 'Stripe', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
   } catch (e: any) {
-    return { name: 'Stripe', status: 'error', message: e.message || 'Connection failed', lastChecked: new Date().toISOString() };
+    return { name: 'Stripe', status: 'error', message: 'Connection failed', lastChecked: new Date().toISOString() };
   }
 }
 
@@ -196,8 +195,7 @@ async function getLivestreamInfo(): Promise<HealthCheckResponse['livestream']> {
           djName: fields.djName?.stringValue || fields.displayName?.stringValue || 'Unknown DJ',
           title: fields.title?.stringValue || 'Live Session',
           viewers: parseInt(fields.currentViewers?.integerValue || '0'),
-          duration,
-          hlsUrl: fields.hlsUrl?.stringValue || 'https://live.freshwax.co.uk/freshwax-main/index.m3u8'
+          duration
         };
       }
     }

@@ -182,9 +182,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// GET: Get current queue and live status
-export const GET: APIRoute = async ({ locals }) => {
+// GET: Get current queue and live status (admin only)
+export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
+  const env = (locals as any)?.runtime?.env;
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const now = new Date().toISOString();
 

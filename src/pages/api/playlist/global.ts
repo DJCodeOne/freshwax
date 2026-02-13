@@ -383,6 +383,7 @@ export async function PUT({ request, locals }: APIContext) {
     // Set KV cache for helper functions
     setKVCache(kv);
 
+    const env = (locals as any)?.runtime?.env;
     const body = await request.json();
     const { action, userId, playlist: syncPlaylist } = body;
 
@@ -449,7 +450,7 @@ export async function PUT({ request, locals }: APIContext) {
             console.log('[GlobalPlaylist] Next: playing user track', playlist.queue[0]?.title);
           } else {
             // Queue empty - pick random track for autoplay
-            const nextRandomTrack = await pickRandomFromServerHistory();
+            const nextRandomTrack = await pickRandomFromServerHistory(env);
             if (nextRandomTrack) {
               playlist.queue.push(nextRandomTrack);
               playlist.isPlaying = true;
@@ -535,7 +536,7 @@ export async function PUT({ request, locals }: APIContext) {
             console.log('[GlobalPlaylist] Playing next user track:', playlist.queue[0]?.title || playlist.queue[0]?.url);
           } else {
             // Queue is empty - pick a random track for autoplay
-            const randomTrack = await pickRandomFromServerHistory();
+            const randomTrack = await pickRandomFromServerHistory(env);
             if (randomTrack) {
               playlist.queue.push(randomTrack);
               playlist.isPlaying = true;
@@ -572,7 +573,7 @@ export async function PUT({ request, locals }: APIContext) {
             (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 10000;
 
           if (playlist.queue.length === 0 && !recentlyStarted) {
-            const autoTrack = await pickRandomFromServerHistory();
+            const autoTrack = await pickRandomFromServerHistory(env);
             if (autoTrack) {
               playlist.queue.push(autoTrack);
               playlist.isPlaying = true;
@@ -701,16 +702,15 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
 // This ensures ALL clients get the SAME track (server is source of truth)
 // Local playlist server URL (H: drive MP3s via Cloudflare tunnel)
 const LOCAL_PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
-const PLAYLIST_TOKEN = import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
-
 // Fallback thumbnail for audio files without thumbnails
 const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
 
-async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
+async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null> {
   try {
+    const playlistToken = env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
     console.log('[GlobalPlaylist] Trying local playlist server /random endpoint...');
     const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/random`, {
-      headers: { 'Authorization': `Bearer ${PLAYLIST_TOKEN}` },
+      headers: { 'Authorization': `Bearer ${playlistToken}` },
       signal: AbortSignal.timeout(5000) // Fast endpoint, 5s is plenty
     });
 
@@ -750,9 +750,9 @@ async function pickRandomFromLocalServer(): Promise<PlaylistItem | null> {
   }
 }
 
-async function pickRandomFromServerHistory(): Promise<PlaylistItem | null> {
+async function pickRandomFromServerHistory(env?: any): Promise<PlaylistItem | null> {
   // Try local playlist server first (H: drive MP3s)
-  const localTrack = await pickRandomFromLocalServer();
+  const localTrack = await pickRandomFromLocalServer(env);
   if (localTrack) {
     return localTrack;
   }
