@@ -719,7 +719,7 @@ const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://local
         try {
           const response = await fetch('/api/delete-release', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
+            headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
             body: JSON.stringify({ releaseId: id })
           });
 

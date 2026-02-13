@@ -1639,7 +1639,7 @@ export const prerender = false;
       const { orderId, releaseId, trackIndex, fileType } = downloadInfo;
 
       // Get Firebase auth token
-      const user = window.firebaseAuth?.currentUser;
+      const user = auth?.currentUser;
       if (!user) {
         throw new Error('Please sign in to download');
       }
@@ -1741,7 +1741,7 @@ export const prerender = false;
 
     try {
       // Get Firebase auth token
-      const user = window.firebaseAuth?.currentUser;
+      const user = auth?.currentUser;
       if (!user) {
         throw new Error('Please sign in to download');
       }

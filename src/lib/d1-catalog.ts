@@ -57,6 +57,7 @@ export function releaseToD1Row(id: string, doc: any): Partial<D1Release> {
     rating_avg: doc.ratings?.average || doc.overallRating?.average || 0,
     rating_count: doc.ratings?.count || doc.overallRating?.count || 0,
     data: JSON.stringify(doc),
+    created_at: doc.createdAt || doc.uploadedAt || new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 }
@@ -172,7 +173,7 @@ export function merchToD1Row(id: string, doc: any): Partial<D1Merch> {
     name: doc.name || doc.title || 'Untitled',
     type: doc.type || doc.category || null,
     price: doc.price || 0,
-    stock: doc.stock || doc.quantity || 0,
+    stock: doc.totalStock || doc.stock || doc.quantity || 0,
     published: (doc.published ?? doc.active ?? true) ? 1 : 0,
     image_url: imageUrl,
     data: JSON.stringify(doc),
@@ -300,8 +301,8 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
     await db.prepare(`
       INSERT INTO releases_v2 (id, title, artist_name, genre, release_date, status, published,
         price_per_sale, track_price, vinyl_price, vinyl_stock, cover_url, thumb_url,
-        plays, downloads, views, likes, rating_avg, rating_count, data, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        plays, downloads, views, likes, rating_avg, rating_count, data, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         title = excluded.title,
         artist_name = excluded.artist_name,
@@ -326,7 +327,7 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
     `).bind(
       row.id, row.title, row.artist_name, row.genre, row.release_date, row.status, row.published,
       row.price_per_sale, row.track_price, row.vinyl_price, row.vinyl_stock, row.cover_url, row.thumb_url,
-      row.plays, row.downloads, row.views, row.likes, row.rating_avg, row.rating_count, row.data, row.updated_at
+      row.plays, row.downloads, row.views, row.likes, row.rating_avg, row.rating_count, row.data, row.created_at, row.updated_at
     ).run();
 
     console.log('[D1] Upserted release:', id);

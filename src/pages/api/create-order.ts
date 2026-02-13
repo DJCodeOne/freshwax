@@ -736,6 +736,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.error('[create-order] Stockist email error:', stockistError);
         // Don't fail the order if stockist email fails
       }
+
+      // Mark vinyl crates listings as sold (single-item listings from marketplace sellers)
+      for (const vItem of vinylItems) {
+        if (vItem.sellerId && !vItem.releaseId) {
+          const listingId = vItem.id || vItem.productId;
+          if (listingId) {
+            try {
+              await updateDocument('vinylListings', listingId, {
+                status: 'sold',
+                soldAt: new Date().toISOString(),
+                orderId: orderRef.id,
+                orderNumber
+              });
+              log.info('[create-order] Marked vinyl listing as sold:', listingId);
+            } catch (vinylErr) {
+              console.error('[create-order] Failed to mark vinyl as sold:', listingId, vinylErr);
+            }
+          }
+        }
+      }
     }
 
     // Send notification emails to artists for digital sales (tracks/releases)
