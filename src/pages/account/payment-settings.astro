@@ -14,7 +14,7 @@ const stripeConnected = url.searchParams.get('stripe_connected') === 'true';
 const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 ---
 
-<Layout title="Payment Settings | Fresh Wax" noindex={true}>
+<Layout title="Payment Settings" noindex={true}>
   <Header />
 
   <main class="payment-settings">
@@ -342,7 +342,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
             <p>Payments will be sent to your connected account automatically.</p>
           </div>
           <div class="status-actions-col">
-            <a href="https://dashboard.stripe.com/express" target="_blank" class="btn btn-secondary">
+            <a href="https://dashboard.stripe.com/express" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
               Stripe Dashboard &rarr;
             </a>
             ${userData.payoutMethod !== 'stripe' && userData.paypalLinked ?

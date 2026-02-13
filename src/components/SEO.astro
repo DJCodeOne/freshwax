@@ -151,10 +151,12 @@ const fullTitle = title === 'Home'
   ? `${SITE.name} | ${SITE.tagline}`
   : `${title} | ${SITE.name}`;
 
-// Normalize pathname: remove trailing slash (except for root "/")
+// Normalize pathname: ensure trailing slash to match Cloudflare's canonical URL
 const normalizedPath = Astro.url.pathname === '/'
   ? '/'
-  : Astro.url.pathname.replace(/\/+$/, '');
+  : Astro.url.pathname.endsWith('/')
+    ? Astro.url.pathname
+    : Astro.url.pathname + '/';
 
 const canonicalUrl = canonical || new URL(normalizedPath, SITE.url).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
@@ -558,7 +560,7 @@ const articleSchema = article ? {
 <title>{fullTitle}</title>
 <meta name="title" content={fullTitle} />
 <meta name="description" content={description} />
-<link rel="canonical" href={canonicalUrl} />
+{!noindex && <link rel="canonical" href={canonicalUrl} />}
 
 <!-- Keywords (still useful for some search engines) -->
 {allKeywords.length > 0 && (
@@ -567,12 +569,18 @@ const articleSchema = article ? {
 
 <!-- Robots -->
 {noindex ? (
-  <meta name="robots" content="noindex, nofollow" />
+  <>
+    <meta name="robots" content="noindex" />
+    <meta name="googlebot" content="noindex" />
+    <meta name="bingbot" content="noindex" />
+  </>
 ) : (
-  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <>
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow" />
+  </>
 )}
-<meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-<meta name="bingbot" content="index, follow" />
 
 <!-- Open Graph -->
 <meta property="og:type" content={
