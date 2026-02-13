@@ -44,7 +44,7 @@ export const blogPosts: BlogPost[] = [
       </ul>
 
       <h2>Browse the Latest</h2>
-      <p>Head over to our <a href="/releases">Releases</a> section to explore the latest drops. Whether you're after deep jungle rollers, technical DnB, or anything in between, you'll find fresh music to add to your collection.</p>
+      <p>Head over to our <a href="/releases/">Releases</a> section to explore the latest drops. Whether you're after deep jungle rollers, technical DnB, or anything in between, you'll find fresh music to add to your collection.</p>
     `
   },
   {
@@ -80,7 +80,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Upload Your Mix</h2>
       <p>Are you a DJ? Upload your mix directly to Fresh Wax for instant streaming and downloads. Add your tracklisting, description, artwork and links – then share it with the world. No waiting for approval, just upload and go live.</p>
 
-      <p>Check out our <a href="/dj-mixes">DJ Mixes</a> section and discover your new favourite selector.</p>
+      <p>Check out our <a href="/dj-mixes/">DJ Mixes</a> section and discover your new favourite selector.</p>
     `
   },
   {
@@ -113,7 +113,7 @@ export const blogPosts: BlogPost[] = [
       <p>Got merch to sell? Whether you're a sound system, label, or artist, we make it easy. Just send us your stock and we do the rest – product photos, listing on the store, and shipping to customers. You get paid instantly when a sale completes.</p>
       <p>It's sale or return: you send stock to us at your expense, and if it doesn't sell, we return it at ours. Zero risk way to get your merch in front of the scene.</p>
 
-      <p>Browse the <a href="/merch">Merch Store</a> and find something to wear to the next dance.</p>
+      <p>Browse the <a href="/merch/">Merch Store</a> and find something to wear to the next dance.</p>
     `
   },
   {
@@ -144,7 +144,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Made by Producers, for Producers</h2>
       <p>Every pack is created by artists who understand what you need in the studio. No filler, just quality sounds that will take your productions to the next level.</p>
 
-      <p>Check out our <a href="/releases">Releases</a> and start building your next banger.</p>
+      <p>Check out our <a href="/releases/">Releases</a> and start building your next banger.</p>
     `
   },
   {
@@ -168,7 +168,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Go Live Yourself</h2>
       <p>Fresh Wax Plus members can broadcast their own sets through our platform. It's a great way to build your audience and connect with like-minded heads from around the world.</p>
 
-      <p>Head to our <a href="/live">Live</a> section to see what's streaming now or check the schedule for upcoming sessions.</p>
+      <p>Head to our <a href="/live/">Live</a> section to see what's streaming now or check the schedule for upcoming sessions.</p>
     `
   },
   {
@@ -203,7 +203,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Built for the Scene</h2>
       <p>Unlike generic marketplaces, Crates is designed by and for the jungle and DnB community. Sellers understand the music, and buyers know they're dealing with fellow heads who care about vinyl as much as they do.</p>
 
-      <p>Start digging in <a href="/crates">Crates</a> and find your next holy grail.</p>
+      <p>Start digging in <a href="/crates/">Crates</a> and find your next holy grail.</p>
     `
   }
 ];

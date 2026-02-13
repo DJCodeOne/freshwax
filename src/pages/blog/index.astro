@@ -99,7 +99,7 @@ function brandFreshWax(text: string): string {
         <div class="blog-grid" id="blogGrid">
           {posts.map(post => (
             <article class="blog-card" data-category={post.category || ''}>
-              <a href={`/blog/${post.slug}`} class="card-link">
+              <a href={`/blog/${post.slug}/`} class="card-link">
                 {post.featuredImage && (
                   <div class="card-image">
                     <img

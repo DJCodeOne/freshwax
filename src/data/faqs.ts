@@ -18,7 +18,7 @@ export const generalFAQs: FAQ[] = [
   },
   {
     question: "Do you ship internationally?",
-    answer: "Digital downloads are available instantly to customers anywhere in the world. Shipping costs and delivery times vary by location - check our <a href='/shipping'>shipping page</a> for details."
+    answer: "Digital downloads are available instantly to customers anywhere in the world. Shipping costs and delivery times vary by location - check our <a href='/shipping/'>shipping page</a> for details."
   },
   {
     question: "How do digital downloads work?",
