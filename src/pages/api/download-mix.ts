@@ -36,7 +36,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const url = new URL(request.url);
   const audioUrl = url.searchParams.get('url');
-  const filename = url.searchParams.get('filename') || 'download.mp3';
+  // SECURITY: Sanitize filename to prevent CRLF header injection
+  const rawFilename = url.searchParams.get('filename') || 'download.mp3';
+  const filename = rawFilename.replace(/[^a-zA-Z0-9._\-() ]/g, '_').slice(0, 200);
 
   if (!audioUrl) {
     return new Response(JSON.stringify({ error: 'Missing audio URL' }), {

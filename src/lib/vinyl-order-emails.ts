@@ -1,6 +1,12 @@
 // src/lib/vinyl-order-emails.ts
 // Email notifications for vinyl crates orders - seller and admin notifications
 
+// SECURITY: Escape user-supplied data for safe HTML embedding
+function esc(s: string | null | undefined): string {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // Send email to seller when their vinyl is purchased
 export async function sendVinylOrderSellerEmail(
   sellerEmail: string,
@@ -39,11 +45,11 @@ export async function sendVinylOrderSellerEmail(
           <td style="padding: 20px;">
             <p style="color: #f97316; font-size: 14px; font-weight: 600; margin: 0 0 10px;">SHIP TO:</p>
             <p style="color: #ffffff; font-size: 14px; margin: 0; line-height: 1.6;">
-              ${shipping.firstName || ''} ${shipping.lastName || ''}<br>
-              ${shipping.address1 || ''}<br>
-              ${shipping.address2 ? shipping.address2 + '<br>' : ''}
-              ${shipping.city || ''}, ${shipping.postcode || ''}<br>
-              ${shipping.country || 'United Kingdom'}
+              ${esc(shipping.firstName)} ${esc(shipping.lastName)}<br>
+              ${esc(shipping.address1)}<br>
+              ${shipping.address2 ? esc(shipping.address2) + '<br>' : ''}
+              ${esc(shipping.city)}, ${esc(shipping.postcode)}<br>
+              ${esc(shipping.country) || 'United Kingdom'}
             </p>
           </td>
         </tr>
@@ -76,7 +82,7 @@ export async function sendVinylOrderSellerEmail(
           <tr>
             <td style="padding: 40px;">
               <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
-                Hey ${sellerName || 'there'},
+                Hey ${esc(sellerName) || 'there'},
               </p>
 
               <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
@@ -90,15 +96,15 @@ export async function sendVinylOrderSellerEmail(
                     <table width="100%" cellpadding="0" cellspacing="0">
                       <tr>
                         <td style="color: #737373; font-size: 14px; padding-bottom: 10px;">Order #</td>
-                        <td align="right" style="color: #ffffff; font-size: 14px; padding-bottom: 10px;">${orderDetails.orderNumber}</td>
+                        <td align="right" style="color: #ffffff; font-size: 14px; padding-bottom: 10px;">${esc(orderDetails.orderNumber)}</td>
                       </tr>
                       <tr>
                         <td style="color: #737373; font-size: 14px; padding-bottom: 10px;">Item</td>
-                        <td align="right" style="color: #f97316; font-size: 14px; font-weight: 600; padding-bottom: 10px;">${orderDetails.itemTitle}</td>
+                        <td align="right" style="color: #f97316; font-size: 14px; font-weight: 600; padding-bottom: 10px;">${esc(orderDetails.itemTitle)}</td>
                       </tr>
                       <tr>
                         <td style="color: #737373; font-size: 14px; padding-bottom: 10px;">Artist</td>
-                        <td align="right" style="color: #ffffff; font-size: 14px; padding-bottom: 10px;">${orderDetails.itemArtist}</td>
+                        <td align="right" style="color: #ffffff; font-size: 14px; padding-bottom: 10px;">${esc(orderDetails.itemArtist)}</td>
                       </tr>
                       <tr>
                         <td style="color: #737373; font-size: 14px;">Sale Price</td>
@@ -112,8 +118,8 @@ export async function sendVinylOrderSellerEmail(
               ${shippingHtml}
 
               <p style="color: #a3a3a3; font-size: 14px; margin: 0 0 25px; line-height: 1.6;">
-                <strong style="color: #ffffff;">Buyer:</strong> ${orderDetails.buyerName}<br>
-                <strong style="color: #ffffff;">Email:</strong> ${orderDetails.buyerEmail}
+                <strong style="color: #ffffff;">Buyer:</strong> ${esc(orderDetails.buyerName)}<br>
+                <strong style="color: #ffffff;">Email:</strong> ${esc(orderDetails.buyerEmail)}
               </p>
 
               <!-- CTA Button -->
@@ -212,20 +218,20 @@ export async function sendVinylOrderAdminEmail(
   <div style="max-width: 600px; margin: 0 auto; background: #141414; padding: 30px; border-radius: 12px;">
     <h1 style="color: #f97316; margin-top: 0;">Vinyl Crates Sale</h1>
 
-    <p><strong>Order:</strong> #${orderDetails.orderNumber}</p>
-    <p><strong>Item:</strong> ${orderDetails.itemTitle} - ${orderDetails.itemArtist}</p>
+    <p><strong>Order:</strong> #${esc(orderDetails.orderNumber)}</p>
+    <p><strong>Item:</strong> ${esc(orderDetails.itemTitle)} - ${esc(orderDetails.itemArtist)}</p>
     <p><strong>Price:</strong> £${orderDetails.price.toFixed(2)}</p>
 
     <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
 
-    <p><strong>Seller:</strong> ${orderDetails.sellerName}</p>
-    <p><strong>Seller Email:</strong> ${orderDetails.sellerEmail}</p>
-    <p><strong>Seller ID:</strong> ${orderDetails.sellerId}</p>
+    <p><strong>Seller:</strong> ${esc(orderDetails.sellerName)}</p>
+    <p><strong>Seller Email:</strong> ${esc(orderDetails.sellerEmail)}</p>
+    <p><strong>Seller ID:</strong> ${esc(orderDetails.sellerId)}</p>
 
     <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
 
-    <p><strong>Buyer:</strong> ${orderDetails.buyerName}</p>
-    <p><strong>Buyer Email:</strong> ${orderDetails.buyerEmail}</p>
+    <p><strong>Buyer:</strong> ${esc(orderDetails.buyerName)}</p>
+    <p><strong>Buyer Email:</strong> ${esc(orderDetails.buyerEmail)}</p>
 
     <p style="color: #737373; font-size: 12px; margin-top: 30px;">
       Seller has been notified to ship the item.
@@ -243,7 +249,7 @@ export async function sendVinylOrderAdminEmail(
       body: JSON.stringify({
         from: 'Fresh Wax <orders@freshwax.co.uk>',
         to: [ADMIN_EMAIL],
-        subject: `[Crates] Vinyl Sale: ${orderDetails.itemTitle} - #${orderDetails.orderNumber}`,
+        subject: `[Crates] Vinyl Sale: ${esc(orderDetails.itemTitle)} - #${esc(orderDetails.orderNumber)}`,
         html: emailHtml
       })
     });

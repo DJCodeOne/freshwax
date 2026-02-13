@@ -907,9 +907,21 @@ const firebaseConfig = {
     }
 
     // Check live status (reduced frequency to minimize Firebase reads)
+    // Stop polling when tab is hidden to save API calls
     checkLiveStatus();
     if (liveStatusInterval) clearInterval(liveStatusInterval);
     liveStatusInterval = setInterval(checkLiveStatus, 60000); // 60s instead of 30s
+    if (!window._fwxVisibilityListenerSet) {
+      window._fwxVisibilityListenerSet = true;
+      document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+          if (liveStatusInterval) { clearInterval(liveStatusInterval); liveStatusInterval = null; }
+        } else {
+          checkLiveStatus();
+          if (!liveStatusInterval) liveStatusInterval = setInterval(checkLiveStatus, 60000);
+        }
+      });
+    }
 
     // Mobile burger menu functionality
     setupBurgerMenu();

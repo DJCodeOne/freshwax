@@ -264,8 +264,8 @@ const webpageSchema = {
   "isPartOf": { "@id": `${SITE.url}/#website` },
   "about": { "@id": `${SITE.url}/#organization` },
   "inLanguage": "en-GB",
-  "datePublished": new Date().toISOString(),
-  "dateModified": new Date().toISOString()
+  "datePublished": article?.publishedTime || new Date().toISOString(),
+  "dateModified": article?.modifiedTime || article?.publishedTime || new Date().toISOString()
 };
 
 // Breadcrumb Schema

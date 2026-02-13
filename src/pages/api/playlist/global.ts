@@ -3,6 +3,9 @@
 // NOW USES CLOUDFLARE KV - NO MORE FIREBASE READS!
 
 import type { APIContext } from 'astro';
+import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // KV keys for playlist data
 const KV_PLAYLIST_KEY = 'global-playlist';
@@ -81,7 +84,26 @@ export async function GET({ request, locals }: APIContext) {
 
 // POST - Add item to playlist (requires auth)
 export async function POST({ request, locals }: APIContext) {
+  // Rate limit: standard - 60 per minute
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`playlist-post:${clientId}`, RateLimiters.standard);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
+    // SECURITY: Verify authentication
+    const env = (locals as any)?.runtime?.env;
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (!verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const kv = getKV(locals);
     if (!kv) {
       return new Response(JSON.stringify({
@@ -91,7 +113,9 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     const body = await request.json();
-    const { item, userId, userName } = body;
+    const { item, userName } = body;
+    // SECURITY: Use verified userId, ignore client-provided userId
+    const userId = verifiedUserId;
 
     if (!item || !userId) {
       return new Response(JSON.stringify({
@@ -198,7 +222,26 @@ export async function POST({ request, locals }: APIContext) {
 
 // DELETE - Remove item from playlist
 export async function DELETE({ request, locals }: APIContext) {
+  // Rate limit: write - 30 per minute
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`playlist-delete:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
+    // SECURITY: Verify authentication
+    const env = (locals as any)?.runtime?.env;
+    initFirebaseEnv({
+      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
+      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
+    });
+    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
+    if (!verifiedUserId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const kv = getKV(locals);
     if (!kv) {
       return new Response(JSON.stringify({
@@ -208,12 +251,16 @@ export async function DELETE({ request, locals }: APIContext) {
     }
 
     const body = await request.json();
-    const { itemId, userId, isAdmin } = body;
+    const { itemId } = body;
+    // SECURITY: Use verified userId, verify admin status server-side
+    const userId = verifiedUserId;
+    initAdminEnv(env);
+    const userIsAdmin = await checkIsAdmin(userId);
 
-    if (!itemId || (!userId && !isAdmin)) {
+    if (!itemId) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing itemId or userId'
+        error: 'Missing itemId'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
@@ -253,8 +300,8 @@ export async function DELETE({ request, locals }: APIContext) {
     }
 
     const item = playlist.queue[itemIndex];
-    // Allow removal if user owns the item OR if admin flag is set
-    if (!isAdmin && item.addedBy !== userId) {
+    // Allow removal if user owns the item OR is verified admin
+    if (!userIsAdmin && item.addedBy !== userId) {
       return new Response(JSON.stringify({
         success: false,
         error: 'You can only remove your own items'
@@ -319,6 +366,11 @@ export async function DELETE({ request, locals }: APIContext) {
 
 // PUT - Update playlist state (next track, play/pause, sync)
 export async function PUT({ request, locals }: APIContext) {
+  // Rate limit: standard - 60 per minute
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`playlist-put:${clientId}`, RateLimiters.standard);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const kv = getKV(locals);
     if (!kv) {

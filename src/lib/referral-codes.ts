@@ -16,14 +16,17 @@ export interface ReferralCode {
   active: boolean;
 }
 
-// Generate a unique referral code
+// Generate a unique referral code (using cryptographic randomness)
 export function generateReferralCode(creatorName: string): string {
   const prefix = 'FWX';
   const namePart = creatorName
     .replace(/[^a-zA-Z0-9]/g, '')
     .substring(0, 4)
     .toUpperCase() || 'PLUS';
-  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+  // SECURITY: Use crypto.getRandomValues instead of Math.random
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const randomBytes = crypto.getRandomValues(new Uint8Array(6));
+  const randomPart = Array.from(randomBytes).map(b => chars[b % chars.length]).join('');
   return `${prefix}${namePart}${randomPart}`;
 }
 

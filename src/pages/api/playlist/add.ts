@@ -35,8 +35,14 @@ function getThumbnailUrl(platform: MediaPlatform, embedId?: string, url?: string
 // Fetch video metadata using noembed.com (free oEmbed proxy)
 async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbnail?: string }> {
   try {
-    const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
+    const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {
+      signal: AbortSignal.timeout(5000) // 5s timeout
+    });
     if (!response.ok) return {};
+
+    // SECURITY: Reject oversized responses to prevent DoS
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 100000) return {};
 
     const data = await response.json();
     return {

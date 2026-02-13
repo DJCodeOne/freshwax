@@ -201,11 +201,11 @@ type D1Database = any; // Will be typed from Cloudflare bindings
 
 // --- RELEASES ---
 
-export async function d1GetAllPublishedReleases(db: D1Database): Promise<any[]> {
+export async function d1GetAllPublishedReleases(db: D1Database, limit: number = 500): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, data FROM releases_v2 WHERE published = 1 ORDER BY release_date DESC`
-    ).all();
+      `SELECT id, data FROM releases_v2 WHERE published = 1 ORDER BY release_date DESC LIMIT ?`
+    ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
   } catch (e) {
@@ -339,11 +339,11 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
 
 // --- DJ MIXES ---
 
-export async function d1GetAllPublishedMixes(db: D1Database): Promise<any[]> {
+export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC`
-    ).all();
+      `SELECT id, data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
+    ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
   } catch (e) {
@@ -352,11 +352,11 @@ export async function d1GetAllPublishedMixes(db: D1Database): Promise<any[]> {
   }
 }
 
-export async function d1GetAllMixes(db: D1Database): Promise<any[]> {
+export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, data FROM dj_mixes ORDER BY upload_date DESC`
-    ).all();
+      `SELECT id, data FROM dj_mixes ORDER BY upload_date DESC LIMIT ?`
+    ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
   } catch (e) {
@@ -440,11 +440,11 @@ export async function d1DeleteMix(db: D1Database, id: string): Promise<boolean> 
 
 // --- MERCH ---
 
-export async function d1GetAllPublishedMerch(db: D1Database): Promise<any[]> {
+export async function d1GetAllPublishedMerch(db: D1Database, limit: number = 500): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, data FROM merch WHERE published = 1 ORDER BY created_at DESC`
-    ).all();
+      `SELECT id, data FROM merch WHERE published = 1 ORDER BY created_at DESC LIMIT ?`
+    ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
   } catch (e) {

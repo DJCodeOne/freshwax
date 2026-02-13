@@ -1,7 +1,7 @@
 // src/pages/robots.txt.ts
 // Enhanced robots.txt for Fresh Wax - optimized for search engine crawling
 
-export const prerender = true;
+export const prerender = false;
 
 const SITE_URL = 'https://freshwax.co.uk';
 

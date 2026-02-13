@@ -1,7 +1,7 @@
 ---
 // src/pages/cookies.astro
-// Static page - prerender for performance
-export const prerender = true;
+// SSR to avoid Astro.request.headers build warning
+export const prerender = false;
 
 import InfoPageLayout from '../layouts/InfoPageLayout.astro';
 

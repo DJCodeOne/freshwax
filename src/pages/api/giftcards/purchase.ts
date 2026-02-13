@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
+import { generateGiftCardCode } from '../../../lib/giftcard';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -52,18 +53,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   }
 }
 
-// Generate gift card code
-function generateGiftCardCode(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars
-  let code = 'FWGC-';
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 4; j++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    if (i < 2) code += '-';
-  }
-  return code;
-}
+// Gift card code generation imported from lib/giftcard.ts (uses crypto.getRandomValues)
 
 // Send gift card email
 async function sendGiftCardEmail(

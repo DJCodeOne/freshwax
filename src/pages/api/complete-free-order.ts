@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { createOrder, validateStock } from '../../lib/order-utils';
-import { initFirebaseEnv, getDocument, updateDocument, atomicIncrement, verifyRequestUser } from '../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, queryCollection, updateDocument, atomicIncrement, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
 
@@ -43,7 +43,11 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
                 );
                 serverPrice = track?.price || release.trackPrice || 0.99;
               } else {
-                serverPrice = release.price || release.digitalPrice || item.price;
+                serverPrice = release.price || release.digitalPrice;
+              if (serverPrice == null || serverPrice <= 0) {
+                validatedItems.push({ ...item, price: item.price || 0, priceValidationFailed: true });
+                continue;
+              }
               }
             }
           }
@@ -178,6 +182,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // SECURITY: Idempotency check - prevent duplicate free orders
+    const orderKey = `${verifiedUserId}:${validatedItems.map((i: any) => `${i.id || i.productId}:${i.quantity}`).join(',')}`;
+    const recentOrders = await queryCollection('orders', {
+      filters: [
+        { field: 'customer.userId', op: 'EQUAL', value: verifiedUserId },
+        { field: 'paymentMethod', op: 'IN', value: ['free', 'credit'] }
+      ],
+      orderBy: 'createdAt',
+      orderDirection: 'DESCENDING',
+      limit: 5
+    });
+    if (recentOrders && recentOrders.length > 0) {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const duplicate = recentOrders.find((order: any) => {
+        if (!order.createdAt || order.createdAt < fiveMinutesAgo) return false;
+        const orderItemKeys = (order.items || []).map((i: any) => `${i.id || i.productId}:${i.quantity}`).join(',');
+        const currentItemKeys = validatedItems.map((i: any) => `${i.id || i.productId}:${i.quantity}`).join(',');
+        return orderItemKeys === currentItemKeys;
+      });
+      if (duplicate) {
+        console.log('[FreeOrder] Duplicate order detected, returning existing:', duplicate.id);
+        return new Response(JSON.stringify({
+          success: true,
+          orderId: duplicate.id,
+          orderNumber: duplicate.orderNumber,
+          duplicate: true
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
     // Verify this is actually a free/credit-paid order (no payment due)
     const paymentDue = Math.max(0, validatedTotal - appliedCredit);
     if (paymentDue > 0) {
@@ -197,7 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await atomicIncrement('userCredits', verifiedUserId, { balance: -appliedCredit });
         await atomicIncrement('users', verifiedUserId, { creditBalance: -appliedCredit });
         creditDeducted = true;
-        console.log('[FreeOrder] Credit deducted before order creation:', appliedCredit, 'from user:', verifiedUserId);
+        console.log('[FreeOrder] Credit deducted before order creation:', appliedCredit);
       } catch (creditErr) {
         console.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
         return new Response(JSON.stringify({
@@ -272,7 +306,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
                 submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
-                console.log(`[FreeOrder] Item ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
+                console.log(`[FreeOrder] Item ${item.name}: seller=${submitterId ? 'SET' : 'NONE'}`);
               }
             } catch (lookupErr) {
               console.error(`[FreeOrder] Failed to lookup release ${releaseId}:`, lookupErr);
@@ -336,7 +370,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           await updateDocument('users', verifiedUserId, { creditUpdatedAt: now });
 
-          console.log('[FreeOrder] Credit transaction recorded:', appliedCredit, 'from user:', verifiedUserId, 'balance:', currentBalance);
+          console.log('[FreeOrder] Credit transaction recorded:', appliedCredit, 'balance:', currentBalance);
         } catch (txnErr) {
           console.error('[FreeOrder] Failed to record credit transaction:', txnErr);
           // Credit already deducted, transaction record is non-critical

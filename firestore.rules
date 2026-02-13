@@ -83,8 +83,8 @@ service cloud.firestore {
 
     // Customers collection
     match /customers/{customerId} {
-      // TODO: Migrate firebase-rest.ts to use service account auth, then restrict to isAdmin() || isOwner(customerId)
-      allow read: if true;
+      // SECURITY: Restrict read to authenticated users (was public - PII exposure risk)
+      allow read: if isAuthenticated();
       // Allow create from authenticated user OR REST API (for wishlist)
       allow create: if (isAuthenticated() && request.auth.uid == customerId) ||
                       request.resource.data.wishlist != null;
@@ -175,10 +175,10 @@ service cloud.firestore {
     }
 
     // DJ Mixes collection (hyphenated) - public read
-    // Note: create/stat updates allow server-side API (REST API doesn't have auth token)
+    // SECURITY: Require authentication for creation to prevent impersonation
     match /dj-mixes/{mixId} {
       allow read: if true;
-      allow create: if request.resource.data.userId != null;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin() ||
                       (isAuthenticated() && resource.data.userId == request.auth.uid) ||
                       // Allow stat updates and admin metadata updates from anyone (needed for REST API)

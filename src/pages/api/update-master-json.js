@@ -113,8 +113,7 @@ export async function POST({ request, locals }) {
     console.error('[Master JSON] ✗ Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Internal error',
-      details: error.stack
+      error: 'Internal error'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -9,6 +9,7 @@ import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 // Import section components
+import ErrorBoundary from './ErrorBoundary';
 import Overview from './admin/Overview';
 import ArtistManagement from './admin/ArtistManagement';
 import CustomerManagement from './admin/CustomerManagement';
@@ -111,30 +112,38 @@ export default function AdminReleasePanel() {
     );
   }
 
-  // Render active section
+  // Render active section wrapped in error boundary
   const renderSection = () => {
     const sectionProps = { auth, db, stats, setStats };
-    
-    switch (activeSection) {
-      case 'overview':
-        return <Overview {...sectionProps} />;
-      case 'artists':
-        return <ArtistManagement {...sectionProps} />;
-      case 'customers':
-        return <CustomerManagement {...sectionProps} />;
-      case 'orders':
-        return <OrderManagement {...sectionProps} />;
-      case 'releases':
-        return <ReleaseManagement {...sectionProps} />;
-      case 'upload':
-        return <UploadRelease {...sectionProps} />;
-      case 'events':
-        return <EventsOffers {...sectionProps} />;
-      case 'settings':
-        return <SettingsPanel {...sectionProps} />;
-      default:
-        return <Overview {...sectionProps} />;
-    }
+
+    const section = (() => {
+      switch (activeSection) {
+        case 'overview':
+          return <Overview {...sectionProps} />;
+        case 'artists':
+          return <ArtistManagement {...sectionProps} />;
+        case 'customers':
+          return <CustomerManagement {...sectionProps} />;
+        case 'orders':
+          return <OrderManagement {...sectionProps} />;
+        case 'releases':
+          return <ReleaseManagement {...sectionProps} />;
+        case 'upload':
+          return <UploadRelease {...sectionProps} />;
+        case 'events':
+          return <EventsOffers {...sectionProps} />;
+        case 'settings':
+          return <SettingsPanel {...sectionProps} />;
+        default:
+          return <Overview {...sectionProps} />;
+      }
+    })();
+
+    return (
+      <ErrorBoundary key={activeSection} fallbackMessage={`The ${activeSection} section encountered an error. Please try again.`}>
+        {section}
+      </ErrorBoundary>
+    );
   };
 
   return (

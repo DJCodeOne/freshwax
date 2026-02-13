@@ -1,6 +1,12 @@
 // src/lib/payout-emails.ts
 // Email notifications for artist payouts and refunds
 
+// SECURITY: Escape user-supplied data for safe HTML embedding
+function esc(s: string | null | undefined): string {
+  if (!s) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // Send email notification when a payout is completed to an artist
 export async function sendPayoutCompletedEmail(
   artistEmail: string,
@@ -51,11 +57,11 @@ export async function sendPayoutCompletedEmail(
           <tr>
             <td style="padding: 40px;">
               <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
-                Hey ${artistName || 'there'},
+                Hey ${esc(artistName) || 'there'},
               </p>
 
               <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
-                We've just sent <strong style="color: #22c55e;">${formattedAmount}</strong> to your connected Stripe account from order <strong style="color: #ffffff;">#${orderNumber}</strong>.
+                We've just sent <strong style="color: #22c55e;">${formattedAmount}</strong> to your connected Stripe account from order <strong style="color: #ffffff;">#${esc(orderNumber)}</strong>.
               </p>
 
               <!-- Payment Details Box -->
@@ -69,7 +75,7 @@ export async function sendPayoutCompletedEmail(
                       </tr>
                       <tr>
                         <td style="color: #737373; font-size: 14px;">Order</td>
-                        <td align="right" style="color: #ffffff; font-size: 14px;">#${orderNumber}</td>
+                        <td align="right" style="color: #ffffff; font-size: 14px;">#${esc(orderNumber)}</td>
                       </tr>
                     </table>
                   </td>
@@ -205,11 +211,11 @@ export async function sendRefundNotificationEmail(
           <tr>
             <td style="padding: 40px;">
               <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
-                Hey ${artistName || 'there'},
+                Hey ${esc(artistName) || 'there'},
               </p>
 
               <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
-                A customer requested a ${isFullRefund ? 'full' : 'partial'} refund for order <strong style="color: #ffffff;">#${orderNumber}</strong>. As a result, your earnings have been adjusted.
+                A customer requested a ${isFullRefund ? 'full' : 'partial'} refund for order <strong style="color: #ffffff;">#${esc(orderNumber)}</strong>. As a result, your earnings have been adjusted.
               </p>
 
               <!-- Refund Details Box -->

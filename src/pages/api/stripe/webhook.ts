@@ -606,6 +606,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (session.mode === 'subscription') {
         console.log('[Stripe Webhook] 👑 Processing Plus subscription...');
 
+        // SECURITY: Validate payment amount matches Pro price (£10 = 1000 pence)
+        const PRO_PRICE_PENCE = 1000; // £10.00
+        if (session.payment_status !== 'paid') {
+          console.error('[Stripe Webhook] SECURITY: Plus subscription payment not completed. Status:', session.payment_status);
+          return new Response(JSON.stringify({ received: true, error: 'Payment not completed' }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        if (session.amount_total != null && session.amount_total < PRO_PRICE_PENCE) {
+          console.error('[Stripe Webhook] SECURITY: Plus payment amount too low:', session.amount_total, 'expected >=', PRO_PRICE_PENCE);
+          return new Response(JSON.stringify({ received: true, error: 'Invalid payment amount' }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+
         const metadata = session.metadata || {};
         const userId = metadata.userId;
         const email = session.customer_email || metadata.email;

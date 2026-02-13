@@ -14,6 +14,10 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
+// Order validation constants
+const MAX_ITEMS_PER_ORDER = 50;
+const MAX_QUANTITY_PER_ITEM = 99;
+
 // Escape user-supplied data for safe HTML embedding in emails
 function escHtml(str: string | null | undefined): string {
   if (!str) return '';
@@ -83,7 +87,10 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
           }
-          serverPrice = release.price || release.digitalPrice || item.price;
+          serverPrice = release.price || release.digitalPrice;
+          if (serverPrice == null || serverPrice <= 0) {
+            return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Unable to verify price for ${item.name}. Please try again.` };
+          }
         }
       }
 
@@ -129,7 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Extract idToken for authenticated Firebase writes
     const idToken = orderData.idToken;
 
-    log.info('[create-order] Processing order:', orderData.customer?.email);
+    log.info('[create-order] Processing order for user:', orderData.customer?.userId || 'guest');
 
     // Validate required fields
     if (!orderData.customer?.email || !orderData.customer?.firstName || !orderData.customer?.lastName) {
@@ -147,13 +154,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Validate item count and quantities
-    if (orderData.items.length > 50) {
+    if (orderData.items.length > MAX_ITEMS_PER_ORDER) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Too many items in order (max 50)'
+        error: `Too many items in order (max ${MAX_ITEMS_PER_ORDER})`
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    if (orderData.items.some((item: any) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99)) {
+    if (orderData.items.some((item: any) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > MAX_QUANTITY_PER_ITEM)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Invalid item quantity (1-99)'
@@ -182,13 +189,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // IMPORTANT: Verify user is a customer (only customers can purchase)
     if (orderData.customer.userId) {
-      const [customerDoc, userDoc, artistDoc] = await Promise.all([
-        getDocument('users', orderData.customer.userId),
+      const [userDoc, artistDoc] = await Promise.all([
         getDocument('users', orderData.customer.userId),
         getDocument('artists', orderData.customer.userId)
       ]);
 
-      const isCustomer = !!customerDoc || !!userDoc;
+      const isCustomer = !!userDoc;
       const isArtist = !!artistDoc;
 
       // If user is an artist but NOT a customer, deny the order

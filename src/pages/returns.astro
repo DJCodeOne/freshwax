@@ -1,7 +1,7 @@
 ---
 // src/pages/returns.astro
-// Static redirect - prerender for performance
-export const prerender = true;
+// SSR to avoid Astro.request.headers build warning
+export const prerender = false;
 
 // Redirect to shipping page which now contains returns information
 return Astro.redirect('/shipping#returns-refunds', 301);

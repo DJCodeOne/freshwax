@@ -178,7 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    log.info('[process-order] Processing order for:', orderData.customer?.email);
+    log.info('[process-order] Processing order for user:', orderData.customer?.userId || 'guest');
 
     // Validation
     if (!orderData.customer?.email || !orderData.customer?.firstName || !orderData.customer?.lastName) {
