@@ -1213,9 +1213,11 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     }
 
     try {
+      const gifHeaders = { 'Content-Type': 'application/json' };
+      try { const t = await currentUser.getIdToken(); if (t) gifHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
       const response = await fetch('/api/livestream/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: gifHeaders,
         body: JSON.stringify({
           streamId,
           userId: currentUser.uid,

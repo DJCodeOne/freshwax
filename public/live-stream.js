@@ -112,6 +112,18 @@ async function registerStreamView(streamId) {
   }
 }
 
+// Helper: get auth headers for chat API calls
+async function getChatAuthHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (currentUser) {
+    try {
+      const token = await currentUser.getIdToken();
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+    } catch (e) { /* ignore */ }
+  }
+  return headers;
+}
+
 // Expose sendGifMessage globally for LiveChat component
 window.sendGifMessage = async function(giphyUrl, giphyId) {
   console.log('[GIF] window.sendGifMessage called:', { giphyUrl, giphyId });
@@ -131,7 +143,7 @@ window.sendGifMessage = async function(giphyUrl, giphyId) {
   try {
     const response = await fetch('/api/livestream/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getChatAuthHeaders(),
       body: JSON.stringify({
         streamId: currentStream.id,
         userId: currentUser.uid,
@@ -3597,7 +3609,7 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
   try {
     await fetch('/api/livestream/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await getChatAuthHeaders(),
       body: JSON.stringify({
         streamId: currentStream.id,
         userId: currentUser.uid,
@@ -3688,7 +3700,7 @@ function setupChatInput(streamId) {
         const streamId = window.currentStreamId || 'playlist-global';
         await fetch('/api/livestream/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getChatAuthHeaders(),
           body: JSON.stringify({
             streamId: streamId,
             userId: 'system',
@@ -3773,7 +3785,7 @@ function setupChatInput(streamId) {
         const streamId = window.currentStreamId || 'playlist-global';
         await fetch('/api/livestream/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await getChatAuthHeaders(),
           body: JSON.stringify({
             streamId: streamId,
             userId: result.type === 'system' ? 'system' : 'bot',
@@ -3813,7 +3825,7 @@ function setupChatInput(streamId) {
     try {
       const response = await fetch('/api/livestream/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getChatAuthHeaders(),
         body: JSON.stringify({
           streamId,
           userId: currentUser.uid,

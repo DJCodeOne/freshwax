@@ -133,9 +133,11 @@
     }
 
     try {
+      const chatHeaders = { 'Content-Type': 'application/json' };
+      try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
       const response = await fetch('/api/livestream/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: chatHeaders,
         body: JSON.stringify({
           streamId: streamId,
           userId: user.uid,
@@ -371,9 +373,11 @@
       }
 
       try {
+        const dmHeaders = { 'Content-Type': 'application/json' };
+        try { const t = await user.getIdToken(); if (t) dmHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
         const response = await fetch('/api/livestream/chat', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: dmHeaders,
           body: JSON.stringify({
             streamId: window.currentStreamId,
             userId: user.uid,
