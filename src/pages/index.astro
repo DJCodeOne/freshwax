@@ -18,9 +18,13 @@ const db = (Astro.locals as any).runtime?.env?.DB;
 const featuredReleases = await getLiveReleases(20, db);
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+
+// Preload the first release cover image for faster LCP
+const firstArtwork = featuredReleases[0]?.coverArtUrl;
 ---
 
 <Layout title="Home" description="Buy jungle and drum & bass music at Fresh Wax. Digital downloads, vinyl records, DJ mixes, and live streams from the UK underground scene.">
+  {firstArtwork && <link rel="preload" href={firstArtwork} as="image" slot="head" />}
   <Header />
 
   <main class="index-main">
@@ -368,6 +372,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
   .release-item:nth-child(3) { animation-delay: 0.15s; }
   .release-item:nth-child(4) { animation-delay: 0.2s; }
   .release-item:nth-child(5) { animation-delay: 0.25s; }
+
+  /* Skip rendering off-screen releases to reduce main-thread layout work */
+  .release-item:nth-child(n+4) {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 400px;
+  }
 
   /* ===========================================
      SMALL MOBILE (375px+)

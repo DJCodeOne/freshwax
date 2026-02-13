@@ -194,6 +194,9 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
     
     <ViewTransitions />
 
+    <!-- Named slot for page-specific head content (preloads, etc.) -->
+    <slot name="head" />
+
     <!-- Image loading placeholder script -->
     <script is:inline>
       document.addEventListener('DOMContentLoaded', function() {
@@ -332,46 +335,31 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
     
     <!-- Cookie consent banner (UK GDPR/PECR compliant) -->
-    <div id="cookie-consent" class="fixed bottom-0 left-0 right-0 z-[9999] hidden" role="dialog" aria-label="Cookie consent" aria-modal="false">
-      <div style="background: #111; border-top: 1px solid #333; padding: 1rem 1.5rem;">
-        <div style="max-width: 72rem; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
-          <p style="color: #ccc; font-size: 0.875rem; flex: 1; min-width: 200px; margin: 0; line-height: 1.5;">
-            We use cookies for analytics to understand how you use our site. Essential cookies for cart and login are always active.
-            <a href="/cookies" style="color: #ef4444; text-decoration: underline;">Cookie policy</a>
-          </p>
-          <div style="display: flex; gap: 0.5rem; flex-shrink: 0;">
-            <button id="cookie-reject" style="padding: 0.5rem 1rem; background: #333; color: #fff; border: 1px solid #555; border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer;">
-              Reject All
-            </button>
-            <button id="cookie-accept" style="padding: 0.5rem 1rem; background: #dc2626; color: #fff; border: none; border-radius: 0.375rem; font-size: 0.875rem; cursor: pointer;">
-              Accept All
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Injected via JS to avoid being in initial DOM and becoming LCP element -->
     <script is:inline>
       (function() {
-        var consent = localStorage.getItem('cookie-consent');
-        if (!consent) {
-          var el = document.getElementById('cookie-consent');
-          if (el) el.classList.remove('hidden');
-        }
-        var acceptBtn = document.getElementById('cookie-accept');
-        var rejectBtn = document.getElementById('cookie-reject');
-        if (acceptBtn) {
-          acceptBtn.addEventListener('click', function() {
-            localStorage.setItem('cookie-consent', 'accepted');
-            document.getElementById('cookie-consent')?.classList.add('hidden');
-            window.dispatchEvent(new Event('cookie-consent-granted'));
-          });
-        }
-        if (rejectBtn) {
-          rejectBtn.addEventListener('click', function() {
-            localStorage.setItem('cookie-consent', 'rejected');
-            document.getElementById('cookie-consent')?.classList.add('hidden');
-          });
-        }
+        if (localStorage.getItem('cookie-consent')) return;
+        // Inject banner after page content has painted
+        window.addEventListener('load', function() {
+          setTimeout(function() {
+            var d = document.createElement('div');
+            d.id = 'cookie-consent';
+            d.setAttribute('role', 'dialog');
+            d.setAttribute('aria-label', 'Cookie consent');
+            d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;';
+            d.innerHTML = '<div style="background:#111;border-top:1px solid #333;padding:1rem 1.5rem"><div style="max-width:72rem;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.75rem"><p style="color:#ccc;font-size:0.875rem;flex:1;min-width:200px;margin:0;line-height:1.5">We use cookies for analytics to understand how you use our site. Essential cookies for cart and login are always active. <a href="/cookies" style="color:#ef4444;text-decoration:underline">Cookie policy</a></p><div style="display:flex;gap:0.5rem;flex-shrink:0"><button id="cookie-reject" style="padding:0.5rem 1rem;background:#333;color:#fff;border:1px solid #555;border-radius:0.375rem;font-size:0.875rem;cursor:pointer">Reject All</button><button id="cookie-accept" style="padding:0.5rem 1rem;background:#dc2626;color:#fff;border:none;border-radius:0.375rem;font-size:0.875rem;cursor:pointer">Accept All</button></div></div></div>';
+            document.body.appendChild(d);
+            document.getElementById('cookie-accept').addEventListener('click', function() {
+              localStorage.setItem('cookie-consent', 'accepted');
+              d.remove();
+              window.dispatchEvent(new Event('cookie-consent-granted'));
+            });
+            document.getElementById('cookie-reject').addEventListener('click', function() {
+              localStorage.setItem('cookie-consent', 'rejected');
+              d.remove();
+            });
+          }, 3000);
+        });
       })();
     </script>
 
