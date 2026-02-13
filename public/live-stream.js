@@ -119,7 +119,7 @@ async function getChatAuthHeaders() {
     try {
       const token = await currentUser.getIdToken();
       if (token) headers['Authorization'] = `Bearer ${token}`;
-    } catch (e) { /* ignore */ }
+    } catch (e) { /* token refresh failed - send without auth */ }
   }
   return headers;
 }
