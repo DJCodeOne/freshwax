@@ -80,7 +80,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Upload Your Mix</h2>
       <p>Are you a DJ? Upload your mix directly to Fresh Wax for instant streaming and downloads. Add your tracklisting, description, artwork and links – then share it with the world. No waiting for approval, just upload and go live.</p>
 
-      <p>Check out our <a href="/mixes">DJ Mixes</a> section and discover your new favourite selector.</p>
+      <p>Check out our <a href="/dj-mixes">DJ Mixes</a> section and discover your new favourite selector.</p>
     `
   },
   {
@@ -144,7 +144,7 @@ export const blogPosts: BlogPost[] = [
       <h2>Made by Producers, for Producers</h2>
       <p>Every pack is created by artists who understand what you need in the studio. No filler, just quality sounds that will take your productions to the next level.</p>
 
-      <p>Check out our <a href="/sample-packs">Sample Packs</a> and start building your next banger.</p>
+      <p>Check out our <a href="/releases">Releases</a> and start building your next banger.</p>
     `
   },
   {

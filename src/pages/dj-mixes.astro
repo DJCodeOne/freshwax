@@ -1368,7 +1368,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
     document.getElementById('shareTwitter')?.addEventListener('click', function() {
       var d = window.currentShareData || {};
       var text = 'Check out "' + d.title + '" by ' + d.dj + ' on Fresh Wax';
-      window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'width=550,height=420');
+      window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'width=550,height=420');
     });
 
     document.getElementById('shareFacebook')?.addEventListener('click', function() {

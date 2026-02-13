@@ -100,7 +100,7 @@ const modifiedTime = publishedTime;
   <div class="blog-post-page">
     <!-- Branded Header -->
     <div class="blog-header">
-      <a href="/blog" class="blog-title-link">
+      <a href="/blog/" class="blog-title-link">
         <h2 class="blog-site-title">FRESH <span class="text-red">WAX</span> BLOG</h2>
       </a>
     </div>
@@ -110,7 +110,7 @@ const modifiedTime = publishedTime;
         <div class="error-content">
           <h1>Post Not Found</h1>
           <p>The article you're looking for doesn't exist or has been removed.</p>
-          <a href="/blog" class="back-link">← Back to Blog</a>
+          <a href="/blog/" class="back-link">← Back to Blog</a>
         </div>
       </div>
     ) : (
@@ -168,7 +168,7 @@ const modifiedTime = publishedTime;
           <span class="share-label">Share this article:</span>
           <div class="share-buttons">
             <a
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://freshwax.co.uk/blog/${slug}`)}`}
+              href={`https://x.com/intent/tweet?text=${encodeURIComponent(post.title)}&url=${encodeURIComponent(`https://freshwax.co.uk/blog/${slug}`)}`}
               target="_blank"
               rel="noopener noreferrer"
               class="share-btn twitter"
@@ -203,7 +203,7 @@ const modifiedTime = publishedTime;
 
         <!-- Navigation -->
         <nav class="article-nav">
-          <a href="/blog" class="nav-link">
+          <a href="/blog/" class="nav-link">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
             </svg>

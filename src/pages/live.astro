@@ -2314,9 +2314,9 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   document.getElementById('shareTwitter')?.addEventListener('click', () => {
     const text = encodeURIComponent(getShareText());
     const url = encodeURIComponent(getShareUrl());
-    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
   });
-  
+
   // Facebook share - use Feed Dialog for better video preview support
   document.getElementById('shareFacebook')?.addEventListener('click', () => {
     const shareUrl = getShareUrl();
