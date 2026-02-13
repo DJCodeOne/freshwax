@@ -192,7 +192,9 @@ let runtimeEnvCache: Record<string, string> = {};
 // Initialize env from Cloudflare runtime (call from API routes/pages)
 export function initFirebaseEnv(env: Record<string, string>) {
   if (env.FIREBASE_API_KEY) {
-    runtimeEnvCache = env;
+    // Merge into existing cache (don't replace) so middleware's full env isn't wiped
+    // by per-endpoint calls that only pass PROJECT_ID + API_KEY
+    runtimeEnvCache = { ...runtimeEnvCache, ...env };
     log.info('Firebase env initialized from runtime');
   }
 }
