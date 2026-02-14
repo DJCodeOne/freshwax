@@ -109,10 +109,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Apply fixes
     for (const fix of trackFixes) {
-      const { trackIndex, mp3Url, wavUrl } = fix;
+      const { trackIndex, mp3Url, wavUrl, previewUrl } = fix;
       if (trackIndex >= 0 && trackIndex < tracks.length) {
         if (mp3Url !== undefined) tracks[trackIndex].mp3Url = mp3Url;
         if (wavUrl !== undefined) tracks[trackIndex].wavUrl = wavUrl;
+        if (previewUrl !== undefined) tracks[trackIndex].previewUrl = previewUrl;
       }
     }
 
