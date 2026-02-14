@@ -982,7 +982,8 @@
     border: 1px solid #4b5563;
   }
 
-  .schedule-header h1 {
+  .schedule-header h1,
+  .schedule-header h2 {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 2.5rem;
     color: #fff;
@@ -991,7 +992,8 @@
     line-height: 1;
   }
 
-  .schedule-header h1 .red { color: #dc2626; }
+  .schedule-header h1 .red,
+  .schedule-header h2 .red { color: #dc2626; }
 
   .schedule-header p {
     color: #9ca3af;
@@ -6715,7 +6717,8 @@
       padding: 1rem;
     }
     
-    .schedule-header h1 {
+    .schedule-header h1,
+    .schedule-header h2 {
       font-size: 2rem;
     }
   }
@@ -6888,7 +6891,8 @@
       font-size: 22px;
     }
     
-    .schedule-header h1 {
+    .schedule-header h1,
+    .schedule-header h2 {
       font-size: 1.75rem;
     }
     
