@@ -352,7 +352,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   </Fragment>
 
   <Fragment slot="actions">
-    <button class="btn btn-ghost" onclick="window.location.reload()">
+    <button class="btn btn-ghost" id="refreshDashboardBtn">
       ↻ Refresh
     </button>
   </Fragment>
@@ -1567,6 +1567,11 @@ Astro.response.headers.set('Pragma', 'no-cache');
 </style>
 
 <script>
+  // Refresh dashboard button
+  document.getElementById('refreshDashboardBtn')?.addEventListener('click', () => {
+    window.location.reload();
+  });
+
   // Feature toggle handling
   document.addEventListener('DOMContentLoaded', async function() {
     // Wait for Firebase auth before making admin API calls
@@ -2277,7 +2282,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       if (currentTrack && playlist.isPlaying) {
         nowPlayingTitle.textContent = currentTrack.title || currentTrack.url || 'Unknown Track';
         nowPlayingThumb.src = currentTrack.thumbnail || '/place-holder.webp';
-        nowPlayingThumb.onerror = function() { this.src = '/place-holder.webp'; };
+
         if (currentTrack.addedAt) {
           const added = new Date(currentTrack.addedAt);
           nowPlayingAdded.textContent = 'Added by ' + (currentTrack.addedByName || 'Unknown') + ' at ' + added.toLocaleTimeString();
@@ -2312,7 +2317,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         html += `
           <div class="queue-item" data-index="${index + 1}" data-id="${safeId}">
             <span class="queue-item-num">${index + 1}</span>
-            <img class="queue-item-thumb" src="${thumb}" alt="" onerror="this.src='/place-holder.webp'">
+            <img class="queue-item-thumb" src="${thumb}" alt="">
             <div class="queue-item-info">
               <div class="queue-item-title">${escapeHtml(title)}</div>
               <div class="queue-item-added">${escapeHtml(track.addedByName || 'Unknown')}</div>

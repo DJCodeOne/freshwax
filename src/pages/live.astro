@@ -263,7 +263,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <div class="sidebar-card schedule-card">
           <div class="schedule-header">
             <h3>TODAY'S LINEUP</h3>
-            <button id="viewFullScheduleBtn" class="view-full-btn" onclick="openPublicSchedule()">
+            <button id="viewFullScheduleBtn" class="view-full-btn">
               View Full Schedule
             </button>
           </div>
@@ -865,12 +865,12 @@ const nonce = (Astro.locals as any).nonce || '';
       <div class="lobby-stream-key">
         <span class="lobby-label">Stream Key:</span>
         <code id="lobbyStreamKey">-</code>
-        <button class="copy-key-btn" onclick="copyLobbyStreamKey()">Copy</button>
+        <button class="copy-key-btn" id="copyLobbyStreamKeyBtn">Copy</button>
       </div>
       <div class="lobby-rtmp">
         <span class="lobby-label">RTMP URL:</span>
         <code>rtmp://rtmp.freshwax.co.uk/live</code>
-        <button class="copy-key-btn" onclick="copyRtmpUrl()">Copy</button>
+        <button class="copy-key-btn" id="copyRtmpUrlBtn">Copy</button>
       </div>
       <div class="lobby-buttons">
         <button id="readyBtn" class="lobby-btn ready">✓ Ready</button>
@@ -924,12 +924,12 @@ const nonce = (Astro.locals as any).nonce || '';
             <div class="takeover-cred-item">
               <span class="lobby-label">Stream Key:</span>
               <code id="takeoverStreamKey">-</code>
-              <button class="copy-key-btn" onclick="copyTakeoverKey()">Copy</button>
+              <button class="copy-key-btn" id="copyTakeoverKeyBtn">Copy</button>
             </div>
             <div class="takeover-cred-item">
               <span class="lobby-label">RTMP URL:</span>
               <code>rtmp://rtmp.freshwax.co.uk/live</code>
-              <button class="copy-key-btn" onclick="copyRtmpUrl()">Copy</button>
+              <button class="copy-key-btn" id="copyTakeoverRtmpBtn">Copy</button>
             </div>
           </div>
           <p class="takeover-note">Connect with your streaming software to take over the stream.</p>
@@ -1141,9 +1141,35 @@ const nonce = (Astro.locals as any).nonce || '';
 
     const emojis = EMOJI_CATEGORIES[category] || [];
     emojiGrid.innerHTML = emojis.map(emoji =>
-      `<button type="button" class="emoji-item" onclick="window.insertEmoji('${emoji}')">${emoji}</button>`
+      `<button type="button" class="emoji-item" data-emoji="${emoji}">${emoji}</button>`
     ).join('');
   };
+
+  // Event delegation for emoji grid clicks (set up once)
+  (function() {
+    const emojiGrid = document.getElementById('emojiGrid');
+    if (emojiGrid) {
+      emojiGrid.addEventListener('click', function(e) {
+        const btn = e.target.closest('.emoji-item');
+        if (btn && btn.dataset.emoji) {
+          window.insertEmoji(btn.dataset.emoji);
+        }
+      });
+    }
+  })();
+
+  // Event delegation for giphy grid clicks (set up once)
+  (function() {
+    const giphyGrid = document.getElementById('giphyGrid');
+    if (giphyGrid) {
+      giphyGrid.addEventListener('click', function(e) {
+        const item = e.target.closest('.giphy-item');
+        if (item && item.dataset.gifUrl && item.dataset.gifId) {
+          window.selectGif(item.dataset.gifUrl, item.dataset.gifId);
+        }
+      });
+    }
+  })();
 
   // Insert emoji into chat input
   window.insertEmoji = function(emoji) {
@@ -1183,7 +1209,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       if (data.data?.length > 0) {
         giphyGrid.innerHTML = data.data.map(gif => `
-          <div class="giphy-item" onclick="window.selectGif('${gif.images.fixed_height.url}', '${gif.id}')">
+          <div class="giphy-item" data-gif-url="${gif.images.fixed_height.url}" data-gif-id="${gif.id}">
             <img src="${gif.images.fixed_height_small.url}" alt="${gif.title || 'GIF'}" loading="lazy" />
           </div>
         `).join('');
@@ -2627,6 +2653,14 @@ const nonce = (Astro.locals as any).nonce || '';
       });
     }
 
+    const viewFullScheduleBtn = document.getElementById('viewFullScheduleBtn');
+    if (viewFullScheduleBtn && !viewFullScheduleBtn._listenerAttached) {
+      viewFullScheduleBtn._listenerAttached = true;
+      viewFullScheduleBtn.addEventListener('click', () => {
+        window.openPublicSchedule();
+      });
+    }
+
     const closeBookingModal = document.getElementById('closeBookingModal');
     if (closeBookingModal && !closeBookingModal._listenerAttached) {
       closeBookingModal._listenerAttached = true;
@@ -3534,7 +3568,7 @@ const nonce = (Astro.locals as any).nonce || '';
       if (listeners.length > 0) {
         listenersList.innerHTML = listeners.map(listener => `
           <div class="listener-item">
-            <img class="listener-avatar" src="${listener.avatar || '/place-holder.webp'}" alt="" onerror="this.src='/place-holder.webp'" />
+            <img class="listener-avatar" src="${listener.avatar || '/place-holder.webp'}" alt="" />
             <span class="listener-name">${listener.name}</span>
           </div>
         `).join('');
@@ -3834,7 +3868,13 @@ const nonce = (Astro.locals as any).nonce || '';
       setTimeout(() => statusMsg.classList.add('hidden'), 2000);
     }
   }
-  
+
+  // Attach event listeners for copy buttons
+  document.getElementById('copyLobbyStreamKeyBtn')?.addEventListener('click', () => window.copyLobbyStreamKey());
+  document.getElementById('copyRtmpUrlBtn')?.addEventListener('click', () => window.copyRtmpUrl());
+  document.getElementById('copyTakeoverKeyBtn')?.addEventListener('click', () => window.copyTakeoverKey());
+  document.getElementById('copyTakeoverRtmpBtn')?.addEventListener('click', () => window.copyRtmpUrl());
+
   // Request takeover button handler
   document.getElementById('requestTakeoverBtn')?.addEventListener('click', async () => {
     const takeoverSection = document.getElementById('takeoverSection');
@@ -4258,13 +4298,29 @@ const nonce = (Astro.locals as any).nonce || '';
             <span class="schedule-time-range">${formatTime(slot.startTime)} - ${formatTime(slot.endTime)}</span>
           </div>
         </div>
-        ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" onclick="cancelSlot('${slot.id}')">×</button>` : ''}
+        ${isMySlot && (slot.status === 'scheduled' || slot.status === 'queued') ? `<button class="cancel-slot-btn" data-cancel-slot="${slot.id}">×</button>` : ''}
       </div>`;
     }).join('');
   }
 
   // Expose for live-stream.js to call when relay stream detected
   window.renderTodaySchedule = renderTodaySchedule;
+
+  // Event delegation for cancel-slot buttons in schedule list
+  (function() {
+    const scheduleList = document.getElementById('scheduleList');
+    if (scheduleList) {
+      scheduleList.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-cancel-slot]');
+        if (btn) {
+          const slotId = btn.dataset.cancelSlot;
+          if (slotId && window.cancelSlot) {
+            window.cancelSlot(slotId);
+          }
+        }
+      });
+    }
+  })();
 
   function updateLiveQueueBar(currentLive, upcoming) {
     const liveStatusCard = document.getElementById('liveStatusCard');

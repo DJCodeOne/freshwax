@@ -12,7 +12,6 @@ const { nonce = '' } = Astro.props;
   class="floating-shuffle-btn"
   title="Shuffle Play"
   aria-label="Shuffle Play"
-  onclick="handleFloatingShuffleClick(event)"
 >
   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="pointer-events: none;" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -83,11 +82,11 @@ const { nonce = '' } = Astro.props;
 </style>
 
 <script is:inline nonce={nonce}>
-  // Global click handler for floating shuffle button (inline onclick)
+  // Global click handler for floating shuffle button
   window.handleFloatingShuffleClick = function(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log('[FloatingShuffle] Button clicked via onclick');
+    console.log('[FloatingShuffle] Button clicked');
 
     // Stop any preview clips first
     if (window.AudioManager) {
@@ -120,6 +119,9 @@ const { nonce = '' } = Astro.props;
       }
     }
   };
+
+  // Bind click handler via addEventListener (CSP-safe)
+  document.getElementById('floating-shuffle-btn')?.addEventListener('click', window.handleFloatingShuffleClick);
 
   // Sync button state with shuffle mode
   function syncFloatingButtonState() {

@@ -67,7 +67,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
       <div class="quick-links-grid">
 
         <!-- Weekly Chart Card -->
-        <a href="/weekly-chart/" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#dc2626'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
+        <a href="/weekly-chart/" class="animate-fade-down-delayed quick-link-card quick-link-red" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;">
           <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626, #991b1b); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <span style="font-size: 1.5rem;">📅</span>
           </div>
@@ -79,7 +79,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
         </a>
         
         <!-- Pre-orders Card -->
-        <a href="/pre-orders/" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#f97316'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
+        <a href="/pre-orders/" class="animate-fade-down-delayed quick-link-card quick-link-orange" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;">
           <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f97316, #dc2626); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <span style="font-size: 1.5rem;">⏰</span>
           </div>
@@ -91,7 +91,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
         </a>
         
         <!-- DJ Mix Chart Card -->
-        <a href="/dj-mix-chart/" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#fbbf24'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
+        <a href="/dj-mix-chart/" class="animate-fade-down-delayed quick-link-card quick-link-yellow" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;">
           <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <span style="font-size: 1.5rem;">🏆</span>
           </div>
@@ -157,6 +157,11 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
 </Layout>
 
 <style>
+  /* Quick link hover effects (replaces inline onmouseover/onmouseout) */
+  .quick-link-card:hover { transform: translateY(-2px); }
+  .quick-link-red:hover { border-color: #dc2626; }
+  .quick-link-orange:hover { border-color: #f97316; }
+  .quick-link-yellow:hover { border-color: #fbbf24; }
 
   /* ===========================================
      MOBILE-FIRST DESIGN

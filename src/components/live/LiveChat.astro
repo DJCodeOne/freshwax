@@ -37,8 +37,8 @@
 
       <div class="chat-input-wrapper">
         <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
-        <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis" onclick="window.toggleEmojiPanel && window.toggleEmojiPanel()">😀</button>
-        <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs" onclick="window.toggleGifModal && window.toggleGifModal()">GIF</button>
+        <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis">😀</button>
+        <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs">GIF</button>
         <button type="submit" id="sendBtn">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -191,7 +191,7 @@
       });
     }
 
-    // Expose toggle functions globally for onclick handlers
+    // Expose toggle functions globally and bind via addEventListener (CSP-safe)
     window.toggleEmojiPanel = function() {
       console.log('[Picker] Emoji toggle called');
       const isVisible = emojiPanel.style.display !== 'none';
@@ -209,6 +209,10 @@
       document.body.style.overflow = 'hidden';
       loadGifs('trending');
     };
+
+    // Bind toggle buttons via addEventListener (CSP-safe, replaces inline onclick)
+    emojiBtn?.addEventListener('click', () => window.toggleEmojiPanel && window.toggleEmojiPanel());
+    gifBtn?.addEventListener('click', () => window.toggleGifModal && window.toggleGifModal());
 
     // Close emoji panel
     closeEmoji?.addEventListener('click', () => {
@@ -427,13 +431,22 @@
           ? `<img src="${user.avatar}" alt="${user.name}" />`
           : initial;
         return `
-          <div class="online-user-item" onclick="window.openDmModal && window.openDmModal('${user.id}', '${user.name.replace(/'/g, "\\'")}')">
+          <div class="online-user-item" data-action="openDm" data-user-id="${user.id}" data-user-name="${user.name.replace(/"/g, '&quot;')}">
             <div class="online-user-avatar">${avatarContent}</div>
             <span class="online-user-name">${user.name}</span>
           </div>
         `;
       }).join('');
     };
+
+    // Event delegation for online user items (CSP-safe, replaces inline onclick)
+    usersList.addEventListener('click', (e) => {
+      const item = e.target.closest('[data-action="openDm"]');
+      if (!item) return;
+      if (window.openDmModal) {
+        window.openDmModal(item.dataset.userId, item.dataset.userName);
+      }
+    });
 
     // Poll for online users (connected to existing viewer system)
     // Clear any existing interval to prevent duplicates on View Transitions

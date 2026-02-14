@@ -505,7 +505,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <!-- Plus Member Modal -->
         <div id="plusMemberModal" class="modal-overlay hidden">
           <div class="modal-content plus-modal">
-            <button class="modal-close" onclick="document.getElementById('plusMemberModal').classList.add('hidden'); document.body.style.overflow='';">&times;</button>
+            <button class="modal-close" id="plusMemberModalCloseBtn">&times;</button>
             <div class="plus-modal-header">
               <span class="plus-modal-icon">⚡</span>
               <h2>Plus Membership</h2>
@@ -922,7 +922,7 @@ const nonce = (Astro.locals as any).nonce || '';
             <div style="display: flex; flex-direction: row; align-items: stretch; background: linear-gradient(to bottom, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; overflow: hidden; margin-bottom: 1.25rem;">
               <div style="width: 240px; min-width: 240px; height: 240px; background: #000; overflow: hidden; flex-shrink: 0;">
                 ${artworkUrl ? 
-                  `<img src="${artworkUrl}" alt="${escapeHtml(mixTitle)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%); color: #fff; font-size: 4rem;\\'>🎧</div>';">` :
+                  `<img src="${artworkUrl}" alt="${escapeHtml(mixTitle)}" style="width: 100%; height: 100%; object-fit: cover; display: block;" data-fallback="hide">` :
                   '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%); color: #fff; font-size: 4rem;">🎧</div>'}
               </div>
               <div style="flex: 1; padding: 1.75rem 2rem; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; min-width: 0;">
@@ -1050,7 +1050,7 @@ const nonce = (Astro.locals as any).nonce || '';
               <div class="wishlist-card" data-release-id="${release.id}">
                 <div class="wishlist-card-artwork">
                   <a href="/item/${release.id}/">
-                    <img src="${release.coverArtUrl || '/place-holder.webp'}" alt="${release.releaseName}" loading="lazy" onerror="this.src='/place-holder.webp'">
+                    <img src="${release.coverArtUrl || '/place-holder.webp'}" alt="${release.releaseName}" loading="lazy">
                   </a>
                 </div>
                 <div class="wishlist-card-content">
@@ -1259,7 +1259,7 @@ const nonce = (Astro.locals as any).nonce || '';
             
             return `
               <div class="following-card" data-artist-name="${artist.artistName}">
-                <img src="${artist.coverArtUrl || '/place-holder.webp'}" alt="${artist.artistName}" class="following-card-avatar" onerror="this.src='/place-holder.webp'">
+                <img src="${artist.coverArtUrl || '/place-holder.webp'}" alt="${artist.artistName}" class="following-card-avatar">
                 <h4 class="following-card-name">${artist.artistName}</h4>
                 <p class="following-card-releases">${releaseCount} release${releaseCount !== 1 ? 's' : ''}</p>
                 ${latestRelease ? `
@@ -3142,6 +3142,12 @@ const nonce = (Astro.locals as any).nonce || '';
               document.body.style.overflow = '';
             }
           });
+
+          // Close modal on X button click
+          document.getElementById('plusMemberModalCloseBtn')?.addEventListener('click', () => {
+            plusMemberModal.classList.add('hidden');
+            document.body.style.overflow = '';
+          });
         }
       } else {
         tierBadge.textContent = 'Standard';
@@ -3183,11 +3189,16 @@ const nonce = (Astro.locals as any).nonce || '';
         expiryWarning.className = 'expiry-warning';
         expiryWarning.innerHTML = `
           <span class="warning-icon">⚠️</span>
-          <span>Your Plus membership expires soon! <a href="#" onclick="document.getElementById('goPlusModal').classList.remove('hidden'); document.body.style.overflow='hidden'; return false;">Renew now</a></span>
+          <span>Your Plus membership expires soon! <a href="#" id="renewPlusLink">Renew now</a></span>
         `;
         if (proExpires && proExpires.parentNode) {
           proExpires.parentNode.insertBefore(expiryWarning, proExpires.nextSibling);
         }
+        document.getElementById('renewPlusLink')?.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.getElementById('goPlusModal')?.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        });
       }
 
       // Update usage stats

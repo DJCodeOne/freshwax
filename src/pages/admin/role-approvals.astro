@@ -323,6 +323,19 @@ const nonce = (Astro.locals as any).nonce || '';
     const tabs = document.querySelectorAll('.tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
+    // Event delegation for approve/deny buttons on all request containers
+    ['artistRequests', 'merchRequests', 'vinylRequests', 'djRequests'].forEach(containerId => {
+      document.getElementById(containerId)?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const uid = btn.dataset.uid;
+        const role = btn.dataset.role;
+        if (action === 'approve') window.approveRequest(uid, role);
+        else if (action === 'deny') window.denyRequest(uid, role);
+      });
+    });
+
     // Tab switching
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -413,8 +426,8 @@ const nonce = (Astro.locals as any).nonce || '';
             </div>
           </div>
           <div class="request-actions">
-            <button class="btn btn-approve" onclick="approveRequest('${escapeHtml(r.uid)}', 'artist')">Approve</button>
-            <button class="btn btn-deny" onclick="denyRequest('${escapeHtml(r.uid)}', 'artist')">Deny</button>
+            <button class="btn btn-approve" data-action="approve" data-uid="${escapeHtml(r.uid)}" data-role="artist">Approve</button>
+            <button class="btn btn-deny" data-action="deny" data-uid="${escapeHtml(r.uid)}" data-role="artist">Deny</button>
           </div>
         </div>
       `).join('');
@@ -452,8 +465,8 @@ const nonce = (Astro.locals as any).nonce || '';
             </div>
           </div>
           <div class="request-actions">
-            <button class="btn btn-approve" onclick="approveRequest('${escapeHtml(r.uid)}', 'merchSeller')">Approve</button>
-            <button class="btn btn-deny" onclick="denyRequest('${escapeHtml(r.uid)}', 'merchSeller')">Deny</button>
+            <button class="btn btn-approve" data-action="approve" data-uid="${escapeHtml(r.uid)}" data-role="merchSeller">Approve</button>
+            <button class="btn btn-deny" data-action="deny" data-uid="${escapeHtml(r.uid)}" data-role="merchSeller">Deny</button>
           </div>
         </div>
       `).join('');
@@ -495,8 +508,8 @@ const nonce = (Astro.locals as any).nonce || '';
             </div>
           </div>
           <div class="request-actions">
-            <button class="btn btn-approve" onclick="approveRequest('${escapeHtml(r.uid)}', 'vinylSeller')">Approve</button>
-            <button class="btn btn-deny" onclick="denyRequest('${escapeHtml(r.uid)}', 'vinylSeller')">Deny</button>
+            <button class="btn btn-approve" data-action="approve" data-uid="${escapeHtml(r.uid)}" data-role="vinylSeller">Approve</button>
+            <button class="btn btn-deny" data-action="deny" data-uid="${escapeHtml(r.uid)}" data-role="vinylSeller">Deny</button>
           </div>
         </div>
       `).join('');
@@ -526,8 +539,8 @@ const nonce = (Astro.locals as any).nonce || '';
             </div>
           </div>
           <div class="request-actions">
-            <button class="btn btn-approve" onclick="approveRequest('${escapeHtml(r.uid)}', 'djBypass')">Approve</button>
-            <button class="btn btn-deny" onclick="denyRequest('${escapeHtml(r.uid)}', 'djBypass')">Deny</button>
+            <button class="btn btn-approve" data-action="approve" data-uid="${escapeHtml(r.uid)}" data-role="djBypass">Approve</button>
+            <button class="btn btn-deny" data-action="deny" data-uid="${escapeHtml(r.uid)}" data-role="djBypass">Deny</button>
           </div>
         </div>
       `).join('');

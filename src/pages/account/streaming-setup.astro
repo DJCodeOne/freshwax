@@ -109,7 +109,7 @@ const nonce = (Astro.locals as any).nonce || '';
       <!-- OBS Instructions -->
       <div id="obsContent" class="instructions-panel">
         <div class="panel-header">
-          <img src="https://obsproject.com/assets/images/new_icon_small-r.png" alt="OBS" class="software-icon" onerror="this.style.display='none'" />
+          <img src="https://obsproject.com/assets/images/new_icon_small-r.png" alt="OBS" class="software-icon" data-fallback="hide" />
           <div>
             <h2>OBS Studio Setup</h2>
             <p>For video and audio streaming</p>
@@ -1515,7 +1515,7 @@ const nonce = (Astro.locals as any).nonce || '';
         function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         listEl.innerHTML = data.sources.map(source => `
           <div class="relay-source-item" data-url="${escAttr(source.url)}" data-name="${escAttr(source.name)}">
-            <img src="${escAttr(source.logo || '/place-holder.webp')}" alt="${escAttr(source.name)}" class="source-logo" onerror="this.src='/place-holder.webp'" />
+            <img src="${escAttr(source.logo || '/place-holder.webp')}" alt="${escAttr(source.name)}" class="source-logo" />
             <div class="source-info">
               <span class="source-name">${escHtml(source.name)}</span>
               <span class="source-url-preview">${escHtml(source.url.substring(0, 40))}...</span>

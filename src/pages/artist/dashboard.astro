@@ -387,7 +387,7 @@ const nonce = (Astro.locals as any).nonce || '';
           <div class="welcome-left">
             <div class="avatar">
               {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
-                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt="" data-fallback="show-next" />
                 <span style="display:none;">{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>
               ) : (
                 <span>{(partner.displayName || partner.artistName)?.charAt(0).toUpperCase() || '?'}</span>

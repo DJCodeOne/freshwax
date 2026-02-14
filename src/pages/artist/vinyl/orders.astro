@@ -65,7 +65,7 @@ export const prerender = false;
     <div class="modal">
       <div class="modal-header">
         <h3>Mark as Shipped</h3>
-        <button class="modal-close" onclick="closeShipModal()">×</button>
+        <button class="modal-close" id="shipModalCloseBtn">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -85,8 +85,8 @@ export const prerender = false;
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeShipModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="confirmShip()">Mark as Shipped</button>
+        <button class="btn btn-secondary" id="shipModalCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="shipModalConfirmBtn">Mark as Shipped</button>
       </div>
     </div>
   </div>
@@ -242,7 +242,7 @@ export const prerender = false;
             </div>
             <div class="order-actions">
               ${o.status === 'paid' ? `
-                <button class="btn btn-primary" onclick="openShipModal('${o.id}')">Mark as Shipped</button>
+                <button class="btn btn-primary" data-action="openShipModal" data-order-id="${o.id}">Mark as Shipped</button>
               ` : o.status === 'shipped' ? `
                 <span class="shipped-info">
                   ${o.carrier ? `<span>${o.carrier}</span>` : ''}
@@ -287,19 +287,19 @@ export const prerender = false;
   });
 
   // Ship modal
-  window.openShipModal = function(orderId) {
+  function openShipModal(orderId) {
     currentOrderId = orderId;
     document.getElementById('shipModal').style.display = 'flex';
-  };
+  }
 
-  window.closeShipModal = function() {
+  function closeShipModal() {
     currentOrderId = null;
     document.getElementById('shipModal').style.display = 'none';
     document.getElementById('carrier').value = 'Royal Mail';
     document.getElementById('trackingNumber').value = '';
-  };
+  }
 
-  window.confirmShip = async function() {
+  async function confirmShip() {
     if (!currentOrderId) return;
 
     const carrier = document.getElementById('carrier').value;
@@ -335,7 +335,20 @@ export const prerender = false;
     } catch (error) {
       alert('Error: ' + error.message);
     }
-  };
+  }
+
+  // Event listeners for ship modal buttons
+  document.getElementById('shipModalCloseBtn')?.addEventListener('click', closeShipModal);
+  document.getElementById('shipModalCancelBtn')?.addEventListener('click', closeShipModal);
+  document.getElementById('shipModalConfirmBtn')?.addEventListener('click', confirmShip);
+
+  // Event delegation for dynamically rendered "Mark as Shipped" buttons
+  document.getElementById('ordersList')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="openShipModal"]');
+    if (btn) {
+      openShipModal(btn.dataset.orderId);
+    }
+  });
 </script>
 
 <style>

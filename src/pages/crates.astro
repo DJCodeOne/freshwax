@@ -1689,19 +1689,19 @@ const nonce = (Astro.locals as any).nonce || '';
             <div class="vinyl-left-col">
               <div class="vinyl-artwork">
                 ${imageUrl
-                  ? `<img src="${imageUrl}" alt="${escapeHtml(listing.title)}" loading="lazy" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                  ? `<img src="${imageUrl}" alt="${escapeHtml(listing.title)}" loading="lazy" data-fallback="show-next" />
                      <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
                   : '<div class="vinyl-artwork-placeholder">📀</div>'}
                 ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}
               </div>
               <div class="vinyl-buttons">
-                <button class="vinyl-buy-btn" onclick="event.stopPropagation(); addVinylToCart('${listing.id}')">
+                <button class="vinyl-buy-btn" data-action="add-to-cart" data-listing-id="${listing.id}">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
                   </svg>
                   <span class="btn-price">£${displayPrice}</span>
                 </button>
-                <button class="vinyl-view-btn" onclick="event.stopPropagation(); viewListing('${listing.id}')">
+                <button class="vinyl-view-btn" data-action="view-listing" data-listing-id="${listing.id}">
                   VIEW
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -1864,9 +1864,23 @@ const nonce = (Astro.locals as any).nonce || '';
     showToast('Added to cart!');
   }
 
-  // Make functions available globally
-  window.viewListing = viewListing;
-  window.addVinylToCart = addVinylToCart;
+  // Event delegation for vinyl card buttons in listings grid
+  const listingsGridEl = document.getElementById('listingsGrid');
+  if (listingsGridEl) {
+    listingsGridEl.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const listingId = btn.dataset.listingId;
+      if (!listingId) return;
+      if (action === 'add-to-cart') {
+        addVinylToCart(listingId);
+      } else if (action === 'view-listing') {
+        viewListing(listingId);
+      }
+    });
+  }
 
   // Condition guide modal
   const conditionKeyToggle = document.getElementById('conditionKeyToggle');

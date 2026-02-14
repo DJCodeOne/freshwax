@@ -75,7 +75,7 @@ export const prerender = false;
               <div class="selected-product-name" id="selectedProductName"></div>
               <div class="selected-product-sku" id="selectedProductSku"></div>
             </div>
-            <button class="selected-product-clear" onclick="clearSelectedProduct()">Clear</button>
+            <button class="selected-product-clear" id="clearSelectedProductBtn">Clear</button>
           </div>
           
           <div class="form-group" id="variantSelectorGroup" style="display: none;">
@@ -175,10 +175,10 @@ export const prerender = false;
             </div>
           </div>
           <div class="stocktake-actions">
-            <button class="print-btn" onclick="printStockTake()">
+            <button class="print-btn" id="printStockTakeBtn">
               🖨️ Print Report
             </button>
-            <button class="btn btn-primary" onclick="saveStockTake()">
+            <button class="btn btn-primary" id="saveStockTakeBtn">
               💾 Save Changes
             </button>
           </div>
@@ -245,7 +245,7 @@ export const prerender = false;
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title">Quick Stock Update</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <button class="modal-close" data-action="close-modal">&times;</button>
       </div>
       <div class="modal-body">
         <div id="modalProductInfo" style="margin-bottom: 1rem;"></div>
@@ -270,8 +270,8 @@ export const prerender = false;
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-        <button class="btn btn-success" onclick="submitModalUpdate()">Update Stock</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancel</button>
+        <button class="btn btn-success" data-action="submit-update">Update Stock</button>
       </div>
     </div>
   </div>
@@ -295,6 +295,38 @@ export const prerender = false;
       });
     });
     
+    // Static button listeners
+    document.getElementById('clearSelectedProductBtn').addEventListener('click', () => clearSelectedProduct());
+    document.getElementById('printStockTakeBtn').addEventListener('click', () => printStockTake());
+    document.getElementById('saveStockTakeBtn').addEventListener('click', () => saveStockTake());
+
+    // Quick receive modal delegation
+    document.getElementById('quickReceiveModal').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'close-modal') closeModal();
+      else if (action === 'submit-update') submitModalUpdate();
+    });
+
+    // Stock table body delegation (for template string buttons)
+    document.getElementById('stockTableBody').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'quick-adjust') quickAdjust(btn.dataset.product, btn.dataset.variant, parseInt(btn.dataset.delta));
+      else if (action === 'toggle-sizes') toggleSizes(btn.dataset.product);
+      else if (action === 'open-receive') openQuickReceive(btn.dataset.product, btn.dataset.operation || 'receive');
+    });
+
+    // Stock take content delegation (for template string onchange)
+    document.getElementById('stocktakeContent').addEventListener('change', (e) => {
+      const el = e.target.closest('[data-onchange]');
+      if (!el) return;
+      if (el.dataset.onchange === 'stock-take-change') updateStockTakeChange(el);
+      else if (el.dataset.onchange === 'stock-take-reason') updateStockTakeReason(el);
+    });
+
     // Toast notification
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
@@ -427,8 +459,8 @@ export const prerender = false;
                         <div style="${labelStyle}">${label || key}</div>
                         <div style="${stockStyle}">${stock}</div>
                         <div style="${actionsStyle}">
-                          <button style="${btnBaseStyle} color: #dc2626; border-color: #dc2626;" onclick="quickAdjust('${product.productId}', '${key}', -1)">−</button>
-                          <button style="${btnBaseStyle} color: #22c55e; border-color: #22c55e;" onclick="quickAdjust('${product.productId}', '${key}', 1)">+</button>
+                          <button style="${btnBaseStyle} color: #dc2626; border-color: #dc2626;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="-1">−</button>
+                          <button style="${btnBaseStyle} color: #22c55e; border-color: #22c55e;" data-action="quick-adjust" data-product="${product.productId}" data-variant="${key}" data-delta="1">+</button>
                         </div>
                       </div>
                     `;
@@ -442,7 +474,7 @@ export const prerender = false;
         return `
           <tr>
             <td style="width:30px; text-align: center;">
-              ${hasVariants ? `<button id="expand-btn-${product.productId}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem;" onclick="toggleSizes('${product.productId}')">▶</button>` : ''}
+              ${hasVariants ? `<button id="expand-btn-${product.productId}" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.25rem;" data-action="toggle-sizes" data-product="${product.productId}">▶</button>` : ''}
             </td>
             <td>
               <div style="display: flex; align-items: center; gap: 1rem;">
@@ -460,8 +492,8 @@ export const prerender = false;
             <td style="text-align: center;"><span style="padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 700; border-radius: 4px; ${statusClass === 'in-stock' ? 'background: #dcfce7; color: #166534;' : statusClass === 'low-stock' ? 'background: #fef3c7; color: #92400e;' : 'background: #fee2e2; color: #991b1b;'}">${statusText}</span></td>
             <td style="text-align: center;">
               <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                <button style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #22c55e; color: #22c55e; background: #fff; cursor: pointer;" onclick="openQuickReceive('${product.productId}')">+ Receive</button>
-                <button style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #f59e0b; color: #f59e0b; background: #fff; cursor: pointer;" onclick="openQuickReceive('${product.productId}', 'adjust')">Adjust</button>
+                <button style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #22c55e; color: #22c55e; background: #fff; cursor: pointer;" data-action="open-receive" data-product="${product.productId}">+ Receive</button>
+                <button style="padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #f59e0b; color: #f59e0b; background: #fff; cursor: pointer;" data-action="open-receive" data-product="${product.productId}" data-operation="adjust">Adjust</button>
               </div>
             </td>
           </tr>
@@ -597,7 +629,7 @@ export const prerender = false;
           container.innerHTML = `<div style="${resultStyle}"><div>No products found</div></div>`;
         } else {
           container.innerHTML = results.map(p => `
-            <div style="${resultStyle}" data-product-id="${p.productId}" class="search-result-item" onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+            <div style="${resultStyle}" data-product-id="${p.productId}" class="search-result-item inv-search-hover">
               <img src="${p.images?.[0]?.url || p.primaryImage || '/place-holder.webp'}" alt="" style="${imgStyle}">
               <div style="flex: 1;">
                 <div style="${nameStyle}">${p.name}</div>
@@ -990,7 +1022,7 @@ export const prerender = false;
                     data-variant="default" 
                     data-system="${stock}"
                     value="${counted}"
-                    onchange="updateStockTakeChange(this)"
+                    data-onchange="stock-take-change"
                     placeholder="—">
                 </td>
                 <td style="${tdStyle} text-align: center; font-weight: 700; color: ${varianceColor};" class="variance">${variance !== '' ? (variance > 0 ? '+' : '') + variance : ''}</td>
@@ -999,7 +1031,7 @@ export const prerender = false;
                     data-product="${product.productId}" 
                     data-variant="default"
                     value="${reason}"
-                    onchange="updateStockTakeReason(this)"
+                    data-onchange="stock-take-reason"
                     placeholder="Reason...">
                 </td>
               </tr>
@@ -1044,7 +1076,7 @@ export const prerender = false;
                       data-variant="${vKey}" 
                       data-system="${stock}"
                       value="${counted}"
-                      onchange="updateStockTakeChange(this)"
+                      data-onchange="stock-take-change"
                       placeholder="—">
                   </td>
                   <td style="${tdStyle} text-align: center; font-weight: 700; color: ${varianceColor};" class="variance">${variance !== '' ? (variance > 0 ? '+' : '') + variance : ''}</td>
@@ -1053,7 +1085,7 @@ export const prerender = false;
                       data-product="${product.productId}" 
                       data-variant="${vKey}"
                       value="${reason}"
-                      onchange="updateStockTakeReason(this)"
+                      data-onchange="stock-take-reason"
                       placeholder="Reason...">
                   </td>
                 </tr>

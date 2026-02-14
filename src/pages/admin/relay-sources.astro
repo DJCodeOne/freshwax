@@ -447,7 +447,18 @@ export const prerender = false;
   const statusUrlGroup = document.getElementById('statusUrlGroup');
   
   let sources = [];
-  
+
+  // Event delegation for source card actions
+  sourcesGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.id;
+    if (action === 'test') window.testSource(id);
+    else if (action === 'edit') window.editSource(id);
+    else if (action === 'delete') window.deleteSource(id);
+  });
+
   // Load sources
   async function loadSources() {
     try {
@@ -501,9 +512,9 @@ export const prerender = false;
           ${source.nowPlaying ? `<div class="now-playing">🎵 ${source.nowPlaying}</div>` : ''}
           <div class="stream-url">${source.streamUrl}</div>
           <div class="source-actions">
-            <button class="btn-test" onclick="testSource('${source.id}')">Test Stream</button>
-            <button class="btn-edit" onclick="editSource('${source.id}')">Edit</button>
-            <button class="btn-delete" onclick="deleteSource('${source.id}')">Delete</button>
+            <button class="btn-test" data-action="test" data-id="${source.id}">Test Stream</button>
+            <button class="btn-edit" data-action="edit" data-id="${source.id}">Edit</button>
+            <button class="btn-delete" data-action="delete" data-id="${source.id}">Delete</button>
           </div>
         </div>
       </div>

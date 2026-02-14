@@ -26,7 +26,7 @@ import Footer from '../components/Footer.astro';
       <p class="error-sub">This isn't your fault. Our team has been notified and we're working to fix it. Please try again in a moment.</p>
 
       <div class="error-actions">
-        <button type="button" class="cta-btn" onclick="window.location.reload()">
+        <button type="button" class="cta-btn" id="retryBtn">
           <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
@@ -248,3 +248,7 @@ import Footer from '../components/Footer.astro';
     }
   }
 </style>
+
+<script>
+  document.getElementById('retryBtn')?.addEventListener('click', () => window.location.reload());
+</script>

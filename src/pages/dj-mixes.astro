@@ -271,7 +271,6 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
                   loading={index < 3 ? "eager" : "lazy"}
                   decoding={index < 3 ? "auto" : "async"}
                   fetchpriority={index === 0 ? "high" : undefined}
-                  onerror="this.src='/place-holder.webp'"
                 />
               </div>
 
@@ -707,7 +706,14 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
       removeNoResultsMessage();
       var msg = document.createElement('div');
       msg.className = 'no-results-message';
-      msg.innerHTML = '<p>No mixes found in "' + genre + '"</p><button onclick="document.querySelector(\'.genre-nav-btn[data-genre=all], .genre-filter-btn[data-genre=all]\').click()">Show All Mixes</button>';
+      msg.innerHTML = '<p>No mixes found in "' + genre + '"</p><button class="show-all-mixes-btn">Show All Mixes</button>';
+      var showAllBtn = msg.querySelector('.show-all-mixes-btn');
+      if (showAllBtn) {
+        showAllBtn.addEventListener('click', function() {
+          var allBtn = document.querySelector('.genre-nav-btn[data-genre=all], .genre-filter-btn[data-genre=all]');
+          if (allBtn) allBtn.click();
+        });
+      }
       mixesList.appendChild(msg);
     }
     

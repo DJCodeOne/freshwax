@@ -207,14 +207,14 @@ export const prerender = false;
             <div class="actions">
               ${l.status === 'draft' ? `
                 <a href="/artist/vinyl/edit/${l.id}/" class="btn-sm">Edit</a>
-                <button class="btn-sm btn-success" onclick="publishListing('${l.id}')">Publish</button>
-                <button class="btn-sm btn-danger" onclick="deleteListing('${l.id}')">Delete</button>
+                <button class="btn-sm btn-success" data-action="publish" data-listing-id="${l.id}">Publish</button>
+                <button class="btn-sm btn-danger" data-action="delete" data-listing-id="${l.id}">Delete</button>
               ` : l.status === 'pending' ? `
                 <a href="/artist/vinyl/edit/${l.id}/" class="btn-sm">Edit</a>
-                <button class="btn-sm" onclick="unpublishListing('${l.id}')">Unpublish</button>
+                <button class="btn-sm" data-action="unpublish" data-listing-id="${l.id}">Unpublish</button>
               ` : l.status === 'published' ? `
                 <a href="/crates/${l.id}/" class="btn-sm" target="_blank">View</a>
-                <button class="btn-sm" onclick="unpublishListing('${l.id}')">Unpublish</button>
+                <button class="btn-sm" data-action="unpublish" data-listing-id="${l.id}">Unpublish</button>
               ` : l.status === 'sold' ? `
                 <span class="sold-label">Sold!</span>
               ` : ''}
@@ -258,7 +258,7 @@ export const prerender = false;
   document.getElementById('searchInput').addEventListener('input', () => renderListings());
 
   // Actions
-  window.publishListing = async function(id) {
+  async function publishListing(id) {
     if (!confirm('Submit this listing for review?')) return;
 
     try {
@@ -283,9 +283,9 @@ export const prerender = false;
     } catch (error) {
       alert('Error: ' + error.message);
     }
-  };
+  }
 
-  window.unpublishListing = async function(id) {
+  async function unpublishListing(id) {
     if (!confirm('Unpublish this listing? It will be moved to drafts.')) return;
 
     try {
@@ -309,9 +309,9 @@ export const prerender = false;
     } catch (error) {
       alert('Error: ' + error.message);
     }
-  };
+  }
 
-  window.deleteListing = async function(id) {
+  async function deleteListing(id) {
     if (!confirm('Delete this listing? This cannot be undone.')) return;
 
     try {
@@ -335,7 +335,18 @@ export const prerender = false;
     } catch (error) {
       alert('Error: ' + error.message);
     }
-  };
+  }
+
+  // Event delegation for dynamically rendered listing action buttons
+  document.getElementById('listingsGrid')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const id = btn.dataset.listingId;
+    if (action === 'publish') publishListing(id);
+    else if (action === 'unpublish') unpublishListing(id);
+    else if (action === 'delete') deleteListing(id);
+  });
 </script>
 
 <style>

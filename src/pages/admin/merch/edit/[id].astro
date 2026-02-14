@@ -318,7 +318,7 @@ const getStockBadgeClass = (stock) => {
                     <div class="color-tag" data-index={idx} data-name={color.name} data-hex={color.hex}>
                       <span class="color-swatch-small" style={`background: ${color.hex};`}></span>
                       <span class="color-name">{color.name}</span>
-                      <button type="button" class="color-remove" onclick={`removeColor(${idx})`}>&times;</button>
+                      <button type="button" class="color-remove" data-action="remove-color" data-idx={idx}>&times;</button>
                     </div>
                   ))}
                 </div>
@@ -343,7 +343,7 @@ const getStockBadgeClass = (stock) => {
                   <span class="form-hint" style="margin-right: 0.5rem;">Custom:</span>
                   <input type="text" id="newColorName" class="form-input" placeholder="Colour name" style="width: 120px;" />
                   <input type="color" id="newColorHex" class="form-input" value="#000000" style="width: 50px; padding: 2px;" />
-                  <button type="button" class="btn btn-secondary btn-sm" onclick="addColor()">+ Add</button>
+                  <button type="button" class="btn btn-secondary btn-sm" id="addColorBtn">+ Add</button>
                 </div>
               </div>
 
@@ -353,7 +353,7 @@ const getStockBadgeClass = (stock) => {
                 <div class="sizes-grid" id="sizesGrid">
                   {['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'].map(size => (
                     <label class="size-checkbox">
-                      <input type="checkbox" value={size} checked={product.sizes?.includes(size)} onchange="updateSizes()" />
+                      <input type="checkbox" value={size} checked={product.sizes?.includes(size)} class="size-checkbox" />
                       <span>{size}</span>
                     </label>
                   ))}
@@ -366,7 +366,7 @@ const getStockBadgeClass = (stock) => {
                 <div class="apply-all-row">
                   <label>Set All:</label>
                   <input type="number" id="applyAllStock" class="form-input" placeholder="0" min="0" />
-                  <button type="button" class="btn btn-primary btn-sm" onclick="applyStockToAll()">Apply to All</button>
+                  <button type="button" class="btn btn-primary btn-sm" id="applyStockToAllBtn">Apply to All</button>
                 </div>
                 <div class="variant-stock-grid" id="variantStockGrid">
                   <!-- Rendered by JavaScript -->
@@ -448,7 +448,7 @@ const getStockBadgeClass = (stock) => {
               <h2>Danger Zone</h2>
             </div>
             <div class="card-body">
-              <button type="button" class="btn btn-danger btn-block" onclick="deleteProduct()">
+              <button type="button" class="btn btn-danger btn-block" id="deleteProductBtn">
                 🗑️ Delete Product
               </button>
             </div>
@@ -464,7 +464,7 @@ const getStockBadgeClass = (stock) => {
   <div class="image-editor-modal">
     <div class="image-editor-header">
       <h3>Resize & Position Image</h3>
-      <button type="button" class="image-editor-close" onclick="closeImageEditor()">&times;</button>
+      <button type="button" class="image-editor-close" data-action="close-editor">&times;</button>
     </div>
     <div class="image-editor-body">
       <div class="crop-container" id="cropContainer">
@@ -480,9 +480,9 @@ const getStockBadgeClass = (stock) => {
       </div>
       <p class="editor-hint">Drag the image to position it within the square frame</p>
       <div class="editor-actions">
-        <button type="button" class="btn btn-secondary" onclick="closeImageEditor()">Cancel</button>
-        <button type="button" class="btn btn-secondary" onclick="useOriginalImage()">Use Original</button>
-        <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save Cropped</button>
+        <button type="button" class="btn btn-secondary" data-action="close-editor">Cancel</button>
+        <button type="button" class="btn btn-secondary" data-action="use-original">Use Original</button>
+        <button type="button" class="btn btn-primary" data-action="save-crop">Save Cropped</button>
       </div>
     </div>
   </div>
@@ -683,7 +683,7 @@ const getStockBadgeClass = (stock) => {
       <div class="color-tag" data-index="${idx}">
         <span class="color-swatch-small" style="background: ${color.hex};"></span>
         <span class="color-name">${color.name}</span>
-        <button type="button" class="color-remove" onclick="removeColor(${idx})">&times;</button>
+        <button type="button" class="color-remove" data-action="remove-color" data-idx="${idx}">&times;</button>
       </div>
     `).join('');
 
@@ -837,7 +837,7 @@ const getStockBadgeClass = (stock) => {
           <input type="number" class="variant-stock-input"
             data-color="${colorName}" data-colorhex="${colorHex}" data-size="${size}"
             value="${stock}" min="0"
-            onchange="updateVariantStock(this)" />
+            data-onchange="variant-stock" />
         </td>`;
       });
       html += '</tr>';
@@ -894,6 +894,44 @@ const getStockBadgeClass = (stock) => {
     // Save to Firebase
     await saveImages();
   };
+
+  // Static button listeners
+  document.getElementById('addColorBtn')?.addEventListener('click', () => window.addColor());
+  document.getElementById('applyStockToAllBtn')?.addEventListener('click', () => window.applyStockToAll());
+  document.getElementById('deleteProductBtn')?.addEventListener('click', () => window.deleteProduct());
+
+  // Size checkboxes - delegate change events
+  document.getElementById('sizesGrid')?.addEventListener('change', (e) => {
+    if (e.target.matches('.size-checkbox')) window.updateSizes();
+  });
+
+  // Colors list delegation (for template string remove buttons)
+  document.getElementById('colorsList')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="remove-color"]');
+    if (btn) window.removeColor(parseInt(btn.dataset.idx));
+  });
+
+  // Variant stock grid delegation (for template string onchange)
+  document.getElementById('variantStockGrid')?.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-onchange="variant-stock"]');
+    if (el) window.updateVariantStock(el);
+  });
+
+  // Images grid delegation (for template string onchange)
+  document.getElementById('imagesGrid')?.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-onchange="image-color"]');
+    if (el) window.updateImageColor(parseInt(el.dataset.index), el.value);
+  });
+
+  // Image editor modal delegation
+  document.getElementById('imageEditorOverlay')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'close-editor') window.closeImageEditor();
+    else if (action === 'use-original') window.useOriginalImage();
+    else if (action === 'save-crop') window.saveImageCrop();
+  });
 
   // Initialize variant grid and images on page load
   document.addEventListener('DOMContentLoaded', () => {
@@ -1260,7 +1298,7 @@ const getStockBadgeClass = (stock) => {
         </div>
         ${idx === 0 ? '<span class="primary-badge">Primary</span>' : ''}
         <div class="image-color-select">
-          <select class="image-color-dropdown" data-index="${idx}" onchange="updateImageColor(${idx}, this.value)">
+          <select class="image-color-dropdown" data-index="${idx}" data-onchange="image-color">
             <option value="">No colour</option>
             ${colorOptions}
           </select>

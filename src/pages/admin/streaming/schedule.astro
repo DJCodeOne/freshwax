@@ -139,7 +139,7 @@ export const prerender = false;
     <div class="modal-content">
       <div class="modal-header">
         <h3>Set DJ Allowance Override</h3>
-        <button class="modal-close" onclick="closeAllowanceModal()">&times;</button>
+        <button class="modal-close" id="closeAllowanceModalBtn">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -172,8 +172,8 @@ export const prerender = false;
           <input type="text" id="allowanceReason" class="form-input" placeholder="e.g., Special event, resident DJ">
         </div>
         <div class="form-actions">
-          <button onclick="closeAllowanceModal()" class="btn btn-outline">Cancel</button>
-          <button onclick="saveAllowance()" class="btn btn-primary">Save Override</button>
+          <button id="cancelAllowanceBtn" class="btn btn-outline">Cancel</button>
+          <button id="saveAllowanceBtn" class="btn btn-primary">Save Override</button>
         </div>
       </div>
     </div>
@@ -456,6 +456,32 @@ export const prerender = false;
     document.getElementById('statusFilter').addEventListener('change', renderBookingsTable);
     document.getElementById('closeModal').addEventListener('click', closeModal);
     document.getElementById('addAllowanceBtn').addEventListener('click', openAllowanceModal);
+
+    // Allowance modal buttons
+    document.getElementById('closeAllowanceModalBtn').addEventListener('click', closeAllowanceModal);
+    document.getElementById('cancelAllowanceBtn').addEventListener('click', closeAllowanceModal);
+    document.getElementById('saveAllowanceBtn').addEventListener('click', saveAllowance);
+
+    // Event delegation for bookings table
+    document.getElementById('bookingsTable').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const slotId = btn.dataset.slotId;
+      if (action === 'viewSlot') {
+        const slot = allSlots.find(s => s.id === slotId);
+        if (slot) showSlotDetails(slot);
+      } else if (action === 'cancelSlot') {
+        cancelSlot(slotId);
+      }
+    });
+
+    // Event delegation for allowances list
+    document.getElementById('allowancesList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="removeAllowance"]');
+      if (!btn) return;
+      removeAllowance(btn.dataset.djId);
+    });
   }
 
   function getWeekStart(date) {
@@ -644,8 +670,8 @@ export const prerender = false;
           <td class="text-center">${slot.duration || 60} min</td>
           <td class="text-center"><span class="badge ${statusClass}">${slot.status}</span></td>
           <td class="text-center">
-            <button class="btn btn-sm btn-outline" onclick="showSlotDetails(${JSON.stringify(slot).replace(/"/g, '&quot;')})">View</button>
-            ${slot.status === 'scheduled' ? `<button class="btn btn-sm btn-danger" onclick="cancelSlot('${slot.id}')">Cancel</button>` : ''}
+            <button class="btn btn-sm btn-outline" data-action="viewSlot" data-slot-id="${slot.id}">View</button>
+            ${slot.status === 'scheduled' ? `<button class="btn btn-sm btn-danger" data-action="cancelSlot" data-slot-id="${slot.id}">Cancel</button>` : ''}
           </td>
         </tr>
       `;
@@ -765,7 +791,7 @@ export const prerender = false;
         </div>
         <div>
           <span class="allowance-badge">${a.weeklySlots}x</span>
-          <button class="btn btn-sm btn-danger" onclick="removeAllowance('${a.djId}')" style="margin-left: 0.5rem;">Remove</button>
+          <button class="btn btn-sm btn-danger" data-action="removeAllowance" data-dj-id="${a.djId}" style="margin-left: 0.5rem;">Remove</button>
         </div>
       </div>
     `).join('');
@@ -828,7 +854,5 @@ export const prerender = false;
     }
   }
 
-  // Expose functions for onclick handlers
-  window.showSlotDetails = showSlotDetails;
-  window.cancelSlot = cancelSlot;
+  // Functions are now called via event delegation, no global exposure needed
 </script>

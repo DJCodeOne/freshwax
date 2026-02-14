@@ -180,7 +180,7 @@ export const prerender = false;
           <div class="access-code-display" id="accessCodeDisplay" style="display: none;">
             <h4>⚠️ Supplier Portal Access Code</h4>
             <span class="code" id="newAccessCode"></span>
-            <button class="copy-btn" onclick="copyAccessCode()">Copy</button>
+            <button class="copy-btn" id="copyAccessCodeBtn">Copy</button>
             <p>Share this code with the supplier so they can view their stock levels. This code is only shown once!</p>
           </div>
         </div>
@@ -569,12 +569,14 @@ export const prerender = false;
       e.target.value = e.target.value.toUpperCase();
     });
     
+    // Copy access code button
+    document.getElementById('copyAccessCodeBtn').addEventListener('click', copyAccessCode);
+
     // Expose functions to window for onclick handlers in dynamic HTML
     window.editSupplier = editSupplier;
     window.deactivateSupplier = deactivateSupplier;
     window.activateSupplier = activateSupplier;
     window.deleteSupplier = deleteSupplier;
-    window.copyAccessCode = copyAccessCode;
   </script>
 </body>
 </html>

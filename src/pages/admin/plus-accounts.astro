@@ -113,7 +113,7 @@ function formatDate(dateStr: string): string {
   </Fragment>
 
   <Fragment slot="actions">
-    <button class="btn btn-ghost" onclick="window.location.reload()">
+    <button class="btn btn-ghost" id="refreshPageBtn">
       ↻ Refresh
     </button>
   </Fragment>
@@ -211,10 +211,10 @@ function formatDate(dateStr: string): string {
                   </td>
                   <td>
                     <div class="action-buttons">
-                      <button class="btn btn-sm btn-ghost" onclick={`viewUser('${user.id}')`} title="View User">
+                      <button class="btn btn-sm btn-ghost" data-action="viewUser" data-user-id={user.id} title="View User">
                         👁
                       </button>
-                      <button class="btn btn-sm btn-ghost" onclick={`extendSubscription('${user.id}')`} title="Extend Subscription">
+                      <button class="btn btn-sm btn-ghost" data-action="extendSubscription" data-user-id={user.id} title="Extend Subscription">
                         ➕
                       </button>
                     </div>
@@ -230,11 +230,11 @@ function formatDate(dateStr: string): string {
 
   <!-- User Details Modal -->
   <div id="userModal" class="modal hidden">
-    <div class="modal-backdrop" onclick="closeModal()"></div>
+    <div class="modal-backdrop" id="userModalBackdrop"></div>
     <div class="modal-content">
       <div class="modal-header">
         <h3>User Details</h3>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <button class="modal-close" id="userModalCloseBtn">&times;</button>
       </div>
       <div class="modal-body" id="userModalBody">
         Loading...
@@ -244,11 +244,11 @@ function formatDate(dateStr: string): string {
 
   <!-- Extend Subscription Modal -->
   <div id="extendModal" class="modal hidden">
-    <div class="modal-backdrop" onclick="closeExtendModal()"></div>
+    <div class="modal-backdrop" id="extendModalBackdrop"></div>
     <div class="modal-content">
       <div class="modal-header">
         <h3>Extend Subscription</h3>
-        <button class="modal-close" onclick="closeExtendModal()">&times;</button>
+        <button class="modal-close" id="extendModalCloseBtn">&times;</button>
       </div>
       <div class="modal-body">
         <p>Extend subscription for user: <strong id="extendUserName"></strong></p>
@@ -267,7 +267,7 @@ function formatDate(dateStr: string): string {
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost" onclick="closeExtendModal()">Cancel</button>
+        <button class="btn btn-ghost" id="cancelExtendBtn">Cancel</button>
         <button class="btn btn-primary" id="confirmExtendBtn">Extend Subscription</button>
       </div>
     </div>
@@ -541,6 +541,26 @@ function formatDate(dateStr: string): string {
 </style>
 
 <script>
+  // Refresh page button
+  document.getElementById('refreshPageBtn')?.addEventListener('click', () => window.location.reload());
+
+  // Modal close buttons
+  document.getElementById('userModalBackdrop')?.addEventListener('click', closeModal);
+  document.getElementById('userModalCloseBtn')?.addEventListener('click', closeModal);
+  document.getElementById('extendModalBackdrop')?.addEventListener('click', closeExtendModal);
+  document.getElementById('extendModalCloseBtn')?.addEventListener('click', closeExtendModal);
+  document.getElementById('cancelExtendBtn')?.addEventListener('click', closeExtendModal);
+
+  // Event delegation for table action buttons
+  document.getElementById('plusTable')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const userId = btn.dataset.userId;
+    if (action === 'viewUser') viewUser(userId);
+    else if (action === 'extendSubscription') extendSubscription(userId);
+  });
+
   // Search functionality
   const searchInput = document.getElementById('searchInput');
   const tableRows = document.querySelectorAll('#plusTable tbody tr');
@@ -675,11 +695,7 @@ function formatDate(dateStr: string): string {
     }
   });
 
-  // Make functions global
-  (window as any).viewUser = viewUser;
-  (window as any).closeModal = closeModal;
-  (window as any).extendSubscription = extendSubscription;
-  (window as any).closeExtendModal = closeExtendModal;
+  // Functions are now called via addEventListener, no global exposure needed
 </script>
 
 <style>

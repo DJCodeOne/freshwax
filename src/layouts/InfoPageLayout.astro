@@ -33,7 +33,7 @@ const { title, description, lastUpdated, faqs, breadcrumbs } = Astro.props;
 
     <!-- Content -->
     <article class="container mx-auto px-4 py-12 max-w-4xl">
-      <button type="button" class="back-btn" onclick="history.back()">
+      <button type="button" class="back-btn js-back-btn">
         <span class="back-arrow">←</span>
         <span>Back</span>
       </button>
@@ -162,3 +162,7 @@ const { title, description, lastUpdated, faqs, breadcrumbs } = Astro.props;
     overflow-x: auto;
   }
 </style>
+
+<script>
+  document.querySelector('.js-back-btn')?.addEventListener('click', () => history.back());
+</script>

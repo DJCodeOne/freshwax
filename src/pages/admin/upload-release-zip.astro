@@ -80,7 +80,7 @@ if (authResult) return Astro.redirect('/login');
       <p class="success-message">All files uploaded to R2 and ALL URLs saved to Firebase.</p>
       <div class="success-actions">
         <a href="/admin/publish-release/" class="success-btn">Preview & Publish</a>
-        <button onclick="location.reload()" class="success-btn">Upload Another</button>
+        <button id="uploadAnotherBtn" class="success-btn">Upload Another</button>
       </div>
     </div>
   </div>
@@ -105,6 +105,8 @@ if (authResult) return Astro.redirect('/login');
     const progressFill = document.getElementById('progressFill');
     const progressLog = document.getElementById('progressLog');
     const successContainer = document.getElementById('successContainer');
+
+    document.getElementById('uploadAnotherBtn')?.addEventListener('click', () => location.reload());
 
     browseBtn.addEventListener('click', (e) => {
       e.preventDefault();

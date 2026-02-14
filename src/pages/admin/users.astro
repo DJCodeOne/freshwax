@@ -15,7 +15,7 @@ export const prerender = false;
 
 <AdminLayout title="User Management" activeNav="users">
   <Fragment slot="actions">
-    <button class="btn btn-outline" onclick="exportUsers()">
+    <button class="btn btn-outline" id="exportUsersBtn">
       <span>📥</span> Export CSV
     </button>
   </Fragment>
@@ -98,7 +98,7 @@ export const prerender = false;
       <div class="modal modal-lg">
         <div class="modal-header">
           <h2>Edit User</h2>
-          <button class="modal-close" onclick="closeModal('editModal')">×</button>
+          <button class="modal-close" data-close-modal="editModal">×</button>
         </div>
         <div class="modal-body">
           <form id="editForm">
@@ -286,8 +286,8 @@ export const prerender = false;
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="saveUser()">Save Changes</button>
+          <button type="button" class="btn btn-secondary" data-close-modal="editModal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="saveUserBtn">Save Changes</button>
         </div>
       </div>
     </div>
@@ -297,15 +297,15 @@ export const prerender = false;
       <div class="modal">
         <div class="modal-header">
           <h2>Approve User</h2>
-          <button class="modal-close" onclick="closeModal('approveModal')">×</button>
+          <button class="modal-close" data-close-modal="approveModal">×</button>
         </div>
         <div class="modal-body">
           <p>Are you sure you want to approve <strong id="approveUserName"></strong>?</p>
           <p class="text-muted mt-1">They will gain access to the Pro Dashboard and can upload content.</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
-          <button type="button" class="btn btn-success" onclick="confirmApprove()">Approve User</button>
+          <button type="button" class="btn btn-secondary" data-close-modal="approveModal">Cancel</button>
+          <button type="button" class="btn btn-success" id="confirmApproveBtn">Approve User</button>
         </div>
       </div>
     </div>
@@ -315,7 +315,7 @@ export const prerender = false;
       <div class="modal">
         <div class="modal-header">
           <h2>Suspend User</h2>
-          <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+          <button class="modal-close" data-close-modal="deleteModal">×</button>
         </div>
         <div class="modal-body">
           <p>Suspend <strong id="deleteUserName"></strong>?</p>
@@ -329,8 +329,8 @@ export const prerender = false;
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
-          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled onclick="confirmDelete()">Suspend User</button>
+          <button type="button" class="btn btn-secondary" data-close-modal="deleteModal">Cancel</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn" disabled>Suspend User</button>
         </div>
       </div>
     </div>
@@ -413,7 +413,7 @@ export const prerender = false;
               <div class="empty-icon">❌</div>
               <h3>Error loading users</h3>
               <p>${error.message}</p>
-              <button class="btn btn-primary mt-2" onclick="location.reload()">Try Again</button>
+              <button class="btn btn-primary mt-2" data-action="reload">Try Again</button>
             </div>
           `;
         }
@@ -475,7 +475,7 @@ export const prerender = false;
             <tr data-id="${u.id}">
               <td>
                 <div class="user-cell">
-                  <div class="avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span style="display:none;">${u.displayName.charAt(0).toUpperCase()}</span>` : u.displayName.charAt(0).toUpperCase()}</div>
+                  <div class="avatar">${u.avatarUrl ? `<img src="${u.avatarUrl}" alt="" data-fallback="show-next" /><span style="display:none;">${u.displayName.charAt(0).toUpperCase()}</span>` : u.displayName.charAt(0).toUpperCase()}</div>
                   <div>
                     <div class="user-name">${u.displayName}</div>
                     ${u.fullName && u.fullName !== u.displayName ? `<div class="text-muted text-sm">${u.fullName}</div>` : ''}
@@ -493,9 +493,9 @@ export const prerender = false;
               <td class="text-muted">${dateStr}</td>
               <td class="text-right">
                 <div class="btn-group">
-                  ${needsApproval ? `<button class="btn btn-sm btn-success" onclick="quickApprove('${u.id}', '${u.displayName.replace(/'/g, "\\'")}', '${u.collection}')">Approve</button>` : ''}
-                  <button class="btn btn-sm btn-secondary" onclick="editUser('${u.id}')">Edit</button>
-                  <button class="btn btn-sm btn-outline" onclick="deleteUser('${u.id}', '${u.displayName.replace(/'/g, "\\'")}')">🗑️</button>
+                  ${needsApproval ? `<button class="btn btn-sm btn-success" data-action="quickApprove" data-id="${u.id}" data-name="${escapeHtml(u.displayName)}" data-collection="${u.collection}">Approve</button>` : ''}
+                  <button class="btn btn-sm btn-secondary" data-action="editUser" data-id="${u.id}">Edit</button>
+                  <button class="btn btn-sm btn-outline" data-action="deleteUser" data-id="${u.id}" data-name="${escapeHtml(u.displayName)}">🗑️</button>
                 </div>
               </td>
             </tr>
@@ -518,6 +518,35 @@ export const prerender = false;
       // Delete confirmation checkbox
       document.getElementById('deleteConfirmCheck')?.addEventListener('change', (e) => {
         document.getElementById('confirmDeleteBtn').disabled = !e.target.checked;
+      });
+
+      // Static button event listeners (replacing inline onclick)
+      document.getElementById('exportUsersBtn')?.addEventListener('click', () => window.exportUsers());
+      document.getElementById('saveUserBtn')?.addEventListener('click', () => window.saveUser());
+      document.getElementById('confirmApproveBtn')?.addEventListener('click', () => window.confirmApprove());
+      document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => window.confirmDelete());
+
+      // Close modal buttons (data-close-modal attribute)
+      document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          closeModal(btn.dataset.closeModal);
+        });
+      });
+
+      // Event delegation for dynamically rendered user table buttons
+      document.getElementById('usersTableBody')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const { action, id, name, collection } = btn.dataset;
+        if (action === 'quickApprove') window.quickApprove(id, name, collection);
+        else if (action === 'editUser') window.editUser(id);
+        else if (action === 'deleteUser') window.deleteUser(id, name);
+      });
+
+      // Event delegation for error state reload button
+      document.getElementById('loadingState')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="reload"]');
+        if (btn) location.reload();
       });
 
       // Edit user - populate modal with user data

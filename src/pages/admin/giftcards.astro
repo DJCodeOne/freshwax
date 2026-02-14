@@ -316,8 +316,8 @@ export const prerender = false;
               <td>${b.transactionCount}</td>
               <td>${date}</td>
               <td>
-                <button class="action-btn" onclick="viewUserHistory('${b.userId}')">View</button>
-                <button class="action-btn" onclick="quickAdjust('${b.userId}')">Adjust</button>
+                <button class="action-btn" data-action="viewUserHistory" data-user-id="${b.userId}">View</button>
+                <button class="action-btn" data-action="quickAdjust" data-user-id="${b.userId}">Adjust</button>
               </td>
             </tr>
           `;
@@ -409,17 +409,50 @@ export const prerender = false;
           <td style="font-size: 0.8125rem;">${recipientEmail !== '-' ? recipientEmail.substring(0, 20) + (recipientEmail.length > 20 ? '...' : '') : '-'}</td>
           <td style="font-size: 0.8125rem;">${redeemedByShort}</td>
           <td class="action-cell">
-            <button class="action-btn small" onclick="viewCardDetails('${card.id}')">View</button>
-            <button class="action-btn small" onclick="copyCode('${card.code}')">Copy</button>
-            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" onclick="resendCardEmail('${card.id}', '${card.code}', '${card.recipientEmail || ''}')">📧</button>` : ''}
-            ${card.isActive && !card.redeemedBy ? `<button class="action-btn danger small" onclick="cancelCard('${card.id}')">Cancel</button>` : ''}
-            ${!card.isActive && !card.redeemedBy ? `<button class="action-btn success small" onclick="reactivateCard('${card.id}')">Reactivate</button>` : ''}
+            <button class="action-btn small" data-action="viewCardDetails" data-card-id="${card.id}">View</button>
+            <button class="action-btn small" data-action="copyCode" data-code="${card.code}">Copy</button>
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn small" data-action="resendCardEmail" data-card-id="${card.id}" data-code="${card.code}" data-email="${escapeHtml(card.recipientEmail || '')}">📧</button>` : ''}
+            ${card.isActive && !card.redeemedBy ? `<button class="action-btn danger small" data-action="cancelCard" data-card-id="${card.id}">Cancel</button>` : ''}
+            ${!card.isActive && !card.redeemedBy ? `<button class="action-btn success small" data-action="reactivateCard" data-card-id="${card.id}">Reactivate</button>` : ''}
           </td>
         </tr>
       `;
     }).join('');
   }
   
+  // Event delegation for balances table
+  document.getElementById('balancesTable')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const userId = btn.dataset.userId;
+    if (action === 'viewUserHistory') window.viewUserHistory(userId);
+    else if (action === 'quickAdjust') window.quickAdjust(userId);
+  });
+
+  // Event delegation for cards table
+  document.getElementById('cardsTable')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'viewCardDetails') window.viewCardDetails(btn.dataset.cardId);
+    else if (action === 'copyCode') window.copyCode(btn.dataset.code);
+    else if (action === 'resendCardEmail') window.resendCardEmail(btn.dataset.cardId, btn.dataset.code, btn.dataset.email);
+    else if (action === 'cancelCard') window.cancelCard(btn.dataset.cardId);
+    else if (action === 'reactivateCard') window.reactivateCard(btn.dataset.cardId);
+  });
+
+  // Event delegation for card modal actions
+  document.getElementById('cardModalActions')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'copyCode') window.copyCode(btn.dataset.code);
+    else if (action === 'resendCardEmail') window.resendCardEmail(btn.dataset.cardId, btn.dataset.code, btn.dataset.email);
+    else if (action === 'cancelCardAndClose') { window.cancelCard(btn.dataset.cardId); document.getElementById('cardModal').classList.add('hidden'); }
+    else if (action === 'reactivateCardAndClose') { window.reactivateCard(btn.dataset.cardId); document.getElementById('cardModal').classList.add('hidden'); }
+  });
+
   // Search and filter listeners
   document.getElementById('cardSearch')?.addEventListener('input', () => renderCards(allCards));
   document.getElementById('cardStatusFilter')?.addEventListener('change', () => renderCards(allCards));
@@ -679,17 +712,17 @@ export const prerender = false;
     `;
     
     // Action buttons
-    let actionsHtml = `<button class="action-btn" onclick="copyCode('${card.code}')">📋 Copy Code</button>`;
-    
+    let actionsHtml = `<button class="action-btn" data-action="copyCode" data-code="${card.code}">📋 Copy Code</button>`;
+
     if (card.isActive && !card.redeemedBy) {
-      actionsHtml += `<button class="action-btn" onclick="resendCardEmail('${card.id}', '${card.code}', '${card.recipientEmail || ''}')">📧 Resend Email</button>`;
-      actionsHtml += `<button class="action-btn danger" onclick="cancelCard('${card.id}'); document.getElementById('cardModal').classList.add('hidden');">❌ Cancel Card</button>`;
+      actionsHtml += `<button class="action-btn" data-action="resendCardEmail" data-card-id="${card.id}" data-code="${card.code}" data-email="${escapeHtml(card.recipientEmail || '')}">📧 Resend Email</button>`;
+      actionsHtml += `<button class="action-btn danger" data-action="cancelCardAndClose" data-card-id="${card.id}">❌ Cancel Card</button>`;
     }
-    
+
     if (!card.isActive && !card.redeemedBy) {
-      actionsHtml += `<button class="action-btn success" onclick="reactivateCard('${card.id}'); document.getElementById('cardModal').classList.add('hidden');">✅ Reactivate</button>`;
+      actionsHtml += `<button class="action-btn success" data-action="reactivateCardAndClose" data-card-id="${card.id}">✅ Reactivate</button>`;
     }
-    
+
     actions.innerHTML = actionsHtml;
   };
   

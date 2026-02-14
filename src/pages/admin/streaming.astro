@@ -1796,9 +1796,80 @@ export const prerender = false;
     setupEventListeners();
     setupChatManagement();
     setupMediaMTXControls();
+    setupDelegationListeners();
 
     // Check server status every 30 seconds
     serverCheckInterval = setInterval(checkServerStatus, 30000);
+  }
+
+  function setupDelegationListeners() {
+    // Active streams list delegation
+    document.getElementById('activeStreamsList')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="kickStream"]');
+      if (btn) window.kickStream(btn.dataset.path);
+    });
+
+    // Live streams delegation
+    document.getElementById('liveStreams')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'kickDJ') window.kickDJ(btn.dataset.userId, btn.dataset.djName);
+      else if (btn.dataset.action === 'endStream') window.endStream(btn.dataset.streamId, btn.dataset.djId);
+    });
+
+    // Approved DJs delegation
+    document.getElementById('approvedDJs')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="revokeDJ"]');
+      if (btn) window.revokeDJ(btn.dataset.userId, btn.dataset.email);
+    });
+
+    // Bypass list delegation
+    document.getElementById('bypassList')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="revokeBypass"]');
+      if (btn) window.revokeBypass(btn.dataset.userId, btn.dataset.email);
+    });
+
+    // Moderation lists delegation
+    document.getElementById('bannedList')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="unbanDJ"]');
+      if (btn) window.unbanDJ(btn.dataset.userId, btn.dataset.email);
+    });
+
+    document.getElementById('onholdList')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="releaseDJ"]');
+      if (btn) window.releaseDJ(btn.dataset.userId, btn.dataset.email);
+    });
+
+    // Quick access key delegation
+    document.getElementById('quickAccessKeyDisplay')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'copyAccessKey') window.copyAccessKey(btn.dataset.code);
+      else if (btn.dataset.action === 'revokeQuickAccessKey') window.revokeQuickAccessKey();
+      else if (btn.dataset.action === 'showSetExpiryModal') window.showSetExpiryModal();
+    });
+
+    // Bypass requests delegation
+    document.getElementById('bypassRequests')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'approveBypassRequest') {
+        window.approveBypassRequest(btn.dataset.requestId, btn.dataset.userId, btn.dataset.email, btn.dataset.djName);
+      } else if (btn.dataset.action === 'showDenyBypassModal') {
+        window.showDenyBypassModal(btn.dataset.requestId, btn.dataset.userId, btn.dataset.email);
+      }
+    });
+
+    // Event requests delegation
+    document.getElementById('eventRequests')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      if (btn.dataset.action === 'approveEventRequest') {
+        window.approveEventRequest(btn.dataset.requestId, btn.dataset.djName, parseInt(btn.dataset.hours));
+      } else if (btn.dataset.action === 'rejectEventRequest') {
+        window.rejectEventRequest(btn.dataset.requestId, btn.dataset.djName);
+      }
+    });
   }
 
   // ===== Server Monitor Dashboard =====
@@ -2105,7 +2176,7 @@ export const prerender = false;
                 ${path.readers?.length || 0} viewer${(path.readers?.length || 0) !== 1 ? 's' : ''}
               </span>
             </div>
-            <button class="kick-stream-btn" onclick="kickStream('${path.name}')">Kick</button>
+            <button class="kick-stream-btn" data-action="kickStream" data-path="${path.name}">Kick</button>
           </div>
         `).join('');
       } catch {
@@ -2312,8 +2383,8 @@ export const prerender = false;
               <span>❤️ ${stream.likeCount || 0}</span>
             </div>
             <div class="live-stream-actions">
-              <button class="kick-btn" onclick="kickDJ('${stream.djId}', '${stream.djName}')">Kick</button>
-              <button class="end-stream-btn" onclick="endStream('${stream.id}', '${stream.djId}')">End Stream</button>
+              <button class="kick-btn" data-action="kickDJ" data-user-id="${stream.djId}" data-dj-name="${stream.djName}">Kick</button>
+              <button class="end-stream-btn" data-action="endStream" data-stream-id="${stream.id}" data-dj-id="${stream.djId}">End Stream</button>
             </div>
           </div>
         `).join('');
@@ -2345,7 +2416,7 @@ export const prerender = false;
               </div>
             </div>
             <div class="dj-actions">
-              <button class="action-btn revoke" onclick="revokeDJ('${dj.userId}', '${dj.email || ''}')">Revoke</button>
+              <button class="action-btn revoke" data-action="revokeDJ" data-user-id="${dj.userId}" data-email="${dj.email || ''}">Revoke</button>
             </div>
           </div>
         `).join('');
@@ -2686,7 +2757,7 @@ export const prerender = false;
                   ${bypass.grantedBy ? ` • By: ${bypass.grantedBy}` : ''}
                 </div>
               </div>
-              <button class="revoke-bypass-btn" onclick="revokeBypass('${bypass.userId}', '${bypass.email || ''}')">Revoke</button>
+              <button class="revoke-bypass-btn" data-action="revokeBypass" data-user-id="${bypass.userId}" data-email="${bypass.email || ''}">Revoke</button>
             </div>
           `;
         }).join('');
@@ -2725,7 +2796,7 @@ export const prerender = false;
           <div class="key-card ${!key.active || isExpired ? 'inactive' : ''}">
             <div class="key-code-display">
               <span class="key-code">${key.code}</span>
-              <button class="copy-key-btn" onclick="copyAccessKey('${key.code}')">📋 Copy</button>
+              <button class="copy-key-btn" data-action="copyAccessKey" data-code="${key.code}">📋 Copy</button>
             </div>
             <div class="key-meta">
               <span class="key-status ${key.active && !isExpired ? 'active' : 'inactive'}">
@@ -2735,8 +2806,8 @@ export const prerender = false;
               <span>Used by ${key.usedCount || 0} DJs</span>
             </div>
             <div class="key-actions">
-              ${key.active && !isExpired ? `<button class="revoke-key-btn" onclick="revokeQuickAccessKey()">Revoke Key</button>` : ''}
-              <button class="expiry-btn" onclick="showSetExpiryModal()">Set Expiry</button>
+              ${key.active && !isExpired ? `<button class="revoke-key-btn" data-action="revokeQuickAccessKey">Revoke Key</button>` : ''}
+              <button class="expiry-btn" data-action="showSetExpiryModal">Set Expiry</button>
             </div>
           </div>
         `;
@@ -2919,7 +2990,7 @@ export const prerender = false;
                   </div>
                 </div>
                 <div class="mod-actions">
-                  <button class="unban-btn" onclick="unbanDJ('${dj.userId}', '${dj.email || ''}')">Unban</button>
+                  <button class="unban-btn" data-action="unbanDJ" data-user-id="${dj.userId}" data-email="${dj.email || ''}">Unban</button>
                 </div>
               </div>
             `;
@@ -2942,7 +3013,7 @@ export const prerender = false;
                   </div>
                 </div>
                 <div class="mod-actions">
-                  <button class="release-btn" onclick="releaseDJ('${dj.userId}', '${dj.email || ''}')">Release</button>
+                  <button class="release-btn" data-action="releaseDJ" data-user-id="${dj.userId}" data-email="${dj.email || ''}">Release</button>
                 </div>
               </div>
             `;
@@ -3093,8 +3164,8 @@ export const prerender = false;
                 </div>
               </div>
               <div class="bypass-request-actions">
-                <button class="approve-bypass-btn" onclick="approveBypassRequest('${req.id}', '${req.userId}', '${req.email || req.userEmail || ''}', '${(req.djName || req.userName || '').replace(/'/g, "\\'")}')">✓ Approve</button>
-                <button class="deny-bypass-btn" onclick="showDenyBypassModal('${req.id}', '${req.userId}', '${req.email || req.userEmail || ''}')">✗ Deny</button>
+                <button class="approve-bypass-btn" data-action="approveBypassRequest" data-request-id="${req.id}" data-user-id="${req.userId}" data-email="${req.email || req.userEmail || ''}" data-dj-name="${(req.djName || req.userName || '').replace(/"/g, '&quot;')}">✓ Approve</button>
+                <button class="deny-bypass-btn" data-action="showDenyBypassModal" data-request-id="${req.id}" data-user-id="${req.userId}" data-email="${req.email || req.userEmail || ''}">✗ Deny</button>
               </div>
             </div>
           `;
@@ -3253,8 +3324,8 @@ export const prerender = false;
                 </div>
               </div>
               <div class="bypass-request-actions">
-                <button class="approve-bypass-btn" onclick="approveEventRequest('${req.id}', '${(req.userName || '').replace(/'/g, "\\'")}', ${req.hoursRequested})">✓ Approve ${req.hoursRequested}h</button>
-                <button class="deny-bypass-btn" onclick="rejectEventRequest('${req.id}', '${(req.userName || '').replace(/'/g, "\\'")}')">✗ Reject</button>
+                <button class="approve-bypass-btn" data-action="approveEventRequest" data-request-id="${req.id}" data-dj-name="${(req.userName || '').replace(/"/g, '&quot;')}" data-hours="${req.hoursRequested}">✓ Approve ${req.hoursRequested}h</button>
+                <button class="deny-bypass-btn" data-action="rejectEventRequest" data-request-id="${req.id}" data-dj-name="${(req.userName || '').replace(/"/g, '&quot;')}">✗ Reject</button>
               </div>
             </div>
           `;

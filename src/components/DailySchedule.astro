@@ -1953,7 +1953,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             <div class="allowance-dj">${a.djName || a.djId}</div>
             <div class="allowance-details">${a.maxHoursPerDay || 2}h/day • ${a.weeklySlots || 1} slots/week${a.reason ? ` • ${a.reason}` : ''}</div>
           </div>
-          <button type="button" class="remove-allowance" onclick="window.removeAllowance_${id}('${a.djId}')">×</button>
+          <button type="button" class="remove-allowance" data-action="removeAllowance" data-dj-id="${a.djId}">×</button>
         </div>
       `).join('');
     }
@@ -2001,8 +2001,8 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       }
     }
 
-    // Expose removeAllowance globally for onclick handlers
-    window[`removeAllowance_${id}`] = async function(djId) {
+    // Remove allowance handler (CSP-safe, uses event delegation instead of inline onclick)
+    async function removeAllowance(djId) {
       if (!confirm('Remove this DJ\'s custom allowance?')) return;
 
       try {
@@ -2021,7 +2021,15 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       } catch (error) {
         alert('Failed to remove allowance');
       }
-    };
+    }
+
+    // Event delegation for allowance remove buttons (CSP-safe, replaces inline onclick)
+    const allowancesList = document.querySelector('[data-modal="allowances"] .allowances-list');
+    allowancesList?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="removeAllowance"]');
+      if (!btn) return;
+      removeAllowance(btn.dataset.djId);
+    });
 
     function closeModal(modal) {
       modal?.classList.add('hidden');

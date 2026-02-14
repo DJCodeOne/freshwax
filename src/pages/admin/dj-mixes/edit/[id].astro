@@ -710,7 +710,7 @@ const nonce = (Astro.locals as any).nonce || '';
   artworkUrlInput.addEventListener('change', () => {
     const url = artworkUrlInput.value.trim();
     if (url) {
-      artworkPreview.innerHTML = `<img src="${url}" alt="Preview" id="previewImg" onerror="this.parentElement.innerHTML='<div class=artwork-placeholder>Invalid URL</div>'" />`;
+      artworkPreview.innerHTML = `<img src="${url}" alt="Preview" id="previewImg" data-fallback="html" data-fallback-html="<div class=artwork-placeholder>Invalid URL</div>" />`;
     }
   });
 

@@ -391,7 +391,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
 <AdminLayout title="Payments" activeNav="payments" showStats={true} stats={stats}>
   <Fragment slot="actions">
-    <button class="btn btn-outline" onclick="window.location.reload()">
+    <button class="btn btn-outline" id="refreshPaymentsBtn">
       ↻ Refresh
     </button>
   </Fragment>
@@ -873,13 +873,13 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
         <h2>Dispute Details</h2>
-        <button class="modal-close" onclick="closeModal('disputeModal')">&times;</button>
+        <button class="modal-close" data-close-modal="disputeModal">&times;</button>
       </div>
       <div class="modal-body" id="disputeModalContent">
         <!-- Populated by JS -->
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('disputeModal')">Close</button>
+        <button class="btn btn-outline" data-close-modal="disputeModal">Close</button>
       </div>
     </div>
   </div>
@@ -889,13 +889,13 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
         <h2>Refund Details</h2>
-        <button class="modal-close" onclick="closeModal('refundModal')">&times;</button>
+        <button class="modal-close" data-close-modal="refundModal">&times;</button>
       </div>
       <div class="modal-body" id="refundModalContent">
         <!-- Populated by JS -->
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('refundModal')">Close</button>
+        <button class="btn btn-outline" data-close-modal="refundModal">Close</button>
       </div>
     </div>
   </div>
@@ -905,13 +905,13 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="modal" style="max-width: 600px;">
       <div class="modal-header">
         <h2>Payout Details</h2>
-        <button class="modal-close" onclick="closeModal('payoutModal')">&times;</button>
+        <button class="modal-close" data-close-modal="payoutModal">&times;</button>
       </div>
       <div class="modal-body" id="payoutModalContent">
         <!-- Populated by JS -->
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('payoutModal')">Close</button>
+        <button class="btn btn-outline" data-close-modal="payoutModal">Close</button>
       </div>
     </div>
   </div>
@@ -932,6 +932,26 @@ const nonce = (Astro.locals as any).nonce || '';
           minute: '2-digit'
         });
       };
+
+      // Refresh button
+      document.getElementById('refreshPaymentsBtn')?.addEventListener('click', () => {
+        window.location.reload();
+      });
+
+      // Close modal buttons
+      document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          closeModal(btn.dataset.closeModal);
+        });
+      });
+
+      // Event delegation for payout modal content (retry button rendered dynamically)
+      document.getElementById('payoutModalContent')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="retryPayout"]');
+        if (btn) {
+          retryPayout(btn.dataset.payoutId);
+        }
+      });
 
       // Tab switching
       document.querySelectorAll('.tab').forEach(tab => {
@@ -1174,7 +1194,7 @@ const nonce = (Astro.locals as any).nonce || '';
           ` : ''}
 
           ${payout.status === 'retry_pending' ? `
-            <button class="btn btn-primary" style="width: 100%;" onclick="retryPayout('${payout.id}')">
+            <button class="btn btn-primary" style="width: 100%;" data-action="retryPayout" data-payout-id="${payout.id}">
               🔄 Retry This Payout
             </button>
           ` : ''}

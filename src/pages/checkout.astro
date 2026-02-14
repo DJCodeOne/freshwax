@@ -476,7 +476,7 @@ const nonce = (Astro.locals as any).nonce || '';
                 <span style="font-size: 1.25rem; font-weight: 700; color: #22c55e;">£${creditBalance.toFixed(2)}</span>
               </div>
               <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; user-select: none;">
-                <input type="checkbox" id="applyCreditCheckbox" onchange="toggleApplyCredit(this.checked)" style="width: 1.25rem; height: 1.25rem; accent-color: #22c55e; cursor: pointer;">
+                <input type="checkbox" id="applyCreditCheckbox" style="width: 1.25rem; height: 1.25rem; accent-color: #22c55e; cursor: pointer;">
                 <span style="font-size: 0.9375rem; color: #374151;">Pay with £${total.toFixed(2)} credit (covers full order)</span>
               </label>
             </div>
@@ -530,7 +530,7 @@ const nonce = (Astro.locals as any).nonce || '';
               <label style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.375rem;">Verify Your Postcode</label>
               <div class="postcode-lookup-row" style="display: flex; gap: 0.75rem;">
                 <input type="text" id="postcodeSearch" placeholder="Enter postcode (e.g. E1 6AN)" value="${postcode}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
-                <button type="button" id="findAddressBtn" onclick="lookupPostcode()" style="padding: 0.875rem 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                <button type="button" id="findAddressBtn" style="padding: 0.875rem 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">
                   Verify
                 </button>
               </div>
@@ -583,7 +583,7 @@ const nonce = (Astro.locals as any).nonce || '';
             
             <!-- Enter Manually Link (hidden since fields always visible now) -->
             <div id="manualEntryLink" style="display: none; margin-top: 0.75rem;">
-              <button type="button" onclick="document.getElementById('manualAddressFields').style.display='block'; document.getElementById('manualEntryLink').style.display='none';" style="background: none; border: none; color: #60a5fa; font-size: 0.875rem; cursor: pointer; text-decoration: underline;">
+              <button type="button" id="manualEntryBtn" style="background: none; border: none; color: #60a5fa; font-size: 0.875rem; cursor: pointer; text-decoration: underline;">
                 Or enter address manually
               </button>
             </div>
@@ -620,7 +620,7 @@ const nonce = (Astro.locals as any).nonce || '';
             ` : `
             <!-- Payment Options -->
             <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
-              <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="stripeOption" onclick="selectPaymentMethod('stripe')">
+              <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="stripeOption">
                 <input type="radio" name="paymentMethod" value="stripe" checked style="width: 20px; height: 20px; accent-color: #dc2626;">
                 <div style="flex: 1;">
                   <div style="font-weight: 600; color: #111827; font-size: 1rem;">Credit / Debit Card</div>
@@ -636,7 +636,7 @@ const nonce = (Astro.locals as any).nonce || '';
                 </svg>
               </label>
 
-              <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="paypalOption" onclick="selectPaymentMethod('paypal')">
+              <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="paypalOption">
                 <input type="radio" name="paymentMethod" value="paypal" style="width: 20px; height: 20px; accent-color: #dc2626;">
                 <div style="flex: 1;">
                   <div style="font-weight: 600; color: #111827; font-size: 1rem;">PayPal</div>
@@ -721,14 +721,23 @@ const nonce = (Astro.locals as any).nonce || '';
       });
     }
     
-    // Make postcode lookup available globally
-    window.lookupPostcode = lookupPostcode;
+    // Attach event listeners for postcode lookup
+    document.getElementById('findAddressBtn')?.addEventListener('click', lookupPostcode);
 
-    // Make payment method selection available globally
-    window.selectPaymentMethod = selectPaymentMethod;
+    // Attach event listener for manual address entry link
+    document.getElementById('manualEntryBtn')?.addEventListener('click', () => {
+      document.getElementById('manualAddressFields').style.display = 'block';
+      document.getElementById('manualEntryLink').style.display = 'none';
+    });
 
-    // Make credit toggle available globally
-    window.toggleApplyCredit = toggleApplyCredit;
+    // Attach event listeners for payment method selection
+    document.getElementById('stripeOption')?.addEventListener('click', () => selectPaymentMethod('stripe'));
+    document.getElementById('paypalOption')?.addEventListener('click', () => selectPaymentMethod('paypal'));
+
+    // Attach event listener for credit toggle
+    document.getElementById('applyCreditCheckbox')?.addEventListener('change', function() {
+      toggleApplyCredit(this.checked);
+    });
 
     document.getElementById('checkoutForm').addEventListener('submit', handleSubmit);
 

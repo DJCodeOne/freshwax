@@ -498,7 +498,7 @@ export const prerender = false;
               <p>Manage your profile, orders and settings</p>
             </div>
             <div class="header-actions">
-              <button class="print-btn" onclick="window.print()">
+              <button class="print-btn" id="printReportBtn">
                 🖨️ Print Report
               </button>
             </div>
@@ -515,7 +515,7 @@ export const prerender = false;
               <div class="profile-view" id="profile-view">
                 <div class="profile-avatar">
                   {partner.avatarUrl || partner.imageUrl || partner.photoURL ? (
-                    <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.artistName} onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                    <img src={partner.avatarUrl || partner.imageUrl || partner.photoURL} alt={partner.artistName} data-fallback="show-next" />
                     <span style="display:none;">{(partner.artistName || 'A')[0].toUpperCase()}</span>
                   ) : (
                     <span>{(partner.artistName || 'A')[0].toUpperCase()}</span>
@@ -2699,6 +2699,9 @@ export const prerender = false;
 </style>
 
 <script type="module">
+  // Print report button
+  document.getElementById('printReportBtn')?.addEventListener('click', () => window.print());
+
   async function getAuthToken() {
     try {
       const user = window.firebaseAuth?.currentUser;

@@ -319,8 +319,8 @@ export const prerender = false;
             <div class="request-date">${new Date(req.createdAt).toLocaleString()}</div>
           </div>
           <div class="request-actions">
-            <button class="btn-approve" onclick="handleBypass('approve', '${req.id}')">Approve</button>
-            <button class="btn-deny" onclick="handleBypass('deny', '${req.id}')">Deny</button>
+            <button class="btn-approve" data-action="approve" data-id="${req.id}">Approve</button>
+            <button class="btn-deny" data-action="deny" data-id="${req.id}">Deny</button>
           </div>
         </div>
       `).join('');
@@ -390,8 +390,8 @@ export const prerender = false;
             <div class="request-date">${new Date(app.createdAt).toLocaleString()}</div>
           </div>
           <div class="request-actions">
-            <button class="btn-approve" onclick="handlePartner('approve', '${app.id}')">Approve</button>
-            <button class="btn-deny" onclick="handlePartner('deny', '${app.id}')">Deny</button>
+            <button class="btn-approve" data-action="approve" data-id="${app.id}">Approve</button>
+            <button class="btn-deny" data-action="deny" data-id="${app.id}">Deny</button>
           </div>
         </div>
       `).join('');
@@ -470,8 +470,8 @@ export const prerender = false;
             <div class="request-date">${listing.submittedAt ? new Date(listing.submittedAt).toLocaleString() : 'Unknown date'}</div>
           </div>
           <div class="request-actions">
-            <button class="btn-approve" onclick="handleVinyl('approve', '${listing.id}')">Approve</button>
-            <button class="btn-deny" onclick="handleVinyl('reject', '${listing.id}')">Reject</button>
+            <button class="btn-approve" data-action="approve" data-id="${listing.id}">Approve</button>
+            <button class="btn-deny" data-action="reject" data-id="${listing.id}">Reject</button>
           </div>
         </div>
       `).join('');
@@ -512,6 +512,30 @@ export const prerender = false;
     }
   }
 
+  // Event delegation for bypass requests container
+  document.getElementById('bypass-requests')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id } = btn.dataset;
+    if (action === 'approve' || action === 'deny') handleBypass(action, id);
+  });
+
+  // Event delegation for partner applications container
+  document.getElementById('partner-applications')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id } = btn.dataset;
+    if (action === 'approve' || action === 'deny') handlePartner(action, id);
+  });
+
+  // Event delegation for vinyl listings container
+  document.getElementById('vinyl-listings')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id } = btn.dataset;
+    if (action === 'approve' || action === 'reject') handleVinyl(action, id);
+  });
+
   // Load on page load
   loadBypassRequests();
   loadPartnerApplications();
@@ -521,9 +545,4 @@ export const prerender = false;
   document.getElementById('refresh-bypass')?.addEventListener('click', loadBypassRequests);
   document.getElementById('refresh-partners')?.addEventListener('click', loadPartnerApplications);
   document.getElementById('refresh-vinyl')?.addEventListener('click', loadVinylListings);
-
-  // Make functions global
-  window.handleBypass = handleBypass;
-  window.handlePartner = handlePartner;
-  window.handleVinyl = handleVinyl;
 </script>

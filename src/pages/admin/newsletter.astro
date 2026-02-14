@@ -14,10 +14,10 @@ export const prerender = false;
 
 <AdminLayout title="Newsletter" activeNav="newsletter">
   <Fragment slot="actions">
-    <button class="btn btn-secondary" onclick="openAddSubscriberModal()">
+    <button class="btn btn-secondary" id="openAddSubscriberBtn">
       <span>➕</span> Add Subscriber
     </button>
-    <button class="btn btn-primary" onclick="openComposeModal()">
+    <button class="btn btn-primary" id="openComposeBtn">
       <span>✉️</span> Compose Newsletter
     </button>
   </Fragment>
@@ -54,9 +54,9 @@ export const prerender = false;
       <button class="filter-tab" data-filter="unsubscribed">Unsubscribed</button>
     </div>
     <div class="toolbar-actions">
-      <button class="btn btn-outline btn-sm" onclick="selectAllActive()">Select All Active</button>
-      <button class="btn btn-outline btn-sm" onclick="deselectAll()">Deselect All</button>
-      <button class="btn btn-primary btn-sm" id="sendSelectedBtn" onclick="openComposeModal()" disabled>
+      <button class="btn btn-outline btn-sm" id="selectAllActiveBtn">Select All Active</button>
+      <button class="btn btn-outline btn-sm" id="deselectAllBtn">Deselect All</button>
+      <button class="btn btn-primary btn-sm" id="sendSelectedBtn" disabled>
         📧 Send to Selected (<span id="sendCount">0</span>)
       </button>
     </div>
@@ -81,7 +81,7 @@ export const prerender = false;
         <thead>
           <tr>
             <th style="width: 40px;">
-              <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+              <input type="checkbox" id="selectAllCheckbox">
             </th>
             <th>Email</th>
             <th>Name</th>
@@ -104,7 +104,7 @@ export const prerender = false;
       <div class="empty-icon">📬</div>
       <h3>No subscribers yet</h3>
       <p>Subscribers will appear here when people sign up via the website footer.</p>
-      <button class="btn btn-primary" onclick="openAddSubscriberModal()">Add First Subscriber</button>
+      <button class="btn btn-primary" id="addFirstSubscriberBtn">Add First Subscriber</button>
     </div>
   </div>
 </AdminLayout>
@@ -114,7 +114,7 @@ export const prerender = false;
   <div class="modal modal-xl">
     <div class="modal-header">
       <h2>✉️ Compose Newsletter</h2>
-      <button class="modal-close" onclick="closeModal('composeModal')">×</button>
+      <button class="modal-close" data-close-modal="composeModal">×</button>
     </div>
     <div class="modal-body">
       <!-- Step Indicator -->
@@ -138,7 +138,7 @@ export const prerender = false;
         <h3>Select Recipients</h3>
         <div class="recipient-options">
           <label class="recipient-option">
-            <input type="radio" name="recipientType" value="selected" checked onchange="updateRecipientType()">
+            <input type="radio" name="recipientType" value="selected" checked>
             <div class="option-card">
               <span class="option-icon">✓</span>
               <span class="option-title">Selected Subscribers</span>
@@ -146,7 +146,7 @@ export const prerender = false;
             </div>
           </label>
           <label class="recipient-option">
-            <input type="radio" name="recipientType" value="all" onchange="updateRecipientType()">
+            <input type="radio" name="recipientType" value="all">
             <div class="option-card">
               <span class="option-icon">👥</span>
               <span class="option-title">All Active Subscribers</span>
@@ -166,7 +166,7 @@ export const prerender = false;
         <!-- Upload Section -->
         <div class="upload-section">
           <label class="upload-area" id="uploadArea">
-            <input type="file" id="fileUpload" accept=".txt,.pdf,.docx" onchange="handleFileUpload(event)" hidden>
+            <input type="file" id="fileUpload" accept=".txt,.pdf,.docx" hidden>
             <div class="upload-icon">📄</div>
             <div class="upload-text">
               <strong>Upload Newsletter</strong>
@@ -177,7 +177,7 @@ export const prerender = false;
           <div class="upload-status" id="uploadStatus" style="display: none;">
             <span class="status-icon">✓</span>
             <span class="status-text" id="uploadFileName"></span>
-            <button class="btn btn-ghost btn-sm" onclick="clearUpload()">✕ Remove</button>
+            <button class="btn btn-ghost btn-sm" id="clearUploadBtn">✕ Remove</button>
           </div>
         </div>
 
@@ -194,13 +194,13 @@ export const prerender = false;
         <div class="form-group">
           <label class="form-label">Newsletter Content <span class="required">*</span></label>
           <div class="editor-toolbar">
-            <button type="button" class="toolbar-btn" onclick="insertFormat('**', '**')" title="Bold"><b>B</b></button>
-            <button type="button" class="toolbar-btn" onclick="insertFormat('*', '*')" title="Italic"><i>I</i></button>
-            <button type="button" class="toolbar-btn" onclick="insertFormat('\n## ', '')" title="Heading">H</button>
-            <button type="button" class="toolbar-btn" onclick="insertFormat('[', '](url)')" title="Link">🔗</button>
-            <button type="button" class="toolbar-btn" onclick="insertFormat('\n- ', '')" title="List">•</button>
+            <button type="button" class="toolbar-btn" data-format-before="**" data-format-after="**" title="Bold"><b>B</b></button>
+            <button type="button" class="toolbar-btn" data-format-before="*" data-format-after="*" title="Italic"><i>I</i></button>
+            <button type="button" class="toolbar-btn" data-format-before="&#10;## " data-format-after="" title="Heading">H</button>
+            <button type="button" class="toolbar-btn" data-format-before="[" data-format-after="](url)" title="Link">🔗</button>
+            <button type="button" class="toolbar-btn" data-format-before="&#10;- " data-format-after="" title="List">•</button>
             <span class="toolbar-divider"></span>
-            <button type="button" class="toolbar-btn" onclick="previewContent()" title="Preview">👁️ Preview</button>
+            <button type="button" class="toolbar-btn" id="previewContentBtn" title="Preview">👁️ Preview</button>
           </div>
           <textarea id="emailContent" class="form-textarea" rows="12" placeholder="Write your newsletter content here...
 
@@ -244,7 +244,7 @@ Stay fresh! 🎵
           <label class="form-label">Send Test Email (Optional)</label>
           <div class="input-group">
             <input type="email" id="testEmail" class="form-input" placeholder="your@email.com">
-            <button type="button" class="btn btn-outline" onclick="sendTestEmail()" id="testEmailBtn">
+            <button type="button" class="btn btn-outline" id="testEmailBtn">
               <span class="btn-text">Send Test</span>
               <span class="btn-loading hidden">Sending...</span>
             </button>
@@ -254,17 +254,17 @@ Stay fresh! 🎵
         <!-- Confirmation -->
         <div class="confirm-section">
           <label class="confirm-checkbox">
-            <input type="checkbox" id="confirmSend" onchange="updateSendButton()">
+            <input type="checkbox" id="confirmSend">
             <span>I confirm I want to send this newsletter to <strong id="confirmCount">0</strong> subscribers</span>
           </label>
         </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('composeModal')">Cancel</button>
-      <button type="button" class="btn btn-secondary" id="prevStepBtn" onclick="prevStep()" style="display: none;">← Previous</button>
-      <button type="button" class="btn btn-primary" id="nextStepBtn" onclick="nextStep()">Next →</button>
-      <button type="button" class="btn btn-success" id="sendBtn" onclick="sendNewsletter()" style="display: none;" disabled>
+      <button type="button" class="btn btn-ghost" data-close-modal="composeModal">Cancel</button>
+      <button type="button" class="btn btn-secondary" id="prevStepBtn" style="display: none;">← Previous</button>
+      <button type="button" class="btn btn-primary" id="nextStepBtn">Next →</button>
+      <button type="button" class="btn btn-success" id="sendBtn" style="display: none;" disabled>
         <span class="btn-text">📧 Send Newsletter</span>
         <span class="btn-loading hidden">Sending...</span>
       </button>
@@ -277,7 +277,7 @@ Stay fresh! 🎵
   <div class="modal">
     <div class="modal-header">
       <h2>➕ Add Subscriber</h2>
-      <button class="modal-close" onclick="closeModal('addSubscriberModal')">×</button>
+      <button class="modal-close" data-close-modal="addSubscriberModal">×</button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -298,8 +298,8 @@ Stay fresh! 🎵
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('addSubscriberModal')">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="addSubscriber()">Add Subscriber</button>
+      <button type="button" class="btn btn-ghost" data-close-modal="addSubscriberModal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="addSubscriberBtn">Add Subscriber</button>
     </div>
   </div>
 </div>
@@ -309,7 +309,7 @@ Stay fresh! 🎵
   <div class="modal">
     <div class="modal-header">
       <h2>✏️ Edit Subscriber</h2>
-      <button class="modal-close" onclick="closeModal('editSubscriberModal')">×</button>
+      <button class="modal-close" data-close-modal="editSubscriberModal">×</button>
     </div>
     <div class="modal-body">
       <input type="hidden" id="editSubscriberId">
@@ -330,8 +330,8 @@ Stay fresh! 🎵
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('editSubscriberModal')">Cancel</button>
-      <button type="button" class="btn btn-primary" onclick="saveSubscriber()">Save Changes</button>
+      <button type="button" class="btn btn-ghost" data-close-modal="editSubscriberModal">Cancel</button>
+      <button type="button" class="btn btn-primary" id="saveSubscriberBtn">Save Changes</button>
     </div>
   </div>
 </div>
@@ -341,7 +341,7 @@ Stay fresh! 🎵
   <div class="modal modal-sm">
     <div class="modal-header danger">
       <h2>🗑️ Delete Subscriber</h2>
-      <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+      <button class="modal-close" data-close-modal="deleteModal">×</button>
     </div>
     <div class="modal-body">
       <p>Are you sure you want to permanently delete this subscriber?</p>
@@ -350,8 +350,8 @@ Stay fresh! 🎵
       <input type="hidden" id="deleteSubscriberId">
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
-      <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+      <button type="button" class="btn btn-ghost" data-close-modal="deleteModal">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
     </div>
   </div>
 </div>
@@ -361,7 +361,7 @@ Stay fresh! 🎵
   <div class="modal modal-lg">
     <div class="modal-header">
       <h2>👁️ Email Preview</h2>
-      <button class="modal-close" onclick="closeModal('previewModal')">×</button>
+      <button class="modal-close" data-close-modal="previewModal">×</button>
     </div>
     <div class="modal-body">
       <div class="preview-email-container">
@@ -373,7 +373,7 @@ Stay fresh! 🎵
       </div>
     </div>
     <div class="modal-footer">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('previewModal')">Close</button>
+      <button type="button" class="btn btn-ghost" data-close-modal="previewModal">Close</button>
     </div>
   </div>
 </div>
@@ -550,29 +550,63 @@ Stay fresh! 🎵
   let currentFilter = 'all';
   let currentStep = 1;
   
-  // Global functions
-  window.openComposeModal = () => { currentStep = 1; updateStepUI(); updateRecipientType(); document.getElementById('composeModal').classList.add('active'); };
-  window.openAddSubscriberModal = () => { document.getElementById('newSubscriberEmail').value = ''; document.getElementById('newSubscriberName').value = ''; document.getElementById('addSubscriberModal').classList.add('active'); };
-  window.closeModal = (id) => document.getElementById(id).classList.remove('active');
-  window.selectAllActive = () => { allSubscribers.filter(s => s.status === 'active').forEach(s => selectedIds.add(s.id)); renderSubscribers(); };
-  window.deselectAll = () => { selectedIds.clear(); renderSubscribers(); };
-  window.toggleSelectAll = (cb) => cb.checked ? window.selectAllActive() : window.deselectAll();
-  window.toggleSubscriber = (id) => { selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id); updateSelectedCount(); };
-  window.updateRecipientType = updateRecipientType;
-  window.nextStep = nextStep;
-  window.prevStep = prevStep;
-  window.handleFileUpload = handleFileUpload;
-  window.clearUpload = clearUpload;
-  window.insertFormat = insertFormat;
-  window.previewContent = previewContent;
-  window.sendTestEmail = sendTestEmail;
-  window.updateSendButton = updateSendButton;
-  window.sendNewsletter = sendNewsletter;
-  window.addSubscriber = addSubscriber;
-  window.editSubscriber = editSubscriber;
-  window.saveSubscriber = saveSubscriber;
-  window.deleteSubscriber = deleteSubscriber;
-  window.confirmDelete = confirmDelete;
+  // Internal functions (no longer exposed globally)
+  function openComposeModal() { currentStep = 1; updateStepUI(); updateRecipientType(); document.getElementById('composeModal').classList.add('active'); }
+  function openAddSubscriberModal() { document.getElementById('newSubscriberEmail').value = ''; document.getElementById('newSubscriberName').value = ''; document.getElementById('addSubscriberModal').classList.add('active'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+  function selectAllActiveFn() { allSubscribers.filter(s => s.status === 'active').forEach(s => selectedIds.add(s.id)); renderSubscribers(); }
+  function deselectAllFn() { selectedIds.clear(); renderSubscribers(); }
+  function toggleSubscriber(id) { selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id); updateSelectedCount(); }
+
+  // Static element event listeners
+  document.getElementById('openAddSubscriberBtn')?.addEventListener('click', openAddSubscriberModal);
+  document.getElementById('openComposeBtn')?.addEventListener('click', openComposeModal);
+  document.getElementById('selectAllActiveBtn')?.addEventListener('click', selectAllActiveFn);
+  document.getElementById('deselectAllBtn')?.addEventListener('click', deselectAllFn);
+  document.getElementById('sendSelectedBtn')?.addEventListener('click', openComposeModal);
+  document.getElementById('addFirstSubscriberBtn')?.addEventListener('click', openAddSubscriberModal);
+  document.getElementById('selectAllCheckbox')?.addEventListener('change', (e) => e.target.checked ? selectAllActiveFn() : deselectAllFn());
+  document.getElementById('prevStepBtn')?.addEventListener('click', prevStep);
+  document.getElementById('nextStepBtn')?.addEventListener('click', nextStep);
+  document.getElementById('sendBtn')?.addEventListener('click', sendNewsletter);
+  document.getElementById('addSubscriberBtn')?.addEventListener('click', addSubscriber);
+  document.getElementById('saveSubscriberBtn')?.addEventListener('click', saveSubscriber);
+  document.getElementById('confirmDeleteBtn')?.addEventListener('click', confirmDelete);
+  document.getElementById('previewContentBtn')?.addEventListener('click', previewContent);
+  document.getElementById('testEmailBtn')?.addEventListener('click', sendTestEmail);
+  document.getElementById('clearUploadBtn')?.addEventListener('click', clearUpload);
+  document.getElementById('confirmSend')?.addEventListener('change', updateSendButton);
+  document.getElementById('fileUpload')?.addEventListener('change', handleFileUpload);
+
+  // Close modal buttons (data-close-modal pattern)
+  document.querySelectorAll('[data-close-modal]').forEach(btn => {
+    btn.addEventListener('click', () => closeModal(btn.dataset.closeModal));
+  });
+
+  // Recipient type radio buttons
+  document.querySelectorAll('input[name="recipientType"]').forEach(radio => {
+    radio.addEventListener('change', updateRecipientType);
+  });
+
+  // Editor toolbar format buttons (delegation on editor toolbar)
+  document.querySelector('.editor-toolbar')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-format-before]');
+    if (!btn) return;
+    insertFormat(btn.dataset.formatBefore, btn.dataset.formatAfter);
+  });
+
+  // Event delegation on subscribers table body (for dynamic rows)
+  document.getElementById('subscribersTableBody')?.addEventListener('change', (e) => {
+    const checkbox = e.target.closest('input[data-subscriber-id]');
+    if (checkbox) toggleSubscriber(checkbox.dataset.subscriberId);
+  });
+
+  document.getElementById('subscribersTableBody')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    if (btn.dataset.action === 'edit') editSubscriber(btn.dataset.id);
+    else if (btn.dataset.action === 'delete') deleteSubscriber(btn.dataset.id);
+  });
   
   onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = '/login/?redirect=/admin/newsletter/'; return; }
@@ -627,7 +661,8 @@ Stay fresh! 🎵
       }
     } catch (e) {
       console.error(e);
-      document.getElementById('loadingState').innerHTML = `<div style="color:red;text-align:center;padding:2rem;"><h3>Error loading</h3><button onclick="location.reload()" class="btn btn-primary">Retry</button></div>`;
+      document.getElementById('loadingState').innerHTML = `<div style="color:red;text-align:center;padding:2rem;"><h3>Error loading</h3><button class="btn btn-primary" id="retryLoadBtn">Retry</button></div>`;
+      document.getElementById('retryLoadBtn')?.addEventListener('click', () => location.reload());
     }
   }
   
@@ -648,14 +683,14 @@ Stay fresh! 🎵
     }
     tbody.innerHTML = filtered.map(s => `
       <tr>
-        <td><input type="checkbox" ${s.status !== 'active' ? 'disabled' : ''} ${selectedIds.has(s.id) ? 'checked' : ''} onchange="toggleSubscriber('${escapeHtml(s.id)}')"></td>
+        <td><input type="checkbox" ${s.status !== 'active' ? 'disabled' : ''} ${selectedIds.has(s.id) ? 'checked' : ''} data-subscriber-id="${escapeHtml(s.id)}"></td>
         <td><strong>${escapeHtml(s.email)}</strong></td>
         <td>${escapeHtml(s.name || '-')}</td>
         <td><span class="status-badge ${escapeHtml(s.status)}">${escapeHtml(s.status)}</span></td>
         <td>${escapeHtml(s.source || 'footer')}</td>
         <td>${s.subscribedAt ? new Date(s.subscribedAt).toLocaleDateString() : 'N/A'}</td>
         <td>${s.emailsReceived || 0}</td>
-        <td><div class="action-btns"><button class="action-btn" onclick="editSubscriber('${escapeHtml(s.id)}')" title="Edit">✏️</button><button class="action-btn danger" onclick="deleteSubscriber('${escapeHtml(s.id)}')" title="Delete">🗑️</button></div></td>
+        <td><div class="action-btns"><button class="action-btn" data-action="edit" data-id="${escapeHtml(s.id)}" title="Edit">✏️</button><button class="action-btn danger" data-action="delete" data-id="${escapeHtml(s.id)}" title="Delete">🗑️</button></div></td>
       </tr>
     `).join('');
     updateSelectedCount();

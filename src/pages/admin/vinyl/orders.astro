@@ -105,7 +105,7 @@ export const prerender = false;
       <div class="modal modal-lg">
         <div class="modal-header">
           <h2>Order Details</h2>
-          <button class="modal-close" onclick="closeModal('viewModal')">×</button>
+          <button class="modal-close" data-action="close-modal">×</button>
         </div>
         <div class="modal-body">
           <div class="order-details">
@@ -198,8 +198,8 @@ export const prerender = false;
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('viewModal')">Close</button>
-          <button type="button" class="btn btn-warning" id="refundBtn" onclick="initiateRefund()">Issue Refund</button>
+          <button type="button" class="btn btn-secondary" data-action="close-modal">Close</button>
+          <button type="button" class="btn btn-warning" id="refundBtn" data-action="refund">Issue Refund</button>
         </div>
       </div>
     </div>
@@ -404,7 +404,7 @@ export const prerender = false;
               <td><strong>£${(o.totals?.total || o.total || 0).toFixed(2)}</strong></td>
               <td>${statusBadge}</td>
               <td class="text-right">
-                <button class="btn btn-sm btn-secondary" onclick="viewOrder('${o.id}')">View</button>
+                <button class="btn btn-sm btn-secondary" data-action="view-order" data-id="${o.id}">View</button>
               </td>
             </tr>
           `;
@@ -421,6 +421,21 @@ export const prerender = false;
       });
 
       document.getElementById('searchInput').addEventListener('input', () => renderOrders());
+
+      // Event delegation on viewModal for close/refund buttons
+      document.getElementById('viewModal').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'close-modal') closeModal('viewModal');
+        else if (action === 'refund') window.initiateRefund();
+      });
+
+      // Event delegation on ordersTableBody for view-order buttons
+      document.getElementById('ordersTableBody').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="view-order"]');
+        if (btn) window.viewOrder(btn.dataset.id);
+      });
 
       window.viewOrder = function(id) {
         const order = allOrders.find(o => o.id === id);

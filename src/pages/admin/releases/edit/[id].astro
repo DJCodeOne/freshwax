@@ -47,7 +47,7 @@ if (!release) {
 <body>
   <div class="container">
     <div class="header-bar">
-      <img src="/logo.webp" alt="Fresh Wax" class="logo" onerror="this.style.display='none'">
+      <img src="/logo.webp" alt="Fresh Wax" class="logo" data-fallback="hide">
       <div style="display: flex; gap: 10px;">
         <button type="button" id="refreshBtn" class="back-btn" style="background: #16a34a; border-color: #16a34a;">
           🔄 Refresh
@@ -679,7 +679,7 @@ if (!release) {
 
       <!-- ACTION BUTTONS -->
       <div class="button-row">
-        <button type="button" class="btn btn-secondary" onclick="window.history.back()">← Cancel</button>
+        <button type="button" class="btn btn-secondary" id="cancelBtn">← Cancel</button>
         <button type="submit" class="btn btn-primary" id="saveBtn">✓ Save All Changes</button>
       </div>
     </form>
@@ -787,6 +787,11 @@ if (!release) {
     document.querySelector('textarea[name="artistSocialLinks"]').value = parsedNotes.socialLinks;
     document.querySelector('textarea[name="otherNotes"]').value = parsedNotes.otherNotes;
     
+    // Cancel button
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+      window.history.back();
+    });
+
     // Copy Label Name to Copyright Holder
     document.getElementById('copyLabelBtn').addEventListener('click', function() {
       var labelName = document.getElementById('labelNameInput').value;

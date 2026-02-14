@@ -110,7 +110,7 @@ export const prerender = false;
       <div class="modal modal-lg">
         <div class="modal-header">
           <h2>Edit Partner</h2>
-          <button class="modal-close" onclick="closeModal('editModal')">×</button>
+          <button class="modal-close" data-action="close-modal" data-modal="editModal">×</button>
         </div>
         <div class="modal-body">
           <form id="editForm">
@@ -223,8 +223,8 @@ export const prerender = false;
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('editModal')">Cancel</button>
-          <button type="button" class="btn btn-primary" onclick="savePartner()">Save Changes</button>
+          <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="editModal">Cancel</button>
+          <button type="button" class="btn btn-primary" data-action="save-partner">Save Changes</button>
         </div>
       </div>
     </div>
@@ -234,15 +234,15 @@ export const prerender = false;
       <div class="modal">
         <div class="modal-header">
           <h2>Approve Partner</h2>
-          <button class="modal-close" onclick="closeModal('approveModal')">×</button>
+          <button class="modal-close" data-action="close-modal" data-modal="approveModal">×</button>
         </div>
         <div class="modal-body">
           <p>Are you sure you want to approve <strong id="approvePartnerName"></strong>?</p>
           <p class="text-muted mt-1">They will gain access to the Pro Dashboard and can start uploading content.</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('approveModal')">Cancel</button>
-          <button type="button" class="btn btn-success" onclick="confirmApprove()">Approve Partner</button>
+          <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="approveModal">Cancel</button>
+          <button type="button" class="btn btn-success" data-action="confirm-approve">Approve Partner</button>
         </div>
       </div>
     </div>
@@ -252,15 +252,15 @@ export const prerender = false;
       <div class="modal">
         <div class="modal-header">
           <h2>Delete Partner</h2>
-          <button class="modal-close" onclick="closeModal('deleteModal')">×</button>
+          <button class="modal-close" data-action="close-modal" data-modal="deleteModal">×</button>
         </div>
         <div class="modal-body">
           <p>Are you sure you want to delete <strong id="deletePartnerName"></strong>?</p>
           <p class="text-danger mt-1">This action cannot be undone. Their releases and content will remain but they won't be able to access the Pro Dashboard.</p>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="closeModal('deleteModal')">Cancel</button>
-          <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Partner</button>
+          <button type="button" class="btn btn-secondary" data-action="close-modal" data-modal="deleteModal">Cancel</button>
+          <button type="button" class="btn btn-danger" data-action="confirm-delete">Delete Partner</button>
         </div>
       </div>
     </div>
@@ -439,7 +439,7 @@ export const prerender = false;
             <tr>
               <td>
                 <div class="item-cell">
-                  <div class="avatar">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span style="display:none;">${p.name.charAt(0).toUpperCase()}</span>` : p.name.charAt(0).toUpperCase()}</div>
+                  <div class="avatar">${p.avatarUrl ? `<img src="${p.avatarUrl}" alt="" data-fallback="show-next" /><span style="display:none;">${p.name.charAt(0).toUpperCase()}</span>` : p.name.charAt(0).toUpperCase()}</div>
                   <div class="item-info">
                     <h4>${p.name}</h4>
                     ${p.fullName && p.fullName !== p.name ? `<p>${p.fullName}</p>` : ''}
@@ -456,10 +456,10 @@ export const prerender = false;
               <td class="text-right">
                 <div class="btn-group">
                   ${!p.approved && !p.suspended ? `
-                    <button class="btn btn-sm btn-success" onclick="quickApprove('${p.id}', '${p.name.replace(/'/g, "\\'")}')">Approve</button>
+                    <button class="btn btn-sm btn-success" data-action="quick-approve" data-id="${p.id}" data-name="${escapeHtml(p.name)}">Approve</button>
                   ` : ''}
-                  <button class="btn btn-sm btn-secondary" onclick="editPartner('${p.id}')">Edit</button>
-                  <button class="btn btn-sm btn-outline" onclick="deletePartner('${p.id}', '${p.name.replace(/'/g, "\\'")}')">🗑️</button>
+                  <button class="btn btn-sm btn-secondary" data-action="edit-partner" data-id="${p.id}">Edit</button>
+                  <button class="btn btn-sm btn-outline" data-action="delete-partner" data-id="${p.id}" data-name="${escapeHtml(p.name)}">🗑️</button>
                 </div>
               </td>
             </tr>
@@ -475,8 +475,45 @@ export const prerender = false;
           renderPartners();
         });
       });
-      
+
       document.getElementById('searchInput').addEventListener('input', () => renderPartners());
+
+      // Partners table delegation (set up ONCE, not inside renderPartners)
+      document.getElementById('partnersTableBody').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'quick-approve') window.quickApprove(btn.dataset.id, btn.dataset.name);
+        else if (action === 'edit-partner') window.editPartner(btn.dataset.id);
+        else if (action === 'delete-partner') window.deletePartner(btn.dataset.id, btn.dataset.name);
+      });
+
+      // Modal delegation - editModal
+      document.getElementById('editModal').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'close-modal') closeModal(btn.dataset.modal);
+        else if (action === 'save-partner') window.savePartner();
+      });
+
+      // Modal delegation - approveModal
+      document.getElementById('approveModal').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'close-modal') closeModal(btn.dataset.modal);
+        else if (action === 'confirm-approve') window.confirmApprove();
+      });
+
+      // Modal delegation - deleteModal
+      document.getElementById('deleteModal').addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        if (action === 'close-modal') closeModal(btn.dataset.modal);
+        else if (action === 'confirm-delete') window.confirmDelete();
+      });
       
       window.editPartner = function(id) {
         const partner = allPartners.find(p => p.id === id);

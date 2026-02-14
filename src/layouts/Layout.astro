@@ -198,8 +198,30 @@ const nonce = (Astro.locals as any).nonce || '';
     <!-- Named slot for page-specific head content (preloads, etc.) -->
     <slot name="head" />
 
-    <!-- Image loading placeholder script -->
+    <!-- Image loading + global error fallback script -->
     <script is:inline nonce={nonce}>
+      // Global image error handler - replaces all inline onerror attributes
+      // Supports data-fallback="hide|show-next|html" for different fallback behaviors
+      document.addEventListener('error', function(e) {
+        var t = e.target;
+        if (t && t.tagName === 'IMG' && !t.dataset.errorHandled) {
+          t.dataset.errorHandled = '1';
+          var fb = t.dataset.fallback;
+          if (fb === 'hide') {
+            t.style.display = 'none';
+          } else if (fb === 'show-next') {
+            t.style.display = 'none';
+            var nx = t.nextElementSibling;
+            if (nx) nx.style.display = nx.dataset.fallbackDisplay || 'flex';
+          } else if (fb === 'html') {
+            var html = t.dataset.fallbackHtml;
+            if (html) t.outerHTML = html;
+            else t.src = '/place-holder.webp';
+          } else {
+            t.src = '/place-holder.webp';
+          }
+        }
+      }, true);
       document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
           if (img.complete) img.classList.add('loaded');

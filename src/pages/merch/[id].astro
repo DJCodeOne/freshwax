@@ -120,11 +120,11 @@ export const prerender = false;
     {error ? (
       <div class="error-state">
         <p>{error}</p>
-        <button onclick="history.back()" class="back-btn">← Back to Item</button>
+        <button class="back-btn js-history-back">← Back to Item</button>
       </div>
     ) : product && (
       <div class="preview-container">
-        <button onclick="history.back()" class="back-link">← Back to Item</button>
+        <button class="back-link js-history-back">← Back to Item</button>
         
         <div class="preview-box">
           <!-- Large Zoomable Image -->
@@ -440,6 +440,11 @@ export const prerender = false;
 
 <script>
   function initPreview() {
+    // Back buttons
+    document.querySelectorAll('.js-history-back').forEach(btn => {
+      btn.addEventListener('click', () => history.back());
+    });
+
     // Thumbnail switching
     document.querySelectorAll('.thumb').forEach(thumb => {
       thumb.addEventListener('click', () => {

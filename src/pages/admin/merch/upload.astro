@@ -279,7 +279,7 @@ export const prerender = false;
             <div class="set-all-row">
               <span>Set All to...</span>
               <input type="number" class="form-input" id="setAllStock" value="0" min="0" style="width: 80px;" />
-              <button type="button" class="btn btn-secondary btn-sm" onclick="setAllVariantStock()">Apply</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="setAllVariantStockBtn">Apply</button>
             </div>
             <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 0;">
               <label class="form-label">Low Stock Alert Threshold</label>
@@ -327,7 +327,7 @@ export const prerender = false;
 
         <!-- Submit -->
         <div class="submit-row">
-          <button type="button" class="btn btn-secondary" onclick="window.location.href='/admin/inventory/'">Cancel</button>
+          <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
           <button type="submit" class="btn btn-primary" id="submitBtn">Upload Product</button>
         </div>
       </div>
@@ -359,7 +359,7 @@ export const prerender = false;
     <div class="image-editor-modal">
       <div class="image-editor-header">
         <h3>Resize & Position Image</h3>
-        <button type="button" class="image-editor-close" onclick="closeImageEditor()">&times;</button>
+        <button type="button" class="image-editor-close" data-action="close-editor">&times;</button>
       </div>
       <div class="image-editor-body">
         <div class="crop-container" id="cropContainer">
@@ -375,9 +375,9 @@ export const prerender = false;
         </div>
         <p class="editor-hint">Drag the image to position it within the square frame</p>
         <div class="editor-actions">
-          <button type="button" class="btn btn-secondary" onclick="closeImageEditor()">Cancel</button>
-          <button type="button" class="btn btn-secondary" onclick="useOriginalImage()">Use Original</button>
-          <button type="button" class="btn btn-primary" onclick="saveImageCrop()">Save Cropped</button>
+          <button type="button" class="btn btn-secondary" data-action="close-editor">Cancel</button>
+          <button type="button" class="btn btn-secondary" data-action="use-original">Use Original</button>
+          <button type="button" class="btn btn-primary" data-action="save-crop">Save Cropped</button>
         </div>
       </div>
     </div>
@@ -425,6 +425,34 @@ export const prerender = false;
       setupEventListeners();
       updateTypeVisibility();
       updatePreview();
+    });
+
+    // Static button listeners
+    document.getElementById('setAllVariantStockBtn').addEventListener('click', () => window.setAllVariantStock());
+    document.getElementById('cancelBtn').addEventListener('click', () => { window.location.href = '/admin/inventory/'; });
+
+    // Image editor modal delegation
+    document.getElementById('imageEditorOverlay').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'close-editor') window.closeImageEditor();
+      else if (action === 'use-original') window.useOriginalImage();
+      else if (action === 'save-crop') window.saveImageCrop();
+    });
+
+    // Image preview grid delegation (for template string buttons)
+    document.getElementById('imagePreviewGrid').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const idx = parseInt(btn.dataset.idx);
+      if (action === 'edit-image') window.editImage(idx);
+      else if (action === 'remove-image') window.removeImage(idx);
+    });
+    document.getElementById('imagePreviewGrid').addEventListener('change', (e) => {
+      const el = e.target.closest('[data-onchange="set-image-color"]');
+      if (el) window.setImageColor(parseInt(el.dataset.idx), el);
     });
 
     function setupEventListeners() {
@@ -813,13 +841,13 @@ export const prerender = false;
             <div class="image-wrapper">
               <img src="${img.dataUrl}" alt="Product image ${idx + 1}" />
               ${idx === 0 ? '<div class="badge">PRIMARY</div>' : ''}
-              <button type="button" class="edit-btn" onclick="editImage(${idx})">Edit</button>
-              <button type="button" class="remove-btn" onclick="removeImage(${idx})">×</button>
+              <button type="button" class="edit-btn" data-action="edit-image" data-idx="${idx}">Edit</button>
+              <button type="button" class="remove-btn" data-action="remove-image" data-idx="${idx}">×</button>
             </div>
             ${hasColors ? `
               <div class="image-color-select">
                 <label>Match to colour</label>
-                <select onchange="setImageColor(${idx}, this)">
+                <select data-onchange="set-image-color" data-idx="${idx}">
                   <option value="">-- Select colour --</option>
                   ${colorOptions}
                 </select>

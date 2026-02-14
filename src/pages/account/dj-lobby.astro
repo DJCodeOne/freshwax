@@ -326,7 +326,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <div class="djs-online-box">
           <div class="box-header">
             <h3>🎧 DJs in Lobby <span class="online-count-inline" id="onlineDjCount">0</span></h3>
-            <button id="openDmBtn" class="dm-btn" onclick="console.log('[DM] Button clicked, window.openDmModal:', typeof window.openDmModal); if(typeof window.openDmModal==='function'){window.openDmModal();}else{console.error('[DM] openDmModal not defined');}">DM</button>
+            <button id="openDmBtn" class="dm-btn">DM</button>
           </div>
           <div id="djsList" class="djs-list">
             <p class="empty-state">No DJs online yet</p>
@@ -1650,10 +1650,11 @@ const nonce = (Astro.locals as any).nonce || '';
             <div class="not-eligible-icon">⏳</div>
             <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Taking too long?</h2>
             <p style="color: #aaa; margin-bottom: 1.5rem;">Authentication is taking longer than expected.</p>
-            <button onclick="location.reload()" class="action-btn primary">Refresh Page</button>
+            <button id="authTimeoutRefreshBtn" class="action-btn primary">Refresh Page</button>
             <a href="/live/" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
           </div>
         `;
+        document.getElementById('authTimeoutRefreshBtn')?.addEventListener('click', () => location.reload());
       }
     }
   }, 8000);
@@ -1682,10 +1683,11 @@ const nonce = (Astro.locals as any).nonce || '';
             <div class="not-eligible-icon">⚠️</div>
             <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Connection Issue</h2>
             <p style="color: #aaa; margin-bottom: 1.5rem;">Unable to verify DJ access. Please check your connection and try again.</p>
-            <button onclick="location.reload()" class="action-btn primary">Try Again</button>
+            <button id="accessCheckRetryBtn" class="action-btn primary">Try Again</button>
             <a href="/live/" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
           </div>
         `;
+        document.getElementById('accessCheckRetryBtn')?.addEventListener('click', () => location.reload());
       }
     }, 15000);
     
@@ -2937,7 +2939,7 @@ const nonce = (Astro.locals as any).nonce || '';
       return `
         <div class="dj-item ${isLive ? 'is-live' : ''} ${isReady && !isLive ? 'is-ready' : ''}">
           ${hasAvatar 
-            ? `<img src="${dj.avatar}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><span class="dj-avatar-letter" style="display:none;">${avatarLetter}</span>`
+            ? `<img src="${dj.avatar}" alt="" data-fallback="show-next" /><span class="dj-avatar-letter" style="display:none;">${avatarLetter}</span>`
             : `<span class="dj-avatar-letter">${avatarLetter}</span>`
           }
           <span>${dj.name}${isMe ? ' (you)' : ''}</span>
@@ -6399,9 +6401,12 @@ const nonce = (Astro.locals as any).nonce || '';
       console.error('[DM] Error opening modal:', e);
     }
   }
-  // Expose to window for onclick fallback
-  window.openDmModal = openDmModal;
-  console.log('[DM] openDmModal exposed to window');
+  // Attach DM button click handler
+  document.getElementById('openDmBtn')?.addEventListener('click', () => {
+    console.log('[DM] Button clicked');
+    openDmModal();
+  });
+  console.log('[DM] openDmModal listener attached');
   
   function closeDmModal() {
     document.getElementById('dmModal')?.classList.add('hidden');
@@ -6448,7 +6453,7 @@ const nonce = (Astro.locals as any).nonce || '';
       return `
         <div class="dm-dj-item" data-dj-id="${dj.odamiMa}" data-dj-name="${escapeHtml(dj.name || 'DJ')}" data-dj-avatar="${dj.avatar || ''}" data-dj-letter="${avatarLetter}">
           ${hasAvatar 
-            ? `<img src="${dj.avatar}" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><span class="dm-dj-avatar-letter" style="display:none;">${avatarLetter}</span>`
+            ? `<img src="${dj.avatar}" alt="" data-fallback="show-next" /><span class="dm-dj-avatar-letter" style="display:none;">${avatarLetter}</span>`
             : `<span class="dm-dj-avatar-letter">${avatarLetter}</span>`
           }
           <div class="dm-dj-info">
@@ -6778,7 +6783,8 @@ const nonce = (Astro.locals as any).nonce || '';
         } else if (error.message?.includes('authenticated')) {
           errorMsg = 'Please log in again';
         }
-        inlineKeyEl.innerHTML = `<span style="color: #ff6b6b; cursor: pointer;" onclick="loadStreamKeyForGoLive()">${errorMsg}</span>`;
+        inlineKeyEl.innerHTML = `<span style="color: #ff6b6b; cursor: pointer;" id="streamKeyRetryBtn">${errorMsg}</span>`;
+        document.getElementById('streamKeyRetryBtn')?.addEventListener('click', () => loadStreamKeyForGoLive());
       }
     }
   }
@@ -8616,7 +8622,7 @@ const nonce = (Astro.locals as any).nonce || '';
     // Validate avatar URL protocol to prevent javascript: injection
     const safeAvatar = msg.userAvatar && /^https?:\/\//i.test(msg.userAvatar) ? escapeHtml(msg.userAvatar) : '';
     const avatarHtml = safeAvatar
-      ? `<img src="${safeAvatar}" alt="" class="ls-chat-avatar" onerror="this.outerHTML='<span class=\\'ls-chat-avatar-letter\\'>${initial}</span>'" />`
+      ? `<img src="${safeAvatar}" alt="" class="ls-chat-avatar" data-fallback="html" data-fallback-html="<span class='ls-chat-avatar-letter'>${initial}</span>" />`
       : `<span class="ls-chat-avatar-letter">${initial}</span>`;
 
     // Plus badge - convert badge name to emoji (only show for Plus members)

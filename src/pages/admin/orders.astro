@@ -135,7 +135,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
 <AdminLayout title="Orders" activeNav="orders" showStats={true} stats={stats}>
   <Fragment slot="actions">
-    <button class="btn btn-outline" onclick="window.location.reload()">
+    <button class="btn btn-outline" id="refreshOrdersBtn">
       ↻ Refresh
     </button>
   </Fragment>
@@ -275,13 +275,13 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="modal" style="max-width: 700px;">
       <div class="modal-header">
         <h2>Order Details</h2>
-        <button class="modal-close" onclick="closeModal('orderModal')">&times;</button>
+        <button class="modal-close" data-close-modal="orderModal">&times;</button>
       </div>
       <div class="modal-body" id="orderModalContent">
         <!-- Populated by JS -->
       </div>
       <div class="modal-footer">
-        <button class="btn btn-outline" onclick="closeModal('orderModal')">Close</button>
+        <button class="btn btn-outline" data-close-modal="orderModal">Close</button>
       </div>
     </div>
   </div>
@@ -296,6 +296,26 @@ const nonce = (Astro.locals as any).nonce || '';
         if (!str) return '';
         return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
       }
+
+      // Refresh button
+      document.getElementById('refreshOrdersBtn')?.addEventListener('click', () => {
+        window.location.reload();
+      });
+
+      // Close modal buttons
+      document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          closeModal(btn.dataset.closeModal);
+        });
+      });
+
+      // Event delegation for order modal content (dynamically rendered buttons)
+      document.getElementById('orderModalContent')?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="updateStatus"]');
+        if (btn) {
+          updateOrderStatus(btn.dataset.orderId, btn.dataset.orderStatus);
+        }
+      });
 
       // Filter functionality
       const statusFilter = document.getElementById('statusFilter');
@@ -475,7 +495,7 @@ const nonce = (Astro.locals as any).nonce || '';
           
           ${(order.status === 'pending' || order.status === 'processing' || order.status === 'shipped') ? `
             <div style="padding-top: 1rem; border-top: 1px solid #e5e5e5;">
-              <button class="btn btn-primary" onclick="updateOrderStatus('${order.id}', '${order.status}')">
+              <button class="btn btn-primary" data-action="updateStatus" data-order-id="${order.id}" data-order-status="${order.status}">
                 ${order.status === 'pending' ? '→ Mark as Processing' : order.status === 'processing' ? '📦 Mark as Shipped' : '✓ Mark as Delivered'}
               </button>
             </div>

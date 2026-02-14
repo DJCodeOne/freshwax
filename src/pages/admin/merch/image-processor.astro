@@ -186,14 +186,14 @@ export const prerender = false;
       <div class="all-urls">
         <div class="all-urls-header">
           <span class="all-urls-label">All URLs (for bulk copy)</span>
-          <button class="btn btn-secondary" onclick="copyAllUrls()" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Copy All</button>
+          <button class="btn btn-secondary" id="copyAllUrlsBtn" style="padding: 0.5rem 1rem; font-size: 0.75rem;">Copy All</button>
         </div>
         <textarea id="allUrlsTextarea" readonly placeholder="URLs will appear here after processing..."></textarea>
       </div>
       
       <div class="actions-bar">
-        <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
-        <button class="btn btn-primary" id="uploadBtn" onclick="uploadToR2()" disabled>Upload to CDN</button>
+        <button class="btn btn-secondary" id="clearAllBtn">Clear All</button>
+        <button class="btn btn-primary" id="uploadBtn" disabled>Upload to CDN</button>
       </div>
     </div>
   </div>
@@ -411,7 +411,7 @@ export const prerender = false;
               </div>
               <div class="image-url" id="url-${idx}" style="display: none;">
                 <input type="text" readonly id="urlInput-${idx}">
-                <button class="copy-btn" onclick="copyUrl(${idx})">Copy URL</button>
+                <button class="copy-btn" data-action="copy-url" data-idx="${idx}">Copy URL</button>
               </div>
             </div>
           </div>
@@ -513,6 +513,19 @@ export const prerender = false;
       document.getElementById('allUrlsTextarea').value = '';
       fileInput.value = '';
     }
+
+    // Static button listeners
+    document.getElementById('copyAllUrlsBtn').addEventListener('click', copyAllUrls);
+    document.getElementById('clearAllBtn').addEventListener('click', clearAll);
+    document.getElementById('uploadBtn').addEventListener('click', uploadToR2);
+
+    // Event delegation on imageGrid for copy-url buttons
+    imageGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="copy-url"]');
+      if (btn) {
+        copyUrl(parseInt(btn.dataset.idx));
+      }
+    });
   </script>
 </body>
 </html>

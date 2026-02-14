@@ -55,7 +55,7 @@ export const prerender = false;
           <option value="other">Other</option>
         </select>
       </div>
-      <button class="refresh-btn" onclick="loadReports()">
+      <button class="refresh-btn" id="refreshReportsBtn">
         <span class="icon">↻</span> Refresh
       </button>
     </div>
@@ -70,7 +70,7 @@ export const prerender = false;
     <div class="modal-content">
       <div class="modal-header">
         <h3>Report Details</h3>
-        <button class="modal-close" onclick="closeDetailModal()">&times;</button>
+        <button class="modal-close" id="closeDetailModalBtn">&times;</button>
       </div>
       <div class="modal-body" id="report-detail-body">
         <!-- Populated dynamically -->
@@ -555,10 +555,10 @@ export const prerender = false;
         <div class="report-footer">
           <span class="report-reporter">Reported by: ${escapeHtml(r.reporterName)}</span>
           <div class="report-actions">
-            <button class="btn-view" onclick="viewReport('${r.id}')">View</button>
+            <button class="btn-view" data-action="viewReport" data-id="${r.id}">View</button>
             ${r.status === 'pending' || r.status === 'reviewing' ? `
-              <button class="btn-resolve" onclick="updateStatus('${r.id}', 'resolved')">Resolve</button>
-              <button class="btn-dismiss" onclick="updateStatus('${r.id}', 'dismissed')">Dismiss</button>
+              <button class="btn-resolve" data-action="updateStatus" data-id="${r.id}" data-status="resolved">Resolve</button>
+              <button class="btn-dismiss" data-action="updateStatus" data-id="${r.id}" data-status="dismissed">Dismiss</button>
             ` : ''}
           </div>
         </div>
@@ -611,11 +611,11 @@ export const prerender = false;
     `;
 
     footer.innerHTML = `
-      <button style="background: rgba(255,255,255,0.1); color: #fff;" onclick="closeDetailModal()">Close</button>
-      <button style="background: rgba(255,255,255,0.15); color: #4ecdc4;" onclick="saveNotes()">Save Notes</button>
-      ${report.status === 'pending' ? `<button style="background: rgba(78,205,196,0.2); color: #4ecdc4;" onclick="updateStatus('${id}', 'reviewing'); closeDetailModal();">Mark Reviewing</button>` : ''}
-      ${report.status !== 'resolved' ? `<button style="background: rgba(78,205,196,0.3); color: #fff;" onclick="updateStatus('${id}', 'resolved'); closeDetailModal();">Resolve</button>` : ''}
-      ${report.status !== 'dismissed' ? `<button style="background: rgba(255,82,82,0.2); color: #ff5252;" onclick="updateStatus('${id}', 'dismissed'); closeDetailModal();">Dismiss</button>` : ''}
+      <button style="background: rgba(255,255,255,0.1); color: #fff;" data-action="closeModal">Close</button>
+      <button style="background: rgba(255,255,255,0.15); color: #4ecdc4;" data-action="saveNotes">Save Notes</button>
+      ${report.status === 'pending' ? `<button style="background: rgba(78,205,196,0.2); color: #4ecdc4;" data-action="updateAndClose" data-id="${id}" data-status="reviewing">Mark Reviewing</button>` : ''}
+      ${report.status !== 'resolved' ? `<button style="background: rgba(78,205,196,0.3); color: #fff;" data-action="updateAndClose" data-id="${id}" data-status="resolved">Resolve</button>` : ''}
+      ${report.status !== 'dismissed' ? `<button style="background: rgba(255,82,82,0.2); color: #ff5252;" data-action="updateAndClose" data-id="${id}" data-status="dismissed">Dismiss</button>` : ''}
     `;
 
     modal.classList.add('active');
@@ -684,6 +684,32 @@ export const prerender = false;
   // Event listeners
   document.getElementById('filter-status').addEventListener('change', loadReports);
   document.getElementById('filter-type').addEventListener('change', loadReports);
+
+  // Static button event listeners (replacing inline onclick)
+  document.getElementById('refreshReportsBtn')?.addEventListener('click', loadReports);
+  document.getElementById('closeDetailModalBtn')?.addEventListener('click', closeDetailModal);
+
+  // Event delegation for reports list container (dynamically rendered buttons)
+  document.getElementById('reports-list')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id, status } = btn.dataset;
+    if (action === 'viewReport') viewReport(id);
+    else if (action === 'updateStatus') updateStatus(id, status);
+  });
+
+  // Event delegation for report detail modal footer (dynamically rendered buttons)
+  document.getElementById('report-detail-footer')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const { action, id, status } = btn.dataset;
+    if (action === 'closeModal') closeDetailModal();
+    else if (action === 'saveNotes') saveNotes();
+    else if (action === 'updateAndClose') {
+      updateStatus(id, status);
+      closeDetailModal();
+    }
+  });
 
   // Close modal on overlay click
   document.getElementById('report-detail-modal').addEventListener('click', (e) => {

@@ -99,7 +99,7 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="modal">
       <div class="modal-header">
         <h2>Edit User Permissions</h2>
-        <button class="modal-close" onclick="closeEditModal()">×</button>
+        <button class="modal-close" data-action="close-edit-modal">×</button>
       </div>
       <div class="modal-body" id="editModalBody">
         <!-- Populated by JS -->
@@ -112,7 +112,7 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="modal">
       <div class="modal-header">
         <h2>User Details</h2>
-        <button class="modal-close" onclick="closeViewModal()">×</button>
+        <button class="modal-close" data-action="close-view-modal">×</button>
       </div>
       <div class="modal-body" id="viewModalBody">
         <!-- Populated by JS -->
@@ -444,7 +444,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <div style="color: red; text-align: center; padding: 2rem;">
           <h3>Error loading partners</h3>
           <p>${escapeHtml(error.message)}</p>
-          <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 1rem;">Retry</button>
+          <button data-action="reload" class="btn btn-primary" style="margin-top: 1rem;">Retry</button>
         </div>
       `;
     }
@@ -507,8 +507,8 @@ const nonce = (Astro.locals as any).nonce || '';
         </td>
         <td class="text-right">
           <div class="flex gap-1 justify-end">
-            <button class="btn btn-ghost btn-sm" onclick="viewUser('${escapeHtml(user.id)}')" title="View">👁️</button>
-            <button class="btn btn-secondary btn-sm" onclick="editUser('${escapeHtml(user.id)}')" title="Edit">✏️</button>
+            <button class="btn btn-ghost btn-sm" data-action="view-user" data-id="${escapeHtml(user.id)}" title="View">👁️</button>
+            <button class="btn btn-secondary btn-sm" data-action="edit-user" data-id="${escapeHtml(user.id)}" title="Edit">✏️</button>
           </div>
         </td>
       </tr>
@@ -560,7 +560,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <span class="detail-value">${escapeHtml(user.source || 'N/A')}</span>
       </div>
       <div style="margin-top: 1rem;">
-        <button class="btn btn-primary" onclick="closeViewModal(); editUser('${escapeHtml(user.id)}');">
+        <button class="btn btn-primary" data-action="edit-from-view" data-id="${escapeHtml(user.id)}">
           Edit Partner
         </button>
       </div>
@@ -750,7 +750,7 @@ const nonce = (Astro.locals as any).nonce || '';
         </div>
       </div>
 
-      <button class="btn-save" onclick="savePermissions()">
+      <button class="btn-save" data-action="save-permissions">
         💾 Save Changes
       </button>
     `;
@@ -883,11 +883,38 @@ const nonce = (Astro.locals as any).nonce || '';
   document.getElementById('searchInput').addEventListener('input', renderUsers);
   document.getElementById('roleFilter').addEventListener('change', renderUsers);
 
-  // Close modals on overlay click
-  document.getElementById('editModal').addEventListener('click', (e) => {
-    if (e.target.id === 'editModal') closeEditModal();
+  // Partners table body delegation (set up ONCE, not inside renderUsers)
+  document.getElementById('customersTableBody').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'view-user') window.viewUser(btn.dataset.id);
+    else if (action === 'edit-user') window.editUser(btn.dataset.id);
   });
+
+  // Edit modal delegation
+  document.getElementById('editModal').addEventListener('click', (e) => {
+    // Close on overlay click
+    if (e.target.id === 'editModal') { closeEditModal(); return; }
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    if (btn.dataset.action === 'close-edit-modal') closeEditModal();
+    else if (btn.dataset.action === 'save-permissions') window.savePermissions();
+  });
+
+  // View modal delegation
   document.getElementById('viewModal').addEventListener('click', (e) => {
-    if (e.target.id === 'viewModal') closeViewModal();
+    // Close on overlay click
+    if (e.target.id === 'viewModal') { closeViewModal(); return; }
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    if (btn.dataset.action === 'close-view-modal') closeViewModal();
+    else if (btn.dataset.action === 'edit-from-view') { closeViewModal(); window.editUser(btn.dataset.id); }
+  });
+
+  // Loading state delegation (for error retry button)
+  document.getElementById('loadingState').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="reload"]');
+    if (btn) location.reload();
   });
 </script>
