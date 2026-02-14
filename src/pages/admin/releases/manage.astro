@@ -370,6 +370,11 @@ const nonce = (Astro.locals as any).nonce || '';
       });
 
       async function checkAudioProcessor() {
+        // Audio processor only runs locally — skip health checks on production
+        if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+          return false;
+        }
+
         // Try both localhost and 127.0.0.1 in case of IPv4/IPv6 issues
         const urls = [
           `${AUDIO_PROCESSOR_URL}/health`,

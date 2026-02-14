@@ -534,6 +534,10 @@ uploadBtn.onclick = async () => {
 const AUDIO_PROCESSOR_URL = window.__AUDIO_PROCESSOR_URL || 'http://localhost:8089';
 
 async function checkAudioProcessor() {
+  // Audio processor only runs locally — skip on production
+  if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    return false;
+  }
   try {
     const response = await fetch(`${AUDIO_PROCESSOR_URL}/health`, {
       method: 'GET',
