@@ -683,7 +683,7 @@ export async function getDocumentsBatch(
 // Now supports D1 as primary source with Firebase fallback
 // Cache tiers: 1) in-memory (~0ms) → 2) KV (~30ms) → 3) D1/Firebase (~300-900ms)
 export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> {
-  const cacheKey = `live-releases:${limit || 'all'}`;
+  const cacheKey = `live-releases-v2:${limit || 'all'}`;
 
   // Tier 1: in-memory cache (same worker process, ~0ms)
   const cached = getCached(cacheKey);

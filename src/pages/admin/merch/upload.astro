@@ -1071,7 +1071,10 @@ export const prerender = false;
 
     async function loadSuppliers() {
       try {
-        const response = await fetch('/api/suppliers', {
+        if (!window.ADMIN_KEY && window.getAdminToken) {
+          await window.getAdminToken();
+        }
+        const response = await fetch('/api/suppliers/', {
           headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
