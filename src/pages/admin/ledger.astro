@@ -525,7 +525,7 @@ const formatDate = (dateStr: string) => {
   // Admin check uses Firestore admins collection
 </script>
 <script type="module">
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   const firebaseConfig = {
@@ -537,7 +537,7 @@ const formatDate = (dateStr: string) => {
     appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
   };
 
-  const app = initializeApp(firebaseConfig);
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
   async function checkIsAdmin(user) {

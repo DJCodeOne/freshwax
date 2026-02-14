@@ -702,7 +702,7 @@ if (!release) {
           projectId: "freshwax-store"
         };
 
-        var app = firebaseApp.initializeApp(firebaseConfig);
+        var app = firebaseApp.getApps().length ? firebaseApp.getApps()[0] : firebaseApp.initializeApp(firebaseConfig);
         var auth = firebaseAuth.getAuth(app);
 
         firebaseAuth.onAuthStateChanged(auth, async function(user) {

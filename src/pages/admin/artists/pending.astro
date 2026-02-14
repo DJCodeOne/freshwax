@@ -68,9 +68,9 @@ const nonce = (Astro.locals as any).nonce || '';
         ))}</tbody></table></div></div>
   )}
   <Fragment slot="scripts"><script is:inline nonce={nonce}>/* Admin check via API */</script><script type="module">
-    import{initializeApp}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import{initializeApp,getApps}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    const app=initializeApp({apiKey:'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
+    const app=getApps().length?getApps()[0]:initializeApp({apiKey:'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
     const auth=getAuth(app);
     onAuthStateChanged(auth,async u=>{if(!u){window.location.href='/admin/login/';return;}try{const t=await u.getIdToken();const r=await fetch('/api/admin/check-access',{headers:{'Authorization':'Bearer '+t}});const d=await r.json();if(!d.success||!d.isAdmin)window.location.href='/admin/login/';}catch(e){window.location.href='/admin/login/';}});
     const tbl=document.getElementById('tbl');

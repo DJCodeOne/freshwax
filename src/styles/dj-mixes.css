@@ -691,11 +691,11 @@
     }
 
     .mix-title {
-      font-size: 2rem;
+      font-size: 1.75rem;
     }
 
     .mix-dj {
-      font-size: 1.5rem;
+      font-size: 1.25rem;
     }
 
     .mix-meta-row {
@@ -747,13 +747,16 @@
     }
 
     .mix-title {
-      font-size: 3rem;
+      font-size: 2.25rem;
       margin: 0 0 0.5rem 0;
-      white-space: nowrap;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
     }
 
     .mix-dj {
-      font-size: 2rem;
+      font-size: 1.5rem;
     }
 
     .mix-meta-row {

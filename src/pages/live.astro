@@ -1561,9 +1561,10 @@ const nonce = (Astro.locals as any).nonce || '';
         // Playlist mode - use livestream react API with playlist-global streamId
         // This ensures emojis broadcast to all viewers (same as fullscreen page)
         console.log('[triggerReaction] Playlist mode - using livestream react API');
+        const token = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
         const emojiResponse = await fetch('/api/livestream/react', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': 'Bearer ' + token }) },
           body: JSON.stringify({
             action: 'emoji',
             streamId: 'playlist-global',
@@ -1590,9 +1591,10 @@ const nonce = (Astro.locals as any).nonce || '';
       } else if (streamId) {
         // Livestream mode - use livestream react API
         console.log('[triggerReaction] Livestream mode - streamId:', streamId);
+        const lsToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
         const emojiResponse = await fetch('/api/livestream/react', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(lsToken && { 'Authorization': 'Bearer ' + lsToken }) },
           body: JSON.stringify({
             action: 'emoji',
             streamId,
@@ -1671,9 +1673,10 @@ const nonce = (Astro.locals as any).nonce || '';
 
         try {
           // Send like and broadcast emoji to all viewers
+          const likeToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
           fetch('/api/livestream/react', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(likeToken && { 'Authorization': 'Bearer ' + likeToken }) },
             body: JSON.stringify({
               action: 'emoji',
               streamId,
@@ -1687,7 +1690,7 @@ const nonce = (Astro.locals as any).nonce || '';
           // Increment like count in database
           const response = await fetch('/api/livestream/react', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(likeToken && { 'Authorization': 'Bearer ' + likeToken }) },
             body: JSON.stringify({
               action: 'like',
               streamId,
@@ -2450,9 +2453,10 @@ const nonce = (Astro.locals as any).nonce || '';
       const streamId = window.currentStreamId || 'playlist-global';
 
       // Send via API to broadcast to all viewers
+      const shoutToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
       const response = await fetch('/api/livestream/react', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(shoutToken && { 'Authorization': 'Bearer ' + shoutToken }) },
         body: JSON.stringify({
           action: 'shoutout',
           streamId: streamId,
@@ -5441,9 +5445,24 @@ const nonce = (Astro.locals as any).nonce || '';
 
 <script>
   // Auto-hide header on live page
-  (function initAutoHideHeader() {
+  // Uses astro:page-load to re-run on View Transition navigations
+  // Uses AbortController to clean up event listeners on navigation away
+
+  let _headerAutoHideAbort: AbortController | null = null;
+
+  function initAutoHideHeader() {
+    // Only activate on the live page
+    if (!window.location.pathname.startsWith('/live')) return;
+
+    // Clean up any previous instance (e.g. back-button navigation)
+    cleanupAutoHideHeader();
+
     const header = document.getElementById('freshwax-header');
     if (!header) return;
+
+    const abort = new AbortController();
+    _headerAutoHideAbort = abort;
+    const sig = { signal: abort.signal };
 
     // Set real viewport height as CSS variable (handles mobile browser chrome)
     function setRealVH() {
@@ -5451,73 +5470,84 @@ const nonce = (Astro.locals as any).nonce || '';
       document.documentElement.style.setProperty('--real-vh', `${vh}px`);
     }
     setRealVH();
-    window.addEventListener('resize', setRealVH);
-    window.addEventListener('orientationchange', () => setTimeout(setRealVH, 100));
+    window.addEventListener('resize', setRealVH, sig);
+    window.addEventListener('orientationchange', () => setTimeout(setRealVH, 100), sig);
 
     // Create hover trigger zone at the very top of the page
-    let hoverZone = document.querySelector('.header-hover-zone');
+    let hoverZone = document.querySelector('.header-hover-zone') as HTMLElement | null;
     if (!hoverZone) {
       hoverZone = document.createElement('div');
       hoverZone.className = 'header-hover-zone';
       document.body.appendChild(hoverZone);
     }
 
-    // Add auto-hide class to header
-    header.classList.add('header-auto-hide');
+    // Add auto-hide class to header - body class MUST come first so CSS specificity works
     document.body.classList.add('header-hidden');
+    header.classList.add('header-auto-hide');
 
     // Show header when hovering near the top
     hoverZone.addEventListener('mouseenter', () => {
       header.classList.add('header-visible');
-    });
+    }, sig);
 
     // Keep header visible while mouse is over it
     header.addEventListener('mouseenter', () => {
       header.classList.add('header-visible');
-    });
+    }, sig);
 
     // Hide header when mouse leaves both the trigger zone and header
-    header.addEventListener('mouseleave', (e) => {
-      // Check if mouse moved to the hover zone
-      const rect = hoverZone.getBoundingClientRect();
+    header.addEventListener('mouseleave', (e: MouseEvent) => {
+      const rect = hoverZone!.getBoundingClientRect();
       if (e.clientY > rect.bottom) {
         header.classList.remove('header-visible');
       }
-    });
+    }, sig);
 
-    hoverZone.addEventListener('mouseleave', (e) => {
-      // Check if mouse moved to the header
+    hoverZone.addEventListener('mouseleave', (e: MouseEvent) => {
       const headerRect = header.getBoundingClientRect();
       if (e.clientY > headerRect.bottom || e.clientY < headerRect.top) {
-        // Give a small delay to allow mouse to move to header
         setTimeout(() => {
           if (!header.matches(':hover')) {
             header.classList.remove('header-visible');
           }
         }, 100);
       }
-    });
+    }, sig);
 
     // Also show header when scrolled to very top
     let lastScrollY = window.scrollY;
     window.addEventListener('scroll', () => {
       if (window.scrollY === 0 && lastScrollY > 0) {
-        // Just scrolled to top - briefly show header
         header.classList.add('header-visible');
         setTimeout(() => {
-          if (!header.matches(':hover') && !hoverZone.matches(':hover')) {
+          if (!header.matches(':hover') && !hoverZone!.matches(':hover')) {
             header.classList.remove('header-visible');
           }
         }, 2000);
       }
       lastScrollY = window.scrollY;
-    }, { passive: true });
+    }, { passive: true, ...sig });
+  }
 
-    // Clean up on page navigation (View Transitions)
-    document.addEventListener('astro:before-swap', () => {
+  function cleanupAutoHideHeader() {
+    // Abort all event listeners from previous setup
+    if (_headerAutoHideAbort) {
+      _headerAutoHideAbort.abort();
+      _headerAutoHideAbort = null;
+    }
+    // Remove classes
+    const header = document.getElementById('freshwax-header');
+    if (header) {
       header.classList.remove('header-auto-hide', 'header-visible');
-      document.body.classList.remove('header-hidden');
-      hoverZone?.remove();
-    });
-  })();
+    }
+    document.body.classList.remove('header-hidden');
+    // Remove hover zone
+    document.querySelector('.header-hover-zone')?.remove();
+  }
+
+  // Run on initial load and on View Transition navigations
+  document.addEventListener('astro:page-load', initAutoHideHeader);
+
+  // Clean up when navigating away via View Transitions
+  document.addEventListener('astro:before-swap', cleanupAutoHideHeader);
 </script>
