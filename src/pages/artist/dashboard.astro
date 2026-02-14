@@ -1443,27 +1443,43 @@ const nonce = (Astro.locals as any).nonce || '';
     if (loginPrompt) loginPrompt.style.display = 'none';
   }
 
+  // Check if the server already rendered the dashboard (partner found from cookies)
+  const serverRenderedDashboard = !!document.querySelector('.welcome-section');
+
   window.authReady.then(async (user) => {
     if (!user) {
-      // Not logged in - show login prompt
+      // Not logged in client-side
+      if (serverRenderedDashboard) {
+        // Server already rendered dashboard from cookies - don't override
+        hideAll();
+        return;
+      }
+      // No server dashboard and no client auth - show login prompt
       document.cookie = 'partnerId=; path=/; max-age=0';
       showLogin();
       return;
     }
-    
+
     // User is logged in
 
     // Always ensure userId cookie is set
     if (!hasCookie('userId')) {
       document.cookie = `userId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
     }
-    
+
     // Check if partnerId cookie exists and is valid
     const hasPartnerCookie = hasCookie('partnerId');
 
     if (!hasPartnerCookie) {
+      // If server already rendered the dashboard, just set the cookie silently
+      if (serverRenderedDashboard) {
+        document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
+        hideAll();
+        return;
+      }
+
       showLoading();
-      
+
       try {
         // Fetch user profile to check if they're a partner
         const _idToken = await user.getIdToken();

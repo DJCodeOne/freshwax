@@ -454,8 +454,8 @@ const nonce = (Astro.locals as any).nonce || '';
             } catch (e) { /* Ignore cache errors */ }
           }
           
-          // Set partnerId cookie if they're an approved partner (needed for pro dashboard)
-          if (profile.success && profile.isPro) {
+          // Set partnerId cookie if they have any partner role (needed for artist dashboard)
+          if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
             document.cookie = `partnerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
           }
           
