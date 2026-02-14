@@ -8,11 +8,9 @@ import ReleasePlate from '../components/ReleasePlate.astro';
 import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
 
-// Get D1 binding from Cloudflare runtime
-const db = (Astro.locals as any).runtime?.env?.DB;
-
-// Fetch all live releases - D1 first, Firebase fallback
-const allReleases = await getLiveReleases(undefined, db);
+// Fetch all live releases from Firebase (authoritative source)
+// KV-cached for 10 minutes so Firebase is only hit infrequently
+const allReleases = await getLiveReleases();
 
 // Group releases by label locally
 const releasesByLabel: Record<string, any[]> = {};

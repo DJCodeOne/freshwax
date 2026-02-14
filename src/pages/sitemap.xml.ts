@@ -81,9 +81,9 @@ export const GET = async ({ locals }: { locals: any }) => {
 
   // Fetch all dynamic content in parallel for performance
   const [releasesResult, djMixesResult, merchResult, vinylResult] = await Promise.allSettled([
-    getLiveReleases(500, db),
-    getLiveDJMixes(500, db),
-    getLiveMerch(500, db),
+    getLiveReleases(500),
+    getLiveDJMixes(500),
+    getLiveMerch(500),
     queryCollection('vinylListings', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'published' }],
       limit: 500,

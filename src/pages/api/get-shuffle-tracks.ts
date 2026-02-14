@@ -56,9 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     pendingRequest = (async () => {
       log.info('[get-shuffle-tracks] Fetching fresh data');
 
-      // Get D1 binding for optimized reads
-      const db = env?.DB;
-      const releases = await getLiveReleases(50, db);
+      const releases = await getLiveReleases(50);
       const allTracks = extractTracksFromReleases(releases);
       
       cachedResult = {

@@ -24,11 +24,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     log.info('Fetching suggestions for:', { currentId, artist, label, genre });
 
-    // Get D1 binding for optimized reads
-    const db = (locals as any)?.runtime?.env?.DB;
-
     // Use cached releases - this is very efficient due to firebase-rest caching
-    const releases = await getLiveReleases(40, db); // Only fetch 40, not all
+    const releases = await getLiveReleases(40);
     
     if (!releases || releases.length === 0) {
       return new Response(JSON.stringify({ 
