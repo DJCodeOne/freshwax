@@ -21,7 +21,7 @@ jobs:
             -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            "https://freshwax.co.uk/api/cron/retry-payouts")
+            "https://freshwax.co.uk/api/cron/retry-payouts/")
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
@@ -45,7 +45,7 @@ jobs:
             -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            "https://freshwax.co.uk/api/cron/stock-alerts")
+            "https://freshwax.co.uk/api/cron/stock-alerts/")
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
@@ -66,7 +66,7 @@ jobs:
             -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json" \
-            "https://freshwax.co.uk/api/cron/send-restock-notifications")
+            "https://freshwax.co.uk/api/cron/send-restock-notifications/")
 
           http_code=$(echo "$response" | tail -n1)
           body=$(echo "$response" | sed '$d')
