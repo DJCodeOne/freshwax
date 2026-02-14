@@ -40,26 +40,29 @@ const startOfYear = new Date(now.getFullYear(), 0, 1);
 
 // Fetch ledger, orders, and releases in parallel (independent queries)
 const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
-  // Ledger entries (source of truth for revenue) - D1 primary, Firebase fallback
+  // Ledger entries (source of truth for revenue) - Firebase primary, D1 fallback
   (async (): Promise<any[]> => {
     let entries: any[] = [];
     try {
       const db = env?.DB;
-      if (db) {
+      if (serviceAccountKey) {
         try {
-          entries = await d1GetLedgerEntries(db, { limit: 2000 });
-          console.log(`[analytics] D1: ${entries.length} ledger entries`);
-        } catch (d1Err) {
-          console.error('[analytics] D1 failed, falling back to Firebase:', d1Err);
-          entries = [];
+          entries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+            limit: 2000
+          });
+          console.log(`[analytics] Firebase: ${entries.length} ledger entries`);
+        } catch (fbErr) {
+          console.error('[analytics] Firebase failed, trying D1:', fbErr);
         }
       }
-      if (entries.length === 0 && serviceAccountKey) {
-        entries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-          orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-          limit: 2000
-        });
-        console.log(`[analytics] Firebase fallback: ${entries.length} ledger entries`);
+      if (entries.length === 0 && db) {
+        try {
+          entries = await d1GetLedgerEntries(db, { limit: 2000 });
+          console.log(`[analytics] D1 fallback: ${entries.length} ledger entries`);
+        } catch (d1Err) {
+          console.error('[analytics] D1 also failed:', d1Err);
+        }
       }
     } catch (e) {
       console.error('Error fetching ledger:', e);

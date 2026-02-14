@@ -63,23 +63,27 @@ let paypalBalance = {
 };
 
 try {
-  // D1 primary, Firebase fallback
+  // Firebase primary (authoritative), D1 fallback
+  // Firebase always has all entries; D1 may be partially synced
   const db = env?.DB;
-  if (db) {
+  if (serviceAccountKey) {
     try {
-      ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
-      console.log('[ledger] D1:', ledgerEntries.length, 'entries');
-    } catch (d1Err) {
-      console.error('[ledger] D1 failed, falling back to Firebase:', d1Err);
-      ledgerEntries = [];
+      ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+        orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+        limit: 2000
+      });
+      console.log('[ledger] Firebase:', ledgerEntries.length, 'entries');
+    } catch (fbErr) {
+      console.error('[ledger] Firebase failed, trying D1:', fbErr);
     }
   }
-  if (ledgerEntries.length === 0 && serviceAccountKey) {
-    ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-      orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-      limit: 2000
-    });
-    console.log('[ledger] Firebase fallback:', ledgerEntries.length, 'entries');
+  if (ledgerEntries.length === 0 && db) {
+    try {
+      ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
+      console.log('[ledger] D1 fallback:', ledgerEntries.length, 'entries');
+    } catch (d1Err) {
+      console.error('[ledger] D1 also failed:', d1Err);
+    }
   }
 
   // Calculate totals
