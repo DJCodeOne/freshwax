@@ -90,6 +90,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Process users collection - this is the SOURCE OF TRUTH
     for (const doc of users) {
       if (doc.deleted === true) continue;
+      // Skip ghost/empty user documents with no email and no name
+      if (!doc.email && !doc.displayName && !doc.name && !doc.fullName) continue;
 
       // Get roles from the roles object (primary) or legacy fields
       const roles = doc.roles || {};
