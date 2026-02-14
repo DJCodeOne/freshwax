@@ -10,12 +10,9 @@ import FloatingShuffleButton from '../components/FloatingShuffleButton.astro';
 
 import { getLiveReleases } from '../lib/firebase-rest';
 
-// Get D1 binding from Cloudflare runtime
-const db = (Astro.locals as any).runtime?.env?.DB;
-
-// Get the 20 most recent published releases - D1 first, Firebase fallback
-// Sorted by upload date (newest first)
-const featuredReleases = await getLiveReleases(20, db);
+// Get the 20 most recent published releases from Firebase (authoritative source)
+// KV-cached for 10 minutes so Firebase is only hit infrequently
+const featuredReleases = await getLiveReleases(20);
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 
