@@ -3,7 +3,7 @@
 // Also creates order as fallback if webhook hasn't processed it
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
 
 export const prerender = false;
@@ -106,25 +106,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     console.log('[verify-session] ✓ Payment status is PAID');
 
-    // Initialize Firebase to find the order
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
     console.log('[verify-session] Firebase config:');
     console.log('[verify-session]   - projectId:', projectId);
     console.log('[verify-session]   - apiKey exists:', !!apiKey);
-
-    // Initialize with full env if available, otherwise use extracted values
-    if (env) {
-      initFirebaseEnv(env);
-      console.log('[verify-session] Initialized Firebase from env');
-    } else {
-      initFirebaseEnv({
-        FIREBASE_PROJECT_ID: projectId,
-        FIREBASE_API_KEY: apiKey,
-      });
-      console.log('[verify-session] Initialized Firebase from fallback');
-    }
 
     // Try to find order by payment intent ID
     const paymentIntentId = session.payment_intent;

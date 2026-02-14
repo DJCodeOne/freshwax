@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../../../lib/firebase-rest';
+import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -19,10 +19,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);

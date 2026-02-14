@@ -3,7 +3,7 @@
 // D1 is PRIMARY - Firebase only used as last resort fallback
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -19,10 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Verify user is logged in (uses Firebase Auth but that's just token verification)
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
+
 
     const { userId, error: authError } = await verifyRequestUser(request);
 

@@ -15,7 +15,7 @@ export const prerender = false;
 <AdminLayout title="Partner Management" activeNav="artists">
 
   <Fragment slot="actions">
-    <a href="/admin/artists/pending" class="btn btn-secondary">
+    <a href="/admin/artists/pending/" class="btn btn-secondary">
       <span>⏳</span> Pending Approvals
     </a>
   </Fragment>
@@ -274,10 +274,9 @@ export const prerender = false;
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
-      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-      import { getFirestore, doc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-      
+      import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+      import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
       const firebaseConfig = {
         apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
         authDomain: "freshwax-store.firebaseapp.com",
@@ -286,10 +285,9 @@ export const prerender = false;
         messagingSenderId: "675435782973",
         appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
       };
-      
+
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      const db = getFirestore(app);
       
       let allPartners = [];
       let currentFilter = 'all';
@@ -299,7 +297,7 @@ export const prerender = false;
 
       onAuthStateChanged(auth, (user) => {
         if (!user) {
-          window.location.href = '/admin/login';
+          window.location.href = '/admin/login/';
           return;
         }
         loadPartners();
@@ -592,11 +590,15 @@ export const prerender = false;
         if (!currentPartnerId) return;
         const partner = allPartners.find(p => p.id === currentPartnerId);
         try {
-          // Update users collection (source of truth)
-          await updateDoc(doc(db, 'users', currentPartnerId), {
-            approved: true,
-            approvedAt: new Date().toISOString()
+          // Approve partner via API (replaces client-side Firestore write)
+          const idToken = await auth.currentUser.getIdToken();
+          const approveResp = await fetch('/api/admin/approve-partner', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ partnerId: currentPartnerId })
           });
+          const approveResult = await approveResp.json();
+          if (!approveResp.ok) throw new Error(approveResult.error || 'Failed to approve');
 
           // Send confirmation email
           if (partner?.email) {
@@ -636,7 +638,17 @@ export const prerender = false;
       window.confirmDelete = async function() {
         if (!currentPartnerId) return;
         try {
-          await deleteDoc(doc(db, 'artists', currentPartnerId));
+          // Delete partner via API (replaces client-side Firestore write)
+          const deleteToken = await auth.currentUser.getIdToken();
+          const deleteResp = await fetch('/api/admin/delete-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deleteToken}` },
+            body: JSON.stringify({ uid: currentPartnerId, collection: 'artists' })
+          });
+          if (!deleteResp.ok) {
+            const deleteResult = await deleteResp.json();
+            throw new Error(deleteResult.error || 'Failed to delete');
+          }
           closeModal('deleteModal');
           showToast('Partner deleted');
           loadPartners();

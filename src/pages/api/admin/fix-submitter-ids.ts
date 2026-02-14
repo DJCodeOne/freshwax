@@ -3,7 +3,7 @@
 // Run via: GET /api/admin/fix-submitter-ids?confirm=yes
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+
 import { saSetDocument, saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
@@ -16,10 +16,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // Initialize environment
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS || '',
     ADMIN_EMAILS: env?.ADMIN_EMAILS,

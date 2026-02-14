@@ -3,7 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
+import { processImageToSquareWebP } from '../../lib/image-processing';
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -31,10 +32,6 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   const R2_CONFIG = getR2Config(env);
   const s3Client = createS3Client(R2_CONFIG);
@@ -100,19 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       canBackfillOwnership
     });
 
-    // Also check by artist name if partnerId is set
-    let isPartnerOwner = false;
-    if (!isOwner && !canBackfillOwnership && partnerId) {
-      const partnerData = await getDocument('artists', partnerId);
-      const partnerName = partnerData?.artistName?.toLowerCase().trim() || null;
-      const mixDjName = (mixData?.djName || mixData?.dj_name || '').toLowerCase().trim();
-
-      if (partnerName && mixDjName === partnerName) {
-        isPartnerOwner = true;
-      }
-    }
-
-    if (!isOwner && !canBackfillOwnership && !isPartnerOwner) {
+    if (!isOwner && !canBackfillOwnership) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Not authorized to edit this mix'
@@ -134,19 +119,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
     
-    // Upload to R2
+    // Process artwork to WebP and upload to R2
     const timestamp = Date.now();
-    const artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
-    const artworkBuffer = Buffer.from(await artworkFile.arrayBuffer());
-    
+    const rawBuffer = await artworkFile.arrayBuffer();
+    let artworkKey: string;
+    let artworkBody: Buffer;
+    let artworkContentType: string;
+
+    try {
+      const processed = await processImageToSquareWebP(rawBuffer, 800, 80);
+      artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
+      artworkBody = Buffer.from(processed.buffer);
+      artworkContentType = 'image/webp';
+      console.log(`[update-mix-artwork] Processed to ${processed.width}x${processed.height} WebP`);
+    } catch (imgErr) {
+      console.error('[update-mix-artwork] WebP processing failed, using original:', imgErr);
+      artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
+      artworkBody = Buffer.from(rawBuffer);
+      artworkContentType = artworkFile.type;
+    }
+
     await s3Client.send(new PutObjectCommand({
       Bucket: R2_CONFIG.bucketName,
       Key: artworkKey,
-      Body: artworkBuffer,
-      ContentType: 'image/webp',
+      Body: artworkBody,
+      ContentType: artworkContentType,
       CacheControl: 'public, max-age=31536000',
     }));
-    
+
     const artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
 
     // Update Firebase with new artwork URL (and backfill userId if missing)

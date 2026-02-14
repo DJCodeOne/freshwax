@@ -2,7 +2,7 @@
 // Admin endpoint to extend a user's Plus subscription
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -10,12 +10,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Rate limit
   const clientId = getClientId(request);

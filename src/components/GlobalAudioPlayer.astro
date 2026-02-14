@@ -1,3 +1,9 @@
+---
+interface Props {
+  nonce?: string;
+}
+const { nonce = '' } = Astro.props;
+---
 <!-- src/components/GlobalAudioPlayer.astro -->
 <!-- Persistent audio player for DJ MIXES and SHUFFLE mode -->
 <!-- Features: Spectrum analyser LEDs, shuffle mode, DJ mix mode -->
@@ -267,7 +273,7 @@
   }
 </style>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // ===========================================
   // GLOBAL AUDIO PLAYER WITH SHUFFLE & SPECTRUM
   // ===========================================
@@ -442,7 +448,10 @@
           var progressBarEl = document.getElementById('mini-progress-bar');
           if (currentTimeEl) currentTimeEl.textContent = formatTime(globalAudio.currentTime);
           if (globalAudio.duration && progressBarEl) {
-            progressBarEl.style.width = (globalAudio.currentTime / globalAudio.duration * 100) + '%';
+            var pct = Math.round(globalAudio.currentTime / globalAudio.duration * 100);
+            progressBarEl.style.width = pct + '%';
+            var progressContainer = document.getElementById('mini-progress-container');
+            if (progressContainer) progressContainer.setAttribute('aria-valuenow', String(pct));
           }
         });
 

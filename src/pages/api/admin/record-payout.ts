@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 
 export const prerender = false;
@@ -35,12 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const serviceAccountKey = getServiceAccountKey(env);
 

@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getAdminDb } from '../../../lib/firebase-admin';
-import { setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
 
 export const prerender = false;
@@ -18,12 +18,6 @@ const log = {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any).runtime?.env;
-
-    // Initialize Firebase REST API as fallback
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const body = await request.json();
     const {

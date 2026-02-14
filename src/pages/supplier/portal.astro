@@ -16,10 +16,11 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 if (!code) {
   return Astro.redirect('/');
 }
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
-<Layout title="Supplier Portal | Fresh Wax">
-  <main class="supplier-portal">
+<Layout title="Supplier Portal | Fresh Wax" noindex={true}>
+  <div class="supplier-portal">
     <div class="container">
       <div id="loading-state" class="loading-state">
         <div class="spinner"></div>
@@ -110,10 +111,10 @@ if (!code) {
         </section>
       </div>
     </div>
-  </main>
+  </div>
 </Layout>
 
-<script define:vars={{ code }}>
+<script define:vars={{ code }} nonce={nonce}>
   const accessCode = code;
   let supplierData = {};
 

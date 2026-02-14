@@ -3,7 +3,7 @@
 // Uses firebase-rest.ts for Firestore access
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
@@ -12,10 +12,7 @@ export const prerender = false;
 // Helper to initialize Firebase and admin config
 function initServices(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
 }
 

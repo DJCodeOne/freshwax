@@ -2,7 +2,7 @@
 // Uses Firebase REST API - works on Cloudflare Pages (no Admin SDK)
 // Uses KV caching for public listings (not user-specific)
 import type { APIRoute } from 'astro';
-import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection } from '../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../lib/kv-cache';
 
 export const prerender = false;
@@ -16,10 +16,7 @@ const MIXES_CACHE = { prefix: 'mixes', ttl: 300 };
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initKVCache(env);
 
   const url = new URL(request.url);

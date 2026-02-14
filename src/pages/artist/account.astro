@@ -478,22 +478,22 @@ const getStatusClass = (status: string) => {
 export const prerender = false;
 ---
 
-<Layout title="My Account">
+<Layout title="My Account" noindex={true}>
   <Header />
   
-  <main class="account-main">
+  <div class="account-main">
     <div class="container">
       {!isLoggedIn ? (
         <div class="login-prompt">
           <p>Please log in to view your account.</p>
-          <a href="/login" class="login-btn">Sign In</a>
+          <a href="/login/" class="login-btn">Sign In</a>
         </div>
       ) : (
         <>
           <!-- Page Header -->
           <div class="page-header">
             <div class="header-left">
-              <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+              <a href="/artist/dashboard/" class="back-link">← Dashboard</a>
               <h1>My Account</h1>
               <p>Manage your profile, orders and settings</p>
             </div>
@@ -1001,7 +1001,7 @@ export const prerender = false;
 
             <div class="payout-info">
               <p>💡 Payouts are processed after each sale.</p>
-              <p>📊 <a href="/artist/payouts" style="color: #60a5fa;">View detailed payout history →</a></p>
+              <p>📊 <a href="/artist/payouts/" style="color: #60a5fa;">View detailed payout history →</a></p>
             </div>
           </section>
 
@@ -1059,7 +1059,7 @@ export const prerender = false;
         </>
       )}
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -2701,10 +2701,8 @@ export const prerender = false;
 <script type="module">
   async function getAuthToken() {
     try {
-      if (window.firebaseAuth?.currentUser) return await window.firebaseAuth.currentUser.getIdToken();
-      const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-      const auth = getAuth();
-      return auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      const user = window.firebaseAuth?.currentUser;
+      return user ? await user.getIdToken() : null;
     } catch { return null; }
   }
 

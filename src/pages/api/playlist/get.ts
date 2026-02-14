@@ -1,17 +1,13 @@
 // src/pages/api/playlist/get.ts
 // Get user's playlist - requires authentication
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import type { UserPlaylist } from '../../../lib/types';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY,
-  });
 
   try {
     // Verify authentication

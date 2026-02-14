@@ -360,19 +360,17 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs, orderBy, Timestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
-    let currentUserId = null;
+    let currentUser = null;
     let currentPeriod = 30;
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      currentUserId = user.uid;
+      currentUser = user;
       await loadAnalytics();
     });
 
@@ -382,63 +380,17 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     });
 
     async function loadAnalytics() {
-      if (!currentUserId) return;
-
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - currentPeriod);
+      if (!currentUser) return;
 
       try {
-        // Get orders for period
-        const ordersQuery = query(
-          collection(db, 'orders'),
-          where('sellerId', '==', currentUserId),
-          where('createdAt', '>=', Timestamp.fromDate(startDate)),
-          orderBy('createdAt', 'desc')
-        );
-
-        const snapshot = await getDocs(ordersQuery);
-
-        let totalRevenue = 0;
-        let totalOrders = 0;
-        let totalUnits = 0;
-        const productSales = {};
-        const recentSales = [];
-        const dailySales = {}; // For chart
-
-        snapshot.forEach(doc => {
-          const order = doc.data();
-          totalOrders++;
-          totalRevenue += order.total || 0;
-
-          // Track daily sales for chart
-          const orderDate = order.createdAt?.toDate?.() || new Date();
-          const dateKey = orderDate.toISOString().split('T')[0];
-          if (!dailySales[dateKey]) {
-            dailySales[dateKey] = { revenue: 0, orders: 0 };
-          }
-          dailySales[dateKey].revenue += order.total || 0;
-          dailySales[dateKey].orders++;
-
-          (order.items || []).forEach(item => {
-            const qty = item.quantity || 1;
-            totalUnits += qty;
-
-            // Track product sales
-            if (!productSales[item.name]) {
-              productSales[item.name] = { units: 0, revenue: 0 };
-            }
-            productSales[item.name].units += qty;
-            productSales[item.name].revenue += (item.price || 0) * qty;
-
-            // Add to recent sales
-            recentSales.push({
-              date: orderDate,
-              product: item.name,
-              quantity: qty,
-              revenue: (item.price || 0) * qty
-            });
-          });
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch(`/api/pro/dashboard-data?type=analytics&period=${currentPeriod}`, {
+          headers: { 'Authorization': `Bearer ${idToken}` }
         });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load analytics');
+
+        const { totalRevenue, totalOrders, totalUnits, productSales, dailySales, recentSales } = data;
 
         // Update metrics
         document.getElementById('totalRevenue').textContent = '£' + totalRevenue.toFixed(2);

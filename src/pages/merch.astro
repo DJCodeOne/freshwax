@@ -134,13 +134,18 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
   label: group.label,
   names: Array.from(group.names).sort()
 })).sort((a, b) => a.label.localeCompare(b.label));
+const nonce = (Astro.locals as any).nonce || '';
+
+// Preload first product image for faster LCP
+const firstProductImage = products[0]?.imageUrl;
 ---
 
 <Layout title="Official Merchandise" description="Official merchandise from Fresh Wax, sound systems, labels and DJs. T-shirts, hoodies, hats and more.">
+  {firstProductImage && <link rel="preload" href={firstProductImage} as="image" slot="head" />}
   <PageLoader />
   <Header />
 
-  <main class="merch-page">
+  <div class="merch-page">
     <!-- Filters Bar - Full Width -->
     <section class="filters-bar">
       <div class="filters-row">
@@ -243,7 +248,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
           <span id="visibleCount">{products.length}</span> / {products.length}
         </div>
 
-        <a href="/giftcards" class="gift-card-btn">
+        <a href="/giftcards/" class="gift-card-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
             <path d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
           </svg>
@@ -272,8 +277,8 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
           </div>
         ) : (
           <div id="productsGrid" class="products-grid">
-            {products.map((product) => (
-              <div 
+            {products.map((product, pIdx) => (
+              <div
                 class="product-card"
                 data-id={product.id}
                 data-category={product.category || 'freshwax'}
@@ -290,7 +295,15 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
                 <!-- Image -->
                 <div class="card-image card-clickable">
                   {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} width="400" height="400" loading="lazy" />
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      width="400"
+                      height="400"
+                      loading={pIdx < 4 ? "eager" : "lazy"}
+                      decoding={pIdx < 4 ? "auto" : "async"}
+                      fetchpriority={pIdx === 0 ? "high" : undefined}
+                    />
                   ) : (
                     <div class="placeholder">👕</div>
                   )}
@@ -350,7 +363,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
         )}
       </section>
     </div>
-  </main>
+  </div>
 
   <!-- Quick View / Buy Modal -->
   <div id="buyModal" class="modal-overlay">
@@ -424,11 +437,11 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
   <Footer />
 </Layout>
 
-<script define:vars={{ productsJson }}>
+<script define:vars={{ productsJson }} nonce={nonce}>
   window.PRODUCTS_DATA = JSON.parse(productsJson);
 </script>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
 
   function escapeHtml(str) {
     if (!str) return '';

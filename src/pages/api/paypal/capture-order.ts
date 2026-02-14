@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder, validateStock } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 
 export const prerender = false;
@@ -50,13 +50,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     // Get PayPal credentials
     const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
@@ -89,11 +84,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log('[PayPal] Capturing order:', paypalOrderId);
 
     // IDEMPOTENCY CHECK: Check if order with this PayPal ID already exists
+    // Uses throwOnError=true so Firebase outages return 503 instead of creating duplicates
     try {
       const existingOrders = await queryCollection('orders', {
         filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
         limit: 1
-      });
+      }, true);
       if (existingOrders && existingOrders.length > 0) {
         const existingOrder = existingOrders[0];
         console.log('[PayPal] Order already exists for this payment:', existingOrder.orderNumber);
@@ -108,18 +104,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
     } catch (idempotencyErr) {
-      console.log('[PayPal] Could not check for existing order:', idempotencyErr);
-      // Continue with capture attempt
+      console.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+      // Don't proceed - we can't verify if this order was already processed
+      // Customer can retry when Firebase is back
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unable to verify order status. Please try again in a moment.'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // SECURITY: Retrieve order data from Firebase - never trust client-submitted data
     let orderData: any;
     let usedServerData = false;
+    let paypalReservationId: string | null = null;
 
     try {
       const pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
       if (pendingOrder) {
         console.log('[PayPal] Retrieved server-side order data');
+        paypalReservationId = pendingOrder.reservationId || null;
         orderData = {
           customer: pendingOrder.customer,
           shipping: pendingOrder.shipping,
@@ -176,9 +182,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
     } catch (stockErr) {
-      console.error('[PayPal] Stock validation error:', stockErr);
-      // If stock check fails, don't block the purchase - fail open
-      // The alternative (fail closed) would block legitimate purchases
+      console.error('[PayPal] Stock validation error (Firebase may be unreachable):', stockErr);
+      // Fail closed: if we can't verify stock (Firebase down), don't capture payment
+      // Payment hasn't been captured yet so customer isn't charged - they can retry
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Unable to verify stock availability. Please try again in a moment.'
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     // Get access token
@@ -229,26 +242,57 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     console.log('[PayPal] Payment captured:', captureId, '£' + capturedAmount);
 
-    // SECURITY: Always validate captured amount matches expected total
+    // Amount verification: compare captured amount against expected total
+    // Don't block on mismatch -- the customer already paid. Flag for admin review instead.
     const expectedTotal = parseFloat(orderData.totals?.total?.toFixed(2) || '0');
+    let amountMismatch = false;
     if (Math.abs(capturedAmount - expectedTotal) > 0.01) {
-      console.error('[PayPal] SECURITY: Amount mismatch! Captured:', capturedAmount, 'Expected:', expectedTotal, 'UsedServerData:', usedServerData);
-      // BLOCK the order - this is a security concern
-      // PayPal already captured the money, so we need to handle refund separately
-      // But we should NOT create an order with manipulated data
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Order validation failed. Payment captured but order could not be created. Please contact support.',
-        refundRequired: true,
-        captureId: captureId
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      amountMismatch = true;
+      console.error('[PayPal] AMOUNT MISMATCH! Captured:', capturedAmount, 'Expected:', expectedTotal, 'PayPal Order:', paypalOrderId);
+      // Flag for admin review via Firebase document
+      try {
+        await addDocument('flaggedOrders', {
+          paypalOrderId,
+          captureId,
+          capturedAmount,
+          expectedTotal,
+          difference: Math.round((capturedAmount - expectedTotal) * 100) / 100,
+          customerEmail: orderData.customer?.email || '',
+          reason: 'amount_mismatch',
+          status: 'needs_review',
+          createdAt: new Date().toISOString()
+        });
+        console.warn('[PayPal] Order flagged for admin review due to amount mismatch');
+      } catch (flagErr) {
+        console.error('[PayPal] Failed to create flaggedOrders doc:', flagErr);
+      }
     }
 
     // Get applied credit from order data
     const appliedCredit = orderData.appliedCredit || 0;
+
+    // D1 DURABLE RECORD: Insert pending order before Firebase creation
+    // If Firebase fails after payment, this record ensures the order is not lost
+    // Reuses the same pending_orders table as the Stripe webhook for admin visibility
+    const db = env?.DB;
+    if (db) {
+      try {
+        await db.prepare(`
+          INSERT INTO pending_orders (stripe_session_id, customer_email, amount_total, currency, items, status, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
+        `).bind(
+          `paypal:${paypalOrderId}`,
+          orderData.customer?.email || '',
+          Math.round(capturedAmount * 100),
+          'gbp',
+          JSON.stringify(orderData.items || [])
+        ).run();
+        console.log('[PayPal] D1 pending_orders row inserted for paypal order:', paypalOrderId);
+      } catch (d1Err) {
+        // D1 write failure must not block order creation -- log and continue
+        console.error('[PayPal] D1 pending_orders insert failed (non-blocking):', d1Err);
+      }
+    }
 
     // Create order in Firebase using shared utility
     // Wrap in try/catch to handle race condition: if a concurrent request already
@@ -263,11 +307,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           totals: {
             ...orderData.totals,
             appliedCredit,
-            amountPaid: capturedAmount
+            amountPaid: capturedAmount,
+            ...(amountMismatch ? { amountMismatch: true, expectedTotal, capturedAmount } : {})
           },
           hasPhysicalItems: orderData.hasPhysicalItems,
           paymentMethod: 'paypal',
-          paypalOrderId: paypalOrderId
+          paypalOrderId: paypalOrderId,
+          ...(amountMismatch ? { flagged: true, flagReason: 'amount_mismatch' } : {})
         },
         env,
         idToken
@@ -281,6 +327,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // If two requests passed the initial idempotency check simultaneously, one will
     // have created the order by now. Return the existing order instead of duplicating.
     if (result.success) {
+      // D1: Mark pending order as completed with Firebase order ID
+      if (db) {
+        try {
+          await db.prepare(`
+            UPDATE pending_orders
+            SET status = 'completed', firebase_order_id = ?, updated_at = datetime('now')
+            WHERE stripe_session_id = ?
+          `).bind(result.orderId || '', `paypal:${paypalOrderId}`).run();
+          console.log('[PayPal] D1 pending_orders updated to completed for paypal order:', paypalOrderId);
+        } catch (d1Err) {
+          console.error('[PayPal] D1 pending_orders update failed (non-blocking):', d1Err);
+        }
+      }
+
       try {
         const duplicateCheck = await queryCollection('orders', {
           filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
@@ -312,6 +372,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!result.success) {
+      // D1: Mark pending order as failed so admin can see the failure reason
+      if (db) {
+        try {
+          await db.prepare(`
+            UPDATE pending_orders
+            SET status = 'failed', updated_at = datetime('now')
+            WHERE stripe_session_id = ?
+          `).bind(`paypal:${paypalOrderId}`).run();
+          console.log('[PayPal] D1 pending_orders marked as failed for paypal order:', paypalOrderId);
+        } catch (d1Err) {
+          console.error('[PayPal] D1 pending_orders failure update failed:', d1Err);
+        }
+      }
+
       // Before returning an error, check one more time if a concurrent request created the order
       try {
         const existingOrders = await queryCollection('orders', {
@@ -336,10 +410,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[PayPal] Fallback duplicate check failed:', fallbackErr);
       }
 
-      console.error('[PayPal] Order creation failed:', result.error);
+      console.error('[PayPal] ORPHANED PAYMENT - Order creation failed after capture.',
+        'PayPal Order:', paypalOrderId, 'Capture:', captureId, 'Amount:', capturedAmount,
+        'Customer:', orderData.customer?.email, 'Error:', result.error);
       return new Response(JSON.stringify({
         success: false,
-        error: result.error || 'Failed to create order'
+        error: 'Payment was captured but order creation failed. Your payment is safe — our team has been notified and will process your order shortly.'
       }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
@@ -347,6 +423,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     console.log('[PayPal] Order created:', result.orderNumber);
+
+    // Convert stock reservation (payment succeeded)
+    if (paypalReservationId) {
+      try {
+        const { convertReservation } = await import('../../../lib/order-utils');
+        await convertReservation(paypalReservationId);
+        console.log('[PayPal] Reservation converted:', paypalReservationId);
+      } catch (err) {
+        console.error('[PayPal] Failed to convert reservation:', err);
+      }
+    }
 
     // Record to sales ledger (source of truth for analytics)
     // Look up seller info for ALL items so multi-seller orders are handled correctly
@@ -371,7 +458,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               // Email field - release stores it as 'email', not 'submitterEmail'
               submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
               artistName = release.artistName || release.artist || artistName;
-              console.log(`[PayPal] Item ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
+              console.log(`[PayPal] Item ${item.name}: seller=${submitterId}`);
             }
           } catch (lookupErr) {
             console.error(`[PayPal] Failed to lookup release ${releaseId}:`, lookupErr);
@@ -405,7 +492,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 }
               }
 
-              console.log(`[PayPal] Merch ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
+              console.log(`[PayPal] Merch ${item.name}: seller=${submitterId}`);
             }
           } catch (lookupErr) {
             console.error(`[PayPal] Failed to lookup merch ${item.productId}:`, lookupErr);
@@ -528,12 +615,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             balanceAfter: newBalance
           };
 
-          const existingTransactions = creditData.transactions || [];
-          existingTransactions.push(transaction);
-
-          await updateDocument('userCredits', userId, {
-            lastUpdated: now,
-            transactions: existingTransactions
+          // Atomic arrayUnion prevents lost transactions under concurrent writes
+          await arrayUnion('userCredits', userId, 'transactions', [transaction], {
+            lastUpdated: now
           });
 
           // Also update user document atomically

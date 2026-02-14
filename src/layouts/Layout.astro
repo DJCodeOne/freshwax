@@ -47,7 +47,7 @@ interface Props {
     genre?: string[];
     label?: string;
     format?: string[];
-    tracks?: { name: string; duration?: string; isrc?: string }[];
+    tracks?: { name: string; duration?: string; isrc?: string; artist?: string }[];
     catalogNumber?: string;
     bpm?: number;
   };
@@ -61,6 +61,7 @@ interface Props {
     contentUrl?: string;
     embedUrl?: string;
     genre?: string[];
+    tracklist?: string[];
   };
   
   // Video content
@@ -134,6 +135,7 @@ const {
 const GA4_ID = 'G-MHKVCNPYBQ';
 const GTM_ID = ''; // Optional: Google Tag Manager ID
 const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <!doctype html>
@@ -198,7 +200,7 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
     <slot name="head" />
 
     <!-- Image loading placeholder script -->
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
           if (img.complete) img.classList.add('loaded');
@@ -286,6 +288,15 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
         background: none;
         animation: none;
       }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -302,23 +313,23 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
     </noscript>
 
     <!-- Cart functionality -->
-    <script is:inline src="/freshwax-cart.js?v=4"></script>
+    <script is:inline src="/freshwax-cart.js?v=4" defer nonce={nonce}></script>
 
     <!-- ARIA live region for toast notifications (screen reader announcements) -->
     <div id="fw-toast-live" aria-live="polite" aria-atomic="true" class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;"></div>
 
     <!-- Shared toast notification -->
-    <script is:inline>
+    <script is:inline nonce={nonce}>
     window.showToast=function(t,e){var o=document.getElementById('fw-toast');if(o)o.remove();var s=document.createElement('div');s.id='fw-toast';s.setAttribute('role','status');s.textContent=t;s.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:'+(e==='error'?'#dc2626':'#16a34a')+';color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.3s;';document.body.appendChild(s);var l=document.getElementById('fw-toast-live');if(l)l.textContent=t;setTimeout(function(){s.style.opacity='0';setTimeout(function(){s.remove();if(l)l.textContent=''},300)},3000)};
     </script>
     
     <!-- Pusher config for real-time features -->
-    <script define:vars={{ pusherConfig }}>
+    <script define:vars={{ pusherConfig }} nonce={nonce}>
       window.PUSHER_CONFIG = pusherConfig;
     </script>
     
     <!-- Audio Coordinator -->
-    <AudioCoordinator />
+    <AudioCoordinator nonce={nonce} />
     
     <!-- Main content -->
     <main id="main-content">
@@ -326,17 +337,17 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
     </main>
     
     <!-- Global Audio Player -->
-    <GlobalAudioPlayer />
+    <GlobalAudioPlayer nonce={nonce} />
 
     <!-- Floating Shuffle Button (hidden on live pages) -->
-    {!hideShuffle && <FloatingShuffleButton />}
+    {!hideShuffle && <FloatingShuffleButton nonce={nonce} />}
 
     <!-- Spacer for mini player -->
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
     
     <!-- Cookie consent banner (UK GDPR/PECR compliant) -->
     <!-- Injected via JS to avoid being in initial DOM and becoming LCP element -->
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       (function() {
         if (localStorage.getItem('cookie-consent')) return;
         // Inject banner after page content has painted
@@ -364,7 +375,7 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
     </script>
 
     <!-- Service Worker Registration for PWA -->
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').catch(() => {});
@@ -377,6 +388,7 @@ const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPH
       ga4Id={GA4_ID}
       gtmId={GTM_ID}
       ecommerce={true}
+      nonce={nonce}
     />
   </body>
 </html>

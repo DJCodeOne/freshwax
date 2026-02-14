@@ -3,8 +3,9 @@
 // Uses service account for writes to ensure Firebase security rules don't block
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -29,11 +30,15 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-shipping:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     // SECURITY: Verify user authentication

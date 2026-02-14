@@ -3,7 +3,7 @@
 // Checks KV storage first (new system), then falls back to Firebase giftCards (legacy)
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -11,10 +11,7 @@ export const prerender = false;
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-  });
+
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

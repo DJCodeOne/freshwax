@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
@@ -46,10 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Require authentication
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
+
     const { userId, error: authError } = await verifyRequestUser(request);
     if (!userId || authError) {
       return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {

@@ -4,17 +4,13 @@
 // Uses Web Crypto API for Cloudflare Workers compatibility
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, atomicIncrement, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, atomicIncrement, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { triggerPusher } from '../../../lib/pusher';
 
 // Helper to initialize Firebase and return env for Pusher
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   return env;
 }
 

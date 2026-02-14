@@ -1,6 +1,6 @@
 // src/pages/api/update-master-json.js
 // FIXED: Sets status to 'pending' by default, admin must approve before going live
-import { getDocument, updateDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest.js';
+import { getDocument, updateDocument, setDocument } from '../../lib/firebase-rest.js';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -12,12 +12,7 @@ const log = {
 export const prerender = false;
 
 export async function POST({ request, locals }) {
-  // Initialize Firebase env for write operations
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const { release } = await request.json();

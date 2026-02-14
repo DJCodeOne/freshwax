@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -48,12 +48,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const env = (locals as any)?.runtime?.env;
-
-    // Initialize Firebase for storing pending orders and auth
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // SECURITY: Verify the requesting user's identity
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

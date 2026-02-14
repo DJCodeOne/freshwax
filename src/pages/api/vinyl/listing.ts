@@ -3,7 +3,7 @@
 // Uses Firebase REST API efficiently, Pusher for real-time updates
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, deleteDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -62,13 +62,8 @@ function validateListing(data: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-// Initialize Firebase from env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET - Fetch seller's listings (efficient: single query)

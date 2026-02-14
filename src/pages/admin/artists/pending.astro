@@ -43,6 +43,7 @@ const counts = { all: pendingPartners.length, artists: pendingPartners.filter((p
 const stats = [{ label: 'Total Pending', value: counts.all, type: counts.all > 0 ? 'warning' : 'default' }, { label: 'Artists', value: counts.artists, type: 'info' }, { label: 'Merch', value: counts.merch, type: 'info' }];
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <AdminLayout title="Partner Approvals" activeNav="pending" showStats={true} stats={stats}>
   <div class="toolbar"><div class="filter-tabs">
@@ -66,17 +67,16 @@ export const prerender = false;
           </tr>
         ))}</tbody></table></div></div>
   )}
-  <Fragment slot="scripts"><script is:inline>/* Admin check via Firestore */</script><script type="module">
-    import{initializeApp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-    import{getFirestore,doc,getDoc,updateDoc,serverTimestamp}from'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+  <Fragment slot="scripts"><script is:inline nonce={nonce}>/* Admin check via API */</script><script type="module">
+    import{initializeApp}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import{getAuth,onAuthStateChanged}from'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
     const app=initializeApp({apiKey:'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',authDomain:"freshwax-store.firebaseapp.com",projectId:"freshwax-store"});
-    const auth=getAuth(app),db=getFirestore(app);
-    onAuthStateChanged(auth,async u=>{if(!u){window.location.href='/admin/login';return;}try{const a=await getDoc(doc(db,'admins',u.uid));if(!a.exists())window.location.href='/admin/login';}catch(e){window.location.href='/admin/login';}});
+    const auth=getAuth(app);
+    onAuthStateChanged(auth,async u=>{if(!u){window.location.href='/admin/login/';return;}try{const t=await u.getIdToken();const r=await fetch('/api/admin/check-access',{headers:{'Authorization':'Bearer '+t}});const d=await r.json();if(!d.success||!d.isAdmin)window.location.href='/admin/login/';}catch(e){window.location.href='/admin/login/';}});
     const tbl=document.getElementById('tbl');
     document.querySelectorAll('.filter-tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.filter-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');const f=t.dataset.filter;tbl?.querySelectorAll('tr').forEach(r=>{const rl=JSON.parse(r.dataset.roles||'{}');r.style.display=(f==='all'||(f==='artist'&&rl.artist)||(f==='merch'&&rl.merch))?'':'none';});});
-    document.querySelectorAll('.approve-btn').forEach(b=>b.onclick=async()=>{const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}'),email=row.dataset.email,name=row.dataset.name;b.disabled=true;b.textContent='Approving...';try{const u={updatedAt:serverTimestamp(),approved:true};if(rl.artist){u['roles.artist']=true;u['pendingRoles.artist.status']='approved';}if(rl.merch){u['roles.merchSeller']=true;u['pendingRoles.merchSeller.status']='approved';}await updateDoc(doc(db,'users',id),u);b.textContent='Sending email...';try{await fetch('/api/admin/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':window.ADMIN_KEY},body:JSON.stringify({email,name,type:(rl.artist && rl.merch) ? 'both' : (rl.artist ? 'artist' : 'merch')})});}catch(emailErr){console.warn('Email failed:',emailErr);}row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Approved! Confirmation email sent.');}catch(e){alert(e.message);b.disabled=false;b.textContent='Approve';}});
-    document.querySelectorAll('.reject-btn').forEach(b=>b.onclick=async()=>{const reason=prompt('Reason?');if(reason===null)return;const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}');b.disabled=true;try{const u={updatedAt:serverTimestamp()};if(rl.artist)u['pendingRoles.artist.status']='rejected';if(rl.merch)u['pendingRoles.merchSeller.status']='rejected';await updateDoc(doc(db,'users',id),u);row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Rejected');}catch(e){alert(e.message);b.disabled=false;}});
+    document.querySelectorAll('.approve-btn').forEach(b=>b.onclick=async()=>{const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}'),email=row.dataset.email,name=row.dataset.name;b.disabled=true;b.textContent='Approving...';try{const idToken=await auth.currentUser.getIdToken();const type=(rl.artist&&rl.merch)?'both':(rl.artist?'artist':'merch');const resp=await fetch('/api/roles/manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify({action:'approveRole',uid:id,roleType:type})});const result=await resp.json();if(!result.success)throw new Error(result.error||'Approval failed');b.textContent='Sending email...';try{await fetch('/api/admin/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':window.ADMIN_KEY},body:JSON.stringify({email,name,type})});}catch(emailErr){console.warn('Email failed:',emailErr);}row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Approved! Confirmation email sent.');}catch(e){alert(e.message);b.disabled=false;b.textContent='Approve';}});
+    document.querySelectorAll('.reject-btn').forEach(b=>b.onclick=async()=>{const reason=prompt('Reason?');if(reason===null)return;const id=b.dataset.id,row=b.closest('tr'),rl=JSON.parse(row.dataset.roles||'{}');b.disabled=true;try{const idToken=await auth.currentUser.getIdToken();const type=rl.artist?'artist':'merchSeller';const resp=await fetch('/api/roles/manage',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify({action:'denyRole',uid:id,roleType:type,reason})});const result=await resp.json();if(!result.success)throw new Error(result.error||'Rejection failed');row.remove();if(!tbl?.querySelector('tr'))location.reload();alert('Rejected');}catch(e){alert(e.message);b.disabled=false;}});
   </script></Fragment>
 </AdminLayout>
 <style>.filter-tab .count{background:var(--border-light);padding:0.1rem 0.4rem;border-radius:4px;font-size:0.7rem;margin-left:0.25rem;}.filter-tab.active .count{background:rgba(255,255,255,0.3);}</style>

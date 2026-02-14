@@ -1,6 +1,6 @@
 // src/pages/api/update-release.ts
 // Firebase-based release update API - uses service account for writes
-import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -63,10 +63,7 @@ export async function POST({ request, locals }: any) {
     const env = locals?.runtime?.env || {};
 
     // Initialize Firebase environment for reads
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
+
 
     const { id, idToken, adminKey, ...updateData } = updates;
 

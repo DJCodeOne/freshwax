@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const MAX_DAILY_HOURS = 2;
 const PROJECT_ID = 'freshwax-store';
@@ -82,10 +83,6 @@ function generateId(): string {
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
@@ -145,7 +142,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return new Response(JSON.stringify({
         success: true,
         bookings
-      }), { headers: { 'Content-Type': 'application/json' } });
+      }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' } });
     }
 
     // Get user's upcoming bookings — requires auth
@@ -202,6 +199,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`bookings:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     // Verify the user is authenticated
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

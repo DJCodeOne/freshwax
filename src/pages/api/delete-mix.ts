@@ -5,7 +5,7 @@
 import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { getDocument, deleteDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
 
@@ -52,10 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   // Initialize R2/S3 client for Cloudflare runtime
   const R2_CONFIG = getR2Config(env);

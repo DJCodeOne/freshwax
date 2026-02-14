@@ -1,23 +1,18 @@
 // src/pages/api/reports.ts
 import type { APIRoute } from 'astro';
-import { queryCollection, addDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 const REPORT_CATEGORIES = ['inappropriate_content', 'harassment', 'spam', 'copyright', 'hate_speech', 'impersonation', 'other'];
 const REPORT_TYPES = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'];
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for viewing reports
@@ -94,7 +89,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {
@@ -161,7 +155,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const PUT: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for updating reports
@@ -201,7 +194,6 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for deleting reports

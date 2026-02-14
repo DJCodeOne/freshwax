@@ -12,13 +12,16 @@ interface Props {
   ecommerce?: boolean;
   // Enable debug mode (for development)
   debug?: boolean;
+  // CSP nonce
+  nonce?: string;
 }
 
 const {
   ga4Id = '',
   gtmId = '',
   ecommerce = true,
-  debug = import.meta.env.DEV
+  debug = import.meta.env.DEV,
+  nonce = ''
 } = Astro.props;
 
 const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
@@ -27,7 +30,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
 {shouldRender && (
   <>
     <!-- GA4 consent-gated loader -->
-    <script define:vars={{ ga4Id, ecommerce, debug, gtmId }}>
+    <script define:vars={{ ga4Id, ecommerce, debug, gtmId }} nonce={nonce}>
       // Only initialize analytics if user has consented
       function initAnalytics() {
         if (window._analyticsInitialized) return;
@@ -246,22 +249,29 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
           }
         });
 
-        // Track scroll depth
+        // Track scroll depth (throttled with requestAnimationFrame)
         let scrollDepthTracked = {};
+        var scrollTicking = false;
         window.addEventListener('scroll', function() {
-          const scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
-          const milestones = [25, 50, 75, 90, 100];
+          if (!scrollTicking) {
+            scrollTicking = true;
+            requestAnimationFrame(function() {
+              var scrollPercent = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+              var milestones = [25, 50, 75, 90, 100];
 
-          milestones.forEach(milestone => {
-            if (scrollPercent >= milestone && !scrollDepthTracked[milestone]) {
-              scrollDepthTracked[milestone] = true;
-              window.trackEvent('scroll_depth', {
-                'event_category': 'Engagement',
-                'event_label': milestone + '%',
-                'value': milestone
+              milestones.forEach(function(milestone) {
+                if (scrollPercent >= milestone && !scrollDepthTracked[milestone]) {
+                  scrollDepthTracked[milestone] = true;
+                  window.trackEvent('scroll_depth', {
+                    'event_category': 'Engagement',
+                    'event_label': milestone + '%',
+                    'value': milestone
+                  });
+                }
               });
-            }
-          });
+              scrollTicking = false;
+            });
+          }
         });
 
         // Track time on page

@@ -133,7 +133,7 @@ export const prerender = false;
 <AdminLayout title="Vinyl Sellers" activeNav="vinyl">
   <Fragment slot="breadcrumb">
     <div class="header-breadcrumb">
-      <a href="/admin">Admin</a>
+      <a href="/admin/">Admin</a>
       <span class="breadcrumb-sep">/</span>
       <span>Vinyl Sellers</span>
     </div>
@@ -148,7 +148,7 @@ export const prerender = false;
   <!-- Alerts -->
   {pendingSellerRequests.length > 0 && (
     <div class="alerts-section mb-4">
-      <a href="/admin/role-approvals" class="alert-item alert-warning">
+      <a href="/admin/role-approvals/" class="alert-item alert-warning">
         <span class="alert-icon">👤</span>
         <span class="alert-text">{pendingSellerRequests.length} vinyl seller request{pendingSellerRequests.length !== 1 ? 's' : ''} awaiting approval</span>
         <span class="alert-arrow">→</span>
@@ -197,22 +197,22 @@ export const prerender = false;
 
   <!-- Quick Actions -->
   <div class="actions-grid mb-4">
-    <a href="/admin/role-approvals" class="action-card" style="position: relative;">
+    <a href="/admin/role-approvals/" class="action-card" style="position: relative;">
       <span class="card-icon">✅</span>
       <span class="card-title">Approve Sellers</span>
       {pendingSellerRequests.length > 0 && (
         <span class="card-badge">{pendingSellerRequests.length}</span>
       )}
     </a>
-    <a href="/admin/vinyl/listings" class="action-card">
+    <a href="/admin/vinyl/listings/" class="action-card">
       <span class="card-icon">📦</span>
       <span class="card-title">All Listings</span>
     </a>
-    <a href="/admin/vinyl/orders" class="action-card">
+    <a href="/admin/vinyl/orders/" class="action-card">
       <span class="card-icon">📋</span>
       <span class="card-title">Vinyl Orders</span>
     </a>
-    <a href="/crates" class="action-card" target="_blank">
+    <a href="/crates/" class="action-card" target="_blank">
       <span class="card-icon">📀</span>
       <span class="card-title">View Crates</span>
     </a>
@@ -293,7 +293,7 @@ export const prerender = false;
     <div class="card">
       <div class="card-header">
         <h2>📦 Recent Listings</h2>
-        <a href="/admin/vinyl/listings" class="btn btn-ghost btn-sm">View All →</a>
+        <a href="/admin/vinyl/listings/" class="btn btn-ghost btn-sm">View All →</a>
       </div>
       {vinylListings.length === 0 ? (
         <div class="card-body">
@@ -347,7 +347,7 @@ export const prerender = false;
   <div class="card mt-4">
     <div class="card-header">
       <h2>📋 Recent Vinyl Orders</h2>
-      <a href="/admin/vinyl/orders" class="btn btn-ghost btn-sm">View All →</a>
+      <a href="/admin/vinyl/orders/" class="btn btn-ghost btn-sm">View All →</a>
     </div>
     {vinylOrders.length === 0 ? (
       <div class="card-body">

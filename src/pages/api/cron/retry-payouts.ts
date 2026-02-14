@@ -6,7 +6,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { queryCollection, updateDocument, addDocument, getDocument, initFirebaseEnv, updateDocumentConditional, clearCache, atomicIncrement } from '../../../lib/firebase-rest';
+import { queryCollection, updateDocument, addDocument, getDocument, updateDocumentConditional, clearCache, atomicIncrement } from '../../../lib/firebase-rest';
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
@@ -44,10 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 

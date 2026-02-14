@@ -43,9 +43,14 @@ const sortedLabels = Object.keys(releasesByLabel).sort((a, b) => {
 const totalReleases = Object.values(releasesByLabel).reduce((sum, releases) => sum + releases.length, 0);
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+
+// Preload the first visible release cover image for faster LCP
+const firstLabel = sortedLabels[0];
+const firstCoverArt = firstLabel ? releasesByLabel[firstLabel]?.[0]?.coverArtUrl : null;
 ---
 
 <Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases. Digital downloads and limited edition vinyl from Fresh Wax.">
+  {firstCoverArt && <link rel="preload" href={firstCoverArt} as="image" slot="head" />}
   <Header />
   
   <div class="flex min-h-screen" style="background: #000000;">
@@ -89,7 +94,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
     </aside>
 
     <!-- Main Content Area - FIXED WIDTH -->
-    <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div class="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div class="max-w-6xl mx-auto w-full">
         <!-- Page Header -->
         <header class="mb-12">
@@ -158,12 +163,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 
                 <!-- Releases Grid -->
                 <div class="space-y-6 w-full">
-                  {releasesByLabel[label].map((release) => (
-                    <div 
-                      id={release.id} 
+                  {releasesByLabel[label].map((release, rIdx) => (
+                    <div
+                      id={release.id}
                       class="release-item scroll-mt-24 w-full"
                     >
-                      <ReleasePlate {...release} />
+                      <ReleasePlate {...release} priority={label === sortedLabels[0] && rIdx === 0} />
                     </div>
                   ))}
                 </div>
@@ -172,7 +177,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
           </div>
         )}
       </div>
-    </main>
+    </div>
   </div>
 
   <FloatingShuffleButton />
@@ -239,7 +244,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
         e.preventDefault();
 
         if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
           return;
         }
 
@@ -379,6 +384,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
     .release-item:nth-child(3) { animation-delay: 0.15s; }
     .release-item:nth-child(4) { animation-delay: 0.2s; }
     .release-item:nth-child(5) { animation-delay: 0.25s; }
+
+    .release-item:nth-child(n+4) {
+      content-visibility: auto;
+      contain-intrinsic-size: auto 400px;
+    }
 
     .label-nav-link {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

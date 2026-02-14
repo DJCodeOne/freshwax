@@ -386,6 +386,7 @@ const getStatusClass = (status) => {
 };
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <AdminLayout title="Payments" activeNav="payments" showStats={true} stats={stats}>
@@ -916,7 +917,7 @@ export const prerender = false;
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
       };

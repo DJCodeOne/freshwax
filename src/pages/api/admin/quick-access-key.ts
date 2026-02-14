@@ -3,17 +3,13 @@
 // Allows admin to generate a key that gives DJs instant lobby access when redeemed
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // Build service account key from individual env vars

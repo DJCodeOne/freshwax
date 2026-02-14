@@ -1,10 +1,26 @@
 // src/pages/api/stripe/webhook.ts
 // Handles Stripe webhook events for product checkouts
+//
+// D1 MIGRATION REQUIRED — run this against your D1 database:
+// -------------------------------------------------------
+// CREATE TABLE IF NOT EXISTS pending_orders (
+//   id INTEGER PRIMARY KEY AUTOINCREMENT,
+//   stripe_session_id TEXT UNIQUE NOT NULL,
+//   customer_email TEXT,
+//   amount_total INTEGER,
+//   currency TEXT DEFAULT 'gbp',
+//   items TEXT,
+//   status TEXT DEFAULT 'pending',
+//   firebase_order_id TEXT,
+//   created_at TEXT DEFAULT (datetime('now')),
+//   updated_at TEXT DEFAULT (datetime('now'))
+// );
+// -------------------------------------------------------
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder, validateStock } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { logStripeEvent } from '../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { redeemReferralCode } from '../../../lib/referral-codes';
@@ -190,7 +206,7 @@ async function sendPendingEarningsEmail(
       return { success: false, error: result.message || 'Failed to send email' };
     }
 
-    console.log('[Stripe Webhook] Pending earnings email sent to:', artistEmail);
+    console.log('[Stripe Webhook] Pending earnings email sent');
     return { success: true, messageId: result.id };
 
   } catch (error) {
@@ -341,7 +357,7 @@ async function sendPayoutCompletedEmail(
       return { success: false, error: result.message || 'Failed to send email' };
     }
 
-    console.log('[Stripe Webhook] Payout completed email sent to:', artistEmail);
+    console.log('[Stripe Webhook] Payout completed email sent');
     return { success: true, messageId: result.id };
 
   } catch (error) {
@@ -502,7 +518,7 @@ async function sendRefundNotificationEmail(
       return { success: false, error: result.message || 'Failed to send email' };
     }
 
-    console.log('[Stripe Webhook] Refund notification email sent to:', artistEmail);
+    console.log('[Stripe Webhook] Refund notification email sent');
     return { success: true, messageId: result.id };
 
   } catch (error) {
@@ -528,17 +544,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log('[Stripe Webhook]   - stripeSecretKey exists:', !!stripeSecretKey);
     console.log('[Stripe Webhook]   - env from locals:', !!env);
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
     console.log('[Stripe Webhook]   - Firebase projectId:', projectId || 'MISSING');
     console.log('[Stripe Webhook]   - Firebase apiKey exists:', !!apiKey);
-
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     // Get raw body for signature verification
     const payload = await request.text();
@@ -685,7 +695,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     isRenewal: false
                   })
                 });
-                console.log('[Stripe Webhook] ✓ Welcome email sent to:', email);
+                console.log('[Stripe Webhook] ✓ Welcome email sent');
 
                 // Mark referral code as redeemed if one was used
                 const referralCardId = metadata.referralCardId;
@@ -836,7 +846,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       isRenewal: false
                     })
                   });
-                  console.log('[Stripe Webhook] ✓ Welcome email sent to:', email);
+                  console.log('[Stripe Webhook] ✓ Welcome email sent');
                 } catch (emailError) {
                   console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
                 }
@@ -908,7 +918,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Extract order data from metadata
       const metadata = session.metadata || {};
       console.log('[Stripe Webhook] Metadata keys:', Object.keys(metadata).join(', '));
-      console.log('[Stripe Webhook] Metadata:', JSON.stringify(metadata, null, 2));
 
       // Handle gift card purchases
       if (metadata.type === 'giftcard') {
@@ -972,16 +981,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Skip if no customer email (not a valid order)
       if (!metadata.customer_email) {
         console.log('[Stripe Webhook] ⚠️ No customer email in metadata - skipping');
-        console.log('[Stripe Webhook] Available metadata:', JSON.stringify(metadata));
+        console.log('[Stripe Webhook] Available metadata keys:', Object.keys(metadata).join(', '));
         return new Response(JSON.stringify({ received: true }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
       }
 
-      console.log('[Stripe Webhook] ✓ Customer email found:', metadata.customer_email);
+      console.log('[Stripe Webhook] ✓ Customer email found');
 
       // IDEMPOTENCY CHECK: Check if order already exists for this payment intent
+      // Uses throwOnError=true so Firebase outages return 500 (Stripe retries) instead of creating duplicates
       const paymentIntentId = session.payment_intent;
       if (paymentIntentId) {
         console.log('[Stripe Webhook] Checking for existing order with paymentIntentId:', paymentIntentId);
@@ -989,10 +999,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const existingOrders = await queryCollection('orders', {
             filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
             limit: 1
-          });
+          }, true);
 
           if (existingOrders && existingOrders.length > 0) {
-            console.log('[Stripe Webhook] ⚠️ Order already exists for this payment intent:', existingOrders[0].id);
+            console.log('[Stripe Webhook] Order already exists for this payment intent:', existingOrders[0].id);
             console.log('[Stripe Webhook] Order number:', existingOrders[0].orderNumber);
             console.log('[Stripe Webhook] Skipping duplicate order creation');
             return new Response(JSON.stringify({
@@ -1004,10 +1014,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
               headers: { 'Content-Type': 'application/json' }
             });
           }
-          console.log('[Stripe Webhook] ✓ No existing order found - proceeding with creation');
+          console.log('[Stripe Webhook] No existing order found - proceeding with creation');
         } catch (idempotencyErr) {
-          console.error('[Stripe Webhook] ⚠️ Idempotency check failed:', idempotencyErr);
-          // Continue anyway - better to risk duplicate than fail order
+          console.error('[Stripe Webhook] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+          // Return 500 so Stripe retries later when Firebase is back up
+          // This prevents duplicate orders when we can't verify idempotency
+          return new Response(JSON.stringify({
+            error: 'Temporary error checking order status. Will retry.',
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
         }
       }
 
@@ -1138,12 +1155,36 @@ export const POST: APIRoute = async ({ request, locals }) => {
           stockIssue = true;
         }
       } catch (stockErr) {
-        console.error('[Stripe Webhook] Stock validation error (proceeding with order):', stockErr);
-        // Don't block order creation if stock check itself fails
+        console.error('[Stripe Webhook] Stock validation error (Firebase may be unreachable):', stockErr);
+        // Payment is already captured - we MUST create the order regardless
+        // Flag it so admin can review manually
+        stockIssue = true;
+      }
+
+      // D1 DURABLE RECORD: Insert pending order before Firebase creation
+      // If Firebase fails after payment, this record ensures the order is not lost
+      const db = env?.DB;
+      if (db) {
+        try {
+          await db.prepare(`
+            INSERT INTO pending_orders (stripe_session_id, customer_email, amount_total, currency, items, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
+          `).bind(
+            session.id,
+            metadata.customer_email || session.customer_email || '',
+            session.amount_total || 0,
+            session.currency || 'gbp',
+            metadata.items_json || JSON.stringify(items)
+          ).run();
+          console.log('[Stripe Webhook] D1 pending_orders row inserted for session:', session.id);
+        } catch (d1Err) {
+          // D1 write failure must not block order creation — log and continue
+          console.error('[Stripe Webhook] D1 pending_orders insert failed (non-blocking):', d1Err);
+        }
       }
 
       console.log('[Stripe Webhook] Calling createOrder with:');
-      console.log('[Stripe Webhook]   - Customer:', metadata.customer_email);
+      console.log('[Stripe Webhook]   - Customer: [REDACTED]');
       console.log('[Stripe Webhook]   - Items:', items.length);
       console.log('[Stripe Webhook]   - Total:', session.amount_total / 100);
       console.log('[Stripe Webhook]   - PaymentIntent:', session.payment_intent);
@@ -1179,7 +1220,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         env
       });
 
-      console.log('[Stripe Webhook] createOrder returned:', JSON.stringify(result));
+      console.log('[Stripe Webhook] createOrder returned:', result.success ? 'SUCCESS' : 'FAILED', result.orderId || '');
 
       if (!result.success) {
         console.error('[Stripe Webhook] ❌ ORDER CREATION FAILED');
@@ -1202,6 +1243,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] ✅ ORDER CREATED SUCCESSFULLY');
       console.log('[Stripe Webhook] Order Number:', result.orderNumber);
       console.log('[Stripe Webhook] Order ID:', result.orderId);
+
+      // D1: Mark pending order as completed with Firebase order ID
+      if (db) {
+        try {
+          await db.prepare(`
+            UPDATE pending_orders
+            SET status = 'completed', firebase_order_id = ?, updated_at = datetime('now')
+            WHERE stripe_session_id = ?
+          `).bind(result.orderId || '', session.id).run();
+          console.log('[Stripe Webhook] D1 pending_orders updated to completed for session:', session.id);
+        } catch (d1Err) {
+          console.error('[Stripe Webhook] D1 pending_orders update failed (non-blocking):', d1Err);
+        }
+      }
+
+      // Convert stock reservation
+      const reservationId = metadata.reservation_id;
+      if (reservationId) {
+        try {
+          const { convertReservation } = await import('../../../lib/order-utils');
+          await convertReservation(reservationId);
+          console.log('[Stripe Webhook] Reservation converted:', reservationId);
+        } catch (err) {
+          console.error('[Stripe Webhook] Failed to convert reservation:', err);
+        }
+      }
 
       // Record to sales ledger (source of truth for analytics)
       // Look up seller info for ALL items so multi-seller orders are handled correctly
@@ -1229,7 +1296,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
 
-                console.log(`[Stripe Webhook] Item ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
+                console.log(`[Stripe Webhook] Item ${item.name}: seller=${submitterId}`);
               }
             } catch (lookupErr) {
               console.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
@@ -1263,7 +1330,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   }
                 }
 
-                console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}, email=${submitterEmail || 'NOT SET'}`);
+                console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}`);
               }
             } catch (lookupErr) {
               console.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
@@ -1378,12 +1445,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               balanceAfter: newBalance
             };
 
-            const existingTransactions = creditData.transactions || [];
-            existingTransactions.push(transaction);
-
-            await updateDocument('userCredits', userId, {
-              lastUpdated: now,
-              transactions: existingTransactions
+            // Atomic arrayUnion prevents lost transactions under concurrent writes
+            await arrayUnion('userCredits', userId, 'transactions', [transaction], {
+              lastUpdated: now
             });
 
             // Also update user document atomically
@@ -1520,7 +1584,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       isRenewal: true
                     })
                   });
-                  console.log('[Stripe Webhook] ✓ Renewal email sent to:', email);
+                  console.log('[Stripe Webhook] ✓ Renewal email sent');
                 } catch (emailError) {
                   console.error('[Stripe Webhook] Failed to send renewal email:', emailError);
                 }
@@ -1580,6 +1644,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
         metadata: { disputeId: dispute.id, status: dispute.status },
         processingTimeMs: Date.now() - startTime
       }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+    }
+
+    // Handle checkout.session.expired - release reserved stock
+    if (event.type === 'checkout.session.expired') {
+      const session = event.data.object;
+      console.log('[Stripe Webhook] Checkout session expired:', session.id);
+
+      const reservationId = session.metadata?.reservation_id;
+      if (reservationId) {
+        try {
+          const { releaseReservation } = await import('../../../lib/order-utils');
+          await releaseReservation(reservationId);
+          console.log('[Stripe Webhook] Released reservation:', reservationId);
+        } catch (err) {
+          console.error('[Stripe Webhook] Failed to release reservation:', err);
+        }
+      }
     }
 
     // Handle refund - reverse artist transfers proportionally

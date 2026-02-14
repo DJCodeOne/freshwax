@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { verifyRequestUser, initFirebaseEnv, getDocument } from '../../lib/firebase-rest';
+import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
@@ -63,12 +63,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!rateLimit.allowed) {
       return rateLimitResponse(rateLimit.retryAfter!);
     }
-
-    // Initialize Firebase for Cloudflare runtime
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // SECURITY: Require authentication
     const { userId, error: authError } = await verifyRequestUser(request);

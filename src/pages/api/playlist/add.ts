@@ -1,7 +1,7 @@
 // src/pages/api/playlist/add.ts
 // Add URL to user's playlist - requires authentication
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
 import { parseJsonBody } from '../../../lib/api-utils';
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
@@ -57,10 +57,6 @@ async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbn
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY,
-  });
 
   try {
     // Verify authentication

@@ -1,8 +1,14 @@
+---
+interface Props {
+  nonce?: string;
+}
+const { nonce = '' } = Astro.props;
+---
 <!-- src/components/AudioCoordinator.astro -->
 <!-- Central Audio Coordination - Ensures only one audio source plays at a time -->
 <!-- Modes: idle | dj-mix | shuffle | tracklist-preview -->
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // ===========================================
   // AUDIO MANAGER - Central Audio Coordination
   // ===========================================

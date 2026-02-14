@@ -3,16 +3,13 @@
 // Validates that the source password matches the current DJ's stream key
 
 import type { APIContext } from 'astro';
-import { queryCollection, initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
 function initEnv(locals: any) {
   const env = (locals as any).runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-  });
+
 }
 
 // Icecast sends POST with form data for source authentication

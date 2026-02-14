@@ -2,7 +2,7 @@
 // Comprehensive admin settings API - handles artist permissions, livestream config, and system settings
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, setDocument } from '../../../lib/firebase-rest';
 import { successResponse, errorResponse, ApiErrors, getEnv, parseJsonBody } from '../../../lib/api-utils';
 
 export const prerender = false;
@@ -56,9 +56,7 @@ const DEFAULT_SETTINGS = {
 
 // GET: Load settings (admin only)
 export const GET: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase env from Cloudflare runtime
   const env = (locals as any).runtime?.env;
-  if (env) initFirebaseEnv(env);
 
   // SECURITY: Require admin authentication for viewing all settings
   // This prevents exposing system configuration to unauthorized users
@@ -135,9 +133,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Save settings
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase env from Cloudflare runtime
   const env = getEnv(locals);
-  if (env) initFirebaseEnv(env);
 
   try {
     const data = await parseJsonBody<{ action?: string; settings?: any; adminKey?: string; section?: string; sectionData?: any }>(request);

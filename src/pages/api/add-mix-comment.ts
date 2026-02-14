@@ -3,7 +3,7 @@
 // Dual-write: Firebase + D1
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -14,13 +14,8 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-// Initialize Firebase helper
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 function containsLinks(text: string): boolean {
@@ -100,7 +95,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
 
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {
@@ -214,10 +208,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    if (!mixData.comments) {
-      mixData.comments = [];
-    }
-
     const newComment = {
       id: 'comment_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
       userId,
@@ -231,11 +221,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[add-mix-comment] Adding comment:', newComment);
 
-    mixData.comments.push(newComment);
-
-    await updateDocument('dj-mixes', mixId, {
-      comments: mixData.comments,
-      commentCount: mixData.comments.length,
+    // Use atomic arrayUnion to prevent lost comments under concurrent writes
+    const currentCount = Array.isArray(mixData.comments) ? mixData.comments.length : 0;
+    await arrayUnion('dj-mixes', mixId, 'comments', [newComment], {
+      commentCount: currentCount + 1,
       updatedAt: new Date().toISOString()
     });
 
@@ -266,7 +255,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       comment: newComment,
-      commentCount: mixData.comments.length
+      commentCount: currentCount + 1
     }), {
       status: 200,
       headers: { 

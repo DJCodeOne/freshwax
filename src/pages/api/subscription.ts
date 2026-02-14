@@ -1,7 +1,7 @@
 // src/pages/api/subscription.ts
 // Subscription management API - check limits, get status, upgrade
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import {
   SUBSCRIPTION_TIERS,
   TIER_LIMITS,
@@ -28,10 +28,6 @@ const log = {
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   // Initialize admin config from runtime env
   initAdminEnv(env);
 }

@@ -1,7 +1,7 @@
 // src/pages/api/get-release.ts
 // Uses Firebase REST API - works on Cloudflare Pages
 import type { APIRoute } from 'astro';
-import { getDocument, clearCache, verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, clearCache, verifyRequestUser } from '../../lib/firebase-rest';
 import { normalizeRelease } from '../../lib/releases';
 import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
 
@@ -15,10 +15,6 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-  });
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const url = new URL(request.url);

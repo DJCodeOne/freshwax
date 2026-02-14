@@ -3,7 +3,7 @@
 // Uses service account for writes to ensure Firebase security rules don't block
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 
 // Build service account key from individual env vars
@@ -30,12 +30,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Get runtime env
     const env = (locals as any)?.runtime?.env || {};
-
-    // Initialize Firebase for reads and auth verification
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // SECURITY: Verify Firebase token instead of trusting cookies
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

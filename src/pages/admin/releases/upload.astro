@@ -9,6 +9,7 @@ if (authResult) return Astro.redirect('/login');
 export const prerender = false;
 
 const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://localhost:8089';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <AdminLayout title="Upload Release" activeNav="releases">
 <div class="card"><div class="card-body">
@@ -77,10 +78,10 @@ const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://local
 </div></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-<script define:vars={{ AUDIO_PROCESSOR_URL }}>
+<script define:vars={{ AUDIO_PROCESSOR_URL }} nonce={nonce}>
   window.__AUDIO_PROCESSOR_URL = AUDIO_PROCESSOR_URL;
 </script>
-<script is:inline>
+<script is:inline nonce={nonce}>
 // Elements
 const dropZone = document.getElementById("dropZone");
 const zipInput = document.getElementById("zipInput");
@@ -512,9 +513,9 @@ uploadBtn.onclick = async () => {
     );
 
     if (processingResult.processed) {
-      setStatus(`Release uploaded and audio processed! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+      setStatus(`Release uploaded and audio processed! ${processingResult.message} <a href="/admin/releases/manage/">Manage Releases</a>`);
     } else {
-      setStatus(`Release uploaded successfully! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+      setStatus(`Release uploaded successfully! ${processingResult.message} <a href="/admin/releases/manage/">Manage Releases</a>`);
     }
 
     // Reset
@@ -749,9 +750,9 @@ manualBtn.onclick = async () => {
     );
 
     if (processingResult.processed) {
-      setStatus(`Release uploaded and audio processed! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+      setStatus(`Release uploaded and audio processed! ${processingResult.message} <a href="/admin/releases/manage/">Manage Releases</a>`);
     } else {
-      setStatus(`Release uploaded successfully! ${processingResult.message} <a href="/admin/releases/manage">Manage Releases</a>`);
+      setStatus(`Release uploaded successfully! ${processingResult.message} <a href="/admin/releases/manage/">Manage Releases</a>`);
     }
 
     // Reset form

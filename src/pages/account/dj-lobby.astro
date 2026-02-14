@@ -25,6 +25,7 @@ const firebaseConfig = {
 const hlsBaseUrl = 'https://stream.freshwax.co.uk';
 
 const runtime = (Astro.locals as any).runtime;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <!DOCTYPE html>
@@ -41,13 +42,13 @@ const runtime = (Astro.locals as any).runtime;
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Configuration - must be set before scripts load -->
-  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }}>
+  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }} nonce={nonce}>
     window.PUSHER_CONFIG = pusherConfig;
     window.HLS_BASE_URL = hlsBaseUrl;
     window.FIREBASE_CONFIG = firebaseConfig;
   </script>
   <!-- Email verification check (loaded early so FreshWax object exists) -->
-  <script is:inline src="/email-verify-check.js"></script>
+  <script is:inline src="/email-verify-check.js" nonce={nonce}></script>
 </head>
 <body class="dj-lobby-page">
   <!-- Auth Gate -->
@@ -68,7 +69,7 @@ const runtime = (Astro.locals as any).runtime;
       <div class="denied-icon">🔒</div>
       <h1>DJ Access Only</h1>
       <p>This area is restricted to approved DJs.</p>
-      <a href="/live" class="back-btn">Back to Live</a>
+      <a href="/live/" class="back-btn">Back to Live</a>
     </div>
   </div>
   
@@ -105,9 +106,9 @@ const runtime = (Astro.locals as any).runtime;
           </div>
 
           <div class="eligibility-actions">
-            <a href="/upload-mix" class="action-btn primary">Upload a Mix →</a>
-            <a href="/dj-mixes" class="action-btn secondary">View DJ Mixes</a>
-            <a href="/live" class="action-btn secondary">Back to Live</a>
+            <a href="/upload-mix/" class="action-btn primary">Upload a Mix →</a>
+            <a href="/dj-mixes/" class="action-btn secondary">View DJ Mixes</a>
+            <a href="/live/" class="action-btn secondary">Back to Live</a>
           </div>
         </div>
 
@@ -221,7 +222,7 @@ const runtime = (Astro.locals as any).runtime;
           <span id="headerTimeLeft" class="header-time-value">--:--</span>
           <span class="header-time-label">remaining</span>
         </div>
-        <a href="/live" class="back-link">
+        <a href="/live/" class="back-link">
           <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
@@ -315,7 +316,7 @@ const runtime = (Astro.locals as any).runtime;
 
         <!-- Streaming Setup Link -->
         <div class="setup-link-section">
-          <a href="/account/streaming-setup" class="setup-link-btn">
+          <a href="/account/streaming-setup/" class="setup-link-btn">
             <span class="setup-text">Streaming Setup</span>
             <span class="setup-arrow">→</span>
           </a>
@@ -1431,27 +1432,25 @@ const runtime = (Astro.locals as any).runtime;
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, collection, query, orderBy, limit, addDoc, serverTimestamp, doc, setDoc, deleteDoc, getDocs, getDoc, where, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-  
+
   // Pusher-based real-time features (replaces Firebase onSnapshot)
-  import { 
-    initDjLobbyPusher, 
-    sendChatMessage, 
-    requestTakeover, 
-    approveTakeover, 
+  import {
+    initDjLobbyPusher,
+    sendChatMessage,
+    requestTakeover,
+    approveTakeover,
     declineTakeover,
     openDmConversation,
     sendDm,
     cleanup as cleanupPusher,
     getOnlineDjs
   } from '/dj-lobby-pusher.js?v=3.5';
-  
+
   const app = initializeApp(window.FIREBASE_CONFIG);
 
   const auth = getAuth(app);
   // Expose auth globally for pusher module to get idToken
   window.firebaseAuth = auth;
-  const db = getFirestore(app);
 
   // Debug logging - set to false for production
   const DEBUG = false;
@@ -1473,7 +1472,6 @@ const runtime = (Astro.locals as any).runtime;
   let userInfo = null;
   let currentStream = null;
   let mySlot = null;
-  let presenceRef = null;
   let streamStartTime = null;
   let streamEndTime = null;
   let previousStreamDjId = null; // Track DJ changes for seamless transitions
@@ -1515,6 +1513,13 @@ const runtime = (Astro.locals as any).runtime;
   let obsKWeightedAnalyserR = null;
   let liveKWeightedAnalyserL = null;
   let liveKWeightedAnalyserR = null;
+
+  // Polling interval IDs - stored for cleanup on View Transitions navigation
+  let lobbyStreamStatusInterval = null;
+  let lobbyTimeRemainingInterval = null;
+  let lobbyStreamKeyInterval = null;
+  let lobbyAllSlotsInterval = null;
+  let lobbyAudioPreviewObserver = null;
 
   // Broadcast mode: 'placeholder' or 'video' - determines what visual to show on live stream
   let broadcastMode = 'placeholder';
@@ -1646,7 +1651,7 @@ const runtime = (Astro.locals as any).runtime;
             <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Taking too long?</h2>
             <p style="color: #aaa; margin-bottom: 1.5rem;">Authentication is taking longer than expected.</p>
             <button onclick="location.reload()" class="action-btn primary">Refresh Page</button>
-            <a href="/live" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
+            <a href="/live/" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
           </div>
         `;
       }
@@ -1659,7 +1664,7 @@ const runtime = (Astro.locals as any).runtime;
     authInitialized = true;
     clearTimeout(authTimeout);
     if (!user) {
-      window.location.href = '/login?redirect=/account/dj-lobby';
+      window.location.href = '/login/?redirect=/account/dj-lobby/';
       return;
     }
     currentUser = user;
@@ -1678,7 +1683,7 @@ const runtime = (Astro.locals as any).runtime;
             <h2 style="margin: 1rem 0 0.5rem; color: #fff;">Connection Issue</h2>
             <p style="color: #aaa; margin-bottom: 1.5rem;">Unable to verify DJ access. Please check your connection and try again.</p>
             <button onclick="location.reload()" class="action-btn primary">Try Again</button>
-            <a href="/live" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
+            <a href="/live/" class="action-btn secondary" style="margin-top: 0.75rem; display: inline-block;">Back to Live</a>
           </div>
         `;
       }
@@ -1842,8 +1847,8 @@ const runtime = (Astro.locals as any).runtime;
         </div>
       `;
       actions.innerHTML = `
-        <a href="/contact" class="action-btn primary">Contact Support</a>
-        <a href="/live" class="action-btn secondary">Back to Live</a>
+        <a href="/contact/" class="action-btn primary">Contact Support</a>
+        <a href="/live/" class="action-btn secondary">Back to Live</a>
       `;
       whySection.classList.add('hidden');
       document.getElementById('bypassRequestSection')?.classList.add('hidden');
@@ -1863,8 +1868,8 @@ const runtime = (Astro.locals as any).runtime;
         </div>
       `;
       actions.innerHTML = `
-        <a href="/contact" class="action-btn primary">Contact Support</a>
-        <a href="/live" class="action-btn secondary">Back to Live</a>
+        <a href="/contact/" class="action-btn primary">Contact Support</a>
+        <a href="/live/" class="action-btn secondary">Back to Live</a>
       `;
       whySection.classList.add('hidden');
       document.getElementById('bypassRequestSection')?.classList.add('hidden');
@@ -2786,7 +2791,7 @@ const runtime = (Astro.locals as any).runtime;
     // DEBUG: Monitor audioPreview visibility changes
     const audioPreviewEl = document.getElementById('audioPreview');
     if (audioPreviewEl) {
-      const observer = new MutationObserver((mutations) => {
+      lobbyAudioPreviewObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
           if (mutation.attributeName === 'class') {
             const isHidden = audioPreviewEl.classList.contains('hidden');
@@ -2794,7 +2799,7 @@ const runtime = (Astro.locals as any).runtime;
           }
         });
       });
-      observer.observe(audioPreviewEl, { attributes: true, attributeFilter: ['class'] });
+      lobbyAudioPreviewObserver.observe(audioPreviewEl, { attributes: true, attributeFilter: ['class'] });
       console.log('[Stream DEBUG] MutationObserver attached to audioPreview');
     }
 
@@ -2827,14 +2832,15 @@ const runtime = (Astro.locals as any).runtime;
     loadTwitchSettings();
 
     // Polling for non-realtime data (reduced frequency to minimize Firebase reads)
-    setInterval(loadStreamStatus, 60000); // 60s instead of 10s - saves ~84% reads
-    setInterval(updateTimeRemaining, 100); // Update every 100ms for tenths of a second
-    setInterval(checkStreamKeyAvailability, 60000); // 60s instead of 30s
-    setInterval(loadAllSlots, 60000); // Refresh slots every minute for consecutive slot detection
+    lobbyStreamStatusInterval = setInterval(loadStreamStatus, 60000); // 60s instead of 10s - saves ~84% reads
+    lobbyTimeRemainingInterval = setInterval(updateTimeRemaining, 100); // Update every 100ms for tenths of a second
+    lobbyStreamKeyInterval = setInterval(checkStreamKeyAvailability, 60000); // 60s instead of 30s
+    lobbyAllSlotsInterval = setInterval(loadAllSlots, 60000); // Refresh slots every minute for consecutive slot detection
   }
   
   // Page cleanup - called when leaving
   function setupPageCleanup() {
+    // Full page navigation cleanup
     window.addEventListener('beforeunload', async () => {
       try {
         await cleanupPusher();
@@ -2842,61 +2848,68 @@ const runtime = (Astro.locals as any).runtime;
         console.error('Cleanup error:', e);
       }
     });
+
+    // View Transitions navigation cleanup (beforeunload does NOT fire for these)
+    document.addEventListener('astro:before-swap', async () => {
+      try {
+        clearInterval(lobbyStreamStatusInterval);
+        clearInterval(lobbyTimeRemainingInterval);
+        clearInterval(lobbyStreamKeyInterval);
+        clearInterval(lobbyAllSlotsInterval);
+        lobbyStreamStatusInterval = null;
+        lobbyTimeRemainingInterval = null;
+        lobbyStreamKeyInterval = null;
+        lobbyAllSlotsInterval = null;
+
+        if (lobbyAudioPreviewObserver) {
+          lobbyAudioPreviewObserver.disconnect();
+          lobbyAudioPreviewObserver = null;
+        }
+
+        await cleanupPusher();
+      } catch(e) {
+        console.error('View Transition cleanup error:', e);
+      }
+    });
   }
-  
+
   // Call setup after initLobby
   setupPageCleanup();
   
   // Check if chat should be cleaned up (2 hours since last stream ended and no one is live)
   async function checkAndCleanupChat() {
     try {
-      // Get chat settings doc - this may fail due to permissions, that's ok
-      const settingsRef = doc(db, 'djLobbySettings', 'chatCleanup');
-      const settingsSnap = await getDoc(settingsRef);
-      
-      if (!settingsSnap.exists()) return; // No settings, skip cleanup
-      
-      const settings = settingsSnap.data();
-      const lastStreamEndTime = settings.lastStreamEndTime?.toMillis() || 0;
-      const now = Date.now();
-      const twoHoursMs = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
-      
-      // If no one is currently streaming AND 2 hours have passed since last stream ended
-      if (!currentStream && lastStreamEndTime > 0 && (now - lastStreamEndTime) > twoHoursMs) {
-        log('Chat cleanup: 2+ hours since last stream, clearing chat history...');
-        
-        // Delete all DJ lobby chat messages
-        const chatSnapshot = await getDocs(collection(db, 'djLobbyChat'));
-        const deletePromises = [];
-        chatSnapshot.forEach(document => {
-          deletePromises.push(deleteDoc(doc(db, 'djLobbyChat', document.id)));
-        });
-        await Promise.all(deletePromises);
-        
-        // Reset the lastStreamEndTime so we don't keep deleting
-        await setDoc(settingsRef, { 
-          lastStreamEndTime: null,
-          lastCleanup: serverTimestamp()
-        }, { merge: true });
-        
-        log('Chat cleanup complete');
+      const token = await currentUser?.getIdToken();
+      if (!token) return;
+
+      const response = await fetch('/api/dj-lobby/chat-cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          action: 'check-and-cleanup',
+          isCurrentlyLive: !!currentStream
+        })
+      });
+      const result = await response.json();
+      if (result.cleaned) {
+        log('Chat cleanup complete via API:', result.messagesDeleted, 'messages deleted');
       }
     } catch (e) {
-      // Permissions error is expected if rules don't allow reading djLobbySettings
-      // This is non-critical, just skip cleanup silently
-      if (e.code !== 'permission-denied') {
-        console.warn('Chat cleanup skipped:', e.message);
-      }
+      console.warn('Chat cleanup skipped:', e.message);
     }
   }
-  
+
   // Call this when a stream ends to record the time
   async function recordStreamEnd() {
     try {
-      const settingsRef = doc(db, 'djLobbySettings', 'chatCleanup');
-      await setDoc(settingsRef, { 
-        lastStreamEndTime: serverTimestamp()
-      }, { merge: true });
+      const token = await currentUser?.getIdToken();
+      if (!token) return;
+
+      await fetch('/api/dj-lobby/chat-cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ action: 'record-stream-end' })
+      });
     } catch (e) {
       console.error('Record stream end error:', e);
     }
@@ -3122,15 +3135,19 @@ const runtime = (Astro.locals as any).runtime;
           hlsUrl = hlsBaseUrl + "/" + currentStream.streamKey + "/index.m3u8";
         }
 
-        const slotRef = doc(db, 'livestreamSlots', currentStream.id);
-        await updateDoc(slotRef, {
-          broadcastMode: mode,
-          hlsUrl: hlsUrl,
-          updatedAt: new Date().toISOString()
+        const token = await currentUser?.getIdToken();
+        if (!token) throw new Error('No auth token');
+
+        const response = await fetch('/api/dj-lobby/broadcast-mode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ slotId: currentStream.id, mode, hlsUrl })
         });
-        console.log('[Broadcast] Updated Firestore:', { mode, hlsUrl });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
+        console.log('[Broadcast] Updated via API:', { mode, hlsUrl });
       } catch (error) {
-        console.error('[Broadcast] Failed to update Firestore:', error);
+        console.error('[Broadcast] Failed to update broadcast mode:', error);
       }
     }
   }
@@ -6535,24 +6552,16 @@ const runtime = (Astro.locals as any).runtime;
   
   async function cleanupDmMessages() {
     if (!dmTargetDj || !currentUser) return;
-    
+
     try {
       const channelId = getDmChannelId(currentUser.uid, dmTargetDj.id);
-      
-      // Delete all messages in the channel
-      const messagesRef = collection(db, 'djDirectMessages', channelId, 'messages');
-      const snapshot = await getDocs(messagesRef);
-      
-      const deletePromises = [];
-      snapshot.forEach(document => {
-        deletePromises.push(deleteDoc(doc(db, 'djDirectMessages', channelId, 'messages', document.id)));
+      const token = await currentUser.getIdToken();
+
+      await fetch('/api/dj-lobby/dm-cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ channelId })
       });
-      
-      await Promise.all(deletePromises);
-      
-      // Delete channel doc
-      await deleteDoc(doc(db, 'djDirectMessages', channelId));
-      
     } catch (e) {
       console.error('DM cleanup error:', e);
     }
@@ -7158,14 +7167,24 @@ const runtime = (Astro.locals as any).runtime;
         userIsStreaming = false;
         stopObsPreviewCheck();
 
-        if (presenceRef) {
-          await deleteDoc(presenceRef);
+        // Leave presence via API before signing out
+        try {
+          const token = await currentUser?.getIdToken();
+          if (token && currentUser) {
+            await fetch('/api/dj-lobby/presence', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ action: 'leave', userId: currentUser.uid })
+            });
+          }
+        } catch (presenceErr) {
+          console.warn('Presence leave error (non-fatal):', presenceErr);
         }
         await signOut(auth);
-        window.location.href = '/live';
+        window.location.href = '/live/';
       } catch (e) {
         console.error('Sign out error:', e);
-        window.location.href = '/live';
+        window.location.href = '/live/';
       }
     });
     
@@ -8282,54 +8301,65 @@ const runtime = (Astro.locals as any).runtime;
         takeoverPending = true;
         updateTakeoverAttemptsUI();
         
-        await setDoc(doc(db, 'djTakeoverRequests', currentStream.djId), {
-          requesterId: currentUser.uid,
-          requesterName: userInfo.name,
-          requesterAvatar: userInfo.avatar,
-          targetDjId: currentStream.djId,
-          targetDjName: currentStream.djName,
-          status: 'pending',
-          createdAt: serverTimestamp()
+        // Send takeover request via API (handles Firestore + Pusher)
+        const token = await currentUser.getIdToken();
+        const response = await fetch('/api/dj-lobby/takeover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            action: 'request',
+            requesterId: currentUser.uid,
+            requesterName: userInfo.name,
+            requesterAvatar: userInfo.avatar,
+            targetDjId: currentStream.djId,
+            targetDjName: currentStream.djName
+          })
         });
-        
-        await setDoc(doc(db, 'djTakeoverRequests', `request_${currentUser.uid}`), {
-          requesterId: currentUser.uid,
-          targetDjId: currentStream.djId,
-          status: 'pending',
-          createdAt: serverTimestamp()
-        });
-        
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
+
         document.getElementById('requestTakeoverBtn').classList.add('hidden');
         document.getElementById('takeoverPending').classList.remove('hidden');
-        
+
         // Start 20-second timeout countdown
         let countdown = 20;
         const countdownEl = document.getElementById('takeoverCountdown');
         countdownEl.textContent = `(${countdown}s)`;
-        
-        takeoverTimeout = setInterval(() => {
+
+        takeoverTimeout = setInterval(async () => {
           countdown--;
           countdownEl.textContent = `(${countdown}s)`;
-          
+
           if (countdown <= 0) {
             clearInterval(takeoverTimeout);
             takeoverTimeout = null;
             takeoverPending = false;
-            
+
             // Reset UI - timeout expired
             document.getElementById('takeoverPending').classList.add('hidden');
-            
+
             // Check if more attempts available
             if (takeoverAttempts < MAX_TAKEOVER_ATTEMPTS) {
               document.getElementById('requestTakeoverBtn').classList.remove('hidden');
               document.getElementById('requestTakeoverBtn').classList.remove('disabled');
             }
-            
+
             updateTakeoverAttemptsUI();
-            
-            // Clean up the pending request
-            deleteDoc(doc(db, 'djTakeoverRequests', currentStream.djId)).catch(() => {});
-            deleteDoc(doc(db, 'djTakeoverRequests', `request_${currentUser.uid}`)).catch(() => {});
+
+            // Clean up the pending request via API
+            try {
+              const cancelToken = await currentUser.getIdToken();
+              await fetch('/api/dj-lobby/takeover', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cancelToken}` },
+                body: JSON.stringify({
+                  action: 'cancel',
+                  requesterId: currentUser.uid
+                })
+              });
+            } catch (cancelErr) {
+              console.warn('Takeover cancel cleanup error:', cancelErr);
+            }
           }
         }, 1000);
         

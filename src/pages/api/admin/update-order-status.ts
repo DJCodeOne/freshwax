@@ -2,7 +2,7 @@
 // API endpoint to update order status with optional tracking info
 
 import type { APIRoute } from 'astro';
-import { updateDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
@@ -18,10 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const { orderId, status, tracking } = body;

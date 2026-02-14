@@ -2,7 +2,7 @@
 // Updates release tracks with processed audio URLs (MP3, WAV, preview)
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument } from '../../../lib/firebase-service-account';
 import { getAdminKey } from '../../../lib/api-utils';
 
@@ -49,11 +49,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    // Initialize Firebase
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const body = await request.json();
     const { releaseId, tracks } = body;

@@ -1,7 +1,7 @@
 // src/pages/api/admin/clear-chat.ts
 // Admin endpoint to clear chat messages with rate limiting and batch safeguards
 import type { APIRoute } from 'astro';
-import { queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import {
   checkRateLimit,
@@ -22,10 +22,6 @@ const DELAY_BETWEEN_DELETES_MS = 10; // Small delay to prevent overwhelming Fire
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

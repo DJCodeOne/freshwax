@@ -2,22 +2,17 @@
 // Creates Stripe checkout session for Plus subscription upgrade
 // Supports unique referral codes from KV (new) and Firebase giftCards (legacy)
 import type { APIRoute } from 'astro';
-import { queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
 
 export const prerender = false;
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-  });
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    // Initialize Firebase for auth verification
     const env = (locals as any)?.runtime?.env;
     initFirebase(locals);
 

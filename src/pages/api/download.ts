@@ -2,7 +2,7 @@
 // Server-side download proxy to bypass CORS for R2 files
 
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, initFirebaseEnv, queryCollection } from '../../lib/firebase-rest';
+import { verifyRequestUser, queryCollection } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -16,10 +16,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const env = (locals as any)?.runtime?.env;
 
   // Initialize Firebase for auth verification
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   // SECURITY: Require authentication - downloads are for purchased content
   const { userId, error: authError } = await verifyRequestUser(request);

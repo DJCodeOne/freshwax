@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
-import { initFirebaseEnv, getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
+import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -53,13 +53,8 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
   try {
     const env = (locals as any)?.runtime?.env;
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     // Get PayPal credentials
     const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
@@ -227,12 +222,9 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
             balanceAfter: newBalance
           };
 
-          const existingTransactions = creditData.transactions || [];
-          existingTransactions.push(transaction);
-
-          await updateDocument('userCredits', userId, {
-            lastUpdated: now,
-            transactions: existingTransactions
+          // Atomic arrayUnion prevents lost transactions under concurrent writes
+          await arrayUnion('userCredits', userId, 'transactions', [transaction], {
+            lastUpdated: now
           });
 
           await atomicIncrement('users', userId, { creditBalance: -appliedCredit });

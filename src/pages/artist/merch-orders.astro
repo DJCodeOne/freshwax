@@ -105,6 +105,7 @@ const formatDate = (date: Date) => new Intl.DateTimeFormat('en-GB', { day: 'nume
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow" />
   <title>Order History | Fresh Wax</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -388,19 +389,19 @@ const formatDate = (date: Date) => new Intl.DateTimeFormat('en-GB', { day: 'nume
       <div class="auth-message">
         <h2>Sign In Required</h2>
         <p>Please sign in to view your orders.</p>
-        <a href="/login" class="auth-link">Partner Login</a>
+        <a href="/login/" class="auth-link">Partner Login</a>
       </div>
     ) : !isMerchSupplier ? (
       <div class="auth-message">
         <h2>Access Restricted</h2>
         <p>This page is only available to merchandise suppliers.</p>
-        <a href="/artist/dashboard" class="auth-link">Back to Dashboard</a>
+        <a href="/artist/dashboard/" class="auth-link">Back to Dashboard</a>
       </div>
     ) : (
       <div class="content-wrapper">
         <header>
           <h1><span class="page-icon">📋</span><span class="page-title">Order History</span></h1>
-          <a href="/artist/dashboard" class="back-link">← Back to Dashboard</a>
+          <a href="/artist/dashboard/" class="back-link">← Back to Dashboard</a>
         </header>
         
         <div class="stats-grid">

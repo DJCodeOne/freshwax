@@ -221,7 +221,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
 <Layout title="Order Confirmed" noindex={true}>
   <Header />
   
-  <main class="confirmation-main">
+  <div class="confirmation-main">
     <div class="container">
       {error ? (
         <div class="error-state">
@@ -418,7 +418,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
           <!-- Actions -->
           <div class="actions">
             <a href="/" class="btn btn-primary">Continue Shopping</a>
-            <a href="/account/dashboard" class="btn btn-secondary">View Orders</a>
+            <a href="/account/dashboard/" class="btn btn-secondary">View Orders</a>
           </div>
         </>
       )}
@@ -437,7 +437,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
         <button type="button" id="zipModalClose" class="zip-modal-close">Cancel</button>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

@@ -14,6 +14,7 @@ const firebaseConfig = {
 
 // reCAPTCHA site key (v3)
 const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <html lang="en">
 <head>
@@ -25,8 +26,9 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
   <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
 </head>
 <body>
+  <a href="#register-form" class="skip-link">Skip to registration form</a>
   <main class="auth-container">
-    <div class="auth-card">
+    <div class="auth-card" id="register-form">
       <div class="auth-header">
         <a href="/" class="logo-link">
           <div class="logo-wrapper">
@@ -91,7 +93,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
             </div>
             <span class="strength-text" id="strengthText"></span>
           </div>
-          <ul class="password-requirements" id="passwordRequirements">
+          <ul class="password-requirements" id="passwordRequirements" aria-live="polite">
             <li id="req-length"><span class="req-icon">○</span> At least 8 characters</li>
             <li id="req-upper"><span class="req-icon">○</span> One uppercase letter</li>
             <li id="req-number"><span class="req-icon">○</span> One number</li>
@@ -208,7 +210,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         <div class="form-group terms-container">
           <label class="checkbox-label">
             <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
-            <span>I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></span>
+            <span>I agree to the <a href="/terms/" target="_blank">Terms of Service</a> and <a href="/privacy/" target="_blank">Privacy Policy</a></span>
           </label>
         </div>
 
@@ -217,8 +219,8 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
           <span class="btn-loading" style="display: none;">Creating...</span>
         </button>
 
-        <div id="formError" class="form-error" style="display: none;"></div>
-        <div id="formSuccess" class="form-success" style="display: none;"></div>
+        <div id="formError" class="form-error" role="alert" style="display: none;"></div>
+        <div id="formSuccess" class="form-success" role="status" style="display: none;"></div>
 
         <p class="recaptcha-notice">
           This site is protected by reCAPTCHA and the Google
@@ -228,7 +230,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
       </form>
 
       <div class="auth-footer">
-        <p>Already have an account? <a href="/login">Sign in</a></p>
+        <p>Already have an account? <a href="/login/">Sign in</a></p>
       </div>
     </div>
   </main>
@@ -769,6 +771,31 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
     .recaptcha-notice a {
       color: var(--text-secondary, #888);
     }
+
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #dc2626;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .skip-link:focus {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      padding: 1rem;
+      background: #000;
+      color: #fff;
+    }
+    :focus-visible {
+      outline: 2px solid #ef4444;
+      outline-offset: 2px;
+    }
   </style>
 
   <script>
@@ -796,15 +823,13 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
     });
   </script>
 
-  <script type="module" define:vars={{ firebaseConfig, recaptchaSiteKey }}>
+  <script type="module" define:vars={{ firebaseConfig, recaptchaSiteKey }} nonce={nonce}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signInWithPopup, GoogleAuthProvider, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     // Initialize reCAPTCHA if site key is configured
     let recaptchaReady = false;
@@ -925,15 +950,15 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
       displayNameHint.className = 'input-hint';
 
       try {
-        // Query users collection for this display name (case-insensitive)
-        const normalizedName = name.toLowerCase();
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('displayNameLower', '==', normalizedName));
-        const snapshot = await getDocs(q);
+        // Check display name availability via server API (avoids Firestore SDK)
+        const response = await fetch(`/api/auth/check-display-name?name=${encodeURIComponent(name)}`);
+        const data = await response.json();
 
-        const isTaken = !snapshot.empty;
+        if (!data.success) {
+          throw new Error(data.error || 'Check failed');
+        }
 
-        if (isTaken) {
+        if (!data.available) {
           displayNameStatus.textContent = '✗';
           displayNameStatus.className = 'input-status taken';
           displayNameHint.textContent = 'This name is already taken';
@@ -999,54 +1024,42 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 
         // Normalize email (googlemail.com -> gmail.com)
         const normalizedEmail = normalizeGmailEmail(user.email);
-
-        // Check if user already exists
-        let userDoc = await getDoc(doc(db, 'users', user.uid));
-
-        if (userDoc.exists()) {
-          // Existing user - redirect to dashboard
-          window.location.href = '/account/dashboard';
-          return;
-        }
-
-        // New user - check if display name is already taken
         const googleDisplayName = user.displayName || normalizedEmail.split('@')[0];
-        const googleNameLower = googleDisplayName.toLowerCase();
-        const nameCheckRef = collection(db, 'users');
-        const nameCheckQuery = query(nameCheckRef, where('displayNameLower', '==', googleNameLower));
-        const nameCheckSnapshot = await getDocs(nameCheckQuery);
 
-        if (!nameCheckSnapshot.empty) {
-          // Sign out the Google user since we can't complete registration
-          await signOut(auth);
-          formError.textContent = 'The display name "' + googleDisplayName + '" is already taken. Please register with email and choose a different display name.';
-          formError.style.display = 'block';
-          return;
+        // Initialize user via server API (checks existence, display name, and creates if needed)
+        const idToken = await user.getIdToken();
+        const initResponse = await fetch('/api/auth/init-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            action: 'google-register',
+            email: normalizedEmail,
+            displayName: googleDisplayName,
+            photoURL: user.photoURL || null
+          })
+        });
+
+        const initData = await initResponse.json();
+
+        if (!initData.success) {
+          if (initData.error === 'display_name_taken') {
+            // Sign out the Google user since we can't complete registration
+            await signOut(auth);
+            formError.textContent = initData.message;
+            formError.style.display = 'block';
+            return;
+          }
+          throw new Error(initData.message || 'Failed to create account');
         }
 
-        // Create account with normalized email
-        const userData = {
-          uid: user.uid,
-          email: normalizedEmail,
-          displayName: googleDisplayName,
-          displayNameLower: googleNameLower,
-          photoURL: user.photoURL || null,
-          provider: 'Google',
-          emailVerified: true, // Google accounts are pre-verified
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          roles: {
-            customer: true,
-            dj: true,
-            artist: false,
-            merchSupplier: false,
-            vinylSeller: false,
-            admin: false
-          },
-          pendingRoles: {}
-        };
-
-        await setDoc(doc(db, 'users', user.uid), userData);
+        if (initData.exists) {
+          // Existing user - redirect to dashboard
+          window.location.href = '/account/dashboard/';
+          return;
+        }
 
         // Social login users are considered verified
         formSuccess.innerHTML = `
@@ -1056,7 +1069,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         formSuccess.style.display = 'block';
 
         setTimeout(() => {
-          window.location.href = '/account/dashboard';
+          window.location.href = '/account/dashboard/';
         }, 2000);
 
       } catch (error) {
@@ -1160,112 +1173,38 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
         // Update display name
         await updateProfile(user, { displayName });
 
-        // Build user document (use normalized email)
-        const userData = {
-          uid: user.uid,
-          email: normalizedEmail,
-          displayName: displayName,
-          displayNameLower: displayName.toLowerCase(),
-          provider: 'email',
-          emailVerified: false,  // Must verify email before full access
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          roles: {
-            customer: true,  // Auto-granted
-            dj: true,  // All users get DJ lobby access by default
-            artist: false,  // Requires approval
-            merchSupplier: false,  // Requires approval
-            vinylSeller: false,  // Requires approval
-            admin: false
+        // Initialize user profile via server API (creates Firestore doc + pending role requests)
+        const idToken = await user.getIdToken();
+        const initResponse = await fetch('/api/auth/init-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
           },
-          pendingRoles: {}
-        };
-
-        // Add artist request if selected
-        if (requestArtist) {
-          userData.pendingRoles.artist = {
-            requestedAt: serverTimestamp(),
-            status: 'pending',
-            artistName: document.getElementById('artistName').value.trim(),
-            bio: document.getElementById('artistBio').value.trim(),
-            links: document.getElementById('artistLinks').value.trim()
-          };
-        }
-
-        // Add merch seller request if selected
-        if (requestMerchSeller) {
-          userData.pendingRoles.merchSeller = {
-            requestedAt: serverTimestamp(),
-            status: 'pending',
-            businessName: document.getElementById('businessName').value.trim(),
-            description: document.getElementById('merchDescription').value.trim(),
-            website: document.getElementById('merchWebsite').value.trim()
-          };
-        }
-
-        // Add vinyl seller request if selected
-        if (requestVinylSeller) {
-          userData.pendingRoles.vinylSeller = {
-            requestedAt: serverTimestamp(),
-            status: 'pending',
-            storeName: document.getElementById('vinylStoreName').value.trim(),
-            description: document.getElementById('vinylDescription').value.trim(),
-            location: document.getElementById('vinylLocation').value.trim(),
-            discogsUrl: document.getElementById('vinylDiscogsUrl').value.trim()
-          };
-        }
-
-        // Save to Firestore (single users collection - customers collection deprecated)
-        await setDoc(doc(db, 'users', user.uid), userData);
-
-        // Also write pending requests to pendingRoleRequests collection (for REST API access)
-        if (requestArtist) {
-          await setDoc(doc(db, 'pendingRoleRequests', `${user.uid}_artist`), {
-            id: `${user.uid}_artist`,
-            uid: user.uid,
-            userId: user.uid,
-            roleType: 'artist',
+          body: JSON.stringify({
+            action: 'register',
+            email: normalizedEmail,
             displayName: displayName,
-            email: user.email,
-            status: 'pending',
-            requestedAt: serverTimestamp(),
-            artistName: document.getElementById('artistName').value.trim(),
-            bio: document.getElementById('artistBio').value.trim(),
-            links: document.getElementById('artistLinks').value.trim()
-          });
-        }
+            provider: 'email',
+            requestArtist: requestArtist,
+            requestMerchSeller: requestMerchSeller,
+            requestVinylSeller: requestVinylSeller,
+            artistName: requestArtist ? document.getElementById('artistName').value.trim() : undefined,
+            artistBio: requestArtist ? document.getElementById('artistBio').value.trim() : undefined,
+            artistLinks: requestArtist ? document.getElementById('artistLinks').value.trim() : undefined,
+            businessName: requestMerchSeller ? document.getElementById('businessName').value.trim() : undefined,
+            merchDescription: requestMerchSeller ? document.getElementById('merchDescription').value.trim() : undefined,
+            merchWebsite: requestMerchSeller ? document.getElementById('merchWebsite').value.trim() : undefined,
+            vinylStoreName: requestVinylSeller ? document.getElementById('vinylStoreName').value.trim() : undefined,
+            vinylDescription: requestVinylSeller ? document.getElementById('vinylDescription').value.trim() : undefined,
+            vinylLocation: requestVinylSeller ? document.getElementById('vinylLocation').value.trim() : undefined,
+            vinylDiscogsUrl: requestVinylSeller ? document.getElementById('vinylDiscogsUrl').value.trim() : undefined,
+          })
+        });
 
-        if (requestMerchSeller) {
-          await setDoc(doc(db, 'pendingRoleRequests', `${user.uid}_merchSeller`), {
-            id: `${user.uid}_merchSeller`,
-            uid: user.uid,
-            userId: user.uid,
-            roleType: 'merchSeller',
-            displayName: displayName,
-            email: user.email,
-            status: 'pending',
-            requestedAt: serverTimestamp(),
-            businessName: document.getElementById('businessName').value.trim(),
-            description: document.getElementById('merchDescription').value.trim(),
-            website: document.getElementById('merchWebsite').value.trim()
-          });
-        }
-
-        if (requestVinylSeller) {
-          await setDoc(doc(db, 'pendingRoleRequests', `${user.uid}_vinylSeller`), {
-            id: `${user.uid}_vinylSeller`,
-            uid: user.uid,
-            userId: user.uid,
-            roleType: 'vinylSeller',
-            displayName: displayName,
-            email: user.email,
-            status: 'pending',
-            requestedAt: serverTimestamp(),
-            storeName: document.getElementById('vinylStoreName').value.trim(),
-            description: document.getElementById('vinylDescription').value.trim(),
-            location: document.getElementById('vinylLocation').value.trim(),
-            discogsUrl: document.getElementById('vinylDiscogsUrl').value.trim()
-          });
+        const initData = await initResponse.json();
+        if (!initData.success) {
+          throw new Error(initData.error || 'Failed to create user profile');
         }
 
         // Send email verification
@@ -1302,7 +1241,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 
         // Redirect to verify-email page
         setTimeout(() => {
-          window.location.href = '/verify-email';
+          window.location.href = '/verify-email/';
         }, 3000);
 
       } catch (error) {

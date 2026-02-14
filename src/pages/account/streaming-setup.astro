@@ -2,6 +2,7 @@
 // src/pages/account/streaming-setup.astro
 // Streaming setup guide with OBS/BUTT instructions and speed test
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <!DOCTYPE html>
@@ -25,7 +26,7 @@ export const prerender = false;
   <div id="mainContent" class="main-content hidden">
     <header class="page-header">
       <div class="header-left">
-        <a href="/account/dj-lobby" class="back-link">
+        <a href="/account/dj-lobby/" class="back-link">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
             <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
           </svg>
@@ -1354,7 +1355,7 @@ export const prerender = false;
   }
 </style>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   window.FIREBASE_CONFIG = {
     apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
@@ -1372,7 +1373,7 @@ export const prerender = false;
   
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      window.location.href = '/login?redirect=/account/streaming-setup';
+      window.location.href = '/login/?redirect=/account/streaming-setup/';
       return;
     }
     
@@ -1393,11 +1394,11 @@ export const prerender = false;
         document.getElementById('mainContent').classList.remove('hidden');
         initPage();
       } else {
-        window.location.href = '/account/dj-lobby';
+        window.location.href = '/account/dj-lobby/';
       }
     } catch (e) {
       console.error('Auth error:', e);
-      window.location.href = '/account/dj-lobby';
+      window.location.href = '/account/dj-lobby/';
     }
   });
   

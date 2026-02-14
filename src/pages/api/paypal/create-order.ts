@@ -3,145 +3,10 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { setDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { setDocument } from '../../../lib/firebase-rest';
+import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 
 export const prerender = false;
-
-// Validate stock availability before checkout
-async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
-  const unavailableItems: string[] = [];
-
-  for (const item of items) {
-    const quantity = item.quantity || 1;
-    const itemType = item.type || 'digital';
-
-    try {
-      if (itemType === 'merch' && item.productId) {
-        // Check merch stock
-        const product = await getDocument('merch', item.productId);
-        if (product) {
-          if (item.size || item.color) {
-            const variantKey = item.size && item.color
-              ? `${item.size.toLowerCase()}_${item.color.toLowerCase()}`
-              : item.size?.toLowerCase() || item.color?.toLowerCase() || 'default';
-            const variantStock = product.variantStock?.[variantKey]?.stock ?? product.stock ?? 0;
-            if (variantStock < quantity) {
-              unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStock} available`);
-            }
-          } else {
-            const totalStock = product.totalStock ?? product.stock ?? 0;
-            if (totalStock < quantity) {
-              unavailableItems.push(`${item.name} - only ${totalStock} available`);
-            }
-          }
-        }
-      } else if (itemType === 'vinyl') {
-        // Check if this is a crates item (has sellerId, no releaseId) or release vinyl
-        if (item.sellerId && !item.releaseId) {
-          // Vinyl crates item - check if listing is still available
-          const listingId = item.id || item.productId;
-          if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
-            if (!listing) {
-              unavailableItems.push(`${item.name} - listing no longer exists`);
-            } else if (listing.status === 'sold') {
-              unavailableItems.push(`${item.name} - already sold`);
-            } else if (listing.status !== 'published') {
-              unavailableItems.push(`${item.name} - no longer available`);
-            }
-          }
-        } else {
-          // Release vinyl - check stock
-          const releaseId = item.releaseId || item.productId || item.id;
-          if (releaseId) {
-            const release = await getDocument('releases', releaseId);
-            if (release) {
-              const vinylStock = release.vinylStock ?? 0;
-              if (vinylStock < quantity) {
-                unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[PayPal] Error checking stock for', item.name, err);
-    }
-  }
-
-  return {
-    available: unavailableItems.length === 0,
-    unavailableItems
-  };
-}
-
-// Validate item prices server-side to prevent manipulation
-async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean, validationError?: string }> {
-  const validatedItems: any[] = [];
-  let hasPriceMismatch = false;
-
-  for (const item of items) {
-    let serverPrice = item.price;
-    const itemType = item.type || 'digital';
-
-    try {
-      if (itemType === 'merch' && item.productId) {
-        const product = await getDocument('merch', item.productId);
-        if (product) {
-          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
-        }
-      } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
-        // Check if this is a vinyl crates item
-        if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
-          // Vinyl crates item - look up price from vinylListings
-          const listingId = item.id || item.productId;
-          if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
-            if (listing) {
-              serverPrice = listing.price || item.price;
-              item.cratesShippingCost = listing.shippingCost || 0;
-              item.isCratesItem = true;
-            }
-          }
-        } else {
-          const releaseId = item.releaseId || item.productId || item.id;
-          if (releaseId) {
-            const release = await getDocument('releases', releaseId);
-            if (release) {
-              if (itemType === 'vinyl') {
-                serverPrice = release.vinylPrice || release.price || item.price;
-              } else if (itemType === 'track' && item.trackId) {
-                const track = (release.tracks || []).find((t: any) =>
-                  t.id === item.trackId || t.trackId === item.trackId
-                );
-                serverPrice = track?.price || release.trackPrice || 0.99;
-              } else {
-                serverPrice = release.price || release.digitalPrice || item.price;
-              }
-            }
-          }
-        }
-      }
-
-      if (Math.abs(serverPrice - item.price) > 0.01) {
-        console.warn('[PayPal] Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
-        hasPriceMismatch = true;
-      }
-
-      validatedItems.push({
-        ...item,
-        price: serverPrice,
-        originalClientPrice: item.price
-      });
-    } catch (err) {
-      console.error('[PayPal] Error validating price for', item.name, err);
-      // SECURITY: Reject items where price validation fails — never trust client price
-      return { validatedItems: [], hasPriceMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
-    }
-  }
-
-  return { validatedItems, hasPriceMismatch };
-}
 
 // Get PayPal API base URL based on mode
 function getPayPalBaseUrl(mode: string): string {
@@ -175,6 +40,7 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string, mode
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  let reservation: { success: boolean; reservationId?: string } | null = null;
   // Rate limit
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`paypal-create:${clientId}`, RateLimiters.standard);
@@ -185,13 +51,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
 
-    // Initialize Firebase for storing pending orders
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     // Get PayPal credentials
     const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
@@ -210,7 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const orderData = await request.json();
-    console.log('[PayPal] Creating order for:', orderData.customer?.email);
+    console.log('[PayPal] Creating order');
 
     // Validate required fields
     if (!orderData.items || orderData.items.length === 0) {
@@ -235,11 +96,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Reserve stock to prevent overselling
+    reservation = await reserveStock(orderData.items, 'paypal_' + Date.now().toString(36), orderData.customer?.userId);
+    if (!reservation.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: reservation.error || 'Failed to reserve stock'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // SECURITY: Validate prices server-side to prevent manipulation
     console.log('[PayPal] Validating prices server-side...');
-    const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items);
+    const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[PayPal]' });
 
     if (validationError) {
+      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
       return new Response(JSON.stringify({ success: false, error: validationError }), {
         status: 400, headers: { 'Content-Type': 'application/json' }
       });
@@ -402,7 +273,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
     }
 
-    console.log('[PayPal] Order request:', JSON.stringify(paypalOrder, null, 2).substring(0, 500));
+    console.log('[PayPal] Order request created, items:', paypalItems.length);
 
     // Create PayPal order
     const createResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
@@ -418,6 +289,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!createResponse.ok) {
       const error = await createResponse.text();
       console.error('[PayPal] Create order error:', error);
+      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
       return new Response(JSON.stringify({
         success: false,
         error: 'Failed to create PayPal order'
@@ -471,6 +343,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         hasPhysicalItems: hasPhysicalItems,
         artistShippingBreakdown: Object.keys(artistShippingBreakdown).length > 0 ? artistShippingBreakdown : null,
         appliedCredit: 0,
+        reservationId: reservation.reservationId || null,
         createdAt: new Date().toISOString(),
         expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString() // 2 hour expiry
       };
@@ -495,6 +368,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[PayPal] Error:', errorMessage);
+    if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
     return new Response(JSON.stringify({
       success: false,
       error: 'An internal error occurred'

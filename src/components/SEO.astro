@@ -33,7 +33,7 @@ interface Props {
     genre?: string[];
     label?: string;
     format?: string[];
-    tracks?: { name: string; duration?: string; isrc?: string }[];
+    tracks?: { name: string; duration?: string; isrc?: string; artist?: string }[];
     isrc?: string;
     catalogNumber?: string;
     bpm?: number;
@@ -48,6 +48,7 @@ interface Props {
     contentUrl?: string;
     embedUrl?: string;
     genre?: string[];
+    tracklist?: string[]; // Track names featured in the mix
   };
   
   // Video content (for video mixes or promo videos)
@@ -160,6 +161,9 @@ const normalizedPath = Astro.url.pathname === '/'
 
 const canonicalUrl = canonical || new URL(normalizedPath, SITE.url).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
+const ogImage = imageUrl;
+const ogImageType = ogImage?.endsWith('.webp') ? 'image/webp' : ogImage?.endsWith('.png') ? 'image/png' : 'image/jpeg';
+const isDefaultOgImage = image === '/og-image.jpg';
 
 // ===========================================
 // STRUCTURED DATA SCHEMAS
@@ -413,7 +417,7 @@ const musicAlbumSchema = music ? {
       'http://schema.org/CDFormat'
     )
   }),
-  ...(music.tracks && {
+  ...(music.tracks && music.tracks.length > 0 && {
     "numTracks": music.tracks.length,
     "track": {
       "@type": "ItemList",
@@ -427,7 +431,8 @@ const musicAlbumSchema = music ? {
           "position": i + 1,
           ...(t.duration && { "duration": t.duration }),
           ...(t.isrc && { "isrcCode": t.isrc }),
-          "byArtist": { "@type": "MusicGroup", "name": music.artist }
+          "byArtist": { "@type": "MusicGroup", "name": t.artist || music.artist },
+          "inAlbum": { "@type": "MusicAlbum", "name": title }
         }
       }))
     }
@@ -443,18 +448,24 @@ const musicAlbumSchema = music ? {
   })
 } : null;
 
-// Audio/Podcast Schema (for DJ Mixes)
+// Audio/MusicRecording Schema (for DJ Mixes)
 const audioSchema = audio ? {
   "@context": "https://schema.org",
-  "@type": "AudioObject",
+  "@type": ["MusicRecording", "AudioObject"],
   "@id": `${canonicalUrl}#audio`,
   "name": title,
   "description": description,
   "duration": audio.duration,
+  "datePublished": audio.uploadDate,
   "uploadDate": audio.uploadDate,
   "thumbnailUrl": audio.thumbnailUrl || imageUrl,
+  "image": audio.thumbnailUrl || imageUrl,
   ...(audio.contentUrl && { "contentUrl": audio.contentUrl }),
   ...(audio.embedUrl && { "embedUrl": audio.embedUrl }),
+  "byArtist": {
+    "@type": "Person",
+    "name": audio.artist
+  },
   "author": {
     "@type": "Person",
     "name": audio.artist
@@ -464,6 +475,13 @@ const audioSchema = audio ? {
     "name": SITE.name
   },
   ...(audio.genre && { "genre": audio.genre }),
+  ...(audio.tracklist && audio.tracklist.length > 0 && {
+    "hasPart": audio.tracklist.map((trackName, i) => ({
+      "@type": "MusicRecording",
+      "name": trackName,
+      "position": i + 1
+    }))
+  }),
   "inLanguage": "en",
   "isAccessibleForFree": true
 } : null;
@@ -596,9 +614,9 @@ const articleSchema = article ? {
 <meta property="og:description" content={description} />
 <meta property="og:image" content={imageUrl} />
 <meta property="og:image:secure_url" content={imageUrl} />
-<meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image:type" content={ogImageType} />
+{isDefaultOgImage && <meta property="og:image:width" content="1200" />}
+{isDefaultOgImage && <meta property="og:image:height" content="630" />}
 <meta property="og:image:alt" content={imageAlt} />
 <meta property="og:site_name" content={SITE.name} />
 <meta property="og:locale" content={SITE.locale} />
@@ -668,9 +686,7 @@ const articleSchema = article ? {
 <meta name="author" content={SITE.name} />
 <meta name="publisher" content={SITE.name} />
 <meta name="copyright" content={`© ${new Date().getFullYear()} ${SITE.name}`} />
-<meta name="theme-color" content="#000000" />
 <meta name="color-scheme" content="dark light" />
-<meta name="format-detection" content="telephone=no" />
 <meta http-equiv="x-ua-compatible" content="IE=edge" />
 
 <!-- Geographic SEO -->
@@ -696,9 +712,6 @@ const articleSchema = article ? {
 <!-- Mobile / PWA -->
 <meta name="application-name" content={SITE.name} />
 <meta name="apple-mobile-web-app-title" content={SITE.name} />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="mobile-web-app-capable" content="yes" />
 <meta name="msapplication-TileColor" content="#000000" />
 <meta name="msapplication-config" content="/browserconfig.xml" />
 

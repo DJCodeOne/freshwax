@@ -1,7 +1,7 @@
 // src/pages/api/dj-lobby/takeover.ts
 // DJ Takeover request system - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection , initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 
 // Pusher configuration
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -36,12 +36,7 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
 
 // GET: Get takeover request status
 export const GET: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for auth verification
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const url = new URL(request.url);
@@ -137,12 +132,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Create/respond to takeover request
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const data = await request.json();
@@ -328,10 +318,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE: Cleanup expired requests
 export const DELETE: APIRoute = async ({ locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

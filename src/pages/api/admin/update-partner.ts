@@ -3,7 +3,7 @@
 // Uses Firebase REST API - only updates fields allowed by Firestore rules
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv, clearCache } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, clearCache } from '../../../lib/firebase-rest';
 import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
@@ -11,10 +11,7 @@ export const prerender = false;
 // Helper to initialize Firebase and admin config
 function initServices(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initAdminEnv({ ADMIN_UIDS: env.ADMIN_UIDS, ADMIN_EMAILS: env.ADMIN_EMAILS });
 }
 

@@ -3,7 +3,7 @@
 // No auth required - public browsing
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+
 import { saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { d1GetAllCollections } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
@@ -37,13 +37,8 @@ function getServiceAccountKey(env: any): string | null {
   return serviceAccountKey || null;
 }
 
-// Initialize Firebase from env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET - Fetch published vinyl listings, collections, and deals

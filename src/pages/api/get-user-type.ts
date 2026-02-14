@@ -1,7 +1,7 @@
 // src/pages/api/get-user-type.ts
 // Returns user type info - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 import { createReferralGiftCard } from '../../lib/giftcard';
 
@@ -10,10 +10,7 @@ export const prerender = false;
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase and admin config for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const url = new URL(request.url);

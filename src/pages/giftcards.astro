@@ -41,8 +41,8 @@ const faqs = [
   faqs={faqs}
 >
   <Header />
-  
-  <main class="giftcards-main">
+
+  <div class="giftcards-main">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
@@ -70,7 +70,7 @@ const faqs = [
         
         <div id="redeemContainer">
           <div id="loginPrompt" class="login-prompt">
-            <p>Please <a href="/login" id="signInLink">sign in</a> or <a href="/register" id="registerLink">create an account</a> to redeem your gift card.</p>
+            <p>Please <a href="/login/" id="signInLink">sign in</a> or <a href="/register/" id="registerLink">create an account</a> to redeem your gift card.</p>
           </div>
           
           <form id="redeemForm" class="redeem-form hidden">
@@ -99,7 +99,7 @@ const faqs = [
         <div id="balanceDisplay" class="balance-display hidden">
           <div class="balance-label">Your Credit Balance</div>
           <div class="balance-amount" id="creditBalance">£0.00</div>
-          <a href="/account/dashboard#credit" class="view-history-link">View transaction history →</a>
+          <a href="/account/dashboard/#credit" class="view-history-link">View transaction history →</a>
         </div>
       </div>
     </section>
@@ -206,7 +206,7 @@ const faqs = [
         </div>
 
         <div id="purchaseLoginPrompt" class="purchase-login-prompt">
-          <p>Please <a href="/login" id="purchaseSignInLink">sign in</a> or <a href="/register" id="purchaseRegisterLink">create an account</a> to purchase a gift card.</p>
+          <p>Please <a href="/login/" id="purchaseSignInLink">sign in</a> or <a href="/register/" id="purchaseRegisterLink">create an account</a> to purchase a gift card.</p>
         </div>
 
         <div id="purchaseActions" class="purchase-actions hidden">
@@ -299,36 +299,23 @@ const faqs = [
         </div>
       </div>
     </section>
-    
-  </main>
+
+  </div>
 
   <Footer />
 </Layout>
 
 
 <script type="module">
-  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-  const firebaseConfig = {
-    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "307622215498",
-    appId: "1:307622215498:web:e66cee39e098fe973c7081"
-  };
-
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+  // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
   let currentUser = null;
   let selectedAmount = 0;
-  
+
   // Helper to get authenticated user (waits for auth to be ready)
   async function getAuthUser() {
     if (window.authReady) await window.authReady;
-    return window.firebaseAuth?.currentUser || window.authUser || auth.currentUser || null;
+    return window.firebaseAuth?.currentUser || window.authUser || null;
   }
   
   // Format code as user types
@@ -444,7 +431,7 @@ const faqs = [
   // Fetch user name from Firestore
   async function fetchUserName(userId) {
     try {
-      const _token = await auth.currentUser?.getIdToken();
+      const _token = await window.firebaseAuth?.currentUser?.getIdToken();
       const response = await fetch(`/api/get-user-type?uid=${userId}`, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
@@ -569,11 +556,12 @@ const faqs = [
     }
   }
   
-  // Auth state listener
-  onAuthStateChanged(auth, async (user) => {
+  // Auth state - use window.authReady from Header.astro (no Firebase SDK needed)
+  if (window.authReady) {
+    const user = await window.authReady;
     currentUser = user;
     await updateAuthUI(user);
-  });
+  }
   
   // Handle back/forward navigation (bfcache)
   window.addEventListener('pageshow', async (event) => {
@@ -590,12 +578,12 @@ const faqs = [
     e.preventDefault();
     if (currentUser) {
       // User is logged in, go to dashboard credit section
-      window.location.href = '/account/dashboard#credit';
+      window.location.href = '/account/dashboard/#credit';
     } else {
       // User is not logged in, go to appropriate page
       const isRegister = e.target.textContent.toLowerCase().includes('create') || 
                          e.target.href?.includes('register');
-      window.location.href = isRegister ? '/register' : '/login';
+      window.location.href = isRegister ? '/register/' : '/login/';
     }
   }
   

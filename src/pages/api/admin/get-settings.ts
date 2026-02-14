@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
       });
     }
 
@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       settings: settingsData
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
     });
 
   } catch (error: any) {

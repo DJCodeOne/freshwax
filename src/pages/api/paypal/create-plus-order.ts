@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { setDocument, getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 
 export const prerender = false;
@@ -54,13 +54,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const env = (locals as any)?.runtime?.env;
     const kv = env?.CACHE as KVNamespace | undefined;
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     // Get PayPal credentials
     const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;

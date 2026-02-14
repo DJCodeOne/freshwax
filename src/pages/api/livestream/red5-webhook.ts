@@ -11,16 +11,12 @@
 // - viewer_leave: Viewer disconnected
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
 
 // Helper to initialize Firebase and Red5
 function initServices(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initRed5Env({
     RED5_RTMP_URL: env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL,
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
@@ -75,7 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Parse the webhook payload
     const event: Red5WebhookEvent = JSON.parse(rawBody);
     
-    console.log('[red5-webhook] Received event:', event.event, 'streamKey:', event.streamKey);
+    console.log('[red5-webhook] Received event:', event.event, 'streamKey:', event.streamKey?.substring(0, 8) + '...');
     
     // Extract slot info from stream key
     // Format: fwx_{djIdShort}_{slotIdShort}_{timestamp}_{signature}

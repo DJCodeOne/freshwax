@@ -2,7 +2,7 @@
 // Admin endpoint to create a pending payout record
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+
 import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
@@ -37,7 +37,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-  initFirebaseEnv({ FIREBASE_PROJECT_ID: projectId, FIREBASE_API_KEY: apiKey });
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const body = await parseJsonBody(request);

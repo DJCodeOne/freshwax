@@ -350,12 +350,13 @@ const showVinylSection = isVinylSeller;
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
-<Layout title="Partner Dashboard">
+<Layout title="Partner Dashboard" noindex={true}>
   <Header />
   
-  <main class="dashboard-main">
+  <div class="dashboard-main">
     <!-- Loading state - shown while checking auth (hidden if already logged in server-side) -->
     <div id="loadingState" class="login-prompt" style={isLoggedIn ? 'display: none;' : ''}>
       <div class="login-card">
@@ -374,8 +375,8 @@ export const prerender = false;
         <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
         <h1>Partner Dashboard</h1>
         <p>Sign in to manage your releases, mixes, and sales.</p>
-        <a href="/login" class="btn-primary">Sign In</a>
-        <a href="/register" class="btn-secondary">Create Account</a>
+        <a href="/login/" class="btn-primary">Sign In</a>
+        <a href="/register/" class="btn-secondary">Create Account</a>
       </div>
     </div>
     
@@ -436,7 +437,7 @@ export const prerender = false;
                 </div>
               )}
 
-              <a href="/artist/payouts" class="earnings-card action">
+              <a href="/artist/payouts/" class="earnings-card action">
                 <div class="earnings-icon">📊</div>
                 <div class="earnings-text">
                   <span class="action-title">View Payouts</span>
@@ -446,7 +447,7 @@ export const prerender = false;
               </a>
 
               {!stats.stripeConnected && (
-                <a href="/artist/account#stripe-connect-section" class="earnings-card connect">
+                <a href="/artist/account/#stripe-connect-section" class="earnings-card connect">
                   <div class="earnings-icon">🏦</div>
                   <div class="earnings-text">
                     <span class="action-title">Set Up Payments</span>
@@ -684,7 +685,7 @@ export const prerender = false;
           </div>
 
           <div class="cards-grid two-col">
-            <a href="/artist/account" class="action-card primary">
+            <a href="/artist/account/" class="action-card primary">
               <div class="card-icon">👤</div>
               <div class="card-body">
                 <h3>My Account</h3>
@@ -693,7 +694,7 @@ export const prerender = false;
               <span class="card-arrow">→</span>
             </a>
 
-            <a href="/contact" class="action-card">
+            <a href="/contact/" class="action-card">
               <div class="card-icon">💬</div>
               <div class="card-body">
                 <h3>Support</h3>
@@ -705,7 +706,7 @@ export const prerender = false;
         </section>
       </div>
     )}
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -1414,48 +1415,35 @@ export const prerender = false;
   }
 </style>
 
-<script is:inline type="module">
-  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+<script is:inline type="module" nonce={nonce}>
+  // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
-  const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
-
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  
   // Helper to check if a cookie is properly set (not empty or expired)
   function hasCookie(name) {
     const value = document.cookie.split('; ').find(row => row.startsWith(name + '='));
     return value && !value.endsWith('=') && !value.endsWith('=;');
   }
-  
+
   // Get UI elements
   const loadingState = document.getElementById('loadingState');
   const loginPrompt = document.getElementById('loginPrompt');
-  
+
   function showLoading() {
     if (loadingState) loadingState.style.display = 'flex';
     if (loginPrompt) loginPrompt.style.display = 'none';
   }
-  
+
   function showLogin() {
     if (loadingState) loadingState.style.display = 'none';
     if (loginPrompt) loginPrompt.style.display = 'flex';
   }
-  
+
   function hideAll() {
     if (loadingState) loadingState.style.display = 'none';
     if (loginPrompt) loginPrompt.style.display = 'none';
   }
-  
-  onAuthStateChanged(auth, async (user) => {
+
+  window.authReady.then(async (user) => {
     if (!user) {
       // Not logged in - show login prompt
       document.cookie = 'partnerId=; path=/; max-age=0';

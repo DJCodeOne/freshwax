@@ -3,7 +3,7 @@
 // NOW USES CLOUDFLARE KV - NO MORE FIREBASE READS!
 
 import type { APIContext } from 'astro';
-import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -92,10 +92,6 @@ export async function POST({ request, locals }: APIContext) {
   try {
     // SECURITY: Verify authentication
     const env = (locals as any)?.runtime?.env;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
       return new Response(JSON.stringify({
@@ -230,10 +226,6 @@ export async function DELETE({ request, locals }: APIContext) {
   try {
     // SECURITY: Verify authentication
     const env = (locals as any)?.runtime?.env;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
       return new Response(JSON.stringify({

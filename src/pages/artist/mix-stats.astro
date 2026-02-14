@@ -85,15 +85,15 @@ const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num 
 export const prerender = false;
 ---
 
-<Layout title="Mix Analytics">
+<Layout title="Mix Analytics" noindex={true}>
   <Header />
   
-  <main class="stats-main">
+  <div class="stats-main">
     <div class="container">
       <!-- Page Header -->
       <div class="page-header">
         <div class="header-left">
-          <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+          <a href="/artist/dashboard/" class="back-link">← Dashboard</a>
           <h1>Mix Analytics</h1>
           <p>Track performance across all your DJ mixes</p>
         </div>
@@ -102,14 +102,14 @@ export const prerender = false;
       {!isLoggedIn ? (
         <div class="login-prompt">
           <p>Please log in to view your analytics.</p>
-          <a href="/login" class="login-btn">Sign In</a>
+          <a href="/login/" class="login-btn">Sign In</a>
         </div>
       ) : mixes.length === 0 ? (
         <div class="empty-state">
           <div class="empty-icon">📊</div>
           <h2>No analytics yet</h2>
           <p>Upload your first mix to start tracking performance!</p>
-          <a href="/upload-mix" class="upload-btn">Upload Mix</a>
+          <a href="/upload-mix/" class="upload-btn">Upload Mix</a>
         </div>
       ) : (
         <>
@@ -147,7 +147,7 @@ export const prerender = false;
                 <h2>Mix Breakdown</h2>
                 <p class="section-desc">Sorted by rating (Downloads×3 + Likes×2 + Comments×1 + Plays×0.1)</p>
               </div>
-              <a href="/dj-mix-chart" class="chart-link">🏆 View All-Time Chart →</a>
+              <a href="/dj-mix-chart/" class="chart-link">🏆 View All-Time Chart →</a>
             </div>
             
             <div class="mix-stats-list">
@@ -225,7 +225,7 @@ export const prerender = false;
         </>
       )}
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

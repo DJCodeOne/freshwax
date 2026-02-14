@@ -3,7 +3,7 @@
 // Optimized: Uses batch fetch for releases to avoid N+1 queries
 // SECURITY: Requires authentication - user can only view their own orders
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocumentsBatch, verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection, getDocumentsBatch, verifyRequestUser } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,12 +14,7 @@ const log = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // SECURITY: Verify the requesting user's identity
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

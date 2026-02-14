@@ -2,7 +2,7 @@
 // Verifies a Stripe checkout session for gift card purchase
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -66,12 +66,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         paymentStatus: session.payment_status
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-
-    // Initialize Firebase to find the gift card
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // Try to find gift card by payment intent ID
     const paymentIntentId = session.payment_intent;

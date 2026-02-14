@@ -1,7 +1,7 @@
 // src/pages/api/save-user-badge.ts
 // Save user's Plus badge to KV storage (minimal Firebase usage)
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyUserToken } from '../../lib/firebase-rest';
+import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -26,11 +26,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // Get auth token
     const authHeader = request.headers.get('Authorization');

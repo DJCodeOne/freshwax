@@ -22,6 +22,7 @@ const faqs = [
     answer: "We use the standard Goldmine grading system: Mint (M), Near Mint (NM), Very Good Plus (VG+), Very Good (VG), Good (G), and Fair (F). Each listing includes detailed condition notes."
   }
 ];
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout
@@ -32,7 +33,7 @@ const faqs = [
   <PageLoader />
   <Header />
 
-  <main class="crates-main">
+  <div class="crates-main">
     <!-- Background -->
     <div class="bg-overlay"></div>
 
@@ -109,7 +110,7 @@ const faqs = [
             </svg>
             Condition Guide
           </button>
-          <a href="/artist/vinyl" class="sell-btn">
+          <a href="/artist/vinyl/" class="sell-btn">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
@@ -165,7 +166,7 @@ const faqs = [
         </div>
       </section>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -1396,7 +1397,7 @@ const faqs = [
   }
 </style>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   function escapeHtml(str) {
     if (!str) return '';
     const d = document.createElement('div');
@@ -1814,14 +1815,14 @@ const faqs = [
   }
 
   function viewListing(id) {
-    window.location.href = `/crates/${id}`;
+    window.location.href = `/crates/${id}/`;
   }
 
   // Cart functionality — uses global FreshWaxCart from freshwax-cart.js
 
   function addVinylToCart(listingId) {
     if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
-      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
 

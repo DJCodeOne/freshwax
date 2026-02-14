@@ -3,10 +3,11 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, initFirebaseEnv, clearCache, clearAllMerchCache } from '../../lib/firebase-rest';
+import { getDocument, clearCache, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -22,10 +23,6 @@ const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK,
-  });
 }
 
 // Get R2 configuration from Cloudflare runtime env
@@ -52,11 +49,17 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-merch:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
 

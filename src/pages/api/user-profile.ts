@@ -1,0 +1,137 @@
+// src/pages/api/user-profile.ts
+// Lightweight API for dashboard to load/save user profile data without Firestore SDK
+// GET: Load full user profile data (all fields from users collection)
+// POST: Save profile form data (merge with existing document)
+// Note: initFirebaseEnv is called by middleware, no need to call it here
+
+import type { APIRoute } from 'astro';
+import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+export const prerender = false;
+
+// GET: Load full user profile data for dashboard
+export const GET: APIRoute = async ({ request }) => {
+  try {
+    const { userId, email, error: authError } = await verifyRequestUser(request);
+
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const userDoc = await getDocument('users', userId);
+
+    if (!userDoc) {
+      return new Response(JSON.stringify({
+        success: true,
+        profile: null,
+        email: email || null
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Return all profile-relevant fields (dashboard needs more than checkout)
+    return new Response(JSON.stringify({
+      success: true,
+      profile: {
+        firstName: userDoc.firstName || '',
+        lastName: userDoc.lastName || '',
+        fullName: userDoc.fullName || '',
+        displayName: userDoc.displayName || userDoc.fullName || userDoc.firstName || '',
+        email: userDoc.email || email || '',
+        phone: userDoc.phone || '',
+        address1: userDoc.address1 || userDoc.addressLine1 || '',
+        address2: userDoc.address2 || userDoc.addressLine2 || '',
+        city: userDoc.city || '',
+        county: userDoc.county || '',
+        postcode: userDoc.postcode || '',
+        country: userDoc.country || 'United Kingdom',
+        isPro: userDoc.isPro || userDoc.isArtist || userDoc.approved || false,
+        avatarUrl: userDoc.avatarUrl || userDoc.photoURL || null,
+        name: userDoc.name || ''
+      }
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('[user-profile] GET error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to load user profile'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};
+
+// POST: Save profile form data (merge with existing document)
+export const POST: APIRoute = async ({ request }) => {
+  // Rate limit
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`user-profile:${clientId}`, RateLimiters.write);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  try {
+    const { userId, error: authError } = await verifyRequestUser(request);
+
+    if (authError || !userId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: authError || 'Authentication required'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const body = await request.json();
+
+    // Validate and sanitize input - only allow known profile fields
+    const allowedFields = [
+      'firstName', 'lastName', 'fullName', 'displayName', 'displayNameLower',
+      'phone', 'address1', 'address2', 'city', 'county', 'postcode', 'country'
+    ];
+    const sanitized: Record<string, string> = {};
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        sanitized[field] = String(body[field]).slice(0, 200); // Limit field length
+      }
+    }
+    sanitized.updatedAt = new Date().toISOString();
+
+    // Merge with existing user document (equivalent to setDoc with merge: true)
+    const existingDoc = await getDocument('users', userId);
+    await setDocument('users', userId, {
+      ...(existingDoc || {}),
+      ...sanitized
+    });
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+  } catch (error) {
+    console.error('[user-profile] POST error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Failed to save profile data'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+};

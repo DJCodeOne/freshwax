@@ -2,17 +2,14 @@
 // API endpoint to reject (delete) a partner application
 
 import type { APIRoute } from 'astro';
-import { deleteDocument, getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { deleteDocument, getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const body = await parseJsonBody<{ partnerId?: string }>(request);

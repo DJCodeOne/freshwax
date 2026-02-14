@@ -6,25 +6,26 @@ import Footer from '../components/Footer.astro';
 import '../styles/checkout.css';
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout title="Checkout" noindex={true}>
   <Header />
-  
-  <main class="checkout-main">
-    
+
+  <div class="checkout-main">
+
     <!-- Page Header -->
     <div class="page-header-container">
       <div class="page-header-pattern"></div>
       <header class="checkout-header">
         <h1>CHECK<span class="red">OUT</span></h1>
-        <a href="/cart" class="back-btn">← Back to Bag</a>
+        <a href="/cart/" class="back-btn">← Back to Bag</a>
       </header>
     </div>
     
     <!-- PayPal SDK loaded dynamically when needed -->
     
-    <div id="error-message" class="error-message"></div>
+    <div id="error-message" class="error-message" role="alert"></div>
     
     <div id="checkout-content">
       <div class="loading-state">
@@ -32,7 +33,7 @@ export const prerender = false;
         <span>Loading your cart...</span>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -40,23 +41,9 @@ export const prerender = false;
 
 
 <script>
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  // LIGHTWEIGHT AUTH: Uses window.firebaseAuth + window.authReady from Header.astro
+  // instead of importing ~200KB Firebase SDK. Customer data loaded via /api/checkout-data.
 
-  const firebaseConfig = {
-    apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  
   let currentUser = null;
   let customerData = null;
   let cart = [];
@@ -295,13 +282,23 @@ export const prerender = false;
   
   async function loadCustomerData(uid) {
     try {
-      // Load from users collection (single source of truth)
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        return data;
-      }
+      // Load via lightweight API instead of Firestore SDK (~80KB saved)
+      let idToken = null;
+      try {
+        idToken = await currentUser?.getIdToken();
+      } catch (e) { /* token fetch failed, try without */ }
 
+      if (!idToken) return null;
+
+      const response = await fetch('/api/checkout-data', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.customer) {
+          return data.customer;
+        }
+      }
     } catch (e) {
       console.error('[Checkout] Error loading customer data:', e);
     }
@@ -1015,7 +1012,7 @@ export const prerender = false;
             window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
             // Redirect to confirmation
-            window.location.href = `/order-confirmation/${result.orderId}`;
+            window.location.href = `/order-confirmation/${result.orderId}/`;
           } else {
             throw new Error(result.error || 'Payment failed');
           }
@@ -1093,20 +1090,26 @@ export const prerender = false;
     const saveDetails = form.saveDetails?.checked;
     if (saveDetails && currentUser) {
       try {
-        const userRef = doc(db, 'users', currentUser.uid);
-        await setDoc(userRef, {
-          firstName: form.firstName.value,
-          lastName: form.lastName.value,
-          email: form.email.value,
-          phone: form.phone?.value || '',
-          address1: form.address1?.value || '',
-          address2: form.address2?.value || '',
-          city: form.city?.value || '',
-          county: form.county?.value || '',
-          postcode: form.postcode?.value || '',
-          country: form.country?.value || 'United Kingdom',
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+        const saveToken = await currentUser.getIdToken();
+        await fetch('/api/checkout-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${saveToken}`
+          },
+          body: JSON.stringify({
+            firstName: form.firstName.value,
+            lastName: form.lastName.value,
+            email: form.email.value,
+            phone: form.phone?.value || '',
+            address1: form.address1?.value || '',
+            address2: form.address2?.value || '',
+            city: form.city?.value || '',
+            county: form.county?.value || '',
+            postcode: form.postcode?.value || '',
+            country: form.country?.value || 'United Kingdom'
+          })
+        });
       } catch (e) {
         console.error('Error saving customer details:', e);
       }
@@ -1192,7 +1195,7 @@ export const prerender = false;
           }
 
           // Redirect to success page
-          window.location.href = '/checkout/success?orderId=' + result.orderId;
+          window.location.href = '/checkout/success/?orderId=' + result.orderId;
         } else {
           throw new Error(result.error || 'Failed to complete free order');
         }
@@ -1232,7 +1235,7 @@ export const prerender = false;
   // Check if logged-in user is a customer (only customers can buy)
   async function checkUserType(uid) {
     try {
-      const _token = await auth.currentUser?.getIdToken();
+      const _token = await currentUser?.getIdToken();
       const response = await fetch('/api/get-user-type?uid=' + uid, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
@@ -1253,7 +1256,7 @@ export const prerender = false;
         <p style="font-size: 1.125rem; color: #888; margin-bottom: 1rem;">Only customer accounts can make purchases.</p>
         <p style="font-size: 1rem; color: #666; margin-bottom: 2rem;">If you're an artist, please create a separate customer account to buy items from the store.</p>
         <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-          <a href="/register" style="display: inline-block; padding: 1rem 2.5rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Create Customer Account</a>
+          <a href="/register/" style="display: inline-block; padding: 1rem 2.5rem; background: #dc2626; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Create Customer Account</a>
           <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: #333; color: #fff; text-decoration: none; border-radius: 10px; font-size: 1.125rem; font-weight: 600;">Back to Store</a>
         </div>
       </div>
@@ -1272,7 +1275,7 @@ export const prerender = false;
       if (customerId) {
         initCheckoutWithUser(null, customerId);
       } else {
-        window.location.href = '/login?redirect=/checkout';
+        window.location.href = '/login/?redirect=/checkout/';
       }
     }
   }, 5000); // 5 second timeout
@@ -1307,7 +1310,7 @@ export const prerender = false;
       await loadCreditBalance();
     } else {
       // No user at all - redirect to login
-      window.location.href = '/login?redirect=/checkout';
+      window.location.href = '/login/?redirect=/checkout/';
       return;
     }
 
@@ -1315,22 +1318,38 @@ export const prerender = false;
     renderCheckout();
   }
 
-  onAuthStateChanged(auth, async (user) => {
-    // If auth already initialized by timeout, skip
-    if (authInitialized) return;
+  // Use window.authReady from Header.astro instead of importing Firebase Auth SDK
+  // Header already loads Firebase Auth and resolves this promise with the user
+  if (window.authReady) {
+    window.authReady.then(async (user) => {
+      // If auth already initialized by timeout, skip
+      if (authInitialized) return;
 
-    // If no Firebase auth AND no customerId cookie, redirect to login
-    const customerId = getCustomerIdFromCookie();
-    if (!user && !customerId) {
-      authInitialized = true;
-      clearTimeout(authTimeout);
-      window.location.href = '/login?redirect=/checkout';
-      return;
-    }
+      // If no Firebase auth AND no customerId cookie, redirect to login
+      const customerId = getCustomerIdFromCookie();
+      if (!user && !customerId) {
+        authInitialized = true;
+        clearTimeout(authTimeout);
+        window.location.href = '/login/?redirect=/checkout/';
+        return;
+      }
 
-    // Initialize checkout with user/cookie data
-    await initCheckoutWithUser(user, customerId);
-  });
+      // Initialize checkout with user/cookie data
+      await initCheckoutWithUser(user, customerId);
+    });
+  } else {
+    // Fallback: if authReady not available yet, wait briefly then check cookies
+    setTimeout(() => {
+      if (!authInitialized) {
+        const customerId = getCustomerIdFromCookie();
+        if (customerId) {
+          initCheckoutWithUser(null, customerId);
+        } else {
+          window.location.href = '/login/?redirect=/checkout/';
+        }
+      }
+    }, 2000);
+  }
 </script>
 
-<script is:inline src="/email-verify-check.js"></script>
+<script is:inline src="/email-verify-check.js" nonce={nonce}></script>

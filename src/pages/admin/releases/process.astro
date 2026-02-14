@@ -14,12 +14,13 @@ export const prerender = false;
 
 // Use local API endpoint instead of external worker
 const WORKER_URL = '/api';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <AdminLayout title="Process Submissions" activeNav="releases">
   <Fragment slot="actions">
     <button id="refreshBtn" class="btn btn-outline">Refresh</button>
-    <a href="/admin/releases/manage" class="btn btn-primary">View Releases</a>
+    <a href="/admin/releases/manage/" class="btn btn-primary">View Releases</a>
   </Fragment>
 
   <!-- Status Card -->
@@ -58,7 +59,7 @@ const WORKER_URL = '/api';
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline define:vars={{ WORKER_URL }}>
+    <script is:inline define:vars={{ WORKER_URL }} nonce={nonce}>
       const workerStatus = document.getElementById('workerStatus');
       const submissionCount = document.getElementById('submissionCount');
       const submissionsContainer = document.getElementById('submissionsContainer');

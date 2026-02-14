@@ -8,18 +8,20 @@ import Footer from '../../components/Footer.astro';
 export const prerender = false;
 
 const { id } = Astro.params;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout
   title="Vinyl Details - Crates"
-  description="View vinyl record details on Fresh Wax Crates"
+  description="Browse vinyl records for sale on Fresh Wax Crates. Jungle, drum & bass, and breakbeat vinyl from independent sellers."
+  type="product"
 >
   <Header />
 
-  <main class="vinyl-detail-main">
+  <div class="vinyl-detail-main">
     <div class="container">
       <!-- Back Link -->
-      <a href="/crates" class="back-link">
+      <a href="/crates/" class="back-link">
         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="20" height="20">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
         </svg>
@@ -37,7 +39,7 @@ const { id } = Astro.params;
         <div class="error-icon">😕</div>
         <h2>Vinyl Not Found</h2>
         <p>This listing may have been sold or removed.</p>
-        <a href="/crates" class="back-btn">Browse Crates</a>
+        <a href="/crates/" class="back-btn">Browse Crates</a>
       </div>
 
       <!-- Content -->
@@ -166,7 +168,7 @@ const { id } = Astro.params;
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -1003,7 +1005,7 @@ const { id } = Astro.params;
   }
 </style>
 
-<script is:inline define:vars={{ listingId: id }}>
+<script is:inline define:vars={{ listingId: id }} nonce={nonce}>
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1037,13 +1039,140 @@ const { id } = Astro.params;
       content.style.display = 'block';
 
       // Update page title
-      document.title = `${listing.title} by ${listing.artist} - Crates`;
+      document.title = `${listing.title} by ${listing.artist} - Crates | Fresh Wax`;
+
+      // Update meta tags dynamically for SEO / social sharing
+      updateMetaTags(listing);
+
+      // Inject JSON-LD structured data
+      injectJsonLd(listing);
 
     } catch (err) {
       console.error('Error loading listing:', err);
       loadingState.style.display = 'none';
       errorState.style.display = 'block';
     }
+  }
+
+  function updateMetaTags(l) {
+    var desc = (l.title || 'Vinyl') + ' by ' + (l.artist || 'Unknown Artist');
+    if (l.format) desc += ' (' + l.format + ')';
+    if (l.mediaCondition) desc += ' - ' + getConditionName(l.mediaCondition) + ' condition';
+    desc += '. Available on Fresh Wax Crates.';
+
+    var metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) metaDesc.setAttribute('content', desc);
+
+    var ogTitle = document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', l.title + ' by ' + l.artist + ' | Fresh Wax Crates');
+
+    var ogDesc = document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', desc);
+
+    var ogType = document.querySelector('meta[property="og:type"]');
+    if (ogType) ogType.setAttribute('content', 'product');
+
+    if (l.images && l.images.length > 0) {
+      var ogImage = document.querySelector('meta[property="og:image"]');
+      if (ogImage) ogImage.setAttribute('content', l.images[0]);
+
+      var ogImageSecure = document.querySelector('meta[property="og:image:secure_url"]');
+      if (ogImageSecure) ogImageSecure.setAttribute('content', l.images[0]);
+
+      var twImage = document.querySelector('meta[name="twitter:image"]');
+      if (twImage) twImage.setAttribute('content', l.images[0]);
+    }
+
+    var twTitle = document.querySelector('meta[name="twitter:title"]');
+    if (twTitle) twTitle.setAttribute('content', l.title + ' by ' + l.artist + ' | Fresh Wax Crates');
+
+    var twDesc = document.querySelector('meta[name="twitter:description"]');
+    if (twDesc) twDesc.setAttribute('content', desc);
+  }
+
+  function injectJsonLd(l) {
+    // Remove any previously injected crate JSON-LD
+    var existing = document.getElementById('crate-jsonld');
+    if (existing) existing.remove();
+
+    var condName = getConditionName(l.mediaCondition || 'VG+');
+    var desc = (l.title || 'Vinyl') + ' by ' + (l.artist || 'Unknown Artist');
+    if (l.format) desc += ' (' + l.format + ')';
+    if (l.mediaCondition) desc += '. Media: ' + condName;
+    if (l.label) desc += '. Label: ' + l.label;
+
+    var jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      'name': (l.title || 'Vinyl') + ' - ' + (l.artist || 'Unknown Artist'),
+      'description': l.description || desc,
+      'url': window.location.href,
+      'brand': {
+        '@type': 'Brand',
+        'name': l.label || 'Fresh Wax Crates'
+      },
+      'category': l.genre || 'Vinyl Records',
+      'offers': {
+        '@type': 'Offer',
+        'url': window.location.href,
+        'price': l.price || 0,
+        'priceCurrency': 'GBP',
+        'availability': 'https://schema.org/InStock',
+        'itemCondition': 'https://schema.org/UsedCondition',
+        'seller': {
+          '@type': 'Person',
+          'name': l.sellerName || 'Independent Seller'
+        }
+      }
+    };
+
+    if (l.images && l.images.length > 0) {
+      jsonLd['image'] = l.images;
+    }
+
+    if (l.releaseYear) {
+      jsonLd['releaseDate'] = String(l.releaseYear);
+    }
+
+    // Additional product properties
+    var additionalProps = [];
+    if (l.mediaCondition) {
+      additionalProps.push({
+        '@type': 'PropertyValue',
+        'name': 'Media Condition',
+        'value': condName
+      });
+    }
+    if (l.sleeveCondition) {
+      additionalProps.push({
+        '@type': 'PropertyValue',
+        'name': 'Sleeve Condition',
+        'value': getConditionName(l.sleeveCondition)
+      });
+    }
+    if (l.format) {
+      additionalProps.push({
+        '@type': 'PropertyValue',
+        'name': 'Format',
+        'value': l.format
+      });
+    }
+    if (l.catalogNumber) {
+      additionalProps.push({
+        '@type': 'PropertyValue',
+        'name': 'Catalog Number',
+        'value': l.catalogNumber
+      });
+    }
+    if (additionalProps.length > 0) {
+      jsonLd['additionalProperty'] = additionalProps;
+    }
+
+    var script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = 'crate-jsonld';
+    script.textContent = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
   }
 
   // Condition data with full names and colors
@@ -1467,6 +1596,10 @@ const { id } = Astro.params;
     waveformCtx = null;
     waveformCanvas = null;
     staticWaveformHeights = null;
+
+    // Clean up injected JSON-LD
+    var existingJsonLd = document.getElementById('crate-jsonld');
+    if (existingJsonLd) existingJsonLd.remove();
   }
 
   // Initialize function

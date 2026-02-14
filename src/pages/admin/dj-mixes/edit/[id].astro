@@ -73,11 +73,12 @@ const formatDuration = (seconds: number) => {
 };
 
 const mixDuration = getDuration(mix);
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <AdminLayout title={`Edit: ${mix.title || 'Untitled Mix'}`} activeNav="mixes">
   <div class="edit-header">
-    <a href="/admin/dj-mixes/manage" class="back-link">← Back to Mixes</a>
+    <a href="/admin/dj-mixes/manage/" class="back-link">← Back to Mixes</a>
     <div class="header-row">
       <h1>✏️ Edit DJ Mix</h1>
       <span class={`badge badge-${mix.published ? 'live' : 'draft'}`}>
@@ -271,7 +272,7 @@ const mixDuration = getDuration(mix);
 
     <!-- Actions -->
     <div class="form-actions">
-      <a href="/admin/dj-mixes/manage" class="btn btn-secondary">Cancel</a>
+      <a href="/admin/dj-mixes/manage/" class="btn btn-secondary">Cancel</a>
       <button type="submit" class="btn btn-primary" id="saveBtn">💾 Save Changes</button>
     </div>
   </form>
@@ -668,7 +669,7 @@ const mixDuration = getDuration(mix);
   }
 </style>
 
-<script define:vars={{ mixId: mix.id }}>
+<script define:vars={{ mixId: mix.id }} nonce={nonce}>
   const form = document.getElementById('editForm');
   const saveBtn = document.getElementById('saveBtn');
   const descriptionField = document.getElementById('descriptionField');

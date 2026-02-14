@@ -3,7 +3,7 @@
 // Usage: GET /api/admin/fix-order-payout?orderId=xxx&confirm=yes
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, getDocument } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
@@ -49,11 +49,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: projectId,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   const serviceAccountKey = getServiceAccountKey(env);
   if (!serviceAccountKey) {

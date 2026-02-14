@@ -173,7 +173,7 @@ export function merchToD1Row(id: string, doc: any): Partial<D1Merch> {
     name: doc.name || doc.title || 'Untitled',
     type: doc.type || doc.category || null,
     price: doc.price || 0,
-    stock: doc.totalStock || doc.stock || doc.quantity || 0,
+    stock: Math.max(0, (doc.totalStock || doc.stock || doc.quantity || 0) - (doc.reservedStock || 0)),
     published: (doc.published ?? doc.active ?? true) ? 1 : 0,
     image_url: imageUrl,
     data: JSON.stringify(doc),
@@ -753,43 +753,6 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
   }
 }
 
-// Bulk upsert ratings (for migration)
-export async function d1BulkUpsertRatings(db: D1Database, releaseId: string, ratingsData: { average: number; count: number; fiveStarCount: number; userRatings?: Record<string, number> }): Promise<boolean> {
-  try {
-    const now = new Date().toISOString();
-
-    // Upsert aggregate ratings
-    await db.prepare(`
-      INSERT INTO ratings (release_id, average, count, five_star_count, last_rated_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON CONFLICT(release_id) DO UPDATE SET
-        average = excluded.average,
-        count = excluded.count,
-        five_star_count = excluded.five_star_count,
-        updated_at = excluded.updated_at
-    `).bind(releaseId, ratingsData.average, ratingsData.count, ratingsData.fiveStarCount, now, now).run();
-
-    // Upsert individual user ratings if provided
-    if (ratingsData.userRatings) {
-      for (const [userId, rating] of Object.entries(ratingsData.userRatings)) {
-        const id = `${releaseId}_${userId}`;
-        await db.prepare(`
-          INSERT INTO user_ratings (id, release_id, user_id, rating, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET
-            rating = excluded.rating,
-            updated_at = excluded.updated_at
-        `).bind(id, releaseId, userId, rating, now, now).run();
-      }
-    }
-
-    return true;
-  } catch (e) {
-    console.error('[D1] Error bulk upserting ratings:', e);
-    return false;
-  }
-}
-
 // =============================================
 // LIVESTREAM SLOTS
 // =============================================
@@ -980,25 +943,6 @@ export async function d1DeleteSlot(db: D1Database, id: string): Promise<boolean>
   } catch (e) {
     console.error('[D1] Error deleting slot:', e);
     return false;
-  }
-}
-
-// Clean up old slots (ended more than 24 hours ago)
-export async function d1CleanupOldSlots(db: D1Database): Promise<number> {
-  try {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const result = await db.prepare(`
-      DELETE FROM livestream_slots WHERE status IN ('ended', 'cancelled') AND end_time < ?
-    `).bind(cutoff).run();
-
-    const deleted = result.meta?.changes || 0;
-    if (deleted > 0) {
-      console.log('[D1] Cleaned up', deleted, 'old slots');
-    }
-    return deleted;
-  } catch (e) {
-    console.error('[D1] Error cleaning up slots:', e);
-    return 0;
   }
 }
 
@@ -1463,18 +1407,6 @@ export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: a
     return true;
   } catch (e) {
     console.error('[D1] Error upserting vinyl seller:', e);
-    return false;
-  }
-}
-
-// Delete vinyl seller settings
-export async function d1DeleteVinylSeller(db: D1Database, userId: string): Promise<boolean> {
-  try {
-    await db.prepare('DELETE FROM vinyl_sellers WHERE id = ?').bind(userId).run();
-    console.log('[D1] Deleted vinyl seller:', userId);
-    return true;
-  } catch (e) {
-    console.error('[D1] Error deleting vinyl seller:', e);
     return false;
   }
 }

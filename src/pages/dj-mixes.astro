@@ -122,12 +122,16 @@ const sortedGenres = Array.from(genreCounts.entries())
 // Core genres to always show (if they exist)
 const coreGenres = ['Jungle', 'Drum and Bass', 'Ragga Jungle', 'Hardcore', 'Old Skool'];
 const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
+
+// Preload first mix artwork for faster LCP
+const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
 ---
 
 <Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax. Jungle, drum & bass, and breakbeat sets from UK underground DJs.">
+  {firstMixArtwork && <link rel="preload" href={firstMixArtwork} as="image" slot="head" />}
   <Header />
-  
-  <main class="dj-mixes-main">
+
+  <div class="dj-mixes-main">
     <!-- Background Image -->
     <div class="bg-image-overlay"></div>
     
@@ -214,7 +218,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
               <h2 class="section-title">Latest Mixes</h2>
               <p class="section-subtitle">Stream or download full DJ sets • <span id="mix-count">{mixes.length}</span> available</p>
             </div>
-            <a href="/upload-mix" class="upload-mix-btn">
+            <a href="/upload-mix/" class="upload-mix-btn">
               📤 Upload Mix
             </a>
           </div>
@@ -264,8 +268,9 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
                   class="mix-artwork"
                   width="260"
                   height="260"
-                  loading="lazy"
-                  decoding="async"
+                  loading={index < 3 ? "eager" : "lazy"}
+                  decoding={index < 3 ? "auto" : "async"}
+                  fetchpriority={index === 0 ? "high" : undefined}
                   onerror="this.src='/place-holder.webp'"
                 />
               </div>
@@ -461,7 +466,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
         </div>
       </div>
     )}
-  </main>
+  </div>
 
   <!-- Share Modal (Enhanced) -->
   <div id="shareModal" class="fixed inset-0 z-[100] hidden">
@@ -653,7 +658,7 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
         
         if (data.success && data.chart && data.chart.length > 0) {
           chartList.innerHTML = data.chart.slice(0, 10).map((mix, index) => `
-            <a href="/dj-mix/${mix.id}" class="chart-item">
+            <a href="/dj-mix/${mix.id}/" class="chart-item">
               <span class="chart-position">${index + 1}</span>
               <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)} artwork" class="chart-artwork" width="48" height="48" loading="lazy" decoding="async" />
               <div class="chart-info">

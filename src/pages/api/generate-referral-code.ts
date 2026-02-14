@@ -1,7 +1,7 @@
 // src/pages/api/generate-referral-code.ts
 // Generate a referral code for Plus members - uses KV storage (not Firebase)
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyUserToken } from '../../lib/firebase-rest';
+import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
 
 export const prerender = false;
@@ -18,11 +18,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // Get auth token
     const authHeader = request.headers.get('Authorization');

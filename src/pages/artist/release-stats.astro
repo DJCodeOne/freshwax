@@ -193,15 +193,15 @@ const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num 
 export const prerender = false;
 ---
 
-<Layout title="Release Analytics">
+<Layout title="Release Analytics" noindex={true}>
   <Header />
   
-  <main class="stats-main">
+  <div class="stats-main">
     <div class="container">
       <!-- Page Header -->
       <div class="page-header">
         <div class="header-left">
-          <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+          <a href="/artist/dashboard/" class="back-link">← Dashboard</a>
           <h1>Release Analytics</h1>
           <p>Track sales and performance across your releases</p>
         </div>
@@ -210,14 +210,14 @@ export const prerender = false;
       {!isLoggedIn ? (
         <div class="login-prompt">
           <p>Please log in to view your analytics.</p>
-          <a href="/login" class="login-btn">Sign In</a>
+          <a href="/login/" class="login-btn">Sign In</a>
         </div>
       ) : releases.length === 0 ? (
         <div class="empty-state">
           <div class="empty-icon">📊</div>
           <h2>No analytics yet</h2>
           <p>Upload your first release to start tracking performance!</p>
-          <a href="/pro/releases/new" class="upload-btn">Upload Release</a>
+          <a href="/pro/releases/new/" class="upload-btn">Upload Release</a>
         </div>
       ) : (
         <>
@@ -305,7 +305,7 @@ export const prerender = false;
         </>
       )}
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

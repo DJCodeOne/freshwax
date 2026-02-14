@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
 
 export const prerender = false;
@@ -25,10 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initKVCache(env);
 
   // SECURITY: Verify user authentication via Firebase token

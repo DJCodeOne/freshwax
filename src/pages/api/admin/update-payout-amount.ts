@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 
@@ -59,11 +59,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const saQuery = getSaQuery(locals);
 

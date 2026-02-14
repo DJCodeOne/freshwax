@@ -8,10 +8,14 @@ import Footer from '../components/Footer.astro';
 export const prerender = false;
 ---
 
-<Layout title="Live Stream Schedule" description="View the Fresh Wax live stream schedule. See when DJs are going live with jungle, drum & bass, and breakbeat sets.">
+<Layout
+  title="Live Stream Schedule - Upcoming DJ Sets"
+  description="View the Fresh Wax live stream schedule. See when DJs are going live with jungle, drum & bass, and breakbeat sets. Book your own slot and stream for free."
+  keywords={['DJ schedule', 'live stream schedule', 'jungle DJ sets', 'drum and bass schedule', 'dnb live timetable', 'book DJ slot', 'upcoming DJ streams']}
+>
   <Header />
 
-  <main class="schedule-main">
+  <div class="schedule-main">
     <div class="container">
       <div class="schedule-header">
         <h1>📅 STREAM <span class="red">SCHEDULE</span></h1>
@@ -75,10 +79,10 @@ export const prerender = false;
             <span class="step-text">Go live!</span>
           </div>
         </div>
-        <a href="/dj-lobby/book" class="cta-btn">Book a Slot →</a>
+        <a href="/dj-lobby/book/" class="cta-btn">Book a Slot →</a>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -626,11 +630,73 @@ export const prerender = false;
 
       if (data.success) {
         allSlots = (data.slots || []).filter(s => s.status !== 'cancelled');
+        // Inject Event structured data (JSON-LD) for SEO
+        injectScheduleJsonLd(allSlots);
       }
     } catch (error) {
       console.error('Failed to load schedule:', error);
     }
     renderGrid();
+  }
+
+  // Inject Event JSON-LD structured data for upcoming scheduled shows
+  function injectScheduleJsonLd(slots) {
+    // Remove any previously injected schedule JSON-LD
+    document.querySelectorAll('script[data-schedule-jsonld]').forEach(el => el.remove());
+
+    const now = new Date();
+    // Filter to upcoming booked/scheduled/live slots only
+    const upcomingSlots = slots
+      .filter(s => (s.status === 'scheduled' || s.status === 'live' || s.status === 'in_lobby') && new Date(s.startTime) > new Date(now.getTime() - 3600000))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .slice(0, 20);
+
+    if (upcomingSlots.length === 0) return;
+
+    const events = upcomingSlots.map(slot => {
+      return {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": (slot.djName || 'DJ') + " Live on Fresh Wax",
+        "description": (slot.djName || 'DJ') + " - live jungle, drum & bass, and breakbeat stream on Fresh Wax." + (slot.title ? " " + slot.title : ""),
+        "startDate": slot.startTime,
+        ...(slot.endTime && { "endDate": slot.endTime }),
+        "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+        "eventStatus": "https://schema.org/EventScheduled",
+        "location": {
+          "@type": "VirtualLocation",
+          "url": "https://freshwax.co.uk/live"
+        },
+        "organizer": {
+          "@type": "Organization",
+          "name": "Fresh Wax",
+          "url": "https://freshwax.co.uk"
+        },
+        ...(slot.djName && {
+          "performer": {
+            "@type": "MusicGroup",
+            "name": slot.djName
+          }
+        }),
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP",
+          "availability": "https://schema.org/InStock",
+          "url": "https://freshwax.co.uk/live"
+        }
+      };
+    });
+
+    // Inject each event as a separate JSON-LD script tag
+    events.forEach(eventData => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-schedule-jsonld', 'true');
+      script.textContent = JSON.stringify(eventData);
+      document.head.appendChild(script);
+    });
   }
 
   function renderGrid() {
@@ -722,7 +788,7 @@ export const prerender = false;
     // Add click handlers to booked/live slots
     grid.querySelectorAll('.hour-cell.booked, .hour-cell.live').forEach(cell => {
       cell.addEventListener('click', () => {
-        window.location.href = '/live';
+        window.location.href = '/live/';
       });
     });
   }

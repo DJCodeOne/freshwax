@@ -2,7 +2,7 @@
 // Check order details including fees
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
@@ -16,7 +16,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const orderId = url.searchParams.get('id') || 'fRh0piRRDvBtXaOYOIdD';
 
   const runtimeEnv = (locals as any)?.runtime?.env;
-  initFirebaseEnv(runtimeEnv);
 
   try {
     const order = await getDocument('orders', orderId);

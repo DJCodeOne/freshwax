@@ -3,7 +3,7 @@
 // Replaces Firebase heartbeat polling with Pusher's built-in presence tracking
 
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -40,12 +40,6 @@ export const OPTIONS: APIRoute = async ({ request }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
-
-    // Initialize Firebase for auth verification
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     // Get Pusher credentials
     const appId = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;

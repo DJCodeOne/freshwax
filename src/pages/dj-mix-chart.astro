@@ -70,7 +70,7 @@ export const prerender = false;
 <Layout title="DJ Mix Chart - Top Rated Mixes" description="Top DJ mixes ranked by plays and engagement. Discover the best jungle and drum & bass mixes on Fresh Wax.">
   <Header />
   
-  <main class="chart-main">
+  <div class="chart-main">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-content">
@@ -86,7 +86,7 @@ export const prerender = false;
           <div class="empty-icon">🎧</div>
           <h2>No mixes yet</h2>
           <p>Be the first to upload a mix!</p>
-          <a href="/upload-mix" class="upload-btn">Upload Mix</a>
+          <a href="/upload-mix/" class="upload-btn">Upload Mix</a>
         </div>
       ) : (
         <div class="chart-list">
@@ -154,7 +154,7 @@ export const prerender = false;
         </div>
       )}
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

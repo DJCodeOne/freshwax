@@ -6,9 +6,10 @@
 interface Props {
   mode: 'public' | 'booking' | 'admin';
   id?: string;
+  nonce?: string;
 }
 
-const { mode, id = 'dailySchedule' } = Astro.props;
+const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 ---
 
 <div class={`daily-schedule mode-${mode}`} id={id} data-mode={mode}>
@@ -1138,7 +1139,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
   }
 </style>
 
-<script define:vars={{ id, mode }}>
+<script define:vars={{ id, mode }} nonce={nonce}>
   // DailySchedule Controller
   (function() {
     const container = document.getElementById(id);
@@ -1460,10 +1461,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
                 if (result.success) {
                   // Successfully extended booking - go to go-live page
                   alert(`Your ${new Date(result.originalStartTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} booking has been extended to start now!`);
-                  window.location.href = '/account/dj-lobby';
+                  window.location.href = '/account/dj-lobby/';
                 } else if (result.noUpcomingBooking) {
                   // No upcoming booking - just go to go-live page for ad-hoc streaming
-                  window.location.href = '/account/dj-lobby';
+                  window.location.href = '/account/dj-lobby/';
                 } else {
                   alert(result.error || 'Could not start early. Try the Go Live page.');
                   goLiveBlock.innerHTML = `<span class="go-live-text">GO LIVE NOW</span>`;
@@ -1471,10 +1472,10 @@ const { mode, id = 'dailySchedule' } = Astro.props;
                 }
               } catch (e) {
                 console.error('Early start error:', e);
-                window.location.href = '/account/dj-lobby';
+                window.location.href = '/account/dj-lobby/';
               }
             } else {
-              window.location.href = '/account/dj-lobby';
+              window.location.href = '/account/dj-lobby/';
             }
           });
         } else if (scheduleMode === 'booking' && !bookingsDisabled) {
@@ -1508,7 +1509,7 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         block.style.cursor = 'pointer';
         block.addEventListener('click', (e) => {
           e.stopPropagation();
-          window.location.href = '/account/dj-lobby';
+          window.location.href = '/account/dj-lobby/';
         });
       }
 
@@ -1650,10 +1651,8 @@ const { mode, id = 'dailySchedule' } = Astro.props;
           // Get Firebase idToken for authenticated write
           let idToken = null;
           try {
-            const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-            const auth = getAuth();
-            if (auth.currentUser) {
-              idToken = await auth.currentUser.getIdToken();
+            if (window.firebaseAuth?.currentUser) {
+              idToken = await window.firebaseAuth.currentUser.getIdToken();
               console.log('[DailySchedule] Got idToken for authenticated write');
             }
           } catch (tokenErr) {
@@ -1728,10 +1727,8 @@ const { mode, id = 'dailySchedule' } = Astro.props;
         // Get Firebase idToken for authenticated write
         let idToken = null;
         try {
-          const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-          const auth = getAuth();
-          if (auth.currentUser) {
-            idToken = await auth.currentUser.getIdToken();
+          if (window.firebaseAuth?.currentUser) {
+            idToken = await window.firebaseAuth.currentUser.getIdToken();
           }
         } catch (tokenErr) {
           console.warn('[DailySchedule] Could not get idToken for cancel:', tokenErr);

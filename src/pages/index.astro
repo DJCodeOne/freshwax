@@ -27,7 +27,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
   {firstArtwork && <link rel="preload" href={firstArtwork} as="image" slot="head" />}
   <Header />
 
-  <main class="index-main">
+  <div class="index-main">
 
     <!-- Welcome Hero Section -->
     <section class="hero-section">
@@ -44,15 +44,15 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
             Jungle & Drum and Bass
           </p>
           <div class="glass-panel animate-fade-up" style="animation-delay: 0.4s;">
-            <a href="/crates" class="nav-item">Vinyl</a>
-            <span class="dot-separator">●</span>
-            <a href="/releases" class="nav-item">Digital</a>
-            <span class="dot-separator">●</span>
-            <a href="/dj-mixes" class="nav-item">DJ Mixes</a>
-            <span class="dot-separator">●</span>
-            <a href="/merch" class="nav-item">Merch</a>
-            <span class="dot-separator">●</span>
-            <a href="/live" class="nav-item">Live</a>
+            <a href="/crates/" class="nav-item">Vinyl</a>
+            <span class="dot-separator" aria-hidden="true">●</span>
+            <a href="/releases/" class="nav-item">Digital</a>
+            <span class="dot-separator" aria-hidden="true">●</span>
+            <a href="/dj-mixes/" class="nav-item">DJ Mixes</a>
+            <span class="dot-separator" aria-hidden="true">●</span>
+            <a href="/merch/" class="nav-item">Merch</a>
+            <span class="dot-separator" aria-hidden="true">●</span>
+            <a href="/live/" class="nav-item">Live</a>
           </div>
           <div class="animate-fade-in" style="display: flex; align-items: center; justify-content: center; gap: 1rem; animation-delay: 0.6s;">
             <div style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
@@ -70,7 +70,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
       <div class="quick-links-grid">
 
         <!-- Weekly Chart Card -->
-        <a href="/weekly-chart" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#dc2626'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
+        <a href="/weekly-chart/" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#dc2626'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
           <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626, #991b1b); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <span style="font-size: 1.5rem;">📅</span>
           </div>
@@ -82,7 +82,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
         </a>
         
         <!-- Pre-orders Card -->
-        <a href="/pre-orders" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#f97316'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
+        <a href="/pre-orders/" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#f97316'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
           <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f97316, #dc2626); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <span style="font-size: 1.5rem;">⏰</span>
           </div>
@@ -94,7 +94,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
         </a>
         
         <!-- DJ Mix Chart Card -->
-        <a href="/dj-mix-chart" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#fbbf24'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
+        <a href="/dj-mix-chart/" class="animate-fade-down-delayed" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: all 0.2s; animation-delay: 0.5s;" onmouseover="this.style.borderColor='#fbbf24'; this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#374151'; this.style.transform='translateY(0)'">
           <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <span style="font-size: 1.5rem;">🏆</span>
           </div>
@@ -143,7 +143,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
       {featuredReleases.length > 0 && (
         <div style="margin-top: 4rem; text-align: center;">
           <a 
-            href="/releases" 
+            href="/releases/" 
             class="cta-button"
             style="display: inline-block; background: linear-gradient(to right, #dc2626, #991b1b); color: white; padding: 1rem 2.5rem; border-radius: 0.5rem; font-weight: 700; font-size: 1.125rem; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); transition: all 0.3s; position: relative; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.2);"
           >
@@ -153,7 +153,7 @@ const firstArtwork = featuredReleases[0]?.coverArtUrl;
       )}
     </section>
 
-  </main>
+  </div>
 
   <FloatingShuffleButton />
   <Footer />

@@ -9,7 +9,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       <div class="header-content">
         <p class="subtitle">Monitor your inventory levels</p>
       </div>
-      <a href="/contact" class="btn btn-secondary">Request Stock Update</a>
+      <a href="/contact/" class="btn btn-secondary">Request Stock Update</a>
     </div>
 
     <!-- Stock Summary -->
@@ -263,37 +263,33 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const stockTableBody = document.getElementById('stockTableBody');
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      await loadStock(user.uid);
+      await loadStock(user);
     });
 
-    async function loadStock(uid) {
+    async function loadStock(user) {
       try {
-        const productsQuery = query(
-          collection(db, 'merch'),
-          where('sellerId', '==', uid)
-        );
-        const snapshot = await getDocs(productsQuery);
-        
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/pro/dashboard-data?type=stock', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load stock');
+
         let totalStock = 0;
         let lowStockCount = 0;
         let outOfStockCount = 0;
 
-        const products = [];
-        snapshot.forEach(doc => {
-          const product = { id: doc.id, ...doc.data() };
-          products.push(product);
-          
+        const products = data.products || [];
+        products.forEach(product => {
           const stock = product.stock || 0;
           totalStock += stock;
           if (stock === 0) outOfStockCount++;

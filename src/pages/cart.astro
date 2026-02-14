@@ -5,13 +5,14 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout title="Record Bag" noindex={true}>
   <Header />
-  
-  <main class="cart-main">
-    
+
+  <div class="cart-main">
+
     <!-- Page Header -->
     <div class="page-header-container">
       <div class="page-header-pattern"></div>
@@ -27,8 +28,8 @@ export const prerender = false;
         <span>Loading your bag...</span>
       </div>
     </div>
-    
-  </main>
+
+  </div>
 
   <Footer />
 </Layout>
@@ -252,4 +253,4 @@ export const prerender = false;
   }
 </style>
 
-<script is:inline src="/cart-page.js?v=4"></script>
+<script is:inline src="/cart-page.js?v=4" nonce={nonce}></script>

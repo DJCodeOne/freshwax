@@ -11,7 +11,7 @@ export const prerender = false;
 <Layout title="My DJ Mixes">
   <Header />
   
-  <main class="mixes-main">
+  <div class="mixes-main">
     <!-- Loading State -->
     <div id="loadingState" class="loading-state">
       <div class="spinner"></div>
@@ -24,7 +24,7 @@ export const prerender = false;
         <img src="/logo.webp" alt="Fresh Wax" class="login-logo" />
         <h1>My DJ Mixes</h1>
         <p>Sign in to manage your DJ mixes.</p>
-        <a href="/login?redirect=/account/mixes" class="btn-primary">Sign In</a>
+        <a href="/login/?redirect=/account/mixes" class="btn-primary">Sign In</a>
       </div>
     </div>
     
@@ -33,10 +33,10 @@ export const prerender = false;
       <!-- Header -->
       <div class="page-header">
         <div class="header-left">
-          <a href="/account/dashboard" class="back-link">← Back to Dashboard</a>
+          <a href="/account/dashboard/" class="back-link">← Back to Dashboard</a>
           <h1>My DJ Mixes</h1>
         </div>
-        <a href="/upload-mix" class="btn-primary">+ Upload New Mix</a>
+        <a href="/upload-mix/" class="btn-primary">+ Upload New Mix</a>
       </div>
 
       <!-- Stats -->
@@ -162,26 +162,13 @@ export const prerender = false;
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
 
 <script type="module">
-  import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  
-  const firebaseConfig = {
-    apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
-  
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+  // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
   // Elements
   const loadingState = document.getElementById('loadingState');
@@ -249,7 +236,7 @@ export const prerender = false;
                 <div class="empty-icon">🎧</div>
                 <h2>No mixes yet</h2>
                 <p>Upload your first DJ mix to share with the community.</p>
-                <a href="/upload-mix" class="btn-primary">Upload Mix</a>
+                <a href="/upload-mix/" class="btn-primary">Upload Mix</a>
               </div>
             `;
           } else {
@@ -265,7 +252,7 @@ export const prerender = false;
                     <div class="mix-image">
                       ${artworkUrl ? `<img src="${artworkUrl}" alt="${title}" />` : '<img src="/place-holder.webp" alt="Placeholder" />'}
                       <div class="mix-overlay">
-                        <a href="/dj-mix/${mix.id}" class="overlay-btn" target="_blank">View</a>
+                        <a href="/dj-mix/${mix.id}/" class="overlay-btn" target="_blank">View</a>
                       </div>
                     </div>
                     <div class="mix-info">
@@ -279,7 +266,7 @@ export const prerender = false;
                         <span>💬 ${formatNumber(mix.commentCount || (Array.isArray(mix.comments) ? mix.comments.length : 0))}</span>
                       </div>
                       <div class="mix-actions">
-                        <a href="/dj-mix/${mix.id}" class="btn-view" target="_blank">👁️ View</a>
+                        <a href="/dj-mix/${mix.id}/" class="btn-view" target="_blank">👁️ View</a>
                         <button class="btn-edit" data-mix-id="${mix.id}" data-title="${title}" data-description="${description}" data-artwork="${artworkUrl}">✏️ Edit</button>
                         <button class="btn-delete" data-mix-id="${mix.id}" data-title="${title}">🗑️ Delete</button>
                       </div>
@@ -310,8 +297,8 @@ export const prerender = false;
     loginPrompt?.classList.remove('hidden');
   }
 
-  // Check auth state changes
-  onAuthStateChanged(auth, (user) => {
+  // Check auth state via Header globals
+  window.authReady.then((user) => {
     if (user) {
       initMixes(user);
     } else {
@@ -320,22 +307,22 @@ export const prerender = false;
   });
 
   // Also check current user immediately (for View Transitions navigation)
-  if (auth.currentUser) {
-    initMixes(auth.currentUser);
+  if (window.authUser) {
+    initMixes(window.authUser);
   }
 
   // Handle View Transitions - reset and reinitialize when page loads via client navigation
   document.addEventListener('astro:page-load', () => {
     resetState();
-    if (auth.currentUser) {
-      initMixes(auth.currentUser);
+    if (window.authUser) {
+      initMixes(window.authUser);
     }
   });
 
   // Also handle visibility change (tab switching back)
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && auth.currentUser && !mixesInitialized) {
-      initMixes(auth.currentUser);
+    if (document.visibilityState === 'visible' && window.firebaseAuth?.currentUser && !mixesInitialized) {
+      initMixes(window.firebaseAuth?.currentUser);
     }
   });
 
@@ -378,7 +365,7 @@ export const prerender = false;
         
         try {
           // Get current user's ID token for authentication
-          const user = auth.currentUser;
+          const user = window.firebaseAuth?.currentUser;
           const idToken = user ? await user.getIdToken() : null;
 
           const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}`, {
@@ -578,7 +565,7 @@ export const prerender = false;
     
     try {
       // Get auth token for API calls
-      const user = auth.currentUser;
+      const user = window.firebaseAuth?.currentUser;
       const idToken = user ? await user.getIdToken() : null;
 
       // If there's new artwork, upload it first
@@ -632,7 +619,7 @@ export const prerender = false;
         // Close modal and refresh data without full page reload
         editModal?.classList.add('hidden');
         mixesInitialized = false;
-        await initMixes(auth.currentUser);
+        await initMixes(window.firebaseAuth?.currentUser);
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
       } else {
@@ -699,7 +686,7 @@ export const prerender = false;
 
     try {
       // Get current user's ID token for authentication
-      const user = auth.currentUser;
+      const user = window.firebaseAuth?.currentUser;
       const idToken = user ? await user.getIdToken() : null;
 
       const response = await fetch('/api/delete-mix', {

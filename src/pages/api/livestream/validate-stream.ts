@@ -9,16 +9,12 @@
 // - 403 with { valid: false, reason: "..." } if stream is denied
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 
 // Helper to initialize services
 function initServices(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initRed5Env({
     RED5_SIGNING_SECRET: env?.RED5_SIGNING_SECRET || import.meta.env.RED5_SIGNING_SECRET,
   });

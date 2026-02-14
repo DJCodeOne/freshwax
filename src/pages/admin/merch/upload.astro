@@ -25,9 +25,9 @@ export const prerender = false;
   <header class="header">
     <h1>Fresh <span>Wax</span> Upload Merch</h1>
     <nav class="header-nav">
-      <a href="/admin/inventory">Stock & Inventory</a>
-      <a href="/admin/merch/suppliers">Suppliers</a>
-      <a href="/admin">Dashboard</a>
+      <a href="/admin/inventory/">Stock & Inventory</a>
+      <a href="/admin/merch/suppliers/">Suppliers</a>
+      <a href="/admin/">Dashboard</a>
     </nav>
   </header>
 
@@ -313,7 +313,7 @@ export const prerender = false;
                 <select class="form-select" id="supplierId">
                   <option value="">Select supplier...</option>
                 </select>
-                <div class="form-hint">Or <a href="/admin/merch/suppliers" target="_blank">add new supplier</a></div>
+                <div class="form-hint">Or <a href="/admin/merch/suppliers/" target="_blank">add new supplier</a></div>
               </div>
               <div class="form-group">
                 <label class="form-label">Supplier Cut (%)</label>
@@ -327,7 +327,7 @@ export const prerender = false;
 
         <!-- Submit -->
         <div class="submit-row">
-          <button type="button" class="btn btn-secondary" onclick="window.location.href='/admin/inventory'">Cancel</button>
+          <button type="button" class="btn btn-secondary" onclick="window.location.href='/admin/inventory/'">Cancel</button>
           <button type="submit" class="btn btn-primary" id="submitBtn">Upload Product</button>
         </div>
       </div>
@@ -1183,7 +1183,7 @@ export const prerender = false;
         showToast('Product uploaded successfully!', 'success');
         
         setTimeout(() => {
-          window.location.href = '/admin/inventory';
+          window.location.href = '/admin/inventory/';
         }, 1500);
         
       } catch (error) {

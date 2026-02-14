@@ -3,7 +3,7 @@
 // Usage: GET /api/admin/test-order-email?orderNumber=FW-260126-1O1JTG&email=test@example.com
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { sendOrderConfirmationEmail } from '../../../lib/order-utils';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
@@ -52,11 +52,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: projectId,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   const saQuery = getSaQuery(locals);
   const serviceAccountKey = getServiceAccountKey(env);

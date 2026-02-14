@@ -2,7 +2,7 @@
 // Scheduled job to send low stock alerts to admins
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, updateDocument, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -42,10 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
   console.log('[Stock Alerts] ========== CRON JOB STARTED ==========');
 
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   const ADMIN_EMAILS = (env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS || '').split(',').filter(Boolean);

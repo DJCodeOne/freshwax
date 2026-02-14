@@ -126,16 +126,6 @@ function persistToKV(key: string, entry: RateLimitEntry, ttlMs: number): void {
 }
 
 /**
- * Reset rate limit for a key (e.g., after successful auth)
- */
-export function resetRateLimit(key: string): void {
-  rateLimitStore.delete(key);
-  if (kvStore) {
-    try { kvStore.delete(`rl:${key}`); } catch { /* non-critical */ }
-  }
-}
-
-/**
  * Pre-configured rate limiters for common use cases
  */
 export const RateLimiters = {
@@ -344,3 +334,4 @@ export function rateLimitResponse(retryAfter: number): Response {
 export function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+

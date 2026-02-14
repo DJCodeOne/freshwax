@@ -21,6 +21,7 @@ const firebaseConfig = {
   messagingSenderId: "675435782973",
   appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
 };
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -36,6 +37,7 @@ const firebaseConfig = {
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
+  <a href="#login-form" class="skip-link">Skip to login form</a>
   <div class="split-container">
     <!-- Left Side - Branding -->
     <div class="branding-side">
@@ -80,7 +82,7 @@ const firebaseConfig = {
 
     <!-- Right Side - Login Form -->
     <div class="form-side">
-      <div class="form-container">
+      <div class="form-container" id="login-form">
         <!-- Mobile Logo -->
         <a href="/" class="mobile-logo">
           <div class="logo-container">
@@ -110,18 +112,18 @@ const firebaseConfig = {
           <span>or sign in with email</span>
         </div>
 
-        <div class="message success-message" id="successMessage">
+        <div class="message success-message" id="successMessage" role="status">
           <span class="message-icon">✓</span>
           <span class="message-text">Login successful! Redirecting...</span>
         </div>
 
-        <div class="message error-message" id="errorMessage"></div>
+        <div class="message error-message" id="errorMessage" role="alert"></div>
 
         <form id="loginForm">
           <div class="form-group">
             <label for="email">Email Address</label>
             <input type="email" id="email" name="email" required placeholder="you@example.com" autocomplete="email">
-            <p class="field-error" id="emailError"></p>
+            <p class="field-error" id="emailError" role="alert"></p>
           </div>
 
           <div class="form-group">
@@ -135,7 +137,7 @@ const firebaseConfig = {
                 </svg>
               </button>
             </div>
-            <p class="field-error" id="passwordError"></p>
+            <p class="field-error" id="passwordError" role="alert"></p>
           </div>
 
           <div class="form-row">
@@ -144,7 +146,7 @@ const firebaseConfig = {
               <span class="checkbox-custom"></span>
               <span>Remember me</span>
             </label>
-            <a href="/forgot-password" class="forgot-link">Forgot password?</a>
+            <a href="/forgot-password/" class="forgot-link">Forgot password?</a>
           </div>
 
           <button type="submit" class="submit-btn" id="submitBtn">
@@ -159,7 +161,7 @@ const firebaseConfig = {
         </form>
 
         <div class="form-footer">
-          <p>Don't have an account? <a href="/register">Create Account</a></p>
+          <p>Don't have an account? <a href="/register/">Create Account</a></p>
         </div>
       </div>
     </div>
@@ -209,14 +211,12 @@ const firebaseConfig = {
   </script>
 
   <!-- Firebase SDK -->
-  <script type="module" define:vars={{ redirectTo, firebaseConfig }}>
+  <script type="module" define:vars={{ redirectTo, firebaseConfig }} nonce={nonce}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, setPersistence, browserLocalPersistence, onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const errorMessage = document.getElementById('errorMessage');
     const successMessage = document.getElementById('successMessage');
@@ -258,32 +258,25 @@ const firebaseConfig = {
         // Normalize email (googlemail.com -> gmail.com)
         const normalizedEmail = normalizeGmailEmail(user.email);
 
-        // Check if user already exists in Firestore
-        let userDoc = await getDoc(doc(db, 'users', user.uid));
-
-        if (!userDoc.exists()) {
-          // New user - create account with normalized email
-          const userData = {
-            uid: user.uid,
+        // Initialize user profile via server API (creates if doesn't exist)
+        const idToken = await user.getIdToken();
+        const initResponse = await fetch('/api/auth/init-user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            action: 'google-login',
             email: normalizedEmail,
             displayName: user.displayName || normalizedEmail.split('@')[0],
-            displayNameLower: (user.displayName || normalizedEmail.split('@')[0]).toLowerCase(),
-            photoURL: user.photoURL || null,
-            provider: 'Google',
-            emailVerified: true, // Google accounts are pre-verified
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            roles: {
-              customer: true,
-              dj: true,
-              artist: false,
-              merchSupplier: false,
-              vinylSeller: false
-            },
-            pendingRoles: {}
-          };
+            photoURL: user.photoURL || null
+          })
+        });
 
-          await setDoc(doc(db, 'users', user.uid), userData);
+        if (!initResponse.ok) {
+          const initData = await initResponse.json();
+          throw new Error(initData.message || 'Failed to initialize user profile');
         }
 
         // Set cookies
@@ -408,7 +401,7 @@ const firebaseConfig = {
           errorMessage.innerHTML = `
             <strong>Email verification required</strong><br>
             Please verify your email address before logging in.<br>
-            <a href="/verify-email" style="color: #22c55e; text-decoration: underline;">Click here to verify</a>
+            <a href="/verify-email/" style="color: #22c55e; text-decoration: underline;">Click here to verify</a>
           `;
           errorMessage.style.display = 'block';
           submitBtn.disabled = false;
@@ -437,32 +430,20 @@ const firebaseConfig = {
           });
           const profile = await profileResponse.json();
 
-          // If user doesn't exist in Firestore, create them (handles orphaned Auth accounts)
+          // If user doesn't exist in Firestore, create them via server API (handles orphaned Auth accounts)
           if (!profile.success || profile.error === 'User not found') {
-            const userData = {
-              email: user.email,
-              displayName: user.displayName || user.email.split('@')[0],
-              fullName: user.displayName || '',
-              roles: {
-                customer: true,
-                dj: true,
-                artist: false,
-                merchSupplier: false,
-                vinylSeller: false,
-                admin: false
+            await fetch('/api/auth/init-user', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${_idToken}`
               },
-              permissions: {
-                canBuy: true,
-                canComment: true,
-                canRate: true
-              },
-              approved: false,
-              suspended: false,
-              createdAt: serverTimestamp(),
-              registeredAt: serverTimestamp(),
-              syncedFromAuth: true
-            };
-            await setDoc(doc(db, 'users', user.uid), userData);
+              body: JSON.stringify({
+                action: 'login',
+                email: user.email,
+                displayName: user.displayName || user.email.split('@')[0]
+              })
+            });
           }
 
           // Cache the profile in sessionStorage for future use
@@ -722,7 +703,11 @@ const firebaseConfig = {
     }
     
     .checkbox-label input {
-      display: none;
+      position: absolute;
+      opacity: 0;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
     }
     
     .checkbox-custom {
@@ -930,6 +915,31 @@ const firebaseConfig = {
 
     .form-divider span {
       padding: 0 1rem;
+    }
+
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #dc2626;
+      color: white;
+      padding: 8px 16px;
+      z-index: 100;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .skip-link:focus {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 10000;
+      padding: 1rem;
+      background: #000;
+      color: #fff;
+    }
+    :focus-visible {
+      outline: 2px solid #ef4444;
+      outline-offset: 2px;
     }
   </style>
 </body>

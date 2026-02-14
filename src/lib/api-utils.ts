@@ -125,35 +125,6 @@ export const ApiErrors = {
   notConfigured: (service: string) => errorResponse(`${service} not configured`, 500),
 };
 
-// ============================================
-// ADMIN KEY VALIDATION
-// ============================================
-
-/**
- * Validate admin key from request
- * Checks both body and Authorization header
- */
-export function validateAdminKey(
-  request: Request,
-  body: { adminKey?: string } | null,
-  env: { ADMIN_KEY?: string }
-): boolean {
-  const expectedKey = env?.ADMIN_KEY;
-  if (!expectedKey) return false;
-
-  // Check body first - timing-safe comparison
-  if (body?.adminKey && timingSafeCompare(body.adminKey, expectedKey)) return true;
-
-  // Check Authorization header - timing-safe comparison
-  const authHeader = request.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    if (timingSafeCompare(token, expectedKey)) return true;
-  }
-
-  return false;
-}
-
 /**
  * Timing-safe string comparison to prevent timing attacks
  */
@@ -216,60 +187,17 @@ export function getEnv(locals: unknown): Record<string, string | undefined> {
 }
 
 // ============================================
-// CORS HELPERS
+// HTML ESCAPING
 // ============================================
 
-// Allowed origins for CORS (must match middleware.ts)
-const ALLOWED_ORIGINS = [
-  'https://freshwax.co.uk',
-  'https://www.freshwax.co.uk',
-  'https://freshwax.pages.dev',
-  'https://stream.freshwax.co.uk',
-  'https://icecast.freshwax.co.uk',
-  'http://localhost:4321',
-  'http://localhost:3000',
-  'http://127.0.0.1:4321',
-];
-
-function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) return false;
-  if (origin.endsWith('.freshwax.pages.dev')) return true;
-  return ALLOWED_ORIGINS.includes(origin);
-}
-
-function getCorsHeadersForOrigin(origin: string | null): Record<string, string> {
-  if (isAllowedOrigin(origin)) {
-    return {
-      'Access-Control-Allow-Origin': origin!,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Allow-Credentials': 'true',
-    };
-  }
-  return {};
-}
-
 /**
- * Handle CORS preflight request
+ * Escape HTML entities to prevent XSS in server-rendered content and emails.
+ * Handles null/undefined gracefully by returning an empty string.
  */
-export function corsPreflightResponse(request?: Request): Response {
-  const origin = request?.headers.get('origin') || null;
-  const corsHeaders = getCorsHeadersForOrigin(origin);
-
-  if (Object.keys(corsHeaders).length > 0) {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    });
-  }
-  return new Response(null, { status: 403 });
+export function escapeHtml(text: string | null | undefined): string {
+  if (!text) return '';
+  const str = String(text);
+  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return str.replace(/[&<>"']/g, m => map[m]);
 }
 
-/**
- * Add CORS headers to existing headers
- */
-export function withCors(headers: Record<string, string> = {}, request?: Request): Record<string, string> {
-  const origin = request?.headers.get('origin') || null;
-  const corsHeaders = getCorsHeadersForOrigin(origin);
-  return { ...headers, ...corsHeaders };
-}

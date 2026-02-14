@@ -6,12 +6,13 @@ import Footer from '../../components/Footer.astro';
 import '../../styles/dashboard.css';
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout title="My Account" noindex={true}>
   <Header />
   
-  <main class="dashboard-main">
+  <div class="dashboard-main">
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
       <div class="spinner"></div>
@@ -37,7 +38,7 @@ export const prerender = false;
             <span class="pro-icon">👑</span>
             <span class="pro-text">Go Plus</span>
           </a>
-          <a href="/artist/dashboard" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved partners">
+          <a href="/artist/dashboard/" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved partners">
             <span class="pro-icon">⚡</span>
             <span class="pro-text">Pro Dashboard</span>
           </a>
@@ -209,7 +210,7 @@ export const prerender = false;
           
           <!-- Get More Credit -->
           <div class="get-credit-cta">
-            <a href="/giftcards" class="cta-link">
+            <a href="/giftcards/" class="cta-link">
               <span class="cta-icon">🎁</span>
               <span>Learn more about Gift Cards →</span>
             </a>
@@ -220,7 +221,7 @@ export const prerender = false;
         <div class="tab-panel" id="panel-wishlist">
           <div class="section-header-flex">
             <h2>My Wishlist</h2>
-            <a href="/releases" class="btn-secondary-sm">Browse Releases →</a>
+            <a href="/releases/" class="btn-secondary-sm">Browse Releases →</a>
           </div>
           <p class="wishlist-intro" style="color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.875rem;">
             Releases you've saved for later. Click the bookmark icon on any release to add it here.
@@ -228,7 +229,7 @@ export const prerender = false;
           <div id="wishlistContainer" class="wishlist-grid">
             <div class="empty-state">
               <p style="color: #fff; margin: 0 0 1.5rem 0; font-size: 0.875rem;">Your wishlist is empty</p>
-              <a href="/releases" style="display: inline-block; padding: 0.7rem 1.4rem; background: #dc2626; color: #fff; font-weight: 600; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">Browse Releases</a>
+              <a href="/releases/" style="display: inline-block; padding: 0.7rem 1.4rem; background: #dc2626; color: #fff; font-weight: 600; font-size: 0.8rem; border-radius: 6px; text-decoration: none;">Browse Releases</a>
             </div>
           </div>
         </div>
@@ -237,7 +238,7 @@ export const prerender = false;
         <div class="tab-panel" id="panel-following">
           <div class="section-header-flex">
             <h2>Artists I Follow</h2>
-            <a href="/releases" class="btn-secondary-sm">Discover Artists →</a>
+            <a href="/releases/" class="btn-secondary-sm">Discover Artists →</a>
           </div>
           <p class="following-intro" style="color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.9375rem;">
             Stay updated with new releases from your favourite artists. Click the Follow button on any release to add artists here.
@@ -245,7 +246,7 @@ export const prerender = false;
           <div id="followingContainer" class="following-grid">
             <div class="empty-state">
               <p style="color: #fff; margin: 0 0 1.5rem 0;">You're not following any artists yet</p>
-              <a href="/releases" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
+              <a href="/releases/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
             </div>
           </div>
         </div>
@@ -254,7 +255,7 @@ export const prerender = false;
         <div class="tab-panel" id="panel-mixes">
           <div class="section-header-flex">
             <h2>My DJ Mixes</h2>
-            <a href="/upload-mix" class="btn-primary-sm">+ Upload Mix</a>
+            <a href="/upload-mix/" class="btn-primary-sm">+ Upload Mix</a>
           </div>
           <div class="mixes-stats" id="mixesStats">
             <div class="stat-mini"><span class="stat-value" id="statMixes">0</span><span class="stat-label">Mixes</span></div>
@@ -437,7 +438,7 @@ export const prerender = false;
             <h3>Selling & Payments</h3>
             <p class="selling-hint">Manage how you receive payments for your sales on Fresh Wax.</p>
             <div class="selling-links">
-              <a href="/account/payment-settings" class="selling-link">
+              <a href="/account/payment-settings/" class="selling-link">
                 <span class="selling-icon">&#128179;</span>
                 <div class="selling-info">
                   <strong>Payment Settings</strong>
@@ -445,7 +446,7 @@ export const prerender = false;
                 </div>
                 <span class="selling-arrow">&rarr;</span>
               </a>
-              <a href="/account/selling" class="selling-link" id="vinylSellingLink" style="display:none;">
+              <a href="/account/selling/" class="selling-link" id="vinylSellingLink" style="display:none;">
                 <span class="selling-icon">&#128230;</span>
                 <div class="selling-info">
                   <strong>Vinyl Selling</strong>
@@ -453,7 +454,7 @@ export const prerender = false;
                 </div>
                 <span class="selling-arrow">&rarr;</span>
               </a>
-              <a href="/artist/dashboard" class="selling-link" id="artistDashboardLink" style="display:none;">
+              <a href="/artist/dashboard/" class="selling-link" id="artistDashboardLink" style="display:none;">
                 <span class="selling-icon">&#9889;</span>
                 <div class="selling-info">
                   <strong>Artist Dashboard</strong>
@@ -705,7 +706,7 @@ export const prerender = false;
         <button type="button" id="zipModalClose" class="zip-modal-close">Cancel</button>
       </div>
     </div>
-  </main>
+  </div>
 
   <!-- JSZip for ZIP downloads -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -713,7 +714,7 @@ export const prerender = false;
   <Footer />
 </Layout>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // Go Plus button handler - separate script to avoid module loading issues
   document.addEventListener('DOMContentLoaded', function() {
     var btn = document.getElementById('goPlusHeaderBtn');
@@ -733,7 +734,7 @@ export const prerender = false;
 <script>
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
+  // Firestore SDK removed (~200KB) - using /api/user-profile server-side API instead
 
   const firebaseConfig = {
     apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_FIREBASE_API_KEY) || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -747,7 +748,6 @@ export const prerender = false;
   // Initialize Firebase only once
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
   
   function escapeHtml(str) {
     if (!str) return '';
@@ -762,16 +762,26 @@ export const prerender = false;
   let appliedPromoCode = null; // Track applied promo code for Plus upgrade
   let authUnsubscribe = null;
 
-  // Load customer data from Firestore (users collection)
+  // Load customer data via API (replaces Firestore SDK getDoc call)
   async function loadCustomerData(uid) {
     try {
-      const customerDoc = await getDoc(doc(db, 'users', uid));
-      
-      if (customerDoc.exists()) {
-        const data = customerDoc.data();
+      const idToken = currentUser ? await currentUser.getIdToken() : null;
+      if (!idToken) {
+        console.error('[Dashboard] No auth token for loading customer data');
+        return {};
+      }
+
+      const response = await fetch('/api/user-profile', {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+      const result = await response.json();
+
+      if (result.success && result.profile) {
         return {
-          ...data,
-          displayName: data.displayName || data.fullName || data.firstName || ''
+          ...result.profile,
+          displayName: result.profile.displayName || result.profile.fullName || result.profile.firstName || ''
         };
       }
       return {};
@@ -852,7 +862,7 @@ export const prerender = false;
               <div class="empty-icon">🎧</div>
               <h3>No mixes yet</h3>
               <p>Upload your first DJ mix to share with the community.</p>
-              <a href="/upload-mix" class="btn-primary-sm">Upload Mix</a>
+              <a href="/upload-mix/" class="btn-primary-sm">Upload Mix</a>
             </div>
           `;
         } else {
@@ -947,8 +957,8 @@ export const prerender = false;
                     <div style="font-size: 0.625rem; color: #9ca3af; text-transform: uppercase;">Score</div>
                   </div>
                   <div style="display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0;">
-                    <a href="/dj-mix/${mix.id}" style="display: inline-block; padding: 0.4rem 0.875rem; background: #000; color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; white-space: nowrap;">View Mix →</a>
-                    <a href="/account/mixes" style="display: inline-block; padding: 0.4rem 0.875rem; background: linear-gradient(to bottom, #1f2937, #111827); color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; border: 2px solid #4b5563; white-space: nowrap;">Manage</a>
+                    <a href="/dj-mix/${mix.id}/" style="display: inline-block; padding: 0.4rem 0.875rem; background: #000; color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; white-space: nowrap;">View Mix →</a>
+                    <a href="/account/mixes/" style="display: inline-block; padding: 0.4rem 0.875rem; background: linear-gradient(to bottom, #1f2937, #111827); color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; border: 2px solid #4b5563; white-space: nowrap;">Manage</a>
                   </div>
                 </div>
                 
@@ -1025,7 +1035,7 @@ export const prerender = false;
           container.innerHTML = `
             <div class="empty-state" style="grid-column: 1/-1;">
               <p style="color: #fff; margin: 0 0 1.5rem 0;">Your wishlist is empty</p>
-              <a href="/releases" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
+              <a href="/releases/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
             </div>
           `;
         } else {
@@ -1039,7 +1049,7 @@ export const prerender = false;
             return `
               <div class="wishlist-card" data-release-id="${release.id}">
                 <div class="wishlist-card-artwork">
-                  <a href="/item/${release.id}">
+                  <a href="/item/${release.id}/">
                     <img src="${release.coverArtUrl || '/place-holder.webp'}" alt="${release.releaseName}" loading="lazy" onerror="this.src='/place-holder.webp'">
                   </a>
                 </div>
@@ -1059,7 +1069,7 @@ export const prerender = false;
                     ${hasVinyl ? `<span class="price-vinyl"><span class="price-label">Vinyl</span> £${vinylPrice.toFixed(2)}</span>` : ''}
                   </div>
                   <div class="wishlist-card-actions">
-                    <a href="/item/${release.id}" class="wishlist-btn-view">View</a>
+                    <a href="/item/${release.id}/" class="wishlist-btn-view">View</a>
                   </div>
                 </div>
               </div>
@@ -1107,7 +1117,7 @@ export const prerender = false;
                     container.innerHTML = `
                       <div class="empty-state" style="grid-column: 1/-1;">
                         <p style="color: #fff; margin: 0 0 1.5rem 0;">Your wishlist is empty</p>
-                        <a href="/releases" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
+                        <a href="/releases/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
                       </div>
                     `;
                   }
@@ -1239,7 +1249,7 @@ export const prerender = false;
           container.innerHTML = `
             <div class="empty-state" style="grid-column: 1/-1;">
               <p style="color: #fff; margin: 0 0 1.5rem 0;">You're not following any artists yet</p>
-              <a href="/releases" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
+              <a href="/releases/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
             </div>
           `;
         } else {
@@ -1259,7 +1269,7 @@ export const prerender = false;
                   </div>
                 ` : ''}
                 <div class="following-card-actions">
-                  ${latestRelease ? `<a href="/item/${latestRelease.id}" class="following-btn-view">View Latest</a>` : '<a href="/releases" class="following-btn-view">Browse</a>'}
+                  ${latestRelease ? `<a href="/item/${latestRelease.id}/" class="following-btn-view">View Latest</a>` : '<a href="/releases/" class="following-btn-view">Browse</a>'}
                   <button class="following-btn-unfollow" data-artist-name="${artist.artistName}">Unfollow</button>
                 </div>
               </div>
@@ -1306,7 +1316,7 @@ export const prerender = false;
                     container.innerHTML = `
                       <div class="empty-state" style="grid-column: 1/-1;">
                         <p style="color: #fff; margin: 0 0 1.5rem 0;">You're not following any artists yet</p>
-                        <a href="/releases" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
+                        <a href="/releases/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
                       </div>
                     `;
                   }
@@ -1558,7 +1568,7 @@ export const prerender = false;
             }).join('')}
           </div>
           
-          <a href="/order-confirmation/${order.id}" class="order-view-link">
+          <a href="/order-confirmation/${order.id}/" class="order-view-link">
             View Order Details
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -2033,7 +2043,7 @@ export const prerender = false;
       container.innerHTML = `
         <div class="empty-state">
           <p style="color: #fff; margin: 0 0 1.5rem 0;">No digital purchases yet</p>
-          <a href="/releases" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
+          <a href="/releases/" style="display: inline-block; padding: 0.75rem 1.5rem; background: #dc2626; color: #fff; font-weight: 600; border-radius: 8px; text-decoration: none;">Browse Releases</a>
         </div>
       `;
       return;
@@ -2253,22 +2263,34 @@ export const prerender = false;
       try {
         const phoneValue = document.getElementById('phone').value;
 
-        // Update users collection (single collection for all user data)
-        await setDoc(doc(db, 'users', currentUser.uid), {
-          firstName: firstName,
-          lastName: lastName,
-          fullName: firstName + ' ' + lastName,
-          displayName: newDisplayName,
-          displayNameLower: newDisplayName.toLowerCase(),
-          phone: phoneValue,
-          address1: document.getElementById('address1').value,
-          address2: document.getElementById('address2').value,
-          city: document.getElementById('city').value,
-          county: document.getElementById('county').value,
-          postcode: document.getElementById('postcode').value,
-          country: document.getElementById('country').value,
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
+        // Save profile via API (replaces Firestore SDK setDoc call)
+        const idToken = await currentUser.getIdToken();
+        const profileResponse = await fetch('/api/user-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            firstName: firstName,
+            lastName: lastName,
+            fullName: firstName + ' ' + lastName,
+            displayName: newDisplayName,
+            displayNameLower: newDisplayName.toLowerCase(),
+            phone: phoneValue,
+            address1: document.getElementById('address1').value,
+            address2: document.getElementById('address2').value,
+            city: document.getElementById('city').value,
+            county: document.getElementById('county').value,
+            postcode: document.getElementById('postcode').value,
+            country: document.getElementById('country').value
+          })
+        });
+
+        const profileResult = await profileResponse.json();
+        if (!profileResult.success) {
+          throw new Error(profileResult.error || 'Failed to save profile');
+        }
 
         // Update Firebase Auth profile
         await updateProfile(currentUser, { displayName: newDisplayName });
@@ -2975,7 +2997,7 @@ export const prerender = false;
         if (result.success) {
           // Sign out and redirect
           await signOut(auth);
-          window.location.href = '/login?deleted=true';
+          window.location.href = '/login/?deleted=true';
         } else {
           throw new Error(result.error || 'Failed to delete account');
         }
@@ -3700,7 +3722,7 @@ export const prerender = false;
 
             if (captureResult.success) {
               // Redirect to success page
-              window.location.href = '/account/dashboard?upgraded=true';
+              window.location.href = '/account/dashboard/?upgraded=true';
             } else {
               // Payment was cancelled or failed
               resetPaymentButtons();
@@ -4066,7 +4088,7 @@ export const prerender = false;
         }
         
       } else {
-        window.location.href = '/login';
+        window.location.href = '/login/';
       }
     });
   }

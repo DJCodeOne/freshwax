@@ -3,7 +3,7 @@
 // Uses Firebase REST API to bypass Firestore rules
 
 import type { APIRoute } from 'astro';
-import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -13,10 +13,6 @@ export const prerender = false;
 // Helper to initialize Firebase for Cloudflare runtime
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // Build service account query function for blocked collections
@@ -65,7 +61,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {

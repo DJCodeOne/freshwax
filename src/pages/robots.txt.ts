@@ -24,10 +24,16 @@ Disallow: /admin
 Disallow: /artist/
 Disallow: /account/
 Disallow: /api/
+Disallow: /pro/
+Disallow: /supplier/
 Disallow: /checkout
 Disallow: /checkout/
 Disallow: /cart
 Disallow: /order-confirmation/
+Disallow: /upload-mix
+Disallow: /dj-lobby/
+Disallow: /login
+Disallow: /register
 
 # ===========================================
 # DISALLOW - Utility/Filter URLs (prevent duplicate content)
@@ -45,7 +51,7 @@ Disallow: /*?msclkid=*
 # ===========================================
 # DISALLOW - Internal/Technical Pages
 # ===========================================
-Disallow: /_astro/
+# Note: /_astro/ is intentionally NOT blocked - CSS/JS must be crawlable for rendering
 Disallow: /_worker/
 Disallow: /cdn-cgi/
 Disallow: /*.json$
@@ -62,6 +68,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /account/
+Disallow: /artist/
+Disallow: /pro/
+Disallow: /supplier/
 Disallow: /checkout
 Disallow: /cart
 
@@ -85,6 +94,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /account/
+Disallow: /artist/
+Disallow: /pro/
+Disallow: /supplier/
 Disallow: /checkout
 Crawl-delay: 1
 
@@ -94,6 +106,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /account/
+Disallow: /artist/
+Disallow: /pro/
+Disallow: /supplier/
 Crawl-delay: 2
 
 # DuckDuckGo
@@ -102,6 +117,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /api/
 Disallow: /account/
+Disallow: /artist/
+Disallow: /pro/
+Disallow: /supplier/
 
 # Facebook crawler (for Open Graph)
 User-agent: facebookexternalhit
@@ -163,7 +181,7 @@ User-agent: Claude-Web
 Disallow: /
 
 # ===========================================
-# SITEMAP
+# SITEMAPS
 # ===========================================
 Sitemap: ${SITE_URL}/sitemap.xml
 

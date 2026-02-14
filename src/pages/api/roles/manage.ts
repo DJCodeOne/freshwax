@@ -1,15 +1,12 @@
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const action = url.searchParams.get('action');
@@ -100,10 +97,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   try {

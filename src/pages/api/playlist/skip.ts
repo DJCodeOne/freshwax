@@ -2,7 +2,7 @@
 // Handle !skip command - checks Plus subscription and daily limit
 
 import type { APIContext } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, canSkipTrack, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 
@@ -10,10 +10,6 @@ export const prerender = false;
 
 function initEnv(locals: any) {
   const env = (locals as any).runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-  });
   // Initialize admin config from runtime env
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }

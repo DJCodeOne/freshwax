@@ -130,6 +130,7 @@ const formatDate = (date) => {
 };
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <AdminLayout title="Orders" activeNav="orders" showStats={true} stats={stats}>
@@ -286,7 +287,7 @@ export const prerender = false;
   </div>
 
   <Fragment slot="scripts">
-    <script is:inline>
+    <script is:inline nonce={nonce}>
       const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
       };

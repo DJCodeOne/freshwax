@@ -1,6 +1,6 @@
 // src/pages/api/download-mix.ts
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { verifyRequestUser } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -20,10 +20,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   // SECURITY: Require authentication
   const { userId, error: authError } = await verifyRequestUser(request);

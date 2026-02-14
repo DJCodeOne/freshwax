@@ -3,7 +3,7 @@
 // POST /api/livestream/bot - Send a bot message to a stream
 
 import type { APIRoute } from 'astro';
-import { addDocument, getDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { addDocument, getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { BOT_USER, BOT_ANNOUNCEMENTS } from '../../../lib/chatbot';
 import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin';
 import { triggerPusher } from '../../../lib/pusher';
@@ -11,14 +11,9 @@ import { triggerPusher } from '../../../lib/pusher';
 // Helper to initialize Firebase and return env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   return env;
 }
-
 
 // Send bot message to a stream
 async function sendBotMessage(streamId: string, message: string, env: any): Promise<{ success: boolean; messageId?: string }> {

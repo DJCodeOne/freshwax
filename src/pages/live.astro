@@ -27,14 +27,16 @@ const firebaseConfig = {
 
 // Dynamic thumbnail URL for social sharing - shows current stream or DJ image when live
 const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout
-  title="Live Stream - Watch DJs Live"
-  description="Watch live DJ streams on Fresh Wax. Tune in for live jungle, drum & bass, and breakbeat sets from our resident and guest DJs."
+  title="Live DJ Streams - Jungle, Drum & Bass, Breakbeat"
+  description="Watch live DJ streams on Fresh Wax. Free jungle, drum & bass, and breakbeat sets from resident and guest DJs. Chat, react, and book your own slot."
   image={ogImageUrl}
-  imageAlt="Fresh Wax Live Stream"
+  imageAlt="Fresh Wax Live Stream - Jungle and Drum & Bass DJs"
   type="video.other"
+  keywords={['live DJ stream', 'jungle live stream', 'drum and bass live', 'dnb live set', 'breakbeat DJ', 'watch DJ live', 'free DJ stream', 'UK jungle radio']}
   hideShuffle={true}
   video={{
     duration: "PT0M",
@@ -48,7 +50,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   
   <!-- Sticky Mini Player for Mobile -->
   <LiveMiniPlayer />
-  
+
   <div id="fullscreenMode" class="fullscreen-mode hidden">
     <div class="fullscreen-header">
       <div class="fs-info">
@@ -214,7 +216,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     </button>
   </nav>
   
-  <main class="live-main">
+  <div class="live-main">
     <div class="live-layout">
       <aside class="schedule-column">
         <div class="schedule-header">
@@ -298,7 +300,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
                 <span class="stat-icon">Reacts</span><span id="likeCount">0</span>
               </button>
               <div class="stat"><span class="stat-icon">Time</span><span id="streamDuration">0:00</span></div>
-              <a href="/account/dj-lobby" id="djLobbyBtn" class="dj-lobby-btn hidden" title="Open DJ Lobby">
+              <a href="/account/dj-lobby/" id="djLobbyBtn" class="dj-lobby-btn hidden" title="Open DJ Lobby">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                   <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                 </svg>
@@ -605,7 +607,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         </div>
       </aside>
     </div>
-  </main>
+  </div>
   
   <div id="bookingModal" class="modal hidden">
     <div class="modal-overlay"></div>
@@ -1047,7 +1049,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   <PlaylistModal />
 </Layout>
 
-<script define:vars={{ giphyApiKey }}>
+<script define:vars={{ giphyApiKey }} nonce={nonce}>
   window.GIPHY_API_KEY = giphyApiKey;
 </script>
 
@@ -2210,19 +2212,17 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     if (window.authReady) {
       user = await window.authReady;
     } else {
-      const { getAuth } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-      const auth = getAuth();
-      user = auth.currentUser;
+      user = window.firebaseAuth?.currentUser;
     }
 
     if (!user) {
       // Not logged in - redirect to login
-      window.location.href = '/login?redirect=/account/dj-lobby';
+      window.location.href = '/login/?redirect=/account/dj-lobby/';
       return;
     }
 
     // Redirect directly to DJ lobby - it handles eligibility checking
-    window.location.href = '/account/dj-lobby';
+    window.location.href = '/account/dj-lobby/';
   });
 
 
@@ -2570,23 +2570,28 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
             // If no user but we have cached UID, wait for auth to sync
             if (!user && cachedUid) {
               console.log('[Live] No user but have cached UID, waiting for auth sync...');
-              const { getAuth, onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
-              const auth = window.firebaseAuth || getAuth();
+              const auth = window.firebaseAuth;
+              if (!auth) {
+                console.log('[Live] No firebaseAuth available');
+                user = null;
+              } else {
+                const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
 
-              // Wait up to 2 seconds for auth to sync
-              user = await new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                  console.log('[Live] Auth sync timeout');
-                  resolve(auth.currentUser);
-                }, 2000);
+                // Wait up to 2 seconds for auth to sync
+                user = await new Promise((resolve) => {
+                  const timeout = setTimeout(() => {
+                    console.log('[Live] Auth sync timeout');
+                    resolve(auth.currentUser);
+                  }, 2000);
 
-                const unsubscribe = onAuthStateChanged(auth, (u) => {
-                  clearTimeout(timeout);
-                  unsubscribe();
-                  console.log('[Live] onAuthStateChanged resolved:', u?.uid);
-                  resolve(u);
+                  const unsubscribe = onAuthStateChanged(auth, (u) => {
+                    clearTimeout(timeout);
+                    unsubscribe();
+                    console.log('[Live] onAuthStateChanged resolved:', u?.uid);
+                    resolve(u);
+                  });
                 });
-              });
+              }
             }
           } catch (err) {
             console.error('[Live] Auth check error:', err);
@@ -2596,7 +2601,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 
           if (!user) {
             console.log('[Live] No user, redirecting to login');
-            window.location.href = '/login?redirect=/live';
+            window.location.href = '/login/?redirect=/live/';
             return;
           }
 
@@ -2697,12 +2702,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
 <script type="module" define:vars={{ firebaseConfig }}>
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, setDoc, deleteDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   // Prevent duplicate app initialization
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const firestoreDb = getFirestore(app);
   
   let currentUser = null;
   let isLoggedIn = false;
@@ -3286,56 +3289,66 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
     document.getElementById('acceptIncomingTakeoverBtn')?.addEventListener('click', async () => {
       const notification = document.getElementById('incomingTakeoverNotification');
       const requesterId = notification.dataset.requesterId;
-      
+
       if (!requesterId || !currentUser) return;
-      
+
       try {
         const token = await currentUser.getIdToken();
-        const response = await fetch('/api/livestream/slots', {
+        // First get stream key
+        const keyResponse = await fetch('/api/livestream/slots', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ action: 'getStreamKey', djId: currentUser.uid })
         });
-        
-        const result = await response.json();
-        
-        // Send stream key to requester
-        await setDoc(doc(firestoreDb, 'djTakeoverRequests', `request_${requesterId}`), {
-          status: 'approved',
-          requesterId: requesterId,
-          serverUrl: result.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live',
-          streamKey: result.streamKey || 'Contact admin for key',
-          approvedAt: serverTimestamp()
-        }, { merge: true });
-        
-        // Clear the request from my document
-        await deleteDoc(doc(firestoreDb, 'djTakeoverRequests', currentUser.uid));
-        
-        notification.classList.add('hidden');
-        alert('Takeover approved! Stream key has been shared.');
+        const keyResult = await keyResponse.json();
+
+        // Approve takeover via API (handles Firestore + Pusher)
+        const approveResponse = await fetch('/api/dj-lobby/takeover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            action: 'approve',
+            requesterId: currentUser.uid,
+            streamKey: keyResult.streamKey || 'Contact admin for key',
+            serverUrl: keyResult.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live'
+          })
+        });
+        const approveResult = await approveResponse.json();
+
+        if (approveResult.success) {
+          notification.classList.add('hidden');
+          alert('Takeover approved! Stream key has been shared.');
+        } else {
+          alert('Failed to accept takeover: ' + (approveResult.error || 'Unknown error'));
+        }
       } catch (e) {
         console.error('Accept takeover error:', e);
         alert('Failed to accept takeover');
       }
     });
-    
+
     document.getElementById('declineIncomingTakeoverBtn')?.addEventListener('click', async () => {
       const notification = document.getElementById('incomingTakeoverNotification');
       const requesterId = notification.dataset.requesterId;
-      
-      if (!requesterId) return;
-      
+
+      if (!requesterId || !currentUser) return;
+
       try {
-        // Update requester's document to show declined
-        await setDoc(doc(firestoreDb, 'djTakeoverRequests', `request_${requesterId}`), {
-          status: 'declined',
-          declinedAt: serverTimestamp()
-        }, { merge: true });
-        
-        // Remove from my document
-        await deleteDoc(doc(firestoreDb, 'djTakeoverRequests', currentUser.uid));
-        
-        notification.classList.add('hidden');
+        const token = await currentUser.getIdToken();
+        // Decline takeover via API (handles Firestore + Pusher)
+        const response = await fetch('/api/dj-lobby/takeover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({
+            action: 'decline',
+            requesterId: currentUser.uid
+          })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          notification.classList.add('hidden');
+        }
       } catch (e) {
         console.error('Decline takeover error:', e);
       }
@@ -3391,10 +3404,111 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         }
         
         console.log('[Schedule] Loaded', allSlots.length, 'slots, upcoming:', result.upcoming?.length || 0);
+
+        // Inject Event structured data (JSON-LD) for SEO
+        updateEventJsonLd(result.currentLive, result.upcoming, allSlots);
       }
     } catch (e) {
       console.error('Failed to load schedule:', e);
     }
+  }
+
+  // Dynamic JSON-LD injection for live stream events
+  function updateEventJsonLd(currentLive, upcoming, slots) {
+    // Remove any previously injected event JSON-LD
+    document.querySelectorAll('script[data-live-jsonld]').forEach(el => el.remove());
+
+    const events = [];
+
+    // If someone is live now, add a BroadcastEvent
+    if (currentLive) {
+      events.push({
+        "@context": "https://schema.org",
+        "@type": "BroadcastEvent",
+        "name": (currentLive.djName || 'DJ') + " Live on Fresh Wax",
+        "description": (currentLive.djName || 'DJ') + " is streaming live jungle, drum & bass, and breakbeat on Fresh Wax.",
+        "startDate": currentLive.startTime || new Date().toISOString(),
+        ...(currentLive.endTime && { "endDate": currentLive.endTime }),
+        "isLiveBroadcast": true,
+        "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+        "eventStatus": "https://schema.org/EventScheduled",
+        "location": {
+          "@type": "VirtualLocation",
+          "url": "https://freshwax.co.uk/live"
+        },
+        "organizer": {
+          "@type": "Organization",
+          "name": "Fresh Wax",
+          "url": "https://freshwax.co.uk"
+        },
+        ...(currentLive.djName && {
+          "performer": {
+            "@type": "MusicGroup",
+            "name": currentLive.djName
+          }
+        }),
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP",
+          "availability": "https://schema.org/InStock",
+          "url": "https://freshwax.co.uk/live"
+        }
+      });
+    }
+
+    // Add upcoming scheduled slots as Event items
+    const now = new Date();
+    const upcomingSlots = (slots || [])
+      .filter(s => s.status === 'scheduled' && new Date(s.startTime) > now)
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      .slice(0, 10);
+
+    upcomingSlots.forEach(slot => {
+      events.push({
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": (slot.djName || 'DJ') + " Live on Fresh Wax",
+        "description": (slot.djName || 'DJ') + " - live jungle, drum & bass, and breakbeat stream on Fresh Wax.",
+        "startDate": slot.startTime,
+        ...(slot.endTime && { "endDate": slot.endTime }),
+        "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+        "eventStatus": "https://schema.org/EventScheduled",
+        "location": {
+          "@type": "VirtualLocation",
+          "url": "https://freshwax.co.uk/live"
+        },
+        "organizer": {
+          "@type": "Organization",
+          "name": "Fresh Wax",
+          "url": "https://freshwax.co.uk"
+        },
+        ...(slot.djName && {
+          "performer": {
+            "@type": "MusicGroup",
+            "name": slot.djName
+          }
+        }),
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "GBP",
+          "availability": "https://schema.org/InStock",
+          "url": "https://freshwax.co.uk/live"
+        }
+      });
+    });
+
+    // Inject each event as a separate JSON-LD script
+    events.forEach(eventData => {
+      const script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-live-jsonld', 'true');
+      script.textContent = JSON.stringify(eventData);
+      document.head.appendChild(script);
+    });
   }
   
   // Update listeners display
@@ -4458,7 +4572,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       
       // Show login link
       setTimeout(() => {
-        window.location.href = '/login?redirect=/live';
+        window.location.href = '/login/?redirect=/live/';
       }, 1500);
       return;
     }
@@ -4599,7 +4713,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
       errorDiv.textContent = 'Please sign in to go live';
       errorDiv.classList.remove('hidden');
       setTimeout(() => {
-        window.location.href = '/login?redirect=/live';
+        window.location.href = '/login/?redirect=/live/';
       }, 1500);
       return;
     }
@@ -5114,13 +5228,14 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   
   // Throttled scroll handler
   let scrollTimeout;
-  window.addEventListener('scroll', () => {
+  function handleScroll() {
     if (scrollTimeout) return;
     scrollTimeout = setTimeout(() => {
       updateMiniPlayer();
       scrollTimeout = null;
     }, 100);
-  }, { passive: true });
+  }
+  window.addEventListener('scroll', handleScroll, { passive: true });
   
   // Observe play state changes
   const playBtn = document.getElementById('playBtn');
@@ -5132,10 +5247,10 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   // ============================================
   // KEYBOARD SHORTCUTS
   // ============================================
-  document.addEventListener('keydown', (e) => {
+  function handleKeydown(e) {
     // Don't trigger if typing in an input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    
+
     switch(e.code) {
       case 'Space':
         e.preventDefault();
@@ -5162,7 +5277,14 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
         document.getElementById('fullscreenBtn')?.click();
         break;
     }
-  });
+  }
+  document.addEventListener('keydown', handleKeydown);
+
+  // Cleanup on View Transitions navigation
+  document.addEventListener('astro:before-swap', () => {
+    window.removeEventListener('scroll', handleScroll);
+    document.removeEventListener('keydown', handleKeydown);
+  }, { once: true });
   
   function adjustVolume(delta) {
     const slider = document.getElementById('volumeSlider');
@@ -5314,7 +5436,7 @@ const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
   });
 </script>
 
-<script is:inline src="/email-verify-check.js"></script>
+<script is:inline src="/email-verify-check.js" nonce={nonce}></script>
 <script type="module" src="/live-stream.js?v=20260212-v2"></script>
 
 <script>

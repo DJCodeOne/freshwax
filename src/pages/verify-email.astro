@@ -8,6 +8,7 @@ const firebaseConfig = {
   authDomain: "freshwax-store.firebaseapp.com",
   projectId: "freshwax-store"
 };
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
@@ -59,11 +60,11 @@ const firebaseConfig = {
 
       <div class="help-text">
         <p>Didn't receive the email? Check your spam folder.</p>
-        <p>Wrong email? <a href="/register">Register again</a> with a different address.</p>
+        <p>Wrong email? <a href="/register/">Register again</a> with a different address.</p>
       </div>
 
       <div class="footer-links">
-        <a href="/login">Back to Login</a>
+        <a href="/login/">Back to Login</a>
         <span class="separator">|</span>
         <a href="/">Go to Homepage</a>
       </div>
@@ -258,14 +259,12 @@ const firebaseConfig = {
     }
   </style>
 
-  <script type="module" define:vars={{ firebaseConfig }}>
+  <script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged, sendEmailVerification, reload } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const resendBtn = document.getElementById('resendBtn');
     const checkBtn = document.getElementById('checkBtn');
@@ -277,10 +276,26 @@ const firebaseConfig = {
     let lastResendTime = 0;
     const RESEND_COOLDOWN = 60000; // 1 minute
 
+    // Helper: update Firestore via API to mark email as verified
+    async function markEmailVerified(user) {
+      try {
+        const idToken = await user.getIdToken();
+        await fetch('/api/auth/verify-email-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+      } catch (e) {
+        console.log('[Verify] Could not update verification status:', e);
+      }
+    }
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         // Not logged in, redirect to login
-        window.location.href = '/login';
+        window.location.href = '/login/';
         return;
       }
 
@@ -291,19 +306,11 @@ const firebaseConfig = {
       // Check if already verified
       await reload(user);
       if (user.emailVerified) {
-        // Update Firestore to mark email as verified
-        try {
-          await updateDoc(doc(db, 'users', user.uid), {
-            emailVerified: true,
-            emailVerifiedAt: new Date().toISOString()
-          });
-        } catch (e) {
-          console.log('[Verify] Could not update Firestore:', e);
-        }
+        await markEmailVerified(user);
         successMessage.textContent = 'Your email is verified! Redirecting...';
         successMessage.style.display = 'block';
         setTimeout(() => {
-          window.location.href = '/account/dashboard';
+          window.location.href = '/account/dashboard/';
         }, 1500);
         return;
       }
@@ -321,7 +328,7 @@ const firebaseConfig = {
 
       const user = auth.currentUser;
       if (!user) {
-        window.location.href = '/login';
+        window.location.href = '/login/';
         return;
       }
 
@@ -333,7 +340,7 @@ const firebaseConfig = {
 
       try {
         await sendEmailVerification(user, {
-          url: window.location.origin + '/login?verified=true',
+          url: window.location.origin + '/login/?verified=true',
           handleCodeInApp: false
         });
 
@@ -359,7 +366,7 @@ const firebaseConfig = {
     checkBtn.addEventListener('click', async () => {
       const user = auth.currentUser;
       if (!user) {
-        window.location.href = '/login';
+        window.location.href = '/login/';
         return;
       }
 
@@ -370,19 +377,11 @@ const firebaseConfig = {
         await reload(user);
 
         if (user.emailVerified) {
-          // Update Firestore to mark email as verified
-          try {
-            await updateDoc(doc(db, 'users', user.uid), {
-              emailVerified: true,
-              emailVerifiedAt: new Date().toISOString()
-            });
-          } catch (e) {
-            console.log('[Verify] Could not update Firestore:', e);
-          }
+          await markEmailVerified(user);
           successMessage.textContent = 'Email verified! Redirecting to your dashboard...';
           successMessage.style.display = 'block';
           setTimeout(() => {
-            window.location.href = '/account/dashboard';
+            window.location.href = '/account/dashboard/';
           }, 1500);
         } else {
           errorMessage.textContent = 'Email not yet verified. Please click the link in your email.';

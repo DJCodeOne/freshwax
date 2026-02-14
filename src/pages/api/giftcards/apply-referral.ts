@@ -2,7 +2,7 @@
 // Apply a referral code to a Pro subscription upgrade
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -19,10 +19,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -121,10 +117,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     // Verify the user is authenticated

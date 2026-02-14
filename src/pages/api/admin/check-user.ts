@@ -2,7 +2,7 @@
 // Check user data in Firebase
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, getDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 
@@ -18,10 +18,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const email = url.searchParams.get('email');
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   const saQuery = getSaQuery(locals);
 

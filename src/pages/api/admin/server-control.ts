@@ -1,7 +1,7 @@
 // src/pages/api/admin/server-control.ts
 // Admin server control API - handles start/stop/restart and maintenance actions
 import type { APIRoute } from 'astro';
-import { queryCollection, updateDocument, deleteDocument, initFirebaseEnv, clearCache as clearFirebaseCache } from '../../../lib/firebase-rest';
+import { queryCollection, updateDocument, deleteDocument, clearCache as clearFirebaseCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -9,12 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Rate limit
   const clientId = getClientId(request);

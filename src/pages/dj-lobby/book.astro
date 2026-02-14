@@ -7,6 +7,7 @@ export const prerender = false;
 // Prevent caching to ensure fresh script execution
 Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
 Astro.response.headers.set('Pragma', 'no-cache');
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <html lang="en">
 <head>
@@ -18,7 +19,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     window.FIREBASE_CONFIG = {
       apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
       authDomain: "freshwax-store.firebaseapp.com",
@@ -39,7 +40,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   <!-- Main Content -->
   <div id="mainContent" class="main-content hidden">
     <header class="header">
-      <a href="/account/dj-lobby" class="back-btn">← DJ Lobby</a>
+      <a href="/account/dj-lobby/" class="back-btn">← DJ Lobby</a>
       <h1>BOOK A <span class="red">SLOT</span></h1>
       <span id="userName" class="user-info"></span>
     </header>
@@ -724,18 +725,15 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
     import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     // Initialize Firebase - use existing app if available (from Header or previous load)
     // This ensures consistent auth state during View Transitions
-    let auth, db;
+    let auth;
 
     function initFirebase() {
       // First check if Header has shared its auth instance
       if (window.firebaseAuth) {
         auth = window.firebaseAuth;
-        const app = getApps()[0];
-        db = getFirestore(app);
         console.log('[Book] Using shared auth from Header');
         return;
       }
@@ -743,7 +741,6 @@ Astro.response.headers.set('Pragma', 'no-cache');
       // Otherwise use existing app or create new one
       const app = getApps().length ? getApps()[0] : initializeApp(window.FIREBASE_CONFIG);
       auth = getAuth(app);
-      db = getFirestore(app);
       console.log('[Book] Initialized Firebase (apps:', getApps().length, ')');
     }
 
@@ -830,7 +827,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         // No user - redirect to login
         localStorage.removeItem('fw_uid');
         localStorage.removeItem('fw_displayName');
-        window.location.href = '/login?redirect=/dj-lobby/book';
+        window.location.href = '/login/?redirect=/dj-lobby/book/';
         return;
       }
 
@@ -838,9 +835,24 @@ Astro.response.headers.set('Pragma', 'no-cache');
       localStorage.setItem('fw_uid', user.uid);
       currentUser = user;
 
-      // Get user data
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      const userData = userDoc.data() || {};
+      // Get user data via API (replaces client-side Firestore read)
+      let userData = {};
+      try {
+        const idToken = await user.getIdToken();
+        const accessResp = await fetch('/api/user/dashboard-access', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const accessData = await accessResp.json();
+        if (accessData.success) {
+          userData = {
+            displayName: accessData.displayName,
+            roles: accessData.roles,
+            subscription: accessData.subscription
+          };
+        }
+      } catch (e) {
+        console.error('[Book] Error fetching user data:', e);
+      }
 
       // Cache display name
       if (userData.displayName) {
@@ -848,15 +860,12 @@ Astro.response.headers.set('Pragma', 'no-cache');
       }
 
       // Check subscription tier for booking limits
-      const subscription = userData.subscription || {};
-      const isPlus = subscription.tier === 'pro' &&
-        subscription.expiresAt &&
-        new Date(subscription.expiresAt) > new Date();
+      const isPlus = userData.subscription?.isPlus || false;
       maxAdvanceDays = isPlus ? 30 : 7; // Plus: 1 month, Standard: 1 week
       console.log('[Book] Subscription tier:', isPlus ? 'Plus' : 'Standard', '- max advance days:', maxAdvanceDays);
 
       // All registered users are DJs by default
-      const isDJ = userData.roles?.dj === true || userDoc.exists();
+      const isDJ = userData.roles?.dj === true || true;
 
       if (!isDJ) {
         loadingGate.innerHTML = `
@@ -864,7 +873,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
             <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎧</div>
             <h2 style="margin-bottom: 0.5rem; font-size: 1.2rem;">DJ Access Required</h2>
             <p style="color: #888; font-size: 0.85rem;">You need DJ access to book slots.</p>
-            <a href="/account/dj-lobby" style="color: #dc2626; margin-top: 1rem; display: inline-block;">← Back to DJ Lobby</a>
+            <a href="/account/dj-lobby/" style="color: #dc2626; margin-top: 1rem; display: inline-block;">← Back to DJ Lobby</a>
           </div>
         `;
         return;

@@ -1,7 +1,7 @@
 // src/pages/api/delete-release.ts
 // Deletes a release from Firebase (releases collection + master list)
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
@@ -48,10 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Initialize Firebase environment
     const env = (locals as any)?.runtime?.env || {};
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
+
 
     const body = await request.json();
     const { releaseId } = body;

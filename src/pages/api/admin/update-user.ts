@@ -3,7 +3,7 @@
 // Uses Firebase REST API to bypass Firestore rules
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -12,10 +12,7 @@ export const prerender = false;
 // Helper to initialize Firebase for Cloudflare runtime
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

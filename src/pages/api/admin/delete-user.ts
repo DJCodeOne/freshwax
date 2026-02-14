@@ -3,7 +3,7 @@
 // Uses soft-delete approach (sets deleted flag) since Firestore rules block hard deletes
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv, invalidateUsersCache } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, invalidateUsersCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 
@@ -12,10 +12,7 @@ export const prerender = false;
 // Helper to initialize Firebase for Cloudflare runtime
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

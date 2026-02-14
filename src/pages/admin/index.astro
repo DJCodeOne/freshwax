@@ -413,7 +413,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   <div class="card mb-4 earnings-card">
     <div class="card-header">
       <h2>💰 Platform Earnings</h2>
-      <a href="/admin/payments" class="btn btn-ghost btn-sm">View Payments →</a>
+      <a href="/admin/payments/" class="btn btn-ghost btn-sm">View Payments →</a>
     </div>
     <div class="card-body">
       <div class="earnings-grid">
@@ -494,32 +494,32 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
   <!-- Quick Actions -->
   <div class="actions-grid mb-4">
-    <a href="/admin/merch/upload" class="action-card primary">
+    <a href="/admin/merch/upload/" class="action-card primary">
       <span class="card-icon">👕</span>
       <span class="card-title">Add Merch</span>
     </a>
-    <a href="/admin/streaming" class="action-card" style="position: relative;">
+    <a href="/admin/streaming/" class="action-card" style="position: relative;">
       <span class="card-icon">🔴</span>
       <span class="card-title">Live Stream</span>
       {activeLivestream && (
         <span class="card-badge live-pulse">LIVE</span>
       )}
     </a>
-    <a href="/admin/orders" class="action-card" style="position: relative;">
+    <a href="/admin/orders/" class="action-card" style="position: relative;">
       <span class="card-icon">📋</span>
       <span class="card-title">Orders</span>
       {pendingOrders.length > 0 && (
         <span class="card-badge">{pendingOrders.length}</span>
       )}
     </a>
-    <a href="/admin/artists/pending" class="action-card" style="position: relative;">
+    <a href="/admin/artists/pending/" class="action-card" style="position: relative;">
       <span class="card-icon">✅</span>
       <span class="card-title">Approvals</span>
       {pendingPartners.length > 0 && (
         <span class="card-badge">{pendingPartners.length}</span>
       )}
     </a>
-    <a href="/admin/analytics" class="action-card">
+    <a href="/admin/analytics/" class="action-card">
       <span class="card-icon">📈</span>
       <span class="card-title">Analytics</span>
     </a>
@@ -531,7 +531,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
     <div class="card">
       <div class="card-header">
         <h2>📋 Recent Orders</h2>
-        <a href="/admin/orders" class="btn btn-ghost btn-sm">View All →</a>
+        <a href="/admin/orders/" class="btn btn-ghost btn-sm">View All →</a>
       </div>
       {recentOrders.length === 0 ? (
         <div class="card-body">
@@ -585,52 +585,52 @@ Astro.response.headers.set('Pragma', 'no-cache');
       </div>
       <div class="card-body">
         <div class="quick-links">
-          <a href="/admin/releases/manage" class="quick-link">
+          <a href="/admin/releases/manage/" class="quick-link">
             <span class="quick-icon">💿</span>
             <span class="quick-text">Manage Releases</span>
             <span class="quick-count">{releases.length}</span>
           </a>
-          <a href="/admin/artists/manage" class="quick-link">
+          <a href="/admin/artists/manage/" class="quick-link">
             <span class="quick-icon">🎤</span>
             <span class="quick-text">Manage Partners</span>
             <span class="quick-count">{approvedPartners.length}</span>
           </a>
-          <a href="/admin/inventory" class="quick-link">
+          <a href="/admin/inventory/" class="quick-link">
             <span class="quick-icon">👕</span>
             <span class="quick-text">Stock & Inventory</span>
             <span class="quick-count">{merch.length}</span>
           </a>
-          <a href="/admin/dj-mixes/manage" class="quick-link">
+          <a href="/admin/dj-mixes/manage/" class="quick-link">
             <span class="quick-icon">🎧</span>
             <span class="quick-text">Manage DJ Mixes</span>
             <span class="quick-count">{mixes.length}</span>
           </a>
-          <a href="/admin/blog" class="quick-link">
+          <a href="/admin/blog/" class="quick-link">
             <span class="quick-icon">📝</span>
             <span class="quick-text">Manage Blog</span>
             <span class="quick-count">{publishedBlogPosts.length}</span>
           </a>
-          <a href="/admin/streaming" class="quick-link">
+          <a href="/admin/streaming/" class="quick-link">
             <span class="quick-icon">🔴</span>
             <span class="quick-text">Manage Live Stream</span>
             <span class="quick-count">{activeLivestream ? 'LIVE' : 'Off'}</span>
           </a>
-          <a href="/admin/users" class="quick-link">
+          <a href="/admin/users/" class="quick-link">
             <span class="quick-icon">👥</span>
             <span class="quick-text">User Management</span>
             <span class="quick-count">-</span>
           </a>
-          <a href="/admin/merch/suppliers" class="quick-link">
+          <a href="/admin/merch/suppliers/" class="quick-link">
             <span class="quick-icon">🏭</span>
             <span class="quick-text">Merch Suppliers</span>
             <span class="quick-count">-</span>
           </a>
-          <a href="/admin/vinyl" class="quick-link">
+          <a href="/admin/vinyl/" class="quick-link">
             <span class="quick-icon">📀</span>
             <span class="quick-text">Vinyl Sellers</span>
             <span class="quick-count">-</span>
           </a>
-          <a href="/admin/plus-accounts" class="quick-link plus-link">
+          <a href="/admin/plus-accounts/" class="quick-link plus-link">
             <span class="quick-icon">👑</span>
             <span class="quick-text">Plus Accounts</span>
             <span class="quick-count">-</span>
@@ -644,7 +644,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   <div class="card mt-4 livestream-card">
     <div class="card-header">
       <h2>🔴 Live Stream Control</h2>
-      <a href="/admin/streaming" class="btn btn-primary btn-sm">Manage Live →</a>
+      <a href="/admin/streaming/" class="btn btn-primary btn-sm">Manage Live →</a>
     </div>
     <div class="card-body">
       <div class="livestream-status-grid">
@@ -676,26 +676,26 @@ Astro.response.headers.set('Pragma', 'no-cache');
           ) : (
             <div class="offline-message">
               <p>No active stream. DJs can go live from the DJ Lobby.</p>
-              <a href="/live" class="btn btn-ghost btn-sm">View Live Page →</a>
+              <a href="/live/" class="btn btn-ghost btn-sm">View Live Page →</a>
             </div>
           )}
         </div>
 
         <!-- Quick Actions -->
         <div class="livestream-actions">
-          <a href="/admin/streaming" class="livestream-action-btn">
+          <a href="/admin/streaming/" class="livestream-action-btn">
             <span class="action-icon">⚙️</span>
             <span class="action-label">Stream Settings</span>
           </a>
-          <a href="/admin/streaming/schedule" class="livestream-action-btn">
+          <a href="/admin/streaming/schedule/" class="livestream-action-btn">
             <span class="action-icon">📅</span>
             <span class="action-label">Schedule</span>
           </a>
-          <a href="/live" class="livestream-action-btn" target="_blank">
+          <a href="/live/" class="livestream-action-btn" target="_blank">
             <span class="action-icon">📺</span>
             <span class="action-label">Watch Live</span>
           </a>
-          <a href="/admin/streaming/history" class="livestream-action-btn">
+          <a href="/admin/streaming/history/" class="livestream-action-btn">
             <span class="action-icon">📜</span>
             <span class="action-label">History</span>
           </a>

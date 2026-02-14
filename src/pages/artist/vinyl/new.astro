@@ -381,8 +381,8 @@ export const prerender = false;
   import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js';
   import RegionsPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/regions.esm.js';
 
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
   const firebaseConfig = {
     apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -413,7 +413,7 @@ export const prerender = false;
 
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      window.location.href = '/login?redirect=/artist/vinyl/new';
+      window.location.href = '/login/?redirect=/artist/vinyl/new/';
       return;
     }
     currentUser = user;
@@ -427,7 +427,7 @@ export const prerender = false;
       const data = await response.json();
       if (!data.isVinylSeller) {
         alert('You need to be an approved vinyl seller to list records.');
-        window.location.href = '/artist/dashboard';
+        window.location.href = '/artist/dashboard/';
         return;
       }
       sellerInfo = { id: user.uid, name: data.displayName || user.displayName || 'Unknown' };
@@ -1174,7 +1174,7 @@ export const prerender = false;
       status.textContent = publish ? 'Listing published!' : 'Draft saved!';
 
       setTimeout(() => {
-        window.location.href = '/artist/vinyl';
+        window.location.href = '/artist/vinyl/';
       }, 1500);
 
     } catch (error) {

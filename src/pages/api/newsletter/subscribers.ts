@@ -1,7 +1,7 @@
 // src/pages/api/newsletter/subscribers.ts
 // Get all subscribers for admin dashboard
 import type { APIRoute } from 'astro';
-import { queryCollection, deleteDocument, updateDocument, addDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, deleteDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
@@ -9,10 +9,6 @@ export const prerender = false;
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // Max subscribers returned per request to prevent memory issues

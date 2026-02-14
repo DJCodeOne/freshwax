@@ -28,8 +28,8 @@ const faqs = [
 
 <Layout title="Contact Us - Get in Touch" description="Get in touch with Fresh Wax. Questions about orders, music suggestions, or just want to chat about jungle and drum & bass? We'd love to hear from you.">
   <Header />
-  
-  <main class="min-h-screen" style="background: linear-gradient(to bottom, #111827, #0a0a0a);">
+
+  <div class="min-h-screen" style="background: linear-gradient(to bottom, #111827, #0a0a0a);">
     <!-- Hero -->
     <section class="bg-black text-white py-12">
       <div class="container mx-auto px-4 text-center">
@@ -166,7 +166,7 @@ const faqs = [
               Send Message
             </button>
             
-            <p id="form-message" class="text-center text-sm hidden"></p>
+            <p id="form-message" class="text-center text-sm hidden" role="alert"></p>
           </form>
         </div>
         
@@ -253,8 +253,8 @@ const faqs = [
             </p>
             <div class="space-y-2">
               <a href="/shipping/" class="block hover:underline">→ Shipping & Returns</a>
-              <a href="/terms" class="block hover:underline">→ Terms & Conditions</a>
-              <a href="/privacy" class="block hover:underline">→ Privacy Policy</a>
+              <a href="/terms/" class="block hover:underline">→ Terms & Conditions</a>
+              <a href="/privacy/" class="block hover:underline">→ Privacy Policy</a>
               <a href="/about/" class="block hover:underline">→ About Us</a>
             </div>
           </div>
@@ -278,7 +278,7 @@ const faqs = [
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

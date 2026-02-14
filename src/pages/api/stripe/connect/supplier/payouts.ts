@@ -2,7 +2,7 @@
 // Get payout history for a supplier
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv } from '../../../../../lib/firebase-rest';
+import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -20,10 +20,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     // Get supplier

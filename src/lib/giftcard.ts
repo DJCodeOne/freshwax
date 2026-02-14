@@ -1,6 +1,8 @@
 // src/lib/giftcard.ts
 // Gift Card System - Generate, validate, and redeem gift cards
 
+import { escapeHtml } from './api-utils';
+
 /**
  * Get cryptographically secure random bytes
  * Works in both Node.js and browser environments
@@ -202,17 +204,6 @@ export interface GiftCardPurchaseData {
   paypalOrderId?: string; // PayPal order ID
 }
 
-/**
- * Escape HTML entities to prevent XSS in email templates
- */
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 /**
  * Send gift card email via Resend API

@@ -1,7 +1,7 @@
 // src/pages/api/update-mix.ts
 // API endpoint to update mix description and backfill userId - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -14,12 +14,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     // SECURITY: Verify authentication via token (not cookies which are spoofable)
@@ -79,10 +74,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     };
 
-    // Update title if provided (max 37 chars)
+    // Update title if provided (max 50 chars)
     if (title !== undefined) {
-      updateData.title = title.slice(0, 37);
-      updateData.name = title.slice(0, 37);
+      updateData.title = title.slice(0, 50);
+      updateData.name = title.slice(0, 50);
     }
 
     if (description !== undefined) {

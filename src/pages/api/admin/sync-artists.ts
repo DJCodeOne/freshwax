@@ -1,7 +1,7 @@
 // src/pages/api/admin/sync-artists.ts
 // Syncs users with artist roles to the artists collection
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, setDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
@@ -9,12 +9,7 @@ import { parseJsonBody } from '../../../lib/api-utils';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase
   const env = (locals as any)?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   const saQuery = getSaQuery(locals);
 
   try {

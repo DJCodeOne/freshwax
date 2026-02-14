@@ -1,7 +1,7 @@
 // src/pages/api/newsletter/subscribe.ts
 // Newsletter subscription endpoint - saves to Firebase and sends welcome email via Resend
 import type { APIRoute } from 'astro';
-import { getDocument, createDocumentIfNotExists, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, createDocumentIfNotExists, updateDocument } from '../../../lib/firebase-rest';
 
 // Create a safe document ID from email (Firebase doc IDs can't contain / or .)
 function emailToDocId(email: string): string {
@@ -20,12 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Initialize Resend with Cloudflare runtime env
   const resend = new Resend(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY);

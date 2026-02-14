@@ -1,7 +1,7 @@
 // src/pages/api/admin/bypass-requests.ts
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
@@ -11,10 +11,6 @@ export const prerender = false;
 // Helper to initialize Firebase and admin env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   return env;
 }

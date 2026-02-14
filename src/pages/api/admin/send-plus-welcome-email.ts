@@ -8,13 +8,9 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, locals }) => {
   // SECURITY: Require admin authentication for sending emails
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
-  const { initFirebaseEnv } = await import('../../../lib/firebase-rest');
+  
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,

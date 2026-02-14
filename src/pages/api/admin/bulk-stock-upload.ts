@@ -2,7 +2,7 @@
 // Bulk stock upload via CSV
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
@@ -77,10 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const csvContent = await csvFile.text();
@@ -301,10 +298,7 @@ SKU003,2,subtract`;
 
   // Export current stock as CSV
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const allMerch = await queryCollection('merch', { limit: 500 });

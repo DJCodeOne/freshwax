@@ -4,10 +4,9 @@
 
 import { requireAdminAuth } from '../../../../lib/admin';
 import AdminLayout from '../../../../layouts/AdminLayout.astro';
-import { getDocument, initFirebaseEnv, clearCache } from '../../../../lib/firebase-rest';
+import { getDocument, clearCache } from '../../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../../lib/firebase-service-account';
 import '../../../../styles/admin/merch/edit.css';
-
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
@@ -19,13 +18,8 @@ export const prerender = false;
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-// Initialize Firebase env for Cloudflare runtime
-initFirebaseEnv({
-  FIREBASE_PROJECT_ID: runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-  FIREBASE_API_KEY: runtimeEnv?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK,
-});
-
 const { id } = Astro.params;
+const nonce = (Astro.locals as any).nonce || '';
 
 // Fetch product from Firebase
 let product = null;
@@ -146,7 +140,7 @@ const getStockBadgeClass = (stock) => {
 
 <AdminLayout title={product ? `Edit: ${product.name}` : 'Edit Product'} activeNav="merch">
   <Fragment slot="actions">
-    <a href="/admin/merch/manage" class="btn btn-secondary">← Back to Products</a>
+    <a href="/admin/merch/manage/" class="btn btn-secondary">← Back to Products</a>
     <a href={`/merch/${id}`} class="btn btn-ghost" target="_blank">View on Store</a>
   </Fragment>
 
@@ -442,7 +436,7 @@ const getStockBadgeClass = (stock) => {
               <button type="submit" class="btn btn-primary btn-block">
                 💾 Save Changes
               </button>
-              <a href="/admin/merch/manage" class="btn btn-secondary btn-block" style="margin-top: 0.5rem;">
+              <a href="/admin/merch/manage/" class="btn btn-secondary btn-block" style="margin-top: 0.5rem;">
                 Cancel
               </a>
             </div>
@@ -494,7 +488,7 @@ const getStockBadgeClass = (stock) => {
   </div>
 </div>
 
-<script define:vars={{ id, product }}>
+<script define:vars={{ id, product }} nonce={nonce}>
   console.log('EDIT PAGE SCRIPT LOADED - v4');
   console.log('product.stock:', product.stock, typeof product.stock);
   console.log('product.totalStock:', product.totalStock, typeof product.totalStock);
@@ -1546,7 +1540,7 @@ const getStockBadgeClass = (stock) => {
     .then(res => res.json())
     .then(data => {
       if (data.success) {
-        window.location.href = '/admin/merch/manage';
+        window.location.href = '/admin/merch/manage/';
       } else {
         alert('Error: ' + (data.error || 'Failed to delete'));
       }

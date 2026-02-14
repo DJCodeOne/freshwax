@@ -2,7 +2,7 @@
 // Admin API for gift cards management - list, create, analytics
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
 
@@ -15,10 +15,7 @@ function getAdminKey(locals: any): string {
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 }
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)

@@ -13,7 +13,7 @@ let error = null;
 
 try {
   const item = await getDocument('merch', id);
-  
+
   if (item) {
     // Process images
     let allImages: string[] = [];
@@ -26,20 +26,35 @@ try {
         })
         .filter((url: string | null): url is string => url !== null && url !== '');
     }
-    
+
     if (allImages.length === 0 && item.imageUrl) {
       allImages = [item.imageUrl];
     }
-    
+
     const imageUrl = item.primaryImage || allImages[0] || '';
-    
+
+    // Determine the effective price (sale price if on sale, otherwise retail price)
+    const retailPrice = item.retailPrice || item.price || 0;
+    const isOnSale = item.onSale === true && item.salePrice && item.salePrice > 0;
+    const effectivePrice = isOnSale ? item.salePrice : retailPrice;
+    const inStock = item.stock === undefined || item.stock > 0;
+
     product = {
       id: item.id,
       name: item.name || item.title || 'Product',
+      description: item.description || '',
       imageUrl: imageUrl,
       images: allImages,
       colors: item.colors || [],
       colorList: item.colorList || [],
+      price: effectivePrice,
+      retailPrice: retailPrice,
+      salePrice: item.salePrice || null,
+      onSale: isOnSale,
+      stock: item.stock,
+      inStock: inStock,
+      sku: item.sku || item.id,
+      category: item.category || 'general',
     };
   } else {
     error = 'Product not found';
@@ -49,13 +64,59 @@ try {
   error = 'Failed to load product';
 }
 
+// Build Product JSON-LD structured data (server-side, safe for SEO crawlers)
+const SITE_URL = 'https://freshwax.co.uk';
+const productJsonLd = product ? JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": product.name,
+  "description": product.description || `${product.name} - Official Fresh Wax merchandise`,
+  "image": product.images.length > 0 ? product.images : (product.imageUrl ? [product.imageUrl] : undefined),
+  "url": `${SITE_URL}/merch/${id}/`,
+  "sku": product.sku,
+  "brand": {
+    "@type": "Brand",
+    "name": "Fresh Wax"
+  },
+  "offers": {
+    "@type": "Offer",
+    "url": `${SITE_URL}/merch/${id}/`,
+    "price": product.price,
+    "priceCurrency": "GBP",
+    "availability": product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": {
+      "@type": "Organization",
+      "name": "Fresh Wax"
+    }
+  }
+}) : null;
+
+const pageDescription = product
+  ? (product.description || `${product.name} - Official Fresh Wax merchandise. Shop jungle and drum & bass merch.`)
+  : 'Product not found';
+
 export const prerender = false;
 ---
 
-<Layout title={product ? product.name : 'Product Not Found'}>
+<Layout
+  title={product ? `${product.name} | Fresh Wax` : 'Product Not Found'}
+  description={pageDescription}
+  image={product?.imageUrl || undefined}
+  type={product ? 'product' : 'website'}
+  product={product ? {
+    price: product.price,
+    currency: 'GBP',
+    availability: product.inStock ? 'InStock' : 'OutOfStock',
+    sku: product.sku,
+    brand: 'Fresh Wax',
+    condition: 'NewCondition',
+    category: product.category,
+  } : undefined}
+>
   <Header />
   
-  <main class="preview-page">
+  <div class="preview-page">
     {error ? (
       <div class="error-state">
         <p>{error}</p>
@@ -122,11 +183,15 @@ export const prerender = false;
         </div>
       </div>
     )}
-  </main>
+  </div>
   
   <footer class="mini-footer">
     © 2025 Fresh<span class="red">Wax</span>
   </footer>
+
+  {productJsonLd && (
+    <script type="application/ld+json" set:html={productJsonLd} />
+  )}
 </Layout>
 
 <style>

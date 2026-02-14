@@ -3,7 +3,7 @@
 // Usage: GET /api/admin/send-artist-notification?orderNumber=FW-xxx&send=yes
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, queryCollection, getDocument } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
@@ -150,10 +150,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   const serviceAccountKey = getServiceAccountKey(env);
 
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: projectId,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   const saQuery = getSaQuery(locals);
 
   try {

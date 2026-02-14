@@ -1288,7 +1288,7 @@ export const prerender = false;
 </style>
 
 <AdminLayout title="Streaming Management">
-  <a slot="actions" href="/admin/streaming/schedule" class="schedule-link-btn">📅 View Full Schedule →</a>
+  <a slot="actions" href="/admin/streaming/schedule/" class="schedule-link-btn">📅 View Full Schedule →</a>
   <div class="streaming-admin">
     <!-- Server Monitor Dashboard -->
     <div class="section mediamtx-section">
@@ -3340,7 +3340,7 @@ export const prerender = false;
 
   // Wait for Firebase auth to resolve before loading data
   if (window.getAdminToken) {
-    window.getAdminToken().then(() => init()).catch(() => { window.location.href = '/login'; });
+    window.getAdminToken().then(() => init()).catch(() => { window.location.href = '/login/'; });
   } else {
     init();
   }

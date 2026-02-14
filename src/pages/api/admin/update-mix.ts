@@ -1,19 +1,14 @@
 // src/pages/api/admin/update-mix.ts
 // Admin endpoint to update DJ mix metadata (no ownership check)
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { invalidateMixesCache } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const body = await request.json();

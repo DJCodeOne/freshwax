@@ -41,18 +41,21 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   return {};
 }
 
-// Security headers to apply to all responses
+// Security headers to apply to all responses (CSP is added dynamically per-request)
 const securityHeaders: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
   'X-XSS-Protection': '1; mode=block',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' blob: https://www.gstatic.com https://www.google.com https://apis.google.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://js.pusher.com https://cdn.jsdelivr.net https://unpkg.com https://www.googletagmanager.com https://www.google-analytics.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://www.paypal.com https://js.stripe.com https://checkout.stripe.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
+  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
 };
 
 export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
+  // Generate CSP nonce for this request
+  const nonce = crypto.randomUUID().replace(/-/g, '');
+  (locals as any).nonce = nonce;
+
   // Get Cloudflare runtime env and initialize Firebase
   const runtime = (locals as any).runtime;
   if (runtime?.env) {
@@ -72,7 +75,23 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     });
   }
 
-  const isApiRoute = url.pathname.startsWith('/api/');
+  // Trailing slash canonicalization — redirect /path to /path/ for SEO consistency
+  // Skip: root, API routes, files with extensions, paths already ending with /
+  const { pathname } = url;
+  if (
+    pathname !== '/' &&
+    !pathname.startsWith('/api/') &&
+    !pathname.endsWith('/') &&
+    !pathname.split('/').pop()?.includes('.')
+  ) {
+    url.pathname = pathname + '/';
+    return new Response(null, {
+      status: 301,
+      headers: { 'Location': url.toString() }
+    });
+  }
+
+  const isApiRoute = pathname.startsWith('/api/');
   const origin = request.headers.get('origin');
 
   // Handle CORS preflight for API routes
@@ -102,7 +121,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     }
     // Add security headers to API responses
     newHeaders.set('X-Content-Type-Options', 'nosniff');
-    newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+    newHeaders.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
     newHeaders.set('X-Frame-Options', 'DENY');
   }
 
@@ -112,6 +131,9 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     for (const [key, value] of Object.entries(securityHeaders)) {
       newHeaders.set(key, value);
     }
+    // Build CSP dynamically with per-request nonce
+    const csp = `default-src 'self'; script-src 'self' 'unsafe-inline' 'nonce-${nonce}' blob: https://www.gstatic.com https://www.google.com https://apis.google.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com https://js.pusher.com https://cdn.jsdelivr.net https://unpkg.com https://www.googletagmanager.com https://www.google-analytics.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://www.paypal.com https://js.stripe.com https://checkout.stripe.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://translate.googleapis.com https://www.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' blob: https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.pusher.com wss://*.pusher.com https://api.stripe.com https://*.stripe.com https://*.cloudflare.com https://*.r2.cloudflarestorage.com https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com https://www.gstatic.com https://www.google.com https://cdn.jsdelivr.net https://unpkg.com https://*.trycloudflare.com https://stream.freshwax.co.uk https://stream.freshwax.co.uk:9997 https://rtmp.freshwax.co.uk https://icecast.freshwax.co.uk https://playlist.freshwax.co.uk https://cdn.freshwax.co.uk https://noembed.com https://api.giphy.com https://www.paypal.com https://*.paypal.com https://www.youtube.com https://vinyl-api.davidhagon.workers.dev https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.youtube.com https://player.vimeo.com https://w.soundcloud.com https://freshwax-uploader-9ge.pages.dev https://www.twitch.tv https://player.twitch.tv https://embed.twitch.tv https://www.paypal.com https://*.paypal.com https://www.google.com https://accounts.google.com https://freshwax-store.firebaseapp.com; media-src 'self' https: blob:; object-src 'none'; base-uri 'self'; form-action 'self';`;
+    newHeaders.set('Content-Security-Policy', csp);
   }
 
   // Add basic security headers to ALL responses (JS, CSS, SVG, etc.)

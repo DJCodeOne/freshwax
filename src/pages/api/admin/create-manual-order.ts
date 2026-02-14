@@ -9,7 +9,6 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-utils';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -194,10 +193,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Record to sales ledger (dual-write D1 + Firebase)
     try {
-      initFirebaseEnv({
-        FIREBASE_PROJECT_ID: projectId,
-        FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-      });
 
       await recordSale({
         orderId,
@@ -429,7 +424,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             artistName: payment.artistName,
             amount: paypalAmount,
             status: 'error',
-            error: err.message
+            error: 'Payout processing failed'
           });
           console.error('[admin] Auto-payout error:', err.message);
         }

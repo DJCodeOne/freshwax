@@ -3,7 +3,7 @@
 // Check if a customer already owns a release or track
 
 import type { APIRoute } from 'astro';
-import { queryCollection, verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -69,10 +69,6 @@ export function clearOwnershipCache(userId: string) {
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-  });
 
   // SECURITY: Require authentication and verify userId matches
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);

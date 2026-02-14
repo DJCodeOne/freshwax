@@ -1,17 +1,10 @@
 // src/lib/order-utils.ts
 // Shared order creation utilities for PayPal and Stripe payment flows
 
-import { getDocument, updateDocument, addDocument, clearCache, setDocument, atomicIncrement, updateDocumentConditional } from './firebase-rest';
+import { getDocument, updateDocument, addDocument, clearCache, setDocument, atomicIncrement, updateDocumentConditional, queryCollection } from './firebase-rest';
 import { d1UpsertMerch } from './d1-catalog';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
-
-// Escape user data for safe HTML embedding in emails
-function escapeHtml(text: string | null | undefined): string {
-  if (!text) return '';
-  const str = String(text);
-  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return str.replace(/[&<>"']/g, m => map[m]);
-}
+import { escapeHtml } from './api-utils';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -38,66 +31,556 @@ export function getShortOrderNumber(orderNumber: string): string {
     : orderNumber.toUpperCase();
 }
 
+// =============================================
+// STOCK RESERVATION SYSTEM
+// =============================================
+
+const RESERVATION_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+// Reserve stock for checkout - prevents overselling
+export async function reserveStock(
+  items: any[],
+  sessionId: string,
+  userId?: string
+): Promise<{ success: boolean; reservationId?: string; expiresAt?: string; error?: string }> {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + RESERVATION_TTL_MS).toISOString();
+  const MAX_RETRIES = 3;
+
+  // Only reserve merch items (they have variant-level stock tracking)
+  const merchItems = items.filter(i => i.type === 'merch' && i.productId);
+  if (merchItems.length === 0) {
+    return { success: true }; // No merch = nothing to reserve
+  }
+
+  // Build list of reservations to make
+  const reservations: { productId: string; variantKey: string; quantity: number }[] = [];
+
+  for (const item of merchItems) {
+    const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
+    const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
+    const variantKey = size + '_' + color;
+    reservations.push({
+      productId: item.productId,
+      variantKey,
+      quantity: item.quantity || 1
+    });
+  }
+
+  // Try to reserve each item with optimistic concurrency
+  const reservedSoFar: typeof reservations = [];
+
+  for (const res of reservations) {
+    let reserved = false;
+
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const product = await getDocument('merch', res.productId);
+        if (!product) {
+          // Rollback reservations made so far
+          await rollbackReservations(reservedSoFar);
+          return { success: false, error: `Product not found: ${res.productId}` };
+        }
+
+        const variantStock = product.variantStock || {};
+        const variant = variantStock[res.variantKey];
+        if (!variant) {
+          await rollbackReservations(reservedSoFar);
+          return { success: false, error: `Variant not found: ${res.variantKey}` };
+        }
+
+        const available = (variant.stock || 0) - (variant.reserved || 0);
+        if (available < res.quantity) {
+          await rollbackReservations(reservedSoFar);
+          return { success: false, error: `Insufficient stock for ${res.variantKey}. Available: ${available}` };
+        }
+
+        // Increment reserved count
+        variant.reserved = (variant.reserved || 0) + res.quantity;
+        variantStock[res.variantKey] = variant;
+
+        // Calculate totals
+        let totalReserved = 0;
+        Object.values(variantStock).forEach((v: any) => {
+          if (typeof v === 'object') totalReserved += v.reserved || 0;
+        });
+
+        const updateData: any = {
+          variantStock,
+          reservedStock: totalReserved,
+          updatedAt: now.toISOString()
+        };
+
+        if (product._updateTime) {
+          await updateDocumentConditional('merch', res.productId, updateData, product._updateTime);
+        } else {
+          await updateDocument('merch', res.productId, updateData);
+        }
+
+        reserved = true;
+        reservedSoFar.push(res);
+        break;
+      } catch (err: any) {
+        if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) {
+          continue; // Retry on conflict
+        }
+        if (attempt === MAX_RETRIES - 1) {
+          await rollbackReservations(reservedSoFar);
+          return { success: false, error: `Failed to reserve stock: ${err.message}` };
+        }
+      }
+    }
+
+    if (!reserved) {
+      await rollbackReservations(reservedSoFar);
+      return { success: false, error: 'Failed to reserve stock after retries' };
+    }
+  }
+
+  // Store reservation record in Firestore
+  const reservationId = `res_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+  try {
+    await setDocument('stock-reservations', reservationId, {
+      id: reservationId,
+      sessionId,
+      userId: userId || null,
+      items: reservations,
+      status: 'active',
+      createdAt: now.toISOString(),
+      expiresAt
+    });
+  } catch (err) {
+    console.error('[order-utils] Failed to store reservation record:', err);
+    // Stock is already reserved in product docs, so continue
+  }
+
+  log.info('[order-utils] Stock reserved:', reservationId, 'expires:', expiresAt);
+  return { success: true, reservationId, expiresAt };
+}
+
+// Release a reservation (e.g., checkout abandoned/expired)
+export async function releaseReservation(sessionOrReservationId: string): Promise<void> {
+  const MAX_RETRIES = 3;
+
+  try {
+    // Find reservation by sessionId or reservationId
+    let reservation: any = null;
+
+    // Try direct lookup first
+    reservation = await getDocument('stock-reservations', sessionOrReservationId);
+
+    // If not found, search by sessionId
+    if (!reservation) {
+      const results = await queryCollection('stock-reservations', {
+        filters: [
+          { field: 'sessionId', op: 'EQUAL', value: sessionOrReservationId },
+          { field: 'status', op: 'EQUAL', value: 'active' }
+        ],
+        limit: 1
+      });
+      if (results && results.length > 0) {
+        reservation = results[0];
+      }
+    }
+
+    if (!reservation || reservation.status !== 'active') {
+      return; // Nothing to release
+    }
+
+    // Decrement reserved counts on each product
+    for (const res of reservation.items || []) {
+      for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+        try {
+          const product = await getDocument('merch', res.productId);
+          if (!product) break;
+
+          const variantStock = product.variantStock || {};
+          const variant = variantStock[res.variantKey];
+          if (!variant) break;
+
+          variant.reserved = Math.max(0, (variant.reserved || 0) - res.quantity);
+          variantStock[res.variantKey] = variant;
+
+          let totalReserved = 0;
+          Object.values(variantStock).forEach((v: any) => {
+            if (typeof v === 'object') totalReserved += v.reserved || 0;
+          });
+
+          const updateData: any = {
+            variantStock,
+            reservedStock: totalReserved,
+            updatedAt: new Date().toISOString()
+          };
+
+          if (product._updateTime) {
+            await updateDocumentConditional('merch', res.productId, updateData, product._updateTime);
+          } else {
+            await updateDocument('merch', res.productId, updateData);
+          }
+          break; // Success
+        } catch (err: any) {
+          if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+          console.error('[order-utils] Failed to release reservation for', res.productId, err);
+        }
+      }
+    }
+
+    // Mark reservation as expired/released
+    await updateDocument('stock-reservations', reservation.id, {
+      status: 'expired',
+      releasedAt: new Date().toISOString()
+    });
+
+    log.info('[order-utils] Reservation released:', reservation.id);
+  } catch (err) {
+    console.error('[order-utils] Error releasing reservation:', err);
+  }
+}
+
+// Convert reservation to sold (payment succeeded)
+export async function convertReservation(sessionOrReservationId: string): Promise<void> {
+  try {
+    let reservation: any = null;
+
+    reservation = await getDocument('stock-reservations', sessionOrReservationId);
+
+    if (!reservation) {
+      const results = await queryCollection('stock-reservations', {
+        filters: [
+          { field: 'sessionId', op: 'EQUAL', value: sessionOrReservationId },
+          { field: 'status', op: 'EQUAL', value: 'active' }
+        ],
+        limit: 1
+      });
+      if (results && results.length > 0) {
+        reservation = results[0];
+      }
+    }
+
+    if (!reservation || reservation.status !== 'active') {
+      return; // Nothing to convert
+    }
+
+    await updateDocument('stock-reservations', reservation.id, {
+      status: 'converted',
+      convertedAt: new Date().toISOString()
+    });
+
+    log.info('[order-utils] Reservation converted:', reservation.id);
+  } catch (err) {
+    console.error('[order-utils] Error converting reservation:', err);
+  }
+}
+
+// Cleanup expired reservations - called by cron endpoint
+export async function cleanupExpiredReservations(): Promise<number> {
+  const MAX_RETRIES = 3;
+  let cleanedCount = 0;
+
+  try {
+    const now = new Date().toISOString();
+    const expired = await queryCollection('stock-reservations', {
+      filters: [
+        { field: 'status', op: 'EQUAL', value: 'active' },
+        { field: 'expiresAt', op: 'LESS_THAN', value: now }
+      ],
+      limit: 50
+    });
+
+    if (!expired || expired.length === 0) return 0;
+
+    for (const reservation of expired) {
+      // Decrement reserved counts
+      for (const res of reservation.items || []) {
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          try {
+            const product = await getDocument('merch', res.productId);
+            if (!product) break;
+
+            const variantStock = product.variantStock || {};
+            const variant = variantStock[res.variantKey];
+            if (!variant) break;
+
+            variant.reserved = Math.max(0, (variant.reserved || 0) - res.quantity);
+            variantStock[res.variantKey] = variant;
+
+            let totalReserved = 0;
+            Object.values(variantStock).forEach((v: any) => {
+              if (typeof v === 'object') totalReserved += v.reserved || 0;
+            });
+
+            if (product._updateTime) {
+              await updateDocumentConditional('merch', res.productId, {
+                variantStock,
+                reservedStock: totalReserved,
+                updatedAt: new Date().toISOString()
+              }, product._updateTime);
+            } else {
+              await updateDocument('merch', res.productId, {
+                variantStock,
+                reservedStock: totalReserved,
+                updatedAt: new Date().toISOString()
+              });
+            }
+            break;
+          } catch (err: any) {
+            if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+            console.error('[order-utils] Cleanup: failed to release stock for', res.productId);
+          }
+        }
+      }
+
+      await updateDocument('stock-reservations', reservation.id, {
+        status: 'expired',
+        releasedAt: new Date().toISOString()
+      });
+      cleanedCount++;
+    }
+  } catch (err) {
+    console.error('[order-utils] Cleanup error:', err);
+  }
+
+  return cleanedCount;
+}
+
+// Internal: rollback reservations already made if a subsequent one fails
+async function rollbackReservations(reserved: { productId: string; variantKey: string; quantity: number }[]): Promise<void> {
+  const MAX_RETRIES = 3;
+  for (const res of reserved) {
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        const product = await getDocument('merch', res.productId);
+        if (!product) break;
+
+        const variantStock = product.variantStock || {};
+        const variant = variantStock[res.variantKey];
+        if (!variant) break;
+
+        variant.reserved = Math.max(0, (variant.reserved || 0) - res.quantity);
+        variantStock[res.variantKey] = variant;
+
+        let totalReserved = 0;
+        Object.values(variantStock).forEach((v: any) => {
+          if (typeof v === 'object') totalReserved += v.reserved || 0;
+        });
+
+        if (product._updateTime) {
+          await updateDocumentConditional('merch', res.productId, {
+            variantStock,
+            reservedStock: totalReserved,
+            updatedAt: new Date().toISOString()
+          }, product._updateTime);
+        } else {
+          await updateDocument('merch', res.productId, {
+            variantStock,
+            reservedStock: totalReserved,
+            updatedAt: new Date().toISOString()
+          });
+        }
+        break;
+      } catch (err: any) {
+        if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+        console.error('[order-utils] Rollback failed for', res.productId, err);
+      }
+    }
+  }
+}
+
 // Validate stock availability before checkout
 export async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
   const unavailableItems: string[] = [];
+
+  // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
+  // Use throwOnError=true so callers know if Firebase is unreachable vs "item not found"
+  const merchIds = [...new Set(items.filter(i => (i.type || 'digital') === 'merch' && i.productId).map(i => i.productId))];
+  const releaseIds = [...new Set(items.filter(i => (i.type || 'digital') === 'vinyl' && !(i.sellerId && !i.releaseId) && (i.releaseId || i.productId || i.id)).map(i => i.releaseId || i.productId || i.id))];
+  const listingIds = [...new Set(items.filter(i => (i.type || 'digital') === 'vinyl' && i.sellerId && !i.releaseId).map(i => i.id || i.productId).filter(Boolean))];
+
+  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
+    Promise.all(merchIds.map(id => getDocument('merch', id, undefined, true))),
+    Promise.all(releaseIds.map(id => getDocument('releases', id, undefined, true))),
+    Promise.all(listingIds.map(id => getDocument('vinylListings', id, undefined, true)))
+  ]);
+
+  const merchMap = new Map(merchIds.map((id, i) => [id, merchDocs[i]]));
+  const releaseMap = new Map(releaseIds.map((id, i) => [id, releaseDocs[i]]));
+  const listingMap = new Map(listingIds.map((id, i) => [id, listingDocs[i]]));
 
   for (const item of items) {
     const quantity = item.quantity || 1;
     const itemType = item.type || 'digital';
 
-    try {
-      if (itemType === 'merch' && item.productId) {
-        const product = await getDocument('merch', item.productId);
-        if (product) {
-          if (item.size || item.color) {
-            const variantKey = item.size && item.color
-              ? `${item.size.toLowerCase()}_${item.color.toLowerCase()}`
-              : item.size?.toLowerCase() || item.color?.toLowerCase() || 'default';
-            const variantStock = product.variantStock?.[variantKey]?.stock ?? product.stock ?? 0;
-            if (variantStock < quantity) {
-              unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStock} available`);
-            }
-          } else {
-            const totalStock = product.totalStock ?? product.stock ?? 0;
-            if (totalStock < quantity) {
-              unavailableItems.push(`${item.name} - only ${totalStock} available`);
+    if (itemType === 'merch' && item.productId) {
+      const product = merchMap.get(item.productId);
+      if (product) {
+        if (item.size || item.color) {
+          const size = (item.size || 'onesize').toLowerCase().replace(/\s/g, '-');
+          const color = (item.color || 'default').toLowerCase().replace(/\s/g, '-');
+          const variantKey = size + '_' + color;
+          const variant = product.variantStock?.[variantKey];
+          const variantStockAvailable = (variant?.stock ?? product.stock ?? 0) - (variant?.reserved ?? 0);
+          if (variantStockAvailable < quantity) {
+            unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStockAvailable} available`);
+          }
+        } else {
+          const totalAvailable = (product.totalStock ?? product.stock ?? 0) - (product.reservedStock ?? 0);
+          if (totalAvailable < quantity) {
+            unavailableItems.push(`${item.name} - only ${totalAvailable} available`);
+          }
+        }
+      }
+    } else if (itemType === 'vinyl') {
+      if (item.sellerId && !item.releaseId) {
+        const listingId = item.id || item.productId;
+        if (listingId) {
+          const listing = listingMap.get(listingId);
+          if (!listing) {
+            unavailableItems.push(`${item.name} - listing no longer exists`);
+          } else if (listing.status === 'sold') {
+            unavailableItems.push(`${item.name} - already sold`);
+          } else if (listing.status !== 'published') {
+            unavailableItems.push(`${item.name} - no longer available`);
+          }
+        }
+      } else {
+        const releaseId = item.releaseId || item.productId || item.id;
+        if (releaseId) {
+          const release = releaseMap.get(releaseId);
+          if (release) {
+            const vinylStock = release.vinylStock ?? 0;
+            if (vinylStock < quantity) {
+              unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
             }
           }
         }
-      } else if (itemType === 'vinyl') {
-        if (item.sellerId && !item.releaseId) {
+      }
+    }
+    // Digital items have unlimited stock - no check needed
+  }
+
+  return { available: unavailableItems.length === 0, unavailableItems };
+}
+
+// Validate item prices server-side to prevent manipulation
+// Shared by Stripe and PayPal checkout flows
+export async function validateAndGetPrices(
+  items: any[],
+  options: { logPrefix?: string } = {}
+): Promise<{ validatedItems: any[], hasPriceMismatch: boolean, validationError?: string }> {
+  const prefix = options.logPrefix || '[Checkout]';
+  const validatedItems: any[] = [];
+  let hasPriceMismatch = false;
+
+  // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
+  const merchIds = [...new Set(items.filter(i => (i.type || 'digital') === 'merch' && i.productId).map(i => i.productId))];
+  const releaseIds = [...new Set(items.filter(i => {
+    const t = i.type || 'digital';
+    if (t === 'vinyl' && i.sellerId && !i.releaseId) return false;
+    return ['vinyl', 'digital', 'track', 'release'].includes(t) && (i.releaseId || i.productId || i.id);
+  }).map(i => i.releaseId || i.productId || i.id))];
+  const listingIds = [...new Set(items.filter(i => (i.type || 'digital') === 'vinyl' && i.sellerId && !i.releaseId).map(i => i.id || i.productId).filter(Boolean))];
+
+  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
+    Promise.all(merchIds.map(id => getDocument('merch', id))),
+    Promise.all(releaseIds.map(id => getDocument('releases', id))),
+    Promise.all(listingIds.map(id => getDocument('vinylListings', id)))
+  ]);
+
+  const merchMap = new Map(merchIds.map((id, i) => [id, merchDocs[i]]));
+  const releaseMap = new Map(releaseIds.map((id, i) => [id, releaseDocs[i]]));
+  const listingMap = new Map(listingIds.map((id, i) => [id, listingDocs[i]]));
+
+  // Pre-fetch artist docs for vinyl items needing shipping defaults
+  const artistIdsNeeded: string[] = [];
+  for (const item of items) {
+    const itemType = item.type || 'digital';
+    if (itemType === 'vinyl' && !(item.sellerId && !item.releaseId)) {
+      const releaseId = item.releaseId || item.productId || item.id;
+      if (releaseId) {
+        const release = releaseMap.get(releaseId);
+        const artistId = release?.artistId || release?.userId || item.artistId;
+        if (artistId) artistIdsNeeded.push(artistId);
+      }
+    }
+  }
+  const uniqueArtistIds = [...new Set(artistIdsNeeded)];
+  const artistDocs = await Promise.all(uniqueArtistIds.map(id => getDocument('artists', id)));
+  const artistMap = new Map(uniqueArtistIds.map((id, i) => [id, artistDocs[i]]));
+
+  for (const item of items) {
+    let serverPrice = item.price;
+    const itemType = item.type || 'digital';
+
+    try {
+      if (itemType === 'merch' && item.productId) {
+        const product = merchMap.get(item.productId);
+        if (product) {
+          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
+        }
+      } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
+        if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
           const listingId = item.id || item.productId;
           if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
-            if (!listing) {
-              unavailableItems.push(`${item.name} - listing no longer exists`);
-            } else if (listing.status === 'sold') {
-              unavailableItems.push(`${item.name} - already sold`);
-            } else if (listing.status !== 'published') {
-              unavailableItems.push(`${item.name} - no longer available`);
+            const listing = listingMap.get(listingId);
+            if (listing) {
+              serverPrice = listing.price || item.price;
+              item.cratesShippingCost = listing.shippingCost || 0;
+              item.isCratesItem = true;
             }
           }
         } else {
           const releaseId = item.releaseId || item.productId || item.id;
           if (releaseId) {
-            const release = await getDocument('releases', releaseId);
+            const release = releaseMap.get(releaseId);
             if (release) {
-              const vinylStock = release.vinylStock ?? 0;
-              if (vinylStock < quantity) {
-                unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
+              if (itemType === 'vinyl') {
+                serverPrice = release.vinylPrice || release.price || item.price;
+
+                item.vinylShippingUK = release.vinylShippingUK;
+                item.vinylShippingEU = release.vinylShippingEU;
+                item.vinylShippingIntl = release.vinylShippingIntl;
+
+                const artistId = release.artistId || release.userId || item.artistId;
+                if (artistId) {
+                  item.artistId = artistId;
+                  const artist = artistMap.get(artistId);
+                  if (artist) {
+                    item.artistVinylShippingUK = artist.vinylShippingUK;
+                    item.artistVinylShippingEU = artist.vinylShippingEU;
+                    item.artistVinylShippingIntl = artist.vinylShippingIntl;
+                    item.artistName = artist.artistName || artist.name;
+                  }
+                }
+              } else if (itemType === 'track' && item.trackId) {
+                const track = (release.tracks || []).find((t: any) =>
+                  t.id === item.trackId || t.trackId === item.trackId
+                );
+                serverPrice = track?.price || release.trackPrice || 0.99;
+              } else {
+                serverPrice = release.price || release.digitalPrice || item.price;
               }
             }
           }
         }
       }
-      // Digital items have unlimited stock - no check needed
+
+      if (Math.abs(serverPrice - item.price) > 0.01) {
+        console.warn(prefix, 'Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
+        hasPriceMismatch = true;
+      }
+
+      validatedItems.push({
+        ...item,
+        price: serverPrice,
+        originalClientPrice: item.price
+      });
     } catch (err) {
-      console.error('[order-utils] Error checking stock for', item.name, err);
+      console.error(prefix, 'Error validating price for', item.name, err);
+      return { validatedItems: [], hasPriceMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
     }
   }
 
-  return { available: unavailableItems.length === 0, unavailableItems };
+  return { validatedItems, hasPriceMismatch };
 }
 
 // Process cart items to add download URLs
@@ -687,20 +1170,24 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
 
           variant.stock = newStock;
           variant.sold = (variant.sold || 0) + item.quantity;
+          variant.reserved = Math.max(0, (variant.reserved || 0) - item.quantity);
           variantStock[variantKey] = variant;
 
           // Calculate totals
           let totalStock = 0;
           let totalSold = 0;
+          let totalReserved = 0;
           Object.values(variantStock).forEach((v: any) => {
             totalStock += v.stock || 0;
             totalSold += v.sold || 0;
+            totalReserved += (typeof v === 'object' ? v.reserved || 0 : 0);
           });
 
           const updateData = {
             variantStock: variantStock,
             totalStock: totalStock,
             soldStock: totalSold,
+            reservedStock: totalReserved,
             isLowStock: totalStock <= (productData.lowStockThreshold || 5) && totalStock > 0,
             isOutOfStock: totalStock === 0,
             updatedAt: now

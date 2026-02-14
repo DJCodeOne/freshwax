@@ -5,12 +5,13 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
 export const prerender = false;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout title="My Orders" noindex={true}>
   <Header />
   
-  <main class="orders-main">
+  <div class="orders-main">
     <div id="loadingScreen" class="loading-screen">
       <div class="spinner"></div>
       <p>Loading your orders...</p>
@@ -19,7 +20,7 @@ export const prerender = false;
     <div id="mainContent" class="hidden">
       <div class="orders-header">
         <h1>My Orders</h1>
-        <a href="/account/dashboard" class="back-link">← Back to Dashboard</a>
+        <a href="/account/dashboard/" class="back-link">← Back to Dashboard</a>
       </div>
       
       <div id="ordersContainer" class="orders-list">
@@ -28,7 +29,7 @@ export const prerender = false;
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -318,7 +319,7 @@ export const prerender = false;
   }
 </style>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // CORRECT Firebase config - matches login page
   var firebaseConfig = {
     apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -381,7 +382,7 @@ export const prerender = false;
       container.innerHTML = 
         '<div class="empty-state">' +
           '<p>You haven\'t placed any orders yet</p>' +
-          '<a href="/releases">Browse Releases</a>' +
+          '<a href="/releases/">Browse Releases</a>' +
         '</div>';
       return;
     }
@@ -451,7 +452,7 @@ export const prerender = false;
     var downloadBtns = container.querySelectorAll('.download-btn');
     for (var d = 0; d < downloadBtns.length; d++) {
       downloadBtns[d].addEventListener('click', function() {
-        window.location.href = '/account/dashboard#downloads';
+        window.location.href = '/account/dashboard/#downloads';
       });
     }
   }
@@ -495,12 +496,12 @@ export const prerender = false;
             document.getElementById('ordersContainer').innerHTML = 
               '<div class="empty-state">' +
                 '<p>Error loading orders. Please try again.</p>' +
-                '<a href="/account/orders">Refresh</a>' +
+                '<a href="/account/orders/">Refresh</a>' +
               '</div>';
           });
           
         } else {
-          window.location.href = '/login?redirect=/account/orders';
+          window.location.href = '/login/?redirect=/account/orders/';
         }
       });
     }).catch(function(error) {
@@ -510,7 +511,7 @@ export const prerender = false;
       document.getElementById('ordersContainer').innerHTML = 
         '<div class="empty-state">' +
           '<p>Error initializing. Please refresh the page.</p>' +
-          '<a href="/account/orders">Refresh</a>' +
+          '<a href="/account/orders/">Refresh</a>' +
         '</div>';
     });
   }

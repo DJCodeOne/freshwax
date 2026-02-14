@@ -1,6 +1,6 @@
 import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, setDocument, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument } from '../../lib/firebase-rest';
 import AdmZip from 'adm-zip';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -102,10 +102,6 @@ export const POST = async ({ request, locals }: any) => {
     // Fetch release data from Firebase if not already available
     if (!release) {
       try {
-        initFirebaseEnv({
-          FIREBASE_PROJECT_ID: config.firebase.projectId,
-          FIREBASE_API_KEY: config.firebase.apiKey || env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-        });
 
         const releaseDoc = await getDocument('releases', releaseId);
 
@@ -296,11 +292,6 @@ async function processRawZip(
     log.info(`[sync-release] Uploaded track ${trackNumber}: ${title}`);
   }
   
-  // Initialize Firebase environment
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: config.firebase.projectId,
-    FIREBASE_API_KEY: config.firebase.apiKey || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Create Firebase document
   const releaseDoc = {

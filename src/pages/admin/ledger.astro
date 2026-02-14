@@ -21,6 +21,7 @@ const env = Astro.locals?.runtime?.env;
 const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+const nonce = (Astro.locals as any).nonce || '';
 
 // Build service account key
 const serviceAccountKey = clientEmail && privateKey ? JSON.stringify({
@@ -181,7 +182,7 @@ const formatDate = (dateStr: string) => {
 
 <AdminLayout title="Sales Ledger" activeNav="analytics">
   <Fragment slot="actions">
-    <a href="/admin/analytics" class="btn btn-outline">
+    <a href="/admin/analytics/" class="btn btn-outline">
       Back to Analytics
     </a>
     <button class="btn btn-primary" id="migrateBtn">
@@ -520,13 +521,12 @@ const formatDate = (dateStr: string) => {
   });
 </script>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // Admin check uses Firestore admins collection
 </script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   const firebaseConfig = {
     apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",
@@ -539,17 +539,15 @@ const formatDate = (dateStr: string) => {
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
 
-  async function checkIsAdmin(uid) {
+  async function checkIsAdmin(user) {
     try {
-      const adminDoc = await getDoc(doc(db, 'admins', uid));
-      if (adminDoc.exists()) return true;
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        return data.roles?.includes('admin') || data.isAdmin === true;
-      }
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/admin/check-access', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await response.json();
+      return data.success && data.isAdmin;
     } catch (e) {
       console.error('Error checking admin:', e);
     }
@@ -559,7 +557,7 @@ const formatDate = (dateStr: string) => {
   // Wait for Firebase auth to fully initialize before checking state
   // This prevents redirect loops when navigating between admin pages
   let authInitialized = false;
-  let redirectTimeout: number | null = null;
+  let redirectTimeout = null;
 
   onAuthStateChanged(auth, async (user) => {
     // Clear any pending redirect
@@ -581,22 +579,22 @@ const formatDate = (dateStr: string) => {
           authInitialized = true;
           redirectTimeout = window.setTimeout(() => {
             if (!auth.currentUser) {
-              window.location.href = '/login?redirect=/admin/ledger';
+              window.location.href = '/login/?redirect=/admin/ledger/';
             }
           }, 2000);
           return;
         }
       }
       // No persistence or subsequent null - redirect to login
-      window.location.href = '/login?redirect=/admin/ledger';
+      window.location.href = '/login/?redirect=/admin/ledger/';
       return;
     }
 
     authInitialized = true;
-    const isAdmin = await checkIsAdmin(user.uid);
+    const isAdmin = await checkIsAdmin(user);
     if (!isAdmin) {
       alert('Access denied. Admin privileges required.');
-      window.location.href = '/account/dashboard';
+      window.location.href = '/account/dashboard/';
     }
   });
 </script>

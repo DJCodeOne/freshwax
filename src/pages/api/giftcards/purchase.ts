@@ -3,7 +3,7 @@
 // For customer purchases, use create-stripe-session.ts or create-paypal-order.ts
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
@@ -11,10 +11,7 @@ import { generateGiftCardCode } from '../../../lib/giftcard';
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 }
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)

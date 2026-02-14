@@ -56,7 +56,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     <!-- Info -->
     <div class="info-box">
       <p><strong>Need help with an order?</strong> Contact the Fresh Wax team for fulfillment support.</p>
-      <a href="/contact" class="btn btn-small">Contact Us</a>
+      <a href="/contact/" class="btn btn-small">Contact Us</a>
     </div>
   </div>
 
@@ -308,12 +308,10 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const ordersList = document.getElementById('ordersList');
     const emptyState = document.getElementById('emptyState');
@@ -324,29 +322,25 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      await loadOrders(user.uid);
+      await loadOrders(user);
     });
 
-    async function loadOrders(uid) {
+    async function loadOrders(user) {
       try {
-        const ordersQuery = query(
-          collection(db, 'orders'),
-          where('sellerId', '==', uid),
-          orderBy('createdAt', 'desc')
-        );
-        const snapshot = await getDocs(ordersQuery);
-        
-        allOrders = [];
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/pro/dashboard-data?type=orders', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load orders');
+
+        allOrders = data.orders || [];
         let pending = 0, shipped = 0, completed = 0, revenue = 0;
 
-        snapshot.forEach(doc => {
-          const order = { id: doc.id, ...doc.data() };
-          allOrders.push(order);
-
+        allOrders.forEach(order => {
           if (order.status === 'pending') pending++;
           else if (order.status === 'shipped') shipped++;
           else if (order.status === 'completed') completed++;
-
           revenue += order.total || 0;
         });
 

@@ -4,7 +4,6 @@
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
 // Pusher for real-time chat (config from window.PUSHER_CONFIG set by Layout.astro)
 let pusher = null;
@@ -214,7 +213,6 @@ const firebaseConfig = {
 // Prevent duplicate app initialization
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 
 // ==========================================
 // STATE MANAGEMENT

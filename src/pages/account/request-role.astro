@@ -12,12 +12,12 @@ import '../../styles/global.css';
 <body>
   <div class="page-container">
     <header class="page-header">
-      <a href="/account/dashboard" class="back-link">← Back to Account</a>
+      <a href="/account/dashboard/" class="back-link">← Back to Account</a>
       <h1>Request Pro Access</h1>
       <p>Apply for Artist, Merch Seller, or Vinyl Seller roles to access the Pro Dashboard</p>
     </header>
 
-    <main class="page-content" id="pageContent">
+    <div class="page-content" id="pageContent">
       <div class="loading" id="loadingState">Loading...</div>
 
       <!-- Current Status -->
@@ -151,7 +151,7 @@ import '../../styles/global.css';
           </form>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 
   <style>
@@ -413,12 +413,10 @@ import '../../styles/global.css';
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const loadingState = document.getElementById('loadingState');
     const statusSection = document.getElementById('statusSection');
@@ -430,21 +428,26 @@ import '../../styles/global.css';
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = '/login?redirect=/account/request-role';
+        window.location.href = '/login/?redirect=/account/request-role/';
         return;
       }
 
       currentUser = user;
-      await loadUserData(user.uid);
+      await loadUserData(user);
     });
 
-    async function loadUserData(uid) {
+    async function loadUserData(user) {
       try {
-        // Get user document
-        const userDoc = await getDoc(doc(db, 'users', uid));
-        const userData = userDoc.exists ? userDoc.data() : {};
-        const roles = userData.roles || {};
-        const pendingRoles = userData.pendingRoles || {};
+        // Get user data via API (replaces client-side Firestore read)
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/user/dashboard-access', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load user data');
+
+        const roles = data.roles || {};
+        const pendingRoles = data.pendingRoles || {};
 
         // Show status section
         loadingState.style.display = 'none';
@@ -502,7 +505,7 @@ import '../../styles/global.css';
       if (roles.artist) {
         artistForm.style.display = 'none';
         artistStatus.className = 'request-status approved';
-        artistStatus.innerHTML = '✓ You have Artist access. <a href="/pro">Go to Pro Dashboard</a>';
+        artistStatus.innerHTML = '✓ You have Artist access. <a href="/pro/">Go to Pro Dashboard</a>';
       } else if (pendingRoles.artist?.status === 'pending') {
         artistForm.style.display = 'none';
         artistStatus.className = 'request-status pending';
@@ -523,7 +526,7 @@ import '../../styles/global.css';
       if (roles.merchSeller) {
         merchForm.style.display = 'none';
         merchStatus.className = 'request-status approved';
-        merchStatus.innerHTML = '✓ You have Merch Seller access. <a href="/pro">Go to Pro Dashboard</a>';
+        merchStatus.innerHTML = '✓ You have Merch Seller access. <a href="/pro/">Go to Pro Dashboard</a>';
       } else if (pendingRoles.merchSeller?.status === 'pending') {
         merchForm.style.display = 'none';
         merchStatus.className = 'request-status pending';
@@ -543,7 +546,7 @@ import '../../styles/global.css';
       if (roles.vinylSeller) {
         vinylForm.style.display = 'none';
         vinylStatus.className = 'request-status approved';
-        vinylStatus.innerHTML = '✓ You have Vinyl Seller access. <a href="/pro">Go to Pro Dashboard</a>';
+        vinylStatus.innerHTML = '✓ You have Vinyl Seller access. <a href="/pro/">Go to Pro Dashboard</a>';
       } else if (pendingRoles.vinylSeller?.status === 'pending') {
         vinylForm.style.display = 'none';
         vinylStatus.className = 'request-status pending';
@@ -563,7 +566,7 @@ import '../../styles/global.css';
 
       if (roles.djEligible) {
         djStatus.className = 'request-status approved';
-        djStatus.innerHTML = '✓ You have DJ Lobby access. <a href="/account/dj-lobby">Go to DJ Lobby</a>';
+        djStatus.innerHTML = '✓ You have DJ Lobby access. <a href="/account/dj-lobby/">Go to DJ Lobby</a>';
         document.getElementById('djRequirements').style.display = 'none';
         djBypassForm.style.display = 'none';
         return;

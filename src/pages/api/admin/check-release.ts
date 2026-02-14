@@ -2,7 +2,7 @@
 // Check release submitter info
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 
@@ -10,7 +10,6 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const runtimeEnv = (locals as any)?.runtime?.env;
-  initFirebaseEnv(runtimeEnv);
   initAdminEnv({
     ADMIN_UIDS: runtimeEnv?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: runtimeEnv?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,

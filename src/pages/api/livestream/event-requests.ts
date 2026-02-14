@@ -1,17 +1,13 @@
 // src/pages/api/livestream/event-requests.ts
 // Manage extended streaming hour requests for events
 import type { APIRoute } from 'astro';
-import { getDocument, addDocument, updateDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, addDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import type { EventRequest } from '../../../lib/subscription';
 
 export const prerender = false;
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET: List event requests (for admin) or user's own requests

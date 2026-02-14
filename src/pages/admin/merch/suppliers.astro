@@ -110,9 +110,9 @@ export const prerender = false;
   <header class="header">
     <h1>👥 Manage Suppliers</h1>
     <nav class="header-nav">
-      <a href="/admin/merch/upload">+ Add Product</a>
-      <a href="/admin/merch/manage">Manage Stock</a>
-      <a href="/admin">Admin Home</a>
+      <a href="/admin/merch/upload/">+ Add Product</a>
+      <a href="/admin/merch/manage/">Manage Stock</a>
+      <a href="/admin/">Admin Home</a>
     </nav>
   </header>
 
@@ -364,7 +364,7 @@ export const prerender = false;
             </div>
             
             <div style="${actionsStyle}">
-              <a href="/admin/inventory?supplier=${encodeURIComponent(s.name)}" style="${btnStyle}">View Products</a>
+              <a href="/admin/inventory/?supplier=${encodeURIComponent(s.name)}" style="${btnStyle}">View Products</a>
               <button style="${btnStyle}" data-action="edit" data-id="${s.id}">Edit</button>
               ${s.active !== false ? 
                 `<button style="${btnStyle} border-color: #f59e0b; color: #f59e0b;" data-action="deactivate" data-id="${s.id}">Deactivate</button>` :

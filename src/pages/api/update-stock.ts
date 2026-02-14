@@ -2,7 +2,7 @@
 // Handles all stock operations: receive, adjust, transfer, reserve, sell
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv, clearAllMerchCache, clearCache } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, clearAllMerchCache, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
@@ -18,10 +18,6 @@ export const prerender = false;
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // Get service account credentials
@@ -73,7 +69,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   initFirebase(locals);
 
@@ -348,7 +343,6 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {

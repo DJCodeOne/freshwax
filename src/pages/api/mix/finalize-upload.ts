@@ -3,9 +3,32 @@
 // Saves metadata to Firebase
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
+import { processImageToSquareWebP } from '../../../lib/image-processing';
+
+function getR2Config(env: any) {
+  return {
+    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
+    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
+    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
+    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
+  };
+}
+
+function createS3Client(config: ReturnType<typeof getR2Config>) {
+  return new S3Client({
+    region: 'auto',
+    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
+}
 
 export const prerender = false;
 
@@ -30,10 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   // Require authenticated user
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
@@ -139,8 +159,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const uploadDate = new Date().toISOString();
     const tracklistArray = parseTracklist(tracklist || '');
 
-    // Use placeholder artwork if not provided
-    const finalArtworkUrl = artworkUrl || '/place-holder.webp';
+    // Process artwork to WebP if provided
+    let finalArtworkUrl = artworkUrl || '/place-holder.webp';
+    if (artworkUrl && !artworkUrl.includes('place-holder')) {
+      try {
+        const R2_CONFIG = getR2Config(env);
+        const s3Client = createS3Client(R2_CONFIG);
+
+        const artworkResp = await fetch(artworkUrl);
+        if (artworkResp.ok) {
+          const artworkBuffer = await artworkResp.arrayBuffer();
+          const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);
+          const webpKey = `dj-mixes/${mixId}/artwork.webp`;
+
+          await s3Client.send(new PutObjectCommand({
+            Bucket: R2_CONFIG.bucketName,
+            Key: webpKey,
+            Body: Buffer.from(processed.buffer),
+            ContentType: 'image/webp',
+            CacheControl: 'public, max-age=31536000',
+          }));
+
+          finalArtworkUrl = `${R2_CONFIG.publicDomain}/${webpKey}`;
+          console.log(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} WebP`);
+        }
+      } catch (imgErr) {
+        console.error('[finalize-upload] WebP processing failed, using original:', imgErr);
+      }
+    }
 
     // Save mix metadata to Firebase
     const mixData = {

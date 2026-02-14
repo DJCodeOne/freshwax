@@ -3,29 +3,12 @@ import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import cloudflare from '@astrojs/cloudflare';
 import node from '@astrojs/node';
-import sitemap from '@astrojs/sitemap';
-
 const isProduction = process.env.NODE_ENV === 'production' || process.env.npm_lifecycle_event === 'build';
 
 export default defineConfig({
-  integrations: [
-    sitemap({
-      filter: (page) =>
-        !page.includes('/admin') &&
-        !page.includes('/account/') &&
-        !page.includes('/api/') &&
-        !page.includes('/cart') &&
-        !page.includes('/checkout') &&
-        !page.includes('/verify-email') &&
-        !page.includes('/forgot-password') &&
-        !page.includes('/supplier/') &&
-        !page.includes('/live/embed') &&
-        !page.includes('/live/fullpage'),
-      changefreq: 'weekly',
-      priority: 0.7,
-      lastmod: new Date(),
-    }),
-  ],
+  // Sitemap is handled by the custom dynamic endpoint at src/pages/sitemap.xml.ts
+  // which queries Firebase at request time to include all product/mix/merch/crate URLs
+  integrations: [],
 
   // Astro 5: use 'static' or 'server'
   // For hybrid behavior, use 'server' + prerender on individual pages
@@ -47,6 +30,8 @@ export default defineConfig({
     : node({ mode: 'standalone' }),
     
   site: 'https://freshwax.co.uk',
+
+  trailingSlash: 'always',
   
   vite: {
     plugins: [tailwindcss()],
@@ -54,7 +39,7 @@ export default defineConfig({
       external: ['firebase-admin']
     },
     optimizeDeps: {
-      include: ['firebase/app', 'firebase/firestore']
+      include: ['firebase/app']
     }
   }
 });

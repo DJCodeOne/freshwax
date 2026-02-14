@@ -4,7 +4,7 @@
 import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
 import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { getDocument, initFirebaseEnv, clearCache } from '../../lib/firebase-rest';
+import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saDeleteDocument, saAddDocument } from '../../lib/firebase-service-account';
 import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -21,10 +21,7 @@ export const prerender = false;
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 }
 
 // Get service account credentials

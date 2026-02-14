@@ -20,7 +20,7 @@ export const prerender = false;
         <h1>Blog Posts</h1>
         <p class="text-gray-400">Create and manage blog content</p>
       </div>
-      <a href="/admin/blog/edit" class="btn btn-primary">
+      <a href="/admin/blog/edit/" class="btn btn-primary">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
@@ -59,7 +59,7 @@ export const prerender = false;
           </svg>
           <h3 class="text-lg font-bold text-white mb-2">No blog posts yet</h3>
           <p class="text-gray-400 mb-4">Create your first blog post to get started</p>
-          <a href="/admin/blog/edit" class="btn btn-primary">Create First Post</a>
+          <a href="/admin/blog/edit/" class="btn btn-primary">Create First Post</a>
         </div>
 
         <table id="posts-table" class="hidden w-full">
@@ -251,7 +251,7 @@ export const prerender = false;
                   </div>
                 `}
                 <div class="min-w-0">
-                  <a href="/admin/blog/edit/${post.id}" class="font-bold text-white hover:text-red-400 transition-colors block truncate">${post.title}</a>
+                  <a href="/admin/blog/edit/${post.id}/" class="font-bold text-white hover:text-red-400 transition-colors block truncate">${post.title}</a>
                   <p class="text-sm text-gray-500 truncate">${post.excerpt || 'No excerpt'}</p>
                 </div>
               </div>
@@ -270,13 +270,13 @@ export const prerender = false;
             </td>
             <td class="p-4 text-right">
               <div class="flex gap-1 justify-end">
-                <a href="/blog/${post.slug}" target="_blank" class="action-btn" title="View">
+                <a href="/blog/${post.slug}/" target="_blank" class="action-btn" title="View">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                   </svg>
                 </a>
-                <a href="/admin/blog/edit/${post.id}" class="action-btn" title="Edit">
+                <a href="/admin/blog/edit/${post.id}/" class="action-btn" title="Edit">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                   </svg>

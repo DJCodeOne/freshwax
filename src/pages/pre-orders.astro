@@ -73,7 +73,7 @@ export const prerender = false;
 <Layout title="Pre-Orders - Upcoming Releases" description="Pre-order upcoming jungle and drum & bass releases. Secure limited vinyl and digital downloads before they drop.">
   <Header />
   
-  <main class="preorders-main">
+  <div class="preorders-main">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-grid"></div>
@@ -96,7 +96,7 @@ export const prerender = false;
           <div class="empty-icon">📦</div>
           <h2>No Pre-Orders Available</h2>
           <p>All current releases are available now! Check back soon for upcoming drops.</p>
-          <a href="/releases" class="browse-btn">Browse Available Releases</a>
+          <a href="/releases/" class="browse-btn">Browse Available Releases</a>
         </div>
       ) : (
         <div class="preorders-grid">
@@ -242,7 +242,7 @@ export const prerender = false;
         </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
@@ -790,7 +790,7 @@ export const prerender = false;
         // Check for customer login
         var customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id');
         if (!customerId) {
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
           return;
         }
         

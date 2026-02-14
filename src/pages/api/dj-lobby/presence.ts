@@ -3,7 +3,7 @@
 // Replaces client-side Firebase listener with server-mediated Pusher events
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
 // Pusher configuration is loaded from env at runtime (not module level)
@@ -275,15 +275,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   const firebaseApiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
   const firebaseProjectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: firebaseProjectId,
-    FIREBASE_API_KEY: firebaseApiKey,
-  });
 
   try {
     // Check cache first
@@ -363,12 +357,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Get idToken from Authorization header
   const authHeader = request.headers.get('Authorization');
@@ -505,12 +494,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Cleanup stale presence entries (cron job endpoint)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const twoMinutesAgo = new Date(Date.now() - 120000);

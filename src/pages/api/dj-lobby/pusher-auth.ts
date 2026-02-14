@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {
@@ -37,12 +37,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
   const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
-
-  // Initialize Firebase for token verification
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     // Verify the user is authenticated via Firebase token

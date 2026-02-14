@@ -1,7 +1,7 @@
 // src/pages/api/follow-artist.ts
 // Follow/unfollow artists API - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, queryCollection , initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, queryCollection } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
@@ -13,10 +13,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   }
   // Initialize Firebase from runtime env
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     // SECURITY: Verify auth token
@@ -141,10 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase from runtime env
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     // SECURITY: Get userId from verified token, not request body

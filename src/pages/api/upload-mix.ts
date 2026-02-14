@@ -3,9 +3,10 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { processImageToSquareWebP } from '../../lib/image-processing';
 
 export const prerender = false;
 
@@ -74,10 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   // Initialize R2/S3 client for Cloudflare runtime
   const R2_CONFIG = getR2Config(env);
@@ -248,15 +246,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (artworkFile && artworkFile.size > 0) {
       const artworkBuffer = await artworkFile.arrayBuffer();
-      const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
-      const artworkKey = `${folderPath}/artwork.${artworkExt}`;
+      let artworkKey: string;
+      let artworkContentType: string;
+      let artworkBody: Buffer;
+
+      try {
+        const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);
+        artworkKey = `${folderPath}/artwork.webp`;
+        artworkContentType = 'image/webp';
+        artworkBody = Buffer.from(processed.buffer);
+        log.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} WebP`);
+      } catch (imgErr) {
+        log.error('[upload-mix] WebP processing failed, using original:', imgErr);
+        const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
+        artworkKey = `${folderPath}/artwork.${artworkExt}`;
+        artworkContentType = artworkFile.type;
+        artworkBody = Buffer.from(artworkBuffer);
+      }
 
       await s3Client.send(
         new PutObjectCommand({
           Bucket: R2_CONFIG.bucketName,
           Key: artworkKey,
-          Body: Buffer.from(artworkBuffer),
-          ContentType: artworkFile.type,
+          Body: artworkBody,
+          ContentType: artworkContentType,
           CacheControl: 'public, max-age=31536000',
         })
       );
@@ -318,6 +331,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         log.error('[upload-mix] D1 dual-write failed (non-critical):', d1Error);
       }
     }
+
+    // Clear cache so new mix appears immediately
+    invalidateMixesCache();
 
     log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 

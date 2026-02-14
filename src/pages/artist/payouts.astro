@@ -200,22 +200,22 @@ const getStatusLabel = (status: string) => {
 export const prerender = false;
 ---
 
-<Layout title="Payouts">
+<Layout title="Payouts" noindex={true}>
   <Header />
 
-  <main class="payouts-main">
+  <div class="payouts-main">
     <div class="container">
       {!isLoggedIn ? (
         <div class="login-prompt">
           <p>Please log in to view your payouts.</p>
-          <a href="/login" class="login-btn">Sign In</a>
+          <a href="/login/" class="login-btn">Sign In</a>
         </div>
       ) : (
         <>
           <!-- Page Header -->
           <div class="page-header">
             <div class="header-left">
-              <a href="/artist/dashboard" class="back-link">← Dashboard</a>
+              <a href="/artist/dashboard/" class="back-link">← Dashboard</a>
               <h1>Payouts</h1>
               <p>Track your earnings and payout history</p>
             </div>
@@ -232,7 +232,7 @@ export const prerender = false;
                   <p class="pending-amount">You have {formatPrice(summary.pendingBalance)} waiting to be paid out!</p>
                 )}
               </div>
-              <a href="/artist/account#stripe-connect-section" class="setup-btn">Set Up Payments</a>
+              <a href="/artist/account/#stripe-connect-section" class="setup-btn">Set Up Payments</a>
             </div>
           )}
 
@@ -469,7 +469,7 @@ export const prerender = false;
         </>
       )}
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

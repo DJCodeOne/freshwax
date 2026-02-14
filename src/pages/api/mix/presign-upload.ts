@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -27,12 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Require authenticated user (all registered users can upload mixes)
   const { userId, error: authError } = await verifyRequestUser(request);

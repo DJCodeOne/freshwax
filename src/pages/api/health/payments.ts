@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
-import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { getWebhookStats } from '../../../lib/webhook-logger';
 import { requireAdminAuth } from '../../../lib/admin';
 
@@ -31,10 +31,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
 
   // Initialize Firebase
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   const result: HealthCheckResult = {
     status: 'healthy',

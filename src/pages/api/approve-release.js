@@ -1,6 +1,6 @@
 // src/pages/api/approve-release.js
 // Approves or rejects pending releases in Firebase
-import { getDocument, updateDocument, initFirebaseEnv, invalidateReleasesCache } from '../../lib/firebase-rest.js';
+import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest.js';
 import { d1UpsertRelease } from '../../lib/d1-catalog.ts';
 
 export const prerender = false;
@@ -14,10 +14,7 @@ const log = {
 export async function POST({ request, locals }) {
   // Initialize Firebase env for write operations (Cloudflare runtime)
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const body = await request.json();

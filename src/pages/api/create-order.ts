@@ -2,7 +2,7 @@
 // Creates order in Firebase and sends confirmation email
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, addDocument, initFirebaseEnv, clearCache, atomicIncrement, updateDocumentConditional } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, addDocument, clearCache, atomicIncrement, updateDocumentConditional } from '../../lib/firebase-rest';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
@@ -35,6 +35,48 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
   let serverSubtotal = 0;
   let hasMismatch = false;
 
+  // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
+  const merchIds = items.filter(i => (i.type || 'digital') === 'merch' && i.productId).map(i => i.productId);
+  const releaseIds = items.filter(i => {
+    const t = i.type || 'digital';
+    if (t === 'vinyl' && i.sellerId && !i.releaseId) return false; // crates items use vinylListings
+    return ['digital', 'track', 'vinyl', 'release'].includes(t) && (i.releaseId || i.productId || i.id);
+  }).map(i => i.releaseId || i.productId || i.id);
+  const listingIds = items.filter(i => (i.type || 'digital') === 'vinyl' && i.sellerId && !i.releaseId).map(i => i.id || i.productId).filter(Boolean);
+
+  // Deduplicate IDs
+  const uniqueMerchIds = [...new Set(merchIds)];
+  const uniqueReleaseIds = [...new Set(releaseIds)];
+  const uniqueListingIds = [...new Set(listingIds)];
+
+  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
+    Promise.all(uniqueMerchIds.map(id => getDocument('merch', id))),
+    Promise.all(uniqueReleaseIds.map(id => getDocument('releases', id))),
+    Promise.all(uniqueListingIds.map(id => getDocument('vinylListings', id)))
+  ]);
+
+  // Build lookup maps
+  const merchMap = new Map(uniqueMerchIds.map((id, i) => [id, merchDocs[i]]));
+  const releaseMap = new Map(uniqueReleaseIds.map((id, i) => [id, releaseDocs[i]]));
+  const listingMap = new Map(uniqueListingIds.map((id, i) => [id, listingDocs[i]]));
+
+  // Pre-fetch artist docs for vinyl items that need shipping defaults
+  const artistIdsNeeded: string[] = [];
+  for (const item of items) {
+    const itemType = item.type || 'digital';
+    if (itemType === 'vinyl' && !(item.sellerId && !item.releaseId)) {
+      const releaseId = item.releaseId || item.productId || item.id;
+      if (releaseId) {
+        const release = releaseMap.get(releaseId);
+        const artistId = item.artistId || release?.artistId;
+        if (artistId) artistIdsNeeded.push(artistId);
+      }
+    }
+  }
+  const uniqueArtistIds = [...new Set(artistIdsNeeded)];
+  const artistDocs = await Promise.all(uniqueArtistIds.map(id => getDocument('artists', id)));
+  const artistMap = new Map(uniqueArtistIds.map((id, i) => [id, artistDocs[i]]));
+
   for (const item of items) {
     let serverPrice = item.price;
     const itemType = item.type || 'digital';
@@ -43,7 +85,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
 
     try {
       if (itemType === 'merch' && item.productId) {
-        const product = await getDocument('merch', item.productId);
+        const product = merchMap.get(item.productId);
         if (!product) {
           return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
         }
@@ -53,7 +95,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
           // Vinyl crates item
           const listingId = item.id || item.productId;
           if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
+            const listing = listingMap.get(listingId);
             if (!listing) {
               return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
             }
@@ -64,7 +106,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
         } else {
           const releaseId = item.releaseId || item.productId || item.id;
           if (releaseId) {
-            const release = await getDocument('releases', releaseId);
+            const release = releaseMap.get(releaseId);
             if (!release) {
               return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
             }
@@ -76,14 +118,12 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
             // Fetch artist-level shipping defaults as fallback
             const artistId = item.artistId || release.artistId;
             if (artistId) {
-              try {
-                const artist = await getDocument('artists', artistId);
-                if (artist) {
-                  extraFields.serverArtistShippingUK = artist.vinylShippingUK ?? null;
-                  extraFields.serverArtistShippingEU = artist.vinylShippingEU ?? null;
-                  extraFields.serverArtistShippingIntl = artist.vinylShippingIntl ?? null;
-                }
-              } catch { /* artist fetch failure is non-fatal, use defaults */ }
+              const artist = artistMap.get(artistId);
+              if (artist) {
+                extraFields.serverArtistShippingUK = artist.vinylShippingUK ?? null;
+                extraFields.serverArtistShippingEU = artist.vinylShippingEU ?? null;
+                extraFields.serverArtistShippingIntl = artist.vinylShippingIntl ?? null;
+              }
               extraFields.artistId = artistId;
             }
           }
@@ -91,7 +131,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
       } else if (itemType === 'track' && item.trackId) {
         const releaseId = item.releaseId || item.productId || item.id;
         if (releaseId) {
-          const release = await getDocument('releases', releaseId);
+          const release = releaseMap.get(releaseId);
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
           }
@@ -103,7 +143,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
       } else if (itemType === 'digital' || itemType === 'release') {
         const releaseId = item.releaseId || item.productId || item.id;
         if (releaseId) {
-          const release = await getDocument('releases', releaseId);
+          const release = releaseMap.get(releaseId);
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
           }
@@ -145,10 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: projectId,
-    FIREBASE_API_KEY: apiKey,
-  });
+
 
   try {
     const orderData = await request.json();

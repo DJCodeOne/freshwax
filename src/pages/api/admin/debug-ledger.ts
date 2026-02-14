@@ -2,7 +2,7 @@
 // Debug endpoint to check sales ledger entries and backfill missing ones
 
 import type { APIRoute } from 'astro';
-import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 
@@ -13,9 +13,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   initAdminEnv({ ADMIN_UIDS: runtimeEnv?.ADMIN_UIDS, ADMIN_EMAILS: runtimeEnv?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
-
-  // Initialize Firebase env
-  initFirebaseEnv(runtimeEnv);
 
   const saQuery = getSaQuery(locals);
 

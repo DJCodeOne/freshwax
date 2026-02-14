@@ -4,17 +4,13 @@
 // POST: Mark stale/disconnected streams as completed
 
 import type { APIRoute } from 'astro';
-import { queryCollection, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 
 function initServices(locals: any) {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   initRed5Env({
     RED5_RTMP_URL: env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL,
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,
@@ -197,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             id: slot.id,
             djName: slot.djName,
             status: 'error',
-            error: e.message
+            error: 'Cleanup error'
           });
         }
       }

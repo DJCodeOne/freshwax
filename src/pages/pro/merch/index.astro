@@ -10,7 +10,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         <p class="subtitle">View your merchandise on Fresh Wax</p>
       </div>
       <div class="header-actions">
-        <a href="/contact" class="btn btn-secondary">Contact to Add Products</a>
+        <a href="/contact/" class="btn btn-secondary">Contact to Add Products</a>
       </div>
     </div>
 
@@ -33,7 +33,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       <div class="empty-icon">📦</div>
       <h3>No products yet</h3>
       <p>Contact us to get your merchandise listed on Fresh Wax</p>
-      <a href="/contact" class="btn btn-primary">Get Started</a>
+      <a href="/contact/" class="btn btn-primary">Get Started</a>
     </div>
   </div>
 
@@ -217,30 +217,31 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     const productsList = document.getElementById('productsList');
     const emptyState = document.getElementById('emptyState');
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      await loadProducts(user.uid);
+      await loadProducts(user);
     });
 
-    async function loadProducts(uid) {
+    async function loadProducts(user) {
       try {
-        const productsQuery = query(
-          collection(db, 'merch'),
-          where('sellerId', '==', uid)
-        );
-        const snapshot = await getDocs(productsQuery);
-        
-        if (snapshot.empty) {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/pro/dashboard-data?type=merch', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Failed to load products');
+
+        const products = data.products || [];
+
+        if (products.length === 0) {
           productsList.style.display = 'none';
           emptyState.style.display = 'block';
           return;
@@ -249,8 +250,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         emptyState.style.display = 'none';
         productsList.style.display = 'grid';
 
-        productsList.innerHTML = snapshot.docs.map(doc => {
-          const product = doc.data();
+        productsList.innerHTML = products.map(product => {
           const stock = product.stock || 0;
           const stockClass = stock === 0 ? 'stock-out' : stock < 5 ? 'stock-low' : 'stock-ok';
           const stockText = stock === 0 ? 'Out of stock' : `${stock} in stock`;

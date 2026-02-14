@@ -2,7 +2,7 @@
 // Tracks DJ mix likes using atomic increments
 
 import type { APIRoute } from 'astro';
-import { getDocument, atomicIncrement, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -19,14 +19,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB; // D1 database binding
-
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     const { mixId } = await request.json();

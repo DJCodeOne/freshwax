@@ -9,7 +9,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       <div class="header-content">
         <p class="subtitle">Manage your music releases on Fresh Wax</p>
       </div>
-      <a href="/pro/releases/new" class="btn btn-primary">
+      <a href="/pro/releases/new/" class="btn btn-primary">
         <span>+</span> New Release
       </a>
     </div>
@@ -37,7 +37,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       <div class="empty-icon">📀</div>
       <h3>No releases yet</h3>
       <p>Upload your first release to start selling on Fresh Wax</p>
-      <a href="/pro/releases/new" class="btn btn-primary">Upload Release</a>
+      <a href="/pro/releases/new/" class="btn btn-primary">Upload Release</a>
     </div>
   </div>
 
@@ -285,12 +285,10 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs, orderBy } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -309,23 +307,20 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
-      await loadReleases(user.uid);
+      await loadReleases(user);
     });
 
-    async function loadReleases(uid) {
+    async function loadReleases(user) {
       try {
-        const releasesQuery = query(
-          collection(db, 'releases'),
-          where('artistId', '==', uid),
-          orderBy('createdAt', 'desc')
-        );
-        const snapshot = await getDocs(releasesQuery);
-        
-        allReleases = [];
-        snapshot.forEach(doc => {
-          allReleases.push({ id: doc.id, ...doc.data() });
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/pro/dashboard-data?type=releases', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
         });
+        const data = await response.json();
 
+        if (!data.success) throw new Error(data.error || 'Failed to load releases');
+
+        allReleases = data.releases || [];
         renderReleases();
       } catch (error) {
         console.error('Error loading releases:', error);
@@ -382,8 +377,8 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
             </div>
             <div class="release-actions">
               <span class="release-status ${statusClass}">${statusText}</span>
-              <a href="/pro/releases/${release.id}" class="action-btn">Edit</a>
-              <a href="/item/${release.id}" class="action-btn" target="_blank">View</a>
+              <a href="/pro/releases/${release.id}/" class="action-btn">Edit</a>
+              <a href="/item/${release.id}/" class="action-btn" target="_blank">View</a>
             </div>
           </div>
         `;

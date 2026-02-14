@@ -3,7 +3,7 @@
 // Uses the CACHE KV namespace with cart:{userId} keys
 
 import type { APIRoute } from 'astro';
-import { verifyRequestUser, initFirebaseEnv } from '../../lib/firebase-rest';
+import { verifyRequestUser } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -12,10 +12,6 @@ async function getUserId(request: Request, locals: any): Promise<string | null> 
   // Try Firebase auth first (secure, verified identity)
   try {
     const env = (locals as any)?.runtime?.env;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId) return verifiedUserId;
   } catch {
@@ -66,7 +62,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         cart: { items: [], updatedAt: null },
         source: 'fallback'
       }), {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
       });
     }
 
@@ -80,7 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       cart: cartData || { items: [], updatedAt: null },
       source: 'kv'
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
     });
 
   } catch (error) {

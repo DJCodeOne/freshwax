@@ -2,16 +2,13 @@
 // Directly credit an account with store credit (for testing / admin use)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const env2 = (locals as any)?.runtime?.env;
@@ -55,27 +52,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       balanceAfter: 0 // Will be set below
     };
 
-    if (creditDoc) {
-      newBalance = (creditDoc.balance || 0) + creditAmount;
-      transaction.balanceAfter = newBalance;
-
-      const existingTransactions = creditDoc.transactions || [];
-      await updateDocument('userCredits', userId, {
-        balance: newBalance,
-        lastUpdated: now,
-        transactions: [...existingTransactions, transaction]
-      });
-    } else {
-      newBalance = creditAmount;
-      transaction.balanceAfter = newBalance;
-
+    if (!creditDoc) {
+      // Create the document first if it doesn't exist
       await setDocument('userCredits', userId, {
         userId,
-        balance: newBalance,
+        balance: 0,
         lastUpdated: now,
-        transactions: [transaction]
+        transactions: []
       });
     }
+
+    // Atomically increment balance to prevent race conditions
+    const result = await atomicIncrement('userCredits', userId, { balance: creditAmount });
+    newBalance = result.newValues.balance ?? ((creditDoc?.balance || 0) + creditAmount);
+    transaction.balanceAfter = newBalance;
+
+    // Atomic arrayUnion prevents lost transactions under concurrent writes
+    await arrayUnion('userCredits', userId, 'transactions', [transaction], {
+      lastUpdated: now
+    });
 
     // Also update customer document
     try {

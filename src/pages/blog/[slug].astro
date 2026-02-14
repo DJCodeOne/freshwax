@@ -6,18 +6,12 @@ import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { blogPosts, getPostBySlug } from '../../data/blog-posts';
+import { escapeHtml } from '../../lib/api-utils';
 
-export const prerender = true;
+export const prerender = false;
 
-export function getStaticPaths() {
-  return blogPosts.map(post => ({
-    params: { slug: post.slug },
-    props: { post }
-  }));
-}
-
-const { post } = Astro.props;
 const { slug } = Astro.params;
+const post = getPostBySlug(slug || '');
 const error = !post ? 'Post not found' : null;
 
 // Format date helper
@@ -49,14 +43,9 @@ function generateExcerpt(content: string, maxLength: number = 160): string {
 }
 
 // Apply Fresh Wax branding to text (white Fresh, red Wax)
-function escapeHtmlText(text: string): string {
-  if (!text) return '';
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function brandFreshWax(text: string): string {
   if (!text) return '';
-  const escaped = escapeHtmlText(text);
+  const escaped = escapeHtml(text);
   return escaped.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
 }
 
@@ -76,6 +65,7 @@ const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.co
 const seoImage = post?.featuredImage || '/og-image.jpg';
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout
@@ -217,7 +207,7 @@ const modifiedTime = publishedTime;
   <Footer />
 </Layout>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   function copyLink() {
     navigator.clipboard.writeText(window.location.href).then(() => {
       const btn = document.querySelector('.share-btn.copy');

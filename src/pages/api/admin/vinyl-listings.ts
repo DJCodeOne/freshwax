@@ -2,7 +2,7 @@
 // Admin API for managing vinyl listing approvals
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+
 import { saQueryCollection, saUpdateDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
@@ -36,13 +36,8 @@ function getServiceAccountKey(env: any): string | null {
   return serviceAccountKey || null;
 }
 
-// Initialize Firebase from env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET - Fetch pending vinyl listings for admin review

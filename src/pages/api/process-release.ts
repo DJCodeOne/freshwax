@@ -9,6 +9,7 @@ import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { processImageToSquareWebP } from '../../lib/image-processing';
 import type { Track } from '../../lib/types';
 
 const log = createLogger('process-release');
@@ -236,16 +237,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return copyResponse.ok;
     }
 
-    // Copy artwork (with magic byte validation)
+    // Process artwork: validate, convert to WebP, create cover + thumb
     let artworkUrl = `${R2_CONFIG.publicDomain}/place-holder.webp`;
+    let thumbUrl = artworkUrl;
     if (artworkKey) {
-      // Validate artwork magic bytes before copying to releases folder
+      // Download full artwork for validation and processing
       const artworkFetchUrl = `${bucketUrl}/${encodeURIComponent(artworkKey)}`;
-      const artworkHeadResp = await awsClient.fetch(artworkFetchUrl, {
-        headers: { 'Range': 'bytes=0-11' }
-      });
-      if (artworkHeadResp.ok) {
-        const artworkBytes = new Uint8Array(await artworkHeadResp.arrayBuffer());
+      const artworkResp = await awsClient.fetch(artworkFetchUrl);
+      if (artworkResp.ok) {
+        const artworkBuffer = await artworkResp.arrayBuffer();
+        const artworkBytes = new Uint8Array(artworkBuffer);
+
+        // Validate magic bytes
         let magicValid = false;
         if (artworkBytes[0] === 0xFF && artworkBytes[1] === 0xD8 && artworkBytes[2] === 0xFF) {
           magicValid = true; // JPEG
@@ -253,7 +256,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           magicValid = true; // PNG
         } else if (artworkBytes[0] === 0x52 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x46
           && artworkBytes[8] === 0x57 && artworkBytes[9] === 0x45 && artworkBytes[10] === 0x42 && artworkBytes[11] === 0x50) {
-          magicValid = true; // WebP (RIFF....WEBP)
+          magicValid = true; // WebP
         } else if (artworkBytes[0] === 0x47 && artworkBytes[1] === 0x49 && artworkBytes[2] === 0x46 && artworkBytes[3] === 0x38) {
           magicValid = true; // GIF
         }
@@ -261,18 +264,53 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.error(`Artwork file failed magic byte validation: ${artworkKey}`);
           return ApiErrors.badRequest('Artwork file content does not match a valid image format (JPEG, PNG, WebP, GIF).');
         }
-      }
 
-      const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
-      const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
+        // Process to WebP: 800x800 cover + 400x400 thumbnail
+        try {
+          const cover = await processImageToSquareWebP(artworkBuffer, 800, 80);
+          const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
 
-      const copied = await copyObject(artworkKey, newArtworkKey);
-      if (copied) {
-        copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
-        artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
-        log.debug(`Copied artwork: ${artworkFilename}`);
+          // Upload cover.webp
+          const coverKey = `${releaseFolder}/cover.webp`;
+          const coverUrl = `${bucketUrl}/${encodeURIComponent(coverKey)}`;
+          const coverResp = await awsClient.fetch(coverUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'image/webp' },
+            body: cover.buffer,
+          });
+          if (coverResp.ok) {
+            artworkUrl = `${R2_CONFIG.publicDomain}/${coverKey}`;
+            copiedFiles.push({ oldKey: artworkKey, newKey: coverKey });
+            log.info(`Created cover.webp (${(cover.buffer.length / 1024).toFixed(0)}KB)`);
+          }
+
+          // Upload thumb.webp
+          const thumbKey = `${releaseFolder}/thumb.webp`;
+          const thumbUploadUrl = `${bucketUrl}/${encodeURIComponent(thumbKey)}`;
+          const thumbResp = await awsClient.fetch(thumbUploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'image/webp' },
+            body: thumb.buffer,
+          });
+          if (thumbResp.ok) {
+            thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+            copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
+            log.info(`Created thumb.webp (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
+          }
+        } catch (imgErr) {
+          // Fallback: copy original if image processing fails
+          log.warn(`Image processing failed, copying original: ${imgErr}`);
+          const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
+          const newArtworkKey = `${releaseFolder}/${artworkFilename}`;
+          const copied = await copyObject(artworkKey, newArtworkKey);
+          if (copied) {
+            copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
+            artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
+            thumbUrl = artworkUrl;
+          }
+        }
       } else {
-        log.warn(`Failed to copy artwork: ${artworkKey}`);
+        log.warn(`Failed to download artwork: ${artworkKey}`);
       }
     }
 
@@ -461,7 +499,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       coverUrl: artworkUrl,
       coverArtUrl: artworkUrl,
       artworkUrl: artworkUrl,
-      thumbUrl: artworkUrl,
+      thumbUrl: thumbUrl,
       imageUrl: artworkUrl,
       genre: metadata.genre || 'Drum and Bass',
       catalogNumber: metadata.labelCode || '',

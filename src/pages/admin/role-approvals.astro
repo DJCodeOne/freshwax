@@ -9,6 +9,7 @@ const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
 const adminUids = getAdminUids();
+const nonce = (Astro.locals as any).nonce || '';
 ---
 <html lang="en">
 <head>
@@ -19,11 +20,11 @@ const adminUids = getAdminUids();
 <body>
   <div class="admin-page">
     <header class="admin-header">
-      <a href="/admin" class="back-link">← Back to Admin</a>
+      <a href="/admin/" class="back-link">← Back to Admin</a>
       <h1>Role Approvals</h1>
     </header>
 
-    <main class="admin-content">
+    <div class="admin-content">
       <!-- Tabs -->
       <div class="tabs">
         <button class="tab active" data-tab="artist">
@@ -71,7 +72,7 @@ const adminUids = getAdminUids();
           <div class="loading">Loading requests...</div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 
   <style>
@@ -296,16 +297,15 @@ const adminUids = getAdminUids();
     }
   </style>
 
-  <script is:inline>
+  <script is:inline nonce={nonce}>
     // Admin check uses Firestore admins collection
   </script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = {
-      apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g' || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+      apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
       authDomain: "freshwax-store.firebaseapp.com",
       projectId: "freshwax-store",
       storageBucket: "freshwax-store.firebasestorage.app",
@@ -314,7 +314,6 @@ const adminUids = getAdminUids();
     };
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -329,7 +328,7 @@ const adminUids = getAdminUids();
       tab.addEventListener('click', () => {
         tabs.forEach(t => t.classList.remove('active'));
         tabContents.forEach(c => c.classList.remove('active'));
-        
+
         tab.classList.add('active');
         document.getElementById(`${tab.dataset.tab}Tab`).classList.add('active');
       });
@@ -337,17 +336,19 @@ const adminUids = getAdminUids();
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        window.location.href = '/login?redirect=/admin/role-approvals';
+        window.location.href = '/login/?redirect=/admin/role-approvals/';
         return;
       }
 
-      // Check admin status via Firestore
-      {
-        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-        if (!adminDoc.exists()) {
-          window.location.href = '/';
-          return;
-        }
+      // Check admin status via API
+      const idToken = await user.getIdToken();
+      const adminResp = await fetch('/api/admin/check-access', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const adminData = await adminResp.json();
+      if (!adminData.success || !adminData.isAdmin) {
+        window.location.href = '/';
+        return;
       }
 
       // Load all requests
@@ -355,32 +356,17 @@ const adminUids = getAdminUids();
     });
 
     async function loadRequests() {
-      // Get all users with pending role requests
-      const usersQuery = query(collection(db, 'users'));
-      const snapshot = await getDocs(usersQuery);
-
-      const artistRequests = [];
-      const merchRequests = [];
-      const vinylRequests = [];
-      const djRequests = [];
-
-      snapshot.forEach(doc => {
-        const user = { uid: doc.id, ...doc.data() };
-        const pending = user.pendingRoles || {};
-
-        if (pending.artist?.status === 'pending') {
-          artistRequests.push({ ...user, request: pending.artist, type: 'artist' });
-        }
-        if (pending.merchSeller?.status === 'pending') {
-          merchRequests.push({ ...user, request: pending.merchSeller, type: 'merchSeller' });
-        }
-        if (pending.vinylSeller?.status === 'pending') {
-          vinylRequests.push({ ...user, request: pending.vinylSeller, type: 'vinylSeller' });
-        }
-        if (pending.djBypass?.status === 'pending') {
-          djRequests.push({ ...user, request: pending.djBypass, type: 'djBypass' });
-        }
+      // Get pending role requests via API (replaces client-side Firestore collection query)
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/roles/manage?action=getPendingRequests', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
       });
+      const data = await response.json();
+
+      const artistRequests = (data.requests?.artist || []).map(r => ({ uid: r.uid || r.userId, ...r, request: r }));
+      const merchRequests = (data.requests?.merchSeller || []).map(r => ({ uid: r.uid || r.userId, ...r, request: r }));
+      const vinylRequests = (data.requests?.vinylSeller || []).map(r => ({ uid: r.uid || r.userId, ...r, request: r }));
+      const djRequests = (data.requests?.djBypass || []).map(r => ({ uid: r.uid || r.userId, ...r, request: r }));
 
       // Update counts
       document.getElementById('artistCount').textContent = artistRequests.length;
@@ -564,65 +550,21 @@ const adminUids = getAdminUids();
       if (!confirm(`Approve this ${roleType === 'djBypass' ? 'DJ bypass' : roleType} request?`)) return;
 
       try {
-        const userRef = doc(db, 'users', uid);
-        const updateData = {
-          updatedAt: serverTimestamp()
-        };
-
-        // Set the role to true and mark as approved
-        if (roleType === 'djBypass') {
-          updateData['roles.djEligible'] = true;
-          updateData['pendingRoles.djBypass.status'] = 'approved';
-          updateData['pendingRoles.djBypass.approvedAt'] = serverTimestamp();
-        } else if (roleType === 'artist') {
-          updateData['roles.artist'] = true;
-          updateData['approved'] = true;
-          updateData['partnerInfo.approved'] = true;
-          updateData['pendingRoles.artist.status'] = 'approved';
-          updateData['pendingRoles.artist.approvedAt'] = serverTimestamp();
-        } else if (roleType === 'merchSeller') {
-          updateData['roles.merchSupplier'] = true;  // Use standardized field name
-          updateData['approved'] = true;
-          updateData['partnerInfo.approved'] = true;
-          updateData['pendingRoles.merchSeller.status'] = 'approved';
-          updateData['pendingRoles.merchSeller.approvedAt'] = serverTimestamp();
-        } else if (roleType === 'vinylSeller') {
-          updateData['roles.vinylSeller'] = true;
-          updateData['approved'] = true;
-          updateData['partnerInfo.approved'] = true;
-          updateData['pendingRoles.vinylSeller.status'] = 'approved';
-          updateData['pendingRoles.vinylSeller.approvedAt'] = serverTimestamp();
-        }
-
-        await updateDoc(userRef, updateData);
-
-        // Get user info for email
-        const userSnap = await getDoc(userRef);
-        const userData = userSnap.data();
-        const userEmail = userData?.email;
-        const userName = userData?.displayName || userData?.pendingRoles?.[roleType]?.displayName || 'Partner';
-
-        // Send approval email (don't block on this)
-        if (userEmail && roleType !== 'djBypass') {
-          try {
-            const adminUid = auth.currentUser?.uid;
-            await fetch('/api/admin/send-approval-email', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-admin-uid': adminUid || ''
-              },
-              body: JSON.stringify({
-                email: userEmail,
-                name: userName,
-                type: roleType
-              })
-            });
-            console.log('[role-approvals] Approval email sent to', userEmail);
-          } catch (emailError) {
-            console.error('[role-approvals] Failed to send approval email:', emailError);
-          }
-        }
+        const idToken = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/roles/manage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            action: 'approveRole',
+            uid,
+            roleType
+          })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Approval failed');
 
         // Remove card from UI
         document.querySelector(`.request-card[data-uid="${uid}"]`)?.remove();
@@ -633,7 +575,7 @@ const adminUids = getAdminUids();
         alert('Request approved!');
       } catch (error) {
         console.error('Error approving request:', error);
-        alert('Error approving request');
+        alert('Error approving request: ' + error.message);
       }
     };
 
@@ -642,41 +584,33 @@ const adminUids = getAdminUids();
       if (reason === null) return; // Cancelled
 
       try {
-        const userRef = doc(db, 'users', uid);
-        const updateData = {
-          updatedAt: serverTimestamp()
-        };
-
-        if (roleType === 'djBypass') {
-          updateData['pendingRoles.djBypass.status'] = 'denied';
-          updateData['pendingRoles.djBypass.deniedAt'] = serverTimestamp();
-          updateData['pendingRoles.djBypass.denialReason'] = reason;
-        } else if (roleType === 'artist') {
-          updateData['pendingRoles.artist.status'] = 'denied';
-          updateData['pendingRoles.artist.deniedAt'] = serverTimestamp();
-          updateData['pendingRoles.artist.denialReason'] = reason;
-        } else if (roleType === 'merchSeller') {
-          updateData['pendingRoles.merchSeller.status'] = 'denied';
-          updateData['pendingRoles.merchSeller.deniedAt'] = serverTimestamp();
-          updateData['pendingRoles.merchSeller.denialReason'] = reason;
-        } else if (roleType === 'vinylSeller') {
-          updateData['pendingRoles.vinylSeller.status'] = 'denied';
-          updateData['pendingRoles.vinylSeller.deniedAt'] = serverTimestamp();
-          updateData['pendingRoles.vinylSeller.denialReason'] = reason;
-        }
-
-        await updateDoc(userRef, updateData);
+        const idToken = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/roles/manage', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            action: 'denyRole',
+            uid,
+            roleType,
+            reason
+          })
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Denial failed');
 
         // Remove card from UI
         document.querySelector(`.request-card[data-uid="${uid}"]`)?.remove();
-        
+
         // Update count
         await loadRequests();
 
         alert('Request denied');
       } catch (error) {
         console.error('Error denying request:', error);
-        alert('Error denying request');
+        alert('Error denying request: ' + error.message);
       }
     };
   </script>

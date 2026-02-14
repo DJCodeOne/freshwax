@@ -82,7 +82,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       <h2>Need to Make Changes?</h2>
       <p>To update your business information, payment details, or commission rate, please contact the Fresh Wax team.</p>
       <div class="contact-actions">
-        <a href="/contact" class="btn btn-primary">Contact Us</a>
+        <a href="/contact/" class="btn btn-primary">Contact Us</a>
         <a href="mailto:merch@freshwax.co.uk" class="btn btn-secondary">Email Support</a>
       </div>
     </div>
@@ -249,12 +249,10 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
     import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-    import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
     const firebaseConfig = window.FIREBASE_CONFIG || {};
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) return;
@@ -263,45 +261,42 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     async function loadAccountInfo(user) {
       try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        const userData = userDoc.exists() ? userDoc.data() : {};
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/pro/dashboard-data?type=account', {
+          headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await response.json();
+        if (!data.success) return;
 
         // Business info
-        document.getElementById('businessName').textContent = 
-          userData.pendingRoles?.merchSeller?.businessName || 
-          userData.displayName || 
-          'Not set';
-        document.getElementById('contactEmail').textContent = user.email;
-        
+        document.getElementById('businessName').textContent = data.businessName || 'Not set';
+        document.getElementById('contactEmail').textContent = data.email || user.email;
+
         const statusEl = document.getElementById('accountStatus');
-        if (userData.roles?.merchSeller) {
+        if (data.isMerchSeller) {
           statusEl.textContent = 'Active';
           statusEl.classList.add('status-active');
         } else {
           statusEl.textContent = 'Pending';
         }
 
-        const createdAt = userData.createdAt?.toDate?.() || new Date();
-        document.getElementById('memberSince').textContent = 
+        const createdAt = data.createdAt ? new Date(data.createdAt) : new Date();
+        document.getElementById('memberSince').textContent =
           createdAt.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 
         // Calculate next payout date (first of next month)
         const now = new Date();
         const nextPayout = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        document.getElementById('nextPayoutDate').textContent = 
+        document.getElementById('nextPayoutDate').textContent =
           nextPayout.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        // Load balance from merch-sellers collection if exists
-        const sellerDoc = await getDoc(doc(db, 'merch-sellers', user.uid));
-        if (sellerDoc.exists()) {
-          const sellerData = sellerDoc.data();
-          document.getElementById('currentBalance').textContent = 
-            '£' + (sellerData.balance || 0).toFixed(2);
-          document.getElementById('pendingAmount').textContent = 
-            '£' + (sellerData.pendingBalance || 0).toFixed(2);
-          document.getElementById('commissionRate').textContent = 
-            (sellerData.commissionRate || 15) + '%';
-        }
+        // Balance info
+        document.getElementById('currentBalance').textContent =
+          '£' + (data.balance || 0).toFixed(2);
+        document.getElementById('pendingAmount').textContent =
+          '£' + (data.pendingBalance || 0).toFixed(2);
+        document.getElementById('commissionRate').textContent =
+          (data.commissionRate || 15) + '%';
 
       } catch (error) {
         console.error('Error loading account info:', error);

@@ -7,8 +7,9 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import PageLoader from '../../components/PageLoader.astro';
 import { blogPosts as posts, getCategories } from '../../data/blog-posts';
+import { escapeHtml } from '../../lib/api-utils';
 
-export const prerender = true;
+export const prerender = false;
 
 // Extract unique categories for filter
 const categories = getCategories();
@@ -42,14 +43,9 @@ function truncateExcerpt(text: string, maxLength: number = 150): string {
 }
 
 // Apply Fresh Wax branding to text (white Fresh, red Wax)
-function escapeHtmlText(text: string): string {
-  if (!text) return '';
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 function brandFreshWax(text: string): string {
   if (!text) return '';
-  const escaped = escapeHtmlText(text);
+  const escaped = escapeHtml(text);
   return escaped.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
 }
 ---

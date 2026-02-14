@@ -2,16 +2,12 @@
 // Get user profile data including approved relay info
 // SECURITY: Requires authentication - user can only view their own profile
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {

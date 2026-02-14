@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { createOrder, validateStock } from '../../lib/order-utils';
-import { initFirebaseEnv, getDocument, queryCollection, updateDocument, atomicIncrement, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
 
@@ -80,14 +80,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = (locals as any)?.runtime?.env;
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     // Parse request body
     const orderData = await request.json();
@@ -179,6 +173,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Some items are no longer available',
         unavailableItems: stockCheck.unavailableItems
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // Reserve and immediately convert stock for free orders
+    const { reserveStock, convertReservation } = await import('../../lib/order-utils');
+    const reservation = await reserveStock(validatedItems, 'free_' + Date.now().toString(36), verifiedUserId);
+    if (!reservation.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: reservation.error || 'Failed to reserve stock'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
@@ -291,6 +295,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (result.success) {
+      // Convert stock reservation (payment succeeded for free order)
+      if (reservation.reservationId) {
+        await convertReservation(reservation.reservationId);
+      }
+
       // Record to sales ledger (even for free/credit orders for accurate tracking)
       try {
         const enrichedItems = await Promise.all((validatedItems || []).map(async (item: any) => {
@@ -360,12 +369,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             balanceAfter: currentBalance
           };
 
-          const existingTransactions = creditData?.transactions || [];
-          existingTransactions.push(transaction);
-
-          await updateDocument('userCredits', verifiedUserId, {
-            lastUpdated: now,
-            transactions: existingTransactions
+          // Atomic arrayUnion prevents lost transactions under concurrent writes
+          await arrayUnion('userCredits', verifiedUserId, 'transactions', [transaction], {
+            lastUpdated: now
           });
 
           await updateDocument('users', verifiedUserId, { creditUpdatedAt: now });

@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { getDocument, addDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 
 export const prerender = false;
@@ -28,13 +28,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return rateLimitResponse(rateLimit.retryAfter!);
     }
 
-    // Initialize Firebase
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: projectId,
-      FIREBASE_API_KEY: apiKey,
-    });
 
     const { orderId, artistId, payeeType, payeeId, payeeName, payeeEmail, amount } = bodyData;
 
@@ -171,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.error('[admin] PayPal payout error:', err);
         return new Response(JSON.stringify({
           success: false,
-          error: err.message || 'PayPal payout error'
+          error: 'Payout error'
         }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
@@ -352,7 +347,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             amount: paypalAmount,
             status: 'error',
             method: 'paypal',
-            error: err.message
+            error: 'Payout error'
           });
         }
       }
@@ -420,7 +415,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             amount: payment.amount,
             status: 'error',
             method: 'stripe',
-            error: err.message
+            error: 'Payout error'
           });
         }
       }

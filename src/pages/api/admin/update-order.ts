@@ -2,7 +2,7 @@
 // Admin endpoint to update order details (totals, items, etc.)
 
 import type { APIRoute } from 'astro';
-import { getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { getDocument } from '../../../lib/firebase-rest';
 import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-  initFirebaseEnv({ FIREBASE_PROJECT_ID: projectId, FIREBASE_API_KEY: apiKey });
+
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   // Parse body and verify admin auth

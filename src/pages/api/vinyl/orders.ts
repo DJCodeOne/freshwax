@@ -3,7 +3,7 @@
 // Uses Firebase REST API with service account
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 
@@ -36,13 +36,8 @@ function getServiceAccountKey(env: any): string | null {
   return serviceAccountKey || null;
 }
 
-// Initialize Firebase from env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET - Fetch seller's orders

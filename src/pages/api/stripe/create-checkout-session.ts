@@ -3,180 +3,10 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { addDocument, getDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { addDocument } from '../../../lib/firebase-rest';
+import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 
 export const prerender = false;
-
-// Validate stock availability before checkout
-async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
-  const unavailableItems: string[] = [];
-
-  for (const item of items) {
-    const quantity = item.quantity || 1;
-    const itemType = item.type || 'digital';
-
-    try {
-      if (itemType === 'merch' && item.productId) {
-        // Check merch stock
-        const product = await getDocument('merch', item.productId);
-        if (product) {
-          // Check variant stock if size/color specified
-          if (item.size || item.color) {
-            const variantKey = item.size && item.color
-              ? `${item.size.toLowerCase()}_${item.color.toLowerCase()}`
-              : item.size?.toLowerCase() || item.color?.toLowerCase() || 'default';
-
-            const variantStock = product.variantStock?.[variantKey]?.stock ?? product.stock ?? 0;
-            if (variantStock < quantity) {
-              unavailableItems.push(`${item.name} (${item.size || ''} ${item.color || ''}) - only ${variantStock} available`);
-            }
-          } else {
-            // Check total stock
-            const totalStock = product.totalStock ?? product.stock ?? 0;
-            if (totalStock < quantity) {
-              unavailableItems.push(`${item.name} - only ${totalStock} available`);
-            }
-          }
-        }
-      } else if (itemType === 'vinyl') {
-        // Check if this is a crates item (has sellerId, no releaseId) or release vinyl
-        if (item.sellerId && !item.releaseId) {
-          // Vinyl crates item - check if listing is still available
-          const listingId = item.id || item.productId;
-          if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
-            if (!listing) {
-              unavailableItems.push(`${item.name} - listing no longer exists`);
-            } else if (listing.status === 'sold') {
-              unavailableItems.push(`${item.name} - already sold`);
-            } else if (listing.status !== 'published') {
-              unavailableItems.push(`${item.name} - no longer available`);
-            }
-          }
-        } else {
-          // Release vinyl - check stock
-          const releaseId = item.releaseId || item.productId || item.id;
-          if (releaseId) {
-            const release = await getDocument('releases', releaseId);
-            if (release) {
-              const vinylStock = release.vinylStock ?? 0;
-              if (vinylStock < quantity) {
-                unavailableItems.push(`${item.name} (Vinyl) - only ${vinylStock} available`);
-              }
-            }
-          }
-        }
-      }
-      // Digital items have unlimited stock - no check needed
-    } catch (err) {
-      console.error('[Stripe] Error checking stock for', item.name, err);
-      // On error, allow checkout but log warning
-    }
-  }
-
-  return {
-    available: unavailableItems.length === 0,
-    unavailableItems
-  };
-}
-
-// Validate item prices server-side to prevent manipulation
-async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], hasPriceMismatch: boolean, validationError?: string }> {
-  const validatedItems: any[] = [];
-  let hasPriceMismatch = false;
-
-  for (const item of items) {
-    let serverPrice = item.price;
-    const itemType = item.type || 'digital';
-
-    try {
-      if (itemType === 'merch' && item.productId) {
-        // Look up merch price
-        const product = await getDocument('merch', item.productId);
-        if (product) {
-          // Check if there's a sale price
-          serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
-        }
-      } else if (itemType === 'vinyl' || itemType === 'digital' || itemType === 'track' || itemType === 'release') {
-        // Check if this is a vinyl crates item
-        if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
-          // Vinyl crates item - look up price from vinylListings
-          const listingId = item.id || item.productId;
-          if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
-            if (listing) {
-              serverPrice = listing.price || item.price;
-              // Store crates shipping cost (seller sets this)
-              item.cratesShippingCost = listing.shippingCost || 0;
-              item.isCratesItem = true;
-            }
-          }
-        } else {
-          // Look up release price
-          const releaseId = item.releaseId || item.productId || item.id;
-          if (releaseId) {
-            const release = await getDocument('releases', releaseId);
-            if (release) {
-              if (itemType === 'vinyl') {
-                serverPrice = release.vinylPrice || release.price || item.price;
-
-                // Also get shipping rates from release
-                item.vinylShippingUK = release.vinylShippingUK;
-                item.vinylShippingEU = release.vinylShippingEU;
-                item.vinylShippingIntl = release.vinylShippingIntl;
-
-                // Get artist defaults as fallback
-                const artistId = release.artistId || release.userId || item.artistId;
-                if (artistId) {
-                  item.artistId = artistId;
-                  try {
-                    const artist = await getDocument('artists', artistId);
-                    if (artist) {
-                      item.artistVinylShippingUK = artist.vinylShippingUK;
-                      item.artistVinylShippingEU = artist.vinylShippingEU;
-                      item.artistVinylShippingIntl = artist.vinylShippingIntl;
-                      item.artistName = artist.artistName || artist.name;
-                    }
-                  } catch (e) {
-                    // Artist lookup failed, use defaults
-                  }
-                }
-              } else if (itemType === 'track' && item.trackId) {
-                // Single track - find track price
-                const track = (release.tracks || []).find((t: any) =>
-                  t.id === item.trackId || t.trackId === item.trackId
-                );
-                serverPrice = track?.price || release.trackPrice || 0.99;
-              } else {
-                // Full release
-                serverPrice = release.price || release.digitalPrice || item.price;
-              }
-            }
-          }
-        }
-      }
-
-      // Check for price mismatch (only allow 1p rounding difference)
-      if (Math.abs(serverPrice - item.price) > 0.01) {
-        console.warn('[Stripe] Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
-        hasPriceMismatch = true;
-      }
-
-      // Always use server price
-      validatedItems.push({
-        ...item,
-        price: serverPrice,
-        originalClientPrice: item.price // Keep for audit
-      });
-    } catch (err) {
-      console.error('[Stripe] Error validating price for', item.name, err);
-      // SECURITY: Reject items where price validation fails — never trust client price
-      return { validatedItems: [], hasPriceMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
-    }
-  }
-
-  return { validatedItems, hasPriceMismatch };
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
@@ -186,6 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
+  let reservation: { success: boolean; reservationId?: string } | null = null;
   try {
     const env = (locals as any)?.runtime?.env;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
@@ -215,12 +46,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Initialize Firebase for price validation
-    initFirebaseEnv(env || {
-      FIREBASE_PROJECT_ID: import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-      FIREBASE_API_KEY: import.meta.env.FIREBASE_API_KEY
-    });
-
     // SECURITY: Validate stock availability before allowing checkout
     console.log('[Stripe] Validating stock availability...');
     const stockCheck = await validateStock(orderData.items);
@@ -233,11 +58,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Reserve stock to prevent overselling
+    reservation = await reserveStock(orderData.items, 'stripe_' + Date.now().toString(36), orderData.customer?.userId);
+    if (!reservation.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: reservation.error || 'Failed to reserve stock'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     // SECURITY: Validate prices server-side to prevent manipulation
     console.log('[Stripe] Validating prices server-side...');
-    const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items);
+    const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[Stripe]' });
 
     if (validationError) {
+      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
       return new Response(JSON.stringify({ success: false, error: validationError }), {
         status: 400, headers: { 'Content-Type': 'application/json' }
       });
@@ -363,7 +198,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       total: String(validatedTotal),
       appliedCredit: String(appliedCredit),
       // Items will be stored as compressed JSON
-      items_count: String(validatedItems.length)
+      items_count: String(validatedItems.length),
+      ...(reservation.reservationId ? { reservation_id: reservation.reservationId } : {})
     };
 
     // Store items data (compressed) - using VALIDATED prices
@@ -496,6 +332,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
       console.error('[Stripe] Create session error:', errorData);
+      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
       return new Response(JSON.stringify({
         success: false,
         error: errorData.error?.message || 'Failed to create checkout session'
@@ -514,6 +351,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Stripe] Error:', errorMessage);
+    // Release any reservation made before the error
+    if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
     return new Response(JSON.stringify({
       success: false,
       error: 'An internal error occurred'

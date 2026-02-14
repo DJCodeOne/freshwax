@@ -3,7 +3,7 @@
 // Uses Pusher for real-time delivery (reduces Firebase reads)
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin } from '../../../lib/admin';
@@ -149,10 +149,6 @@ function moderateMessage(message: string): { allowed: boolean; reason?: string }
 // Helper to initialize Firebase and return env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   return env;
 }
 
@@ -376,7 +372,6 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 
 // Get recent chat messages (initial load only - no real-time)
 export const GET: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   try {
@@ -452,7 +447,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime and get env for Pusher
   const env = initFirebase(locals);
 
   // Verify authenticated user
@@ -708,7 +702,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // Delete a message (for moderation)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase for Cloudflare runtime
   initFirebase(locals);
 
   // Verify authenticated user

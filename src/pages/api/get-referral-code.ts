@@ -1,7 +1,7 @@
 // src/pages/api/get-referral-code.ts
 // Get user's referral code from KV storage
 import type { APIRoute } from 'astro';
-import { verifyUserToken, initFirebaseEnv } from '../../lib/firebase-rest';
+import { verifyUserToken } from '../../lib/firebase-rest';
 import { getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
 
 export const prerender = false;
@@ -17,11 +17,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    initFirebaseEnv({
-      FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-      FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-    });
 
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');

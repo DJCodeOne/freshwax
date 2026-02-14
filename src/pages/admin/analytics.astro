@@ -38,62 +38,71 @@ const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-// Fetch ledger entries (source of truth for revenue) - D1 primary, Firebase fallback
-let ledgerEntries: any[] = [];
-try {
-  const db = env?.DB;
-  if (db) {
+// Fetch ledger, orders, and releases in parallel (independent queries)
+const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
+  // Ledger entries (source of truth for revenue) - D1 primary, Firebase fallback
+  (async (): Promise<any[]> => {
+    let entries: any[] = [];
     try {
-      ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
-      console.log(`[analytics] D1: ${ledgerEntries.length} ledger entries`);
-    } catch (d1Err) {
-      console.error('[analytics] D1 failed, falling back to Firebase:', d1Err);
-      ledgerEntries = [];
+      const db = env?.DB;
+      if (db) {
+        try {
+          entries = await d1GetLedgerEntries(db, { limit: 2000 });
+          console.log(`[analytics] D1: ${entries.length} ledger entries`);
+        } catch (d1Err) {
+          console.error('[analytics] D1 failed, falling back to Firebase:', d1Err);
+          entries = [];
+        }
+      }
+      if (entries.length === 0 && serviceAccountKey) {
+        entries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+          orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+          limit: 2000
+        });
+        console.log(`[analytics] Firebase fallback: ${entries.length} ledger entries`);
+      }
+    } catch (e) {
+      console.error('Error fetching ledger:', e);
     }
-  }
-  if (ledgerEntries.length === 0 && serviceAccountKey) {
-    ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-      orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-      limit: 2000
-    });
-    console.log(`[analytics] Firebase fallback: ${ledgerEntries.length} ledger entries`);
-  }
-} catch (e) {
-  console.error('Error fetching ledger:', e);
-}
-
-// Also fetch orders for top sellers (uses items data)
-let orders: any[] = [];
-try {
-  const allOrders = serviceAccountKey
-    ? await saQueryCollection(serviceAccountKey, projectId, 'orders', {
-        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-        limit: 500
-      })
-    : await queryCollection('orders', {
-        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-        limit: 500
+    return entries;
+  })(),
+  // Orders for top sellers (uses items data)
+  (async (): Promise<any[]> => {
+    try {
+      const allOrders = serviceAccountKey
+        ? await saQueryCollection(serviceAccountKey, projectId, 'orders', {
+            orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+            limit: 500
+          })
+        : await queryCollection('orders', {
+            orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+            limit: 500
+          });
+      return allOrders.filter((o: any) =>
+        o.status !== 'cancelled' &&
+        o.paymentMethod !== 'test_mode'
+      );
+    } catch (e) {
+      console.error('Error fetching orders:', e);
+      return [];
+    }
+  })(),
+  // Releases to get actual prices (for free download detection)
+  (async (): Promise<Record<string, number>> => {
+    const priceMap: Record<string, number> = {};
+    try {
+      const releases = await queryCollection('releases', { limit: 500 });
+      releases.forEach((r: any) => {
+        if (r.id) {
+          priceMap[r.id] = r.price ?? 0;
+        }
       });
-  orders = allOrders.filter((o: any) =>
-    o.status !== 'cancelled' &&
-    o.paymentMethod !== 'test_mode'
-  );
-} catch (e) {
-  console.error('Error fetching orders:', e);
-}
-
-// Fetch releases to get actual prices (for free download detection)
-const releasesPriceMap: Record<string, number> = {};
-try {
-  const releases = await queryCollection('releases', { limit: 500 });
-  releases.forEach((r: any) => {
-    if (r.id) {
-      releasesPriceMap[r.id] = r.price ?? 0;
+    } catch (e) {
+      console.error('Error fetching releases:', e);
     }
-  });
-} catch (e) {
-  console.error('Error fetching releases:', e);
-}
+    return priceMap;
+  })(),
+]);
 
 // Helper to correct item prices (some might be stored in pence)
 function correctItemPrice(price: number): number {
@@ -269,7 +278,7 @@ export const prerender = false;
 
 <AdminLayout title="Analytics" activeNav="analytics">
   <Fragment slot="actions">
-    <a href="/admin/ledger" class="btn btn-primary">
+    <a href="/admin/ledger/" class="btn btn-primary">
       📒 Sales Ledger
     </a>
     <button class="btn btn-outline" onclick="window.print()">

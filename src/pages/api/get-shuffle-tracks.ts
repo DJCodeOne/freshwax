@@ -1,6 +1,6 @@
 // src/pages/api/get-shuffle-tracks.ts
 import type { APIRoute } from 'astro';
-import { getLiveReleases, extractTracksFromReleases, shuffleArray, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getLiveReleases, extractTracksFromReleases, shuffleArray } from '../../lib/firebase-rest';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -18,10 +18,7 @@ let cachedResult: any = null;
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   const startTime = Date.now();
   
   try {

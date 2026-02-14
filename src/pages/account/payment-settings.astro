@@ -12,12 +12,13 @@ export const prerender = false;
 const url = new URL(Astro.request.url);
 const stripeConnected = url.searchParams.get('stripe_connected') === 'true';
 const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout title="Payment Settings" noindex={true}>
   <Header />
 
-  <main class="payment-settings">
+  <div class="payment-settings">
     <div class="container">
       <div id="loading-state" class="loading-state">
         <div class="spinner"></div>
@@ -27,19 +28,19 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       <div id="auth-required" class="auth-required" style="display: none;">
         <h1>Sign In Required</h1>
         <p>Please sign in to access your payment settings.</p>
-        <a href="/login?redirect=/account/payment-settings" class="btn btn-primary">Sign In</a>
+        <a href="/login/?redirect=/account/payment-settings" class="btn btn-primary">Sign In</a>
       </div>
 
       <div id="not-vendor" class="not-vendor" style="display: none;">
         <h1>Not a Vendor</h1>
         <p>Payment settings are only available for artists, merch suppliers, and vinyl sellers.</p>
         <p>If you'd like to sell on Fresh Wax, visit your dashboard to apply.</p>
-        <a href="/account/dashboard" class="btn btn-primary">Go to Dashboard</a>
+        <a href="/account/dashboard/" class="btn btn-primary">Go to Dashboard</a>
       </div>
 
       <div id="payment-main-content" class="main-content" style="display: none;">
         <div class="page-header">
-          <a href="/account/dashboard" class="back-link">&larr; Back to Dashboard</a>
+          <a href="/account/dashboard/" class="back-link">&larr; Back to Dashboard</a>
           <h1>Payment Settings</h1>
           <p class="subtitle">Set up how you receive payments for your sales on Fresh Wax.</p>
         </div>
@@ -163,27 +164,13 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </section>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
 
-<script is:inline type="module">
-  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-  // Initialize Firebase (reuse existing app if available)
-  const firebaseConfig = {
-    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
-
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+<script is:inline type="module" nonce={nonce}>
+  // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
   let currentUserId = null;
   let userData = {};
@@ -196,8 +183,8 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     const notVendor = document.getElementById('not-vendor');
     const mainContent = document.getElementById('payment-main-content');
 
-    onAuthStateChanged(auth, async (user) => {
-      console.log('[PaymentSettings] onAuthStateChanged - user:', user ? user.uid : 'null');
+    window.authReady.then(async (user) => {
+      console.log('[PaymentSettings] authReady - user:', user ? user.uid : 'null');
       if (!user) {
         loadingState.style.display = 'none';
         authRequired.style.display = 'block';

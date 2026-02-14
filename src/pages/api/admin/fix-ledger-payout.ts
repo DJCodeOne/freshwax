@@ -3,7 +3,7 @@
 // Usage: GET /api/admin/fix-ledger-payout?orderNumber=FW-xxx&confirm=yes
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv, queryCollection } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
@@ -59,10 +59,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: projectId,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
   const saQuery = getSaQuery(locals);
 
   try {

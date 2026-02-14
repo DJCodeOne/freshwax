@@ -1,7 +1,7 @@
 // src/pages/api/livestream/slots.ts
 // DJ livestream schedule - uses Firebase REST API + D1 sync
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, updateDocument, initFirebaseEnv, clearCache, verifyRequestUser } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, updateDocument, clearCache, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey as generateSecureStreamKey, buildRtmpUrl, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { APPROVED_RELAY_STATIONS } from '../../../lib/relay-stations';
@@ -16,11 +16,6 @@ function initServices(locals: any) {
 
   const firebaseProjectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const firebaseApiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
-
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: firebaseProjectId,
-    FIREBASE_API_KEY: firebaseApiKey,
-  });
 
   const red5RtmpUrl = env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL;
   const red5HlsUrl = env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL;

@@ -84,7 +84,7 @@ export const prerender = false;
 <Layout title="Weekly Chart - Top Selling Releases" description="This week's top jungle and drum & bass releases ranked by sales and streams on Fresh Wax.">
   <Header />
   
-  <main class="chart-main">
+  <div class="chart-main">
     <!-- Hero Section -->
     <section class="hero">
       <div class="hero-grid"></div>
@@ -119,7 +119,7 @@ export const prerender = false;
           <div class="empty-icon">🎵</div>
           <h2>No New Releases This Week</h2>
           <p>Check back soon for fresh drops!</p>
-          <a href="/releases" class="browse-btn">Browse All Releases</a>
+          <a href="/releases/" class="browse-btn">Browse All Releases</a>
         </div>
       ) : (
         <div class="chart-list">
@@ -189,11 +189,11 @@ export const prerender = false;
       <!-- View All Link -->
       {releases.length > 0 && (
         <div class="view-all">
-          <a href="/releases" class="view-all-btn">View All Releases →</a>
+          <a href="/releases/" class="view-all-btn">View All Releases →</a>
         </div>
       )}
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>

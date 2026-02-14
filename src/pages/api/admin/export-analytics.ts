@@ -2,7 +2,7 @@
 // Export analytics data as CSV
 
 import type { APIRoute } from 'astro';
-import { queryCollection, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 
@@ -21,10 +21,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return authError;
   }
 
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
   const saQuery = getSaQuery(locals);
 
   try {

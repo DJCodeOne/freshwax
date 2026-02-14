@@ -400,7 +400,8 @@ function validatePath(segment: string, label: string): void {
 
 export async function queryCollection(
   collection: string,
-  options: QueryOptions = {}
+  options: QueryOptions = {},
+  throwOnError = false
 ): Promise<any[]> {
   validatePath(collection, 'collection');
   // Generate cache key
@@ -484,8 +485,9 @@ export async function queryCollection(
       });
       
       if (!response.ok) {
-        const error = await response.text();
-        log.error('Query failed:', error);
+        const errorText = await response.text();
+        log.error('Query failed:', errorText);
+        if (throwOnError) throw new Error(`Firebase queryCollection failed: ${response.status}`);
         return [];
       }
       
@@ -504,6 +506,7 @@ export async function queryCollection(
         
     } catch (error) {
       log.error('Query error:', error);
+      if (throwOnError) throw error;
       return [];
     } finally {
       // Remove from pending requests
@@ -521,7 +524,7 @@ export async function queryCollection(
 // This is a client-side Firebase API key - safe to include in code
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-export async function getDocument(collection: string, docId: string, ttl?: number): Promise<any | null> {
+export async function getDocument(collection: string, docId: string, ttl?: number, throwOnError = false): Promise<any | null> {
   validatePath(collection, 'collection');
   validatePath(docId, 'docId');
   const cacheKey = `doc:${collection}:${docId}`;
@@ -560,6 +563,7 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
           return null;
         }
         log.error('Get document failed:', response.status);
+        if (throwOnError) throw new Error(`Firebase getDocument failed: ${response.status}`);
         return null;
       }
       
@@ -573,13 +577,14 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       return parsed;
       
     } catch (error) {
-      log.error('Get document error:', error);
+      log.error(`Get document error (${collection}/${docId}):`, error);
+      if (throwOnError) throw error;
       return null;
     } finally {
       pendingRequests.delete(cacheKey);
     }
   })();
-  
+
   pendingRequests.set(cacheKey, fetchPromise);
   return fetchPromise;
 }
@@ -594,14 +599,6 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
  */
 export async function getSettings(): Promise<any | null> {
   return getDocument('settings', 'admin', CACHE_TTL.SETTINGS);
-}
-
-/**
- * Invalidate settings cache (call after updating settings)
- */
-export function invalidateSettingsCache(): void {
-  cache.delete('doc:settings:admin');
-  log.info('Settings cache invalidated');
 }
 
 // ==========================================
@@ -886,24 +883,6 @@ export async function getLiveMerch(limit?: number, db?: any, skipCache?: boolean
   const result = limit ? merchData.slice(0, limit) : merchData;
   setCache(cacheKey, result, 10 * 60 * 1000);
   return result;
-}
-
-// Batch get ratings for multiple releases (reduces reads significantly)
-export async function getRatingsBatch(releaseIds: string[]): Promise<Map<string, any>> {
-  const results = new Map<string, any>();
-  
-  // Fetch all releases in batch
-  const releases = await getDocumentsBatch('releases', releaseIds, CACHE_TTL.RATINGS);
-  
-  for (const [id, release] of releases) {
-    results.set(id, {
-      average: release?.ratings?.average || 0,
-      count: release?.ratings?.count || 0,
-      fiveStarCount: release?.ratings?.fiveStarCount || 0
-    });
-  }
-  
-  return results;
 }
 
 // Extract tracks with preview URLs from releases
@@ -1203,26 +1182,6 @@ export async function deleteDocument(
   return { success: true };
 }
 
-// Increment a numeric field (read-modify-write)
-export async function incrementField(
-  collection: string,
-  docId: string,
-  fieldName: string,
-  incrementBy: number = 1
-): Promise<{ success: boolean; newValue: number }> {
-  const doc = await getDocument(collection, docId);
-  if (!doc) {
-    throw new Error(`Document ${collection}/${docId} not found`);
-  }
-
-  const currentValue = typeof doc[fieldName] === 'number' ? doc[fieldName] : 0;
-  const newValue = currentValue + incrementBy;
-
-  await updateDocument(collection, docId, { [fieldName]: newValue });
-
-  return { success: true, newValue };
-}
-
 /**
  * Atomically increment numeric fields using Firestore's commit API with fieldTransforms.
  * Unlike incrementField, this does NOT do read-modify-write and is safe against race conditions.
@@ -1353,42 +1312,85 @@ export async function updateDocumentConditional(
   return { success: true };
 }
 
-// Append to an array field
+/**
+ * Atomically append elements to an array field using Firestore's commit API with fieldTransforms.
+ * Uses appendMissingElements (Firestore's arrayUnion) so concurrent appends never lose data.
+ * Unlike the old read-modify-write approach, this is safe against race conditions.
+ *
+ * Note: appendMissingElements deduplicates by value. Since each element includes a unique `id`
+ * and `createdAt`/`timestamp`, duplicates are effectively impossible for comments/transactions.
+ *
+ * @param collection - Firestore collection
+ * @param docId - Document ID
+ * @param fieldName - The array field to append to
+ * @param values - Array of values to append
+ * @param additionalFields - Optional additional fields to update on the same document (e.g. commentCount, lastUpdated)
+ */
 export async function arrayUnion(
   collection: string,
   docId: string,
   fieldName: string,
-  values: any[]
+  values: any[],
+  additionalFields?: Record<string, any>
 ): Promise<{ success: boolean }> {
-  const doc = await getDocument(collection, docId);
-  if (!doc) {
-    throw new Error(`Document ${collection}/${docId} not found`);
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
   }
 
-  const currentArray = Array.isArray(doc[fieldName]) ? doc[fieldName] : [];
-  const newArray = [...currentArray, ...values];
+  const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
+  const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
 
-  await updateDocument(collection, docId, { [fieldName]: newArray });
+  const writes: any[] = [];
 
-  return { success: true };
-}
+  // Write 1: Field transform to atomically append to the array
+  writes.push({
+    transform: {
+      document: documentPath,
+      fieldTransforms: [{
+        fieldPath: fieldName,
+        appendMissingElements: {
+          values: values.map(v => toFirestoreValue(v))
+        }
+      }]
+    }
+  });
 
-// Remove from an array field
-export async function arrayRemove(
-  collection: string,
-  docId: string,
-  fieldName: string,
-  values: any[]
-): Promise<{ success: boolean }> {
-  const doc = await getDocument(collection, docId);
-  if (!doc) {
-    throw new Error(`Document ${collection}/${docId} not found`);
+  // Write 2: If there are additional fields to update (e.g. updatedAt, commentCount), add a separate update write
+  if (additionalFields && Object.keys(additionalFields).length > 0) {
+    const fields: Record<string, any> = {};
+    for (const [key, value] of Object.entries(additionalFields)) {
+      fields[key] = toFirestoreValue(value);
+    }
+    writes.push({
+      update: {
+        name: documentPath,
+        fields
+      },
+      updateMask: {
+        fieldPaths: Object.keys(additionalFields)
+      }
+    });
   }
 
-  const currentArray = Array.isArray(doc[fieldName]) ? doc[fieldName] : [];
-  const newArray = currentArray.filter((item: any) => !values.includes(item));
+  const arrayUnionHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
+  const response = await fetch(commitUrl, {
+    method: 'POST',
+    headers: arrayUnionHeaders,
+    body: JSON.stringify({ writes })
+  });
 
-  await updateDocument(collection, docId, { [fieldName]: newArray });
+  if (!response.ok) {
+    const error = await response.text();
+    log.error('arrayUnion error:', error);
+    throw new Error(`Atomic arrayUnion failed: ${response.status}`);
+  }
+
+  // Invalidate cache for this document
+  cache.delete(`doc:${collection}:${docId}`);
+  clearCache(`query:${collection}`);
 
   return { success: true };
 }

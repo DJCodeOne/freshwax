@@ -1553,7 +1553,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         if (!user) {
           alert('Please log in to rate releases.');
           var currentPage = window.location.pathname;
-          window.location.href = '/login?redirect=' + encodeURIComponent(currentPage);
+          window.location.href = '/login/?redirect=' + encodeURIComponent(currentPage);
           return;
         }
 
@@ -2062,7 +2062,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       
       // Check for customer login
       if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
       
@@ -2177,7 +2177,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       
       // Check for customer login
       if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
       
@@ -2435,7 +2435,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         
         // Check for customer login
         if (!window.FreshWaxCart || !FreshWaxCart.isLoggedIn()) {
-          window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+          window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
           return;
         }
         

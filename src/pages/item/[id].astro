@@ -3,6 +3,8 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { getDocument } from '../../lib/firebase-rest';
+import { normalizeRelease } from '../../lib/releases';
 
 const { id } = Astro.params;
 
@@ -11,19 +13,38 @@ let release = null;
 let error = null;
 
 try {
-  // Add nocache timestamp to ensure fresh data (ratings/comments update frequently)
-  const apiUrl = `${Astro.url.origin}/api/get-release?id=${id}&admin=true&nocache=${Date.now()}`;
-  
-  const response = await fetch(apiUrl);
-  const data = await response.json();
-  
-  if (data.success && data.release) {
-    release = data.release;
+  // Direct Firestore read instead of self-fetch (middleware already initializes Firebase)
+  const doc = await getDocument('releases', id!);
+
+  if (doc) {
+    const normalized = normalizeRelease(doc, id);
+
+    // Fetch artist bio if artistId exists
+    let artistBio = '';
+    if (normalized.artistId) {
+      try {
+        const userDoc = await getDocument('users', normalized.artistId);
+        if (userDoc?.pendingRoles?.artist?.bio) {
+          const bio = userDoc.pendingRoles.artist.bio.trim();
+          const placeholderBios = [
+            'electronic music / digital and vinyl',
+            'electronic music digital and vinyl'
+          ];
+          if (!placeholderBios.includes(bio.toLowerCase())) {
+            artistBio = bio;
+          }
+        }
+      } catch (err) {
+        // Could not fetch artist bio - non-fatal
+      }
+    }
+
+    release = { ...normalized, artistBio };
   } else {
-    error = data.error || 'Release not found';
+    error = 'Release not found';
   }
 } catch (err) {
-  console.error('[ITEM PAGE] ✗ Fetch error:', err);
+  console.error('[ITEM PAGE] Fetch error:', err);
   error = 'Failed to load release';
 }
 
@@ -224,6 +245,38 @@ const releaseDateTime = new Date(releaseDate);
 const now = new Date();
 const isPreOrder = releaseDateTime > now;
 const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+const nonce = (Astro.locals as any).nonce || '';
+
+// Convert time string (e.g. "3:45", "1:02:30") to ISO 8601 duration (e.g. "PT3M45S")
+function toIsoDuration(timeStr: string | undefined | null): string | undefined {
+  if (!timeStr || timeStr === '0' || timeStr === '0:00') return undefined;
+  const parts = timeStr.split(':').map(Number);
+  if (parts.some(isNaN)) return undefined;
+  if (parts.length === 3) {
+    const [h, m, s] = parts;
+    return `PT${h > 0 ? h + 'H' : ''}${m > 0 ? m + 'M' : ''}${s > 0 ? s + 'S' : ''}` || 'PT0S';
+  }
+  if (parts.length === 2) {
+    const [m, s] = parts;
+    return `PT${m > 0 ? m + 'M' : ''}${s > 0 ? s + 'S' : ''}` || 'PT0S';
+  }
+  return undefined;
+}
+
+// Build structured track data for JSON-LD
+const structuredTracks = tracksWithIds.map((t: any) => ({
+  name: t.title || t.trackName || 'Untitled',
+  duration: toIsoDuration(t.duration),
+  artist: t.artist || undefined,
+}));
+
+// Determine product availability
+const productAvailability = isPreOrder ? 'PreOrder' as const
+  : (vinylRelease && !vinylAvailable) ? 'OutOfStock' as const
+  : 'InStock' as const;
+
+// Determine effective price for structured data (use digital price, fall back to track price * count)
+const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTrackPrice * tracksWithIds.length);
 ---
 
 <Layout
@@ -235,23 +288,26 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   music={release ? {
     artist: artistName,
     releaseDate: releaseDate,
-    genre: genre ? [genre] : undefined,
+    genre: genre ? [displayGenre] : undefined,
     label: labelName || undefined,
     format: vinylRelease ? ['Vinyl', 'Digital'] : ['Digital'],
-    tracks: tracks?.map((t: any) => ({ name: t.trackName || 'Untitled', duration: t.duration }))
+    catalogNumber: catalogNumber || undefined,
+    tracks: structuredTracks
   } : undefined}
-  product={release && actualPricePerSale > 0 ? {
-    price: actualPricePerSale,
+  product={release && structuredPrice > 0 ? {
+    price: structuredPrice,
     currency: 'GBP',
-    availability: vinylRelease && !vinylAvailable ? 'OutOfStock' : 'InStock',
+    availability: productAvailability,
     brand: artistName,
-    category: 'Music > Digital Downloads'
+    category: 'Music > Digital Downloads',
+    ...(overallRating.count > 0 ? { reviews: { rating: overallRating.average, count: overallRating.count } } : {})
   } : undefined}
 >
+  {coverArtUrl && coverArtUrl !== '/place-holder.webp' && <link rel="preload" href={coverArtUrl} as="image" slot="head" />}
   <Header />
   
   {!release ? (
-    <main style="min-height: 100vh; background: #000000; padding: 2rem 0;">
+    <div style="min-height: 100vh; background: #000000; padding: 2rem 0;">
       <div class="max-w-4xl mx-auto px-4">
         <div class="bg-white border-2 border-black p-8 text-center">
           <h1 class="text-3xl font-black text-black mb-4 uppercase">Release Not Found</h1>
@@ -262,9 +318,9 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
           </a>
         </div>
       </div>
-    </main>
+    </div>
   ) : (
-    <main style="min-height: 100vh; background: #000000; padding: 1rem 0;">
+    <div style="min-height: 100vh; background: #000000; padding: 1rem 0;">
       <!-- Data attributes for recommendations -->
       <div 
         id="release-meta" 
@@ -295,6 +351,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
                   class="w-full border-2 md:border-4 border-white shadow-2xl mb-4 md:mb-6"
                   width="600"
                   height="600"
+                  loading="eager"
                   fetchpriority="high"
                   decoding="async"
                   onerror="this.src='/place-holder.webp'"
@@ -853,7 +910,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         </div>
 
       </div>
-    </main>
+    </div>
   )}
 
   <!-- Giphy Picker Modal -->
@@ -1238,7 +1295,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   }
 </style>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // Ensure global mini player AND shuffle widget are paused when playing local track previews on item page
   (function() {
     function stopAllOtherAudio() {
@@ -1302,13 +1359,19 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     } else {
       initItemPageAudioControl();
     }
-    
+
     // Re-initialize after Astro page transitions
     document.addEventListener('astro:page-load', initItemPageAudioControl);
+
+    // Cleanup on Astro View Transition swap to prevent duplicate listeners
+    document.addEventListener('astro:before-swap', function() {
+      document.removeEventListener('DOMContentLoaded', initItemPageAudioControl);
+      document.removeEventListener('astro:page-load', initItemPageAudioControl);
+    }, { once: true });
   })();
 </script>
 
-<script is:inline define:vars={{ releaseId: id }}>
+<script is:inline define:vars={{ releaseId: id }} nonce={nonce}>
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -1395,14 +1458,11 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   // Initialize Firebase Auth listener
   async function initFirebaseAuth() {
     try {
-      const firebaseApp = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-      const firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-      const firebaseFirestore = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js');
-      
+      const firebaseApp = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+      const firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
       const { initializeApp, getApps } = firebaseApp;
       const { getAuth, onAuthStateChanged } = firebaseAuth;
-      const { getFirestore, doc, getDoc } = firebaseFirestore;
-      
+
       // Firebase config
       const firebaseConfig = {
         apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -1412,15 +1472,13 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
         messagingSenderId: "675435782973",
         appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
       };
-      
+
       // Check if app already initialized
       const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
       const auth = getAuth(app);
-      const db = getFirestore(app);
-      
+
       // Store auth globally for other scripts
       window.firebaseAuth = auth;
-      window.firebaseDb = db;
       
       // Helper to fetch user profile using cached API (reduces 3 reads to 1)
       async function fetchUserProfile(user) {
@@ -1497,21 +1555,23 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   setupCommentForm();
 
   // Re-check auth on Astro page transitions
-  document.addEventListener('astro:page-load', function() {
+  function handleItemAstroPageLoad() {
     // Check cache first for instant UI update, then verify with Firebase
     checkAuthCache();
     setupCommentForm();
     initFirebaseAuth();
-  });
+  }
+  document.addEventListener('astro:page-load', handleItemAstroPageLoad);
 
   // Re-check auth on back/forward navigation (bfcache)
-  window.addEventListener('pageshow', function(event) {
+  function handleItemPageshow(event) {
     if (event.persisted) {
       checkAuthCache();
       setupCommentForm();
       initFirebaseAuth();
     }
-  });
+  }
+  window.addEventListener('pageshow', handleItemPageshow);
 
   // Setup comment form event listeners
   let selectedGifUrl = null;
@@ -1566,7 +1626,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     // Use cachedUserId if currentUser isn't set yet (during View Transition)
     if (!currentUser && !cachedUserId) {
       alert('Please login to post a comment');
-      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+      window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
       return;
     }
 
@@ -1873,9 +1933,15 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     gifPreviewContainer?.classList.add('hidden');
     if (gifPreview) gifPreview.src = '';
   });
+
+  // Cleanup on Astro View Transition swap to prevent duplicate listeners
+  document.addEventListener('astro:before-swap', function() {
+    document.removeEventListener('astro:page-load', handleItemAstroPageLoad);
+    window.removeEventListener('pageshow', handleItemPageshow);
+  }, { once: true });
 </script>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // Follow Artist Button Functionality
   function initFollowButton() {
     const followBtn = document.getElementById('followArtistBtn');
@@ -1934,7 +2000,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 
       const user = window.firebaseAuth?.currentUser;
       if (!user) {
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
 
@@ -2087,7 +2153,7 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 
       const user = window.firebaseAuth?.currentUser;
       if (!user) {
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
         return;
       }
 
@@ -2201,6 +2267,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     initWishlistButton();
   }
   document.addEventListener('astro:page-load', initWishlistButton);
+
+  // Cleanup on Astro View Transition swap to prevent duplicate listeners
+  document.addEventListener('astro:before-swap', function() {
+    document.removeEventListener('DOMContentLoaded', initFollowButton);
+    document.removeEventListener('astro:page-load', initFollowButton);
+    document.removeEventListener('DOMContentLoaded', initWishlistButton);
+    document.removeEventListener('astro:page-load', initWishlistButton);
+  }, { once: true });
 </script>
 
 <!-- NYOP Price Selection Modal -->
@@ -2275,10 +2349,14 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
 </style>
 
 <!-- NYOP (Name Your Own Price) Script -->
-<script is:inline>
+<script is:inline nonce={nonce}>
   function initNYOPItem() {
     const modal = document.getElementById('nyop-modal-item');
     if (!modal) return;
+
+    // Prevent double initialization (keydown listeners would accumulate)
+    if (modal.dataset.nyopInitialized === 'true') return;
+    modal.dataset.nyopInitialized = 'true';
 
     const modalArtwork = document.getElementById('nyop-modal-artwork-item');
     const modalTitle = document.getElementById('nyop-modal-title-item');
@@ -2429,17 +2507,23 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
     initNYOPItem();
   }
   document.addEventListener('astro:page-load', initNYOPItem);
+
+  // Cleanup on Astro View Transition swap to prevent duplicate listeners
+  document.addEventListener('astro:before-swap', function() {
+    document.removeEventListener('DOMContentLoaded', initNYOPItem);
+    document.removeEventListener('astro:page-load', initNYOPItem);
+  }, { once: true });
 </script>
 
 <!-- OPTIMIZED: Pass SSR data to client to avoid duplicate API calls -->
-<script define:vars={{ 
-  ssrRatings: { 
-    average: overallRating?.average || 0, 
-    count: overallRating?.count || 0 
+<script define:vars={{
+  ssrRatings: {
+    average: overallRating?.average || 0,
+    count: overallRating?.count || 0
   },
   ssrComments: sortedComments || [],
   ssrReleaseId: id
-}}>
+}} nonce={nonce}>
   // Make SSR data available to item-page.js
   window.__SSR_RELEASE_DATA__ = {
     releaseId: ssrReleaseId,
@@ -2449,5 +2533,5 @@ const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now
   };
 </script>
 
-<script is:inline src="/email-verify-check.js"></script>
+<script is:inline src="/email-verify-check.js" nonce={nonce}></script>
 <script type="module" src="/item-page.js?v=20260123d"></script>

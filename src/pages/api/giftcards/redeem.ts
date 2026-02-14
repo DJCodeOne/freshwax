@@ -2,7 +2,7 @@
 // Redeem a gift card code and add to user's credit balance
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, initFirebaseEnv, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -16,10 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     // Verify authentication - get userId from token, not request body
@@ -176,11 +173,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       balanceAfter: newBalance
     };
 
-    // Append the transaction record
-    const existingTransactions = updatedCreditDoc?.transactions || [];
-    await updateDocument('userCredits', userId, {
-      lastUpdated: nowISO,
-      transactions: [...existingTransactions, transaction]
+    // Atomic arrayUnion prevents lost transactions under concurrent writes
+    await arrayUnion('userCredits', userId, 'transactions', [transaction], {
+      lastUpdated: nowISO
     });
 
     // Also update the customer document with the new balance for quick access

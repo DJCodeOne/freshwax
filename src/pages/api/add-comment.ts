@@ -2,7 +2,7 @@
 // Add comments to releases with optional GIF support
 // Dual-write: Firebase + D1
 import type { APIRoute } from 'astro';
-import { getDocument, arrayUnion, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1AddComment } from '../../lib/d1-catalog';
@@ -23,12 +23,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
-
-  // Initialize Firebase for Cloudflare runtime
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     // SECURITY: Get userId from verified token, not request body
@@ -103,11 +97,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       approved: true
     };
 
-    await arrayUnion('releases', releaseId, 'comments', [newComment]);
-
-    // Also update the updatedAt timestamp
-    const { updateDocument } = await import('../../lib/firebase-rest');
-    await updateDocument('releases', releaseId, {
+    // Atomic arrayUnion prevents lost comments under concurrent writes
+    await arrayUnion('releases', releaseId, 'comments', [newComment], {
       updatedAt: new Date().toISOString()
     });
 

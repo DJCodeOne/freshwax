@@ -3,7 +3,7 @@
 // User can contact support to restore or permanently delete
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv, verifyUserToken } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -26,10 +26,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     const body = await request.json();

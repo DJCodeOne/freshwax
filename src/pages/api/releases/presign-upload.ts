@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { verifyRequestUser, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { getAdminKey } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
 
@@ -31,12 +31,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const env = (locals as any)?.runtime?.env;
-
-  // Initialize Firebase for Cloudflare runtime
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Check for admin key first (for admin upload page) - timing-safe comparison
   const adminKey = getAdminKey(request);

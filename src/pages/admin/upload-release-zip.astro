@@ -30,7 +30,7 @@ if (authResult) return Astro.redirect('/login');
         <h1>📦 Upload Release ZIP<span class="badge">R2 + Firebase</span></h1>
         <p style="font-size: 12px; color: #666; margin-top: 8px;">All files to R2, ALL URLs saved to Firebase for editing</p>
       </div>
-      <a href="/admin" class="admin-back-btn">← Back to Dashboard</a>
+      <a href="/admin/" class="admin-back-btn">← Back to Dashboard</a>
     </div>
 
     <div id="dropZone" class="drop-zone">
@@ -79,7 +79,7 @@ if (authResult) return Astro.redirect('/login');
       <h2 class="success-title">Upload Complete!</h2>
       <p class="success-message">All files uploaded to R2 and ALL URLs saved to Firebase.</p>
       <div class="success-actions">
-        <a href="/admin/publish-release" class="success-btn">Preview & Publish</a>
+        <a href="/admin/publish-release/" class="success-btn">Preview & Publish</a>
         <button onclick="location.reload()" class="success-btn">Upload Another</button>
       </div>
     </div>

@@ -3,7 +3,7 @@
 // Run via: GET /api/admin/backfill-ledger?confirm=yes
 
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+
 import { saSetDocument, saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
@@ -18,9 +18,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
   const confirm = url.searchParams.get('confirm');
   const dryRun = confirm !== 'yes';
-
-  // Initialize Firebase env
-  initFirebaseEnv(runtimeEnv);
 
   // Get service account credentials
   const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';

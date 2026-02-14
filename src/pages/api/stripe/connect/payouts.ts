@@ -2,7 +2,7 @@
 // Returns payout history for an artist
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection, initFirebaseEnv, verifyRequestUser } from '../../../../lib/firebase-rest';
+import { getDocument, queryCollection, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 
 export const prerender = false;
@@ -17,10 +17,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
   // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
+
 
   try {
     // SECURITY: Verify user authentication via Firebase token

@@ -13,6 +13,7 @@ if (authResult) return Astro.redirect('/login');
 export const prerender = false;
 
 const { id } = Astro.params;
+const nonce = (Astro.locals as any).nonce || '';
 
 // Fetch release from Firebase REST API
 let release = null;
@@ -51,7 +52,7 @@ if (!release) {
         <button type="button" id="refreshBtn" class="back-btn" style="background: #16a34a; border-color: #16a34a;">
           🔄 Refresh
         </button>
-        <a href="/admin/releases/manage" class="back-btn">← Back to Releases</a>
+        <a href="/admin/releases/manage/" class="back-btn">← Back to Releases</a>
       </div>
     </div>
 
@@ -686,14 +687,14 @@ if (!release) {
 
   <div class="success-message" id="successMessage">✅ Release Updated Successfully!</div>
 
-  <script define:vars={{ releaseId: release.id, existingSocialLinks: JSON.stringify(release.socialLinks || {}), trackCount: release.tracks?.length || 0, existingNotes: release.metadata?.notes || '', timestamps: JSON.stringify({ uploadedAt: release.uploadedAt || null, createdAt: release.createdAt || null, processedAt: release.processedAt || null, updatedAt: release.updatedAt || null }) }}>
+  <script define:vars={{ releaseId: release.id, existingSocialLinks: JSON.stringify(release.socialLinks || {}), trackCount: release.tracks?.length || 0, existingNotes: release.metadata?.notes || '', timestamps: JSON.stringify({ uploadedAt: release.uploadedAt || null, createdAt: release.createdAt || null, processedAt: release.processedAt || null, updatedAt: release.updatedAt || null }) }} nonce={nonce}>
     var currentIdToken = null;
 
     // Initialize Firebase for auth using dynamic import
     (async function() {
       try {
-        var firebaseApp = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
-        var firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+        var firebaseApp = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+        var firebaseAuth = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
 
         var firebaseConfig = {
           apiKey: "AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g",

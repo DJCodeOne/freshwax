@@ -2,7 +2,7 @@
 // Blog post CRUD API for admin
 
 import type { APIRoute } from 'astro';
-import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
@@ -11,10 +11,6 @@ export const prerender = false;
 
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET - List all blog posts or get single post

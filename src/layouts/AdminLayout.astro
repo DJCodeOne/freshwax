@@ -39,6 +39,7 @@ const navItems = [
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{title} | Fresh Wax Admin</title>
+  <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1481,8 +1482,8 @@ const navItems = [
       
       <div class="topbar-right">
         <a href="/" class="topbar-link">← Store</a>
-        <a href="/releases" class="topbar-link">Releases</a>
-        <a href="/dj-mixes" class="topbar-link">Mixes</a>
+        <a href="/releases/" class="topbar-link">Releases</a>
+        <a href="/dj-mixes/" class="topbar-link">Mixes</a>
       </div>
     </div>
   </nav>
@@ -1493,7 +1494,7 @@ const navItems = [
       <div class="header-left">
         <slot name="breadcrumb">
           <div class="header-breadcrumb">
-            <a href="/admin">Admin</a>
+            <a href="/admin/">Admin</a>
             <span>›</span>
             <span>{title}</span>
           </div>

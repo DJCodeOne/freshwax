@@ -1,7 +1,7 @@
 // src/pages/api/admin/add-artist.ts
 // Manually add an artist to the artists collection
 import type { APIRoute } from 'astro';
-import { initFirebaseEnv } from '../../../lib/firebase-rest';
+
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;

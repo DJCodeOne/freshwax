@@ -12,11 +12,12 @@ if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 const adminUids = getAdminUids();
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <AdminLayout title="Partner Management" activeNav="partners">
   <Fragment slot="actions">
-    <a href="/admin" class="btn btn-secondary">← Dashboard</a>
+    <a href="/admin/" class="btn btn-secondary">← Dashboard</a>
   </Fragment>
 
   <!-- Stats Row -->
@@ -349,16 +350,15 @@ const adminUids = getAdminUids();
   }
 </style>
 
-<script is:inline>
+<script is:inline nonce={nonce}>
   // Admin check uses Firestore admins collection - no UIDs exposed to client
 </script>
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
 
   const firebaseConfig = {
-    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g' || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
     authDomain: "freshwax-store.firebaseapp.com",
     projectId: "freshwax-store",
     storageBucket: "freshwax-store.firebasestorage.app",
@@ -368,7 +368,6 @@ const adminUids = getAdminUids();
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -381,53 +380,30 @@ const adminUids = getAdminUids();
   // Check authentication - admin check
   onAuthStateChanged(auth, async (user) => {
     if (!user) {
-      window.location.href = '/login';
+      window.location.href = '/login/';
       return;
     }
 
-    // Check if admin
-    const isAdmin = await checkIsAdmin(user.uid);
+    // Check if admin via API
+    const isAdmin = await checkIsAdmin(user);
     if (!isAdmin) {
       alert('Access denied. Admin privileges required.');
-      window.location.href = '/account/dashboard';
+      window.location.href = '/account/dashboard/';
       return;
     }
 
     loadUsersAndOrders();
   });
 
-  // Check if user is admin
-  async function checkIsAdmin(uid) {
+  // Check if user is admin via API
+  async function checkIsAdmin(user) {
     try {
-      // Check admins collection first
-      const adminDoc = await getDoc(doc(db, 'admins', uid));
-      if (adminDoc.exists()) {
-        console.log('[Admin Check] Admin found in admins collection');
-        return true;
-      }
-      
-      // Check users collection
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        if (data.isAdmin === true || data.role === 'admin' || data.roles?.admin === true) {
-          console.log('[Admin Check] Admin by users collection');
-          return true;
-        }
-      }
-      
-      // Check artists collection
-      const artistDoc = await getDoc(doc(db, 'artists', uid));
-      if (artistDoc.exists()) {
-        const data = artistDoc.data();
-        if (data.isAdmin === true || data.role === 'admin') {
-          console.log('[Admin Check] Admin by artists collection');
-          return true;
-        }
-      }
-      
-      console.log('[Admin Check] No admin privileges found for UID:', uid);
-      return false;
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/admin/check-access', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await response.json();
+      return data.success && data.isAdmin;
     } catch (error) {
       console.error('Error checking admin status:', error);
       return false;

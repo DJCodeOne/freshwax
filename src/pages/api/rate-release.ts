@@ -2,7 +2,7 @@
 // Uses Firebase as source of truth, dual-writes to D1
 
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, clearCache, initFirebaseEnv } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
@@ -22,12 +22,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB;
-
-  // Initialize Firebase for Cloudflare runtime
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   try {
     // SECURITY: Get userId from verified token, not request body

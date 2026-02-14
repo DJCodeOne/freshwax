@@ -3,7 +3,7 @@
 // Handles shipping costs, store info, etc.
 
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { d1GetVinylSeller, d1UpsertVinylSeller, d1GetNextCollectionNumber } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { saSetDocument } from '../../../lib/firebase-service-account';
@@ -43,13 +43,8 @@ const MAX_STORE_NAME = 50;
 const MAX_LOCATION = 50;
 const MAX_DESCRIPTION = 500;
 
-// Initialize Firebase from env
 function initFirebase(locals: any) {
   const env = locals?.runtime?.env || {};
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store',
-    FIREBASE_API_KEY: env.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // GET - Fetch seller settings (D1 first, Firebase fallback)

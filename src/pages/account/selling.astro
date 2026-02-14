@@ -12,12 +12,13 @@ export const prerender = false;
 const url = new URL(Astro.request.url);
 const stripeConnected = url.searchParams.get('stripe_connected') === 'true';
 const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
+const nonce = (Astro.locals as any).nonce || '';
 ---
 
 <Layout title="Selling Settings" noindex={true}>
   <Header />
 
-  <main class="selling-settings">
+  <div class="selling-settings">
     <div class="container">
       <div id="loading-state" class="loading-state">
         <div class="spinner"></div>
@@ -27,12 +28,12 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       <div id="auth-required" class="auth-required" style="display: none;">
         <h1>Sign In Required</h1>
         <p>Please sign in to access your selling settings.</p>
-        <a href="/account/dashboard" class="btn btn-primary">Sign In</a>
+        <a href="/account/dashboard/" class="btn btn-primary">Sign In</a>
       </div>
 
       <div id="selling-main-content" class="main-content" style="display: none;">
         <div class="page-header">
-          <a href="/account/dashboard" class="back-link">&larr; Back to Dashboard</a>
+          <a href="/account/dashboard/" class="back-link">&larr; Back to Dashboard</a>
           <h1>Selling Settings</h1>
           <p class="subtitle">Set up how you receive payments for vinyl sales in crates.</p>
         </div>
@@ -169,27 +170,13 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
         </section>
       </div>
     </div>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
 
-<script is:inline type="module">
-  import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-
-  // Initialize Firebase (reuse existing app if available)
-  const firebaseConfig = {
-    apiKey: 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
-    authDomain: "freshwax-store.firebaseapp.com",
-    projectId: "freshwax-store",
-    storageBucket: "freshwax-store.firebasestorage.app",
-    messagingSenderId: "675435782973",
-    appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
-  };
-
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+<script is:inline type="module" nonce={nonce}>
+  // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
   let currentUserId = null;
   let userData = {};
@@ -199,7 +186,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     const authRequired = document.getElementById('auth-required');
     const mainContent = document.getElementById('selling-main-content');
 
-    onAuthStateChanged(auth, async (user) => {
+    window.authReady.then(async (user) => {
       if (!user) {
         if (loadingState) loadingState.style.display = 'none';
         if (authRequired) authRequired.style.display = 'block';
@@ -211,17 +198,17 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
       const authHeaders = { 'Authorization': `Bearer ${idToken}` };
 
       try {
-        // Get Stripe Connect status
-        const stripeRes = await fetch(`/api/stripe/connect/user/status?userId=${user.uid}`, { headers: authHeaders });
-        const stripeData = await stripeRes.json();
-
-        // Get PayPal status
-        const paypalRes = await fetch(`/api/paypal/link-account?entityType=user&entityId=${user.uid}`, { headers: authHeaders });
-        const paypalData = await paypalRes.json();
-
-        // Get payouts
-        const payoutsRes = await fetch(`/api/stripe/connect/user/payouts?userId=${user.uid}`, { headers: authHeaders });
-        const payoutsData = await payoutsRes.json();
+        // Fetch Stripe status, PayPal status, and payouts in parallel
+        const [stripeRes, paypalRes, payoutsRes] = await Promise.all([
+          fetch(`/api/stripe/connect/user/status?userId=${user.uid}`, { headers: authHeaders }),
+          fetch(`/api/paypal/link-account?entityType=user&entityId=${user.uid}`, { headers: authHeaders }),
+          fetch(`/api/stripe/connect/user/payouts?userId=${user.uid}`, { headers: authHeaders }),
+        ]);
+        const [stripeData, paypalData, payoutsData] = await Promise.all([
+          stripeRes.json(),
+          paypalRes.json(),
+          payoutsRes.json(),
+        ]);
 
         // Store combined data
         userData = { ...stripeData, ...paypalData };
@@ -424,7 +411,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
 
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
       const res = await fetch('/api/stripe/connect/user/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
@@ -461,7 +448,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     btn.disabled = true;
 
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
       const res = await fetch('/api/paypal/link-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
@@ -491,7 +478,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
     }
 
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
       const res = await fetch('/api/paypal/link-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
@@ -507,7 +494,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 
   async function setPreferred(method) {
     try {
-      const idToken = await auth.currentUser?.getIdToken();
+      const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
       const res = await fetch('/api/paypal/set-payout-method', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },

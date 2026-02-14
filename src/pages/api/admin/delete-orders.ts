@@ -1,18 +1,13 @@
 // src/pages/api/admin/delete-orders.ts
 // Admin endpoint to delete orders - requires admin key
 import type { APIRoute } from 'astro';
-import { deleteDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  // Initialize Firebase
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Parse body first for admin key check
   let body: any;

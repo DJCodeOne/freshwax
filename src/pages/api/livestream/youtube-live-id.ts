@@ -3,7 +3,7 @@
 // and updates the livestream document with it
 
 import type { APIRoute } from 'astro';
-import { queryCollection, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 
 export const prerender = false;
 
@@ -17,10 +17,6 @@ function getYouTubeApiKey(env: any): string {
 // Helper to initialize Firebase
 function initServices(locals: any) {
   const env = locals?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 }
 
 // First, resolve channel handle to channel ID

@@ -1,27 +1,16 @@
 // src/pages/api/newsletter/send.ts
 // Send newsletter to selected subscribers via Resend
 import type { APIRoute } from 'astro';
-import { queryCollection, addDocument, updateDocument, atomicIncrement, initFirebaseEnv } from '../../../lib/firebase-rest';
+import { queryCollection, addDocument, updateDocument, atomicIncrement } from '../../../lib/firebase-rest';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
+import { escapeHtml } from '../../../lib/api-utils';
 
 export const prerender = false;
 
 // Max 500 subscribers per newsletter send (prevent massive sends)
 const MAX_SUBSCRIBERS_PER_SEND = 500;
-
-// HTML escape function to prevent XSS/injection
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;'
-  };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
-}
 
 export const POST: APIRoute = async ({ request, cookies, locals }) => {
   const clientId = getClientId(request);
@@ -37,12 +26,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
-  });
 
   // Initialize Resend with Cloudflare runtime env
   const resend = new Resend(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY);

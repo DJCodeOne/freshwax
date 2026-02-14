@@ -1,7 +1,7 @@
 // src/pages/api/playlist/update.ts
 // Update playlist state (currentIndex, isPlaying, etc.)
 import type { APIRoute } from 'astro';
-import { getDocument, updateDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseJsonBody } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
 
@@ -9,10 +9,6 @@ export const prerender = false;
 
 export const PUT: APIRoute = async ({ request, locals }) => {
   const env = (locals as any)?.runtime?.env;
-  initFirebaseEnv({
-    FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
-    FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY,
-  });
 
   try {
     // SECURITY: Get userId from verified token, not request body
