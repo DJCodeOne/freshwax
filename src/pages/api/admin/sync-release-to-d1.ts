@@ -2,7 +2,8 @@
 // Sync a release from Firebase to D1 database
 
 import type { APIRoute } from 'astro';
-import { getDocument, queryCollection } from '../../../lib/firebase-rest';
+import { getDocument, queryCollection, invalidateReleasesCache } from '../../../lib/firebase-rest';
+import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
@@ -121,9 +122,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // Clear in-memory and KV caches so fresh data is served immediately
+    invalidateReleasesCache();
+    await kvDelete('live-releases:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases:all', CACHE_CONFIG.RELEASES).catch(() => {});
+
     return new Response(JSON.stringify({
       success: true,
-      message: `Synced ${results.length} releases to D1`,
+      message: `Synced ${results.length} releases to D1 and cleared caches`,
       results
     }), {
       status: 200,

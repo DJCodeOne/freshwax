@@ -2,7 +2,8 @@
 // Fix mp3Url/wavUrl for tracks in a release
 
 import type { APIRoute } from 'astro';
-import { getDocument } from '../../../lib/firebase-rest';
+import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest';
+import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
@@ -166,9 +167,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // Sync updated release to D1 if available
+    const db = env?.DB;
+    if (db) {
+      try {
+        const freshRelease = await getDocument('releases', releaseId);
+        if (freshRelease) {
+          const dataJson = JSON.stringify({ ...freshRelease, id: releaseId });
+          const releaseDate = freshRelease.releaseDate || freshRelease.createdAt || new Date().toISOString();
+          await db.prepare(
+            `UPDATE releases_v2 SET data = ?, release_date = ? WHERE id = ?`
+          ).bind(dataJson, releaseDate, releaseId).run();
+        }
+      } catch (e) {
+        // D1 sync is best-effort, don't fail the request
+      }
+    }
+
+    // Clear in-memory and KV caches
+    invalidateReleasesCache();
+    await kvDelete('live-releases:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases:all', CACHE_CONFIG.RELEASES).catch(() => {});
+
     return new Response(JSON.stringify({
       success: true,
-      message: 'Track URLs updated',
+      message: 'Track URLs updated and caches cleared',
       releaseId,
       updatedTracks: trackFixes.length
     }), {
