@@ -1,0 +1,208 @@
+---
+// src/pages/admin/errors.astro
+// Admin error log viewer
+
+import { requireAdminAuth } from '../../lib/admin';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
+export const prerender = false;
+---
+
+<AdminLayout title="Error Logs" activeNav="errors">
+  <div style="padding: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+      <h1 style="font-family: 'Bebas Neue', sans-serif; font-size: 2rem; margin: 0;">Error Logs</h1>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <select id="sourceFilter" style="padding: 0.5rem 1rem; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; background: white;">
+          <option value="">All Sources</option>
+          <option value="client">Client</option>
+          <option value="server">Server</option>
+        </select>
+        <input type="text" id="searchInput" placeholder="Search errors..." style="padding: 0.5rem 1rem; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 0.875rem; min-width: 200px;" />
+        <button id="refreshBtn" style="padding: 0.5rem 1rem; background: #1f2937; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;">Refresh</button>
+        <button id="cleanupBtn" style="padding: 0.5rem 1rem; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.875rem;">Cleanup 7d+</button>
+      </div>
+    </div>
+
+    <!-- Top Errors (24h) -->
+    <div id="topErrors" style="margin-bottom: 1.5rem;"></div>
+
+    <!-- Stats Bar -->
+    <div id="statsBar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;"></div>
+
+    <!-- Error List -->
+    <div id="errorList" style="font-size: 0.875rem;">
+      <p style="text-align: center; color: #6b7280; padding: 2rem;">Loading...</p>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem;"></div>
+  </div>
+</AdminLayout>
+
+<script>
+  let currentOffset = 0;
+  const PAGE_SIZE = 50;
+
+  async function loadErrors() {
+    const source = (document.getElementById('sourceFilter') as HTMLSelectElement).value;
+    const search = (document.getElementById('searchInput') as HTMLInputElement).value.trim();
+
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(currentOffset) });
+    if (source) params.set('source', source);
+    if (search) params.set('q', search);
+
+    const errorList = document.getElementById('errorList')!;
+    errorList.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">Loading...</p>';
+
+    try {
+      const res = await fetch(`/api/admin/errors?${params}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        errorList.innerHTML = `<p style="color: #dc2626; text-align: center; padding: 2rem;">Error: ${data.error}</p>`;
+        return;
+      }
+
+      // Stats bar
+      const statsBar = document.getElementById('statsBar')!;
+      statsBar.innerHTML = `
+        <div style="background: #f3f4f6; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600;">
+          Total: <span style="color: #dc2626;">${data.total}</span>
+        </div>
+        <div style="background: #f3f4f6; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600;">
+          Showing: ${data.offset + 1}-${Math.min(data.offset + data.errors.length, data.total)}
+        </div>
+      `;
+
+      // Top errors (24h)
+      const topDiv = document.getElementById('topErrors')!;
+      if (data.topErrors && data.topErrors.length > 0) {
+        topDiv.innerHTML = `
+          <details style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 1rem;">
+            <summary style="cursor: pointer; font-weight: 700; color: #92400e;">Top Errors (24h) — ${data.topErrors.length} unique</summary>
+            <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
+              ${data.topErrors.map((e: any) => `
+                <div style="background: white; padding: 0.75rem; border-radius: 6px; border: 1px solid #fde68a; display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
+                  <div style="flex: 1; min-width: 0;">
+                    <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: ${e.source === 'client' ? '#dbeafe' : '#fce7f3'}; color: ${e.source === 'client' ? '#1e40af' : '#9d174d'}; margin-right: 0.5rem;">${e.source}</span>
+                    <span style="font-family: monospace; font-size: 0.8125rem; word-break: break-all;">${escapeHtml(e.message?.slice(0, 120))}</span>
+                  </div>
+                  <div style="flex-shrink: 0; text-align: right;">
+                    <span style="font-weight: 700; color: #dc2626; font-size: 1.25rem;">${e.count}x</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </details>
+        `;
+      } else {
+        topDiv.innerHTML = '<div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 1rem; font-weight: 600; color: #065f46;">No errors in the last 24 hours</div>';
+      }
+
+      // Error list
+      if (!data.errors || data.errors.length === 0) {
+        errorList.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No errors found</p>';
+      } else {
+        errorList.innerHTML = data.errors.map((err: any) => {
+          const time = new Date(err.created_at + 'Z').toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          const sourceBg = err.source === 'client' ? '#dbeafe' : '#fce7f3';
+          const sourceColor = err.source === 'client' ? '#1e40af' : '#9d174d';
+          const levelColor = err.level === 'fatal' ? '#dc2626' : err.level === 'warn' ? '#f59e0b' : '#6b7280';
+
+          return `
+            <details style="background: white; border: 2px solid #e5e7eb; border-radius: 8px; margin-bottom: 0.5rem; overflow: hidden;">
+              <summary style="padding: 0.75rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <span style="color: #9ca3af; font-size: 0.75rem; font-family: monospace; flex-shrink: 0;">${time}</span>
+                <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: ${sourceBg}; color: ${sourceColor}; flex-shrink: 0;">${err.source}</span>
+                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${levelColor}; flex-shrink: 0;"></span>
+                <span style="font-family: monospace; font-size: 0.8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; color: #111827;">${escapeHtml(err.message?.slice(0, 150))}</span>
+                ${err.status_code ? `<span style="font-size: 0.75rem; color: #dc2626; font-weight: 600; flex-shrink: 0;">${err.status_code}</span>` : ''}
+              </summary>
+              <div style="padding: 1rem; border-top: 1px solid #e5e7eb; background: #f9fafb;">
+                <table style="width: 100%; font-size: 0.8125rem; border-collapse: collapse;">
+                  <tr><td style="padding: 0.25rem 0.5rem; color: #6b7280; width: 100px;">Message</td><td style="padding: 0.25rem 0.5rem; font-family: monospace; word-break: break-all;">${escapeHtml(err.message)}</td></tr>
+                  ${err.url ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">URL</td><td style="padding: 0.25rem 0.5rem; font-family: monospace; word-break: break-all;">${escapeHtml(err.url)}</td></tr>` : ''}
+                  ${err.endpoint ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">Endpoint</td><td style="padding: 0.25rem 0.5rem; font-family: monospace;">${escapeHtml(err.endpoint)}</td></tr>` : ''}
+                  ${err.ip ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">IP</td><td style="padding: 0.25rem 0.5rem; font-family: monospace;">${escapeHtml(err.ip)}</td></tr>` : ''}
+                  ${err.user_agent ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">UA</td><td style="padding: 0.25rem 0.5rem; font-size: 0.75rem; word-break: break-all;">${escapeHtml(err.user_agent?.slice(0, 200))}</td></tr>` : ''}
+                  ${err.user_id ? `<tr><td style="padding: 0.25rem 0.5rem; color: #6b7280;">User</td><td style="padding: 0.25rem 0.5rem; font-family: monospace;">${escapeHtml(err.user_id)}</td></tr>` : ''}
+                </table>
+                ${err.stack ? `<details style="margin-top: 0.75rem;"><summary style="cursor: pointer; color: #6b7280; font-size: 0.8125rem;">Stack trace</summary><pre style="margin: 0.5rem 0 0; padding: 0.75rem; background: #1f2937; color: #e5e7eb; border-radius: 6px; overflow-x: auto; font-size: 0.75rem; line-height: 1.5; white-space: pre-wrap; word-break: break-all;">${escapeHtml(err.stack)}</pre></details>` : ''}
+                ${err.metadata ? `<details style="margin-top: 0.5rem;"><summary style="cursor: pointer; color: #6b7280; font-size: 0.8125rem;">Metadata</summary><pre style="margin: 0.5rem 0 0; padding: 0.75rem; background: #f3f4f6; border-radius: 6px; overflow-x: auto; font-size: 0.75rem;">${escapeHtml(err.metadata)}</pre></details>` : ''}
+              </div>
+            </details>
+          `;
+        }).join('');
+      }
+
+      // Pagination
+      const pag = document.getElementById('pagination')!;
+      const totalPages = Math.ceil(data.total / PAGE_SIZE);
+      const currentPage = Math.floor(currentOffset / PAGE_SIZE) + 1;
+
+      if (totalPages > 1) {
+        let pagHtml = '';
+        if (currentPage > 1) pagHtml += `<button onclick="goPage(${currentPage - 2})" style="padding: 0.375rem 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer;">Prev</button>`;
+        pagHtml += `<span style="padding: 0.375rem 0.75rem; font-weight: 600;">Page ${currentPage} of ${totalPages}</span>`;
+        if (currentPage < totalPages) pagHtml += `<button onclick="goPage(${currentPage})" style="padding: 0.375rem 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer;">Next</button>`;
+        pag.innerHTML = pagHtml;
+      } else {
+        pag.innerHTML = '';
+      }
+    } catch (err) {
+      errorList.innerHTML = `<p style="color: #dc2626; text-align: center; padding: 2rem;">Failed to load errors</p>`;
+    }
+  }
+
+  function escapeHtml(s: string | null | undefined): string {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  (window as any).goPage = function(page: number) {
+    currentOffset = page * PAGE_SIZE;
+    loadErrors();
+    window.scrollTo(0, 0);
+  };
+
+  // Event listeners
+  document.getElementById('sourceFilter')!.addEventListener('change', () => {
+    currentOffset = 0;
+    loadErrors();
+  });
+
+  let searchTimeout: any;
+  document.getElementById('searchInput')!.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentOffset = 0;
+      loadErrors();
+    }, 400);
+  });
+
+  document.getElementById('refreshBtn')!.addEventListener('click', loadErrors);
+
+  document.getElementById('cleanupBtn')!.addEventListener('click', async () => {
+    if (!confirm('Delete error logs older than 7 days?')) return;
+    const btn = document.getElementById('cleanupBtn') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = 'Cleaning...';
+    try {
+      const res = await fetch('/api/admin/errors?days=7', { method: 'DELETE' });
+      const data = await res.json();
+      alert(`Deleted ${data.deleted} old error logs`);
+      loadErrors();
+    } catch {
+      alert('Cleanup failed');
+    }
+    btn.disabled = false;
+    btn.textContent = 'Cleanup 7d+';
+  });
+
+  // Initial load
+  loadErrors();
+</script>

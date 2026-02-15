@@ -198,6 +198,52 @@ const nonce = (Astro.locals as any).nonce || '';
     <!-- Named slot for page-specific head content (preloads, etc.) -->
     <slot name="head" />
 
+    <!-- Global error monitoring — captures uncaught errors and unhandled rejections -->
+    <script is:inline nonce={nonce}>
+      (function() {
+        var pending = [];
+        var sending = false;
+        function sendErrors() {
+          if (sending || !pending.length) return;
+          sending = true;
+          var batch = pending.splice(0, 5);
+          for (var i = 0; i < batch.length; i++) {
+            try {
+              var x = new XMLHttpRequest();
+              x.open('POST', '/api/log-error', true);
+              x.setRequestHeader('Content-Type', 'application/json');
+              x.send(JSON.stringify(batch[i]));
+            } catch(e) {}
+          }
+          sending = false;
+        }
+        function report(msg, stack, url, level) {
+          if (!msg) return;
+          // Skip noise: browser extensions, third-party scripts, ResizeObserver
+          var s = String(msg);
+          if (s.indexOf('ResizeObserver') > -1 || s.indexOf('extension') > -1) return;
+          if (pending.length >= 20) return; // cap per page load
+          pending.push({
+            message: s.slice(0, 2000),
+            stack: stack ? String(stack).slice(0, 5000) : undefined,
+            url: url || location.href,
+            level: level || 'error'
+          });
+          setTimeout(sendErrors, 100);
+        }
+        window.addEventListener('error', function(e) {
+          report(e.message, e.error && e.error.stack, e.filename, 'error');
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          var r = e.reason;
+          var msg = r instanceof Error ? r.message : String(r || 'Unhandled rejection');
+          var stack = r instanceof Error ? r.stack : undefined;
+          report(msg, stack, location.href, 'error');
+        });
+        window.__reportError = report;
+      })();
+    </script>
+
     <!-- Image loading + global error fallback script -->
     <script is:inline nonce={nonce}>
       // Global image error handler - replaces all inline onerror attributes

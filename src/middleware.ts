@@ -5,6 +5,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { initFirebaseEnv } from './lib/firebase-rest';
 import { initKVCache } from './lib/kv-cache';
 import { initRateLimitKV, checkRateLimit, getClientId, rateLimitResponse } from './lib/rate-limit';
+import { logServerError } from './lib/error-logger';
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -203,8 +204,27 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     return new Response(null, { status: 403 });
   }
 
-  // Get the response
-  const response = await next();
+  // Get the response — log server errors for API routes
+  let response: Response;
+  try {
+    response = await next();
+  } catch (err) {
+    // Unhandled exception in API handler
+    if (isApiRoute) {
+      const env = (locals as any)?.runtime?.env;
+      logServerError(err, request, env, { endpoint: pathname, statusCode: 500 }).catch(() => {});
+    }
+    throw err; // Re-throw to let Astro handle the error page
+  }
+
+  // Log 5xx API responses
+  if (isApiRoute && response.status >= 500) {
+    const env = (locals as any)?.runtime?.env;
+    logServerError(new Error(`${response.status} ${response.statusText || 'Server Error'}`), request, env, {
+      endpoint: pathname,
+      statusCode: response.status,
+    }).catch(() => {});
+  }
 
   // Clone headers for modification
   const newHeaders = new Headers(response.headers);
