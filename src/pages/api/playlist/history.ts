@@ -3,6 +3,7 @@
 // NOW USES CLOUDFLARE KV - NO MORE FIREBASE READS!
 
 import type { APIContext } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const KV_HISTORY_KEY = 'playlist-history';
 const MAX_HISTORY_SIZE = 500;
@@ -24,7 +25,14 @@ interface HistoryItem {
 }
 
 // GET - Fetch playlist history from KV (NO FIREBASE!)
-export async function GET({ locals }: APIContext) {
+export async function GET({ request, locals }: APIContext) {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`playlist-history:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const kv = getKV(locals);
     if (!kv) {
@@ -69,6 +77,13 @@ export async function GET({ locals }: APIContext) {
 // POST - Add item to history (called when track starts playing)
 // This is a non-critical operation - if it fails, playback should continue
 export async function POST({ request, locals }: APIContext) {
+  // Rate limit: write operations - 30 per minute
+  const clientId = getClientId(request);
+  const rl = checkRateLimit(`playlist-history-write:${clientId}`, RateLimiters.write);
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.retryAfter!);
+  }
+
   try {
     const kv = getKV(locals);
     if (!kv) {
@@ -161,6 +176,13 @@ export async function POST({ request, locals }: APIContext) {
 // DELETE - Remove blocked/unavailable video from history
 // This prevents the video from being auto-played again
 export async function DELETE({ request, locals }: APIContext) {
+  // Rate limit: write operations - 30 per minute
+  const clientId2 = getClientId(request);
+  const rl2 = checkRateLimit(`playlist-history-write:${clientId2}`, RateLimiters.write);
+  if (!rl2.allowed) {
+    return rateLimitResponse(rl2.retryAfter!);
+  }
+
   try {
     const kv = getKV(locals);
     if (!kv) {

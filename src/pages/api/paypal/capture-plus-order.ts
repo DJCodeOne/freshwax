@@ -271,7 +271,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Plus subscription activated successfully!'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PayPal Plus] Error:', error);
     return new Response(JSON.stringify({
       success: false,

@@ -8,6 +8,7 @@ import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 function initServices(locals: any) {
   const env = (locals as any)?.runtime?.env;
@@ -33,6 +34,10 @@ async function checkStreamHealth(streamKey: string): Promise<{ isLive: boolean; 
 
 // GET: List all slots marked as "live" with health check
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`cleanup-streams-get:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   // Check admin authentication
@@ -112,6 +117,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Clean up stale and disconnected streams
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`cleanup-streams-post:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   try {

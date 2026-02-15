@@ -2,6 +2,7 @@
 // Real-time health check for all services
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -246,6 +247,10 @@ async function getQuickStats(): Promise<HealthCheckResponse['stats']> {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`health-check:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Require admin authentication
   const authError = await requireAdminAuth(request, locals);
   if (authError) {

@@ -5,10 +5,18 @@
 import type { APIRoute } from 'astro';
 import { verifyUserToken, initFirebaseEnv } from '../../lib/firebase-rest';
 import { isAdmin } from '../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: auth tier (strict) - 10 per 15 minutes to prevent user enumeration
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`check-admin:${clientId}`, RateLimiters.auth);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const runtime = (locals as any).runtime;
   if (runtime?.env) {
     initFirebaseEnv(runtime.env);

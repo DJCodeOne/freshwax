@@ -162,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { 'Content-Type': 'application/json' }
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('[admin] PayPal payout error:', err);
         return new Response(JSON.stringify({
           success: false,
@@ -340,7 +340,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               error: payoutResult.error
             });
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           results.push({
             artistId: payment.artistId,
             artistName: payment.artistName,
@@ -408,7 +408,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
 
           console.log('[admin] ✓ Stripe transfer successful:', transfer.id);
-        } catch (err: any) {
+        } catch (err: unknown) {
           results.push({
             artistId: payment.artistId,
             artistName: payment.artistName,

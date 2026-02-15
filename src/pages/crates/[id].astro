@@ -9,12 +9,49 @@ export const prerender = false;
 
 const { id } = Astro.params;
 const nonce = (Astro.locals as any).nonce || '';
+
+// Fetch listing data server-side for OG meta tags (social crawlers can't execute JS)
+let pageTitle = 'Vinyl Details - Crates';
+let pageDescription = 'Browse vinyl records for sale on Fresh Wax Crates. Jungle, drum & bass, and breakbeat vinyl from independent sellers.';
+let pageImage: string | undefined;
+let productMeta: any = undefined;
+
+try {
+  const res = await fetch(`https://vinyl-api.davidhagon.workers.dev/listings/${id}`, {
+    signal: AbortSignal.timeout(3000)
+  });
+  if (res.ok) {
+    const data = await res.json();
+    if (data.success && data.listing) {
+      const l = data.listing;
+      pageTitle = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'} - Crates`;
+      pageDescription = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'}`;
+      if (l.format) pageDescription += ` (${l.format})`;
+      pageDescription += '. Available on Fresh Wax Crates.';
+      if (l.images?.[0]) pageImage = l.images[0];
+      if (l.price) {
+        productMeta = {
+          price: l.price,
+          currency: 'GBP',
+          availability: l.status === 'sold' ? 'OutOfStock' as const : 'InStock' as const,
+          condition: l.mediaCondition === 'M' || l.mediaCondition === 'NM' ? 'NewCondition' as const : 'UsedCondition' as const,
+          brand: l.artist || 'Various',
+          category: 'Vinyl Records',
+        };
+      }
+    }
+  }
+} catch (_) {
+  // Timeout or network error — fall back to generic meta tags
+}
 ---
 
 <Layout
-  title="Vinyl Details - Crates"
-  description="Browse vinyl records for sale on Fresh Wax Crates. Jungle, drum & bass, and breakbeat vinyl from independent sellers."
+  title={pageTitle}
+  description={pageDescription}
+  image={pageImage}
   type="product"
+  product={productMeta}
 >
   <Header />
 

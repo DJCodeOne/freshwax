@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to get admin key from environment
 function getAdminKey(locals: any): string {
@@ -21,6 +22,10 @@ function initFirebase(locals: any) {
 
 // GET: List all bypass approvals
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`lobby-bypass:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for listing bypasses
@@ -74,6 +79,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Grant or revoke bypass
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`lobby-bypass-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
   const saQuery = getSaQuery(locals);
   try {

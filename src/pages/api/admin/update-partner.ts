@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, clearCache } from '../../../lib/firebase-rest';
 import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -16,6 +17,10 @@ function initServices(locals: any) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-partner:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initServices(locals);
 
   try {

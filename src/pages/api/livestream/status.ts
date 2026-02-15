@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Cache TTLs in seconds
 // Pusher handles real-time updates, so polling can be slower
@@ -70,6 +71,13 @@ function jsonResponse(data: any, status: number, maxAge: number = 10): Response 
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`livestream-status:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Red5 env for HLS URL building
   const env = (locals as any)?.runtime?.env;
   const db = env?.DB; // D1 database binding

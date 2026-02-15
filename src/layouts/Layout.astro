@@ -142,7 +142,7 @@ const nonce = (Astro.locals as any).nonce || '';
 <html lang="en-GB" data-giphy-key={giphyApiKey}>
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Bing Webmaster Verification -->
     <meta name="msvalidate.01" content="C8E438BABBBCC1E7056C65D9DB7F4DD3" />
@@ -161,14 +161,22 @@ const nonce = (Astro.locals as any).nonce || '';
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    
+    <meta name="msapplication-TileColor" content="#8b5cf6" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://firestore.googleapis.com" />
+    <link rel="preconnect" href="https://js.pusher.com" crossorigin />
+    <link rel="preconnect" href="https://ws-eu.pusher.com" crossorigin />
+    <link rel="preconnect" href="https://sockjs-eu.pusher.com" crossorigin />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
-    
+
+    <!-- Font preload - discover the Google Fonts stylesheet early -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Bebas+Neue&display=swap" />
+
     <!-- Google Fonts - render-blocking is acceptable since display=swap prevents FOIT -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Bebas+Neue&display=swap" />
     
@@ -412,12 +420,51 @@ const nonce = (Astro.locals as any).nonce || '';
     <!-- Spacer for mini player -->
     <div id="mini-player-spacer" class="h-0 transition-all duration-300"></div>
     
-    <!-- Cookie consent banner (UK GDPR/PECR compliant) -->
+    <!-- Cookie consent banner (UK GDPR/PECR compliant, granular categories) -->
     <!-- Injected via JS to avoid being in initial DOM and becoming LCP element -->
     <script is:inline nonce={nonce}>
       (function() {
-        if (localStorage.getItem('cookie-consent')) return;
-        // Inject banner after page content has painted
+        // Helper to read consent state
+        function getConsent() {
+          var raw = localStorage.getItem('cookie-consent');
+          if (!raw) return null;
+          // Backward compat: old string values
+          if (raw === 'accepted') return { necessary: true, analytics: true, marketing: true };
+          if (raw === 'rejected') return { necessary: true, analytics: false, marketing: false };
+          try { return JSON.parse(raw); } catch(e) { return null; }
+        }
+        // Helper to delete GA4 cookies
+        function deleteAnalyticsCookies() {
+          var cookies = document.cookie.split(';');
+          for (var i = 0; i < cookies.length; i++) {
+            var name = cookies[i].split('=')[0].trim();
+            if (name === '_ga' || name === '_gid' || name.indexOf('_ga_') === 0) {
+              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.' + location.hostname;
+              document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+            }
+          }
+        }
+        // Helper to save and close
+        function saveConsent(analytics, marketing, action) {
+          var consent = { necessary: true, analytics: !!analytics, marketing: !!marketing, timestamp: new Date().toISOString() };
+          localStorage.setItem('cookie-consent', JSON.stringify(consent));
+          var el = document.getElementById('cookie-consent');
+          if (el) el.remove();
+          if (consent.analytics) {
+            window.dispatchEvent(new Event('cookie-consent-granted'));
+          } else {
+            deleteAnalyticsCookies();
+          }
+          // Log consent server-side for GDPR audit trail
+          try {
+            fetch('/api/consent-log', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ necessary: true, analytics: !!analytics, marketing: !!marketing, action: action || 'save' })
+            });
+          } catch(e) {}
+        }
+        if (getConsent()) return;
         window.addEventListener('load', function() {
           setTimeout(function() {
             var d = document.createElement('div');
@@ -425,16 +472,24 @@ const nonce = (Astro.locals as any).nonce || '';
             d.setAttribute('role', 'dialog');
             d.setAttribute('aria-label', 'Cookie consent');
             d.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;';
-            d.innerHTML = '<div style="background:#111;border-top:1px solid #333;padding:1rem 1.5rem"><div style="max-width:72rem;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.75rem"><p style="color:#ccc;font-size:0.875rem;flex:1;min-width:200px;margin:0;line-height:1.5">We use cookies for analytics to understand how you use our site. Essential cookies for cart and login are always active. <a href="/cookies/" style="color:#ef4444;text-decoration:underline">Cookie policy</a></p><div style="display:flex;gap:0.5rem;flex-shrink:0"><button id="cookie-reject" style="padding:0.5rem 1rem;background:#333;color:#fff;border:1px solid #555;border-radius:0.375rem;font-size:0.875rem;cursor:pointer">Reject All</button><button id="cookie-accept" style="padding:0.5rem 1rem;background:#dc2626;color:#fff;border:none;border-radius:0.375rem;font-size:0.875rem;cursor:pointer">Accept All</button></div></div></div>';
+            d.innerHTML = '<div style="background:#111;border-top:1px solid #333;padding:1rem 1.5rem">'
+              + '<div style="max-width:72rem;margin:0 auto">'
+              + '<p style="color:#ccc;font-size:0.875rem;margin:0 0 0.75rem;line-height:1.5">We use cookies to improve your experience. You can choose which categories to allow. <a href="/cookies/" style="color:#ef4444;text-decoration:underline">Cookie policy</a></p>'
+              + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:1rem;margin-bottom:0.75rem">'
+              + '<label style="color:#999;font-size:0.8125rem;display:flex;align-items:center;gap:0.375rem;cursor:default"><input type="checkbox" checked disabled style="accent-color:#dc2626"> Necessary <span style="color:#555">(always on)</span></label>'
+              + '<label style="color:#ccc;font-size:0.8125rem;display:flex;align-items:center;gap:0.375rem;cursor:pointer"><input type="checkbox" id="cc-analytics" style="accent-color:#dc2626"> Analytics</label>'
+              + '<label style="color:#ccc;font-size:0.8125rem;display:flex;align-items:center;gap:0.375rem;cursor:pointer"><input type="checkbox" id="cc-marketing" style="accent-color:#dc2626"> Marketing</label>'
+              + '</div>'
+              + '<div style="display:flex;gap:0.5rem;flex-wrap:wrap">'
+              + '<button id="cc-reject" style="padding:0.5rem 1rem;background:#333;color:#fff;border:1px solid #555;border-radius:0.375rem;font-size:0.8125rem;cursor:pointer">Reject All</button>'
+              + '<button id="cc-save" style="padding:0.5rem 1rem;background:#333;color:#fff;border:1px solid #555;border-radius:0.375rem;font-size:0.8125rem;cursor:pointer">Save Preferences</button>'
+              + '<button id="cc-accept" style="padding:0.5rem 1rem;background:#dc2626;color:#fff;border:none;border-radius:0.375rem;font-size:0.8125rem;cursor:pointer">Accept All</button>'
+              + '</div></div></div>';
             document.body.appendChild(d);
-            document.getElementById('cookie-accept').addEventListener('click', function() {
-              localStorage.setItem('cookie-consent', 'accepted');
-              d.remove();
-              window.dispatchEvent(new Event('cookie-consent-granted'));
-            });
-            document.getElementById('cookie-reject').addEventListener('click', function() {
-              localStorage.setItem('cookie-consent', 'rejected');
-              d.remove();
+            document.getElementById('cc-accept').addEventListener('click', function() { saveConsent(true, true, 'accept_all'); });
+            document.getElementById('cc-reject').addEventListener('click', function() { saveConsent(false, false, 'reject_all'); });
+            document.getElementById('cc-save').addEventListener('click', function() {
+              saveConsent(document.getElementById('cc-analytics').checked, document.getElementById('cc-marketing').checked, 'save');
             });
           }, 3000);
         });

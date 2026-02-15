@@ -5,6 +5,7 @@ import { getDocument, updateDocument, setDocument, queryCollection, deleteDocume
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -22,6 +23,10 @@ function generateId(): string {
 
 // GET - List all pending bypass requests (admin) OR check status for specific user
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`bypass-requests:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
   const saQuery = getSaQuery(locals);
   try {
@@ -202,6 +207,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Create a new bypass request OR approve/deny a request
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`bypass-requests-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
   const saQuery = getSaQuery(locals);
   try {
@@ -444,6 +453,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Remove a bypass request (admin only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`bypass-requests-delete:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
 
   const authError = await requireAdminAuth(request, locals);

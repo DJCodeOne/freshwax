@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -10,6 +11,10 @@ function initFirebase(locals: any) {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`vinyl-listing:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for viewing listing admin data
@@ -58,6 +63,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`vinyl-listing-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for listing management

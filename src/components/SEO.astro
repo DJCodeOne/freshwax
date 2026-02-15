@@ -111,7 +111,7 @@ const {
   title,
   description,
   canonical,
-  image = '/og-image.jpg',
+  image = '/og-image.webp',
   imageAlt = title,
   type = 'website',
   noindex = false,
@@ -163,7 +163,7 @@ const canonicalUrl = canonical || new URL(normalizedPath, SITE.url).href;
 const imageUrl = image.startsWith('http') ? image : new URL(image, SITE.url).href;
 const ogImage = imageUrl;
 const ogImageType = ogImage?.endsWith('.webp') ? 'image/webp' : ogImage?.endsWith('.png') ? 'image/png' : 'image/jpeg';
-const isDefaultOgImage = image === '/og-image.jpg';
+const isDefaultOgImage = image === '/og-image.webp';
 
 // ===========================================
 // STRUCTURED DATA SCHEMAS
@@ -615,8 +615,8 @@ const articleSchema = article ? {
 <meta property="og:image" content={imageUrl} />
 <meta property="og:image:secure_url" content={imageUrl} />
 <meta property="og:image:type" content={ogImageType} />
-{isDefaultOgImage && <meta property="og:image:width" content="1200" />}
-{isDefaultOgImage && <meta property="og:image:height" content="630" />}
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content={isDefaultOgImage ? "630" : "1200"} />
 <meta property="og:image:alt" content={imageAlt} />
 <meta property="og:site_name" content={SITE.name} />
 <meta property="og:locale" content={SITE.locale} />

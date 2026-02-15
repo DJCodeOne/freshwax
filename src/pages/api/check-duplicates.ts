@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -70,6 +71,13 @@ async function getOwnershipData(userId: string): Promise<{
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`check-duplicates:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     // SECURITY: Verify the authenticated user
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

@@ -1,0 +1,435 @@
+---
+// src/pages/admin/image-tools.astro
+// Admin tool to scan and reprocess R2 images
+
+import { requireAdminAuth } from '../../lib/admin';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
+export const prerender = false;
+---
+
+<AdminLayout title="Image Tools" activeNav="images">
+  <!-- Scan Controls -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>Scan R2 Images</h2>
+    </div>
+    <div class="card-body">
+      <p style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+        Scan R2 bucket for non-WebP, oversized, or missing thumbnail images. Select a prefix to scan a specific folder.
+      </p>
+      <div class="flex flex-wrap gap-2" style="margin-bottom: 1rem;">
+        <button class="btn btn-primary scan-btn" data-prefix="">All</button>
+        <button class="btn btn-outline scan-btn" data-prefix="releases/">releases/</button>
+        <button class="btn btn-outline scan-btn" data-prefix="merch/">merch/</button>
+        <button class="btn btn-outline scan-btn" data-prefix="vinyl/">vinyl/</button>
+        <button class="btn btn-outline scan-btn" data-prefix="avatars/">avatars/</button>
+        <button class="btn btn-outline scan-btn" data-prefix="dj-mixes/">dj-mixes/</button>
+      </div>
+      <div id="scanStatus" style="display: none;" class="flex items-center gap-2">
+        <div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
+        <span id="scanStatusText" style="font-size: 0.875rem; color: var(--text-secondary);">Scanning...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Stats -->
+  <div id="summarySection" class="mb-4" style="display: none;">
+    <div class="stats-grid cols-5">
+      <div class="stat-card">
+        <div class="stat-label">Scanned</div>
+        <div class="stat-value" id="statScanned">0</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-label">Not WebP</div>
+        <div class="stat-value" id="statNotWebp">0</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-label">Oversized</div>
+        <div class="stat-value" id="statOversized">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Missing Thumb</div>
+        <div class="stat-value" id="statMissingThumb">0</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Total Issues</div>
+        <div class="stat-value" id="statTotalIssues">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Issues Table -->
+  <div id="issuesSection" class="card mb-4" style="display: none;">
+    <div class="card-header">
+      <h2>Issues Found</h2>
+      <div class="flex gap-1">
+        <button id="selectAllBtn" class="btn btn-sm btn-ghost">Select All</button>
+        <button id="reprocessBtn" class="btn btn-sm btn-danger" disabled>Reprocess Selected (0)</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width: 40px; text-align: center;">
+                <input type="checkbox" id="headerCheckbox" />
+              </th>
+              <th>Key</th>
+              <th>Issue</th>
+              <th class="text-right">Size</th>
+              <th>Type</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="issuesBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card-footer flex justify-between items-center">
+      <span id="issueCount" style="font-size: 0.85rem; color: var(--text-secondary);"></span>
+      <div class="flex gap-1">
+        <button id="nextPageBtn" class="btn btn-sm btn-outline" style="display: none;">Scan Next Page</button>
+        <label class="flex items-center gap-1" style="font-size: 0.8rem; color: var(--text-secondary);">
+          <input type="checkbox" id="deleteOriginalsCheckbox" />
+          Delete originals after reprocess
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reprocess Results -->
+  <div id="resultsSection" class="card mb-4" style="display: none;">
+    <div class="card-header">
+      <h2>Reprocess Results</h2>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Status</th>
+              <th class="text-right">Old Size</th>
+              <th class="text-right">New Size</th>
+              <th>New Key</th>
+              <th>Thumb</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Processing Log -->
+  <div id="logSection" class="card mb-4" style="display: none;">
+    <div class="card-header">
+      <h2>Processing Log</h2>
+      <button id="clearLogBtn" class="btn btn-sm btn-ghost">Clear</button>
+    </div>
+    <div class="card-body">
+      <div id="logEntries" style="font-family: 'SF Mono', Monaco, monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; line-height: 1.8;"></div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  // State
+  let allIssues: any[] = [];
+  let currentCursor: string | null = null;
+  let currentPrefix = '';
+  let totalScanned = 0;
+  let cumulativeSummary = { notWebp: 0, oversized: 0, missingThumb: 0 };
+
+  // DOM references
+  const scanStatus = document.getElementById('scanStatus')!;
+  const scanStatusText = document.getElementById('scanStatusText')!;
+  const summarySection = document.getElementById('summarySection')!;
+  const issuesSection = document.getElementById('issuesSection')!;
+  const issuesBody = document.getElementById('issuesBody')!;
+  const issueCount = document.getElementById('issueCount')!;
+  const nextPageBtn = document.getElementById('nextPageBtn')!;
+  const reprocessBtn = document.getElementById('reprocessBtn') as HTMLButtonElement;
+  const selectAllBtn = document.getElementById('selectAllBtn')!;
+  const headerCheckbox = document.getElementById('headerCheckbox') as HTMLInputElement;
+  const deleteOriginalsCheckbox = document.getElementById('deleteOriginalsCheckbox') as HTMLInputElement;
+  const resultsSection = document.getElementById('resultsSection')!;
+  const resultsBody = document.getElementById('resultsBody')!;
+  const logSection = document.getElementById('logSection')!;
+  const logEntries = document.getElementById('logEntries')!;
+
+  function formatBytes(bytes: number): string {
+    if (bytes === 0) return '-';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  function escapeHtml(s: string | null | undefined): string {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function addLog(message: string, type: 'info' | 'success' | 'error' = 'info') {
+    logSection.style.display = '';
+    const colors = { info: 'var(--text-secondary)', success: 'var(--accent-green)', error: 'var(--accent-red)' };
+    const time = new Date().toLocaleTimeString('en-GB');
+    logEntries.innerHTML += `<div style="color: ${colors[type]};">[${time}] ${escapeHtml(message)}</div>`;
+    logEntries.scrollTop = logEntries.scrollHeight;
+  }
+
+  function getIssueBadge(issue: string): string {
+    const badges: Record<string, string> = {
+      'not-webp': '<span class="badge badge-danger">NOT WEBP</span>',
+      'oversized': '<span class="badge badge-pending">OVERSIZED</span>',
+      'not-webp,oversized': '<span class="badge badge-danger">NOT WEBP</span> <span class="badge badge-pending">OVERSIZED</span>',
+      'missing-thumb': '<span class="badge badge-info">NO THUMB</span>',
+    };
+    return badges[issue] || `<span class="badge">${escapeHtml(issue)}</span>`;
+  }
+
+  function updateSelectedCount() {
+    const checked = issuesBody.querySelectorAll('input[type="checkbox"]:checked');
+    const count = checked.length;
+    reprocessBtn.textContent = `Reprocess Selected (${count})`;
+    reprocessBtn.disabled = count === 0;
+  }
+
+  function renderIssues() {
+    issuesBody.innerHTML = allIssues.map((issue, i) => `
+      <tr data-index="${i}">
+        <td class="text-center">
+          ${issue.issue !== 'missing-thumb'
+            ? `<input type="checkbox" class="issue-checkbox" data-key="${escapeHtml(issue.key)}" />`
+            : ''}
+        </td>
+        <td class="cell-mono" style="font-size: 0.8rem; max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(issue.key)}">${escapeHtml(issue.key)}</td>
+        <td>${getIssueBadge(issue.issue)}</td>
+        <td class="text-right cell-secondary">${formatBytes(issue.size)}</td>
+        <td class="cell-secondary">${escapeHtml(issue.type)}</td>
+        <td id="status-${i}"></td>
+      </tr>
+    `).join('');
+
+    issueCount.textContent = `${allIssues.length} issue${allIssues.length !== 1 ? 's' : ''} found`;
+    updateSelectedCount();
+  }
+
+  function updateSummaryStats() {
+    summarySection.style.display = '';
+    document.getElementById('statScanned')!.textContent = String(totalScanned);
+    document.getElementById('statNotWebp')!.textContent = String(cumulativeSummary.notWebp);
+    document.getElementById('statOversized')!.textContent = String(cumulativeSummary.oversized);
+    document.getElementById('statMissingThumb')!.textContent = String(cumulativeSummary.missingThumb);
+    document.getElementById('statTotalIssues')!.textContent = String(allIssues.length);
+  }
+
+  // Scan handler
+  async function runScan(prefix: string, cursor?: string) {
+    scanStatus.style.display = 'flex';
+    scanStatusText.textContent = `Scanning ${prefix || 'all prefixes'}...`;
+
+    if (!cursor) {
+      // Fresh scan - reset state
+      allIssues = [];
+      currentCursor = null;
+      totalScanned = 0;
+      cumulativeSummary = { notWebp: 0, oversized: 0, missingThumb: 0 };
+      currentPrefix = prefix;
+      resultsSection.style.display = 'none';
+      resultsBody.innerHTML = '';
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (prefix) params.set('prefix', prefix);
+      if (cursor) params.set('cursor', cursor);
+
+      const res = await fetch(`/api/admin/r2-image-scan?${params}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        addLog(`Scan failed: ${data.error}`, 'error');
+        (window as any).showToast?.(`Scan failed: ${data.error}`, 'error');
+        scanStatus.style.display = 'none';
+        return;
+      }
+
+      // Accumulate results
+      totalScanned += data.scanned;
+      cumulativeSummary.notWebp += data.summary.notWebp;
+      cumulativeSummary.oversized += data.summary.oversized;
+      cumulativeSummary.missingThumb += data.summary.missingThumb;
+      allIssues = allIssues.concat(data.issues);
+      currentCursor = data.cursor;
+
+      updateSummaryStats();
+
+      if (allIssues.length > 0) {
+        issuesSection.style.display = '';
+        renderIssues();
+      }
+
+      // Show next page button if there are more results
+      nextPageBtn.style.display = data.isTruncated ? '' : 'none';
+
+      addLog(`Scanned ${data.scanned} objects, found ${data.issues.length} issues${data.isTruncated ? ' (more pages available)' : ''}`, 'info');
+      scanStatusText.textContent = 'Scan complete';
+      setTimeout(() => { scanStatus.style.display = 'none'; }, 1500);
+
+    } catch (err) {
+      addLog(`Scan error: ${err}`, 'error');
+      (window as any).showToast?.('Scan failed', 'error');
+      scanStatus.style.display = 'none';
+    }
+  }
+
+  // Reprocess handler
+  async function reprocessSelected() {
+    const checkboxes = issuesBody.querySelectorAll('input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
+    const selectedKeys = Array.from(checkboxes).map(cb => cb.dataset.key!).filter(Boolean);
+
+    if (selectedKeys.length === 0) return;
+
+    reprocessBtn.disabled = true;
+    reprocessBtn.textContent = 'Processing...';
+    resultsSection.style.display = '';
+    resultsBody.innerHTML = '';
+
+    const deleteOriginals = deleteOriginalsCheckbox.checked;
+
+    // Process in batches of 10
+    const batches: string[][] = [];
+    for (let i = 0; i < selectedKeys.length; i += 10) {
+      batches.push(selectedKeys.slice(i, i + 10));
+    }
+
+    let totalProcessed = 0;
+    let totalFailed = 0;
+
+    for (let b = 0; b < batches.length; b++) {
+      const batch = batches[b];
+      addLog(`Processing batch ${b + 1}/${batches.length} (${batch.length} images)...`);
+
+      // Mark rows as processing
+      for (const key of batch) {
+        const idx = allIssues.findIndex(i => i.key === key);
+        if (idx >= 0) {
+          const statusCell = document.getElementById(`status-${idx}`);
+          if (statusCell) statusCell.innerHTML = '<span class="badge badge-processing">PROCESSING</span>';
+        }
+      }
+
+      try {
+        const res = await fetch('/api/admin/r2-image-reprocess', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keys: batch, deleteOriginals }),
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          addLog(`Batch ${b + 1} failed: ${data.error}`, 'error');
+          continue;
+        }
+
+        totalProcessed += data.processed;
+        totalFailed += data.failed;
+
+        // Render results
+        for (const result of data.results) {
+          const savings = result.oldSize && result.newSize
+            ? Math.round((1 - result.newSize / result.oldSize) * 100) + '%'
+            : '-';
+
+          resultsBody.innerHTML += `
+            <tr>
+              <td class="cell-mono" style="font-size: 0.8rem; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(result.key)}">${escapeHtml(result.key)}</td>
+              <td>${result.status === 'success'
+                ? '<span class="badge badge-completed">SUCCESS</span>'
+                : '<span class="badge badge-danger">FAILED</span>'}</td>
+              <td class="text-right cell-secondary">${formatBytes(result.oldSize || 0)}</td>
+              <td class="text-right" style="font-weight: 600; color: ${result.newSize < result.oldSize ? 'var(--accent-green)' : 'var(--text-primary)'};">${formatBytes(result.newSize || 0)} <span style="font-size: 0.75rem; color: var(--text-muted);">${savings !== '-' ? `(${savings})` : ''}</span></td>
+              <td class="cell-mono" style="font-size: 0.8rem;">${escapeHtml(result.newKey || '')}</td>
+              <td>${result.thumbCreated ? `<span class="badge badge-completed">YES</span> <span style="font-size: 0.75rem;">${formatBytes(result.thumbSize || 0)}</span>` : '-'}</td>
+              <td class="cell-secondary" style="font-size: 0.8rem;">${result.error ? `<span style="color: var(--accent-red);">${escapeHtml(result.error)}</span>` : result.urlChanges?.length ? result.urlChanges.map((c: any) => `${escapeHtml(c.oldKey)} &rarr; ${escapeHtml(c.newKey)}`).join('<br>') : ''}</td>
+            </tr>
+          `;
+
+          // Update row status
+          const idx = allIssues.findIndex(i => i.key === result.key);
+          if (idx >= 0) {
+            const statusCell = document.getElementById(`status-${idx}`);
+            if (statusCell) {
+              statusCell.innerHTML = result.status === 'success'
+                ? '<span class="badge badge-completed">DONE</span>'
+                : '<span class="badge badge-danger">FAILED</span>';
+            }
+          }
+        }
+
+        addLog(`Batch ${b + 1} complete: ${data.processed} processed, ${data.failed} failed`, data.failed > 0 ? 'error' : 'success');
+
+      } catch (err) {
+        addLog(`Batch ${b + 1} error: ${err}`, 'error');
+      }
+    }
+
+    addLog(`Reprocessing complete: ${totalProcessed} processed, ${totalFailed} failed`, totalFailed > 0 ? 'error' : 'success');
+    (window as any).showToast?.(`Done: ${totalProcessed} processed, ${totalFailed} failed`, totalFailed > 0 ? 'warning' : 'success');
+    reprocessBtn.disabled = false;
+    updateSelectedCount();
+  }
+
+  // Event listeners
+  document.querySelectorAll('.scan-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prefix = (btn as HTMLElement).dataset.prefix || '';
+      // Highlight active button
+      document.querySelectorAll('.scan-btn').forEach(b => b.classList.remove('btn-primary'));
+      document.querySelectorAll('.scan-btn').forEach(b => b.classList.add('btn-outline'));
+      btn.classList.remove('btn-outline');
+      btn.classList.add('btn-primary');
+      runScan(prefix);
+    });
+  });
+
+  nextPageBtn.addEventListener('click', () => {
+    if (currentCursor) runScan(currentPrefix, currentCursor);
+  });
+
+  reprocessBtn.addEventListener('click', reprocessSelected);
+
+  selectAllBtn.addEventListener('click', () => {
+    const checkboxes = issuesBody.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    checkboxes.forEach(cb => { cb.checked = !allChecked; });
+    headerCheckbox.checked = !allChecked;
+    updateSelectedCount();
+  });
+
+  headerCheckbox.addEventListener('change', () => {
+    const checkboxes = issuesBody.querySelectorAll('input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
+    checkboxes.forEach(cb => { cb.checked = headerCheckbox.checked; });
+    updateSelectedCount();
+  });
+
+  issuesBody.addEventListener('change', (e) => {
+    if ((e.target as HTMLElement).matches('input[type="checkbox"]')) {
+      updateSelectedCount();
+    }
+  });
+
+  document.getElementById('clearLogBtn')!.addEventListener('click', () => {
+    logEntries.innerHTML = '';
+    logSection.style.display = 'none';
+  });
+</script>
+</AdminLayout>

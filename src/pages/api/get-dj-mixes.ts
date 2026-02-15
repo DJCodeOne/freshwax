@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../lib/kv-cache';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -14,6 +15,13 @@ const isDev = import.meta.env.DEV;
 const MIXES_CACHE = { prefix: 'mixes', ttl: 300 };
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`get-dj-mixes:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
 

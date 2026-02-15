@@ -108,11 +108,11 @@ export async function createPayout(
       payoutItemId: data.items?.[0]?.payout_item_id,
       status: data.batch_header?.batch_status,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PayPal] Payout error:', error);
     return {
       success: false,
-      error: error.message || 'PayPal payout failed',
+      error: error instanceof Error ? error.message : 'PayPal payout failed',
     };
   }
 }
@@ -174,11 +174,11 @@ export async function createBatchPayout(
       status: data.batch_header?.batch_status,
       items: data.items,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PayPal] Batch payout error:', error);
     return {
       success: false,
-      error: error.message || 'PayPal batch payout failed',
+      error: error instanceof Error ? error.message : 'PayPal batch payout failed',
     };
   }
 }
@@ -212,10 +212,10 @@ export async function getPayoutStatus(
       status: data.batch_header?.batch_status,
       items: data.items,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

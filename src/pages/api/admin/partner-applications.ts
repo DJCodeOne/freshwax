@@ -3,6 +3,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -67,6 +68,10 @@ function convertToFirestoreValue(value: any): any {
 
 // GET - List pending partner applications
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`partner-applications:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
@@ -149,6 +154,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Approve or deny application
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`partner-applications-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);

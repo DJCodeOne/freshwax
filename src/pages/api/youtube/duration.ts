@@ -2,6 +2,7 @@
 // API endpoint to get YouTube video duration using oEmbed + fallback to player check
 
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -17,7 +18,14 @@ function parseISO8601Duration(duration: string): number | null {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`youtube-duration:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const videoId = url.searchParams.get('videoId');
 
   if (!videoId) {

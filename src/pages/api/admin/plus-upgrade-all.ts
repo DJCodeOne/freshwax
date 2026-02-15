@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -145,6 +146,10 @@ function buildThankYouEmail(userName: string): string {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`plus-upgrade-all:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const env = (locals as any)?.runtime?.env;
     const body = await request.json();

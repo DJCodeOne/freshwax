@@ -141,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PayPal] Link account error:', error);
     return new Response(JSON.stringify({
       success: false,
@@ -220,7 +220,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       stripeConnected: !!entity.stripeConnectId && entity.stripeConnectStatus === 'active'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PayPal] Get status error:', error);
     return new Response(JSON.stringify({
       success: false,

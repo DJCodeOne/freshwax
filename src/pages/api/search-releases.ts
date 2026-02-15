@@ -2,6 +2,7 @@
 // OPTIMIZED: Uses D1 for search data - zero Firebase reads
 import type { APIRoute } from 'astro';
 import { d1SearchPublishedReleases, d1SearchPublishedMixes, d1SearchPublishedMerch } from '../../lib/d1-catalog';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -12,6 +13,13 @@ const log = {
 };
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`search-releases:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const query = url.searchParams.get('q')?.toLowerCase().trim();
   const limitParam = url.searchParams.get('limit');
@@ -46,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       type: 'release',
       title: release.releaseName || release.title || 'Untitled',
       artist_name: release.artistName || release.artist || 'Unknown Artist',
-      artwork_url: release.artwork?.cover || release.coverArtUrl || release.artworkUrl || '/place-holder.webp'
+      artwork_url: release.thumbUrl || release.artwork?.cover || release.coverArtUrl || release.artworkUrl || '/place-holder.webp'
     }));
 
     const matchedMixes = mixes.map((mix: any) => ({

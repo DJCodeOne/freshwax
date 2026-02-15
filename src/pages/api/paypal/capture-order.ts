@@ -943,8 +943,9 @@ async function processMerchSupplierPayments(params: {
             throw new Error(paypalResult.error || 'PayPal payout failed');
           }
 
-        } catch (paypalError: any) {
-          console.error('[PayPal] Supplier PayPal payout failed:', paypalError.message);
+        } catch (paypalError: unknown) {
+          const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
+          console.error('[PayPal] Supplier PayPal payout failed:', paypalMessage);
 
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
@@ -960,7 +961,7 @@ async function processMerchSupplierPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: paypalError.message,
+            failureReason: paypalMessage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -1014,8 +1015,9 @@ async function processMerchSupplierPayments(params: {
 
           console.log('[PayPal] ✓ Supplier Stripe transfer created:', transfer.id);
 
-        } catch (transferError: any) {
-          console.error('[PayPal] Supplier transfer failed:', transferError.message);
+        } catch (transferError: unknown) {
+          const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
+          console.error('[PayPal] Supplier transfer failed:', transferMessage);
 
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
@@ -1027,7 +1029,7 @@ async function processMerchSupplierPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: transferError.message,
+            failureReason: transferMessage,
             customerPaymentMethod: 'paypal',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -1233,8 +1235,9 @@ async function processVinylCrateSellerPayments(params: {
             throw new Error(paypalResult.error || 'PayPal payout failed');
           }
 
-        } catch (paypalError: any) {
-          console.error('[PayPal] Crate seller PayPal payout failed:', paypalError.message);
+        } catch (paypalError: unknown) {
+          const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
+          console.error('[PayPal] Crate seller PayPal payout failed:', paypalMessage);
 
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
@@ -1250,7 +1253,7 @@ async function processVinylCrateSellerPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: paypalError.message,
+            failureReason: paypalMessage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -1304,8 +1307,9 @@ async function processVinylCrateSellerPayments(params: {
 
           console.log('[PayPal] ✓ Crate seller Stripe transfer created:', transfer.id);
 
-        } catch (transferError: any) {
-          console.error('[PayPal] Crate seller transfer failed:', transferError.message);
+        } catch (transferError: unknown) {
+          const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
+          console.error('[PayPal] Crate seller transfer failed:', transferMessage);
 
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
@@ -1317,7 +1321,7 @@ async function processVinylCrateSellerPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: transferError.message,
+            failureReason: transferMessage,
             customerPaymentMethod: 'paypal',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()

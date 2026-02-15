@@ -1461,3 +1461,40 @@
       max-height: 70vh;
     }
   }
+
+/* =====================================================
+   DJ MIXES MOBILE (moved from global mobile-enhancements.css)
+   ===================================================== */
+
+@media (max-width: 640px) {
+  .mix-card {
+    flex-direction: column;
+  }
+
+  .mix-cover {
+    width: 100%;
+    aspect-ratio: 1;
+  }
+
+  .mix-info {
+    padding: 0.75rem;
+  }
+
+  .mix-title {
+    font-size: 1rem;
+  }
+
+  .mix-artist {
+    font-size: 0.85rem;
+  }
+
+  .mix-duration,
+  .mix-date {
+    font-size: 0.75rem;
+  }
+
+  .mix-play-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+}

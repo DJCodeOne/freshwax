@@ -8,6 +8,7 @@ import { sendOrderConfirmationEmail } from '../../../lib/order-utils';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -31,6 +32,10 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`test-order-email:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = (locals as any)?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);

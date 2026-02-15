@@ -380,6 +380,7 @@ const firebaseConfig = {
     font-weight: 500;
     transition: color 0.15s;
     min-width: 50px;
+    min-height: 44px;
   }
 
   .fwx-bnav-item:hover,
@@ -438,6 +439,8 @@ const firebaseConfig = {
     border-radius: 0.5rem;
     cursor: pointer;
     transition: all 0.15s;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   #freshwax-header .fwx-lang-btn:hover {
@@ -823,7 +826,7 @@ const firebaseConfig = {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee;">Releases</div>';
       releases.forEach(r => {
         html += `<a href="/item/${encodeURIComponent(r.id)}/" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
-          <img src="${escapeHtml(r.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
+          <img src="${escapeHtml(r.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
           <div>
             <div style="font-weight: 500; font-size: 0.875rem;">${escapeHtml(r.title)}</div>
             <div style="font-size: 0.75rem; color: #666;">${escapeHtml(r.artist_name)}</div>
@@ -837,7 +840,7 @@ const firebaseConfig = {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">DJ Mixes</div>';
       mixes.forEach(m => {
         html += `<a href="/dj-mix/${encodeURIComponent(m.id)}/" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
-          <img src="${escapeHtml(m.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
+          <img src="${escapeHtml(m.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
           <div>
             <div style="font-weight: 500; font-size: 0.875rem;">${escapeHtml(m.title)}</div>
             <div style="font-size: 0.75rem; color: #666;">${escapeHtml(m.artist_name)}</div>
@@ -854,7 +857,7 @@ const firebaseConfig = {
         const priceStr = item.price ? `£${item.price.toFixed(2)}` : '';
         const stockStr = item.stock === 0 ? '<span style="color: #dc2626;">Out of Stock</span>' : (item.stock <= 5 ? `<span style="color: #f59e0b;">Low Stock</span>` : '');
         html += `<a href="/merch/#quick-view-${encodeURIComponent(item.id)}" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
-          <img src="${escapeHtml(item.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
+          <img src="${escapeHtml(item.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 500; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.title)}</div>
             <div style="font-size: 0.75rem; color: #666; display: flex; gap: 0.5rem; align-items: center;">
@@ -1569,6 +1572,7 @@ const firebaseConfig = {
     font-weight: 700;
     text-decoration: none;
     transition: all 0.3s;
+    min-height: 44px;
   }
   
   #freshwax-header .fwx-live-btn .live-dot {
@@ -1699,6 +1703,7 @@ const firebaseConfig = {
     cursor: pointer;
     transition: all 0.15s;
     max-width: 180px;
+    min-height: 44px;
   }
 
   #freshwax-header .fwx-account-btn:hover {
@@ -1732,10 +1737,10 @@ const firebaseConfig = {
     }
 
     #freshwax-header .fwx-mobile .fwx-account-btn {
-      padding: 0.4rem;
+      padding: 0.5rem;
       gap: 0;
-      min-width: 36px;
-      min-height: 36px;
+      min-width: 44px;
+      min-height: 44px;
       justify-content: center;
     }
   }
@@ -1787,12 +1792,14 @@ const firebaseConfig = {
   }
   
   #freshwax-header .fwx-dropdown-link {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 0.75rem 1rem;
     color: #000000;
     text-decoration: none;
     font-size: 0.875rem;
     transition: background 0.15s;
+    min-height: 44px;
   }
   
   #freshwax-header .fwx-dropdown-link:hover {
@@ -1800,7 +1807,8 @@ const firebaseConfig = {
   }
   
   #freshwax-header .fwx-logout-btn {
-    display: block;
+    display: flex;
+    align-items: center;
     width: 100%;
     text-align: left;
     padding: 0.75rem 1rem;
@@ -1812,6 +1820,7 @@ const firebaseConfig = {
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s;
+    min-height: 44px;
   }
   
   #freshwax-header .fwx-logout-btn:hover {
@@ -1832,6 +1841,7 @@ const firebaseConfig = {
     font-size: 0.875rem;
     text-decoration: none;
     transition: all 0.15s;
+    min-height: 44px;
   }
 
   #freshwax-header .fwx-cart-btn:hover {
@@ -1879,15 +1889,15 @@ const firebaseConfig = {
     }
 
     #freshwax-header .fwx-mobile .fwx-cart-btn {
-      padding: 0.4rem 0.5rem;
-      min-width: 36px;
-      min-height: 36px;
+      padding: 0.5rem;
+      min-width: 44px;
+      min-height: 44px;
       justify-content: center;
     }
 
     #freshwax-header .fwx-mobile .fwx-live-btn {
-      padding: 0.4rem 0.6rem;
-      min-height: 36px;
+      padding: 0.5rem 0.6rem;
+      min-height: 44px;
     }
 
     #freshwax-header .fwx-mobile .fwx-live-btn .live-text {
@@ -1905,8 +1915,8 @@ const firebaseConfig = {
     #freshwax-header .fwx-mobile .fwx-cart-btn,
     #freshwax-header .fwx-mobile .fwx-live-btn {
       padding: 0.35rem;
-      min-width: 32px;
-      min-height: 32px;
+      min-width: 44px;
+      min-height: 44px;
     }
 
     #freshwax-header .fwx-logo-mobile {
@@ -1931,8 +1941,8 @@ const firebaseConfig = {
     border: none;
     border-radius: 0.5rem;
     cursor: pointer;
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 44px;
+    min-height: 44px;
     transition: background 0.15s;
   }
 
@@ -1995,8 +2005,8 @@ const firebaseConfig = {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     background: transparent;
     border: none;
     color: #ffffff;

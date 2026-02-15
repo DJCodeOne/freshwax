@@ -646,8 +646,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               stockUpdated = true;
               log.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
               break; // Success - exit retry loop
-            } catch (conflictErr: any) {
-              if (conflictErr.message?.includes('CONFLICT') && attempt < MAX_STOCK_RETRIES - 1) {
+            } catch (conflictErr: unknown) {
+              const conflictMessage = conflictErr instanceof Error ? conflictErr.message : String(conflictErr);
+              if (conflictMessage?.includes('CONFLICT') && attempt < MAX_STOCK_RETRIES - 1) {
                 log.info(`[create-order] Stock conflict for ${item.name}, retrying...`);
                 continue;
               }

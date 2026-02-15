@@ -129,10 +129,12 @@ export const prerender = false;
                 {index > 2 && <span class="rank-number">{index + 1}</span>}
               </div>
               
-              <img 
-                src={release.coverArtUrl || '/place-holder.webp'} 
+              <img
+                src={release.thumbUrl || release.coverArtUrl || '/place-holder.webp'}
                 alt={`${release.releaseName} by ${release.artistName}`}
                 class="artwork"
+                width="80"
+                height="80"
                 loading="lazy"
               />
               

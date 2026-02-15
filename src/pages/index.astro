@@ -15,12 +15,17 @@ const featuredReleases = await getLiveReleases(20);
 
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 
-// Preload the first release cover image for faster LCP
+// Preload the first release cover image for faster LCP (with srcset for responsive)
 const firstArtwork = featuredReleases[0]?.coverArtUrl;
+const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/cover.webp') ? firstArtwork.replace('/cover.webp', '/thumb.webp') : null);
 ---
 
-<Layout title="Home" description="Buy jungle and drum & bass music at Fresh Wax. Digital downloads, vinyl records, DJ mixes, and live streams from the UK underground scene.">
-  {firstArtwork && <link rel="preload" href={firstArtwork} as="image" slot="head" />}
+<Layout title="Home" description="Buy jungle and drum & bass music at Fresh Wax. Digital downloads, vinyl records, DJ mixes, and live streams from the UK underground scene." image={firstArtwork || undefined}>
+  {firstArtwork && firstThumb ? (
+    <link rel="preload" as="image" imagesrcset={`${firstThumb} 400w, ${firstArtwork} 800w`} imagesizes="256px" slot="head" />
+  ) : firstArtwork ? (
+    <link rel="preload" href={firstArtwork} as="image" slot="head" />
+  ) : null}
   <Header />
 
   <div class="index-main">

@@ -209,6 +209,10 @@ const nonce = (Astro.locals as any).nonce || '';
 
         <div class="form-group terms-container">
           <label class="checkbox-label">
+            <input type="checkbox" id="confirmAge" name="confirmAge" required>
+            <span>I confirm I am 13 years of age or older</span>
+          </label>
+          <label class="checkbox-label">
             <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
             <span>I agree to the <a href="/terms/" target="_blank">Terms of Service</a> and <a href="/privacy/" target="_blank">Privacy Policy</a></span>
           </label>

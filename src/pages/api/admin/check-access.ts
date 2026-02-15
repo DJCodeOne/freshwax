@@ -3,10 +3,14 @@
 // Replaces client-side Firestore reads to admins/users/artists collections
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`check-access:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
   try {
     const { userId, error: authError } = await verifyRequestUser(request);
 

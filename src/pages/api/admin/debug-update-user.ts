@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -53,6 +54,10 @@ async function getToken(serviceAccountKey: string): Promise<string> {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`debug-update-user:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Require admin authentication
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

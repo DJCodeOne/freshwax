@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
 
@@ -56,6 +57,10 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
 // GET: Fetch gift cards, user balances, and analytics
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`giftcards:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for viewing gift cards data
@@ -234,6 +239,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Create gift card or adjust user balance
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`giftcards-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
   try {
     const data = await request.json();

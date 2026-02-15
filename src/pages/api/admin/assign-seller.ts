@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -28,6 +29,10 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`assign-seller:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const env = (locals as any)?.runtime?.env;
     const body = await request.json();

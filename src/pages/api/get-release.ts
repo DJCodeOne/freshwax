@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, clearCache, verifyRequestUser } from '../../lib/firebase-rest';
 import { normalizeRelease } from '../../lib/releases';
 import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,6 +15,13 @@ const log = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`get-release:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 

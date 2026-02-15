@@ -6,10 +6,15 @@ import type { APIRoute } from 'astro';
 
 import { saSetDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`migrate-orders-to-ledger:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const url = new URL(request.url);
   const confirm = url.searchParams.get('confirm');
   const dryRun = url.searchParams.get('dryRun') === 'yes';

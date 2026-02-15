@@ -62,7 +62,7 @@ function sanitizeHtml(html: string): string {
 // Prepare SEO data
 const seoTitle = post?.title || 'Post Not Found';
 const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.content) : 'Read this article on Fresh Wax blog.');
-const seoImage = post?.featuredImage || '/og-image.jpg';
+const seoImage = post?.featuredImage || '/og-image.webp';
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
 const nonce = (Astro.locals as any).nonce || '';

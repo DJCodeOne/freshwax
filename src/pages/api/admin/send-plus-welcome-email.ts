@@ -2,10 +2,15 @@
 // Sends welcome/confirmation email when user subscribes to Plus
 
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`send-plus-welcome-email:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // SECURITY: Require admin authentication for sending emails
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
   

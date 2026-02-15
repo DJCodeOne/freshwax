@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to initialize Firebase
 function initFirebase(locals: any) {
@@ -31,6 +32,13 @@ async function getSettings() {
 }
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`dj-eligibility:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initFirebase(locals);
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
@@ -174,6 +182,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: write operations - 30 per minute
+  const clientId2 = getClientId(request);
+  const rl = checkRateLimit(`dj-eligibility-write:${clientId2}`, RateLimiters.write);
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.retryAfter!);
+  }
+
   initFirebase(locals);
   try {
     // SECURITY: Verify Firebase token for all POST actions

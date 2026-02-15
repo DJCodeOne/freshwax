@@ -2682,24 +2682,39 @@ export const prerender = false;
   
   window.endStream = async function(streamId, djId) {
     if (!confirm('Are you sure you want to end this stream?')) return;
-    
+
     try {
-      const response = await fetch('/api/stream/end', {
+      // Use the slots endpoint which handles admin auth, D1 sync, cache invalidation, and Pusher broadcast
+      const response = await window.adminFetch('/api/livestream/slots', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ streamId, djId })
+        body: JSON.stringify({ action: 'endStream', slotId: streamId, djId })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
+        alert('Stream ended successfully');
         loadLiveStreams();
         loadRecentStreams();
       } else {
-        alert('Error: ' + result.error);
+        // Fallback: try the force-end-streams server action if slots endpoint fails
+        if (result.error === 'No active stream found' || result.error === 'Authentication required') {
+          console.warn('[endStream] Slots endpoint failed, trying force-end-streams fallback:', result.error);
+          const fallbackResult = await serverAction('force-end-streams');
+          if (fallbackResult.success) {
+            alert('Stream force-ended: ' + fallbackResult.message);
+            loadLiveStreams();
+            loadRecentStreams();
+          } else {
+            alert('Error ending stream: ' + (fallbackResult.error || result.error));
+          }
+        } else {
+          alert('Error ending stream: ' + result.error);
+        }
       }
     } catch (error) {
       console.error('Error ending stream:', error);
+      alert('Failed to end stream. Try using "End All Streams" button instead.');
     }
   };
   

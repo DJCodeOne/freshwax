@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest';
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -55,6 +56,10 @@ async function getToken(serviceAccountKey: string): Promise<string> {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`fix-track-urls:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const body = await request.json();
   const env = (locals as any)?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });

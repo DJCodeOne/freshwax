@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -33,6 +34,10 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`create-pending-payout:${clientId}`, RateLimiters.adminDelete);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = (locals as any)?.runtime?.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;

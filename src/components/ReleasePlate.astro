@@ -46,6 +46,7 @@ interface Props {
   catalogNumber?: string;
   genre?: string;
   coverArtUrl?: string;
+  thumbUrl?: string;
   additionalArtwork?: string[];
   tracks?: Track[];
   releaseDate?: string;
@@ -115,6 +116,7 @@ const {
   catalogNumber = '',
   genre = '',
   coverArtUrl = '/place-holder.webp',
+  thumbUrl,
   additionalArtwork = [],
   tracks = [],
   releaseDate = new Date().toISOString(),
@@ -141,6 +143,10 @@ const {
   nyopSuggestedPrice = 0,
   priority = false
 } = Astro.props;
+
+// Derive thumb URL for srcset (400w thumbnail + 800w cover)
+const thumbSrc = thumbUrl || (coverArtUrl?.includes('/cover.webp') ? coverArtUrl.replace('/cover.webp', '/thumb.webp') : undefined);
+const hasSrcset = thumbSrc && coverArtUrl !== '/place-holder.webp';
 
 // Use whichever label field is available
 const displayLabel = labelName || recordLabel || copyrightHolder || '';
@@ -295,6 +301,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
       <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden">
         <img
           src={coverArtUrl}
+          srcset={hasSrcset ? `${thumbSrc} 400w, ${coverArtUrl} 800w` : undefined}
+          sizes={hasSrcset ? "256px" : undefined}
           alt={`${releaseName} by ${artistName}`}
           class="w-full h-full object-cover"
           width="256"

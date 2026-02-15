@@ -290,6 +290,61 @@ const nonce = (Astro.locals as any).nonce || '';
     cursor: not-allowed;
   }
   
+  .order-tracking {
+    padding: 0.75rem 1.25rem;
+    background: #1e1b4b;
+    border-top: 1px solid #312e81;
+  }
+
+  .tracking-label {
+    font-size: 0.7rem;
+    color: #a78bfa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+  }
+
+  .tracking-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .tracking-courier {
+    color: #c4b5fd;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .tracking-number {
+    font-family: monospace;
+    color: #e0e7ff;
+    font-size: 0.875rem;
+    background: #312e81;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .tracking-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: #4f46e5;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+
+  .tracking-link:hover {
+    background: #6366f1;
+  }
+
   @media (max-width: 640px) {
     .orders-header {
       flex-direction: column;
@@ -419,7 +474,26 @@ const nonce = (Astro.locals as any).nonce || '';
       var canDownload = hasDigital &&
         (orderStatus === 'completed' || orderStatus === 'paid' || order.paymentStatus === 'completed' || order.paymentStatus === 'paid');
       
-      html += 
+      // Build tracking section for shipped/delivered orders
+      var trackingHtml = '';
+      var tracking = order.tracking;
+      if (tracking && (orderStatus === 'shipped' || orderStatus === 'delivered')) {
+        trackingHtml = '<div class="order-tracking">' +
+          '<div class="tracking-label">Shipment Tracking</div>' +
+          '<div class="tracking-details">';
+        if (tracking.courier) {
+          trackingHtml += '<span class="tracking-courier">' + tracking.courier + '</span>';
+        }
+        if (tracking.trackingNumber) {
+          trackingHtml += '<span class="tracking-number">' + tracking.trackingNumber + '</span>';
+        }
+        if (tracking.trackingUrl) {
+          trackingHtml += '<a href="' + tracking.trackingUrl + '" target="_blank" rel="noopener noreferrer" class="tracking-link">Track Your Package →</a>';
+        }
+        trackingHtml += '</div></div>';
+      }
+
+      html +=
         '<div class="order-card">' +
           '<div class="order-header">' +
             '<div class="order-info">' +
@@ -439,6 +513,7 @@ const nonce = (Astro.locals as any).nonce || '';
             '<span class="order-status ' + getStatusClass(orderStatus) + '">' + (orderStatus || 'Pending') + '</span>' +
           '</div>' +
           '<div class="order-items">' + itemsHtml + '</div>' +
+          trackingHtml +
           '<div class="order-footer">' +
             '<div class="order-total">Total: <span>' + formatPrice(order.total) + '</span></div>' +
             (canDownload ? '<button class="download-btn" data-order-id="' + order.id + '"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>Downloads</button>' : '') +

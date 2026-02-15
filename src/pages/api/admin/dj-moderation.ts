@@ -8,6 +8,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to get admin key from environment
 function getAdminKey(locals: any): string {
@@ -23,6 +24,10 @@ function initFirebase(locals: any) {
 
 // GET: List banned and on-hold DJs
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`dj-moderation:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for listing moderation data
@@ -93,6 +98,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Ban, unban, hold, release, or kick a DJ
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`dj-moderation-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   initFirebase(locals);
   const saQuery = getSaQuery(locals);
   try {

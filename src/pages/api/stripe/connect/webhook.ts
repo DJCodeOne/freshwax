@@ -51,8 +51,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
         console.log('[Connect Webhook] ✓ Signature verified');
-      } catch (err: any) {
-        console.error('[Connect Webhook] Signature verification failed:', err.message);
+      } catch (err: unknown) {
+        const errMessage = err instanceof Error ? err.message : String(err);
+        console.error('[Connect Webhook] Signature verification failed:', errMessage);
         return new Response('Webhook signature verification failed', { status: 401 });
       }
     } else if (!isDevelopment) {
@@ -104,7 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Connect Webhook] Error:', error);
 
     logConnectEvent('connect_webhook_error', 'unknown', false, {
@@ -418,13 +419,14 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
         ).catch(err => console.error('[Connect Webhook] Failed to send payout email:', err));
       }
 
-    } catch (transferError: any) {
-      console.error('[Connect Webhook] Failed to process pending payout:', pending.id, transferError.message);
+    } catch (transferError: unknown) {
+      const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
+      console.error('[Connect Webhook] Failed to process pending payout:', pending.id, transferMessage);
 
       // Mark as failed for retry
       await updateDocument('pendingPayouts', pending.id, {
         status: 'retry_pending',
-        failureReason: transferError.message,
+        failureReason: transferMessage,
         updatedAt: new Date().toISOString()
       });
     }

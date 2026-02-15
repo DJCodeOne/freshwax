@@ -580,8 +580,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Use constructEventAsync for Cloudflare Workers (Web Crypto API)
         event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
         console.log('[Stripe Webhook] ✓ Signature verified successfully via Stripe SDK');
-      } catch (err: any) {
-        console.error('[Stripe Webhook] ❌ Stripe signature verification failed:', err.message);
+      } catch (err: unknown) {
+        const errMessage = err instanceof Error ? err.message : String(err);
+        console.error('[Stripe Webhook] ❌ Stripe signature verification failed:', errMessage);
         return new Response(JSON.stringify({ error: 'Invalid signature' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' }
@@ -1907,8 +1908,9 @@ async function processArtistPayments(params: {
       console.log('[Stripe Webhook] ✓ Pending payout created for', payment.artistName);
     }
 
-  } catch (error: any) {
-    console.error('[Stripe Webhook] Error processing artist payments:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe Webhook] Error processing artist payments:', message);
     // Don't throw - order was created, payments can be retried
   }
 }
@@ -2053,8 +2055,9 @@ async function processSupplierPayments(params: {
       console.log('[Stripe Webhook] ✓ Pending supplier payout created for', payment.supplierName);
     }
 
-  } catch (error: any) {
-    console.error('[Stripe Webhook] Error processing supplier payments:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe Webhook] Error processing supplier payments:', message);
     // Don't throw - order was created, payments can be retried
   }
 }
@@ -2207,8 +2210,9 @@ async function processVinylCrateSellerPayments(params: {
       console.log('[Stripe Webhook] ✓ Pending crate seller payout created for', payment.sellerName);
     }
 
-  } catch (error: any) {
-    console.error('[Stripe Webhook] Error processing vinyl crate seller payments:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe Webhook] Error processing vinyl crate seller payments:', message);
     // Don't throw - order was created, payments can be retried
   }
 }
@@ -2317,8 +2321,9 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
             }
           }
 
-        } catch (reversalError: any) {
-          console.error('[Stripe Webhook] Failed to reverse transfer:', transfer.id, reversalError.message);
+        } catch (reversalError: unknown) {
+          const reversalMessage = reversalError instanceof Error ? reversalError.message : String(reversalError);
+          console.error('[Stripe Webhook] Failed to reverse transfer:', transfer.id, reversalMessage);
         }
       }
     }
@@ -2345,8 +2350,9 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
 
     console.log('[Stripe Webhook] ✓ Dispute recorded. Recovered:', totalRecovered, 'GBP from', transfersReversed.length, 'transfers');
 
-  } catch (error: any) {
-    console.error('[Stripe Webhook] Error handling dispute:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe Webhook] Error handling dispute:', message);
     // Still record the dispute even if transfer reversal failed
     await addDocument('disputes', {
       stripeDisputeId: dispute.id,
@@ -2476,8 +2482,9 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
 
           console.log('[Stripe Webhook] ✓ Re-transferred', reversedTransfer.amount, 'GBP to', reversedTransfer.artistName);
 
-        } catch (retransferError: any) {
-          console.error('[Stripe Webhook] Failed to re-transfer to artist:', reversedTransfer.artistId, retransferError.message);
+        } catch (retransferError: unknown) {
+          const retransferMessage = retransferError instanceof Error ? retransferError.message : String(retransferError);
+          console.error('[Stripe Webhook] Failed to re-transfer to artist:', reversedTransfer.artistId, retransferMessage);
 
           // Store as pending for retry
           await addDocument('pendingPayouts', {
@@ -2491,7 +2498,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
             reason: 'dispute_won_retransfer',
             originalTransferId: reversedTransfer.transferId,
             disputeId: dispute.id,
-            failureReason: retransferError.message,
+            failureReason: retransferMessage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -2519,8 +2526,9 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
       console.log('[Stripe Webhook]   Net platform loss:', netImpact, 'GBP');
     }
 
-  } catch (error: any) {
-    console.error('[Stripe Webhook] Error handling dispute closure:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe Webhook] Error handling dispute closure:', message);
   }
 }
 
@@ -2717,13 +2725,14 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
           }
         }
 
-      } catch (reversalError: any) {
-        console.error('[Stripe Webhook] Failed to reverse transfer:', payout.stripeTransferId, reversalError.message);
+      } catch (reversalError: unknown) {
+        const reversalMessage = reversalError instanceof Error ? reversalError.message : String(reversalError);
+        console.error('[Stripe Webhook] Failed to reverse transfer:', payout.stripeTransferId, reversalMessage);
 
         // Record failed reversal for manual review
         transfersReversed.push({
           transferId: payout.stripeTransferId,
-          error: reversalError.message,
+          error: reversalMessage,
           amount: reversalAmount,
           artistId: payout.artistId,
           artistName: payout.artistName,
@@ -2812,7 +2821,8 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
       }
     }
 
-  } catch (error: any) {
-    console.error('[Stripe Webhook] Error handling refund:', error.message);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe Webhook] Error handling refund:', message);
   }
 }

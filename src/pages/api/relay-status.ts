@@ -2,13 +2,21 @@
 // Proxy for checking relay station status (avoids CORS issues)
 
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const STATION_CHECK_URLS: Record<string, string | null> = {
   'underground-lair': 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get',
   'somafm-groovesalad': null // SomaFM is always live, no check needed
 };
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`relay-status:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const stationId = url.searchParams.get('station');
 
   if (!stationId || !(stationId in STATION_CHECK_URLS)) {

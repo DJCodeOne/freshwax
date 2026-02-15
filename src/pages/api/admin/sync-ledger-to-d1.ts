@@ -5,10 +5,15 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { d1InsertLedgerEntry, d1GetLedgerEntryById } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`sync-ledger-to-d1:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const env = (locals as any)?.runtime?.env;
 

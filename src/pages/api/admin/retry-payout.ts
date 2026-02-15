@@ -151,13 +151,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         amount: pendingPayout.amount
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-    } catch (transferError: any) {
-      console.error('[retry-payout] Transfer failed:', transferError.message);
+    } catch (transferError: unknown) {
+      const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
+      console.error('[retry-payout] Transfer failed:', transferMessage);
 
       // Update with new failure reason
       await updateDocument('pendingPayouts', payoutId, {
         status: 'retry_pending',
-        failureReason: transferError.message,
+        failureReason: transferMessage,
         lastRetryFailedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });

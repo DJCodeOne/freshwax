@@ -5,10 +5,15 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`debug-ledger:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const runtimeEnv = (locals as any)?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: runtimeEnv?.ADMIN_UIDS, ADMIN_EMAILS: runtimeEnv?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);

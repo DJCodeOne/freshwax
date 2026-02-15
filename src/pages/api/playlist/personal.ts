@@ -5,6 +5,7 @@
 import type { APIContext } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 function initEnv(locals: any) {
   const env = (locals as any).runtime?.env;
@@ -29,6 +30,13 @@ async function getUserTierInfo(userId: string): Promise<{ tier: string; isPlus: 
 
 // GET - Load user's personal playlist from D1
 export async function GET({ request, locals }: APIContext) {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`playlist-personal:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     initEnv(locals);
     const env = (locals as any).runtime?.env;
@@ -99,6 +107,13 @@ export async function GET({ request, locals }: APIContext) {
 
 // POST - Save user's personal playlist to D1
 export async function POST({ request, locals }: APIContext) {
+  // Rate limit: write operations - 30 per minute
+  const clientId2 = getClientId(request);
+  const rl = checkRateLimit(`playlist-personal-write:${clientId2}`, RateLimiters.write);
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.retryAfter!);
+  }
+
   try {
     initEnv(locals);
     const env = (locals as any).runtime?.env;

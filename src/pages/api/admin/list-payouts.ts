@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saDeleteDocument } from '../../../lib/firebase-service-account';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -26,6 +27,10 @@ function getServiceAccountKey(env: any): string {
 
 // GET: List all payouts
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`list-payouts:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = (locals as any)?.runtime?.env;
 
   const authError = await requireAdminAuth(request, locals);
@@ -70,6 +75,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Delete a payout by ID
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`list-payouts-delete:${clientId}`, RateLimiters.adminDelete);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = (locals as any)?.runtime?.env;
 
   const url = new URL(request.url);

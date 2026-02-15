@@ -26,6 +26,9 @@ import Footer from '../components/Footer.astro';
         </p>
       </div>
 
+      <!-- Confirmation Status Banner -->
+      <div id="confirm-banner" class="hidden mb-6 p-4 rounded-lg text-center font-semibold"></div>
+
       <!-- Signup Form -->
       <div class="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-2xl p-8 md:p-10">
         <form id="newsletter-signup-form" class="space-y-6">
@@ -48,6 +51,19 @@ import Footer from '../components/Footer.astro';
               class="w-full px-4 py-3 bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors rounded-lg"
             />
           </div>
+          <div>
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                id="signup-consent"
+                required
+                class="mt-1 w-4 h-4 accent-red-600"
+              />
+              <span class="text-sm text-gray-400">
+                I agree to receive marketing emails from Fresh Wax. You can unsubscribe at any time. <a href="/privacy/" class="text-red-500 hover:text-red-400 underline">Privacy Policy</a>
+              </span>
+            </label>
+          </div>
           <button
             type="submit"
             id="signup-btn"
@@ -57,10 +73,6 @@ import Footer from '../components/Footer.astro';
           </button>
         </form>
         <p id="signup-message" class="mt-4 text-center hidden"></p>
-
-        <p class="mt-6 text-center text-sm text-gray-500">
-          We respect your privacy. Unsubscribe at any time.
-        </p>
       </div>
 
       <!-- What you'll get -->
@@ -96,9 +108,26 @@ import Footer from '../components/Footer.astro';
 
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    // Show confirmation status from redirect
+    const params = new URLSearchParams(window.location.search);
+    const banner = document.getElementById('confirm-banner');
+    if (banner) {
+      if (params.get('confirmed') === 'success') {
+        banner.textContent = 'Your subscription is confirmed! Welcome to Fresh Wax.';
+        banner.className = 'mb-6 p-4 rounded-lg text-center font-semibold bg-green-900/50 border border-green-700 text-green-400';
+      } else if (params.get('confirmed') === 'already') {
+        banner.textContent = 'You are already subscribed!';
+        banner.className = 'mb-6 p-4 rounded-lg text-center font-semibold bg-blue-900/50 border border-blue-700 text-blue-400';
+      } else if (params.get('error')) {
+        banner.textContent = 'Something went wrong confirming your subscription. Please try subscribing again.';
+        banner.className = 'mb-6 p-4 rounded-lg text-center font-semibold bg-red-900/50 border border-red-700 text-red-400';
+      }
+    }
+
     const form = document.getElementById('newsletter-signup-form');
     const nameInput = document.getElementById('signup-name') as HTMLInputElement;
     const emailInput = document.getElementById('signup-email') as HTMLInputElement;
+    const consentInput = document.getElementById('signup-consent') as HTMLInputElement;
     const btn = document.getElementById('signup-btn') as HTMLButtonElement;
     const message = document.getElementById('signup-message') as HTMLParagraphElement;
 
@@ -109,6 +138,13 @@ import Footer from '../components/Footer.astro';
       const name = nameInput?.value?.trim();
       if (!email) return;
 
+      if (!consentInput?.checked) {
+        message.textContent = 'Please agree to receive marketing emails.';
+        message.className = 'mt-4 text-center text-red-500';
+        message.classList.remove('hidden');
+        return;
+      }
+
       btn.disabled = true;
       btn.textContent = 'Subscribing...';
       message.classList.add('hidden');
@@ -117,13 +153,13 @@ import Footer from '../components/Footer.astro';
         const response = await fetch('/api/newsletter/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, name, source: 'newsletter-page' })
+          body: JSON.stringify({ email, name, source: 'newsletter-page', consent: true })
         });
 
         const data = await response.json();
 
         if (data.success) {
-          message.textContent = data.message || 'Successfully subscribed! Check your email for confirmation.';
+          message.textContent = data.message || 'Please check your email to confirm your subscription.';
           message.className = 'mt-4 text-center text-green-500 font-semibold';
           message.classList.remove('hidden');
           form.reset();

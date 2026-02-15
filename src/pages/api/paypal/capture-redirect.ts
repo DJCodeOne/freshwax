@@ -506,8 +506,9 @@ async function processMerchSupplierPayments(params: {
           } else {
             throw new Error(paypalResult.error || 'PayPal payout failed');
           }
-        } catch (paypalError: any) {
-          console.error('[PayPal Redirect] Supplier PayPal payout failed:', paypalError.message);
+        } catch (paypalError: unknown) {
+          const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
+          console.error('[PayPal Redirect] Supplier PayPal payout failed:', paypalMessage);
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
             supplierName: payment.supplierName,
@@ -522,7 +523,7 @@ async function processMerchSupplierPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: paypalError.message,
+            failureReason: paypalMessage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -572,8 +573,9 @@ async function processMerchSupplierPayments(params: {
           await updateDocument('merch-suppliers', payment.supplierId, {
             lastPayoutAt: new Date().toISOString()
           });
-        } catch (transferError: any) {
-          console.error('[PayPal Redirect] Supplier transfer failed:', transferError.message);
+        } catch (transferError: unknown) {
+          const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
+          console.error('[PayPal Redirect] Supplier transfer failed:', transferMessage);
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
             supplierName: payment.supplierName,
@@ -584,7 +586,7 @@ async function processMerchSupplierPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: transferError.message,
+            failureReason: transferMessage,
             customerPaymentMethod: 'paypal',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -763,8 +765,9 @@ async function processVinylCrateSellerPayments(params: {
           } else {
             throw new Error(paypalResult.error || 'PayPal payout failed');
           }
-        } catch (paypalError: any) {
-          console.error('[PayPal Redirect] Crate seller PayPal payout failed:', paypalError.message);
+        } catch (paypalError: unknown) {
+          const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
+          console.error('[PayPal Redirect] Crate seller PayPal payout failed:', paypalMessage);
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
             sellerName: payment.sellerName,
@@ -779,7 +782,7 @@ async function processVinylCrateSellerPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: paypalError.message,
+            failureReason: paypalMessage,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           });
@@ -829,8 +832,9 @@ async function processVinylCrateSellerPayments(params: {
           await updateDocument('users', payment.sellerId, {
             lastCratePayoutAt: new Date().toISOString()
           });
-        } catch (transferError: any) {
-          console.error('[PayPal Redirect] Crate seller transfer failed:', transferError.message);
+        } catch (transferError: unknown) {
+          const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
+          console.error('[PayPal Redirect] Crate seller transfer failed:', transferMessage);
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
             sellerName: payment.sellerName,
@@ -841,7 +845,7 @@ async function processVinylCrateSellerPayments(params: {
             currency: 'gbp',
             status: 'retry_pending',
             items: payment.items,
-            failureReason: transferError.message,
+            failureReason: transferMessage,
             customerPaymentMethod: 'paypal',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()

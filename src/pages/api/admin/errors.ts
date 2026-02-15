@@ -4,11 +4,16 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 // GET /api/admin/errors?source=client&limit=100&offset=0
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`errors:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const authResult = await requireAdminAuth(request, locals);
   if (authResult) return authResult;
 
@@ -93,6 +98,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // DELETE /api/admin/errors — cleanup old logs
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`errors-delete:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const authResult = await requireAdminAuth(request, locals);
   if (authResult) return authResult;
 

@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -57,6 +58,10 @@ async function writeToFirestore(collection: string, docId: string, data: Record<
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`add-artist:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const body = await request.json();
     const env = (locals as any)?.runtime?.env;

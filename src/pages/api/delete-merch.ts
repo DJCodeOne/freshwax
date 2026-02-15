@@ -18,12 +18,6 @@ const log = {
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: any) {
-  const env = locals?.runtime?.env;
-
-}
-
 // Get service account credentials
 function getServiceAccountKey(env: any): { key: string; projectId: string } {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -90,9 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  // Initialize Firebase for Cloudflare runtime
   const env = (locals as any)?.runtime?.env;
-  initFirebase(locals);
 
   // Initialize R2/S3 client for Cloudflare runtime
   const R2_CONFIG = getR2Config(env);

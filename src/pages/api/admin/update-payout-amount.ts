@@ -7,6 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -30,6 +31,10 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-payout-amount:${clientId}`, RateLimiters.adminDelete);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const env = (locals as any)?.runtime?.env;
     const body = await request.json();

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
 import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 function getR2Config(env: any) {
   return {
@@ -15,6 +16,10 @@ function getR2Config(env: any) {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`list-r2-folders:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 

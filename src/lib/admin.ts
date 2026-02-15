@@ -15,8 +15,8 @@ function getAdminConfig(): { uids: string[]; emails: string[] } {
   if (adminConfig) return adminConfig;
 
   // Get from environment variables (comma-separated lists)
-  const envUids = import.meta.env.ADMIN_UIDS || process.env.ADMIN_UIDS || '';
-  const envEmails = import.meta.env.ADMIN_EMAILS || process.env.ADMIN_EMAILS || '';
+  const envUids = import.meta.env.ADMIN_UIDS || '';
+  const envEmails = import.meta.env.ADMIN_EMAILS || '';
 
   // Parse comma-separated values
   const uids = envUids.split(',').map((s: string) => s.trim()).filter(Boolean);

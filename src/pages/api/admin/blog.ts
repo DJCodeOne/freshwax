@@ -6,6 +6,7 @@ import { queryCollection, getDocument, setDocument, updateDocument, deleteDocume
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -15,6 +16,10 @@ function initFirebase(locals: any) {
 
 // GET - List all blog posts or get single post
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`blog:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
@@ -74,6 +79,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Create new blog post
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`blog-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
@@ -138,6 +147,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // PUT - Update blog post
 export const PUT: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`blog-write:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
@@ -191,6 +204,10 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Delete blog post
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`blog-delete:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);

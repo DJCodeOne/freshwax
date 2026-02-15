@@ -10,7 +10,7 @@ import { queryCollection } from '../../lib/firebase-rest';
 
 let currentStream: any = null;
 let hlsUrl = '';
-let thumbnailUrl = 'https://freshwax.co.uk/og-image.jpg';
+let thumbnailUrl = 'https://freshwax.co.uk/og-image.webp';
 let streamTitle = 'Fresh Wax Live';
 let djName = 'Fresh Wax';
 
@@ -25,7 +25,7 @@ try {
     hlsUrl = currentStream.hlsUrl || '';
     streamTitle = currentStream.title || 'Live Stream';
     djName = currentStream.djName || 'Fresh Wax DJ';
-    thumbnailUrl = currentStream.coverImage || currentStream.djAvatar || 'https://freshwax.co.uk/og-image.jpg';
+    thumbnailUrl = currentStream.coverImage || currentStream.djAvatar || 'https://freshwax.co.uk/og-image.webp';
   }
 } catch (e) {
   console.error('Error fetching stream:', e);

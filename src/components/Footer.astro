@@ -68,22 +68,28 @@ const currentYear = new Date().getFullYear();
       <div class="max-w-xl mx-auto text-center">
         <h3 class="text-white font-bold text-base mb-2">Stay Fresh</h3>
         <p class="text-gray-400 text-sm mb-3">Subscribe for new releases, exclusive offers, and store updates.</p>
-        <form id="newsletter-form" class="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
-          <input
-            type="email"
-            id="newsletter-email"
-            placeholder="Enter your email"
-            required
-            aria-label="Email address for newsletter"
-            class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors text-sm rounded-lg"
-          />
-          <button 
-            type="submit" 
-            id="newsletter-btn"
-            class="px-6 py-2 bg-white text-black font-bold hover:bg-red-600 hover:text-white transition-colors rounded-lg text-sm"
-          >
-            Subscribe
-          </button>
+        <form id="newsletter-form" class="max-w-md mx-auto">
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              type="email"
+              id="newsletter-email"
+              placeholder="Enter your email"
+              required
+              aria-label="Email address for newsletter"
+              class="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors text-sm rounded-lg"
+            />
+            <button
+              type="submit"
+              id="newsletter-btn"
+              class="px-6 py-2 bg-white text-black font-bold hover:bg-red-600 hover:text-white transition-colors rounded-lg text-sm"
+            >
+              Subscribe
+            </button>
+          </div>
+          <label class="flex items-start gap-2 mt-2 cursor-pointer">
+            <input type="checkbox" id="newsletter-consent" required class="mt-0.5 w-3.5 h-3.5 accent-red-600" />
+            <span class="text-xs text-gray-500">I agree to receive marketing emails. <a href="/privacy/" class="text-gray-400 hover:text-white underline">Privacy Policy</a></span>
+          </label>
         </form>
         <p id="newsletter-message" class="mt-2 text-xs hidden" role="alert"></p>
       </div>
@@ -114,22 +120,33 @@ const currentYear = new Date().getFullYear();
     const btn = document.getElementById('newsletter-btn') as HTMLButtonElement;
     const message = document.getElementById('newsletter-message') as HTMLParagraphElement;
     
+    const consentInput = document.getElementById('newsletter-consent') as HTMLInputElement;
+
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const email = emailInput?.value?.trim();
       if (!email) return;
-      
+
+      if (!consentInput?.checked) {
+        if (message) {
+          message.textContent = 'Please agree to receive marketing emails.';
+          message.className = 'mt-2 text-xs text-red-500';
+          message.classList.remove('hidden');
+        }
+        return;
+      }
+
       // Update button state
       btn.disabled = true;
       btn.textContent = 'Subscribing...';
       message.classList.add('hidden');
-      
+
       try {
         const response = await fetch('/api/newsletter/subscribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, source: 'footer' })
+          body: JSON.stringify({ email, source: 'footer', consent: true })
         });
         
         const data = await response.json();

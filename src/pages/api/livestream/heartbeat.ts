@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Viewer info structure
 interface ViewerInfo {
@@ -99,6 +100,13 @@ function removeViewer(streamId: string, sessionId: string): number {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`heartbeat:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const body = await request.json();
     const { streamId, sessionId, action } = body;
@@ -156,7 +164,14 @@ export const POST: APIRoute = async ({ request }) => {
   }
 };
 
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ request, url }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rl = checkRateLimit(`heartbeat:${clientId}`, RateLimiters.standard);
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.retryAfter!);
+  }
+
   const streamId = url.searchParams.get('streamId');
 
   if (!streamId) {

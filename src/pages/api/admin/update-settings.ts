@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument } from '../../../lib/firebase-rest';
 import { successResponse, errorResponse, ApiErrors, getEnv, parseJsonBody } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -56,6 +57,10 @@ const DEFAULT_SETTINGS = {
 
 // GET: Load settings (admin only)
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-settings-get:${clientId}`, RateLimiters.admin);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = (locals as any).runtime?.env;
 
   // SECURITY: Require admin authentication for viewing all settings
@@ -133,6 +138,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Save settings
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-settings-post:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = getEnv(locals);
 
   try {

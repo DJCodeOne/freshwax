@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
       skipCache: true
     });
 
-    let imageUrl = '/og-image.jpg'; // Default site image when offline
+    let imageUrl = '/og-image.webp'; // Default site image when offline
     let isLive = false;
 
     if (liveSlots.length > 0) {
@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request }) => {
   } catch (error) {
     console.error('[livestream/thumbnail] Error:', error);
     // Return default image on error
-    return redirectToImage('/og-image.jpg');
+    return redirectToImage('/og-image.webp');
   }
 };
 

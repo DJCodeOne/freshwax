@@ -5,6 +5,8 @@ import { queryCollection, updateDocument, deleteDocument, clearCache as clearFir
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { broadcastLiveStatus } from '../../../lib/pusher';
+import { invalidateStatusCache } from '../livestream/status';
 
 export const prerender = false;
 
@@ -49,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         break;
 
       case 'force-end-streams':
-        result = await forceEndStreams();
+        result = await forceEndStreams(env);
         break;
 
       case 'clear-chat':
@@ -146,30 +148,54 @@ async function restartServer(): Promise<{ success: boolean; message?: string; er
 }
 
 // Force end all active streams
-async function forceEndStreams(): Promise<{ success: boolean; message?: string; error?: string }> {
+async function forceEndStreams(env?: any): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    // Get active livestreams with limit
-    const streams = await queryCollection('livestreams', { limit: 100 });
-    const activeStreams = streams.filter((s: any) => s.status === 'live');
+    const now = new Date().toISOString();
 
-    // Update each to ended
+    // Get active livestreams (legacy collection) with limit
+    const streams = await queryCollection('livestreams', { limit: 100 });
+    const activeStreams = streams.filter((s: any) => s.status === 'live' || s.isLive === true);
+
+    // Update each to offline
     for (const stream of activeStreams) {
       await updateDocument('livestreams', stream.id, {
-        status: 'ended',
-        endedAt: new Date().toISOString(),
+        status: 'offline',
+        isLive: false,
+        endedAt: now,
         endedBy: 'admin-force'
       });
     }
 
-    // Also update livestreamSlots with limit
-    const slots = await queryCollection('livestreamSlots', { limit: 200 });
+    // Also update livestreamSlots (current system) with limit
+    const slots = await queryCollection('livestreamSlots', { limit: 200, skipCache: true });
     const activeSlots = slots.filter((s: any) => s.status === 'live');
 
     for (const slot of activeSlots) {
       await updateDocument('livestreamSlots', slot.id, {
-        status: 'ended',
-        endedAt: new Date().toISOString()
+        status: 'completed',
+        endedAt: now,
+        updatedAt: now,
+        endedBy: 'admin-force'
       });
+
+      // Broadcast each stream end via Pusher
+      try {
+        await broadcastLiveStatus('stream-ended', {
+          djId: slot.djId,
+          djName: slot.djName,
+          slotId: slot.id,
+          reason: 'admin_force_end'
+        }, env);
+      } catch (pusherErr) {
+        // Non-critical
+      }
+    }
+
+    // Clear caches so status endpoint returns fresh data
+    if (activeSlots.length > 0 || activeStreams.length > 0) {
+      clearFirebaseCache('livestreamSlots');
+      clearFirebaseCache('livestreams');
+      await invalidateStatusCache();
     }
 
     return {

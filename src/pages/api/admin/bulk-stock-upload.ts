@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -54,6 +55,10 @@ function parseCSV(content: string): { headers: string[], rows: string[][] } {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`bulk-stock-upload:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const env = (locals as any)?.runtime?.env;
 
   // Parse form data
@@ -278,6 +283,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // GET endpoint to download CSV template
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`bulk-stock-upload-get:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const url = new URL(request.url);
   const format = url.searchParams.get('format');
 

@@ -46,8 +46,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update status to unsubscribed
     await updateDocument('subscribers', subscriberDoc.id, {
       status: 'unsubscribed',
-      unsubscribedAt: new Date(),
-      updatedAt: new Date()
+      unsubscribedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     });
 
     return new Response(JSON.stringify({

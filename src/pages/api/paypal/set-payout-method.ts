@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: `Payout method set to ${payoutMethod === 'stripe' ? 'Stripe' : 'PayPal'}`
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Payout] Set method error:', error);
     return new Response(JSON.stringify({
       success: false,

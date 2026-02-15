@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocumentsBatch, CACHE_TTL } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -40,6 +41,13 @@ function setCachedResponse(key: string, data: any): void {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`get-ratings-batch:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
 
   try {

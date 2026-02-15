@@ -4,6 +4,7 @@
 // SECURITY: Requires authentication - user can only view their own orders
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocumentsBatch, verifyRequestUser } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,6 +15,13 @@ const log = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`get-orders:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = (locals as any)?.runtime?.env;
 
   // SECURITY: Verify the requesting user's identity

@@ -82,7 +82,9 @@ const orders = await Promise.all(allOrders.map(async (data: any) => {
     paymentMethod: data.paymentMethod || data.payment?.method || 'Unknown',
     paymentStatus: data.paymentStatus || data.payment?.status || 'Unknown',
     notes: data.notes || data.customerNotes || '',
-    trackingNumber: data.trackingNumber || '',
+    trackingNumber: data.tracking?.trackingNumber || data.trackingNumber || '',
+    trackingCourier: data.tracking?.courier || '',
+    trackingUrl: data.tracking?.trackingUrl || '',
     total: data.total || data.totals?.total || 0,
     createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt || Date.now()),
     shippedAt: data.shippedAt ? (data.shippedAt instanceof Date ? data.shippedAt : new Date(data.shippedAt)) : null,
@@ -438,10 +440,12 @@ const nonce = (Astro.locals as any).nonce || '';
             </div>
           </div>
           
-          ${order.trackingNumber ? `
+          ${order.trackingNumber || order.trackingCourier ? `
             <div style="background: #e8f5e9; border: 1px solid #a5d6a7; padding: 1rem; margin-bottom: 1.5rem;">
-              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.25rem;">Tracking Number</div>
-              <div style="font-weight: 600; font-family: monospace;">${escapeHtml(order.trackingNumber)}</div>
+              <div style="font-size: 0.7rem; color: #888; text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 600;">📦 Tracking Info</div>
+              ${order.trackingCourier ? `<div style="margin-bottom: 0.25rem;"><strong>Courier:</strong> ${escapeHtml(order.trackingCourier)}</div>` : ''}
+              ${order.trackingNumber ? `<div style="margin-bottom: 0.25rem;"><strong>Tracking #:</strong> <span style="font-family: monospace;">${escapeHtml(order.trackingNumber)}</span></div>` : ''}
+              ${order.trackingUrl ? `<div><a href="${escapeHtml(order.trackingUrl)}" target="_blank" rel="noopener noreferrer" style="color: #2e7d32; font-weight: 600;">Track Package →</a></div>` : ''}
             </div>
           ` : ''}
           
@@ -514,6 +518,20 @@ const nonce = (Astro.locals as any).nonce || '';
         });
       });
 
+      // Auto-generate tracking URL from courier + tracking number
+      function generateTrackingUrl(courier, trackingNumber) {
+        if (!courier || !trackingNumber) return '';
+        const num = encodeURIComponent(trackingNumber.trim());
+        const urls = {
+          'Royal Mail': `https://www.royalmail.com/track-your-item#/tracking-results/${num}`,
+          'DPD': `https://track.dpd.co.uk/search?reference=${num}`,
+          'Hermes/Evri': `https://www.evri.com/track-a-parcel/${num}`,
+          'UPS': `https://www.ups.com/track?tracknum=${num}`,
+          'FedEx': `https://www.fedex.com/fedextrack/?trknbr=${num}`
+        };
+        return urls[courier] || '';
+      }
+
       async function updateOrderStatus(id, currentStatus) {
         const nextStatus = {
           'pending': 'processing',
@@ -523,18 +541,111 @@ const nonce = (Astro.locals as any).nonce || '';
 
         if (!nextStatus) return;
 
+        // For shipping, show tracking modal instead of simple confirm
+        if (nextStatus === 'shipped') {
+          showTrackingModal(id);
+          return;
+        }
+
         if (!confirm(`Update order to "${nextStatus}"?`)) return;
 
+        await sendStatusUpdate(id, nextStatus);
+      }
+
+      function showTrackingModal(orderId) {
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.style.display = 'flex';
+        overlay.id = 'trackingModal';
+        overlay.innerHTML = `
+          <div class="modal" style="max-width: 500px;">
+            <div class="modal-header">
+              <h2>Shipping Details</h2>
+              <button class="modal-close" id="closeTrackingModal">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Courier</label>
+                <select id="trackingCourier" class="form-select" style="width: 100%; padding: 0.5rem;">
+                  <option value="">Select courier...</option>
+                  <option value="Royal Mail">Royal Mail</option>
+                  <option value="DPD">DPD</option>
+                  <option value="Hermes/Evri">Hermes / Evri</option>
+                  <option value="UPS">UPS</option>
+                  <option value="FedEx">FedEx</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div id="customCourierWrap" style="display: none; margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Courier Name</label>
+                <input type="text" id="customCourierName" class="form-input" placeholder="Enter courier name" style="width: 100%;" />
+              </div>
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tracking Number</label>
+                <input type="text" id="trackingNumber" class="form-input" placeholder="e.g. AB123456789GB" style="width: 100%;" />
+              </div>
+              <div style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.25rem;">Tracking URL <span style="color: #888; font-weight: 400;">(optional, auto-generated if left blank)</span></label>
+                <input type="url" id="trackingUrl" class="form-input" placeholder="https://..." style="width: 100%;" />
+              </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+              <button class="btn btn-outline" id="shipWithoutTracking">Ship Without Tracking</button>
+              <button class="btn btn-primary" id="shipWithTracking">📦 Mark as Shipped</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Show/hide custom courier input
+        const courierSelect = document.getElementById('trackingCourier');
+        courierSelect.addEventListener('change', () => {
+          document.getElementById('customCourierWrap').style.display = courierSelect.value === 'Other' ? 'block' : 'none';
+        });
+
+        // Close modal
+        document.getElementById('closeTrackingModal').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+        // Ship without tracking
+        document.getElementById('shipWithoutTracking').addEventListener('click', async () => {
+          overlay.remove();
+          await sendStatusUpdate(orderId, 'shipped');
+        });
+
+        // Ship with tracking
+        document.getElementById('shipWithTracking').addEventListener('click', async () => {
+          let courier = courierSelect.value;
+          if (courier === 'Other') courier = document.getElementById('customCourierName').value.trim();
+          const trackingNumber = document.getElementById('trackingNumber').value.trim();
+          let trackingUrl = document.getElementById('trackingUrl').value.trim();
+
+          // Auto-generate URL if not provided
+          if (!trackingUrl && courier && trackingNumber) {
+            trackingUrl = generateTrackingUrl(courier, trackingNumber);
+          }
+
+          const tracking = (courier || trackingNumber) ? { courier, trackingNumber, trackingUrl } : null;
+          overlay.remove();
+          await sendStatusUpdate(orderId, 'shipped', tracking);
+        });
+      }
+
+      async function sendStatusUpdate(id, status, tracking) {
         try {
+          const bodyData = { orderId: id, status };
+          if (tracking) bodyData.tracking = tracking;
+
           const response = await fetch('/api/admin/update-order-status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: id, status: nextStatus })
+            body: JSON.stringify(bodyData)
           });
 
           if (!response.ok) throw new Error('Failed to update');
 
-          showToast(`Order updated to ${nextStatus}`);
+          showToast(`Order updated to ${status}`);
           setTimeout(() => location.reload(), 1000);
 
         } catch (error) {

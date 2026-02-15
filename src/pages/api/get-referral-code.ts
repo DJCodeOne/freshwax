@@ -3,10 +3,18 @@
 import type { APIRoute } from 'astro';
 import { verifyUserToken } from '../../lib/firebase-rest';
 import { getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`get-referral-code:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const env = (locals as any)?.runtime?.env;
     const kv = env?.CACHE as KVNamespace | undefined;

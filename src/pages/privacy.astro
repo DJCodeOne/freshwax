@@ -12,7 +12,7 @@ import Footer from '../components/Footer.astro';
     <div class="legal-container">
       <div class="legal-header">
         <h1>Privacy Policy</h1>
-        <p class="last-updated">Last updated: December 2024</p>
+        <p class="last-updated">Last updated: February 2026</p>
       </div>
 
       <div class="legal-content">
@@ -22,9 +22,11 @@ import Footer from '../components/Footer.astro';
           <ul>
             <li><strong>Account information:</strong> Email address, display name, and password</li>
             <li><strong>Profile information:</strong> Artist name, bio, and links (if applicable)</li>
-            <li><strong>Purchase history:</strong> Records of your transactions</li>
-            <li><strong>Content:</strong> DJ mixes, comments, and ratings you submit</li>
-            <li><strong>Usage data:</strong> How you interact with the platform</li>
+            <li><strong>Purchase history:</strong> Records of your transactions including items, amounts, and shipping details</li>
+            <li><strong>Content:</strong> DJ mixes, comments, ratings, and vinyl listings you submit</li>
+            <li><strong>Payment information:</strong> Card details are processed directly by Stripe/PayPal and never stored on our servers</li>
+            <li><strong>Usage data:</strong> Pages visited, features used, and technical information (browser, IP address)</li>
+            <li><strong>Newsletter data:</strong> Email address, consent timestamp, and engagement metrics</li>
           </ul>
         </section>
 
@@ -34,63 +36,123 @@ import Footer from '../components/Footer.astro';
           <ul>
             <li>Provide and maintain the Fresh Wax platform</li>
             <li>Process purchases and deliver digital content</li>
-            <li>Enable community features (comments, ratings, mixes)</li>
-            <li>Communicate with you about your account and orders</li>
-            <li>Improve our services</li>
+            <li>Enable community features (comments, ratings, mixes, live chat)</li>
+            <li>Send transactional emails (order confirmations, shipping updates, verification reminders)</li>
+            <li>Send marketing emails (newsletter) — only with your explicit consent</li>
+            <li>Analyse site usage to improve our services (with your consent)</li>
+            <li>Prevent fraud and abuse</li>
           </ul>
         </section>
 
         <section>
-          <h2>3. Information Sharing</h2>
-          <p>We do not sell your personal information. We may share information with:</p>
+          <h2>3. Third-Party Services</h2>
+          <p>We do not sell your personal information. We share data with the following processors to operate our service:</p>
+
+          <h3>Payment Processing</h3>
           <ul>
-            <li><strong>Payment processors:</strong> To complete transactions</li>
-            <li><strong>Service providers:</strong> Who help us operate the platform</li>
-            <li><strong>Legal requirements:</strong> When required by law</li>
+            <li><strong>Stripe</strong> — Processes card payments. Receives: name, email, card details, billing address, order amount. <a href="https://stripe.com/gb/privacy" target="_blank" rel="noopener">Stripe Privacy Policy</a></li>
+            <li><strong>PayPal</strong> — Alternative payment method. Receives: email, name, order amount. <a href="https://www.paypal.com/uk/webapps/mpp/ua/privacy-full" target="_blank" rel="noopener">PayPal Privacy Policy</a></li>
           </ul>
+
+          <h3>Infrastructure &amp; Hosting</h3>
+          <ul>
+            <li><strong>Cloudflare</strong> — Hosting, CDN, and security. Processes: IP addresses, page requests, security tokens. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Cloudflare Privacy Policy</a></li>
+            <li><strong>Google Firebase</strong> — Authentication and database. Stores: account data, orders, content. <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase Privacy</a></li>
+          </ul>
+
+          <h3>Communications</h3>
+          <ul>
+            <li><strong>Resend</strong> — Transactional and marketing emails. Receives: email address, name. <a href="https://resend.com/legal/privacy-policy" target="_blank" rel="noopener">Resend Privacy Policy</a></li>
+            <li><strong>Pusher</strong> — Real-time notifications for live streams and chat. Receives: anonymised user IDs. <a href="https://pusher.com/legal/privacy-policy" target="_blank" rel="noopener">Pusher Privacy Policy</a></li>
+          </ul>
+
+          <h3>Analytics</h3>
+          <ul>
+            <li><strong>Google Analytics 4</strong> — Site usage analytics (only with your consent). Receives: anonymised IP, page views, events. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a></li>
+          </ul>
+
+          <h3>Content &amp; Security</h3>
+          <ul>
+            <li><strong>Giphy</strong> — GIF search in live chat. Receives: search queries. <a href="https://support.giphy.com/hc/en-us/articles/360032872931" target="_blank" rel="noopener">Giphy Privacy Policy</a></li>
+            <li><strong>Google Translate</strong> — Optional chat translation. Receives: message text. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a></li>
+            <li><strong>Google reCAPTCHA</strong> — Fraud prevention on forms. Receives: browser behaviour data. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a></li>
+          </ul>
+
           <p>Your public profile, uploaded mixes, comments, and ratings are visible to other users.</p>
         </section>
 
         <section>
-          <h2>4. Data Storage</h2>
-          <p>Your data is stored securely using industry-standard practices. We use Firebase and Cloudflare services to host and protect your information.</p>
-        </section>
-
-        <section>
-          <h2>5. Your Rights</h2>
-          <p>You have the right to:</p>
+          <h2>4. Data Retention</h2>
+          <p>We retain your data for the following periods:</p>
           <ul>
-            <li>Access your personal data</li>
-            <li>Correct inaccurate information</li>
-            <li>Request deletion of your account and data</li>
-            <li>Download your uploaded content</li>
+            <li><strong>Account data:</strong> Until you delete your account</li>
+            <li><strong>Order and financial records:</strong> 7 years after the transaction (UK tax and accounting obligations)</li>
+            <li><strong>Comments and ratings:</strong> Until you delete your account (anonymised, not deleted, to preserve community content)</li>
+            <li><strong>DJ mixes and vinyl listings:</strong> Until you delete your account or remove the content</li>
+            <li><strong>Newsletter subscription:</strong> Until you unsubscribe or delete your account</li>
+            <li><strong>Analytics data:</strong> 14 months (Google Analytics default retention)</li>
+            <li><strong>Error logs:</strong> 90 days</li>
+            <li><strong>Session cookies:</strong> Expire when you close your browser or after 14 days</li>
           </ul>
-          <p>To exercise these rights, please contact us through the platform.</p>
         </section>
 
         <section>
-          <h2>6. Cookies</h2>
-          <p>We use essential cookies for authentication and session management. We may use analytics cookies to understand how the platform is used.</p>
+          <h2>5. Data Storage &amp; Security</h2>
+          <p>Your data is stored securely using industry-standard practices:</p>
+          <ul>
+            <li>All data is encrypted in transit (TLS/HTTPS)</li>
+            <li>Passwords are hashed and never stored in plain text</li>
+            <li>Payment card data is processed directly by Stripe/PayPal and never touches our servers</li>
+            <li>Infrastructure is hosted on Cloudflare (global edge network) and Google Cloud (Firebase)</li>
+            <li>Server-side authentication uses service account credentials with least-privilege access</li>
+          </ul>
         </section>
 
         <section>
-          <h2>7. Third-Party Links</h2>
+          <h2>6. Your Rights (UK GDPR)</h2>
+          <p>Under the UK General Data Protection Regulation, you have the right to:</p>
+          <ul>
+            <li><strong>Access</strong> — Request a copy of all personal data we hold about you</li>
+            <li><strong>Rectification</strong> — Correct inaccurate information via your account settings</li>
+            <li><strong>Erasure</strong> — Delete your account and all associated data from your <a href="/account/dashboard/">account dashboard</a></li>
+            <li><strong>Data portability</strong> — Download your data in machine-readable format (JSON) from your account dashboard</li>
+            <li><strong>Restrict processing</strong> — Request that we limit how we use your data</li>
+            <li><strong>Object</strong> — Object to processing based on legitimate interests</li>
+            <li><strong>Withdraw consent</strong> — Withdraw cookie or newsletter consent at any time</li>
+          </ul>
+
+          <h3>How to Exercise Your Rights</h3>
+          <p>For most actions (deletion, data export), use the tools in your <a href="/account/dashboard/">account dashboard</a>. For other requests, <a href="/contact/">contact us</a> and we will respond within 30 days. If you are unsatisfied with our response, you can complain to the <a href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">Information Commissioner's Office (ICO)</a>.</p>
+        </section>
+
+        <section>
+          <h2>7. Cookies</h2>
+          <p>We use essential cookies for authentication, cart, and session management. Analytics cookies (Google Analytics) are only set with your explicit consent. You can manage your cookie preferences at any time using the cookie banner or visiting our <a href="/cookies/">Cookie Policy</a>.</p>
+        </section>
+
+        <section>
+          <h2>8. Newsletter &amp; Marketing</h2>
+          <p>We send marketing emails only with your explicit, informed consent (double opt-in). You can unsubscribe at any time via the link in every email or from the <a href="/unsubscribe/">unsubscribe page</a>. We record consent timestamps and source for compliance purposes.</p>
+        </section>
+
+        <section>
+          <h2>9. Third-Party Links</h2>
           <p>Our platform may contain links to external sites. We are not responsible for the privacy practices of other websites.</p>
         </section>
 
         <section>
-          <h2>8. Children's Privacy</h2>
-          <p>Fresh Wax is not intended for users under 13 years of age. We do not knowingly collect information from children.</p>
+          <h2>10. Children's Privacy</h2>
+          <p>Fresh Wax is not intended for users under 13 years of age. We do not knowingly collect information from children. If we become aware that we have collected data from a child under 13, we will delete it promptly.</p>
         </section>
 
         <section>
-          <h2>9. Changes to This Policy</h2>
-          <p>We may update this policy from time to time. We will notify you of significant changes through the platform or by email.</p>
+          <h2>11. Changes to This Policy</h2>
+          <p>We may update this policy from time to time. Significant changes will be communicated via email or a prominent notice on the site. The "last updated" date at the top reflects the most recent revision.</p>
         </section>
 
         <section>
-          <h2>10. Contact</h2>
-          <p>For privacy-related questions, please <a href="/contact/">contact us</a> through the platform.</p>
+          <h2>12. Contact</h2>
+          <p>For privacy-related questions or data subject access requests (DSARs), please <a href="/contact/">contact us</a>. We aim to respond to all requests within 30 days.</p>
         </section>
       </div>
     </div>
@@ -142,6 +204,14 @@ import Footer from '../components/Footer.astro';
 
   .legal-content section {
     margin-bottom: 1.75rem;
+  }
+
+  .legal-content h2 {
+    color: var(--text-primary, #fff);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    margin-top: 0;
   }
 
   .legal-content h3 {

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { AwsClient } from 'aws4fetch';
 import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 function getR2Config(env: any) {
   return {
@@ -15,6 +16,10 @@ function getR2Config(env: any) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`delete-submission:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   try {
     const env = (locals as any)?.runtime?.env;
     const bodyData = await request.json();

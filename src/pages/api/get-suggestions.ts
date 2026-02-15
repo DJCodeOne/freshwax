@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getLiveReleases, CACHE_TTL } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -14,6 +15,13 @@ const log = {
 };
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`get-suggestions:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const url = new URL(request.url);
     const currentId = url.searchParams.get('currentId') || '';

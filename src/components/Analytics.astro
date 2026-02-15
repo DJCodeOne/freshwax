@@ -308,8 +308,16 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
         window.trackDownload = function() {};
       }
 
-      // Check consent and initialize if already accepted
-      if (localStorage.getItem('cookie-consent') === 'accepted') {
+      // Check consent (supports both old string and new granular JSON format)
+      function hasAnalyticsConsent() {
+        var raw = localStorage.getItem('cookie-consent');
+        if (!raw) return false;
+        if (raw === 'accepted') return true;
+        if (raw === 'rejected') return false;
+        try { return JSON.parse(raw).analytics === true; } catch(e) { return false; }
+      }
+
+      if (hasAnalyticsConsent()) {
         initAnalytics();
       }
 

@@ -3,10 +3,18 @@
 // Called by verify-email page when user clicks "I've Verified My Email"
 import type { APIRoute } from 'astro';
 import { updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request }) => {
+  // Rate limit: auth tier - 10 per 15 minutes
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`verify-email:${clientId}`, RateLimiters.auth);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const { userId, error: authError } = await verifyRequestUser(request);
 

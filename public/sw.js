@@ -1,16 +1,17 @@
 // Fresh Wax Service Worker
 // Provides offline support and caching for PWA
 
-const CACHE_NAME = 'freshwax-v26';
-const STATIC_CACHE = 'freshwax-static-v26';
-const DYNAMIC_CACHE = 'freshwax-dynamic-v26';
+const CACHE_NAME = 'freshwax-v27';
+const STATIC_CACHE = 'freshwax-static-v27';
+const DYNAMIC_CACHE = 'freshwax-dynamic-v27';
 
 // Only cache actual static files that definitely exist
 const STATIC_ASSETS = [
   '/android-chrome-192x192.png',
   '/android-chrome-512x512.png',
   '/favicon.ico',
-  '/logo.webp'
+  '/logo.webp',
+  '/offline.html'
 ];
 
 // Install event - cache static assets
@@ -86,9 +87,9 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Fallback to cache
+          // Fallback to cache, then offline page
           return caches.match(request).then((cached) => {
-            return cached || caches.match('/');
+            return cached || caches.match('/offline.html');
           });
         })
     );

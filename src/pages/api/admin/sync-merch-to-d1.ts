@@ -5,10 +5,15 @@ import type { APIRoute } from 'astro';
 import { queryCollection, clearCache } from '../../../lib/firebase-rest';
 import { d1UpsertMerch, d1DeleteMerch } from '../../../lib/d1-catalog';
 import { requireAdminAuth } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`sync-merch-to-d1:${clientId}`, RateLimiters.adminBulk);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

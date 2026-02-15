@@ -6,11 +6,16 @@ import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Valid status transitions
 const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`update-order-status:${clientId}`, RateLimiters.write);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);

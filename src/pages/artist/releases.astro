@@ -209,9 +209,12 @@ export const prerender = false;
               <div class="release-header">
                 <div class="artwork-container">
                   <img
-                    src={release.coverArtUrl || release.artworkUrl || release.artwork_url || '/place-holder.webp'}
+                    src={release.thumbUrl || release.coverArtUrl || release.artworkUrl || release.artwork_url || '/place-holder.webp'}
                     alt={release.releaseName || release.title}
                     class="release-artwork"
+                    width="120"
+                    height="120"
+                    loading="lazy"
                   />
                   {release.saleDiscount > 0 && (
                     <div class="sale-badge">{release.saleDiscount}% OFF</div>

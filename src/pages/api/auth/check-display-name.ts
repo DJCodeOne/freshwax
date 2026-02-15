@@ -9,9 +9,9 @@ import { queryCollection } from '../../../lib/firebase-rest';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
-  // Rate limit: standard API - 60 per minute
+  // Rate limit: auth tier (strict) - 10 per 15 minutes to prevent user enumeration
   const clientId = getClientId(request);
-  const rateLimit = checkRateLimit(`check-name:${clientId}`, RateLimiters.standard);
+  const rateLimit = checkRateLimit(`check-name:${clientId}`, RateLimiters.auth);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }

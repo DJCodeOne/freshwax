@@ -7,10 +7,15 @@ import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateCheck = checkRateLimit(`process-refund:${clientId}`, RateLimiters.adminDelete);
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
+
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
@@ -212,11 +217,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[process-refund] Error:', error);
 
     // Handle specific Stripe errors
-    if (error.type === 'StripeCardError' || error.type === 'StripeInvalidRequestError') {
+    const stripeType = (error as any)?.type;
+    if (stripeType === 'StripeCardError' || stripeType === 'StripeInvalidRequestError') {
       return new Response(JSON.stringify({ error: 'Refund request failed' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

@@ -46,6 +46,19 @@ const nonce = (Astro.locals as any).nonce || '';
         </div>
       </div>
 
+      <!-- Email Verification Banner (hidden by default) -->
+      <div id="verifyBanner" class="verify-banner hidden">
+        <div class="verify-banner-content">
+          <span class="verify-banner-icon">⚠️</span>
+          <span class="verify-banner-text">Please verify your email to unlock all features (purchasing, commenting, live chat).</span>
+          <div class="verify-banner-actions">
+            <a href="/verify-email/" class="verify-banner-btn verify-now">Verify Now</a>
+            <button id="resendVerifyBtn" class="verify-banner-btn verify-resend">Resend Email</button>
+          </div>
+        </div>
+        <button id="dismissVerifyBanner" class="verify-banner-dismiss" title="Dismiss">&times;</button>
+      </div>
+
       <!-- Tab Navigation -->
       <div class="tab-nav">
         <button class="tab-btn active" data-tab="overview">Overview</button>
@@ -494,7 +507,7 @@ const nonce = (Astro.locals as any).nonce || '';
                 </svg>
                 <div>
                   <strong>Delete Account</strong>
-                  <p>This will disable your account and you will be logged out. Your data will be retained for 30 days in case you change your mind. Contact support to restore your account or request permanent deletion.</p>
+                  <p>This will permanently delete your account and all associated personal data. Order records will be anonymised for tax/legal compliance. This action cannot be undone.</p>
                 </div>
               </div>
               <button type="button" id="deleteAccountBtn" class="delete-account-btn">Delete My Account</button>
@@ -540,7 +553,20 @@ const nonce = (Astro.locals as any).nonce || '';
           <div class="modal-content download-modal">
             <h2>Download Your Data</h2>
             <p class="modal-description">Select items to download:</p>
-            
+
+            <!-- GDPR Personal Data Export -->
+            <div class="download-section" style="border:1px solid #374151;border-radius:8px;padding:1rem;margin-bottom:1rem;background:#111827;">
+              <div class="section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Personal Data (GDPR)</span>
+              </div>
+              <p style="color:#9ca3af;font-size:0.8125rem;margin:0.5rem 0;">Download all your personal data in machine-readable JSON format — profile, orders, comments, mixes, and more.</p>
+              <button type="button" id="gdprExportBtn" style="background:#2563eb;color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;font-size:0.8125rem;cursor:pointer;margin-top:0.25rem;">Export Personal Data (JSON)</button>
+              <span id="gdprExportStatus" style="font-size:0.75rem;color:#9ca3af;margin-left:0.5rem;"></span>
+            </div>
+
             <!-- Order History Section -->
             <div class="download-section">
               <div class="section-title">
@@ -616,8 +642,8 @@ const nonce = (Astro.locals as any).nonce || '';
               <ul class="modal-list">
                 <li>Your account will be disabled immediately</li>
                 <li>You will be logged out</li>
-                <li>Your data is kept for 30 days for recovery</li>
-                <li>Contact support to restore or permanently delete</li>
+                <li>All personal data will be permanently deleted</li>
+                <li>Order records will be anonymised (kept for tax/legal)</li>
               </ul>
               <div class="confirm-delete">
                 <label for="confirmDelete">Type <strong>delete</strong> to confirm:</label>
@@ -733,7 +759,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
 <script>
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged, signOut, updateProfile } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  import { getAuth, onAuthStateChanged, signOut, updateProfile, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   // Firestore SDK removed (~200KB) - using /api/user-profile server-side API instead
 
   const firebaseConfig = {
@@ -1396,6 +1422,48 @@ const nonce = (Astro.locals as any).nonce || '';
     } catch (error) {
       console.error('[Dashboard] Error checking partner status:', error);
     }
+  }
+
+  // Show verification banner for unverified users created after cutoff
+  function showVerificationBanner(user, data) {
+    const banner = document.getElementById('verifyBanner');
+    if (!banner) return;
+
+    // Don't show if dismissed this session
+    if (sessionStorage.getItem('verifyBannerDismissed')) return;
+
+    // Only show for users created after 2026-01-06
+    const cutoffDate = new Date('2026-01-06').getTime();
+    const createdAt = data?.createdAt ? new Date(data.createdAt).getTime() : 0;
+    if (!createdAt || createdAt < cutoffDate) return;
+
+    // Check if user is unverified
+    const isVerified = user.emailVerified || data?.emailVerified;
+    if (isVerified) return;
+
+    banner.classList.remove('hidden');
+
+    // Dismiss button
+    document.getElementById('dismissVerifyBanner')?.addEventListener('click', () => {
+      banner.classList.add('hidden');
+      sessionStorage.setItem('verifyBannerDismissed', '1');
+    });
+
+    // Resend verification email button
+    document.getElementById('resendVerifyBtn')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.textContent = 'Sending...';
+      btn.disabled = true;
+      try {
+        await sendEmailVerification(user);
+        btn.textContent = 'Sent!';
+        setTimeout(() => { btn.textContent = 'Resend Email'; btn.disabled = false; }, 3000);
+      } catch (err) {
+        console.error('[Dashboard] Resend verification error:', err);
+        btn.textContent = 'Failed';
+        setTimeout(() => { btn.textContent = 'Resend Email'; btn.disabled = false; }, 3000);
+      }
+    });
   }
 
   // Update UI with user data
@@ -2551,6 +2619,41 @@ const nonce = (Astro.locals as any).nonce || '';
     const musicList = document.getElementById('musicDownloadsList');
     const mixesList = document.getElementById('mixesDownloadsList');
     const mixesSection = document.getElementById('djMixesSection');
+
+    // GDPR personal data export
+    const gdprBtn = document.getElementById('gdprExportBtn');
+    const gdprStatus = document.getElementById('gdprExportStatus');
+    gdprBtn?.addEventListener('click', async () => {
+      if (!currentUser) return;
+      gdprBtn.disabled = true;
+      gdprBtn.textContent = 'Exporting...';
+      if (gdprStatus) gdprStatus.textContent = '';
+      try {
+        const idToken = await currentUser.getIdToken();
+        const res = await fetch('/api/user/export-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: currentUser.uid, idToken })
+        });
+        if (!res.ok) throw new Error('Export failed');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `freshwax-data-export.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        if (gdprStatus) gdprStatus.textContent = 'Downloaded!';
+      } catch (e) {
+        console.error('GDPR export error:', e);
+        if (gdprStatus) gdprStatus.textContent = 'Export failed. Try again.';
+      } finally {
+        gdprBtn.disabled = false;
+        gdprBtn.textContent = 'Export Personal Data (JSON)';
+      }
+    });
     
     if (!downloadBtn || !modal) return;
     
@@ -2985,11 +3088,12 @@ const nonce = (Astro.locals as any).nonce || '';
       cancelBtn.disabled = true;
       
       try {
-        // Call delete account API
+        // Call delete account API (with idToken for GDPR-compliant deletion)
+        const idToken = await currentUser.getIdToken();
         const response = await fetch('/api/delete-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: currentUser.uid })
+          body: JSON.stringify({ userId: currentUser.uid, idToken })
         });
         
         const result = await response.json();
@@ -4040,7 +4144,10 @@ const nonce = (Astro.locals as any).nonce || '';
           
           // Update UI first to show the dashboard
           updateUI(user, customerData);
-          
+
+          // Show verification banner for unverified users (created after 2026-01-06)
+          showVerificationBanner(user, customerData);
+
           // Fetch orders via API
           orders = await fetchOrders(user.uid);
           

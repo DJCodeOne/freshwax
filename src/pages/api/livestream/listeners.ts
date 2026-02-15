@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { initKVCache, kvGet, kvSet, kvDelete } from '../../../lib/kv-cache';
 import { triggerPusher } from '../../../lib/pusher';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -125,6 +126,13 @@ async function removeListener(streamId: string, userId: string): Promise<number>
 
 // GET - Retrieve list of active listeners for a stream
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`listeners:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initKV(locals);
 
   try {
@@ -162,6 +170,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Join, leave, or heartbeat as a listener
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rl = checkRateLimit(`listeners:${clientId}`, RateLimiters.standard);
+  if (!rl.allowed) {
+    return rateLimitResponse(rl.retryAfter!);
+  }
+
   const env = initKV(locals);
 
   try {
