@@ -47,14 +47,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
   }
 
+  // Reject oversized JSON bodies (max 1MB for metadata-only requests)
+  const reqContentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (reqContentLength > 1 * 1024 * 1024) {
+    return new Response(JSON.stringify({ error: 'Request body too large' }), {
+      status: 413, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
-    const { key, contentType, bucket } = await request.json();
+    const { key, contentType, contentLength, bucket } = await request.json();
 
     if (!key || !contentType) {
       return new Response(JSON.stringify({ error: 'key and contentType are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
+    }
+
+    // Validate declared file size if provided (500MB max for releases)
+    const MAX_RELEASE_FILE_SIZE = 500 * 1024 * 1024;
+    if (contentLength && contentLength > MAX_RELEASE_FILE_SIZE) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'File too large. Maximum file size is 500MB.'
+      }), { status: 413, headers: { 'Content-Type': 'application/json' } });
     }
 
     // SECURITY: Validate the key to prevent path traversal and uploading to arbitrary locations

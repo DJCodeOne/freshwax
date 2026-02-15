@@ -38,6 +38,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
 
+  // Reject oversized JSON bodies (max 1MB for metadata-only requests)
+  const reqContentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (reqContentLength > 1 * 1024 * 1024) {
+    return new Response(JSON.stringify({ error: 'Request body too large' }), {
+      status: 413, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   try {
     const { fileName, contentType, fileSize, mixId, artworkFileName, artworkContentType } = await request.json();
 

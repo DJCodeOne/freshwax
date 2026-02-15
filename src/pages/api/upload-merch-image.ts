@@ -38,10 +38,22 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
   });
 }
 
+// Max request size for merch image upload: 50MB
+const MAX_MERCH_IMAGE_REQUEST_SIZE = 50 * 1024 * 1024;
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
+
+  // Early Content-Length check to reject oversized requests before reading body into memory
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (contentLength > MAX_MERCH_IMAGE_REQUEST_SIZE) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Request too large. Maximum 50MB allowed.'
+    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+  }
 
   const env = locals.runtime.env;
   const r2Config = getR2Config(env);

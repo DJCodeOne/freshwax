@@ -1,7 +1,7 @@
 // src/pages/api/wishlist.ts
 // Wishlist management API - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, getDocumentsBatch, setDocument, updateDocument } from '../../lib/firebase-rest';
+import { getDocument, getDocumentsBatch, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
@@ -114,10 +114,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Extract the ID token from Authorization header for Firestore rules
-    const authHeader = request.headers.get('Authorization');
-    const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
-
     const body = await request.json();
     const { releaseId, action } = body;
 
@@ -134,25 +130,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const now = new Date().toISOString();
 
     if (action === 'add') {
-      // Get current wishlist and add new item
+      // Pre-check wishlist size (soft cap - not atomic but prevents runaway growth)
       const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
-
-      if (!currentWishlist.includes(releaseId)) {
-        if (currentWishlist.length >= 500) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Wishlist is full (max 500 items)'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        }
-        currentWishlist.push(releaseId);
+      if (currentWishlist.length >= 500) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'Wishlist is full (max 500 items)'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // Only update wishlist fields (not entire document) to comply with Firestore rules
-      await updateDocument('users', userId, {
-        wishlist: currentWishlist,
+      // Atomic arrayUnion prevents lost items under concurrent writes
+      await arrayUnion('users', userId, 'wishlist', [releaseId], {
         wishlistUpdatedAt: now
-      }, idToken);
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -164,16 +155,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'remove') {
-      // Remove from wishlist
-      const customerDoc = await getDocument('users', userId);
-      const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
-      const newWishlist = currentWishlist.filter((id: string) => id !== releaseId);
-
-      // Only update wishlist fields (not entire document) to comply with Firestore rules
-      await updateDocument('users', userId, {
-        wishlist: newWishlist,
+      // Atomic arrayRemove prevents lost data under concurrent writes
+      await arrayRemove('users', userId, 'wishlist', [releaseId], {
         wishlistUpdatedAt: now
-      }, idToken);
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -185,18 +170,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'toggle') {
-      // Toggle wishlist status
+      // Read to determine current state, then use atomic operation for the mutation
       const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const isInWishlist = currentWishlist.includes(releaseId);
 
       if (isInWishlist) {
-        // Remove from wishlist
-        const newWishlist = currentWishlist.filter((id: string) => id !== releaseId);
-        await updateDocument('users', userId, {
-          wishlist: newWishlist,
+        await arrayRemove('users', userId, 'wishlist', [releaseId], {
           wishlistUpdatedAt: now
-        }, idToken);
+        });
         return new Response(JSON.stringify({
           success: true,
           message: 'Removed from wishlist',
@@ -206,12 +188,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       } else {
-        // Add to wishlist
-        currentWishlist.push(releaseId);
-        await updateDocument('users', userId, {
-          wishlist: currentWishlist,
+        await arrayUnion('users', userId, 'wishlist', [releaseId], {
           wishlistUpdatedAt: now
-        }, idToken);
+        });
         return new Response(JSON.stringify({
           success: true,
           message: 'Added to wishlist',

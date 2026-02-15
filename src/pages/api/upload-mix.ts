@@ -66,12 +66,24 @@ function parseTracklist(tracklist: string): string[] {
     .filter(line => line.length > 0); // Filter again in case stripping left empty lines
 }
 
+// Max total request size for direct upload: 120MB (100MB audio + artwork + form fields)
+const MAX_UPLOAD_MIX_REQUEST_SIZE = 120 * 1024 * 1024;
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: upload operations - 10 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`upload-mix:${clientId}`, RateLimiters.upload);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  // Early Content-Length check to reject oversized requests before reading body into memory
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (contentLength > MAX_UPLOAD_MIX_REQUEST_SIZE) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Request too large. Maximum 120MB for direct upload. For files over 100MB, use the large file upload option.'
+    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
   }
 
   // Initialize Firebase for Cloudflare runtime

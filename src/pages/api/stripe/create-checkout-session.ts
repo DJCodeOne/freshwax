@@ -29,7 +29,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const orderData = await request.json();
-    console.log('[Stripe] Creating checkout session for:', orderData.customer?.email);
 
     // Validate required fields
     if (!orderData.items || orderData.items.length === 0) {
@@ -47,7 +46,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Validate stock availability before allowing checkout
-    console.log('[Stripe] Validating stock availability...');
     const stockCheck = await validateStock(orderData.items);
     if (!stockCheck.available) {
       console.warn('[Stripe] Stock validation failed:', stockCheck.unavailableItems);
@@ -68,7 +66,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Validate prices server-side to prevent manipulation
-    console.log('[Stripe] Validating prices server-side...');
     const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[Stripe]' });
 
     if (validationError) {
@@ -154,8 +151,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stripeFee = (validatedTotal * 0.014) + 0.20;
     const validatedServiceFees = freshWaxFee + stripeFee;
 
-    console.log('[Stripe] Validated totals - Subtotal:', validatedSubtotal, 'Total:', validatedTotal, '(fees deducted from payout:', validatedServiceFees.toFixed(2), ')');
-
     // Build line items for Stripe using VALIDATED prices
     const lineItems: string[][] = [];
     validatedItems.forEach((item: any, index: number) => {
@@ -227,7 +222,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       (metadata as any).items_json = itemsJson;
     } else {
       // Items too large for metadata - store in Firestore pendingCheckouts collection
-      console.log('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
+      console.debug('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
 
       // Firebase already initialized above for price validation
 
@@ -259,7 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const docRef = await addDocument('pendingCheckouts', pendingCheckout);
         (metadata as any).pending_checkout_id = docRef.id;
-        console.log('[Stripe] Stored pending checkout:', docRef.id);
+        console.debug('[Stripe] Stored pending checkout:', docRef.id);
       } catch (pendingErr) {
         console.error('[Stripe] Failed to store pending checkout:', pendingErr);
         // Continue anyway - webhook can fall back to line items
@@ -317,8 +312,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       bodyParams.append('shipping_address_collection[allowed_countries][8]', 'AU');
     }
 
-    console.log('[Stripe] Creating checkout session...');
-
     // Create Stripe checkout session
     const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
@@ -340,7 +333,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const session = await stripeResponse.json();
-    console.log('[Stripe] Session created:', session.id);
 
     return new Response(JSON.stringify({
       success: true,

@@ -41,12 +41,24 @@ function createR2Client(config: ReturnType<typeof getR2Config>) {
   });
 }
 
+// Max request size for avatar upload: 10MB (2MB file limit + form overhead)
+const MAX_AVATAR_REQUEST_SIZE = 10 * 1024 * 1024;
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: upload operations - 10 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`upload-avatar:${clientId}`, RateLimiters.upload);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  // Early Content-Length check to reject oversized requests before reading body into memory
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (contentLength > MAX_AVATAR_REQUEST_SIZE) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Request too large. Maximum avatar file size is 2MB.'
+    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
   }
 
   const env = locals.runtime.env;

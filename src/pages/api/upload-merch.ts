@@ -108,10 +108,24 @@ function sanitizeForPath(str: string): string {
   return str.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase();
 }
 
+// Max request size for merch upload: 50MB (up to 20 images at ~10MB each after form overhead)
+const MAX_MERCH_REQUEST_SIZE = 50 * 1024 * 1024;
+// Max individual image file size: 10MB (before compression)
+const MAX_MERCH_IMAGE_FILE_SIZE = 10 * 1024 * 1024;
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
+
+  // Early Content-Length check to reject oversized requests before reading body into memory
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (contentLength > MAX_MERCH_REQUEST_SIZE) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Request too large. Maximum 50MB allowed for merch uploads.'
+    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+  }
 
   // Rate limit: upload operations - 10 per hour
   const clientId = getClientId(request);
@@ -238,6 +252,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (!imageFile || imageFile.size === 0) {
         continue;
+      }
+
+      // Validate individual image file size
+      if (imageFile.size > MAX_MERCH_IMAGE_FILE_SIZE) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: `Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.`
+        }), { status: 413, headers: { 'Content-Type': 'application/json' } });
       }
 
       log.info('[upload-merch] Processing image', i + 1);

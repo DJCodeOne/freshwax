@@ -140,7 +140,19 @@ async function processReleaseArtwork(
   }
 }
 
+// Max JSON body size for metadata-only requests: 1MB
+const MAX_COMPLETE_UPLOAD_BODY_SIZE = 1 * 1024 * 1024;
+
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Reject oversized JSON bodies before reading into memory
+  const contentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (contentLength > MAX_COMPLETE_UPLOAD_BODY_SIZE) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Request body too large. Maximum 1MB for metadata.'
+    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+  }
+
   try {
     const env = locals.runtime.env;
 

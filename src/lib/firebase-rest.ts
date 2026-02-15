@@ -1395,6 +1395,84 @@ export async function arrayUnion(
   return { success: true };
 }
 
+/**
+ * Atomically removes values from an array field in a Firestore document.
+ * Uses Firestore's removeAllFromArray transform to avoid race conditions.
+ * @param collection - The Firestore collection
+ * @param docId - The document ID
+ * @param fieldName - The array field to remove from
+ * @param values - Array of values to remove
+ * @param additionalFields - Optional additional fields to update on the same document (e.g. updatedAt)
+ */
+export async function arrayRemove(
+  collection: string,
+  docId: string,
+  fieldName: string,
+  values: any[],
+  additionalFields?: Record<string, any>
+): Promise<{ success: boolean }> {
+  const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
+  const apiKey = getEnvVar('FIREBASE_API_KEY');
+
+  if (!projectId || !apiKey) {
+    throw new Error('Firebase configuration missing - ensure initFirebaseEnv() is called');
+  }
+
+  const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
+  const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
+
+  const writes: any[] = [];
+
+  // Write 1: Field transform to atomically remove from the array
+  writes.push({
+    transform: {
+      document: documentPath,
+      fieldTransforms: [{
+        fieldPath: fieldName,
+        removeAllFromArray: {
+          values: values.map(v => toFirestoreValue(v))
+        }
+      }]
+    }
+  });
+
+  // Write 2: If there are additional fields to update (e.g. updatedAt), add a separate update write
+  if (additionalFields && Object.keys(additionalFields).length > 0) {
+    const fields: Record<string, any> = {};
+    for (const [key, value] of Object.entries(additionalFields)) {
+      fields[key] = toFirestoreValue(value);
+    }
+    writes.push({
+      update: {
+        name: documentPath,
+        fields
+      },
+      updateMask: {
+        fieldPaths: Object.keys(additionalFields)
+      }
+    });
+  }
+
+  const arrayRemoveHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
+  const response = await fetch(commitUrl, {
+    method: 'POST',
+    headers: arrayRemoveHeaders,
+    body: JSON.stringify({ writes })
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    log.error('arrayRemove error:', error);
+    throw new Error(`Atomic arrayRemove failed: ${response.status}`);
+  }
+
+  // Invalidate cache for this document
+  cache.delete(`doc:${collection}:${docId}`);
+  clearCache(`query:${collection}`);
+
+  return { success: true };
+}
+
 // Add a document with auto-generated ID
 // idToken is optional - if provided, request is authenticated
 export async function addDocument(

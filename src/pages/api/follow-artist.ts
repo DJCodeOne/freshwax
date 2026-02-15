@@ -1,7 +1,7 @@
 // src/pages/api/follow-artist.ts
 // Follow/unfollow artists API - uses Firebase REST API
 import type { APIRoute } from 'astro';
-import { getDocument, setDocument, updateDocument, queryCollection } from '../../lib/firebase-rest';
+import { getDocument, queryCollection, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
@@ -155,10 +155,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Extract the ID token from Authorization header for Firestore rules
-    const authHeader = request.headers.get('Authorization');
-    const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
-
     const body = await request.json();
     const { artistName, artistId, action } = body;
 
@@ -178,19 +174,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const now = new Date().toISOString();
 
     if (action === 'follow') {
-      // Get current followed artists and add new one
-      const customerDoc = await getDocument('users', userId);
-      const currentFollowed = customerDoc?.followedArtists || [];
-
-      if (!currentFollowed.includes(artistIdentifier)) {
-        currentFollowed.push(artistIdentifier);
-      }
-
-      // Only update followedArtists fields to comply with Firestore rules
-      await updateDocument('users', userId, {
-        followedArtists: currentFollowed,
+      // Atomic arrayUnion prevents lost follows under concurrent writes
+      await arrayUnion('users', userId, 'followedArtists', [artistIdentifier], {
         followedArtistsUpdatedAt: now
-      }, idToken);
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -202,14 +189,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'unfollow') {
-      const customerDoc = await getDocument('users', userId);
-      const currentFollowed = customerDoc?.followedArtists || [];
-      const newFollowed = currentFollowed.filter((a: string) => a !== artistIdentifier);
-
-      await updateDocument('users', userId, {
-        followedArtists: newFollowed,
+      // Atomic arrayRemove prevents lost data under concurrent writes
+      await arrayRemove('users', userId, 'followedArtists', [artistIdentifier], {
         followedArtistsUpdatedAt: now
-      }, idToken);
+      });
 
       return new Response(JSON.stringify({
         success: true,
@@ -221,16 +204,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else if (action === 'toggle') {
+      // Read to determine current state, then use atomic operation for the mutation
       const customerDoc = await getDocument('users', userId);
       const currentFollowed = customerDoc?.followedArtists || [];
       const isFollowing = currentFollowed.includes(artistIdentifier);
 
       if (isFollowing) {
-        const newFollowed = currentFollowed.filter((a: string) => a !== artistIdentifier);
-        await updateDocument('users', userId, {
-          followedArtists: newFollowed,
+        await arrayRemove('users', userId, 'followedArtists', [artistIdentifier], {
           followedArtistsUpdatedAt: now
-        }, idToken);
+        });
         return new Response(JSON.stringify({
           success: true,
           message: 'Unfollowed artist',
@@ -240,12 +222,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       } else {
-        currentFollowed.push(artistIdentifier);
-        // Only update followedArtists fields to comply with Firestore rules
-        await updateDocument('users', userId, {
-          followedArtists: currentFollowed,
+        await arrayUnion('users', userId, 'followedArtists', [artistIdentifier], {
           followedArtistsUpdatedAt: now
-        }, idToken);
+        });
         return new Response(JSON.stringify({
           success: true,
           message: 'Now following artist',

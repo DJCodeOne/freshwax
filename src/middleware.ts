@@ -7,6 +7,24 @@ import { initKVCache } from './lib/kv-cache';
 import { initRateLimitKV, checkRateLimit, getClientId, rateLimitResponse } from './lib/rate-limit';
 import { logServerError } from './lib/error-logger';
 
+// Webhook endpoints that bypass Content-Type validation (they have their own body parsing)
+const CONTENT_TYPE_SKIP = new Set([
+  '/api/stripe/webhook/',
+  '/api/stripe/connect/webhook/',
+  '/api/paypal/webhook/',
+  '/api/livestream/red5-webhook/',
+]);
+
+// Allowed Content-Type prefixes for POST/PUT/PATCH requests
+const ALLOWED_CONTENT_TYPES = [
+  'application/json',
+  'multipart/form-data',
+  'application/x-www-form-urlencoded',
+];
+
+// Max JSON body size: 2 MB
+const MAX_JSON_BODY_SIZE = 2 * 1024 * 1024;
+
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
   'https://freshwax.co.uk',
@@ -196,6 +214,36 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   if (isApiRoute && request.method !== 'OPTIONS') {
     const rlResult = apiRateLimit(pathname, request);
     if (rlResult) return rlResult;
+  }
+
+  // --- Content-Type validation & JSON body size limit for API write requests ---
+  if (
+    isApiRoute &&
+    (request.method === 'POST' || request.method === 'PUT' || request.method === 'PATCH') &&
+    !CONTENT_TYPE_SKIP.has(pathname)
+  ) {
+    const contentLength = request.headers.get('content-length');
+    const hasBody = contentLength !== null && contentLength !== '0';
+
+    if (hasBody) {
+      const ct = (request.headers.get('content-type') || '').toLowerCase();
+      const isAllowedType = ALLOWED_CONTENT_TYPES.some((allowed) => ct.startsWith(allowed));
+
+      if (!isAllowedType) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Unsupported Media Type. Expected application/json, multipart/form-data, or application/x-www-form-urlencoded.' }),
+          { status: 415, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Reject oversized JSON payloads
+      if (ct.startsWith('application/json') && parseInt(contentLength, 10) > MAX_JSON_BODY_SIZE) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Payload Too Large. JSON body must not exceed 2 MB.' }),
+          { status: 413, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
   }
 
   // Handle CORS preflight for API routes

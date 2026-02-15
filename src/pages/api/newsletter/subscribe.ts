@@ -161,17 +161,19 @@ async function sendConfirmationEmail(
   const confirmUrl = `https://freshwax.co.uk/api/newsletter/confirm/?id=${encodeURIComponent(subscriberId)}&token=${encodeURIComponent(token)}`;
   const greeting = name ? `Hi ${name},` : 'Hi there,';
 
-  await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: 'Fresh Wax <noreply@freshwax.co.uk>',
-      to: email,
-      subject: 'Confirm Your Subscription - Fresh Wax',
-      html: `<!DOCTYPE html>
+  let response: Response;
+  try {
+    response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Fresh Wax <noreply@freshwax.co.uk>',
+        to: email,
+        subject: 'Confirm Your Subscription - Fresh Wax',
+        html: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -201,6 +203,17 @@ async function sendConfirmationEmail(
   </div>
 </body>
 </html>`
-    })
-  });
+      })
+    });
+  } catch (fetchError) {
+    console.error('[Newsletter] Resend fetch failed:', fetchError);
+    return; // Subscription was created, email failure is non-blocking
+  }
+
+  if (!response.ok) {
+    let errorBody: string | undefined;
+    try { errorBody = await response.text(); } catch {}
+    console.error('[Newsletter] Resend API error:', response.status, errorBody);
+    return;
+  }
 }

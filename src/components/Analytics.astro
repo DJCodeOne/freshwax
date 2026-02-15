@@ -81,9 +81,6 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
         // Setup tracking helpers
         setupTrackingHelpers();
 
-        if (debug) {
-          console.log('[Analytics] GA4 initialized with consent:', ga4Id);
-        }
       }
 
       function setupTrackingHelpers() {

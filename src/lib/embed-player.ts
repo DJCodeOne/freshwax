@@ -28,6 +28,7 @@ export class EmbedPlayerManager {
   };
   private pendingSeekPosition: number | null = null;
   private hasInitialSeekExecuted: boolean = false;
+  private pendingSeekTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(containerId: string, callbacks: PlayerCallbacks = {}) {
     this.containerId = containerId;
@@ -40,9 +41,6 @@ export class EmbedPlayerManager {
   setPendingSeek(seconds: number): void {
     this.pendingSeekPosition = seconds > 2 ? seconds : null;
     this.hasInitialSeekExecuted = false;
-    if (this.pendingSeekPosition) {
-      // console.log('[EmbedPlayerManager] Pending seek set to:', seconds, 'seconds');
-    }
   }
 
   /**
@@ -119,18 +117,16 @@ export class EmbedPlayerManager {
       events: {
         onReady: () => {
           this.youtubePlayerReady = true;
-          // console.log('[EmbedPlayerManager] YouTube player ready');
           this.callbacks.onReady?.();
           // Fallback: if pending seek is set, execute it after player is ready
           if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
             const seekPos = this.pendingSeekPosition;
-            // console.log('[EmbedPlayerManager] onReady: Will seek to', seekPos, 'seconds after delay');
-            setTimeout(() => {
+            this.pendingSeekTimeout = setTimeout(() => {
+              this.pendingSeekTimeout = null;
               // Double-check we haven't already seeked
               if (!this.hasInitialSeekExecuted && this.youtubePlayer) {
                 this.hasInitialSeekExecuted = true;
                 this.pendingSeekPosition = null;
-                // console.log('[EmbedPlayerManager] onReady fallback: Seeking to', seekPos, 'seconds');
                 this.youtubePlayer.seekTo(seekPos, true);
               }
             }, 500);
@@ -143,7 +139,6 @@ export class EmbedPlayerManager {
           }
           // @ts-ignore
           if (event.data === YT.PlayerState.PAUSED) {
-            // console.log('[EmbedPlayerManager] YouTube player paused');
             this.callbacks.onStateChange?.('paused');
           }
           // @ts-ignore
@@ -153,7 +148,6 @@ export class EmbedPlayerManager {
               this.hasInitialSeekExecuted = true;
               const seekPos = this.pendingSeekPosition;
               this.pendingSeekPosition = null;
-              // console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
               // Small delay to ensure player is truly ready
               setTimeout(() => {
                 this.youtubePlayer?.seekTo(seekPos, true);
@@ -165,7 +159,6 @@ export class EmbedPlayerManager {
             try {
               const videoData = this.youtubePlayer?.getVideoData?.();
               if (videoData?.title) {
-                // console.log('[EmbedPlayerManager] Got YouTube title:', videoData.title);
                 this.callbacks.onTitleUpdate?.(videoData.title);
               }
             } catch (e) {
@@ -183,8 +176,6 @@ export class EmbedPlayerManager {
           const errorCode = event.data;
           const blockedCodes = [100, 101, 150];
           const isBlocked = blockedCodes.includes(errorCode);
-
-          // console.log('[EmbedPlayerManager] YouTube error code:', errorCode, 'isBlocked:', isBlocked);
 
           // Pass structured error info for blocked video handling
           this.callbacks.onError?.(JSON.stringify({
@@ -235,7 +226,6 @@ export class EmbedPlayerManager {
         this.hasInitialSeekExecuted = true;
         const seekPos = this.pendingSeekPosition;
         this.pendingSeekPosition = null;
-        // console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
         try {
           await this.vimeoPlayer?.setCurrentTime(seekPos);
         } catch (e) {
@@ -246,7 +236,6 @@ export class EmbedPlayerManager {
     });
 
     this.vimeoPlayer.on('pause', () => {
-      // console.log('[EmbedPlayerManager] Vimeo player paused');
       this.callbacks.onStateChange?.('paused');
     });
 
@@ -297,14 +286,12 @@ export class EmbedPlayerManager {
         this.hasInitialSeekExecuted = true;
         const seekPos = this.pendingSeekPosition;
         this.pendingSeekPosition = null;
-        // console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
         this.soundcloudWidget?.seekTo(seekPos * 1000); // SoundCloud uses ms
       }
       this.callbacks.onStateChange?.('playing');
     });
 
     this.soundcloudWidget.bind(SC.Widget.Events.PAUSE, () => {
-      // console.log('[EmbedPlayerManager] SoundCloud player paused');
       this.callbacks.onStateChange?.('paused');
     });
   }
@@ -434,7 +421,6 @@ export class EmbedPlayerManager {
 
         // Ignore errors for empty src (happens during cleanup)
         if (!target?.src || target.src === '' || target.src === window.location.href) {
-          // console.log('[EmbedPlayerManager] Ignoring error for empty/cleared src');
           return;
         }
 
@@ -451,14 +437,12 @@ export class EmbedPlayerManager {
           this.hasInitialSeekExecuted = true;
           const seekPos = this.pendingSeekPosition;
           this.pendingSeekPosition = null;
-          // console.log('[EmbedPlayerManager] Executing pending seek to:', seekPos, 'seconds');
           this.directVideo.currentTime = seekPos;
         }
         this.callbacks.onStateChange?.('playing');
       });
 
       this.directVideo.addEventListener('pause', () => {
-        // console.log('[EmbedPlayerManager] Direct media paused');
         this.callbacks.onStateChange?.('paused');
       });
     }
@@ -481,7 +465,6 @@ export class EmbedPlayerManager {
     } catch (error: unknown) {
       // AbortError happens when play() is interrupted by pause() - this is expected during rapid state changes
       if (error instanceof Error && error.name === 'AbortError') {
-        // console.log('[EmbedPlayerManager] Play interrupted (normal during state changes)');
         return;
       }
       console.error('[EmbedPlayerManager] Play error:', error);
@@ -492,7 +475,6 @@ export class EmbedPlayerManager {
    * Pause current media
    */
   async pause(): Promise<void> {
-    // console.log('[EmbedPlayerManager] Pause called, platform:', this.currentPlatform, 'hasPlayer:', !!this.youtubePlayer, 'ready:', this.youtubePlayerReady);
     try {
       if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         // Check if pauseVideo function exists
@@ -500,9 +482,7 @@ export class EmbedPlayerManager {
           const stateBefore = typeof this.youtubePlayer.getPlayerState === 'function'
             ? this.youtubePlayer.getPlayerState()
             : 'unknown';
-          // console.log('[EmbedPlayerManager] YouTube player state before pause:', stateBefore);
           this.youtubePlayer.pauseVideo();
-          // console.log('[EmbedPlayerManager] pauseVideo() called successfully');
         } else {
           console.error('[EmbedPlayerManager] pauseVideo is not a function on youtubePlayer');
         }
@@ -549,7 +529,6 @@ export class EmbedPlayerManager {
   async seekTo(seconds: number): Promise<void> {
     try {
       const position = Math.max(0, seconds);
-      // console.log('[EmbedPlayerManager] Seeking to:', position, 'seconds');
 
       if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
         // YouTube: seekTo(seconds, allowSeekAhead)
@@ -638,7 +617,6 @@ export class EmbedPlayerManager {
 
       // If metadata already loaded
       if (media.readyState >= 1 && !isNaN(media.duration) && isFinite(media.duration) && media.duration > 0) {
-        // console.log('[EmbedPlayerManager] Metadata already loaded, duration:', media.duration);
         resolve(media.duration);
         return;
       }
@@ -660,7 +638,6 @@ export class EmbedPlayerManager {
         media.removeEventListener('durationchange', onDurationChange);
         const duration = media.duration;
         if (!isNaN(duration) && isFinite(duration) && duration > 0) {
-          // console.log('[EmbedPlayerManager] Metadata loaded via event, duration:', duration);
           resolve(duration);
         } else {
           console.warn('[EmbedPlayerManager] Metadata loaded but duration invalid:', duration);
@@ -676,7 +653,6 @@ export class EmbedPlayerManager {
           clearTimeout(timeoutId);
           media.removeEventListener('loadedmetadata', onMetadataLoaded);
           media.removeEventListener('durationchange', onDurationChange);
-          // console.log('[EmbedPlayerManager] Duration available via durationchange:', duration);
           resolve(duration);
         }
       };
@@ -710,6 +686,11 @@ export class EmbedPlayerManager {
    * Clean up current player
    */
   private async cleanup(): Promise<void> {
+    if (this.pendingSeekTimeout) {
+      clearTimeout(this.pendingSeekTimeout);
+      this.pendingSeekTimeout = null;
+    }
+
     if (this.youtubePlayer) {
       try {
         this.youtubePlayer.destroy();

@@ -44,7 +44,19 @@ function parseTracklist(tracklist: string): string[] {
     .filter(line => line.length > 0);
 }
 
+// Max JSON body size for metadata-only requests: 1MB
+const MAX_FINALIZE_BODY_SIZE = 1 * 1024 * 1024;
+
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Reject oversized JSON bodies before reading into memory
+  const reqContentLength = parseInt(request.headers.get('Content-Length') || '0');
+  if (reqContentLength > MAX_FINALIZE_BODY_SIZE) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Request body too large. Maximum 1MB for metadata.'
+    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+  }
+
   // Rate limit: upload operations - 10 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`finalize-mix:${clientId}`, RateLimiters.upload);
