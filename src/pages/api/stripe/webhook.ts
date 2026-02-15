@@ -625,6 +625,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (session.mode === 'subscription') {
         console.log('[Stripe Webhook] 👑 Processing Plus subscription...');
 
+        // IDEMPOTENCY CHECK: Prevent duplicate processing of the same subscription session
+        const metadata = session.metadata || {};
+        const subUserId = metadata.userId;
+        if (subUserId) {
+          try {
+            const userDoc = await getDocument('users', subUserId);
+            const existingSub = userDoc?.subscription;
+            if (existingSub && existingSub.subscriptionId === (session.subscription || session.id)) {
+              console.log('[Stripe Webhook] Subscription already processed for user:', subUserId, 'subscriptionId:', existingSub.subscriptionId);
+              return new Response(JSON.stringify({ received: true, message: 'Subscription already processed' }), {
+                status: 200, headers: { 'Content-Type': 'application/json' }
+              });
+            }
+          } catch (idempotencyErr) {
+            console.error('[Stripe Webhook] Subscription idempotency check failed:', idempotencyErr);
+            // Return 500 so Stripe retries when Firebase is back
+            return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
+              status: 500, headers: { 'Content-Type': 'application/json' }
+            });
+          }
+        }
+
         // SECURITY: Validate payment amount matches Pro price (£10 = 1000 pence)
         const PRO_PRICE_PENCE = 1000; // £10.00
         if (session.payment_status !== 'paid') {
@@ -640,7 +662,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         }
 
-        const metadata = session.metadata || {};
         const userId = metadata.userId;
         const email = session.customer_email || metadata.email;
 
@@ -793,6 +814,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const userId = metadata.userId;
           const email = session.customer_email || metadata.email;
           const promoCode = metadata.promoCode;
+
+          // IDEMPOTENCY CHECK: Prevent duplicate processing of the same promo subscription
+          if (userId) {
+            try {
+              const userDoc = await getDocument('users', userId);
+              const existingSub = userDoc?.subscription;
+              if (existingSub && existingSub.subscriptionId === (session.payment_intent || session.id)) {
+                console.log('[Stripe Webhook] Promo subscription already processed for user:', userId);
+                return new Response(JSON.stringify({ received: true, message: 'Subscription already processed' }), {
+                  status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+              }
+            } catch (idempotencyErr) {
+              console.error('[Stripe Webhook] Promo subscription idempotency check failed:', idempotencyErr);
+              return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
+                status: 500, headers: { 'Content-Type': 'application/json' }
+              });
+            }
+          }
 
           if (userId) {
             // Calculate subscription dates
@@ -1501,6 +1541,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (invoice.billing_reason === 'subscription_cycle' && invoice.subscription) {
         console.log('[Stripe Webhook] 👑 Processing Plus subscription RENEWAL...');
 
+        // IDEMPOTENCY CHECK: Skip if this invoice renewal was already processed
+        // Use the invoice ID as a deduplication key by checking lastRenewalInvoiceId on the user
+        // This prevents duplicate expiry extensions and renewal emails on Stripe retries
+
         // Get subscription details from Stripe
         const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
         if (stripeSecretKey) {
@@ -1527,6 +1571,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
               );
               const userData = await userResponse.json();
 
+              // IDEMPOTENCY CHECK: Skip if this exact invoice renewal was already applied
+              const lastRenewalInvoice = userData.fields?.subscription?.mapValue?.fields?.lastRenewalInvoiceId?.stringValue;
+              if (lastRenewalInvoice === invoice.id) {
+                console.log('[Stripe Webhook] Renewal already processed for invoice:', invoice.id, 'user:', userId);
+                return new Response(JSON.stringify({ received: true, message: 'Renewal already processed' }), {
+                  status: 200, headers: { 'Content-Type': 'application/json' }
+                });
+              }
+
               let baseDate = new Date();
               if (userData.fields?.subscription?.mapValue?.fields?.expiresAt?.stringValue) {
                 const currentExpiry = new Date(userData.fields.subscription.mapValue.fields.expiresAt.stringValue);
@@ -1547,6 +1600,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         tier: { stringValue: 'pro' },
                         expiresAt: { stringValue: newExpiry.toISOString() },
                         lastRenewal: { stringValue: new Date().toISOString() },
+                        lastRenewalInvoiceId: { stringValue: invoice.id },
                         subscriptionId: { stringValue: invoice.subscription },
                         paymentMethod: { stringValue: 'stripe' }
                       }
@@ -1629,6 +1683,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log('[Stripe Webhook] Charge ID:', dispute.charge);
       console.log('[Stripe Webhook] Amount:', dispute.amount / 100, dispute.currency?.toUpperCase());
       console.log('[Stripe Webhook] Reason:', dispute.reason);
+
+      // IDEMPOTENCY CHECK: Skip if dispute already recorded
+      try {
+        const existingDisputes = await queryCollection('disputes', {
+          filters: [{ field: 'stripeDisputeId', op: 'EQUAL', value: dispute.id }],
+          limit: 1
+        });
+        if (existingDisputes && existingDisputes.length > 0) {
+          console.log('[Stripe Webhook] Dispute already recorded, skipping:', dispute.id);
+          return new Response(JSON.stringify({ received: true, message: 'Dispute already processed' }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (idempotencyErr) {
+        console.error('[Stripe Webhook] Dispute idempotency check failed:', idempotencyErr);
+        // Return 500 so Stripe retries when Firebase is back
+        return new Response(JSON.stringify({ error: 'Temporary error checking dispute status' }), {
+          status: 500, headers: { 'Content-Type': 'application/json' }
+        });
+      }
 
       await handleDisputeCreated(dispute, stripeSecretKey);
 

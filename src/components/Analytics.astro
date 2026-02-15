@@ -328,57 +328,78 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
       });
     </script>
 
-    <!-- Web Vitals Tracking (consent-gated via gtag check) -->
+    <!-- Core Web Vitals: LCP, CLS, INP (consent-gated via gtag check) -->
     <script is:inline nonce={nonce}>
-      if (typeof PerformanceObserver !== 'undefined') {
-        try {
-          new PerformanceObserver((entryList) => {
-            for (const entry of entryList.getEntries()) {
-              if (typeof window.gtag === 'function') {
-                window.gtag('event', 'web_vitals', {
-                  'event_category': 'Web Vitals',
-                  'event_label': 'LCP',
-                  'value': Math.round(entry.startTime),
-                  'non_interaction': true
-                });
-              }
-            }
-          }).observe({ type: 'largest-contentful-paint', buffered: true });
+      (function(){
+        if(typeof PerformanceObserver==='undefined')return;
+        function send(name,val){
+          if(typeof window.gtag==='function'){
+            window.gtag('event','web_vitals',{
+              event_category:'Web Vitals',
+              metric_name:name,
+              value:Math.round(val),
+              non_interaction:true
+            });
+          }
+        }
+        var sent={};
+        function sendOnce(name,val){if(!sent[name]){sent[name]=1;send(name,val);}}
+        try{
+          // LCP - report the last entry (largest) on page hide
+          var lcpVal=0;
+          new PerformanceObserver(function(l){
+            var entries=l.getEntries();
+            var last=entries[entries.length-1];
+            if(last) lcpVal=last.renderTime||last.startTime;
+          }).observe({type:'largest-contentful-paint',buffered:true});
 
-          new PerformanceObserver((entryList) => {
-            for (const entry of entryList.getEntries()) {
-              if (typeof window.gtag === 'function') {
-                window.gtag('event', 'web_vitals', {
-                  'event_category': 'Web Vitals',
-                  'event_label': 'FID',
-                  'value': Math.round(entry.processingStart - entry.startTime),
-                  'non_interaction': true
-                });
+          // CLS - session window approach per web.dev spec
+          var clsVal=0,clsSession=0,clsStart=0,clsPrev=0;
+          new PerformanceObserver(function(l){
+            for(var e,i=0;i<l.getEntries().length;i++){
+              e=l.getEntries()[i];
+              if(e.hadRecentInput)continue;
+              if(e.startTime-clsPrev<1000&&e.startTime-clsStart<5000){
+                clsSession+=e.value;
+              }else{
+                clsSession=e.value;
+                clsStart=e.startTime;
               }
+              clsPrev=e.startTime;
+              if(clsSession>clsVal)clsVal=clsSession;
             }
-          }).observe({ type: 'first-input', buffered: true });
+          }).observe({type:'layout-shift',buffered:true});
 
-          let clsValue = 0;
-          new PerformanceObserver((entryList) => {
-            for (const entry of entryList.getEntries()) {
-              if (!entry.hadRecentInput) {
-                clsValue += entry.value;
-              }
+          // INP - track worst interaction (replaces deprecated FID)
+          var inpVal=0,inpEntries=[];
+          new PerformanceObserver(function(l){
+            for(var e,i=0;i<l.getEntries().length;i++){
+              e=l.getEntries()[i];
+              // interactionId groups multi-event interactions
+              if(!e.interactionId)continue;
+              var dur=e.duration;
+              inpEntries.push(dur);
             }
-          }).observe({ type: 'layout-shift', buffered: true });
+          }).observe({type:'event',buffered:true,durationThreshold:16});
 
-          document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden' && typeof window.gtag === 'function') {
-              window.gtag('event', 'web_vitals', {
-                'event_category': 'Web Vitals',
-                'event_label': 'CLS',
-                'value': Math.round(clsValue * 1000),
-                'non_interaction': true
-              });
+          // Send all metrics when page is being unloaded
+          function reportAll(){
+            sendOnce('LCP',lcpVal);
+            sendOnce('CLS',clsVal*1000);
+            // INP = p98 of interactions (approximation: highest minus outlier)
+            if(inpEntries.length){
+              inpEntries.sort(function(a,b){return a-b;});
+              var idx=Math.min(inpEntries.length-1,Math.floor(inpEntries.length*0.98));
+              sendOnce('INP',inpEntries[idx]);
             }
+          }
+          document.addEventListener('visibilitychange',function(){
+            if(document.visibilityState==='hidden')reportAll();
           });
-        } catch (e) {}
-      }
+          // Safari fallback
+          window.addEventListener('pagehide',reportAll);
+        }catch(e){}
+      })();
     </script>
   </>
 )}

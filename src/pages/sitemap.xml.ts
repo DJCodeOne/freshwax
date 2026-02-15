@@ -11,34 +11,35 @@ export const prerender = false;
 const SITE_URL = 'https://freshwax.co.uk';
 
 // Static pages with priority and change frequency based on importance
+// Pages with lastmod: 'dynamic:<source>' will be resolved at request time from fetched data
 const staticPages = [
-  // High priority - main conversion/browse pages
-  { url: '/', priority: '1.0', changefreq: 'daily' },
-  { url: '/releases/', priority: '0.9', changefreq: 'daily' },
-  { url: '/dj-mixes/', priority: '0.9', changefreq: 'daily' },
-  { url: '/dj-mix-chart/', priority: '0.8', changefreq: 'daily' },
-  { url: '/weekly-chart/', priority: '0.8', changefreq: 'weekly' },
-  { url: '/merch/', priority: '0.8', changefreq: 'weekly' },
-  { url: '/crates/', priority: '0.8', changefreq: 'daily' },
-  { url: '/live/', priority: '0.8', changefreq: 'hourly' },
-  { url: '/pre-orders/', priority: '0.8', changefreq: 'weekly' },
-  { url: '/samples/', priority: '0.7', changefreq: 'weekly' },
-  { url: '/blog/', priority: '0.7', changefreq: 'weekly' },
-  { url: '/schedule/', priority: '0.7', changefreq: 'daily' },
+  // High priority - main conversion/browse pages (lastmod derived from latest content)
+  { url: '/', priority: '1.0', changefreq: 'daily', lastmod: 'dynamic:all' },
+  { url: '/releases/', priority: '0.9', changefreq: 'daily', lastmod: 'dynamic:releases' },
+  { url: '/dj-mixes/', priority: '0.9', changefreq: 'daily', lastmod: 'dynamic:djMixes' },
+  { url: '/dj-mix-chart/', priority: '0.8', changefreq: 'daily', lastmod: 'dynamic:djMixes' },
+  { url: '/weekly-chart/', priority: '0.8', changefreq: 'weekly', lastmod: 'dynamic:releases' },
+  { url: '/merch/', priority: '0.8', changefreq: 'weekly', lastmod: 'dynamic:merch' },
+  { url: '/crates/', priority: '0.8', changefreq: 'daily', lastmod: 'dynamic:vinyl' },
+  { url: '/live/', priority: '0.8', changefreq: 'hourly', lastmod: 'dynamic:all' },
+  { url: '/pre-orders/', priority: '0.8', changefreq: 'weekly', lastmod: 'dynamic:releases' },
+  { url: '/samples/', priority: '0.7', changefreq: 'weekly', lastmod: 'dynamic:releases' },
+  { url: '/blog/', priority: '0.7', changefreq: 'weekly', lastmod: 'dynamic:blog' },
+  { url: '/schedule/', priority: '0.7', changefreq: 'daily', lastmod: 'dynamic:all' },
 
-  // Medium priority - informational/conversion
-  { url: '/giftcards/', priority: '0.7', changefreq: 'monthly' },
-  { url: '/upload-mix/', priority: '0.6', changefreq: 'monthly' },
-  { url: '/newsletter/', priority: '0.6', changefreq: 'monthly' },
-  { url: '/about/', priority: '0.6', changefreq: 'monthly' },
-  { url: '/contact/', priority: '0.6', changefreq: 'monthly' },
+  // Medium priority - informational/conversion (fixed lastmod dates)
+  { url: '/giftcards/', priority: '0.7', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/upload-mix/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/newsletter/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/about/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/contact/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
 
-  // Lower priority - policy pages (but important for trust)
-  { url: '/shipping/', priority: '0.5', changefreq: 'monthly' },
-  { url: '/returns/', priority: '0.5', changefreq: 'monthly' },
-  { url: '/privacy/', priority: '0.3', changefreq: 'yearly' },
-  { url: '/terms/', priority: '0.3', changefreq: 'yearly' },
-  { url: '/cookies/', priority: '0.3', changefreq: 'yearly' },
+  // Lower priority - policy pages (fixed lastmod - updated during GDPR work Feb 2026)
+  { url: '/shipping/', priority: '0.5', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/returns/', priority: '0.5', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/privacy/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
+  { url: '/terms/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
+  { url: '/cookies/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
 ];
 
 function escapeXml(str: string): string {
@@ -97,6 +98,44 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   if (merchResult.status === 'fulfilled') merchItems = merchResult.value;
   if (vinylResult.status === 'fulfilled') vinylListings = vinylResult.value;
 
+  // Compute the most recent update date per content source for listing page lastmod
+  function getLatestDate(items: any[], fields: string[]): string {
+    let latest = 0;
+    for (const item of items) {
+      for (const field of fields) {
+        if (item[field]) {
+          const ts = new Date(item[field]).getTime();
+          if (!isNaN(ts) && ts > latest) latest = ts;
+        }
+      }
+    }
+    return latest > 0 ? new Date(latest).toISOString().split('T')[0] : today;
+  }
+
+  // Most recent blog post date
+  const latestBlog = blogPosts.length > 0
+    ? blogPosts.reduce((latest, p) => p.publishedAt > latest ? p.publishedAt : latest, blogPosts[0].publishedAt)
+    : today;
+
+  const dynamicLastmod: Record<string, string> = {
+    releases: getLatestDate(releases, ['updatedAt', 'releaseDate', 'createdAt']),
+    djMixes: getLatestDate(djMixes, ['updatedAt', 'createdAt']),
+    merch: getLatestDate(merchItems, ['updatedAt', 'createdAt']),
+    vinyl: getLatestDate(vinylListings, ['updatedAt', 'createdAt']),
+    blog: latestBlog,
+  };
+  // 'all' = the most recent across every source
+  dynamicLastmod.all = Object.values(dynamicLastmod).reduce((a, b) => a > b ? a : b);
+
+  // Resolve a page's lastmod: dynamic sources are looked up, fixed dates pass through
+  function resolveLastmod(raw: string): string {
+    if (raw.startsWith('dynamic:')) {
+      const key = raw.slice('dynamic:'.length);
+      return dynamicLastmod[key] || today;
+    }
+    return raw; // already a YYYY-MM-DD string
+  }
+
   // Build XML with all extensions
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
@@ -111,7 +150,7 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   for (const page of staticPages) {
     xml += `  <url>
     <loc>${SITE_URL}${page.url}</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${resolveLastmod(page.lastmod)}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>
@@ -304,11 +343,20 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   // ARTIST FILTER PAGES
   // ===========================================
   // Get unique artists from releases for filtered browse pages
-  const artists = [...new Set(releases.map(r => r.artistName || r.artist).filter(Boolean))];
+  // Build a map of artist -> most recent release date for accurate lastmod
+  const artistLatest = new Map<string, string>();
+  for (const r of releases) {
+    const name = r.artistName || r.artist;
+    if (!name) continue;
+    const date = formatDate(r.updatedAt || r.releaseDate || r.createdAt);
+    const existing = artistLatest.get(name);
+    if (!existing || date > existing) artistLatest.set(name, date);
+  }
+  const artists = [...artistLatest.keys()];
   for (const artist of artists.slice(0, 100)) { // Limit to 100 artists
     xml += `  <url>
     <loc>${SITE_URL}/releases/?artist=${encodeURIComponent(artist)}</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${artistLatest.get(artist)}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>

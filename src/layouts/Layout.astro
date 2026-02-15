@@ -21,6 +21,8 @@ interface Props {
   description?: string;
   image?: string;
   imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
   type?: 'website' | 'article' | 'product' | 'music.album' | 'video.other';
   noindex?: boolean;
   canonical?: string;
@@ -113,6 +115,8 @@ const {
   description = 'Independent UK jungle and drum & bass record label and music store. Digital downloads, limited edition vinyl pressings, DJ mixes, and official merchandise.',
   image,
   imageAlt,
+  imageWidth,
+  imageHeight,
   type,
   noindex,
   canonical,
@@ -192,6 +196,8 @@ const nonce = Astro.locals.nonce || '';
       description={description}
       image={image}
       imageAlt={imageAlt}
+      imageWidth={imageWidth}
+      imageHeight={imageHeight}
       type={type}
       noindex={noindex}
       canonical={canonical}
