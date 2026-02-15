@@ -1363,7 +1363,7 @@ const nonce = (Astro.locals as any).nonce || '';
   };
 </script>
 
-<script type="module">
+<script is:inline type="module" nonce={nonce}>
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 

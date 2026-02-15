@@ -39,7 +39,7 @@ const nonce = (Astro.locals as any).nonce || '';
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- HLS.js for video playback -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Configuration - must be set before scripts load -->
   <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }} nonce={nonce}>
@@ -1429,7 +1429,7 @@ const nonce = (Astro.locals as any).nonce || '';
     </div>
   </div>
 
-<script type="module">
+<script is:inline type="module" nonce={nonce}>
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 

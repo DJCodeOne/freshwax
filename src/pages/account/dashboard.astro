@@ -735,7 +735,7 @@ const nonce = (Astro.locals as any).nonce || '';
   </div>
 
   <!-- JSZip for ZIP downloads -->
-  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 
   <Footer />
 </Layout>
@@ -757,7 +757,7 @@ const nonce = (Astro.locals as any).nonce || '';
   });
 </script>
 
-<script>
+<script is:inline type="module" nonce={nonce}>
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut, updateProfile, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   // Firestore SDK removed (~200KB) - using /api/user-profile server-side API instead
