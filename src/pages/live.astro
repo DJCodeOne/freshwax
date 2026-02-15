@@ -2737,7 +2737,7 @@ const nonce = (Astro.locals as any).nonce || '';
   }
 </script>
 
-<script type="module" define:vars={{ firebaseConfig }}>
+<script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
@@ -5599,5 +5599,15 @@ const nonce = (Astro.locals as any).nonce || '';
   })();
 
   // Clean up when navigating away via View Transitions
-  document.addEventListener('astro:before-swap', cleanupAutoHideHeader);
+  document.addEventListener('astro:before-swap', function() {
+    if (window._headerAutoHideAbort) {
+      window._headerAutoHideAbort.abort();
+      window._headerAutoHideAbort = null;
+    }
+    var h = document.getElementById('freshwax-header');
+    if (h) h.classList.remove('header-auto-hide', 'header-visible');
+    document.body.classList.remove('header-hidden');
+    var hz = document.querySelector('.header-hover-zone');
+    if (hz) hz.remove();
+  });
 </script>
