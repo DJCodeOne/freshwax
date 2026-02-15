@@ -3,7 +3,6 @@
 // Copies files from submissions/ to releases/ folder for organization
 
 import type { APIRoute } from 'astro';
-import { AwsClient } from 'aws4fetch';
 import { saSetDocument, saQueryCollection } from '../../lib/firebase-service-account';
 import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
@@ -32,17 +31,6 @@ function getServiceAccountKey(env: any): string | null {
     auth_uri: 'https://accounts.google.com/o/oauth2/auth',
     token_uri: 'https://oauth2.googleapis.com/token'
   });
-}
-
-// Get R2 configuration
-function getR2Config(env: any) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
 }
 
 // Create a clean folder name from artist and release name
@@ -84,6 +72,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.notConfigured('Firebase service account');
   }
 
+  // R2 public domain for CDN URLs
+  const publicDomain = env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk';
+
+  // Access native R2 binding
+  const r2: R2Bucket = (locals as any).runtime.env.R2;
+
   try {
     let { submissionId } = bodyData;
 
@@ -99,67 +93,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Processing: ${submissionId} (root: ${isRootLevel})`);
 
-    // Initialize R2 client
-    const R2_CONFIG = getR2Config(env);
-
-    if (!R2_CONFIG.accessKeyId || !R2_CONFIG.secretAccessKey) {
-      return ApiErrors.notConfigured('R2');
-    }
-
-    const awsClient = new AwsClient({
-      accessKeyId: R2_CONFIG.accessKeyId,
-      secretAccessKey: R2_CONFIG.secretAccessKey,
-      service: 's3',
-      region: 'auto',
-    });
-
-    const endpoint = `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
-    const bucketUrl = `${endpoint}/${R2_CONFIG.bucketName}`;
-
     // Get metadata from submission (handle root vs submissions folder)
     // Try info.json first (new uploader format), then metadata.json (legacy)
     const submissionPrefix = isRootLevel ? submissionId : `submissions/${submissionId}`;
 
-    let metadataResponse: Response | null = null;
+    let metadata: any = null;
 
     // Try info.json first (new uploader format)
     const infoKey = `${submissionPrefix}/info.json`;
-    const infoUrl = `${bucketUrl}/${encodeURIComponent(infoKey)}`;
-    metadataResponse = await awsClient.fetch(infoUrl);
+    const infoObj = await r2.get(infoKey);
 
-    // Fall back to metadata.json if info.json not found
-    if (!metadataResponse.ok) {
+    if (infoObj) {
+      metadata = await infoObj.json();
+    } else {
+      // Fall back to metadata.json
       const metadataKey = `${submissionPrefix}/metadata.json`;
-      const metadataUrl = `${bucketUrl}/${encodeURIComponent(metadataKey)}`;
-      metadataResponse = await awsClient.fetch(metadataUrl);
+      const metaObj = await r2.get(metadataKey);
+      if (metaObj) {
+        metadata = await metaObj.json();
+      }
     }
 
-    if (!metadataResponse.ok) {
+    if (!metadata) {
       log.error(`Metadata not found at ${submissionPrefix}/info.json or metadata.json`);
       return ApiErrors.notFound('Metadata not found - ensure info.json exists in submission folder');
     }
 
-    const metadata = await metadataResponse.json() as any;
     log.info(`Loaded metadata: ${metadata.artistName} - ${metadata.releaseName}`);
 
-    // List all files in submission folder
-    const listUrl = `${bucketUrl}?list-type=2&prefix=${submissionPrefix}/`;
-    const listResponse = await awsClient.fetch(listUrl);
-    const listXml = await listResponse.text();
-
-    // Parse keys and sizes from R2 listing XML
-    const keyMatches = listXml.matchAll(/<Key>([^<]+)<\/Key>/g);
-    const sizeMatches = listXml.matchAll(/<Size>([^<]+)<\/Size>/g);
+    // List all files in submission folder (handle pagination)
     const files: string[] = [];
     const fileSizes: Map<string, number> = new Map();
-    const keys = [...keyMatches];
-    const sizes = [...sizeMatches];
-    for (let idx = 0; idx < keys.length; idx++) {
-      const key = keys[idx][1];
-      files.push(key);
-      if (idx < sizes.length) {
-        fileSizes.set(key, parseInt(sizes[idx][1], 10) || 0);
+
+    let cursor: string | undefined;
+    let truncated = true;
+    while (truncated) {
+      const listResult = await r2.list({ prefix: `${submissionPrefix}/`, cursor });
+      for (const obj of listResult.objects) {
+        files.push(obj.key);
+        fileSizes.set(obj.key, obj.size);
       }
+      truncated = listResult.truncated;
+      cursor = listResult.truncated ? listResult.cursor : undefined;
     }
 
     // Find artwork and audio files
@@ -218,36 +193,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Target folder: ${releaseFolder}`);
 
-    // Use server-side copy to move files from submissions/ to releases/ folder
-    // This avoids loading large files into memory (R2 CopyObject via x-amz-copy-source header)
+    // Use native R2 get+put to copy files from submissions/ to releases/ folder
     const copiedFiles: { oldKey: string; newKey: string }[] = [];
 
-    // Helper function for server-side copy (no memory overhead)
+    // Helper function for server-side copy via get+put (R2 native binding)
     async function copyObject(sourceKey: string, destKey: string): Promise<boolean> {
-      const destUrl = `${bucketUrl}/${encodeURIComponent(destKey)}`;
-      const copySource = `/${R2_CONFIG.bucketName}/${sourceKey}`;
-
-      const copyResponse = await awsClient.fetch(destUrl, {
-        method: 'PUT',
-        headers: {
-          'x-amz-copy-source': copySource
-        }
+      const sourceObj = await r2.get(sourceKey);
+      if (!sourceObj) return false;
+      await r2.put(destKey, sourceObj.body, {
+        httpMetadata: sourceObj.httpMetadata,
+        customMetadata: sourceObj.customMetadata,
       });
-
-      return copyResponse.ok;
+      return true;
     }
 
     // Process artwork: validate, convert to WebP, create cover + thumb
     // Keep original full-res for buyer downloads
-    let artworkUrl = `${R2_CONFIG.publicDomain}/place-holder.webp`;
+    let artworkUrl = `${publicDomain}/place-holder.webp`;
     let thumbUrl = artworkUrl;
     let originalArtworkUrl = '';
     if (artworkKey) {
       // Download full artwork for validation and processing
-      const artworkFetchUrl = `${bucketUrl}/${encodeURIComponent(artworkKey)}`;
-      const artworkResp = await awsClient.fetch(artworkFetchUrl);
-      if (artworkResp.ok) {
-        const artworkBuffer = await artworkResp.arrayBuffer();
+      const artworkObj = await r2.get(artworkKey);
+      if (artworkObj) {
+        const artworkBuffer = await artworkObj.arrayBuffer();
         const artworkBytes = new Uint8Array(artworkBuffer);
 
         // Validate magic bytes
@@ -274,37 +243,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           // Upload cover.webp
           const coverKey = `${releaseFolder}/cover.webp`;
-          const coverUrl = `${bucketUrl}/${encodeURIComponent(coverKey)}`;
-          const coverResp = await awsClient.fetch(coverUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'image/webp' },
-            body: cover.buffer,
+          await r2.put(coverKey, cover.buffer, {
+            httpMetadata: { contentType: 'image/webp' },
           });
-          if (coverResp.ok) {
-            artworkUrl = `${R2_CONFIG.publicDomain}/${coverKey}`;
-            copiedFiles.push({ oldKey: artworkKey, newKey: coverKey });
-            log.info(`Created cover.webp (${(cover.buffer.length / 1024).toFixed(0)}KB)`);
-          }
+          artworkUrl = `${publicDomain}/${coverKey}`;
+          copiedFiles.push({ oldKey: artworkKey, newKey: coverKey });
+          log.info(`Created cover.webp (${(cover.buffer.length / 1024).toFixed(0)}KB)`);
 
           // Upload thumb.webp
           const thumbKey = `${releaseFolder}/thumb.webp`;
-          const thumbUploadUrl = `${bucketUrl}/${encodeURIComponent(thumbKey)}`;
-          const thumbResp = await awsClient.fetch(thumbUploadUrl, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'image/webp' },
-            body: thumb.buffer,
+          await r2.put(thumbKey, thumb.buffer, {
+            httpMetadata: { contentType: 'image/webp' },
           });
-          if (thumbResp.ok) {
-            thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-            copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
-            log.info(`Created thumb.webp (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
-          }
+          thumbUrl = `${publicDomain}/${thumbKey}`;
+          copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
+          log.info(`Created thumb.webp (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
+
           // Copy original full-res artwork for buyer downloads
           const origExt = artworkKey.split('.').pop() || 'jpg';
           const originalKey = `${releaseFolder}/original.${origExt}`;
           const origCopied = await copyObject(artworkKey, originalKey);
           if (origCopied) {
-            originalArtworkUrl = `${R2_CONFIG.publicDomain}/${originalKey}`;
+            originalArtworkUrl = `${publicDomain}/${originalKey}`;
             copiedFiles.push({ oldKey: artworkKey, newKey: originalKey });
             log.info(`Copied original artwork for downloads: ${originalKey}`);
           }
@@ -316,7 +276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const copied = await copyObject(artworkKey, newArtworkKey);
           if (copied) {
             copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
-            artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
+            artworkUrl = `${publicDomain}/${newArtworkKey}`;
             originalArtworkUrl = artworkUrl;
             thumbUrl = artworkUrl;
           }
@@ -338,7 +298,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         newAudioFiles.push({
           oldKey: audioFile,
           newKey: newAudioKey,
-          url: `${R2_CONFIG.publicDomain}/${newAudioKey}`
+          url: `${publicDomain}/${newAudioKey}`
         });
         log.debug(`Copied audio: ${audioFilename}`);
       } else {
@@ -579,12 +539,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Delete submission files after successful processing
     try {
       log.info(`Deleting submission files from ${submissionPrefix}/`);
-      for (const file of files) {
-        const deleteUrl = `${bucketUrl}/${encodeURIComponent(file)}`;
-        await awsClient.fetch(deleteUrl, { method: 'DELETE' });
-        log.debug(`Deleted: ${file}`);
-      }
-      log.info(`Deleted ${files.length} submission files`);
+      const keysToDelete = files.map(f => f);
+      await r2.delete(keysToDelete);
+      log.info(`Deleted ${keysToDelete.length} submission files`);
     } catch (deleteError) {
       log.warn('Failed to delete some submission files:', deleteError);
     }

@@ -12,6 +12,10 @@ database_id = "909e1932-1e20-4081-a37e-32cf355dec8f"
 binding = "CACHE"
 id = "349d1fd00f3d4de9811529cc96fd4d8b"
 
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "freshwax-releases"
+
 [vars]
 PUBLIC_RECAPTCHA_SITE_KEY = "6LfojkEsAAAAAJ9A6y9ZIzO-ZaRqdsWCGfXjU-sm"
 PUBLIC_GIPHY_API_KEY = "p0USqLUVxus8d82HAcPhQ2GqG6SfraYr"

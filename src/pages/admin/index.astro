@@ -7,22 +7,13 @@ import { requireAdminAuth } from '../../lib/admin';
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
-import { AwsClient } from 'aws4fetch';
 import '../../styles/admin/index.css';
-
-// R2 config for pending submissions count
 
 // Server-side admin auth check
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
 const runtimeEnv = (Astro.locals as any)?.runtime?.env;
-const r2Config = {
-  accountId: runtimeEnv?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-  accessKeyId: runtimeEnv?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-  secretAccessKey: runtimeEnv?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-  bucketName: 'freshwax-releases',
-};
 
 // Fetch all data using REST API with error handling
 let ordersData: any[] = [];
@@ -93,44 +84,30 @@ try {
   console.error('[Admin Dashboard] Error fetching data:', error);
 }
 
-// Fetch R2 pending submissions count
+// Fetch R2 pending submissions count using native R2 binding
 try {
-  if (r2Config.accessKeyId && r2Config.secretAccessKey) {
-    const awsClient = new AwsClient({
-      accessKeyId: r2Config.accessKeyId,
-      secretAccessKey: r2Config.secretAccessKey,
-      service: 's3',
-      region: 'auto',
-    });
-    const endpoint = `https://${r2Config.accountId}.r2.cloudflarestorage.com`;
+  const r2: R2Bucket = (Astro.locals as any).runtime.env.R2;
 
-    // Check submissions/ folder
-    const submissionsUrl = `${endpoint}/${r2Config.bucketName}?list-type=2&prefix=submissions/&delimiter=/`;
-    const submissionsResponse = await awsClient.fetch(submissionsUrl);
-    if (submissionsResponse.ok) {
-      const xmlText = await submissionsResponse.text();
-      const prefixMatches = [...xmlText.matchAll(/<Prefix>submissions\/([^<]+)\/<\/Prefix>/g)];
-      const subFolders = prefixMatches.filter(m => !m[1].startsWith('test-')).map(m => `submissions/${m[1]}`);
-      r2SubmissionsCount = subFolders.length;
-      r2PendingFolders.push(...subFolders);
+  // Check submissions/ folder
+  const submissionsResult = await r2.list({ prefix: 'submissions/', delimiter: '/' });
+  for (const prefix of submissionsResult.delimitedPrefixes) {
+    const folderName = prefix.replace(/^submissions\//, '').replace(/\/$/, '');
+    if (!folderName.startsWith('test-')) {
+      r2PendingFolders.push(`submissions/${folderName}`);
+      r2SubmissionsCount++;
     }
+  }
 
-    // Also check root level for submission-like folders (Artist-timestamp pattern)
-    const rootUrl = `${endpoint}/${r2Config.bucketName}?list-type=2&delimiter=/`;
-    const rootResponse = await awsClient.fetch(rootUrl);
-    if (rootResponse.ok) {
-      const rootXml = await rootResponse.text();
-      const rootPrefixes = [...rootXml.matchAll(/<Prefix>([^<]+)\/<\/Prefix>/g)];
-      const submissionPattern = /^[A-Za-z0-9_\-\s]+[-_]\d{13,}$/;
-      for (const match of rootPrefixes) {
-        const folder = match[1];
-        // Skip known non-submission folders
-        if (['submissions', 'releases', 'assets', 'thumbnails', 'audio', 'temp'].includes(folder)) continue;
-        if (submissionPattern.test(folder)) {
-          r2PendingFolders.push(folder);
-          r2SubmissionsCount++;
-        }
-      }
+  // Also check root level for submission-like folders (Artist-timestamp pattern)
+  const rootResult = await r2.list({ delimiter: '/' });
+  const submissionPattern = /^[A-Za-z0-9_\-\s]+[-_]\d{13,}$/;
+  for (const prefix of rootResult.delimitedPrefixes) {
+    const folder = prefix.replace(/\/$/, '');
+    // Skip known non-submission folders
+    if (['submissions', 'releases', 'assets', 'thumbnails', 'audio', 'temp'].includes(folder)) continue;
+    if (submissionPattern.test(folder)) {
+      r2PendingFolders.push(folder);
+      r2SubmissionsCount++;
     }
   }
 } catch (error) {

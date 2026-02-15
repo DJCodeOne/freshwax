@@ -2,18 +2,8 @@
 // Delete a folder and all its contents from R2
 
 import type { APIRoute } from 'astro';
-import { AwsClient } from 'aws4fetch';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-
-function getR2Config(env: any) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: 'freshwax-releases',
-  };
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -33,39 +23,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const env = (locals as any)?.runtime?.env;
-    const R2_CONFIG = getR2Config(env);
-
-    if (!R2_CONFIG.accessKeyId || !R2_CONFIG.secretAccessKey) {
-      return new Response(JSON.stringify({ error: 'R2 not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    const awsClient = new AwsClient({
-      accessKeyId: R2_CONFIG.accessKeyId,
-      secretAccessKey: R2_CONFIG.secretAccessKey,
-      service: 's3',
-      region: 'auto',
-    });
-
-    const endpoint = `https://${R2_CONFIG.accountId}.r2.cloudflarestorage.com`;
+    const r2: R2Bucket = (locals as any).runtime.env.R2;
 
     // List all objects in the folder
     const prefix = folder.endsWith('/') ? folder : `${folder}/`;
-    const listUrl = `${endpoint}/${R2_CONFIG.bucketName}?list-type=2&prefix=${encodeURIComponent(prefix)}`;
-    const listResponse = await awsClient.fetch(listUrl);
+    const keys: string[] = [];
 
-    if (!listResponse.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to list folder contents' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    let cursor: string | undefined;
+    let truncated = true;
+    while (truncated) {
+      const listResult = await r2.list({ prefix, cursor });
+      for (const obj of listResult.objects) {
+        keys.push(obj.key);
+      }
+      truncated = listResult.truncated;
+      cursor = listResult.truncated ? listResult.cursor : undefined;
     }
-
-    const xmlText = await listResponse.text();
-    const keys = [...xmlText.matchAll(/<Key>([^<]+)<\/Key>/g)].map(m => m[1]);
 
     if (keys.length === 0) {
       return new Response(JSON.stringify({ message: 'Folder is empty or does not exist', deleted: 0 }), {
@@ -74,20 +47,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // Delete each object
-    let deleted = 0;
-    for (const key of keys) {
-      const deleteUrl = `${endpoint}/${R2_CONFIG.bucketName}/${encodeURIComponent(key)}`;
-      const deleteResponse = await awsClient.fetch(deleteUrl, { method: 'DELETE' });
-      if (deleteResponse.ok || deleteResponse.status === 204) {
-        deleted++;
-      }
-    }
+    // Batch delete all objects (r2.delete accepts an array of keys)
+    await r2.delete(keys);
 
     return new Response(JSON.stringify({
       success: true,
-      message: `Deleted ${deleted} files from ${folder}`,
-      deleted
+      message: `Deleted ${keys.length} files from ${folder}`,
+      deleted: keys.length
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }

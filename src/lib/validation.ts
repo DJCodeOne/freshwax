@@ -105,12 +105,12 @@ export const moderationSchema = z.object({
 });
 
 // Validation helper
-export function validateRequest<T>(schema: z.ZodSchema<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
+export function validateRequest<T>(schema: z.ZodType<T>, data: unknown): { success: true; data: T } | { success: false; error: string } {
   const result = schema.safeParse(data);
   if (result.success) {
     return { success: true, data: result.data };
   }
-  const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+  const errors = result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
   return { success: false, error: `Validation failed: ${errors}` };
 }
 
