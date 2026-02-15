@@ -66,7 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const userId = url.searchParams.get('userId') || 'JueT7q9eKjQk4iFRg2tXa4ZP8642';
   const confirm = url.searchParams.get('confirm');
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;

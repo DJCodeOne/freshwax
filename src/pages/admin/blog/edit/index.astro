@@ -580,9 +580,9 @@ export const prerender = false;
 
       // Redirect to edit page
       window.location.href = `/admin/blog/edit/${result.postId}/`;
-    } catch (error: any) {
-      console.error('Save failed:', error);
-      alert('Failed to save: ' + error.message);
+    } catch (error: unknown) {
+      console.error('Save failed:', error instanceof Error ? error.message : String(error));
+      alert('Failed to save: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       btn.disabled = false;
       btn.textContent = status === 'published' ? 'Publish' : 'Save Draft';

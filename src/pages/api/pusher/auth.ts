@@ -39,7 +39,7 @@ export const OPTIONS: APIRoute = async ({ request }) => {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
 
     // Get Pusher credentials
     const appId = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
@@ -136,8 +136,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error: any) {
-    console.error('[Pusher Auth] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Pusher Auth] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ error: 'Auth failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -9,7 +9,7 @@ import { getLiveDJMixes, getSettings } from '../lib/firebase-rest';
 import '../styles/dj-mixes.css';
 
 // Get D1 binding from Cloudflare runtime
-const db = (Astro.locals as any).runtime?.env?.DB;
+const db = Astro.locals.runtime.env?.DB;
 
 // Fetch data via REST API
 let mixes: any[] = [];

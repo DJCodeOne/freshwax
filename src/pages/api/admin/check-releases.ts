@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`check-releases:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // SECURITY: Require admin authentication
   initAdminEnv({

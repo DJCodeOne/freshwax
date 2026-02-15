@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  const env = (locals as any).runtime?.env;
+  const env = locals.runtime.env;
 
   // Check for admin key first (for admin upload page) - timing-safe comparison
   const adminKey = getAdminKey(request);

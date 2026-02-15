@@ -244,7 +244,7 @@ function checkRateLimit(userId: string): boolean {
 // GET: Get recent chat messages (initial load only)
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
@@ -304,7 +304,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
@@ -402,7 +402,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE: Delete a message (admin/owner only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,

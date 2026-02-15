@@ -14,7 +14,7 @@ export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const bodyData = await request.json();
 
     // Admin auth required

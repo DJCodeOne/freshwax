@@ -5,6 +5,7 @@ import { saUpdateDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 
 export const prerender = false;
 
@@ -236,6 +237,10 @@ export async function POST({ request, locals }: any) {
       log.error('[update-release] Warning: Could not update master list:', error);
       // Don't fail the whole operation if master list update fails
     }
+
+    // Invalidate KV cache for releases list so all edge workers serve fresh data
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
     log.info('[update-release] Success - Update complete');
 

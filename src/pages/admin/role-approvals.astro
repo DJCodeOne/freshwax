@@ -9,7 +9,7 @@ const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
 const adminUids = getAdminUids();
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 <html lang="en">
 <head>

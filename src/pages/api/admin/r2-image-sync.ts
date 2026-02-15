@@ -191,7 +191,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase env for server-side calls
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebaseEnv({
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY,
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID,

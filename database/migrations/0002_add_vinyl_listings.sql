@@ -1,7 +1,11 @@
--- =============================================
--- VINYL LISTINGS (crates marketplace)
--- D1 Primary, Firebase backup
--- =============================================
+-- Migration 0002: Add vinyl_listings table
+-- Description: Creates the vinyl_listings table for the crates marketplace.
+--   D1 is primary; Firebase is backup.
+--   Stores second-hand vinyl listings with seller info, pricing, condition,
+--   deal metadata, and status tracking.
+-- Applied to: freshwax-db
+-- Idempotent: Yes (CREATE TABLE/INDEX IF NOT EXISTS)
+
 CREATE TABLE IF NOT EXISTS vinyl_listings (
   id TEXT PRIMARY KEY,
   -- Seller info

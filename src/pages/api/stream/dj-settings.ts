@@ -7,7 +7,7 @@ import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/
 export const prerender = false;
 
 // Helper to get admin key from environment
-function getAdminKey(locals: any): string {
+function getAdminKey(locals: App.Locals): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
@@ -74,7 +74,7 @@ async function findUserByEmail(email: string): Promise<{ userId: string; display
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -178,8 +178,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[dj-settings] Error:', error);
+  } catch (error: unknown) {
+    console.error('[dj-settings] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

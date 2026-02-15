@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`list-payouts:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -79,7 +79,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`list-payouts-delete:${clientId}`, RateLimiters.adminDelete);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const url = new URL(request.url);
   const payoutId = url.searchParams.get('id');

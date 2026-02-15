@@ -36,7 +36,7 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
 
 // GET: Get takeover request status
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const url = new URL(request.url);
@@ -132,7 +132,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Create/respond to takeover request
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const data = await request.json();
@@ -317,7 +317,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Cleanup expired requests
 export const DELETE: APIRoute = async ({ locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();

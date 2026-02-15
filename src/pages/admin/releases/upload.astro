@@ -9,7 +9,7 @@ if (authResult) return Astro.redirect('/login');
 export const prerender = false;
 
 const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://localhost:8089';
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 <AdminLayout title="Upload Release" activeNav="releases">
 <div class="card"><div class="card-body">

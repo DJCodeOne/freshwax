@@ -34,7 +34,7 @@ function getReadTime(content: string): string {
   return `${minutes} min read`;
 }
 
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 
 // Truncate excerpt
 function truncateExcerpt(text: string, maxLength: number = 150): string {

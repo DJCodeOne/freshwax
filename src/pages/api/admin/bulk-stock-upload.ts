@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`bulk-stock-upload:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Parse form data
   const formData = await request.formData();
@@ -306,7 +306,7 @@ SKU003,2,subtract`;
   }
 
   // Export current stock as CSV
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {

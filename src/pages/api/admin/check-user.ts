@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const userId = url.searchParams.get('userId');
   const email = url.searchParams.get('email');
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const saQuery = getSaQuery(locals);
 

@@ -5,7 +5,7 @@ import { isAdmin, initAdminEnv } from '../../../lib/admin';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
@@ -86,8 +86,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       error: 'Invalid action' 
     }), { status: 400 });
 
-  } catch (error: any) {
-    console.error('Roles API GET error:', error);
+  } catch (error: unknown) {
+    console.error('Roles API GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'Internal error' 
@@ -96,7 +96,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
@@ -546,8 +546,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       error: 'Invalid action' 
     }), { status: 400 });
 
-  } catch (error: any) {
-    console.error('Roles API POST error:', error);
+  } catch (error: unknown) {
+    console.error('Roles API POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'Internal error' 

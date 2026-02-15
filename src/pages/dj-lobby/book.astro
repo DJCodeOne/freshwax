@@ -7,7 +7,7 @@ export const prerender = false;
 // Prevent caching to ensure fresh script execution
 Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
 Astro.response.headers.set('Pragma', 'no-cache');
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 <html lang="en">
 <head>

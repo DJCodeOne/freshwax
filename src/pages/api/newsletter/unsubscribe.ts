@@ -6,7 +6,7 @@ import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const body = await request.json();

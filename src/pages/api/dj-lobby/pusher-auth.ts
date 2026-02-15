@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
   const PUSHER_SECRET = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
 

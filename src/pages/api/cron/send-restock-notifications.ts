@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
   console.log('[Restock Notifications] ========== CRON JOB STARTED ==========');
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Verify authorization
   const authHeader = request.headers.get('Authorization');
@@ -192,8 +192,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Restock Notifications] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

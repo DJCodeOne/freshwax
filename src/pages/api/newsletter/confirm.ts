@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     });
 
     // Send welcome email
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (RESEND_API_KEY) {

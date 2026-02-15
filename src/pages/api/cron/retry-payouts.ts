@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   console.log('[Retry Payouts] ========== CRON JOB STARTED ==========');
   console.log('[Retry Payouts] Timestamp:', new Date().toISOString());
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Verify cron secret or admin authorization
   const authHeader = request.headers.get('Authorization');

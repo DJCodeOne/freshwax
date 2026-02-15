@@ -32,7 +32,7 @@ try {
 }
 
 const isLive = !!currentStream;
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <!DOCTYPE html>

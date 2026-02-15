@@ -275,7 +275,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const firebaseApiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
   const firebaseProjectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
 
@@ -357,7 +357,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Get idToken from Authorization header
   const authHeader = request.headers.get('Authorization');
@@ -494,7 +494,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Cleanup stale presence entries (cron job endpoint)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const twoMinutesAgo = new Date(Date.now() - 120000);

@@ -257,19 +257,19 @@ export async function processAudioTrack(
     env.RELEASES_BUCKET.put(mp3Key, mp3Data, {
       httpMetadata: {
         contentType: 'audio/mpeg',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: 'public, max-age=31536000, immutable'
       }
     }),
     env.RELEASES_BUCKET.put(wavKey, wavData, {
       httpMetadata: {
         contentType: 'audio/wav',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: 'public, max-age=31536000, immutable'
       }
     }),
     env.RELEASES_BUCKET.put(previewKey, previewData, {
       httpMetadata: {
         contentType: 'audio/mpeg',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: 'public, max-age=31536000, immutable'
       }
     })
   ]);

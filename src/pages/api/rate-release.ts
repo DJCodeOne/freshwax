@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -20,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB;
 
   try {
@@ -155,6 +156,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Invalidate cache for this release so fresh data is served
     clearCache(`releases:${releaseId}`);
     clearCache(`doc:releases:${releaseId}`);
+
+    // Invalidate KV cache for releases list so all edge workers serve fresh data
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
     return new Response(JSON.stringify({
       success: true,

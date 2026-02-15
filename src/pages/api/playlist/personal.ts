@@ -7,8 +7,8 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
-function initEnv(locals: any) {
-  const env = (locals as any).runtime?.env;
+function initEnv(locals: App.Locals) {
+  const env = locals.runtime.env;
 }
 
 // Get user's subscription tier and track limit
@@ -39,7 +39,7 @@ export async function GET({ request, locals }: APIContext) {
 
   try {
     initEnv(locals);
-    const env = (locals as any).runtime?.env;
+    const env = locals.runtime.env;
     const db = env?.DB;
 
     const url = new URL(request.url);
@@ -93,8 +93,8 @@ export async function GET({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[PersonalPlaylist] GET error:', error);
+  } catch (error: unknown) {
+    console.error('[PersonalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -116,7 +116,7 @@ export async function POST({ request, locals }: APIContext) {
 
   try {
     initEnv(locals);
-    const env = (locals as any).runtime?.env;
+    const env = locals.runtime.env;
     const db = env?.DB;
 
     // SECURITY: Verify the requesting user owns this playlist
@@ -216,8 +216,8 @@ export async function POST({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[PersonalPlaylist] POST error:', error);
+  } catch (error: unknown) {
+    console.error('[PersonalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 export const prerender = false;
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 
 }
@@ -21,7 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateLimit.allowed) return rateLimitResponse(rateLimit.retryAfter!);
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const kv = env?.CACHE as KVNamespace | undefined;
 
     const body = await request.json();
@@ -132,8 +132,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       referredBy: referralCard.createdByUserId
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[validate-promo] Error:', error);
+  } catch (error: unknown) {
+    console.error('[validate-promo] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       valid: false,

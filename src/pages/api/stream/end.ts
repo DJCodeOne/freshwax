@@ -11,7 +11,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Rate limit
   const clientId = getClientId(request);
@@ -129,8 +129,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[stream/end] Error:', error);
+  } catch (error: unknown) {
+    console.error('[stream/end] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

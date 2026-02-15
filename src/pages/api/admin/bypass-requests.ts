@@ -10,7 +10,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 export const prerender = false;
 
 // Helper to initialize Firebase and admin env
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   return env;

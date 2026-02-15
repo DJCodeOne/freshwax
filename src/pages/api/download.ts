@@ -13,7 +13,7 @@ const log = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Initialize Firebase for auth verification
 

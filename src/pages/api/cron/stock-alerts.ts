@@ -9,7 +9,7 @@ export const prerender = false;
 const LOW_STOCK_THRESHOLD = 5;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Verify authorization FIRST - always enforce auth before any logic
   const authHeader = request.headers.get('Authorization');
@@ -270,8 +270,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Stock Alerts] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Stock Alerts] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

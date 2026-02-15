@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rat
 import { triggerPusher } from '../../../lib/pusher';
 
 // Helper to initialize Firebase and return env for Pusher
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
   return env;
 }

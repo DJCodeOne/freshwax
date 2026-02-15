@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
   
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get Resend API key
-    const runtime = (locals as any)?.runtime?.env || {};
+    const runtime = locals.runtime.env || {};
     const RESEND_API_KEY = runtime.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {

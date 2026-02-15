@@ -16,7 +16,7 @@ const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 if (!code) {
   return Astro.redirect('/');
 }
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <Layout title="Supplier Portal | Fresh Wax" noindex={true}>

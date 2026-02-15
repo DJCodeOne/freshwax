@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const kv = env?.CACHE as KVNamespace | undefined;
 
     if (!kv) {

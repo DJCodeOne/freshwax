@@ -6,7 +6,7 @@ import Footer from '../../components/Footer.astro';
 import '../../styles/dashboard.css';
 
 export const prerender = false;
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <Layout title="My Account" noindex={true}>

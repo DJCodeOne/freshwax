@@ -3,6 +3,7 @@
 import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest.js';
 import { d1UpsertRelease } from '../../lib/d1-catalog.ts';
 import { requireAdminAuth } from '../../lib/admin.ts';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache.ts';
 
 export const prerender = false;
 
@@ -111,8 +112,10 @@ export async function POST({ request, locals }) {
       }
     }
 
-    // Invalidate cache to ensure fresh data
+    // Invalidate in-memory and KV caches to ensure fresh data across all edge workers
     invalidateReleasesCache();
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
     log.info('[approve-release] Cache invalidated');
 
     log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);

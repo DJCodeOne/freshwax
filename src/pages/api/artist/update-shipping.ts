@@ -37,7 +37,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -139,8 +139,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[Artist] Update shipping error:', error);
+  } catch (error: unknown) {
+    console.error('[Artist] Update shipping error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update shipping rates'

@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {

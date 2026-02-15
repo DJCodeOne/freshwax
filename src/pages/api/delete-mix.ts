@@ -8,6 +8,7 @@ import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/cl
 import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
+import { kvDelete } from '../../lib/kv-cache';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -51,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // Initialize R2/S3 client for Cloudflare runtime
@@ -171,8 +172,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    // Invalidate KV cache for mixes list so all edge workers serve fresh data
+    const MIXES_CACHE = { prefix: 'mixes' };
+    await kvDelete('public:50', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:20', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:100', MIXES_CACHE).catch(() => {});
+
+    return new Response(JSON.stringify({
+      success: true,
       message: 'Mix deleted successfully',
       deletedId: mixId,
       deletedFolder: r2FolderPath

@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`send-verification-email:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
 
   // SECURITY: Require admin authentication
   initAdminEnv({
@@ -182,8 +182,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[SendVerification] Error:', error);
+  } catch (error: unknown) {
+    console.error('[SendVerification] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       error: 'Failed to send verification email'
     }), {

@@ -14,7 +14,7 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 // Get service account config for payouts collection (requires auth)
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const runtimeEnv = Astro.locals.runtime.env;
 const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
 const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -386,7 +386,7 @@ const getStatusClass = (status) => {
 };
 
 export const prerender = false;
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <AdminLayout title="Payments" activeNav="payments" showStats={true} stats={stats}>

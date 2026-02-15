@@ -82,7 +82,7 @@ export async function processArtwork(
   await env.MIXES_BUCKET.put(artworkOutputKey, artwork.buffer, {
     httpMetadata: {
       contentType: 'image/webp',
-      cacheControl: 'public, max-age=31536000'
+      cacheControl: 'public, max-age=31536000, immutable'
     }
   });
 

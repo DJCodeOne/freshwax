@@ -8,7 +8,7 @@ import { parseJsonBody } from '../../lib/api-utils';
 export const prerender = false;
 
 // Helper to initialize services
-function initServices(locals: any) {
+function initServices(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }

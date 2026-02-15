@@ -68,7 +68,7 @@ export function clearOwnershipCache(userId: string) {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // SECURITY: Require authentication and verify userId matches
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);

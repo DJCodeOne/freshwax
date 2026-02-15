@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const url = new URL(request.url);
   const approvedOnly = url.searchParams.get('approved') === 'true';
@@ -87,8 +87,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[list-djs] Error:', error);
+  } catch (error: unknown) {
+    console.error('[list-djs] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: true,
       djs: [],

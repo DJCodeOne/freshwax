@@ -84,8 +84,8 @@ const HYPE_MESSAGES = [
   "FULL SEND! No regrets, only bass!",
 ];
 
-function initEnv(locals: any) {
-  const env = (locals as any).runtime?.env;
+function initEnv(locals: App.Locals) {
+  const env = locals.runtime.env;
   initFirebaseEnv({
     FIREBASE_PROJECT_ID: env?.FIREBASE_PROJECT_ID || env?.PUBLIC_FIREBASE_PROJECT_ID || 'freshwax-store',
     FIREBASE_API_KEY: env?.FIREBASE_API_KEY || env?.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -273,8 +273,8 @@ export async function POST({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Plus Command API] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Plus Command API] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

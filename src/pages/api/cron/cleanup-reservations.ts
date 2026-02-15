@@ -8,7 +8,7 @@ import { cleanupExpiredReservations } from '../../../lib/order-utils';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Verify authorization
   const authHeader = request.headers.get('Authorization');
@@ -35,7 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     return new Response(JSON.stringify({ error: 'Cleanup failed' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

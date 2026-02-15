@@ -9,6 +9,7 @@ import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from 
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { processImageToSquareWebP } from '../../lib/image-processing';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
 
 const log = createLogger('process-release');
@@ -76,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const publicDomain = env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk';
 
   // Access native R2 binding
-  const r2: R2Bucket = (locals as any).runtime.env.R2;
+  const r2: R2Bucket = locals.runtime.env.R2;
 
   try {
     let { submissionId } = bodyData;
@@ -200,8 +201,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     async function copyObject(sourceKey: string, destKey: string): Promise<boolean> {
       const sourceObj = await r2.get(sourceKey);
       if (!sourceObj) return false;
+      const httpMetadata = { ...sourceObj.httpMetadata };
+      if (!httpMetadata.cacheControl) {
+        httpMetadata.cacheControl = 'public, max-age=31536000, immutable';
+      }
       await r2.put(destKey, sourceObj.body, {
-        httpMetadata: sourceObj.httpMetadata,
+        httpMetadata,
         customMetadata: sourceObj.customMetadata,
       });
       return true;
@@ -244,7 +249,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Upload cover.webp
           const coverKey = `${releaseFolder}/cover.webp`;
           await r2.put(coverKey, cover.buffer, {
-            httpMetadata: { contentType: 'image/webp' },
+            httpMetadata: { contentType: 'image/webp', cacheControl: 'public, max-age=31536000, immutable' },
           });
           artworkUrl = `${publicDomain}/${coverKey}`;
           copiedFiles.push({ oldKey: artworkKey, newKey: coverKey });
@@ -253,7 +258,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Upload thumb.webp
           const thumbKey = `${releaseFolder}/thumb.webp`;
           await r2.put(thumbKey, thumb.buffer, {
-            httpMetadata: { contentType: 'image/webp' },
+            httpMetadata: { contentType: 'image/webp', cacheControl: 'public, max-age=31536000, immutable' },
           });
           thumbUrl = `${publicDomain}/${thumbKey}`;
           copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
@@ -533,6 +538,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Invalidate releases cache so new release appears in listings
     invalidateReleasesCache();
     clearCache(`doc:releases:${releaseId}`);
+    // Invalidate KV cache for releases list so all edge workers serve fresh data
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
     log.info(`Created release: ${releaseId}`);
 

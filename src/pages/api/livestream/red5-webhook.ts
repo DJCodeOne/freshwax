@@ -15,7 +15,7 @@ import { getDocument, updateDocument, setDocument, addDocument, queryCollection,
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
 
 // Helper to initialize Firebase and Red5
-function initServices(locals: any) {
+function initServices(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initRed5Env({
     RED5_RTMP_URL: env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL,

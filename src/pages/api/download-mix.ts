@@ -19,7 +19,7 @@ const ALLOWED_DOMAINS = [
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // SECURITY: Require authentication

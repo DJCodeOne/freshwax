@@ -148,10 +148,10 @@ const securityHeaders: Record<string, string> = {
 export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   // Generate CSP nonce for this request
   const nonce = crypto.randomUUID().replace(/-/g, '');
-  (locals as any).nonce = nonce;
+  locals.nonce = nonce;
 
   // Get Cloudflare runtime env and initialize Firebase
-  const runtime = (locals as any).runtime;
+  const runtime = locals.runtime;
   if (runtime?.env) {
     initFirebaseEnv(runtime.env);
     initKVCache(runtime.env);
@@ -216,7 +216,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   } catch (err) {
     // Unhandled exception in API handler
     if (isApiRoute) {
-      const env = (locals as any)?.runtime?.env;
+      const env = locals.runtime?.env;
       logServerError(err, request, env, { endpoint: pathname, statusCode: 500 }).catch(() => {});
     }
     throw err; // Re-throw to let Astro handle the error page
@@ -224,7 +224,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
 
   // Log 5xx API responses
   if (isApiRoute && response.status >= 500) {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime?.env;
     logServerError(new Error(`${response.status} ${response.statusText || 'Server Error'}`), request, env, {
       endpoint: pathname,
       statusCode: response.status,

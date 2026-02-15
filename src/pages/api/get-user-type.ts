@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase and admin config for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 

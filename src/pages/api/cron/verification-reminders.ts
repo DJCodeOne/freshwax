@@ -14,7 +14,7 @@ const MIN_ACCOUNT_AGE_HOURS = 24;
 const MAX_ACCOUNT_AGE_DAYS = 30;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Verify authorization
   const authHeader = request.headers.get('Authorization');
@@ -129,8 +129,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[VerifyReminders] Error:', error);
+  } catch (error: unknown) {
+    console.error('[VerifyReminders] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

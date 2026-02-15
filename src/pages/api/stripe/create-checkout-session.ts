@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   let reservation: { success: boolean; reservationId?: string } | null = null;
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {

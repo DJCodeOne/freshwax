@@ -1612,9 +1612,9 @@ const physicalItems = enrichedItems.filter((item: any) =>
           listItem.textContent = `✓ ${file.label}`;
           listItem.className = 'zip-file-item success';
           successCount++;
-        } catch (err: any) {
-          if (err.name === 'AbortError') throw new Error('Download cancelled');
-          console.error(`Failed to download ${file.label}:`, err);
+        } catch (err: unknown) {
+          if (err instanceof Error && err.name === 'AbortError') throw new Error('Download cancelled');
+          console.error(`Failed to download ${file.label}:`, err instanceof Error ? err.message : String(err));
           listItem.textContent = `✗ ${file.label} - Failed`;
           listItem.className = 'zip-file-item error';
         }
@@ -1669,11 +1669,12 @@ const physicalItems = enrichedItems.filter((item: any) =>
         button.classList.remove('downloading');
       }, 2000);
 
-    } catch (error: any) {
-      console.error('ZIP download error:', error);
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error('ZIP download error:', errorMsg);
 
-      if (error.message !== 'Download cancelled') {
-        progressText.textContent = `Error: ${error.message}`;
+      if (errorMsg !== 'Download cancelled') {
+        progressText.textContent = `Error: ${errorMsg}`;
         progressFill.style.background = '#dc2626';
 
         setTimeout(() => {

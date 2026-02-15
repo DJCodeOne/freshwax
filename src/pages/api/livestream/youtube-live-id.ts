@@ -15,7 +15,7 @@ function getYouTubeApiKey(env: any): string {
 }
 
 // Helper to initialize Firebase
-function initServices(locals: any) {
+function initServices(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -111,7 +111,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 // SECURITY: Requires server key (called by MediaMTX/Red5, not by clients)
 export const POST: APIRoute = async ({ request, locals }) => {
   initServices(locals);
-  const env = (locals as any).runtime?.env;
+  const env = locals.runtime.env;
 
   // SECURITY: Require server key for write operations
   const serverKey = request.headers.get('x-server-key');
@@ -216,7 +216,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // GET - Check current YouTube live status
 export const GET: APIRoute = async ({ locals }) => {
   initServices(locals);
-  const env = (locals as any).runtime?.env;
+  const env = locals.runtime.env;
 
   const apiKey = getYouTubeApiKey(env);
   const youtubeChannelId = env?.YOUTUBE_CHANNEL_ID ||

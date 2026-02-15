@@ -1,6 +1,10 @@
--- Migration: Add missing indexes for commonly queried columns
--- Tables: pending_orders, image_scan_results, sales_ledger, error_logs
--- All indexes use IF NOT EXISTS for safe re-runs
+-- Migration 0003: Add missing indexes for commonly queried columns
+-- Description: Adds indexes to tables that were created inline by application
+--   code (pending_orders, image_scan_results) and supplements existing tables
+--   (sales_ledger, error_logs) with indexes for columns used in queries but
+--   not previously indexed.
+-- Applied to: freshwax-db
+-- Idempotent: Yes (CREATE INDEX IF NOT EXISTS throughout)
 
 -- =============================================
 -- PENDING_ORDERS

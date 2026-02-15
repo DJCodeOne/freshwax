@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
   }
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
 
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;

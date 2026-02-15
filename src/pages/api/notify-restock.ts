@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -70,8 +70,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'You will be notified when this item is back in stock'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[notify-restock] Error:', error);
+  } catch (error: unknown) {
+    console.error('[notify-restock] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       error: 'Failed to subscribe to notifications'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
@@ -90,7 +90,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -111,8 +111,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       message: 'Unsubscribed from notifications'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[notify-restock] DELETE error:', error);
+  } catch (error: unknown) {
+    console.error('[notify-restock] DELETE error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       error: 'Failed to unsubscribe'
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });

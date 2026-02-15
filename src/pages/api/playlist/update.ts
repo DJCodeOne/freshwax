@@ -8,7 +8,7 @@ import type { UserPlaylist } from '../../../lib/types';
 export const prerender = false;
 
 export const PUT: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     // SECURITY: Get userId from verified token, not request body
@@ -80,8 +80,8 @@ export const PUT: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[playlist/update] Error:', error);
+  } catch (error: unknown) {
+    console.error('[playlist/update] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update playlist'

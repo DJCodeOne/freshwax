@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // SECURITY: Verify the requesting user's identity
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

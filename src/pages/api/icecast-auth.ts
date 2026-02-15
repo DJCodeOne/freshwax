@@ -7,8 +7,8 @@ import { queryCollection } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-function initEnv(locals: any) {
-  const env = (locals as any).runtime?.env;
+function initEnv(locals: App.Locals) {
+  const env = locals.runtime.env;
 
 }
 
@@ -113,8 +113,8 @@ export async function POST({ request, locals }: APIContext) {
       }
     });
 
-  } catch (error: any) {
-    console.error('[Icecast Auth] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Icecast Auth] Error:', error instanceof Error ? error.message : String(error));
     return new Response('Authentication error', {
       status: 500,
       headers: { 'Content-Type': 'text/plain' }
@@ -175,7 +175,7 @@ export async function GET({ url, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

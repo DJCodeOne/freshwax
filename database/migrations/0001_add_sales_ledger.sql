@@ -1,5 +1,9 @@
--- Migration: Add sales_ledger table for D1
--- D1 is primary read source, Firebase is backup
+-- Migration 0001: Add sales_ledger table
+-- Description: Creates the sales_ledger table for D1-based financial reporting.
+--   D1 is the primary read source; Firebase is the backup.
+--   Stores immutable order/revenue records with indexes for reporting queries.
+-- Applied to: freshwax-db
+-- Idempotent: Yes (CREATE TABLE/INDEX IF NOT EXISTS)
 
 CREATE TABLE IF NOT EXISTS sales_ledger (
   id TEXT PRIMARY KEY,

@@ -13,7 +13,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 const AVATAR_SIZE = 128;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 
 }
@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebase(locals);
 
   const r2Config = getR2Config(env);
@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         Key: filename,
         Body: processed.buffer,
         ContentType: 'image/webp',
-        CacheControl: 'public, max-age=86400', // 1 day cache
+        CacheControl: 'public, max-age=3600', // 1 hour cache (mutable - avatar can be re-uploaded)
       }));
       console.log(`[upload-avatar] R2 upload successful`);
     } catch (r2Error) {
@@ -210,7 +210,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Remove avatar
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebase(locals);
 
   const r2Config = getR2Config(env);

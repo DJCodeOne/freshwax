@@ -13,7 +13,7 @@ import '../../styles/admin/index.css';
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
-const runtimeEnv = (Astro.locals as any)?.runtime?.env;
+const runtimeEnv = Astro.locals.runtime.env;
 
 // Fetch all data using REST API with error handling
 let ordersData: any[] = [];
@@ -86,7 +86,7 @@ try {
 
 // Fetch R2 pending submissions count using native R2 binding
 try {
-  const r2: R2Bucket = (Astro.locals as any).runtime.env.R2;
+  const r2: R2Bucket = Astro.locals.runtime.env.R2;
 
   // Check submissions/ folder
   const submissionsResult = await r2.list({ prefix: 'submissions/', delimiter: '/' });

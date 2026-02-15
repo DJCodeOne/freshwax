@@ -11,7 +11,7 @@ import { invalidateStatusCache } from '../livestream/status';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Rate limit
   const clientId = getClientId(request);
@@ -254,7 +254,7 @@ async function kickViewers(): Promise<{ success: boolean; message?: string; erro
 }
 
 // Clear cache
-async function clearCache(locals: any): Promise<{ success: boolean; message?: string; error?: string }> {
+async function clearCache(locals: App.Locals): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     // Clear in-memory firebase-rest cache
     clearFirebaseCache();
@@ -281,7 +281,7 @@ async function syncData(): Promise<{ success: boolean; message?: string; error?:
 }
 
 // Database cleanup
-async function cleanupDatabase(locals: any): Promise<{ success: boolean; message?: string; error?: string }> {
+async function cleanupDatabase(locals: App.Locals): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     let cleaned = 0;
 

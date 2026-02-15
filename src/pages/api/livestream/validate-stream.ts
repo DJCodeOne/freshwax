@@ -13,7 +13,7 @@ import { getDocument, updateDocument, queryCollection } from '../../../lib/fireb
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 
 // Helper to initialize services
-function initServices(locals: any) {
+function initServices(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initRed5Env({
     RED5_SIGNING_SECRET: env?.RED5_SIGNING_SECRET || import.meta.env.RED5_SIGNING_SECRET,

@@ -12,7 +12,7 @@ if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 const adminUids = getAdminUids();
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <AdminLayout title="Partner Management" activeNav="partners">

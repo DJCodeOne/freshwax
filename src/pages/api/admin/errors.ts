@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const authResult = await requireAdminAuth(request, locals);
   if (authResult) return authResult;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB;
   if (!db) {
     return new Response(JSON.stringify({ success: false, error: 'D1 not available' }), {
@@ -105,7 +105,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const authResult = await requireAdminAuth(request, locals);
   if (authResult) return authResult;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const url = new URL(request.url);
   const days = parseInt(url.searchParams.get('days') || '7');
 

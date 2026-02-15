@@ -27,7 +27,7 @@ const log = {
 export const prerender = false;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -120,7 +120,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebase(locals);
 
   const r2Config = getR2Config(env);
@@ -269,7 +269,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           Key: imageKey,
           Body: processed.buffer,
           ContentType: 'image/webp',
-          CacheControl: 'public, max-age=31536000',
+          CacheControl: 'public, max-age=31536000, immutable',
         })
       );
 

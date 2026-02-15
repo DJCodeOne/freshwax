@@ -9,7 +9,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -50,7 +50,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -85,8 +85,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[quick-access-key] Error getting key:', error);
+  } catch (error: unknown) {
+    console.error('[quick-access-key] Error getting key:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -101,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const serviceAccountKey = getServiceAccountKey(env);
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
@@ -210,8 +210,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-  } catch (error: any) {
-    console.error('[quick-access-key] Error:', error);
+  } catch (error: unknown) {
+    console.error('[quick-access-key] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

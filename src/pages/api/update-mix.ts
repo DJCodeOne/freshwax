@@ -5,6 +5,7 @@ import { getDocument, updateDocument, verifyRequestUser } from '../../lib/fireba
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { kvDelete } from '../../lib/kv-cache';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: write operations - 30 per minute
@@ -14,7 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     // SECURITY: Verify authentication via token (not cookies which are spoofable)
@@ -141,6 +142,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.error('[update-mix] D1 dual-write failed (non-critical):', d1Error);
       }
     }
+
+    // Invalidate KV cache for mixes list so all edge workers serve fresh data
+    const MIXES_CACHE = { prefix: 'mixes' };
+    await kvDelete('public:50', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:20', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
     return new Response(JSON.stringify({
       success: true,

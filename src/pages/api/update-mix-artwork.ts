@@ -3,8 +3,9 @@
 
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
+import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { processImageToSquareWebP } from '../../lib/image-processing';
+import { kvDelete } from '../../lib/kv-cache';
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -31,7 +32,7 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const R2_CONFIG = getR2Config(env);
   const s3Client = createS3Client(R2_CONFIG);
@@ -183,10 +184,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     await updateDocument('dj-mixes', mixId, updateData);
-    
+
+    // Invalidate in-memory and KV caches so all edge workers serve fresh data
+    invalidateMixesCache();
+    const MIXES_CACHE = { prefix: 'mixes' };
+    await kvDelete('public:50', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:20', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:100', MIXES_CACHE).catch(() => {});
+
     console.log(`[update-mix-artwork] Updated artwork for mix ${mixId}: ${artworkUrl}`);
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: true,
       artworkUrl,
       message: 'Artwork updated successfully'

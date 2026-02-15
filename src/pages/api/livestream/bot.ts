@@ -9,7 +9,7 @@ import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin
 import { triggerPusher } from '../../../lib/pusher';
 
 // Helper to initialize Firebase and return env
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   return env;
@@ -119,8 +119,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[bot] Error:', error);
+  } catch (error: unknown) {
+    console.error('[bot] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to send bot message',
@@ -175,8 +175,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[bot] GET Error:', error);
+  } catch (error: unknown) {
+    console.error('[bot] GET Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to get bot info'

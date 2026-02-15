@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const body = await request.json();
 
     // Admin auth

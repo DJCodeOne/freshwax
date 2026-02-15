@@ -79,7 +79,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Red5 env for HLS URL building
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB; // D1 database binding
 
   initRed5Env({

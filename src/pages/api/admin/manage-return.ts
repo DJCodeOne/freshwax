@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -199,8 +199,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[manage-return] Error:', error);
+  } catch (error: unknown) {
+    console.error('[manage-return] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       error: 'Failed to update return'
     }), {
@@ -216,7 +216,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`manage-return-list:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -263,8 +263,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[manage-return] GET error:', error);
+  } catch (error: unknown) {
+    console.error('[manage-return] GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       error: 'Failed to fetch returns'
     }), {

@@ -63,8 +63,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[youtube/title] Error:', error);
+  } catch (error: unknown) {
+    console.error('[youtube/title] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       title: null,

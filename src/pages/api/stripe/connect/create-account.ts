@@ -17,7 +17,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   }
 
   // Initialize Firebase
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // Get Stripe secret key
@@ -139,8 +139,8 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       message: 'Stripe Connect account created'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[Stripe Connect] Create account error:', error);
+  } catch (error: unknown) {
+    console.error('[Stripe Connect] Create account error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to create Stripe account'

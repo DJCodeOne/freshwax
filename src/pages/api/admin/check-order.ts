@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
   const orderId = url.searchParams.get('id') || 'fRh0piRRDvBtXaOYOIdD';
 
-  const runtimeEnv = (locals as any)?.runtime?.env;
+  const runtimeEnv = locals.runtime.env;
 
   try {
     const order = await getDocument('orders', orderId);

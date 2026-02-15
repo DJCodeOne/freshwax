@@ -7,6 +7,7 @@ import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { kvDelete } from '../../lib/kv-cache';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,7 +15,7 @@ const log = {
   error: (...args: any[]) => console.error(...args),
 };
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -92,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB;
 
   initFirebase(locals);
@@ -249,6 +250,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Invalidate cache for this mix so fresh data is served
     clearCache(`doc:dj-mixes:${mixId}`);
+
+    // Invalidate KV cache for mixes list so all edge workers serve fresh data
+    const MIXES_CACHE = { prefix: 'mixes' };
+    await kvDelete('public:50', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:20', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
     log.info('[add-mix-comment] Comment saved');
 

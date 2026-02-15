@@ -43,14 +43,14 @@ const MAX_STORE_NAME = 50;
 const MAX_LOCATION = 50;
 const MAX_DESCRIPTION = 500;
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env || {};
 }
 
 // GET - Fetch seller settings (D1 first, Firebase fallback)
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
 
   const url = new URL(request.url);
   const userId = url.searchParams.get('userId');
@@ -135,7 +135,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST - Save seller settings (D1 primary, Firebase backup)
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
 
   // Rate limit writes
   const clientId = getClientId(request);

@@ -94,7 +94,7 @@ export const GET: APIRoute = async ({ request, url }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     return new Response(JSON.stringify({
       success: false,
       isLive: false,

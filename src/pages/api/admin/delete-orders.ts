@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`delete-orders:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Parse body first for admin key check
   let body: any;

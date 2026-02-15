@@ -56,7 +56,7 @@ async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbn
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     // Verify authentication
@@ -166,8 +166,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[playlist/add] Error:', error);
+  } catch (error: unknown) {
+    console.error('[playlist/add] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to add to playlist'

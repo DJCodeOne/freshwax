@@ -82,7 +82,7 @@ function generateId(): string {
 }
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
@@ -189,8 +189,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       error: 'Invalid action'
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('Bookings API GET error:', error);
+  } catch (error: unknown) {
+    console.error('Bookings API GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -381,8 +381,8 @@ export const POST: APIRoute = async ({ request }) => {
       error: 'Invalid action'
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('Bookings API POST error:', error);
+  } catch (error: unknown) {
+    console.error('Bookings API POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

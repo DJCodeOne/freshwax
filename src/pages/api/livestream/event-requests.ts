@@ -6,7 +6,7 @@ import type { EventRequest } from '../../../lib/subscription';
 
 export const prerender = false;
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (adminView) {
       // SECURITY: Require admin authentication for viewing all requests
       const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
-      const env = (locals as any)?.runtime?.env;
+      const env = locals.runtime.env;
       initAdminEnv({
         ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
         ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -199,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'approve') {
       // SECURITY: Require admin authentication for approving requests
       const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
-      const env = (locals as any)?.runtime?.env;
+      const env = locals.runtime.env;
       initAdminEnv({
         ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
         ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -246,7 +246,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (action === 'reject') {
       // SECURITY: Require admin authentication for rejecting requests
       const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
-      const env = (locals as any)?.runtime?.env;
+      const env = locals.runtime.env;
       initAdminEnv({
         ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
         ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,

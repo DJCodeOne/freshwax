@@ -6,7 +6,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 export const prerender = false;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for viewing listing admin data
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -70,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   // SECURITY: Require admin authentication for listing management
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,

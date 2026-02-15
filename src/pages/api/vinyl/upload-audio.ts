@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Require authenticated user
   const { userId, error: authError } = await verifyRequestUser(request);

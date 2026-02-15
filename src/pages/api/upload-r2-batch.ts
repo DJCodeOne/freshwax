@@ -36,7 +36,7 @@ function getContentType(filename: string): string {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any)?.runtime?.env || {};
+    const env = locals.runtime.env || {};
 
     // SECURITY: Rate limit uploads
     const clientId = getClientId(request);

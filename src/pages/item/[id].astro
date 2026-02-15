@@ -245,7 +245,7 @@ const releaseDateTime = new Date(releaseDate);
 const now = new Date();
 const isPreOrder = releaseDateTime > now;
 const daysUntilRelease = isPreOrder ? Math.ceil((releaseDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : 0;
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 
 // Convert time string (e.g. "3:45", "1:02:30") to ISO 8601 duration (e.g. "PT3M45S")
 function toIsoDuration(timeStr: string | undefined | null): string | undefined {

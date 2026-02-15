@@ -8,7 +8,7 @@ import { getDocument, updateDocument, verifyRequestUser } from '../../../../../l
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
@@ -128,8 +128,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Stripe Connect account created'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[Stripe Connect] User create account error:', error);
+  } catch (error: unknown) {
+    console.error('[Stripe Connect] User create account error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to create Stripe account'

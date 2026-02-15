@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`update-settings-get:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any).runtime?.env;
+  const env = locals.runtime.env;
 
   // SECURITY: Require admin authentication for viewing all settings
   // This prevents exposing system configuration to unauthorized users

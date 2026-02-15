@@ -11,7 +11,7 @@ import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
 
 // Helper to initialize services
-function initServices(locals: any) {
+function initServices(locals: App.Locals) {
   const env = locals?.runtime?.env;
 
   const firebaseProjectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
@@ -119,7 +119,7 @@ function generateId(): string {
 
 // GET: Fetch schedule
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB; // D1 database binding
 
   try {
@@ -1532,7 +1532,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     invalidateCache();
 
     // Sync cancellation to D1 (non-blocking)
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const db = env?.DB;
     syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt });
 

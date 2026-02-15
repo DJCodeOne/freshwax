@@ -35,7 +35,7 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any).runtime?.env;
+  const env = locals.runtime.env;
 
   // Admin key required
   const adminKey = getAdminKey(request);

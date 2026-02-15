@@ -8,7 +8,7 @@ export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // SECURITY: Requires authentication - user can only use their own credit
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {

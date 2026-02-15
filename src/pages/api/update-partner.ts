@@ -29,7 +29,7 @@ function getServiceAccountKey(env: any): string | null {
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Get runtime env
-    const env = (locals as any)?.runtime?.env || {};
+    const env = locals.runtime.env || {};
 
     // SECURITY: Verify Firebase token instead of trusting cookies
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);

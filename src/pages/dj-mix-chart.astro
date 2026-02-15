@@ -9,7 +9,7 @@ import Footer from '../components/Footer.astro';
 import { getLiveDJMixes } from '../lib/firebase-rest';
 
 // Get D1 binding from Cloudflare runtime
-const db = (Astro.locals as any).runtime?.env?.DB;
+const db = Astro.locals.runtime.env?.DB;
 
 // Rating calculation function
 function calculateRating(mix: any): number {

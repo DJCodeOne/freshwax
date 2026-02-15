@@ -181,9 +181,8 @@ export async function parseJsonBody<T = unknown>(request: Request): Promise<T | 
 /**
  * Get runtime environment from Astro locals
  */
-export function getEnv(locals: unknown): Record<string, string | undefined> {
-  const typedLocals = locals as { runtime?: { env?: Record<string, string> } };
-  return typedLocals?.runtime?.env ?? {};
+export function getEnv(locals: App.Locals): CloudflareEnv {
+  return locals.runtime.env;
 }
 
 // ============================================

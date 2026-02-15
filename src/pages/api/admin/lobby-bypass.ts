@@ -9,13 +9,13 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to get admin key from environment
-function getAdminKey(locals: any): string {
+function getAdminKey(locals: App.Locals): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 
 }
@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require admin authentication for listing bypasses
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,

@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get Resend API key from runtime env or import.meta.env
-    const runtime = (locals as any)?.runtime?.env || {};
+    const runtime = locals.runtime.env || {};
     const RESEND_API_KEY = runtime.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {

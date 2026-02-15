@@ -11,7 +11,7 @@ const log = {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const { mixId } = await request.json();

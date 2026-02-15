@@ -27,7 +27,7 @@ const firebaseConfig = {
 
 // Dynamic thumbnail URL for social sharing - shows current stream or DJ image when live
 const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail/';
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <Layout

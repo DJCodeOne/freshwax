@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
   // Initialize Firebase from runtime env
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -116,8 +116,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[FOLLOW API] Error:', error);
+  } catch (error: unknown) {
+    console.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to get followed artists'
@@ -137,7 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase from runtime env
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
@@ -278,8 +278,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[FOLLOW API] Error:', error);
+  } catch (error: unknown) {
+    console.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update follow status'

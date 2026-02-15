@@ -147,7 +147,7 @@ function moderateMessage(message: string): { allowed: boolean; reason?: string }
 }
 
 // Helper to initialize Firebase and return env
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
   return env;
 }
@@ -672,7 +672,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       })();
 
       // Use Cloudflare's waitUntil to keep worker alive for async bot operations
-      const ctx = (locals as any)?.runtime?.ctx;
+      const ctx = locals.runtime.ctx;
       if (ctx?.waitUntil) {
         ctx.waitUntil(interactiveBotTask);
       }
@@ -691,8 +691,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[livestream/chat] POST Error:', error);
+  } catch (error: unknown) {
+    console.error('[livestream/chat] POST Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to send message',

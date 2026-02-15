@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const r2: R2Bucket = (locals as any).runtime.env.R2;
+    const r2: R2Bucket = locals.runtime.env.R2;
 
     // Determine prefix based on location
     let prefix: string;

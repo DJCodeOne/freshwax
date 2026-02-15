@@ -8,8 +8,8 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 const KV_HISTORY_KEY = 'playlist-history';
 const MAX_HISTORY_SIZE = 500;
 
-function getKV(locals: any): any {
-  return (locals as any).runtime?.env?.CACHE;
+function getKV(locals: App.Locals): KVNamespace | undefined {
+  return locals.runtime.env?.CACHE;
 }
 
 interface HistoryItem {
@@ -61,8 +61,8 @@ export async function GET({ request, locals }: APIContext) {
         'Cache-Control': 'public, max-age=30, s-maxage=60' // History doesn't change often
       }
     });
-  } catch (error: any) {
-    console.error('[PlaylistHistory] GET error:', error);
+  } catch (error: unknown) {
+    console.error('[PlaylistHistory] GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error',
@@ -161,8 +161,8 @@ export async function POST({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[PlaylistHistory] POST error:', error);
+  } catch (error: unknown) {
+    console.error('[PlaylistHistory] POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -250,8 +250,8 @@ export async function DELETE({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[PlaylistHistory] DELETE error:', error);
+  } catch (error: unknown) {
+    console.error('[PlaylistHistory] DELETE error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

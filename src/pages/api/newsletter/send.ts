@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Initialize Resend with Cloudflare runtime env
   const resend = new Resend(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY);

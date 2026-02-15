@@ -50,8 +50,8 @@ export const GET: APIRoute = async ({ request }) => {
         'Cache-Control': 'no-cache'
       }
     });
-  } catch (error: any) {
-    console.error('[check-display-name] Error:', error);
+  } catch (error: unknown) {
+    console.error('[check-display-name] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to check display name'

@@ -8,8 +8,8 @@ import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 
 export const prerender = false;
 
-function initEnv(locals: any) {
-  const env = (locals as any).runtime?.env;
+function initEnv(locals: App.Locals) {
+  const env = locals.runtime.env;
   // Initialize admin config from runtime env
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
@@ -113,8 +113,8 @@ export async function POST({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Skip API] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -198,8 +198,8 @@ export async function GET({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Skip API] Error:', error);
+  } catch (error: unknown) {
+    console.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

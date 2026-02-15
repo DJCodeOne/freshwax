@@ -26,7 +26,7 @@ const log = {
   error: (...args: any[]) => console.error('[subscription]', ...args),
 };
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
   // Initialize admin config from runtime env
   initAdminEnv(env);
@@ -298,7 +298,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // SECURITY: Verify payment is real and completed before activating Pro
-      const env = (locals as any)?.runtime?.env;
+      const env = locals.runtime.env;
       const method = paymentMethod || 'stripe';
 
       if (method === 'stripe') {

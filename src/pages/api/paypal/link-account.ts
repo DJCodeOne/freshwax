@@ -8,7 +8,7 @@ import { saUpdateDocument } from '../../../lib/firebase-service-account';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -164,7 +164,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // SECURITY: Verify user authentication via Firebase token

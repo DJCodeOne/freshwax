@@ -46,7 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
 
     // Get PayPal credentials
     const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;

@@ -62,7 +62,7 @@ function validateListing(data: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env || {};
 }
 

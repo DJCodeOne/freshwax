@@ -73,7 +73,7 @@ const formatDuration = (seconds: number) => {
 };
 
 const mixDuration = getDuration(mix);
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <AdminLayout title={`Edit: ${mix.title || 'Untitled Mix'}`} activeNav="mixes">

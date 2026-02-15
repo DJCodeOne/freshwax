@@ -11,13 +11,13 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to get admin key from environment
-function getAdminKey(locals: any): string {
+function getAdminKey(locals: App.Locals): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 
 }
@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require admin authentication for listing moderation data
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -87,8 +87,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[dj-moderation] Error listing:', error);
+  } catch (error: unknown) {
+    console.error('[dj-moderation] Error listing:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -361,8 +361,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-  } catch (error: any) {
-    console.error('[dj-moderation] Error:', error);
+  } catch (error: unknown) {
+    console.error('[dj-moderation] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

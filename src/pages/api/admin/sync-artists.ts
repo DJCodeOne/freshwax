@@ -14,7 +14,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`sync-artists:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
   const saQuery = getSaQuery(locals);
 
   try {

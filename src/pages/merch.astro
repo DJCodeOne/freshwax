@@ -14,7 +14,7 @@ export const prerender = false;
 // Note: We pass skipCache=true below to always get fresh data from D1
 
 // Get D1 binding for optimized reads
-const db = (Astro.locals as any).runtime?.env?.DB;
+const db = Astro.locals.runtime.env?.DB;
 
 // Fetch merch using D1 first, Firebase fallback
 let products: any[] = [];
@@ -133,7 +133,7 @@ const categoryGroupsArray = Object.entries(categoryGroups).map(([slug, group]) =
   label: group.label,
   names: Array.from(group.names).sort()
 })).sort((a, b) => a.label.localeCompare(b.label));
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 
 // Preload first product image for faster LCP
 const firstProductImage = products[0]?.imageUrl;

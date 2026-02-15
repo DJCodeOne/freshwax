@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const runtime = (locals as any).runtime;
+  const runtime = locals.runtime;
   if (runtime?.env) {
     initFirebaseEnv(runtime.env);
   }

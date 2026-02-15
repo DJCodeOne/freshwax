@@ -21,7 +21,7 @@ const firebaseConfig = {
   messagingSenderId: "675435782973",
   appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
 };
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 <!DOCTYPE html>
 <html lang="en">

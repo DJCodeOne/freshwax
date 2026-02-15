@@ -24,8 +24,8 @@ const firebaseConfig = {
 // HLS URL for preview player - always use production stream URL
 const hlsBaseUrl = 'https://stream.freshwax.co.uk';
 
-const runtime = (Astro.locals as any).runtime;
-const nonce = (Astro.locals as any).nonce || '';
+const runtime = Astro.locals.runtime;
+const nonce = Astro.locals.nonce || '';
 ---
 
 <!DOCTYPE html>

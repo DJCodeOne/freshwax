@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // Get D1 database from Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB;
 
   if (!db) {

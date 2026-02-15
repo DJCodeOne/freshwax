@@ -135,7 +135,7 @@ const {
 const GA4_ID = 'G-MHKVCNPYBQ';
 const GTM_ID = ''; // Optional: Google Tag Manager ID
 const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <!doctype html>

@@ -90,7 +90,7 @@ export async function processProductImages(
     await env.MERCH_BUCKET.put(outputKey, processed.buffer, {
       httpMetadata: {
         contentType: 'image/webp',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: 'public, max-age=31536000, immutable'
       }
     });
 
@@ -108,7 +108,7 @@ export async function processProductImages(
       await env.MERCH_BUCKET.put(thumbKey, thumb.buffer, {
         httpMetadata: {
           contentType: 'image/webp',
-          cacheControl: 'public, max-age=31536000'
+          cacheControl: 'public, max-age=31536000, immutable'
         }
       });
       thumbnail = `${env.R2_PUBLIC_DOMAIN}/${thumbKey}`;

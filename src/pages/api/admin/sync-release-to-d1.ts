@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`sync-release-to-d1:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -129,8 +129,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Clear in-memory and KV caches so fresh data is served immediately
     invalidateReleasesCache();
-    await kvDelete('live-releases:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
     return new Response(JSON.stringify({
       success: true,

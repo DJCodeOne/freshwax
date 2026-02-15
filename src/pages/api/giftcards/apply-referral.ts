@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
@@ -116,7 +116,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(postRateLimit.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     // Verify the user is authenticated

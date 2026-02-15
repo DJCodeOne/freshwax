@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const type = url.searchParams.get('type') || 'orders';
   const period = parseInt(url.searchParams.get('period') || '30', 10);
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // SECURITY: Use timing-safe admin auth via headers (not query params to avoid logging)
   const authError = await requireAdminAuth(request, locals);
@@ -259,8 +259,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error: any) {
-    console.error('[export-analytics] Error:', error);
+  } catch (error: unknown) {
+    console.error('[export-analytics] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       error: 'Export failed'
     }), {

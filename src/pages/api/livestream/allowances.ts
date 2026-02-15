@@ -6,7 +6,7 @@ import { getDocument, updateDocument, setDocument, deleteDocument, queryCollecti
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -18,7 +18,7 @@ export const MAX_BOOKING_DAYS_AHEAD = 30; // 1 month
 // GET: Fetch all allowances or check specific DJ's allowance
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -86,7 +86,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST: Create/update DJ allowance
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const postEnv = (locals as any)?.runtime?.env;
+  const postEnv = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: postEnv?.ADMIN_UIDS, ADMIN_EMAILS: postEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();
@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE: Remove DJ allowance (revert to defaults)
 export const DELETE: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const delEnv = (locals as any)?.runtime?.env;
+  const delEnv = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: delEnv?.ADMIN_UIDS, ADMIN_EMAILS: delEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();

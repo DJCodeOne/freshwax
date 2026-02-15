@@ -7,6 +7,7 @@ import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } fro
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { processImageToSquareWebP } from '../../lib/image-processing';
+import { kvDelete } from '../../lib/kv-cache';
 
 export const prerender = false;
 
@@ -74,7 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // Initialize R2/S3 client for Cloudflare runtime
@@ -354,8 +355,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Clear cache so new mix appears immediately
+    // Clear in-memory cache so new mix appears immediately
     invalidateMixesCache();
+
+    // Invalidate KV cache for mixes list so all edge workers serve fresh data
+    const MIXES_CACHE = { prefix: 'mixes' };
+    await kvDelete('public:50', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:20', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
     log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 

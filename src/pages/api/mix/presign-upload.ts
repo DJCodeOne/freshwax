@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Require authenticated user (all registered users can upload mixes)
   const { userId, error: authError } = await verifyRequestUser(request);

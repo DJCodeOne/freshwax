@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const r2: R2Bucket = (locals as any).runtime.env.R2;
+    const r2: R2Bucket = locals.runtime.env.R2;
     const submissions: string[] = [];
 
     // Check submissions/ folder first

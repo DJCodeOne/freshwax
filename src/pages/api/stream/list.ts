@@ -65,8 +65,8 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[stream/list] Error:', error);
+  } catch (error: unknown) {
+    console.error('[stream/list] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: true,
       streams: [],

@@ -8,7 +8,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 export const prerender = false;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 

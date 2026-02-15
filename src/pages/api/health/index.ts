@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
   const startTime = Date.now();
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const checks: Record<string, { ok: boolean; ms?: number }> = {};
 

@@ -12,7 +12,7 @@ const MAX_MESSAGES_PER_BATCH = 500; // Max messages to delete in one operation
 const MAX_PENDING_JOBS = 50; // Max pending cleanup jobs to process at once
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -97,8 +97,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Chat cleanup error:', error);
+  } catch (error: unknown) {
+    console.error('Chat cleanup error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -162,7 +162,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           });
 
           return { streamId: job.streamId, success: true, deleted };
-        } catch (error: any) {
+        } catch (error: unknown) {
           await updateDocument('chatCleanupSchedule', job.id, {
             status: 'failed',
             error: 'Internal error'
@@ -180,8 +180,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Chat cleanup check error:', error);
+  } catch (error: unknown) {
+    console.error('Chat cleanup check error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

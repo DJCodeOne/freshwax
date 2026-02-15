@@ -109,8 +109,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[youtube/duration] Error:', error);
+  } catch (error: unknown) {
+    console.error('[youtube/duration] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch duration',

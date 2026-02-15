@@ -65,8 +65,8 @@ export const GET: APIRoute = async ({ request }) => {
       }
     });
 
-  } catch (error: any) {
-    console.error('[get-mix-chart] Error:', error);
+  } catch (error: unknown) {
+    console.error('[get-mix-chart] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to get chart'

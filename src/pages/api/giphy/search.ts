@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // Get API key from server environment (never exposed to client)
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const apiKey = env?.GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY;
 
   if (!apiKey) {

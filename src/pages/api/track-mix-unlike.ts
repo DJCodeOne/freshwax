@@ -11,7 +11,7 @@ const log = {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const db = env?.DB; // D1 database binding
 
   try {

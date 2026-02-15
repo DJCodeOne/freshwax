@@ -7,13 +7,13 @@ import { validateReferralCode } from '../../lib/referral-codes';
 
 export const prerender = false;
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     initFirebase(locals);
 
     // Verify user authentication

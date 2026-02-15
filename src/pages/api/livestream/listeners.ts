@@ -12,7 +12,7 @@ export const prerender = false;
 const LISTENER_TTL = 120; // 2 minutes - listeners expire if no heartbeat
 
 // Helper to initialize KV
-function initKV(locals: any) {
+function initKV(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initKVCache(env);
   return env;

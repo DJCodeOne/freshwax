@@ -5,7 +5,7 @@
 interface Props {
   nonce?: string;
 }
-const nonce = (Astro.locals as any).nonce || Astro.props.nonce || '';
+const nonce = Astro.locals.nonce || Astro.props.nonce || '';
 
 // Firebase config for client-side auth
 const firebaseConfig = {

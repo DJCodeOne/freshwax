@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   const r2Config = getR2Config(env);
   const s3Client = createS3Client(r2Config);
 
@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         Key: key,
         Body: processedBuffer,
         ContentType: 'image/webp',
-        CacheControl: 'public, max-age=31536000', // 1 year cache
+        CacheControl: 'public, max-age=31536000, immutable', // 1 year cache, immutable
       })
     );
 

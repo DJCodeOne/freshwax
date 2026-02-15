@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
     }
 
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     console.log('[verify-session] Environment check:');

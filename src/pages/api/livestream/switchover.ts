@@ -6,14 +6,14 @@ import { getDocument, updateDocument, setDocument, deleteDocument, queryCollecti
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
 // POST: Check and perform auto-switchover (admin/system only)
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -181,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // GET: Get current queue and live status (admin only)
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

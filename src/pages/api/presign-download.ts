@@ -55,7 +55,7 @@ function extractKeyFromUrl(url: string, publicUrl: string): string | null {
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
 
     // Rate limit: download operations - 60 per minute per user
     const clientId = getClientId(request);

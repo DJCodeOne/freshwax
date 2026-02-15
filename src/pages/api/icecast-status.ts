@@ -12,7 +12,7 @@ export async function GET({ request, locals }: APIContext) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const runtime = (locals as any).runtime;
+  const runtime = locals.runtime;
   const icecastUrl = runtime?.env?.ICECAST_STATUS_URL || 'https://icecast.freshwax.co.uk/status-json.xsl';
 
   try {

@@ -65,7 +65,7 @@ const seoDescription = post?.excerpt || (post?.content ? generateExcerpt(post.co
 const seoImage = post?.featuredImage || '/og-image.webp';
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <Layout

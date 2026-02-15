@@ -88,13 +88,13 @@ export async function processArtwork(
     env.RELEASES_BUCKET.put(coverKey, cover.buffer, {
       httpMetadata: {
         contentType: 'image/webp',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: 'public, max-age=31536000, immutable'
       }
     }),
     env.RELEASES_BUCKET.put(thumbKey, thumb.buffer, {
       httpMetadata: {
         contentType: 'image/webp',
-        cacheControl: 'public, max-age=31536000'
+        cacheControl: 'public, max-age=31536000, immutable'
       }
     })
   ]);

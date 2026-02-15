@@ -36,14 +36,14 @@ function getServiceAccountKey(env: any): string | null {
   return serviceAccountKey || null;
 }
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env || {};
 }
 
 // GET - Fetch seller's orders
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
 
   const url = new URL(request.url);
   const sellerId = url.searchParams.get('sellerId');
@@ -125,7 +125,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // POST - Update order status (mark as shipped, etc.)
 export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
 
   // Rate limit writes
   const clientId = getClientId(request);

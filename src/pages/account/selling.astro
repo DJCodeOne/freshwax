@@ -12,7 +12,7 @@ export const prerender = false;
 const url = new URL(Astro.request.url);
 const stripeConnected = url.searchParams.get('stripe_connected') === 'true';
 const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <Layout title="Selling Settings" noindex={true}>

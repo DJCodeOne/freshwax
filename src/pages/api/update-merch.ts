@@ -22,7 +22,7 @@ export const prerender = false;
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -61,7 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebase(locals);
 
   // Initialize R2/S3 client for Cloudflare runtime

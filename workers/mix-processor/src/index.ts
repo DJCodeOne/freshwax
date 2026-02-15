@@ -106,7 +106,7 @@ async function copyAudioFile(
   await env.MIXES_BUCKET.put(outputKey, audioBuffer, {
     httpMetadata: {
       contentType,
-      cacheControl: 'public, max-age=31536000'
+      cacheControl: 'public, max-age=31536000, immutable'
     }
   });
 

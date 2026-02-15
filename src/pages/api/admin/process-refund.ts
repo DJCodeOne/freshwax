@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;

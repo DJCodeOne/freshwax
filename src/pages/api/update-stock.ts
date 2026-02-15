@@ -16,7 +16,7 @@ const log = {
 export const prerender = false;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -69,7 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initFirebase(locals);
 
   // Get service account credentials for writes

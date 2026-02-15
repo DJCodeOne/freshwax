@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
 
   // Initialize Firebase
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // Get Stripe keys

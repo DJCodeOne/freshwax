@@ -12,7 +12,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
-const runtime = (Astro.locals as any)?.runtime;
+const runtime = Astro.locals.runtime;
 const db = runtime?.env?.DB;
 
 // Fetch all DJ mixes - prefer D1, fallback to Firebase

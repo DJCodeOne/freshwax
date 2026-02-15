@@ -142,7 +142,7 @@ async function processReleaseArtwork(
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any).runtime?.env;
+    const env = locals.runtime.env;
 
     const body = await request.json();
     const {

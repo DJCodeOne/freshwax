@@ -7,7 +7,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 export const prerender = false;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
@@ -41,8 +41,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: true, sources }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Error fetching relay sources:', error);
+  } catch (error: unknown) {
+    console.error('Error fetching relay sources:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -94,8 +94,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Error creating relay source:', error);
+  } catch (error: unknown) {
+    console.error('Error creating relay source:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -128,8 +128,8 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Error updating relay source:', error);
+  } catch (error: unknown) {
+    console.error('Error updating relay source:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -158,8 +158,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Error deleting relay source:', error);
+  } catch (error: unknown) {
+    console.error('Error deleting relay source:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

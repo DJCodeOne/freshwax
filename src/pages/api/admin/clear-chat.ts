@@ -20,7 +20,7 @@ const MAX_MESSAGES_PER_REQUEST = 500;
 const MAX_MESSAGES_PER_HOUR = 2000;
 const DELAY_BETWEEN_DELETES_MS = 10; // Small delay to prevent overwhelming Firestore
 
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -131,8 +131,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Clear chat error:', error);
+  } catch (error: unknown) {
+    console.error('Clear chat error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to clear chat'
@@ -175,8 +175,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('Get chat count error:', error);
+  } catch (error: unknown) {
+    console.error('Get chat count error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to get chat count'

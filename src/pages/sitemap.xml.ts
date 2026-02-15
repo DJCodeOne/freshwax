@@ -68,7 +68,7 @@ function formatDate(date: any): string {
   }
 }
 
-export const GET = async ({ locals }: { locals: any }) => {
+export const GET = async ({ locals }: { locals: App.Locals }) => {
   const today = new Date().toISOString().split('T')[0];
 
   // Get D1 binding for optimized reads

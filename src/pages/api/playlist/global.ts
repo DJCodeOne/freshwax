@@ -34,8 +34,8 @@ interface GlobalPlaylist {
 }
 
 // Helper to get KV binding
-function getKV(locals: any): any {
-  return (locals as any).runtime?.env?.CACHE;
+function getKV(locals: App.Locals): KVNamespace | undefined {
+  return locals.runtime.env?.CACHE;
 }
 
 // GET - Fetch global playlist from KV (NO FIREBASE!)
@@ -70,8 +70,8 @@ export async function GET({ request, locals }: APIContext) {
       success: true,
       playlist
     }), { headers });
-  } catch (error: any) {
-    console.error('[GlobalPlaylist] GET error:', error);
+  } catch (error: unknown) {
+    console.error('[GlobalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -91,7 +91,7 @@ export async function POST({ request, locals }: APIContext) {
 
   try {
     // SECURITY: Verify authentication
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
       return new Response(JSON.stringify({
@@ -195,7 +195,7 @@ export async function POST({ request, locals }: APIContext) {
     }));
 
     // Trigger Pusher broadcast
-    await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
+    await broadcastPlaylistUpdate(playlist, locals.runtime.env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -204,8 +204,8 @@ export async function POST({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[GlobalPlaylist] POST error:', error);
+  } catch (error: unknown) {
+    console.error('[GlobalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -225,7 +225,7 @@ export async function DELETE({ request, locals }: APIContext) {
 
   try {
     // SECURITY: Verify authentication
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
       return new Response(JSON.stringify({
@@ -336,7 +336,7 @@ export async function DELETE({ request, locals }: APIContext) {
     }));
 
     // Trigger Pusher broadcast
-    await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
+    await broadcastPlaylistUpdate(playlist, locals.runtime.env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -344,8 +344,8 @@ export async function DELETE({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[GlobalPlaylist] DELETE error:', error);
+  } catch (error: unknown) {
+    console.error('[GlobalPlaylist] DELETE error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -375,7 +375,7 @@ export async function PUT({ request, locals }: APIContext) {
     // Set KV cache for helper functions
     setKVCache(kv);
 
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const body = await request.json();
     const { action, userId, playlist: syncPlaylist } = body;
 
@@ -551,7 +551,7 @@ export async function PUT({ request, locals }: APIContext) {
           // Broadcast emoji animation to all viewers
           const { emoji, sessionId } = body;
           if (emoji) {
-            await broadcastEmojiReaction(emoji, sessionId, (locals as any)?.runtime?.env);
+            await broadcastEmojiReaction(emoji, sessionId, locals.runtime.env);
           }
           break;
 
@@ -604,7 +604,7 @@ export async function PUT({ request, locals }: APIContext) {
     }));
 
     // Trigger Pusher broadcast
-    await broadcastPlaylistUpdate(playlist, (locals as any)?.runtime?.env);
+    await broadcastPlaylistUpdate(playlist, locals.runtime.env);
 
     return new Response(JSON.stringify({
       success: true,
@@ -612,8 +612,8 @@ export async function PUT({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[GlobalPlaylist] PUT error:', error);
+  } catch (error: unknown) {
+    console.error('[GlobalPlaylist] PUT error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

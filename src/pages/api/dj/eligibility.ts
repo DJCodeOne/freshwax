@@ -3,7 +3,7 @@ import { getDocument, updateDocument, queryCollection, addDocument, verifyReques
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -172,8 +172,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       error: 'Invalid action' 
     }), { status: 400 });
 
-  } catch (error: any) {
-    console.error('DJ Eligibility API GET error:', error);
+  } catch (error: unknown) {
+    console.error('DJ Eligibility API GET error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'Internal error' 
@@ -365,8 +365,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       error: 'Invalid action' 
     }), { status: 400 });
 
-  } catch (error: any) {
-    console.error('DJ Eligibility API POST error:', error);
+  } catch (error: unknown) {
+    console.error('DJ Eligibility API POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({ 
       success: false, 
       error: 'Internal error' 

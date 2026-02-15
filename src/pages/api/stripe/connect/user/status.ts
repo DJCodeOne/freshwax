@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   // SECURITY: Verify user authentication via Firebase token
@@ -114,8 +114,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       disabledReason: account.requirements?.disabled_reason || null
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[Stripe Connect] User status error:', error);
+  } catch (error: unknown) {
+    console.error('[Stripe Connect] User status error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to get status'

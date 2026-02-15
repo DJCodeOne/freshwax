@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   const startTime = Date.now();
   
@@ -103,9 +103,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     pendingRequest = null;
-    log.error('[get-shuffle-tracks] Error:', error);
+    log.error('[get-shuffle-tracks] Error:', error instanceof Error ? error.message : String(error));
     
     if (cachedResult) {
       log.info('[get-shuffle-tracks] Returning stale cache');

@@ -8,7 +8,7 @@ import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
@@ -72,8 +72,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       onboardingUrl: accountLink.url
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[Stripe Connect] Supplier refresh link error:', error);
+  } catch (error: unknown) {
+    console.error('[Stripe Connect] Supplier refresh link error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to create onboarding link'

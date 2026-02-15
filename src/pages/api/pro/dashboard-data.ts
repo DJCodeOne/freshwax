@@ -42,8 +42,8 @@ export const GET: APIRoute = async ({ request }) => {
       default:
         return jsonResponse({ success: false, error: 'Invalid type' }, 400);
     }
-  } catch (error: any) {
-    console.error('[pro/dashboard-data] Error:', error);
+  } catch (error: unknown) {
+    console.error('[pro/dashboard-data] Error:', error instanceof Error ? error.message : String(error));
     return jsonResponse({ success: false, error: 'Internal error' }, 500);
   }
 };

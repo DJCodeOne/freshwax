@@ -8,7 +8,7 @@ import Footer from '../../components/Footer.astro';
 export const prerender = false;
 
 const { id } = Astro.params;
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 
 // Fetch listing data server-side for OG meta tags (social crawlers can't execute JS)
 let pageTitle = 'Vinyl Details - Crates';

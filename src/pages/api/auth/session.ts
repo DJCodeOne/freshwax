@@ -9,7 +9,7 @@ import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Rate limit: auth attempts - 10 per 15 minutes
   const clientId = getClientId(request);
@@ -52,8 +52,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[auth/session] Error:', error);
+  } catch (error: unknown) {
+    console.error('[auth/session] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       authenticated: false,

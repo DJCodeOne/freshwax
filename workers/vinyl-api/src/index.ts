@@ -485,7 +485,7 @@ async function handleImageUpload(request: Request, env: Env): Promise<Response> 
   await env.R2.put(key, buffer, {
     httpMetadata: {
       contentType: 'image/webp',
-      cacheControl: 'public, max-age=31536000',
+      cacheControl: 'public, max-age=31536000, immutable',
     },
   });
 
@@ -536,7 +536,7 @@ async function handleAudioUpload(request: Request, env: Env): Promise<Response> 
   await env.R2.put(key, buffer, {
     httpMetadata: {
       contentType: 'audio/mpeg',
-      cacheControl: 'public, max-age=31536000',
+      cacheControl: 'public, max-age=31536000, immutable',
     },
   });
 

@@ -14,7 +14,7 @@ export const prerender = false;
 
 // Use local API endpoint instead of external worker
 const WORKER_URL = '/api';
-const nonce = (Astro.locals as any).nonce || '';
+const nonce = Astro.locals.nonce || '';
 ---
 
 <AdminLayout title="Process Submissions" activeNav="releases">

@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const dryRun = url.searchParams.get('dryRun') === 'yes';
 
   // Initialize environment
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS || '',
     ADMIN_EMAILS: env?.ADMIN_EMAILS,

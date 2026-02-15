@@ -77,8 +77,8 @@ export const POST: APIRoute = async ({ request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
-    console.error('[verify-email-status] Error:', error);
+  } catch (error: unknown) {
+    console.error('[verify-email-status] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update verification status'

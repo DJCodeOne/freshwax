@@ -533,7 +533,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   console.log('[Stripe Webhook] Timestamp:', new Date().toISOString());
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
 
     // Get webhook secret
     const webhookSecret = env?.STRIPE_WEBHOOK_SECRET || import.meta.env.STRIPE_WEBHOOK_SECRET;

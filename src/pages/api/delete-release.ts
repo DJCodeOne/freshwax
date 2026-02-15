@@ -5,6 +5,7 @@ import { getDocument, queryCollection, verifyRequestUser } from '../../lib/fireb
 import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -47,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     // Initialize Firebase environment
-    const env = (locals as any)?.runtime?.env || {};
+    const env = locals.runtime.env || {};
 
 
     const body = await request.json();
@@ -152,6 +153,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } catch (error) {
       log.warn('[delete-release] Could not update master list:', error);
     }
+
+    // Invalidate KV cache for releases list so all edge workers serve fresh data
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
     log.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
 

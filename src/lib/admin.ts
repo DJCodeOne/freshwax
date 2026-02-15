@@ -45,13 +45,13 @@ export function getAdminEmails(): string[] {
 }
 
 // Get admin key from environment
-export function getAdminKey(locals: any): string {
+export function getAdminKey(locals: App.Locals): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
 // Verify admin key with timing-safe comparison
-export function verifyAdminKey(key: string, locals: any): boolean {
+export function verifyAdminKey(key: string, locals: App.Locals): boolean {
   const expectedKey = getAdminKey(locals);
   if (!expectedKey || !key) return false;
   return timingSafeEqual(key, expectedKey);
@@ -64,7 +64,7 @@ export function verifyAdminKey(key: string, locals: any): boolean {
  * SECURITY: Query params are NOT supported to prevent keys appearing in logs
  * Returns error response if auth fails, null if auth succeeds
  */
-export async function requireAdminAuth(request: Request, locals: any, bodyData?: any): Promise<Response | null> {
+export async function requireAdminAuth(request: Request, locals: App.Locals, bodyData?: any): Promise<Response | null> {
   const expectedKey = getAdminKey(locals);
 
   // Check body (for POST requests) - timing-safe comparison

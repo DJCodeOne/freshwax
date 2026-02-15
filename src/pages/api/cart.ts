@@ -10,10 +10,10 @@ export const prerender = false;
 const isDev = import.meta.env.DEV;
 
 // Helper to get user ID - prefers verified Firebase auth, falls back to cookie for anonymous carts (GET only)
-async function getUserId(request: Request, locals: any): Promise<string | null> {
+async function getUserId(request: Request, locals: App.Locals): Promise<string | null> {
   // Try Firebase auth first (secure, verified identity)
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId) return verifiedUserId;
   } catch {
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const kv = env?.CACHE;
 
     if (!kv) {
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const kv = env?.CACHE;
 
     if (!kv) {
@@ -183,7 +183,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const kv = env?.CACHE;
 
     if (!kv) {

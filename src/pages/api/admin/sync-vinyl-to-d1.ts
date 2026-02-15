@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`sync-vinyl-to-d1:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = (locals as any)?.runtime?.env || {};
+  const env = locals.runtime.env || {};
   const db = env.DB;
 
   if (!db) {

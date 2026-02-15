@@ -9,7 +9,7 @@ import { verifyRequestUser, getDocument, setDocument, queryCollection } from '..
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   // Rate limit: auth attempts - 10 per 15 minutes
   const clientId = getClientId(request);
@@ -307,8 +307,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: 400, headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[auth/init-user] Error:', error);
+  } catch (error: unknown) {
+    console.error('[auth/init-user] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to initialize user profile'

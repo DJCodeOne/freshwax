@@ -156,7 +156,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const env = (locals as any)?.runtime?.env;
+    const env = locals.runtime.env;
     const r2Config = getR2Config(env);
 
     if (!r2Config.accessKeyId || !r2Config.secretAccessKey) {
@@ -202,7 +202,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           Key: coverKey,
           Body: coverBuffer,
           ContentType: 'image/webp',
-          CacheControl: 'public, max-age=31536000',
+          CacheControl: 'public, max-age=31536000, immutable',
         }));
 
         if (coverKey !== key) {
@@ -222,7 +222,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             Key: thumbKey,
             Body: thumbBuffer,
             ContentType: 'image/webp',
-            CacheControl: 'public, max-age=31536000',
+            CacheControl: 'public, max-age=31536000, immutable',
           }));
 
           result.thumbCreated = true;

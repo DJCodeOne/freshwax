@@ -5,7 +5,7 @@ import { queryCollection, addDocument, updateDocument, deleteDocument } from '..
 export const prerender = false;
 
 // Helper to initialize Firebase
-function initFirebase(locals: any) {
+function initFirebase(locals: App.Locals) {
   const env = locals?.runtime?.env;
 }
 
@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require admin authentication for viewing reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       reports,
       counts: { pending: pendingReports.length, reviewing: reviewingReports.length }
     }), { headers: { 'Content-Type': 'application/json' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500, headers: { 'Content-Type': 'application/json' }
     });
@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({ success: true, reportId: result.id, message: 'Report submitted. Our team will review it shortly.' }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
@@ -159,7 +159,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require admin authentication for updating reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -188,7 +188,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     await updateDocument('reports', reportId, updates);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };
@@ -198,7 +198,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require admin authentication for deleting reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
   initAdminEnv({
     ADMIN_UIDS: env?.ADMIN_UIDS || import.meta.env.ADMIN_UIDS,
     ADMIN_EMAILS: env?.ADMIN_EMAILS || import.meta.env.ADMIN_EMAILS,
@@ -215,7 +215,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     if (!reportId) return new Response(JSON.stringify({ success: false, error: 'Report ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     await deleteDocument('reports', reportId);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 };

@@ -10,8 +10,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
-function initServices(locals: any) {
-  const env = (locals as any)?.runtime?.env;
+function initServices(locals: App.Locals) {
+  const env = locals.runtime.env;
   initRed5Env({
     RED5_RTMP_URL: env?.RED5_RTMP_URL || import.meta.env.RED5_RTMP_URL,
     RED5_HLS_URL: env?.RED5_HLS_URL || import.meta.env.RED5_HLS_URL,

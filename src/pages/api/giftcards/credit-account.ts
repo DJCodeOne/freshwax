@@ -7,11 +7,11 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
 
   try {
-    const env2 = (locals as any)?.runtime?.env;
+    const env2 = locals.runtime.env;
     initAdminEnv({ ADMIN_UIDS: env2?.ADMIN_UIDS, ADMIN_EMAILS: env2?.ADMIN_EMAILS });
 
     const data = await request.json();

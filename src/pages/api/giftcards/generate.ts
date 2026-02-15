@@ -23,7 +23,7 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = (locals as any)?.runtime?.env;
+  const env = locals.runtime.env;
 
   try {
     const data = await request.json();

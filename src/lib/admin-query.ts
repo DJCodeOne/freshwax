@@ -6,7 +6,7 @@
 import { queryCollection } from './firebase-rest';
 import { saQueryCollection } from './firebase-service-account';
 
-export function getSaQuery(locals: any) {
+export function getSaQuery(locals: App.Locals) {
   const env = locals?.runtime?.env || {};
   const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
