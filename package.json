@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.10",
-    "@astrojs/react": "^4.4.0",
     "@aws-sdk/client-s3": "^3.913.0",
     "@aws-sdk/s3-request-presigner": "^3.948.0",
     "@cf-wasm/photon": "^0.3.4",
@@ -24,11 +23,8 @@
     "adm-zip": "^0.5.16",
     "astro": "^5.14.4",
     "aws4fetch": "^1.0.20",
-    "lucide-react": "^0.546.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
     "resend": "^6.5.2",
-    "stripe": "^19.1.0",
+    "stripe": "^20.3.1",
     "tailwindcss": "^4.1.18",
     "zod": "^3.25.76"
   },
