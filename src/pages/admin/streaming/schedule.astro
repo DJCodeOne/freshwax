@@ -500,7 +500,7 @@ export const prerender = false;
       const end = new Date();
       end.setDate(end.getDate() + 30);
 
-      const response = await fetch(`/api/livestream/slots?start=${start.toISOString()}&end=${end.toISOString()}&includeAll=true`);
+      const response = await fetch(`/api/livestream/slots/?start=${start.toISOString()}&end=${end.toISOString()}&includeAll=true`);
       const data = await response.json();
 
       if (data.success) {
@@ -743,7 +743,7 @@ export const prerender = false;
     if (!confirm('Are you sure you want to cancel this booking?')) return;
 
     try {
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slotId, adminCancel: true })

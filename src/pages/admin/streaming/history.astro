@@ -290,7 +290,7 @@ export const prerender = false;
 
   async function loadHistory() {
     try {
-      const response = await fetch('/api/livestream/slots?action=history');
+      const response = await fetch('/api/livestream/slots/?action=history');
       const data = await response.json();
 
       if (data.success && data.slots) {

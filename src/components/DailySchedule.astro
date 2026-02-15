@@ -1336,7 +1336,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         console.log('[loadBookings] Fetching range:', startDate.toISOString(), 'to', endDate.toISOString());
 
         const response = await fetch(
-          `/api/livestream/slots?start=${startDate.toISOString()}&end=${endDate.toISOString()}&fresh=1&_t=${Date.now()}`
+          `/api/livestream/slots/?start=${startDate.toISOString()}&end=${endDate.toISOString()}&fresh=1&_t=${Date.now()}`
         );
         
         const data = await response.json();
@@ -1447,7 +1447,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
               try {
                 const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
-                const response = await fetch('/api/livestream/slots', {
+                const response = await fetch('/api/livestream/slots/', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
                   body: JSON.stringify({
@@ -1671,7 +1671,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
           console.log('[DailySchedule] POST body:', { ...requestBody, idToken: idToken ? '[PRESENT]' : null });
 
-          const response = await fetch('/api/livestream/slots', {
+          const response = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
@@ -1734,7 +1734,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           console.warn('[DailySchedule] Could not get idToken for cancel:', tokenErr);
         }
 
-        const response = await fetch('/api/livestream/slots', {
+        const response = await fetch('/api/livestream/slots/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1801,7 +1801,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       startTime.setHours(startHour, 0, 0, 0);
 
       try {
-        const response = await fetch('/api/livestream/slots', {
+        const response = await fetch('/api/livestream/slots/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1879,7 +1879,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       if (!confirm(`Remove ${selectedSlotForEdit.djName} from the schedule?`)) return;
 
       try {
-        const response = await fetch('/api/livestream/slots', {
+        const response = await fetch('/api/livestream/slots/', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

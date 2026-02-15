@@ -991,7 +991,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         try {
           const idToken = await currentUser.getIdToken();
-          const response = await fetch('/api/livestream/slots', {
+          const response = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1054,7 +1054,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       try {
         // Use the unified livestreamSlots collection via API
-        const response = await fetch(`/api/livestream/slots?start=${startOfDay.toISOString()}&end=${endOfDay.toISOString()}&_t=${Date.now()}`);
+        const response = await fetch(`/api/livestream/slots/?start=${startOfDay.toISOString()}&end=${endOfDay.toISOString()}&_t=${Date.now()}`);
         const result = await response.json();
 
         dayBookings = [];
@@ -1251,7 +1251,7 @@ const nonce = (Astro.locals as any).nonce || '';
           const startTime = new Date(currentDate);
           startTime.setHours(sortedHours[0], 0, 0, 0);
 
-          const response = await fetch('/api/livestream/slots', {
+          const response = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1278,7 +1278,7 @@ const nonce = (Astro.locals as any).nonce || '';
             const startTime = new Date(currentDate);
             startTime.setHours(hour, 0, 0, 0);
 
-            const response = await fetch('/api/livestream/slots', {
+            const response = await fetch('/api/livestream/slots/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1328,7 +1328,7 @@ const nonce = (Astro.locals as any).nonce || '';
         // Fetch user's bookings via API
         const startDate = new Date(now.getTime() - 2 * 3600000);
         const endDate = new Date(now.getTime() + 30 * 24 * 3600000); // Next 30 days
-        const response = await fetch(`/api/livestream/slots?djId=${currentUser.uid}&start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`);
+        const response = await fetch(`/api/livestream/slots/?djId=${currentUser.uid}&start=${startDate.toISOString()}&end=${endDate.toISOString()}&_t=${Date.now()}`);
         const result = await response.json();
 
         if (!result.success || !result.slots || result.slots.length === 0) {
@@ -1403,7 +1403,7 @@ const nonce = (Astro.locals as any).nonce || '';
             if (confirm('Cancel this booking? The stream key will be invalidated.')) {
               try {
                 const idToken = await currentUser.getIdToken();
-                const cancelResponse = await fetch('/api/livestream/slots', {
+                const cancelResponse = await fetch('/api/livestream/slots/', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',

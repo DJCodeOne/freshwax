@@ -625,7 +625,7 @@ export const prerender = false;
       const end = new Date();
       end.setDate(end.getDate() + 14);
 
-      const response = await fetch(`/api/livestream/slots?start=${start.toISOString()}&end=${end.toISOString()}`);
+      const response = await fetch(`/api/livestream/slots/?start=${start.toISOString()}&end=${end.toISOString()}`);
       const data = await response.json();
 
       if (data.success) {

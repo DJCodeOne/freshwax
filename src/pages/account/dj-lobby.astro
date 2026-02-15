@@ -5900,7 +5900,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const now = new Date();
       const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       
-      const response = await fetch(`/api/livestream/slots?start=${now.toISOString()}&end=${end.toISOString()}&djId=${currentUser.uid}`);
+      const response = await fetch(`/api/livestream/slots/?start=${now.toISOString()}&end=${end.toISOString()}&djId=${currentUser.uid}`);
       const result = await response.json();
       
       if (result.success && result.slots && result.slots.length > 0) {
@@ -5922,7 +5922,7 @@ const nonce = (Astro.locals as any).nonce || '';
     try {
       const now = new Date();
       const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      const response = await fetch(`/api/livestream/slots?start=${now.toISOString()}&end=${end.toISOString()}`);
+      const response = await fetch(`/api/livestream/slots/?start=${now.toISOString()}&end=${end.toISOString()}`);
       const result = await response.json();
       if (result.success && result.slots) {
         allDjSlots = result.slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
@@ -6277,7 +6277,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function fetchStreamKey() {
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ action: 'getStreamKey', slotId: mySlot.id, djId: currentUser.uid })
@@ -6717,7 +6717,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -6894,7 +6894,7 @@ const nonce = (Astro.locals as any).nonce || '';
     }
 
     // Send request
-    const response = await fetch('/api/livestream/slots', {
+    const response = await fetch('/api/livestream/slots/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -7214,7 +7214,7 @@ const nonce = (Astro.locals as any).nonce || '';
         const targetDjId = currentStream?.djId || currentUser.uid;
 
         const token = await currentUser.getIdToken();
-        const response = await fetch('/api/livestream/slots', {
+        const response = await fetch('/api/livestream/slots/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -8017,7 +8017,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         if (!existingSlotId) {
           // Fetch user's current bookings to check
-          const checkResponse = await fetch(`/api/livestream/slots?djId=${currentUser.uid}`);
+          const checkResponse = await fetch(`/api/livestream/slots/?djId=${currentUser.uid}`);
           const checkResult = await checkResponse.json();
 
           if (checkResult.success && checkResult.slots?.length > 0) {
@@ -8032,7 +8032,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         if (existingSlotId) {
           // Have existing slot - fetch its stream key
-          const keyResponse = await fetch('/api/livestream/slots', {
+          const keyResponse = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -8057,7 +8057,7 @@ const nonce = (Astro.locals as any).nonce || '';
           const now = new Date();
           now.setSeconds(0, 0);
 
-          const bookResponse = await fetch('/api/livestream/slots', {
+          const bookResponse = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -8156,7 +8156,7 @@ const nonce = (Astro.locals as any).nonce || '';
           // Round to nearest minute
           now.setSeconds(0, 0);
 
-          const bookResponse = await fetch('/api/livestream/slots', {
+          const bookResponse = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -8394,7 +8394,7 @@ const nonce = (Astro.locals as any).nonce || '';
         // If no stream key available, try to fetch it
         if (!streamKeyToPass) {
           const token = await currentUser.getIdToken();
-          const response = await fetch('/api/livestream/slots?action=checkStreamKey&djId=' + currentUser.uid, {
+          const response = await fetch('/api/livestream/slots/?action=checkStreamKey&djId=' + currentUser.uid, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const result = await response.json();
@@ -8444,7 +8444,7 @@ const nonce = (Astro.locals as any).nonce || '';
       
       try {
         const token = await currentUser.getIdToken();
-        const response = await fetch('/api/livestream/slots', {
+        const response = await fetch('/api/livestream/slots/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ action: 'endStream', djId: currentUser.uid })

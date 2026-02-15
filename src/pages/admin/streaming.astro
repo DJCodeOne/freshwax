@@ -2685,7 +2685,7 @@ export const prerender = false;
 
     try {
       // Use the slots endpoint which handles admin auth, D1 sync, cache invalidation, and Pusher broadcast
-      const response = await window.adminFetch('/api/livestream/slots', {
+      const response = await window.adminFetch('/api/livestream/slots/', {
         method: 'POST',
         body: JSON.stringify({ action: 'endStream', slotId: streamId, djId })
       });

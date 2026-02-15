@@ -166,18 +166,20 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     });
   }
 
-  // Trailing slash canonicalization — redirect /path to /path/ for SEO consistency
-  // Skip: root, API routes, files with extensions, paths already ending with /
+  // Trailing slash canonicalization — redirect /path/ for consistency
+  // Astro trailingSlash:'always' registers routes with trailing slash,
+  // so requests without it get 404. Redirect all paths (including API).
+  // Use 308 for POST/PUT/DELETE (preserves method+body), 301 for GET/HEAD.
   const { pathname } = url;
   if (
     pathname !== '/' &&
-    !pathname.startsWith('/api/') &&
     !pathname.endsWith('/') &&
     !pathname.split('/').pop()?.includes('.')
   ) {
     url.pathname = pathname + '/';
+    const isGetOrHead = request.method === 'GET' || request.method === 'HEAD';
     return new Response(null, {
-      status: 301,
+      status: isGetOrHead ? 301 : 308,
       headers: { 'Location': url.toString() }
     });
   }

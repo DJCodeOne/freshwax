@@ -3333,7 +3333,7 @@ const nonce = (Astro.locals as any).nonce || '';
       try {
         const token = await currentUser.getIdToken();
         // First get stream key
-        const keyResponse = await fetch('/api/livestream/slots', {
+        const keyResponse = await fetch('/api/livestream/slots/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ action: 'getStreamKey', djId: currentUser.uid })
@@ -3416,7 +3416,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const cacheBuster = forceRefresh ? `&_t=${Date.now()}` : '';
       
       // Single API call that returns both schedule and live status
-      const response = await fetch(`/api/livestream/slots?start=${currentWeekStart.toISOString()}&end=${weekEnd.toISOString()}${cacheBuster}`);
+      const response = await fetch(`/api/livestream/slots/?start=${currentWeekStart.toISOString()}&end=${weekEnd.toISOString()}${cacheBuster}`);
       const result = await response.json();
       
       if (result.success) {
@@ -3727,7 +3727,7 @@ const nonce = (Astro.locals as any).nonce || '';
     }
     
     try {
-      const response = await fetch('/api/livestream/slots');
+      const response = await fetch('/api/livestream/slots/');
       const result = await response.json();
       
       if (!result.success) return;
@@ -3806,7 +3806,7 @@ const nonce = (Astro.locals as any).nonce || '';
       
       try {
         // Check if takeover was approved
-        const response = await fetch('/api/livestream/slots', {
+        const response = await fetch('/api/livestream/slots/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3890,7 +3890,7 @@ const nonce = (Astro.locals as any).nonce || '';
     btn.innerHTML = '<span>⏳ Sending request...</span>';
     
     try {
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3930,7 +3930,7 @@ const nonce = (Astro.locals as any).nonce || '';
     stopTakeoverPolling();
     
     try {
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4721,7 +4721,7 @@ const nonce = (Astro.locals as any).nonce || '';
         };
       }
       
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
@@ -4811,7 +4811,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
 
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4878,7 +4878,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const idToken = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4992,7 +4992,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
       
       try {
-        const response = await fetch('/api/livestream/slots?checkAvailable=true');
+        const response = await fetch('/api/livestream/slots/?checkAvailable=true');
         const result = await response.json();
         
         if (result.availableSlot) {
@@ -5041,7 +5041,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
       
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/slots', {
+      const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
