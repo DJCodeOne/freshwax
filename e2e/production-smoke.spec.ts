@@ -237,7 +237,10 @@ test.describe('Security Headers', () => {
 });
 
 test.describe('Trailing Slash Redirects', () => {
-  test('paths without trailing slash redirect', async ({ request }) => {
+  // Trailing slash redirects are enforced by Cloudflare middleware,
+  // not active in Astro dev server — skip when running locally
+  test('paths without trailing slash redirect', async ({ request, baseURL }) => {
+    test.skip(baseURL?.includes('localhost') === true, 'Trailing slash redirects only work in Cloudflare production');
     const response = await request.get('/releases', { maxRedirects: 0 });
     expect([301, 308]).toContain(response.status());
     expect(response.headers()['location']).toContain('/releases/');
