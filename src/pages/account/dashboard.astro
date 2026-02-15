@@ -758,6 +758,7 @@ const nonce = (Astro.locals as any).nonce || '';
 </script>
 
 <script is:inline type="module" nonce={nonce}>
+  // @ts-nocheck - is:inline bypasses TypeScript
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut, updateProfile, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
   // Firestore SDK removed (~200KB) - using /api/user-profile server-side API instead
@@ -1895,7 +1896,7 @@ const nonce = (Astro.locals as any).nonce || '';
           document.head.appendChild(script);
         });
       }
-      const zip = new (window as any).JSZip();
+      const zip = new window.JSZip();
       const folder = zip.folder(releaseName);
 
       // Download each file and add to ZIP (80% of progress for downloads)

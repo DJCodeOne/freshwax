@@ -328,7 +328,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
     </script>
 
     <!-- Web Vitals Tracking (consent-gated via gtag check) -->
-    <script>
+    <script is:inline nonce={nonce}>
       if (typeof PerformanceObserver !== 'undefined') {
         try {
           new PerformanceObserver((entryList) => {
