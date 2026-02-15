@@ -330,7 +330,7 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
       row.plays, row.downloads, row.views, row.likes, row.rating_avg, row.rating_count, row.data, row.created_at, row.updated_at
     ).run();
 
-    console.log('[D1] Upserted release:', id);
+    // console.log('[D1] Upserted release:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error upserting release:', e);
@@ -420,7 +420,7 @@ export async function d1UpsertMix(db: D1Database, id: string, doc: any): Promise
       row.plays, row.downloads, row.likes, row.duration_seconds, row.data, row.upload_date, row.updated_at
     ).run();
 
-    console.log('[D1] Upserted mix:', id);
+    // console.log('[D1] Upserted mix:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error upserting mix:', e);
@@ -431,7 +431,7 @@ export async function d1UpsertMix(db: D1Database, id: string, doc: any): Promise
 export async function d1DeleteMix(db: D1Database, id: string): Promise<boolean> {
   try {
     await db.prepare(`DELETE FROM dj_mixes WHERE id = ?`).bind(id).run();
-    console.log('[D1] Deleted mix:', id);
+    // console.log('[D1] Deleted mix:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error deleting mix:', e);
@@ -487,7 +487,7 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
       row.id, row.name, row.type, row.price, row.stock, row.published, row.image_url, row.data, row.created_at, row.updated_at
     ).run();
 
-    console.log('[D1] Upserted merch:', id);
+    // console.log('[D1] Upserted merch:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error upserting merch:', e);
@@ -499,7 +499,7 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
 export async function d1DeleteMerch(db: D1Database, id: string): Promise<boolean> {
   try {
     await db.prepare('DELETE FROM merch WHERE id = ?').bind(id).run();
-    console.log('[D1] Deleted merch:', id);
+    // console.log('[D1] Deleted merch:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error deleting merch:', e);
@@ -608,7 +608,7 @@ export async function d1AddComment(db: D1Database, comment: {
       new Date().toISOString()
     ).run();
 
-    console.log('[D1] Added comment:', comment.id);
+    // console.log('[D1] Added comment:', comment.id);
     return true;
   } catch (e) {
     console.error('[D1] Error adding comment:', e);
@@ -744,7 +744,7 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
         updated_at = excluded.updated_at
     `).bind(releaseId, newAverage, newCount, newFiveStarCount, now, now).run();
 
-    console.log('[D1] Upserted rating:', releaseId, userId, rating);
+    // console.log('[D1] Upserted rating:', releaseId, userId, rating);
 
     return { average: newAverage, count: newCount, fiveStarCount: newFiveStarCount };
   } catch (e) {
@@ -896,7 +896,7 @@ export async function d1UpsertSlot(db: D1Database, id: string, doc: any): Promis
       row.stream_key, row.hls_url, row.is_relay, row.relay_station_id, row.data, row.updated_at
     ).run();
 
-    console.log('[D1] Upserted slot:', id, row.status);
+    // console.log('[D1] Upserted slot:', id, row.status);
     return true;
   } catch (e) {
     console.error('[D1] Error upserting slot:', e);
@@ -910,7 +910,7 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
     // First get the current data
     const row = await db.prepare(`SELECT data FROM livestream_slots WHERE id = ?`).bind(id).first();
     if (!row) {
-      console.log('[D1] Slot not found for status update:', id);
+      // console.log('[D1] Slot not found for status update:', id);
       return false;
     }
 
@@ -926,7 +926,7 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
       WHERE id = ?
     `).bind(status, JSON.stringify(doc), new Date().toISOString(), id).run();
 
-    console.log('[D1] Updated slot status:', id, status);
+    // console.log('[D1] Updated slot status:', id, status);
     return true;
   } catch (e) {
     console.error('[D1] Error updating slot status:', e);
@@ -938,7 +938,7 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
 export async function d1DeleteSlot(db: D1Database, id: string): Promise<boolean> {
   try {
     await db.prepare(`DELETE FROM livestream_slots WHERE id = ?`).bind(id).run();
-    console.log('[D1] Deleted slot:', id);
+    // console.log('[D1] Deleted slot:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error deleting slot:', e);
@@ -1065,7 +1065,7 @@ export async function d1InsertLedgerEntry(db: D1Database, id: string, entry: any
       row.item_count, row.has_physical, row.has_digital, row.data
     ).run();
 
-    console.log('[D1] Inserted ledger entry:', id);
+    // console.log('[D1] Inserted ledger entry:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error inserting ledger entry:', e);
@@ -1129,7 +1129,7 @@ export async function d1UpdateLedgerEntry(db: D1Database, id: string, updates: a
       UPDATE sales_ledger SET ${fields.join(', ')} WHERE id = ?
     `).bind(...values).run();
 
-    console.log('[D1] Updated ledger entry:', id);
+    // console.log('[D1] Updated ledger entry:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error updating ledger entry:', e);
@@ -1289,7 +1289,7 @@ export async function d1GetLedgerTotals(db: D1Database, options: {
 export async function d1DeleteLedgerEntry(db: D1Database, id: string): Promise<boolean> {
   try {
     await db.prepare('DELETE FROM sales_ledger WHERE id = ?').bind(id).run();
-    console.log('[D1] Deleted ledger entry:', id);
+    // console.log('[D1] Deleted ledger entry:', id);
     return true;
   } catch (e) {
     console.error('[D1] Error deleting ledger entry:', e);
@@ -1403,7 +1403,7 @@ export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: a
       row.data, doc.createdAt || new Date().toISOString(), row.updated_at
     ).run();
 
-    console.log('[D1] Upserted vinyl seller:', userId);
+    // console.log('[D1] Upserted vinyl seller:', userId);
     return true;
   } catch (e) {
     console.error('[D1] Error upserting vinyl seller:', e);

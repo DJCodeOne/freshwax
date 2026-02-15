@@ -26,14 +26,14 @@ export async function sendAbandonedCartEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!email) {
-      console.log('[Abandoned Cart] No email address, skipping');
+      // console.log('[Abandoned Cart] No email address, skipping');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.log('[Abandoned Cart] No Resend API key configured, skipping');
+      // console.log('[Abandoned Cart] No Resend API key configured, skipping');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -194,7 +194,7 @@ export async function sendAbandonedCartEmail(
       return { success: false, error: result.message || 'Failed to send email' };
     }
 
-    console.log('[Abandoned Cart] Recovery email sent to:', email);
+    // console.log('[Abandoned Cart] Recovery email sent to:', email);
     return { success: true, messageId: result.id };
 
   } catch (error) {
