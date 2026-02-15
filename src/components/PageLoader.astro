@@ -1,6 +1,10 @@
 ---
 // src/components/PageLoader.astro
 // Full-page loading animation that fades out when content is ready
+interface Props {
+  nonce?: string;
+}
+const { nonce = '' } = Astro.props;
 ---
 
 <div id="pageLoader" class="page-loader">
@@ -100,14 +104,14 @@
   }
 </style>
 
-<script>
+<script is:inline nonce={nonce}>
   // Hide loader when page is fully loaded
   function hideLoader() {
-    const loader = document.getElementById('pageLoader');
+    var loader = document.getElementById('pageLoader');
     if (loader) {
       loader.classList.add('loaded');
       // Remove from DOM after animation
-      setTimeout(() => {
+      setTimeout(function() {
         loader.remove();
       }, 400);
     }

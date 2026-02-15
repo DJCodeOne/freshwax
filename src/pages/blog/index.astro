@@ -34,6 +34,8 @@ function getReadTime(content: string): string {
   return `${minutes} min read`;
 }
 
+const nonce = (Astro.locals as any).nonce || '';
+
 // Truncate excerpt
 function truncateExcerpt(text: string, maxLength: number = 150): string {
   if (!text) return '';
@@ -55,7 +57,7 @@ function brandFreshWax(text: string): string {
   description="Latest news, articles and updates from Fresh Wax. Music production tips, artist interviews, and behind-the-scenes content."
   breadcrumbs={[{ name: 'Blog', url: '/blog' }]}
 >
-  <PageLoader />
+  <PageLoader nonce={nonce} />
   <Header />
 
   <div class="blog-page">

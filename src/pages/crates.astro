@@ -30,7 +30,7 @@ const nonce = (Astro.locals as any).nonce || '';
   description="Buy vinyl on Fresh Wax Crates. Browse records from stockists and collectors with detailed condition grades, audio samples, and direct checkout."
   faqs={faqs}
 >
-  <PageLoader />
+  <PageLoader nonce={nonce} />
   <Header />
 
   <div class="crates-main">
