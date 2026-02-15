@@ -906,7 +906,7 @@ const nonce = (Astro.locals as any).nonce || '';
             
             // Handle various field name formats from API
             const djName = mix.dj_name || mix.djName || mix.artist || 'Unknown DJ';
-            const rawArtworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+            const rawArtworkUrl = mix.thumbUrl || mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
             // Add cache-busting parameter using updatedAt timestamp to show fresh artwork after edits
             const cacheBuster = mix.updatedAt ? new Date(mix.updatedAt).getTime() : Date.now();
             const artworkUrl = rawArtworkUrl ? `${rawArtworkUrl}${rawArtworkUrl.includes('?') ? '&' : '?'}v=${cacheBuster}` : '';

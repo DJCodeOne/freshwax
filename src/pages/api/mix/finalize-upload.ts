@@ -161,6 +161,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Process artwork to WebP if provided
     let finalArtworkUrl = artworkUrl || '/place-holder.webp';
+    let finalThumbUrl: string | undefined;
     if (artworkUrl && !artworkUrl.includes('place-holder')) {
       try {
         const R2_CONFIG = getR2Config(env);
@@ -182,6 +183,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           finalArtworkUrl = `${R2_CONFIG.publicDomain}/${webpKey}`;
           console.log(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} WebP`);
+
+          // Generate 400x400 thumbnail for listing pages
+          try {
+            const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
+            const thumbKey = `dj-mixes/${mixId}/thumb.webp`;
+
+            await s3Client.send(new PutObjectCommand({
+              Bucket: R2_CONFIG.bucketName,
+              Key: thumbKey,
+              Body: Buffer.from(thumb.buffer),
+              ContentType: 'image/webp',
+              CacheControl: 'public, max-age=31536000',
+            }));
+
+            finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+            console.log(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} WebP`);
+          } catch (thumbErr) {
+            console.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
+          }
         }
       } catch (imgErr) {
         console.error('[finalize-upload] WebP processing failed, using original:', imgErr);
@@ -211,6 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artworkUrl: finalArtworkUrl,
       imageUrl: finalArtworkUrl,
       artwork_url: finalArtworkUrl,
+      ...(finalThumbUrl && { thumbUrl: finalThumbUrl }),
       folder_path: folderPath,
       userId: authenticatedUserId,
       upload_date: uploadDate,

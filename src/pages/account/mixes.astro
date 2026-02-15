@@ -243,7 +243,7 @@ export const prerender = false;
             // Render mixes grid
             mixesContainer.innerHTML = `<div class="mixes-grid">
               ${data.mixes.map(mix => {
-                const rawArtworkUrl = mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
+                const rawArtworkUrl = mix.thumbUrl || mix.artwork_url || mix.artworkUrl || mix.artwork || mix.imageUrl || mix.coverUrl || '';
                 const artworkUrl = rawArtworkUrl && !rawArtworkUrl.includes('place-holder') ? rawArtworkUrl : '';
                 const title = (mix.title || 'Untitled Mix').replace(/"/g, '&quot;');
                 const description = (mix.description || '').replace(/"/g, '&quot;');

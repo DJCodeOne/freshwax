@@ -83,6 +83,7 @@ function normalizeMix(data: any): any {
     // Prioritize displayName for public views, fall back to dj_name/djName
     dj_name: data.displayName || data.dj_name || data.djName || data.artist || 'Unknown DJ',
     artwork_url: data.artwork_url || data.artworkUrl || data.coverUrl || data.imageUrl || '/place-holder.webp',
+    thumbUrl: data.thumbUrl || null,
     audio_url: data.audio_url || data.audioUrl || data.mp3Url || data.streamUrl || null,
     duration: data.duration || null,
     durationSeconds: data.durationSeconds || data.duration_seconds || null,

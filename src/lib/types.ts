@@ -219,6 +219,7 @@ export interface DjMix extends Timestamps {
   audioUrl?: string;
   audio_url?: string;
   artworkUrl?: string;
+  thumbUrl?: string;
   imageUrl?: string;
   artwork_url?: string;
 

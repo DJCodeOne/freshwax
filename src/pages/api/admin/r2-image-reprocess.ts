@@ -85,7 +85,15 @@ function getProcessingConfig(key: string): { cover: ProcessingConfig; thumb?: Pr
     return { cover: { mode: 'square', width: 128, height: 128, quality: 60 } };
   }
   if (key.startsWith('dj-mixes/')) {
-    return { cover: { mode: 'square', width: 800, height: 800, quality: 80 } };
+    const filename = key.split('/').pop()?.toLowerCase() || '';
+    if (filename.startsWith('thumb')) {
+      return { cover: { mode: 'square', width: 400, height: 400, quality: 75 } };
+    }
+    // For artwork images, generate both cover + thumb (same as releases)
+    return {
+      cover: { mode: 'square', width: 800, height: 800, quality: 80 },
+      thumb: { mode: 'square', width: 400, height: 400, quality: 75 },
+    };
   }
   // Default
   return { cover: { mode: 'square', width: 800, height: 800, quality: 80 } };

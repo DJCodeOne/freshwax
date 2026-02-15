@@ -263,7 +263,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
               <!-- Artwork -->
               <div class="mix-artwork-container">
                 <img
-                  src={mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}
+                  src={mix.thumbUrl || mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}
                   alt={`${mix.title} by ${mix.dj_name || mix.djName}`}
                   class="mix-artwork"
                   width="260"
@@ -444,7 +444,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
                   {index > 2 && `#${index + 1}`}
                 </span>
                 <img
-                  src={mix.imageUrl || mix.artworkUrl || mix.artwork_url || '/place-holder.webp'}
+                  src={mix.thumbUrl || mix.imageUrl || mix.artworkUrl || mix.artwork_url || '/place-holder.webp'}
                   alt={`${mix.title} artwork`}
                   class="chart-artwork"
                   width="36"
@@ -654,7 +654,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
           chartList.innerHTML = data.chart.slice(0, 10).map((mix, index) => `
             <a href="/dj-mix/${mix.id}/" class="chart-item">
               <span class="chart-position">${index + 1}</span>
-              <img src="${mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)} artwork" class="chart-artwork" width="48" height="48" loading="lazy" decoding="async" />
+              <img src="${mix.thumbUrl || mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}" alt="${escapeHtml(mix.title)} artwork" class="chart-artwork" width="48" height="48" loading="lazy" decoding="async" />
               <div class="chart-info">
                 <span class="chart-title">${escapeHtml(mix.title || 'Untitled')}</span>
                 <span class="chart-dj">${escapeHtml(mix.dj_name || mix.djName || 'Unknown DJ')}</span>

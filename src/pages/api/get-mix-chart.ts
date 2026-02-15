@@ -35,6 +35,7 @@ export const GET: APIRoute = async ({ request }) => {
         title: data.title,
         dj_name: data.dj_name || data.djName,
         artwork_url: data.artwork_url || data.artworkUrl || data.imageUrl,
+        thumbUrl: data.thumbUrl || null,
         plays,
         likes,
         downloads,

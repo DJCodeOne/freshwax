@@ -243,6 +243,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Upload artwork to R2 (or use default)
     let artworkUrl: string;
+    let thumbUrl: string | undefined;
 
     if (artworkFile && artworkFile.size > 0) {
       const artworkBuffer = await artworkFile.arrayBuffer();
@@ -276,6 +277,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
       uploadedR2Keys.push(artworkKey);
 
       artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
+
+      // Generate 400x400 thumbnail for listing pages
+      try {
+        const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
+        const thumbKey = `${folderPath}/thumb.webp`;
+        await s3Client.send(
+          new PutObjectCommand({
+            Bucket: R2_CONFIG.bucketName,
+            Key: thumbKey,
+            Body: Buffer.from(thumb.buffer),
+            ContentType: 'image/webp',
+            CacheControl: 'public, max-age=31536000',
+          })
+        );
+        uploadedR2Keys.push(thumbKey);
+        thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+        log.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} WebP`);
+      } catch (thumbErr) {
+        log.error('[upload-mix] Thumbnail generation failed (non-critical):', thumbErr);
+      }
     } else {
       artworkUrl = '/place-holder.webp';
     }
@@ -302,6 +323,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       audioUrl: audioUrl,
       artwork_url: artworkUrl,
       artworkUrl: artworkUrl,
+      ...(thumbUrl && { thumbUrl }),
       upload_date: new Date().toISOString(),
       uploadedAt: new Date().toISOString(),
       folder_path: folderPath,

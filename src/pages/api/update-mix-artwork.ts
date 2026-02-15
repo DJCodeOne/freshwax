@@ -149,11 +149,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const artworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
 
+    // Generate 400x400 thumbnail for listing pages
+    let thumbUrl: string | undefined;
+    try {
+      const thumb = await processImageToSquareWebP(rawBuffer, 400, 75);
+      const thumbKey = `dj-mixes/${mixId}/thumb.webp`;
+      await s3Client.send(new PutObjectCommand({
+        Bucket: R2_CONFIG.bucketName,
+        Key: thumbKey,
+        Body: Buffer.from(thumb.buffer),
+        ContentType: 'image/webp',
+        CacheControl: 'public, max-age=31536000',
+      }));
+      thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
+      console.log(`[update-mix-artwork] Thumbnail generated: ${thumb.width}x${thumb.height} WebP`);
+    } catch (thumbErr) {
+      console.error('[update-mix-artwork] Thumbnail generation failed (non-critical):', thumbErr);
+    }
+
     // Update Firebase with new artwork URL (and backfill userId if missing)
     const updateData: Record<string, any> = {
       artwork_url: artworkUrl,
       artworkUrl: artworkUrl,
       imageUrl: artworkUrl,
+      ...(thumbUrl && { thumbUrl }),
       updatedAt: new Date().toISOString()
     };
 

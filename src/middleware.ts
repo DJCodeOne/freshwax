@@ -53,6 +53,8 @@ const RATE_LIMIT_SKIP = new Set([
   '/api/cron/retry-payouts/',
   '/api/cron/send-restock-notifications/',
   '/api/cron/stock-alerts/',
+  '/api/cron/image-scan/',
+  '/api/cron/verification-reminders/',
   '/api/health/index/',
   '/api/health/payments/',
 ]);
