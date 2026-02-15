@@ -238,8 +238,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Process artwork: validate, convert to WebP, create cover + thumb
+    // Keep original full-res for buyer downloads
     let artworkUrl = `${R2_CONFIG.publicDomain}/place-holder.webp`;
     let thumbUrl = artworkUrl;
+    let originalArtworkUrl = '';
     if (artworkKey) {
       // Download full artwork for validation and processing
       const artworkFetchUrl = `${bucketUrl}/${encodeURIComponent(artworkKey)}`;
@@ -297,6 +299,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
             copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
             log.info(`Created thumb.webp (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
           }
+          // Copy original full-res artwork for buyer downloads
+          const origExt = artworkKey.split('.').pop() || 'jpg';
+          const originalKey = `${releaseFolder}/original.${origExt}`;
+          const origCopied = await copyObject(artworkKey, originalKey);
+          if (origCopied) {
+            originalArtworkUrl = `${R2_CONFIG.publicDomain}/${originalKey}`;
+            copiedFiles.push({ oldKey: artworkKey, newKey: originalKey });
+            log.info(`Copied original artwork for downloads: ${originalKey}`);
+          }
         } catch (imgErr) {
           // Fallback: copy original if image processing fails
           log.warn(`Image processing failed, copying original: ${imgErr}`);
@@ -306,6 +317,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (copied) {
             copiedFiles.push({ oldKey: artworkKey, newKey: newArtworkKey });
             artworkUrl = `${R2_CONFIG.publicDomain}/${newArtworkKey}`;
+            originalArtworkUrl = artworkUrl;
             thumbUrl = artworkUrl;
           }
         }
@@ -501,6 +513,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artworkUrl: artworkUrl,
       thumbUrl: thumbUrl,
       imageUrl: artworkUrl,
+      originalArtworkUrl: originalArtworkUrl,
       genre: metadata.genre || 'Drum and Bass',
       catalogNumber: metadata.labelCode || '',
       labelCode: metadata.labelCode || '',

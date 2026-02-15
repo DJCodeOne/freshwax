@@ -1,6 +1,7 @@
 import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
+import { processImageToSquareWebP } from '../../lib/image-processing';
 import AdmZip from 'adm-zip';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -235,21 +236,58 @@ async function processRawZip(
     },
   });
   
-  // Upload cover art
+  // Upload cover art (convert to WebP + keep original for buyer downloads)
+  let thumbUrl = '';
+  let originalArtworkUrl = '';
   if (coverEntry) {
+    const coverBuffer = coverEntry.getData();
     const ext = path.extname(coverEntry.entryName).toLowerCase();
     const contentType = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
-    const key = `releases/${releaseId}/artwork/cover${ext}`;
-    
+
+    // Always upload original full-res for buyer downloads
+    const originalKey = `releases/${releaseId}/artwork/original${ext}`;
     await s3Client.send(new PutObjectCommand({
       Bucket: config.r2.bucketName,
-      Key: key,
-      Body: coverEntry.getData(),
+      Key: originalKey,
+      Body: coverBuffer,
       ContentType: contentType,
+      CacheControl: 'public, max-age=31536000',
     }));
-    
-    coverUrl = `${config.r2.publicDomain}/${key}`;
-    log.info(`[sync-release] Uploaded cover: ${coverUrl}`);
+    originalArtworkUrl = `${config.r2.publicDomain}/${originalKey}`;
+    log.info(`[sync-release] Uploaded original: ${originalArtworkUrl}`);
+
+    try {
+      const coverResult = await processImageToSquareWebP(coverBuffer.buffer as ArrayBuffer, 800, 80);
+      const thumbResult = await processImageToSquareWebP(coverBuffer.buffer as ArrayBuffer, 400, 75);
+
+      const coverKey = `releases/${releaseId}/artwork/cover.webp`;
+      const thumbKey = `releases/${releaseId}/artwork/thumb.webp`;
+
+      await Promise.all([
+        s3Client.send(new PutObjectCommand({
+          Bucket: config.r2.bucketName,
+          Key: coverKey,
+          Body: coverResult.buffer,
+          ContentType: 'image/webp',
+          CacheControl: 'public, max-age=31536000',
+        })),
+        s3Client.send(new PutObjectCommand({
+          Bucket: config.r2.bucketName,
+          Key: thumbKey,
+          Body: thumbResult.buffer,
+          ContentType: 'image/webp',
+          CacheControl: 'public, max-age=31536000',
+        })),
+      ]);
+
+      coverUrl = `${config.r2.publicDomain}/${coverKey}`;
+      thumbUrl = `${config.r2.publicDomain}/${thumbKey}`;
+      log.info(`[sync-release] Uploaded cover: ${coverUrl} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
+      log.info(`[sync-release] Uploaded thumb: ${thumbUrl} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
+    } catch (imgErr) {
+      log.warn('[sync-release] WebP conversion failed, using original as cover:', imgErr);
+      coverUrl = originalArtworkUrl;
+    }
   }
   
   // Upload tracks and build track list
@@ -302,6 +340,8 @@ async function processRawZip(
     title: releaseName,
     coverArtUrl: coverUrl,
     coverArt: coverUrl,
+    thumbUrl,
+    originalArtworkUrl,
     tracks,
     trackCount: tracks.length,
     status: 'pending', // Start as pending - admin must approve to go live

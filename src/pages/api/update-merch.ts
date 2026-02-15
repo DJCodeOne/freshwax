@@ -7,6 +7,7 @@ import { getDocument, clearCache, clearAllMerchCache } from '../../lib/firebase-
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
+import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
@@ -344,15 +345,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
         log.info('[update-merch] Uploading new image', i + 1);
 
         const imageBuffer = await imageFile.arrayBuffer();
-        const imageExt = imageFile.name.split('.').pop() || 'jpg';
-        const imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.' + imageExt;
+
+        let imageKey: string;
+        let uploadBody: Uint8Array | Buffer;
+        let uploadContentType: string;
+
+        try {
+          const processed = await processImageToSquareWebP(imageBuffer, 800, 85);
+          imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.webp';
+          uploadBody = processed.buffer;
+          uploadContentType = 'image/webp';
+          log.info('[update-merch] Converted to WebP:', processed.width, 'x', processed.height);
+        } catch (imgErr) {
+          log.warn('[update-merch] WebP conversion failed, uploading original:', imgErr);
+          const imageExt = imageFile.name.split('.').pop() || 'jpg';
+          imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.' + imageExt;
+          uploadBody = Buffer.from(imageBuffer);
+          uploadContentType = imageFile.type;
+        }
 
         await s3Client.send(
           new PutObjectCommand({
             Bucket: R2_CONFIG.bucketName,
             Key: imageKey,
-            Body: Buffer.from(imageBuffer),
-            ContentType: imageFile.type,
+            Body: uploadBody,
+            ContentType: uploadContentType,
             CacheControl: 'public, max-age=31536000',
           })
         );

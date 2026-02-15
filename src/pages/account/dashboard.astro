@@ -2126,7 +2126,8 @@ const nonce = (Astro.locals as any).nonce || '';
       const artistName = item.downloads?.artistName || item.artist || '';
       const releaseName = item.downloads?.releaseName || item.name || '';
       const displayName = artistName ? artistName + ' - ' + releaseName : releaseName;
-      const artworkFilename = artistName ? artistName + ' - ' + releaseName + ' - Artwork.jpg' : releaseName + ' - Artwork.jpg';
+      const artExt = (item.downloads?.artworkUrl || '').split('.').pop() || 'jpg';
+      const artworkFilename = artistName ? artistName + ' - ' + releaseName + ' - Artwork.' + artExt : releaseName + ' - Artwork.' + artExt;
       
       const orderId = item.orderId;
       const releaseId = item.releaseId;
@@ -2911,7 +2912,8 @@ const nonce = (Astro.locals as any).nonce || '';
           if (item.hasArtwork) {
             const artworkUrl = typeof item.hasArtwork === 'string' ? item.hasArtwork : null;
             if (artworkUrl) {
-              const filename = `${item.artist} - ${item.title} - Artwork.jpg`;
+              const dlExt = artworkUrl.split('.').pop() || 'jpg';
+              const filename = `${item.artist} - ${item.title} - Artwork.${dlExt}`;
               window.open(`/api/download/?url=${encodeURIComponent(artworkUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
               await new Promise(r => setTimeout(r, 500));
             }

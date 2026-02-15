@@ -405,8 +405,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
 
               if (track) {
-                // Get artwork from Firebase - check all possible locations
-                const artworkUrl = releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
+                // Get artwork from Firebase - prefer original full-res for buyer downloads
+                const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
                 log.info('[create-order] Track artwork URL:', artworkUrl);
                 return {
                   ...item,
@@ -426,7 +426,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 };
               } else {
                 // Fallback: include all tracks if we can't find the specific one
-                const artworkUrl = releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
+                const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
                 log.info('[create-order] Fallback artwork URL:', artworkUrl);
                 return {
                   ...item,
@@ -450,8 +450,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Full release - include all tracks
             const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
             const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
-            // Get artwork from Firebase - check all possible locations (coverArtUrl is at root level)
-            const artworkUrl = releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
+            // Get artwork from Firebase - prefer original full-res for buyer downloads
+            const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
             log.info('[create-order] Full release artwork URL:', artworkUrl);
 
             const downloads = {
