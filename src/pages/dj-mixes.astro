@@ -608,12 +608,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
 </Layout>
 
 <script>
-  function escapeHtml(str) {
-    if (!str) return '';
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
-  }
+  import { escapeHtml } from '../lib/escape-html';
 
   // Floating chart functionality
   document.addEventListener('DOMContentLoaded', async function() {

@@ -354,6 +354,7 @@ const nonce = (Astro.locals as any).nonce || '';
   // Admin check uses Firestore admins collection - no UIDs exposed to client
 </script>
 <script type="module">
+  import { escapeHtml } from '../../../lib/escape-html';
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
@@ -368,11 +369,6 @@ const nonce = (Astro.locals as any).nonce || '';
 
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
-  }
 
   let allUsers = [];
   let currentEditUser = null;

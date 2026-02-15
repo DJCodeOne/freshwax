@@ -2213,6 +2213,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 </script>
 
 <script>
+  import { escapeHtml } from '../../lib/escape-html';
   // Playlist Monitor functionality
   document.addEventListener('DOMContentLoaded', function() {
     const PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
@@ -2338,12 +2339,6 @@ Astro.response.headers.set('Pragma', 'no-cache');
           }
         });
       });
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.textContent = text;
-      return div.innerHTML;
     }
 
     // Remove from queue (uses DELETE endpoint with admin override)

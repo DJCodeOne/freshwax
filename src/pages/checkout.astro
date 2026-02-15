@@ -41,6 +41,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
 
 <script>
+  import { escapeHtml } from '../lib/escape-html';
   // LIGHTWEIGHT AUTH: Uses window.firebaseAuth + window.authReady from Header.astro
   // instead of importing ~200KB Firebase SDK. Customer data loaded via /api/checkout-data./
 
@@ -272,14 +273,6 @@ const nonce = (Astro.locals as any).nonce || '';
     return 'background: #052e16; color: #22c55e; border-color: #22c55e;';
   }
 
-  // XSS prevention for innerHTML
-  function escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = String(str);
-    return div.innerHTML;
-  }
-  
   async function loadCustomerData(uid) {
     try {
       // Load via lightweight API instead of Firestore SDK (~80KB saved)

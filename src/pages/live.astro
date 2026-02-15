@@ -1054,11 +1054,7 @@ const nonce = (Astro.locals as any).nonce || '';
 </script>
 
 <script>
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  }
+  import { escapeHtml } from '../lib/escape-html';
 
   // ==========================================
   // EMOJI & GIF PICKER - Global Functions

@@ -694,6 +694,7 @@ const firebaseConfig = {
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
+  import { escapeHtml } from '../lib/escape-html';
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
@@ -799,11 +800,6 @@ const firebaseConfig = {
       resultsContainer.style.display = 'block';
       if (searchInputEl) searchInputEl.setAttribute('aria-expanded', 'true');
     }
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
 
   function displayResults(data, container) {

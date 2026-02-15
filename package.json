@@ -24,7 +24,6 @@
     "adm-zip": "^0.5.16",
     "astro": "^5.14.4",
     "aws4fetch": "^1.0.20",
-    "firebase-admin": "^13.5.0",
     "lucide-react": "^0.546.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

@@ -44,6 +44,7 @@ export const prerender = false;
 </AdminLayout>
 
 <script>
+  import { escapeHtml } from '../../lib/escape-html';
   let currentOffset = 0;
   const PAGE_SIZE = 50;
 
@@ -159,11 +160,6 @@ export const prerender = false;
     } catch (err) {
       errorList.innerHTML = `<p style="color: #dc2626; text-align: center; padding: 2rem;">Failed to load errors</p>`;
     }
-  }
-
-  function escapeHtml(s: string | null | undefined): string {
-    if (!s) return '';
-    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   (window as any).goPage = function(page: number) {

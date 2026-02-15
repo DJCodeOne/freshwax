@@ -7,6 +7,8 @@ import { verifyRequestUser } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
+const isDev = import.meta.env.DEV;
+
 // Helper to get user ID - prefers verified Firebase auth, falls back to cookie for anonymous carts (GET only)
 async function getUserId(request: Request, locals: any): Promise<string | null> {
   // Try Firebase auth first (secure, verified identity)
@@ -56,7 +58,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      console.log('[Cart API] KV not available, returning empty cart');
+      if (isDev) console.log('[Cart API] KV not available, returning empty cart');
       return new Response(JSON.stringify({
         success: true,
         cart: { items: [], updatedAt: null },
@@ -69,7 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const cartKey = `cart:${userId}`;
     const cartData = await kv.get(cartKey, 'json');
 
-    console.log('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
+    if (isDev) console.log('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
 
     return new Response(JSON.stringify({
       success: true,
@@ -123,7 +125,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      console.log('[Cart API] KV not available, cart not persisted');
+      if (isDev) console.log('[Cart API] KV not available, cart not persisted');
       return new Response(JSON.stringify({
         success: true,
         persisted: false,
@@ -144,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       expirationTtl: 30 * 24 * 60 * 60
     });
 
-    console.log('[Cart API] POST', cartKey, 'saved', items.length, 'items');
+    if (isDev) console.log('[Cart API] POST', cartKey, 'saved', items.length, 'items');
 
     return new Response(JSON.stringify({
       success: true,
@@ -196,7 +198,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const cartKey = `cart:${userId}`;
     await kv.delete(cartKey);
 
-    console.log('[Cart API] DELETE', cartKey);
+    if (isDev) console.log('[Cart API] DELETE', cartKey);
 
     return new Response(JSON.stringify({
       success: true

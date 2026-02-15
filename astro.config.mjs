@@ -35,9 +35,7 @@ export default defineConfig({
   
   vite: {
     plugins: [tailwindcss()],
-    ssr: {
-      external: ['firebase-admin']
-    },
+    ssr: {},
     optimizeDeps: {
       include: ['firebase/app']
     }

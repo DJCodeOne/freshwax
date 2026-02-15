@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { escapeHtml } from '../../lib/escape-html';
 
 export const prerender = false;
 
@@ -56,8 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // SECURITY: Escape HTML in user inputs to prevent injection
-    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const esc = (s: string) => escapeHtml(s);
 
     // Build subject line
     const isReport = subject === 'report';
@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       `
     });
 
-    console.log('[Contact] Email sent:', result);
+    if (import.meta.env.DEV) console.log('[Contact] Email sent:', result);
 
     return new Response(JSON.stringify({
       success: true,

@@ -479,6 +479,7 @@ export const prerender = false;
 </style>
 
 <script>
+  import { escapeHtml } from '../../lib/escape-html';
   const CATEGORIES = {
     inappropriate_content: 'Inappropriate Content',
     harassment: 'Harassment',
@@ -674,11 +675,6 @@ export const prerender = false;
     if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
     if (diff < 86400000) return `${Math.floor(diff/3600000)}h ago`;
     return d.toLocaleDateString();
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   // Event listeners

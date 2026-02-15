@@ -269,11 +269,7 @@ export const prerender = false;
 
 
 <script>
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  }
+  import { escapeHtml } from '../../lib/escape-html';
 
   // Load analytics
   async function loadAnalytics() {

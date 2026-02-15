@@ -190,14 +190,6 @@ export function getEnv(locals: unknown): Record<string, string | undefined> {
 // HTML ESCAPING
 // ============================================
 
-/**
- * Escape HTML entities to prevent XSS in server-rendered content and emails.
- * Handles null/undefined gracefully by returning an empty string.
- */
-export function escapeHtml(text: string | null | undefined): string {
-  if (!text) return '';
-  const str = String(text);
-  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return str.replace(/[&<>"']/g, m => map[m]);
-}
+// Re-export from standalone module (safe for both server and client imports)
+export { escapeHtml } from './escape-html';
 
