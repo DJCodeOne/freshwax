@@ -2,8 +2,6 @@
 import { defineConfig } from 'astro/config';
 import tailwindcss from '@tailwindcss/vite';
 import cloudflare from '@astrojs/cloudflare';
-import node from '@astrojs/node';
-const isProduction = process.env.NODE_ENV === 'production' || process.env.npm_lifecycle_event === 'build';
 
 export default defineConfig({
   // Sitemap is handled by the custom dynamic endpoint at src/pages/sitemap.xml.ts
@@ -18,26 +16,30 @@ export default defineConfig({
   security: {
     checkOrigin: true
   },
-  
-  adapter: isProduction 
-    ? cloudflare({ 
-        mode: 'directory',
-        runtime: {
-          mode: 'local',
-          type: 'pages'
-        }
-      }) 
-    : node({ mode: 'standalone' }),
-    
+
+  adapter: cloudflare({
+    mode: 'directory',
+    runtime: {
+      mode: 'local',
+      type: 'pages'
+    }
+  }),
+
   site: 'https://freshwax.co.uk',
 
   trailingSlash: 'always',
-  
+
   vite: {
     plugins: [tailwindcss()],
-    ssr: {},
-    optimizeDeps: {
-      include: ['firebase/app']
+    ssr: {
+      // firebase-admin is dynamically imported by complete-upload.ts at runtime;
+      // externalize so Vite doesn't try to bundle it (not installed as a dependency)
+      external: [/^firebase-admin/]
+    },
+    build: {
+      rollupOptions: {
+        external: [/^firebase-admin/]
+      }
     }
   }
 });
