@@ -9,6 +9,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
     "astro": "astro"
   },
   "dependencies": {
@@ -33,6 +35,7 @@
   },
   "devDependencies": {
     "@astrojs/node": "^9.5.0",
+    "@playwright/test": "^1.58.2",
     "@types/adm-zip": "^0.5.7",
     "@vitest/coverage-v8": "^4.0.16",
     "husky": "^9.1.7",

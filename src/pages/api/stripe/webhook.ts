@@ -1646,7 +1646,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }).catch(e => console.error('[Stripe Webhook] Log error:', e));
     }
 
-    // Handle checkout.session.expired - release reserved stock
+    // Handle checkout.session.expired - release reserved stock + send recovery email
     if (event.type === 'checkout.session.expired') {
       const session = event.data.object;
       console.log('[Stripe Webhook] Checkout session expired:', session.id);
@@ -1659,6 +1659,67 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.log('[Stripe Webhook] Released reservation:', reservationId);
         } catch (err) {
           console.error('[Stripe Webhook] Failed to release reservation:', err);
+        }
+      }
+
+      // Send abandoned cart recovery email
+      const customerEmail = session.customer_email || session.customer_details?.email;
+      const itemsMeta = session.metadata?.items;
+      if (customerEmail && itemsMeta) {
+        try {
+          let items: any[] = [];
+          try { items = JSON.parse(itemsMeta); } catch { /* invalid JSON */ }
+
+          if (items.length > 0) {
+            // Check email opt-out (forward-compatible)
+            let optedOut = false;
+            const userId = session.metadata?.userId || session.metadata?.customer_id;
+            if (userId) {
+              try {
+                const userDoc = await getDocument('customers', userId, env);
+                if (userDoc && (userDoc as any).emailOptOut) {
+                  optedOut = true;
+                }
+              } catch { /* user not found, proceed */ }
+            }
+
+            if (!optedOut) {
+              // Rate limit: max 1 per email per 24h
+              const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+              const recentEmails = await queryCollection('abandonedCartEmails', env, [
+                { field: 'email', op: 'EQUAL', value: customerEmail },
+                { field: 'sentAt', op: 'GREATER_THAN_OR_EQUAL', value: oneDayAgo }
+              ]);
+
+              if (!recentEmails || recentEmails.length === 0) {
+                const { sendAbandonedCartEmail } = await import('../../../lib/abandoned-cart-email');
+                const customerName = session.customer_details?.name || session.metadata?.customerName || null;
+                const total = (session.amount_total || 0) / 100;
+
+                const emailResult = await sendAbandonedCartEmail(customerEmail, customerName, items, total, env);
+
+                // Log to Firestore for analytics
+                await addDocument('abandonedCartEmails', {
+                  email: customerEmail,
+                  sessionId: session.id,
+                  itemCount: items.length,
+                  total,
+                  sent: emailResult.success,
+                  messageId: emailResult.messageId || null,
+                  error: emailResult.error || null,
+                  sentAt: new Date().toISOString()
+                }, env);
+
+                console.log('[Stripe Webhook] Abandoned cart email:', emailResult.success ? 'sent' : 'failed');
+              } else {
+                console.log('[Stripe Webhook] Abandoned cart email rate-limited for:', customerEmail);
+              }
+            } else {
+              console.log('[Stripe Webhook] Customer opted out of emails:', customerEmail);
+            }
+          }
+        } catch (emailErr) {
+          console.error('[Stripe Webhook] Abandoned cart email error:', emailErr);
         }
       }
     }

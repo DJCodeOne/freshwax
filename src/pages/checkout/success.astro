@@ -68,9 +68,18 @@ const nonce = (Astro.locals as any).nonce || '';
     if (orderId) {
       console.log('[success] Free order detected:', orderId);
 
-      // Clear cart
+      // Track purchase before clearing cart
       const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
       if (customerId) {
+        try {
+          const cartData = localStorage.getItem('freshwax_cart_' + customerId);
+          if (cartData) {
+            const parsed = JSON.parse(cartData);
+            const items = parsed.items || [];
+            const total = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
+            window.trackPurchase?.(orderId, total, items, 0);
+          }
+        } catch (e) { /* ignore parse errors */ }
         localStorage.removeItem('freshwax_cart_' + customerId);
       }
       localStorage.removeItem('cart');
@@ -115,7 +124,18 @@ const nonce = (Astro.locals as any).nonce || '';
         if (result.success || result.paymentStatus === 'paid') {
           console.log('[success] Payment successful, clearing cart');
           const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
+
+          // Track purchase before clearing cart
           if (customerId) {
+            try {
+              const cartData = localStorage.getItem('freshwax_cart_' + customerId);
+              if (cartData) {
+                const parsed = JSON.parse(cartData);
+                const items = parsed.items || [];
+                const total = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
+                window.trackPurchase?.(result.orderId || sessionId, total, items, 0);
+              }
+            } catch (e) { /* ignore parse errors */ }
             localStorage.removeItem('freshwax_cart_' + customerId);
           }
           localStorage.removeItem('cart');

@@ -787,6 +787,7 @@ const firebaseConfig = {
       resultsContainer.classList.remove('fwx-hidden');
       resultsContainer.style.display = 'block';
       if (searchInputEl) searchInputEl.setAttribute('aria-expanded', 'true');
+      window.trackSearch?.(query, (data.results || []).length);
     } catch (error) {
       if (error.name === 'AbortError') return; // Cancelled by newer search
       console.error('Search error:', error);

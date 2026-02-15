@@ -5604,6 +5604,9 @@ const nonce = (Astro.locals as any).nonce || '';
   // Run on initial load and on View Transition navigations
   document.addEventListener('astro:page-load', initAutoHideHeader);
 
+  // Also run immediately — astro:page-load may have already fired before this module executes
+  initAutoHideHeader();
+
   // Clean up when navigating away via View Transitions
   document.addEventListener('astro:before-swap', cleanupAutoHideHeader);
 </script>

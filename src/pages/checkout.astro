@@ -1124,6 +1124,9 @@ const nonce = (Astro.locals as any).nonce || '';
       }
     }
 
+    // Track begin checkout event
+    window.trackBeginCheckout?.(cart, total);
+
     const orderData = {
       customer: {
         email: form.email.value,
