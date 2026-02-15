@@ -1935,7 +1935,7 @@ const nonce = (Astro.locals as any).nonce || '';
           const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
 
           let receivedBytes = 0;
-          const chunks: Uint8Array[] = [];
+          const chunks = [];
           const reader = fileResponse.body?.getReader();
 
           if (reader && totalSize > 0) {
@@ -1968,7 +1968,7 @@ const nonce = (Astro.locals as any).nonce || '';
           if (itemEl) {
             itemEl.innerHTML = `<span class="zip-file-icon" style="color: #22c55e;">✓</span> ${file.label}`;
           }
-        } catch (fileError: any) {
+        } catch (fileError) {
           if (fileError.name === 'AbortError' || isCancelled) {
             throw new Error('Download cancelled');
           }
@@ -1999,7 +1999,7 @@ const nonce = (Astro.locals as any).nonce || '';
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: { level: 6 }
-      }, (metadata: any) => {
+      }, (metadata) => {
         // 80% to 100% during ZIP generation
         const zipPercent = 80 + (metadata.percent * 0.2);
         progressFill.style.width = `${Math.round(zipPercent)}%`;
@@ -2029,17 +2029,17 @@ const nonce = (Astro.locals as any).nonce || '';
         document.body.style.overflow = '';
       }, 2000);
 
-    } catch (error: any) {
+    } catch (error) {
       // Clean up animation state
       progressFill.classList.remove('creating');
 
       // If cancelled, just clean up silently (already handled by cancelHandler)
-      if (isCancelled || error.message === 'Download cancelled') {
+      if (isCancelled || (error && error.message === 'Download cancelled')) {
         return;
       }
 
       console.error('ZIP download error:', error);
-      progressText.textContent = `Error: ${error.message}`;
+      progressText.textContent = `Error: ${error && error.message ? error.message : 'Unknown error'}`;
       progressFill.style.background = '#ef4444';
 
       button.innerHTML = '✗ Error';
