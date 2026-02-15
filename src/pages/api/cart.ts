@@ -37,7 +37,7 @@ async function getUserId(request: Request, locals: any): Promise<string | null> 
   return null;
 }
 
-// GET /api/cart - Retrieve cart from KV
+// GET /api/cart/ - Retrieve cart from KV
 export const GET: APIRoute = async ({ request, locals }) => {
   const userId = await getUserId(request, locals);
 
@@ -91,7 +91,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// POST /api/cart - Save cart to KV
+// POST /api/cart/ - Save cart to KV
 export const POST: APIRoute = async ({ request, locals }) => {
   const userId = await getUserId(request, locals);
 
@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// DELETE /api/cart - Clear cart from KV
+// DELETE /api/cart/ - Clear cart from KV
 export const DELETE: APIRoute = async ({ request, locals }) => {
   const userId = await getUserId(request, locals);
 

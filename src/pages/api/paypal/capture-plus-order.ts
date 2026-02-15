@@ -207,7 +207,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Send welcome email
     try {
       const origin = new URL(request.url).origin;
-      await fetch(`${origin}/api/admin/send-plus-welcome-email`, {
+      await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

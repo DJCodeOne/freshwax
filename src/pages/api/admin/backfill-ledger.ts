@@ -1,6 +1,6 @@
 // src/pages/api/admin/backfill-ledger.ts
 // Backfill sales ledger entries for orders missing them
-// Run via: GET /api/admin/backfill-ledger?confirm=yes
+// Run via: GET /api/admin/backfill-ledger/?confirm=yes
 
 import type { APIRoute } from 'astro';
 

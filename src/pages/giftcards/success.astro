@@ -71,7 +71,7 @@ const nonce = (Astro.locals as any).nonce || '';
       console.log('[giftcard-success] PayPal order:', paypalOrderId);
 
       try {
-        const response = await fetch('/api/giftcards/capture-paypal-order', {
+        const response = await fetch('/api/giftcards/capture-paypal-order/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ paypalOrderId })
@@ -122,7 +122,7 @@ const nonce = (Astro.locals as any).nonce || '';
         console.log(`[giftcard-success] Attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
 
-        const response = await fetch(`/api/giftcards/verify-session?session_id=${sessionId}`);
+        const response = await fetch(`/api/giftcards/verify-session/?session_id=${sessionId}`);
         const result = await response.json();
         console.log('[giftcard-success] Verify result:', result);
 

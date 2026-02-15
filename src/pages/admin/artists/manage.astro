@@ -315,7 +315,7 @@ export const prerender = false;
             throw new Error('Not authenticated');
           }
 
-          const response = await fetch(`/api/admin/list-partners`, {
+          const response = await fetch(`/api/admin/list-partners/`, {
             headers: { 'X-Admin-Key': window.ADMIN_KEY }
           });
           const data = await response.json();
@@ -570,7 +570,7 @@ export const prerender = false;
           }
 
           // Call server-side API with simplified updates object
-          const response = await fetch('/api/admin/update-partner', {
+          const response = await fetch('/api/admin/update-partner/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -633,7 +633,7 @@ export const prerender = false;
         try {
           // Approve partner via API (replaces client-side Firestore write)
           const idToken = await auth.currentUser.getIdToken();
-          const approveResp = await fetch('/api/admin/approve-partner', {
+          const approveResp = await fetch('/api/admin/approve-partner/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
             body: JSON.stringify({ partnerId: currentPartnerId })
@@ -644,7 +644,7 @@ export const prerender = false;
           // Send confirmation email
           if (partner?.email) {
             try {
-              await fetch('/api/admin/send-approval-email', {
+              await fetch('/api/admin/send-approval-email/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -681,7 +681,7 @@ export const prerender = false;
         try {
           // Delete partner via API (replaces client-side Firestore write)
           const deleteToken = await auth.currentUser.getIdToken();
-          const deleteResp = await fetch('/api/admin/delete-user', {
+          const deleteResp = await fetch('/api/admin/delete-user/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${deleteToken}` },
             body: JSON.stringify({ uid: currentPartnerId, collection: 'artists' })

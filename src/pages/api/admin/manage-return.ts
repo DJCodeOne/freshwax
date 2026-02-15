@@ -103,7 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // Call the process-refund endpoint
         const origin = new URL(request.url).origin;
-        const refundResponse = await fetch(`${origin}/api/admin/process-refund`, {
+        const refundResponse = await fetch(`${origin}/api/admin/process-refund/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

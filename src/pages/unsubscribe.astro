@@ -87,7 +87,7 @@ const email = Astro.url.searchParams.get('email') || '';
     message.classList.add('hidden');
     
     try {
-      const response = await fetch('/api/newsletter/unsubscribe', {
+      const response = await fetch('/api/newsletter/unsubscribe/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })

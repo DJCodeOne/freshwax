@@ -224,7 +224,7 @@ export const prerender = false;
   // Load settings via API (D1 primary, Firebase fallback)
   async function loadSettings(userId) {
     try {
-      const response = await fetch(`/api/vinyl/settings?userId=${encodeURIComponent(userId)}`);
+      const response = await fetch(`/api/vinyl/settings/?userId=${encodeURIComponent(userId)}`);
       const result = await response.json();
 
       if (result.success && result.settings) {
@@ -306,7 +306,7 @@ export const prerender = false;
         discogsUrl: document.getElementById('discogsUrl').value.trim()
       };
 
-      const response = await fetch('/api/vinyl/settings', {
+      const response = await fetch('/api/vinyl/settings/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

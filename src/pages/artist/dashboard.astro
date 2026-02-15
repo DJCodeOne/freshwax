@@ -1483,7 +1483,7 @@ const nonce = (Astro.locals as any).nonce || '';
       try {
         // Fetch user profile to check if they're a partner
         const _idToken = await user.getIdToken();
-        const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+        const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
           headers: { 'Authorization': `Bearer ${_idToken}` }
         });
         const profile = await response.json();

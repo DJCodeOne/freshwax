@@ -59,7 +59,7 @@ export const prerender = false;
     errorList.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">Loading...</p>';
 
     try {
-      const res = await fetch(`/api/admin/errors?${params}`);
+      const res = await fetch(`/api/admin/errors/?${params}`);
       const data = await res.json();
 
       if (!data.success) {
@@ -146,10 +146,13 @@ export const prerender = false;
 
       if (totalPages > 1) {
         let pagHtml = '';
-        if (currentPage > 1) pagHtml += `<button onclick="goPage(${currentPage - 2})" style="padding: 0.375rem 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer;">Prev</button>`;
+        if (currentPage > 1) pagHtml += `<button data-page="${currentPage - 2}" style="padding: 0.375rem 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer;">Prev</button>`;
         pagHtml += `<span style="padding: 0.375rem 0.75rem; font-weight: 600;">Page ${currentPage} of ${totalPages}</span>`;
-        if (currentPage < totalPages) pagHtml += `<button onclick="goPage(${currentPage})" style="padding: 0.375rem 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer;">Next</button>`;
+        if (currentPage < totalPages) pagHtml += `<button data-page="${currentPage}" style="padding: 0.375rem 0.75rem; border: 2px solid #e5e7eb; border-radius: 6px; background: white; cursor: pointer;">Next</button>`;
         pag.innerHTML = pagHtml;
+        pag.querySelectorAll('button[data-page]').forEach((btn: Element) => {
+          btn.addEventListener('click', () => goPage(parseInt((btn as HTMLElement).dataset.page!)));
+        });
       } else {
         pag.innerHTML = '';
       }
@@ -192,7 +195,7 @@ export const prerender = false;
     btn.disabled = true;
     btn.textContent = 'Cleaning...';
     try {
-      const res = await fetch('/api/admin/errors?days=7', { method: 'DELETE' });
+      const res = await fetch('/api/admin/errors/?days=7', { method: 'DELETE' });
       const data = await res.json();
       alert(`Deleted ${data.deleted} old error logs`);
       loadErrors();

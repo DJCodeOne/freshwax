@@ -129,7 +129,7 @@ export const prerender = false;
     try {
       // Use API endpoint instead of direct Firestore
       const idToken = await currentUser.getIdToken();
-      const response = await fetch(`/api/vinyl/orders?sellerId=${encodeURIComponent(currentUser.uid)}`, {
+      const response = await fetch(`/api/vinyl/orders/?sellerId=${encodeURIComponent(currentUser.uid)}`, {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       const result = await response.json();
@@ -309,7 +309,7 @@ export const prerender = false;
       // Get auth token
       const idToken = await currentUser.getIdToken();
 
-      const response = await fetch('/api/vinyl/orders', {
+      const response = await fetch('/api/vinyl/orders/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

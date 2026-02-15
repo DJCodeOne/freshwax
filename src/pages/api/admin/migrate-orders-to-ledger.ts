@@ -1,6 +1,6 @@
 // src/pages/api/admin/migrate-orders-to-ledger.ts
 // One-time migration script to backfill existing orders to the sales ledger
-// Run via: GET /api/admin/migrate-orders-to-ledger?confirm=yes
+// Run via: GET /api/admin/migrate-orders-to-ledger/?confirm=yes
 
 import type { APIRoute } from 'astro';
 

@@ -115,7 +115,7 @@ describe('timingSafeCompare', () => {
 // =============================================
 describe('getAdminKey', () => {
   function makeRequest(headers: Record<string, string> = {}): Request {
-    return new Request('https://example.com/api/test', {
+    return new Request('https://example.com/api/test/', {
       headers: new Headers(headers),
     });
   }

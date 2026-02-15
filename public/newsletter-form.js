@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     message.classList.add('hidden');
 
     try {
-      var response = await fetch('/api/newsletter/subscribe', {
+      var response = await fetch('/api/newsletter/subscribe/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email, source: 'footer', consent: true })

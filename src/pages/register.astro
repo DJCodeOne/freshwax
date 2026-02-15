@@ -955,7 +955,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       try {
         // Check display name availability via server API (avoids Firestore SDK)
-        const response = await fetch(`/api/auth/check-display-name?name=${encodeURIComponent(name)}`);
+        const response = await fetch(`/api/auth/check-display-name/?name=${encodeURIComponent(name)}`);
         const data = await response.json();
 
         if (!data.success) {
@@ -1032,7 +1032,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Initialize user via server API (checks existence, display name, and creates if needed)
         const idToken = await user.getIdToken();
-        const initResponse = await fetch('/api/auth/init-user', {
+        const initResponse = await fetch('/api/auth/init-user/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1179,7 +1179,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Initialize user profile via server API (creates Firestore doc + pending role requests)
         const idToken = await user.getIdToken();
-        const initResponse = await fetch('/api/auth/init-user', {
+        const initResponse = await fetch('/api/auth/init-user/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -197,7 +197,7 @@ const nonce = (Astro.locals as any).nonce || '';
         // Get user type/roles from existing API
         console.log('[PaymentSettings] Fetching user type...');
         const _idToken = await user.getIdToken();
-        const userRes = await fetch(`/api/get-user-type?uid=${user.uid}`, {
+        const userRes = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
           headers: { 'Authorization': `Bearer ${_idToken}` }
         });
         const userTypeData = await userRes.json();
@@ -222,7 +222,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Get payment status - use unified endpoint
         console.log('[PaymentSettings] Fetching payment status...');
-        const paymentRes = await fetch(`/api/payment/status?userId=${user.uid}`);
+        const paymentRes = await fetch(`/api/payment/status/?userId=${user.uid}`);
         const paymentData = await paymentRes.json();
         console.log('[PaymentSettings] Payment data:', paymentData);
 
@@ -483,7 +483,7 @@ const nonce = (Astro.locals as any).nonce || '';
     try {
       console.log('[PaymentSettings] Calling Stripe Connect API...');
       // Use user endpoint that works for all vendor types
-      const res = await fetch('/api/stripe/connect/user/create-account', {
+      const res = await fetch('/api/stripe/connect/user/create-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -525,7 +525,7 @@ const nonce = (Astro.locals as any).nonce || '';
     btn.disabled = true;
 
     try {
-      const res = await fetch('/api/paypal/link-account', {
+      const res = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -558,7 +558,7 @@ const nonce = (Astro.locals as any).nonce || '';
     }
 
     try {
-      const res = await fetch('/api/paypal/link-account', {
+      const res = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -577,7 +577,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
   async function setPreferred(method) {
     try {
-      const res = await fetch('/api/paypal/set-payout-method', {
+      const res = await fetch('/api/paypal/set-payout-method/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

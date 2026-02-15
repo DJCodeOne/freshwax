@@ -278,7 +278,7 @@ export const prerender = false;
   // Load analytics
   async function loadAnalytics() {
     try {
-      const response = await fetch('/api/admin/giftcards?type=analytics');
+      const response = await fetch('/api/admin/giftcards/?type=analytics');
       const result = await response.json();
       
       if (result.success) {
@@ -302,7 +302,7 @@ export const prerender = false;
     tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading...</td></tr>';
     
     try {
-      const response = await fetch('/api/admin/giftcards?type=balances');
+      const response = await fetch('/api/admin/giftcards/?type=balances');
       const result = await response.json();
       
       if (result.success && result.balances.length > 0) {
@@ -340,7 +340,7 @@ export const prerender = false;
     tbody.innerHTML = '<tr><td colspan="9" class="loading">Loading...</td></tr>';
     
     try {
-      const response = await fetch('/api/admin/giftcards?type=cards');
+      const response = await fetch('/api/admin/giftcards/?type=cards');
       const result = await response.json();
       
       if (result.success && result.cards.length > 0) {
@@ -485,7 +485,7 @@ export const prerender = false;
     btn.textContent = 'Creating...';
     
     try {
-      const response = await adminFetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards/', {
         method: 'POST',
         body: JSON.stringify({
           action: 'createCard',
@@ -525,7 +525,7 @@ export const prerender = false;
     try {
       const amount = parseFloat(document.getElementById('adjustAmount').value);
       
-      const response = await adminFetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards/', {
         method: 'POST',
         body: JSON.stringify({
           action: 'adjustBalance',
@@ -575,7 +575,7 @@ export const prerender = false;
     if (!confirm('Are you sure you want to cancel this gift card? The code will no longer be redeemable.')) return;
     
     try {
-      const response = await adminFetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards/', {
         method: 'POST',
         body: JSON.stringify({
           action: 'deactivateCard',
@@ -603,7 +603,7 @@ export const prerender = false;
     if (!confirm('Reactivate this gift card? It will become redeemable again.')) return;
     
     try {
-      const response = await adminFetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards/', {
         method: 'POST',
         body: JSON.stringify({
           action: 'reactivateCard',
@@ -751,7 +751,7 @@ export const prerender = false;
     const code = document.getElementById('resendCardCode').value;
     
     try {
-      const response = await adminFetch('/api/admin/giftcards', {
+      const response = await adminFetch('/api/admin/giftcards/', {
         method: 'POST',
         body: JSON.stringify({
           action: 'resendEmail',
@@ -804,7 +804,7 @@ export const prerender = false;
     body.innerHTML = 'Loading...';
     
     try {
-      const response = await fetch(`/api/giftcards/balance?userId=${userId}`);
+      const response = await fetch(`/api/giftcards/balance/?userId=${userId}`);
       const result = await response.json();
       
       if (result.success) {

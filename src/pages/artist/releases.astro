@@ -1652,7 +1652,7 @@ export const prerender = false;
       btn.disabled = true;
 
       try {
-        const response = await fetch('/api/update-release', {
+        const response = await fetch('/api/update-release/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -1750,7 +1750,7 @@ export const prerender = false;
       const releaseId = card.dataset.releaseId;
 
       try {
-        const response = await fetch('/api/update-release', {
+        const response = await fetch('/api/update-release/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1828,7 +1828,7 @@ export const prerender = false;
     confirmDeleteBtn.disabled = true;
 
     try {
-      const response = await fetch('/api/delete-release', {
+      const response = await fetch('/api/delete-release/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

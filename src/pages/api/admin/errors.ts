@@ -8,7 +8,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 export const prerender = false;
 
-// GET /api/admin/errors?source=client&limit=100&offset=0
+// GET /api/admin/errors/?source=client&limit=100&offset=0
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`errors:${clientId}`, RateLimiters.admin);
@@ -96,7 +96,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 };
 
-// DELETE /api/admin/errors — cleanup old logs
+// DELETE /api/admin/errors/ — cleanup old logs
 export const DELETE: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`errors-delete:${clientId}`, RateLimiters.adminBulk);

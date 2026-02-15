@@ -569,7 +569,7 @@ export const prerender = false;
     btn.textContent = 'Saving...';
 
     try {
-      const response = await fetch('/api/admin/blog', {
+      const response = await fetch('/api/admin/blog/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

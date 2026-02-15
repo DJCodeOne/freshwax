@@ -839,7 +839,7 @@ const nonce = (Astro.locals as any).nonce || '';
       let userData = {};
       try {
         const idToken = await user.getIdToken();
-        const accessResp = await fetch('/api/user/dashboard-access', {
+        const accessResp = await fetch('/api/user/dashboard-access/', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const accessData = await accessResp.json();

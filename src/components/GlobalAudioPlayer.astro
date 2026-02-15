@@ -771,7 +771,7 @@ const { nonce = '' } = Astro.props;
         }
         
         // Priority 3: Fetch from API
-        fetch('/api/get-shuffle-tracks')
+        fetch('/api/get-shuffle-tracks/')
           .then(function(res) { 
             if (!res.ok) throw new Error('API returned status ' + res.status);
             return res.json(); 

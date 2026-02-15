@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   if (!orderId) {
     return new Response(JSON.stringify({
       error: 'Missing orderId',
-      usage: '/api/admin/check-order-files?orderId=xxx'
+      usage: '/api/admin/check-order-files/?orderId=xxx'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

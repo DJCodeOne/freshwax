@@ -1,6 +1,6 @@
 // src/pages/api/admin/r2-image-reprocess.ts
 // Batch reprocess R2 images: fetch, convert to WebP, re-upload
-// POST /api/admin/r2-image-reprocess
+// POST /api/admin/r2-image-reprocess/
 
 import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';

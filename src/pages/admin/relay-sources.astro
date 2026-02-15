@@ -462,7 +462,7 @@ export const prerender = false;
   // Load sources
   async function loadSources() {
     try {
-      const response = await fetch('/api/livestream/relay-sources');
+      const response = await fetch('/api/livestream/relay-sources/');
       const result = await response.json();
       
       if (result.success) {
@@ -569,13 +569,13 @@ export const prerender = false;
     try {
       let response;
       if (sourceId) {
-        response = await fetch('/api/livestream/relay-sources', {
+        response = await fetch('/api/livestream/relay-sources/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: sourceId, ...data })
         });
       } else {
-        response = await fetch('/api/livestream/relay-sources', {
+        response = await fetch('/api/livestream/relay-sources/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
@@ -625,7 +625,7 @@ export const prerender = false;
     if (!confirm(`Delete "${source.name}"? This cannot be undone.`)) return;
     
     try {
-      const response = await fetch(`/api/livestream/relay-sources?id=${id}`, {
+      const response = await fetch(`/api/livestream/relay-sources/?id=${id}`, {
         method: 'DELETE'
       });
       
@@ -651,7 +651,7 @@ export const prerender = false;
     
     // Also check status
     try {
-      const response = await fetch(`/api/livestream/check-relays?id=${id}`);
+      const response = await fetch(`/api/livestream/check-relays/?id=${id}`);
       const result = await response.json();
       
       if (result.success && result.relays.length > 0) {

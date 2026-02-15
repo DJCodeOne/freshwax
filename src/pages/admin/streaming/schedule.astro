@@ -764,7 +764,7 @@ export const prerender = false;
   // Allowance management
   async function loadAllowances() {
     try {
-      const response = await fetch('/api/livestream/allowances');
+      const response = await fetch('/api/livestream/allowances/');
       const data = await response.json();
       if (data.success) {
         allowances = data.allowances || [];
@@ -817,7 +817,7 @@ export const prerender = false;
     }
 
     try {
-      const response = await fetch('/api/livestream/allowances', {
+      const response = await fetch('/api/livestream/allowances/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ djId, weeklySlots, maxHoursPerDay, reason })
@@ -839,7 +839,7 @@ export const prerender = false;
     if (!confirm('Remove this DJ\'s override?')) return;
 
     try {
-      const response = await fetch('/api/livestream/allowances', {
+      const response = await fetch('/api/livestream/allowances/', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ djId })

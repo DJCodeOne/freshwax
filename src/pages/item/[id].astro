@@ -1501,7 +1501,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
           
           // Fetch from consolidated API endpoint
           const _idToken = await user.getIdToken();
-          const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+          const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
             headers: { 'Authorization': `Bearer ${_idToken}` }
           });
           if (response.ok) {
@@ -1660,7 +1660,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     // Get auth token for API
     const token = currentUser ? await currentUser.getIdToken() : null;
 
-    fetch('/api/add-comment', {
+    fetch('/api/add-comment/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1873,7 +1873,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     // Immediately post the GIF
     const token = await currentUser.getIdToken();
 
-    fetch('/api/add-comment', {
+    fetch('/api/add-comment/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1968,7 +1968,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
       try {
         const token = await user.getIdToken();
-        const response = await fetch('/api/follow-artist', {
+        const response = await fetch('/api/follow-artist/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2015,7 +2015,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
       try {
         const token = await user.getIdToken();
-        const response = await fetch('/api/follow-artist', {
+        const response = await fetch('/api/follow-artist/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2122,7 +2122,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
       try {
         const token = await user.getIdToken();
-        const response = await fetch('/api/wishlist', {
+        const response = await fetch('/api/wishlist/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2168,7 +2168,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
       try {
         const token = await user.getIdToken();
-        const response = await fetch('/api/wishlist', {
+        const response = await fetch('/api/wishlist/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

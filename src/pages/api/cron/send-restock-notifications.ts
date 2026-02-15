@@ -154,7 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
                     <p style="color: #737373; font-size: 12px; margin-top: 20px; border-top: 1px solid #262626; padding-top: 20px;">
                       You received this email because you signed up for back-in-stock notifications.<br>
-                      <a href="https://freshwax.co.uk/api/notify-restock?email=${encodeURIComponent(sub.email)}&productId=${productId}&action=unsubscribe" style="color: #737373;">Unsubscribe</a>
+                      <a href="https://freshwax.co.uk/api/notify-restock/?email=${encodeURIComponent(sub.email)}&productId=${productId}&action=unsubscribe" style="color: #737373;">Unsubscribe</a>
                     </p>
                   </div>
                 `

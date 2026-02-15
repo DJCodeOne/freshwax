@@ -233,7 +233,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     async function loadProducts(user) {
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch('/api/pro/dashboard-data?type=merch', {
+        const response = await fetch('/api/pro/dashboard-data/?type=merch', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await response.json();

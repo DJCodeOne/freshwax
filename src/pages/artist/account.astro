@@ -2758,7 +2758,7 @@ export const prerender = false;
     saveBtn.disabled = true;
     
     try {
-      const response = await fetch('/api/update-partner', {
+      const response = await fetch('/api/update-partner/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: partnerId, ...data })
@@ -2846,7 +2846,7 @@ export const prerender = false;
 
     try {
       const _token = await getAuthToken();
-      const response = await fetch('/api/stripe/connect/create-account', {
+      const response = await fetch('/api/stripe/connect/create-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) }
       });
@@ -2878,7 +2878,7 @@ export const prerender = false;
 
     try {
       const _token = await getAuthToken();
-      const response = await fetch('/api/stripe/connect/refresh-link', {
+      const response = await fetch('/api/stripe/connect/refresh-link/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) }
       });
@@ -2965,7 +2965,7 @@ export const prerender = false;
 
     try {
       const _token = await getAuthToken();
-      const response = await fetch('/api/paypal/link-account', {
+      const response = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
         body: JSON.stringify({
@@ -3006,7 +3006,7 @@ export const prerender = false;
     paypalChangeBtn.textContent = 'Updating...';
     paypalChangeBtn.disabled = true;
 
-    getAuthToken().then(_token => fetch('/api/paypal/link-account', {
+    getAuthToken().then(_token => fetch('/api/paypal/link-account/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
       body: JSON.stringify({
@@ -3043,7 +3043,7 @@ export const prerender = false;
 
       try {
         const _token = await getAuthToken();
-        const response = await fetch('/api/paypal/set-payout-method', {
+        const response = await fetch('/api/paypal/set-payout-method/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
           body: JSON.stringify({
@@ -3085,7 +3085,7 @@ export const prerender = false;
 
     try {
       const _token = await getAuthToken();
-      const response = await fetch('/api/paypal/set-payout-method', {
+      const response = await fetch('/api/paypal/set-payout-method/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(_token && { 'Authorization': `Bearer ${_token}` }) },
         body: JSON.stringify({
@@ -3170,7 +3170,7 @@ export const prerender = false;
     shippingStatus.className = 'save-status';
 
     try {
-      const response = await fetch('/api/artist/update-shipping', {
+      const response = await fetch('/api/artist/update-shipping/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

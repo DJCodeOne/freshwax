@@ -624,7 +624,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
 
     // Check if charts feature is enabled
     try {
-      const response = await fetch('/api/admin/get-settings');
+      const response = await fetch('/api/admin/get-settings/');
       const data = await response.json();
       
       if (data.success && data.settings?.showMixCharts) {
@@ -652,7 +652,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
     // Load chart data
     async function loadChartData() {
       try {
-        const response = await fetch('/api/get-mix-chart');
+        const response = await fetch('/api/get-mix-chart/');
         const data = await response.json();
         
         if (data.success && data.chart && data.chart.length > 0) {
@@ -917,7 +917,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
   // API tracking functions with debounce
   function trackPlay(mixId) {
     return debounceAction('play_' + mixId, function() {
-      return fetch('/api/track-mix-play', {
+      return fetch('/api/track-mix-play/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mixId: mixId })
@@ -927,7 +927,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
 
   function trackDownload(mixId) {
     return debounceAction('download_' + mixId, function() {
-      return fetch('/api/track-mix-download', {
+      return fetch('/api/track-mix-download/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mixId: mixId })
@@ -937,7 +937,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
 
   function trackLike(mixId) {
     return debounceAction('like_' + mixId, function() {
-      return fetch('/api/track-mix-like', {
+      return fetch('/api/track-mix-like/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mixId: mixId })
@@ -947,7 +947,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
 
   function trackUnlike(mixId) {
     return debounceAction('unlike_' + mixId, function() {
-      return fetch('/api/track-mix-unlike', {
+      return fetch('/api/track-mix-unlike/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mixId: mixId })
@@ -1196,7 +1196,7 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
         
         try {
           // Use server-side proxy to fetch the file
-          var proxyUrl = '/api/download?url=' + encodeURIComponent(audioUrl) + '&filename=' + encodeURIComponent(filename);
+          var proxyUrl = '/api/download/?url=' + encodeURIComponent(audioUrl) + '&filename=' + encodeURIComponent(filename);
           
           var response = await fetch(proxyUrl);
           if (!response.ok) {

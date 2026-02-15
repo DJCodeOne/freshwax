@@ -126,7 +126,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       // Check Connect status
-      const statusRes = await fetch(`/api/stripe/connect/supplier/status?code=${accessCode}`);
+      const statusRes = await fetch(`/api/stripe/connect/supplier/status/?code=${accessCode}`);
       const statusData = await statusRes.json();
 
       if (!statusRes.ok) {
@@ -134,11 +134,11 @@ const nonce = (Astro.locals as any).nonce || '';
       }
 
       // Check PayPal status
-      const paypalRes = await fetch(`/api/paypal/link-account?entityType=supplier&accessCode=${accessCode}`);
+      const paypalRes = await fetch(`/api/paypal/link-account/?entityType=supplier&accessCode=${accessCode}`);
       const paypalData = await paypalRes.json();
 
       // Get payouts
-      const payoutsRes = await fetch(`/api/stripe/connect/supplier/payouts?code=${accessCode}`);
+      const payoutsRes = await fetch(`/api/stripe/connect/supplier/payouts/?code=${accessCode}`);
       const payoutsData = await payoutsRes.json();
 
       // Store data
@@ -245,7 +245,7 @@ const nonce = (Astro.locals as any).nonce || '';
     btn.disabled = true;
 
     try {
-      const res = await fetch('/api/paypal/link-account', {
+      const res = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entityType: 'supplier', accessCode, paypalEmail: email })
@@ -274,7 +274,7 @@ const nonce = (Astro.locals as any).nonce || '';
     }
 
     try {
-      const res = await fetch('/api/paypal/link-account', {
+      const res = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entityType: 'supplier', accessCode, paypalEmail: newEmail })
@@ -289,7 +289,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
   async function setPreferred(method) {
     try {
-      const res = await fetch('/api/paypal/set-payout-method', {
+      const res = await fetch('/api/paypal/set-payout-method/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ entityType: 'supplier', accessCode, payoutMethod: method })
@@ -367,7 +367,7 @@ const nonce = (Astro.locals as any).nonce || '';
     btn.textContent = 'Loading...';
 
     try {
-      const res = await fetch('/api/stripe/connect/supplier/create-account', {
+      const res = await fetch('/api/stripe/connect/supplier/create-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accessCode })

@@ -87,7 +87,7 @@ async function registerStreamView(streamId) {
   const userName = window.currentUserInfo?.name || user?.displayName || 'Viewer';
 
   try {
-    const response = await fetch('/api/livestream/listeners', {
+    const response = await fetch('/api/livestream/listeners/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -140,7 +140,7 @@ window.sendGifMessage = async function(giphyUrl, giphyId) {
   }
 
   try {
-    const response = await fetch('/api/livestream/chat', {
+    const response = await fetch('/api/livestream/chat/', {
       method: 'POST',
       headers: await getChatAuthHeaders(),
       body: JSON.stringify({
@@ -1357,7 +1357,7 @@ async function checkLiveStatus(skipCache = false) {
     // Use fresh=1 to bypass server-side cache when called from Pusher events
     const cacheBuster = Date.now();
     const freshParam = skipCache ? '&fresh=1' : '';
-    const response = await fetch(`/api/livestream/status?_t=${cacheBuster}${freshParam}`);
+    const response = await fetch(`/api/livestream/status/?_t=${cacheBuster}${freshParam}`);
     const result = await response.json();
 
     console.log('[checkLiveStatus] API response:', {
@@ -1803,7 +1803,7 @@ function showLiveStream(stream) {
       let stationId = null;
       if (relayUrl.includes('relay.freshwax.co.uk/')) {
         stationId = relayUrl.split('relay.freshwax.co.uk/')[1];
-      } else if (relayUrl.includes('/api/relay-stream?station=')) {
+      } else if (relayUrl.includes('/api/relay-stream/?station=')) {
         stationId = relayUrl.split('station=')[1];
       }
 
@@ -2957,7 +2957,7 @@ async function joinStream(streamId) {
   window.addEventListener('beforeunload', () => {
     if (viewerSessionId) {
       const activeStreamId = currentStream ? currentStream.id : 'playlist-global';
-      navigator.sendBeacon('/api/livestream/heartbeat', JSON.stringify({
+      navigator.sendBeacon('/api/livestream/heartbeat/', JSON.stringify({
         action: 'leave',
         streamId: activeStreamId,
         sessionId: viewerSessionId
@@ -2985,7 +2985,7 @@ async function sendHeartbeat(streamId) {
     }
 
     // Use listeners API with heartbeat action (KV-backed, persistent)
-    const response = await fetch('/api/livestream/listeners', {
+    const response = await fetch('/api/livestream/listeners/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(heartbeatData)
@@ -3067,7 +3067,7 @@ async function setupChat(streamId) {
   
   // Load initial messages via API (15 messages max)
   try {
-    const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=15`);
+    const response = await fetch(`/api/livestream/chat/?streamId=${streamId}&limit=15`);
     const result = await response.json();
     if (result.success) {
       chatMessages = result.messages || [];
@@ -3484,13 +3484,13 @@ function setupGiphyPicker() {
       let proxyUrl;
       if (query) {
         // Search query takes priority
-        proxyUrl = `/api/giphy/search?endpoint=search&q=${encodeURIComponent(query)}&limit=32`;
+        proxyUrl = `/api/giphy/search/?endpoint=search&q=${encodeURIComponent(query)}&limit=32`;
       } else if (category && category !== 'trending') {
         // Category search
-        proxyUrl = `/api/giphy/search?endpoint=search&q=${encodeURIComponent(category)}&limit=32`;
+        proxyUrl = `/api/giphy/search/?endpoint=search&q=${encodeURIComponent(category)}&limit=32`;
       } else {
         // Default to trending
-        proxyUrl = `/api/giphy/search?endpoint=trending&limit=32`;
+        proxyUrl = `/api/giphy/search/?endpoint=trending&limit=32`;
       }
 
       const response = await fetch(proxyUrl);
@@ -3605,7 +3605,7 @@ async function sendGiphyMessage(giphyUrl, giphyId) {
   }
 
   try {
-    await fetch('/api/livestream/chat', {
+    await fetch('/api/livestream/chat/', {
       method: 'POST',
       headers: await getChatAuthHeaders(),
       body: JSON.stringify({
@@ -3659,7 +3659,7 @@ function setupChatInput(streamId) {
         const idToken = await currentUser.getIdToken();
 
         // Call skip API to check permission and track usage
-        const skipResponse = await fetch('/api/playlist/skip', {
+        const skipResponse = await fetch('/api/playlist/skip/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3696,7 +3696,7 @@ function setupChatInput(streamId) {
 
         // Broadcast skip notification to all users
         const streamId = window.currentStreamId || 'playlist-global';
-        await fetch('/api/livestream/chat', {
+        await fetch('/api/livestream/chat/', {
           method: 'POST',
           headers: await getChatAuthHeaders(),
           body: JSON.stringify({
@@ -3749,7 +3749,7 @@ function setupChatInput(streamId) {
         // Get stream start time if available
         const streamStartTime = window.streamStartTime || null;
 
-        const response = await fetch('/api/chat/plus-command', {
+        const response = await fetch('/api/chat/plus-command/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3781,7 +3781,7 @@ function setupChatInput(streamId) {
 
         // Broadcast the bot response to chat
         const streamId = window.currentStreamId || 'playlist-global';
-        await fetch('/api/livestream/chat', {
+        await fetch('/api/livestream/chat/', {
           method: 'POST',
           headers: await getChatAuthHeaders(),
           body: JSON.stringify({
@@ -3821,7 +3821,7 @@ function setupChatInput(streamId) {
     }
 
     try {
-      const response = await fetch('/api/livestream/chat', {
+      const response = await fetch('/api/livestream/chat/', {
         method: 'POST',
         headers: await getChatAuthHeaders(),
         body: JSON.stringify({
@@ -3964,7 +3964,7 @@ async function loadUserReactions(streamId) {
   if (!currentUser) return;
   
   try {
-    const response = await fetch(`/api/livestream/react?streamId=${streamId}&userId=${currentUser.uid}`);
+    const response = await fetch(`/api/livestream/react/?streamId=${streamId}&userId=${currentUser.uid}`);
     const result = await response.json();
     
     if (result.success) {

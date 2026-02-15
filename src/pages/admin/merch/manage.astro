@@ -411,7 +411,7 @@ export const prerender = false;
   window.deleteProduct = function(id) {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
-    fetch('/api/delete-merch', {
+    fetch('/api/delete-merch/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify({ productId: id })
@@ -437,7 +437,7 @@ export const prerender = false;
     btn.innerHTML = '⟳ Syncing...';
     btn.disabled = true;
 
-    fetch('/api/admin/sync-merch-to-d1', {
+    fetch('/api/admin/sync-merch-to-d1/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY }
     })

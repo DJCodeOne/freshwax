@@ -104,7 +104,7 @@ export const prerender = false;
 
   async function loadListings() {
     try {
-      const response = await fetch(`/api/vinyl/listing?sellerId=${currentUser.uid}`);
+      const response = await fetch(`/api/vinyl/listing/?sellerId=${currentUser.uid}`);
       const data = await response.json();
 
       if (!data.success) {
@@ -263,7 +263,7 @@ export const prerender = false;
 
     try {
       const idToken = await currentUser.getIdToken();
-      const response = await fetch('/api/vinyl/listing', {
+      const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({
@@ -290,7 +290,7 @@ export const prerender = false;
 
     try {
       const idToken = await currentUser.getIdToken();
-      const response = await fetch('/api/vinyl/listing', {
+      const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({
@@ -316,7 +316,7 @@ export const prerender = false;
 
     try {
       const idToken = await currentUser.getIdToken();
-      const response = await fetch('/api/vinyl/listing', {
+      const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
         body: JSON.stringify({

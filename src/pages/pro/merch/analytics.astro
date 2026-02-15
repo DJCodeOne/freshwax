@@ -384,7 +384,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
       try {
         const idToken = await currentUser.getIdToken();
-        const response = await fetch(`/api/pro/dashboard-data?type=analytics&period=${currentPeriod}`, {
+        const response = await fetch(`/api/pro/dashboard-data/?type=analytics&period=${currentPeriod}`, {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await response.json();

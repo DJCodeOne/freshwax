@@ -93,7 +93,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Service status
     logs.push(`\n[SERVICE STATUS]`);
     logs.push(`  Firebase: Connected`);
-    logs.push(`  Stream Server: Check /api/admin/server-status`);
+    logs.push(`  Stream Server: Check /api/admin/server-status/`);
     logs.push(`  CDN: Cloudflare Pages`);
 
     logs.push(`\n--- End of Logs ---`);

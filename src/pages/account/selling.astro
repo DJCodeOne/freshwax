@@ -200,9 +200,9 @@ const nonce = (Astro.locals as any).nonce || '';
       try {
         // Fetch Stripe status, PayPal status, and payouts in parallel
         const [stripeRes, paypalRes, payoutsRes] = await Promise.all([
-          fetch(`/api/stripe/connect/user/status?userId=${user.uid}`, { headers: authHeaders }),
-          fetch(`/api/paypal/link-account?entityType=user&entityId=${user.uid}`, { headers: authHeaders }),
-          fetch(`/api/stripe/connect/user/payouts?userId=${user.uid}`, { headers: authHeaders }),
+          fetch(`/api/stripe/connect/user/status/?userId=${user.uid}`, { headers: authHeaders }),
+          fetch(`/api/paypal/link-account/?entityType=user&entityId=${user.uid}`, { headers: authHeaders }),
+          fetch(`/api/stripe/connect/user/payouts/?userId=${user.uid}`, { headers: authHeaders }),
         ]);
         const [stripeData, paypalData, payoutsData] = await Promise.all([
           stripeRes.json(),
@@ -412,7 +412,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
-      const res = await fetch('/api/stripe/connect/user/create-account', {
+      const res = await fetch('/api/stripe/connect/user/create-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ userId: currentUserId })
@@ -449,7 +449,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
-      const res = await fetch('/api/paypal/link-account', {
+      const res = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, paypalEmail: email })
@@ -479,7 +479,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
-      const res = await fetch('/api/paypal/link-account', {
+      const res = await fetch('/api/paypal/link-account/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, paypalEmail: newEmail })
@@ -495,7 +495,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function setPreferred(method) {
     try {
       const idToken = await window.firebaseAuth?.currentUser?.getIdToken();
-      const res = await fetch('/api/paypal/set-payout-method', {
+      const res = await fetch('/api/paypal/set-payout-method/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ entityType: 'user', entityId: currentUserId, payoutMethod: method })

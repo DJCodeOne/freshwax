@@ -382,7 +382,7 @@ if (authResult) return Astro.redirect('/login');
           formData.append('fileType', 'metadata');
 
           try {
-            const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+            const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
             const result = await response.json();
             if (!result.success) throw new Error(result.error);
             log(`✓ Metadata: ${result.url}`, 'success');
@@ -446,7 +446,7 @@ if (authResult) return Astro.redirect('/login');
               formData.append('fileType', 'track');
 
               try {
-                const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+                const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
                 const result = await response.json();
                 if (!result.success) throw new Error(result.error);
 
@@ -512,7 +512,7 @@ if (authResult) return Astro.redirect('/login');
             formData.append('fileType', 'preview');
 
             try {
-              const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+              const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
               const result = await response.json();
               if (!result.success) throw new Error(result.error);
 
@@ -585,7 +585,7 @@ if (authResult) return Astro.redirect('/login');
             formData.append('fileType', 'artwork');
 
             try {
-              const response = await fetch('/api/upload-r2-batch', { method: 'POST', body: formData });
+              const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
               const result = await response.json();
               if (!result.success) throw new Error(result.error);
 
@@ -663,7 +663,7 @@ if (authResult) return Astro.redirect('/login');
       try {
         log('Sending to Firebase...', 'info');
         
-        const response = await fetch('/api/update-master-json', {
+        const response = await fetch('/api/update-master-json/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ release: newRelease })

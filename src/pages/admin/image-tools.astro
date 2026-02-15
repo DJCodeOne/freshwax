@@ -251,7 +251,7 @@ export const prerender = false;
       if (prefix) params.set('prefix', prefix);
       if (cursor) params.set('cursor', cursor);
 
-      const res = await fetch(`/api/admin/r2-image-scan?${params}`);
+      const res = await fetch(`/api/admin/r2-image-scan/?${params}`);
       const data = await res.json();
 
       if (!data.success) {
@@ -327,7 +327,7 @@ export const prerender = false;
       }
 
       try {
-        const res = await fetch('/api/admin/r2-image-reprocess', {
+        const res = await fetch('/api/admin/r2-image-reprocess/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ keys: batch, deleteOriginals }),

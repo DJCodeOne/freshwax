@@ -1214,7 +1214,7 @@ const nonce = (Astro.locals as any).nonce || '';
         if (!confirm('Retry this payout? This will attempt to transfer funds to the artist.')) return;
 
         try {
-          const response = await fetch('/api/admin/retry-payout', {
+          const response = await fetch('/api/admin/retry-payout/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
             body: JSON.stringify({ payoutId })
@@ -1269,7 +1269,7 @@ const nonce = (Astro.locals as any).nonce || '';
             return;
           }
 
-          const response = await fetch('/api/admin/trigger-payout', {
+          const response = await fetch('/api/admin/trigger-payout/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1338,7 +1338,7 @@ const nonce = (Astro.locals as any).nonce || '';
             return;
           }
 
-          const response = await fetch('/api/admin/trigger-payout', {
+          const response = await fetch('/api/admin/trigger-payout/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId, adminKey })
@@ -1407,7 +1407,7 @@ const nonce = (Astro.locals as any).nonce || '';
             return;
           }
 
-          const response = await fetch('/api/admin/record-payout', {
+          const response = await fetch('/api/admin/record-payout/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orderId, adminKey, notes: 'Manual payout - already paid outside system' })

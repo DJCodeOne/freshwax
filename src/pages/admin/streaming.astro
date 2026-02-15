@@ -1906,7 +1906,7 @@ export const prerender = false;
 
     try {
       // First check via server-side proxy (no CORS issues)
-      const healthResponse = await fetch('/api/admin/health-check');
+      const healthResponse = await fetch('/api/admin/health-check/');
       if (!healthResponse.ok) throw new Error('Health check failed');
       const healthData = await healthResponse.json();
       const streamSvc = healthData.services?.find(s => s.name === 'Stream Server');
@@ -1970,7 +1970,7 @@ export const prerender = false;
     statusText.textContent = 'Checking...';
 
     try {
-      const response = await fetch('/api/admin/health-check');
+      const response = await fetch('/api/admin/health-check/');
       if (!response.ok) throw new Error('Health check failed');
       const data = await response.json();
       if (!data.success) throw new Error('Health check error');
@@ -2022,7 +2022,7 @@ export const prerender = false;
     statusText.textContent = 'Checking...';
 
     try {
-      const response = await fetch('/api/admin/health-check');
+      const response = await fetch('/api/admin/health-check/');
       if (!response.ok) throw new Error('Health check failed');
       const data = await response.json();
       const icecastSvc = data.services?.find(s => s.name === 'Icecast');
@@ -2055,7 +2055,7 @@ export const prerender = false;
     statusText.textContent = 'Checking...';
 
     try {
-      const response = await fetch('/api/admin/health-check');
+      const response = await fetch('/api/admin/health-check/');
       if (!response.ok) throw new Error('Health check failed');
       const data = await response.json();
       const playlistSvc = data.services?.find(s => s.name === 'Playlist Server');
@@ -2116,7 +2116,7 @@ export const prerender = false;
     statusText.textContent = 'Checking...';
 
     try {
-      const response = await fetch('/api/admin/health-check');
+      const response = await fetch('/api/admin/health-check/');
       if (!response.ok) throw new Error('Health check failed');
       const data = await response.json();
       const r2Svc = data.services?.find(s => s.name === 'R2 Storage');
@@ -2141,7 +2141,7 @@ export const prerender = false;
     const container = document.getElementById('activeStreamsList');
     try {
       // Use server-side health check to get stream info (avoids cross-origin errors)
-      const response = await fetch('/api/admin/health-check');
+      const response = await fetch('/api/admin/health-check/');
       if (!response.ok) throw new Error('Health check failed');
       const data = await response.json();
       const streamSvc = data.services?.find(s => s.name === 'Stream Server');
@@ -2255,7 +2255,7 @@ export const prerender = false;
       logsEl.textContent = 'Loading logs...';
 
       try {
-        const response = await fetch('/api/admin/server-logs', {
+        const response = await fetch('/api/admin/server-logs/', {
           headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
@@ -2287,7 +2287,7 @@ export const prerender = false;
 
   async function serverAction(action) {
     try {
-      const response = await fetch('/api/admin/server-control', {
+      const response = await fetch('/api/admin/server-control/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, adminKey: window.ADMIN_KEY })
@@ -2301,7 +2301,7 @@ export const prerender = false;
   async function loadChatCount() {
     const countEl = document.getElementById('chatMessageCount');
     try {
-      const response = await fetch('/api/admin/clear-chat', {
+      const response = await fetch('/api/admin/clear-chat/', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
@@ -2335,7 +2335,7 @@ export const prerender = false;
       clearBtn.textContent = '🗑️ Clearing...';
 
       try {
-        const response = await fetch('/api/admin/clear-chat', {
+        const response = await fetch('/api/admin/clear-chat/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ adminKey: window.ADMIN_KEY })
@@ -2363,7 +2363,7 @@ export const prerender = false;
     const container = document.getElementById('liveStreams');
     
     try {
-      const response = await fetch('/api/livestream/status');
+      const response = await fetch('/api/livestream/status/');
       const result = await response.json();
       
       if (result.success && result.isLive && result.streams?.length > 0) {
@@ -2401,7 +2401,7 @@ export const prerender = false;
     const container = document.getElementById('approvedDJs');
     
     try {
-      const response = await fetch('/api/stream/list-djs?approved=true');
+      const response = await fetch('/api/stream/list-djs/?approved=true');
       const result = await response.json();
       
       if (result.success && result.djs?.length > 0) {
@@ -2433,7 +2433,7 @@ export const prerender = false;
     const container = document.getElementById('recentStreams');
     
     try {
-      const response = await fetch('/api/stream/list?limit=10');
+      const response = await fetch('/api/stream/list/?limit=10');
       const result = await response.json();
       
       if (result.success && result.streams?.length > 0) {
@@ -2507,7 +2507,7 @@ export const prerender = false;
       if (!email) return;
       
       try {
-        const response = await fetch('/api/admin/lobby-bypass', {
+        const response = await fetch('/api/admin/lobby-bypass/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2544,7 +2544,7 @@ export const prerender = false;
       submitBtn.disabled = true;
 
       try {
-        const response = await fetch('/api/stream/dj-settings', {
+        const response = await fetch('/api/stream/dj-settings/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2605,7 +2605,7 @@ export const prerender = false;
       if (!email || !reason) return;
       
       try {
-        const response = await fetch('/api/admin/dj-moderation', {
+        const response = await fetch('/api/admin/dj-moderation/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2652,7 +2652,7 @@ export const prerender = false;
       if (!email) return;
       
       try {
-        const response = await fetch('/api/admin/dj-moderation', {
+        const response = await fetch('/api/admin/dj-moderation/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2723,7 +2723,7 @@ export const prerender = false;
     
     try {
       // Revoke from djLobbyBypass collection
-      const response = await fetch('/api/admin/lobby-bypass', {
+      const response = await fetch('/api/admin/lobby-bypass/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2754,7 +2754,7 @@ export const prerender = false;
     const container = document.getElementById('bypassList');
     
     try {
-      const response = await fetch('/api/admin/lobby-bypass?action=list', {
+      const response = await fetch('/api/admin/lobby-bypass/?action=list', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
@@ -2795,7 +2795,7 @@ export const prerender = false;
     const usersContainer = document.getElementById('keyUsersContainer');
 
     try {
-      const response = await fetch('/api/admin/quick-access-key', {
+      const response = await fetch('/api/admin/quick-access-key/', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
@@ -2868,7 +2868,7 @@ export const prerender = false;
     if (!confirm('Revoke the quick access key? Users who already redeemed will keep their access.')) return;
 
     try {
-      const response = await fetch('/api/admin/quick-access-key', {
+      const response = await fetch('/api/admin/quick-access-key/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2899,7 +2899,7 @@ export const prerender = false;
 
   async function setKeyExpiry(expiresAt) {
     try {
-      const response = await fetch('/api/admin/quick-access-key', {
+      const response = await fetch('/api/admin/quick-access-key/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2927,7 +2927,7 @@ export const prerender = false;
     if (!confirm(confirmMsg)) return;
 
     try {
-      const response = await fetch('/api/admin/quick-access-key', {
+      const response = await fetch('/api/admin/quick-access-key/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2958,7 +2958,7 @@ export const prerender = false;
     if (!confirm(`Revoke lobby access bypass for ${email || userId}?`)) return;
     
     try {
-      const response = await fetch('/api/admin/lobby-bypass', {
+      const response = await fetch('/api/admin/lobby-bypass/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2985,7 +2985,7 @@ export const prerender = false;
     const onholdContainer = document.getElementById('onholdList');
     
     try {
-      const response = await fetch('/api/admin/dj-moderation?action=list', {
+      const response = await fetch('/api/admin/dj-moderation/?action=list', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
@@ -3048,7 +3048,7 @@ export const prerender = false;
     if (!confirm(`Unban ${email || userId}? They will be able to go live again.`)) return;
     
     try {
-      const response = await fetch('/api/admin/dj-moderation', {
+      const response = await fetch('/api/admin/dj-moderation/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3074,7 +3074,7 @@ export const prerender = false;
     if (!confirm(`Release ${email || userId} from hold?`)) return;
     
     try {
-      const response = await fetch('/api/admin/dj-moderation', {
+      const response = await fetch('/api/admin/dj-moderation/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3100,7 +3100,7 @@ export const prerender = false;
     if (!confirm(`Kick ${djName || userId} from the current stream? This will end their stream but they can go live again later.`)) return;
     
     try {
-      const response = await fetch('/api/admin/dj-moderation', {
+      const response = await fetch('/api/admin/dj-moderation/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3133,7 +3133,7 @@ export const prerender = false;
     const container = document.getElementById('bypassRequests');
     
     try {
-      const response = await fetch('/api/admin/bypass-requests?action=list', {
+      const response = await fetch('/api/admin/bypass-requests/?action=list', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
@@ -3211,7 +3211,7 @@ export const prerender = false;
     if (!confirm(`Approve bypass request for ${djName || email || userId}? They will be able to go live immediately.`)) return;
     
     try {
-      const response = await fetch('/api/admin/bypass-requests', {
+      const response = await fetch('/api/admin/bypass-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3268,7 +3268,7 @@ export const prerender = false;
     const reason = document.getElementById('denyBypassReason').value.trim();
     
     try {
-      const response = await fetch('/api/admin/bypass-requests', {
+      const response = await fetch('/api/admin/bypass-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3310,7 +3310,7 @@ export const prerender = false;
     const container = document.getElementById('eventRequests');
 
     try {
-      const response = await fetch('/api/livestream/event-requests?admin=true&status=pending', {
+      const response = await fetch('/api/livestream/event-requests/?admin=true&status=pending', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const result = await response.json();
@@ -3363,7 +3363,7 @@ export const prerender = false;
     if (!confirm(`Approve ${hours} hours for ${djName || 'this DJ'}?`)) return;
 
     try {
-      const response = await fetch('/api/livestream/event-requests', {
+      const response = await fetch('/api/livestream/event-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3400,7 +3400,7 @@ export const prerender = false;
     if (reason === null) return; // Cancelled
 
     try {
-      const response = await fetch('/api/livestream/event-requests', {
+      const response = await fetch('/api/livestream/event-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

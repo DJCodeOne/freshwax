@@ -824,7 +824,7 @@ if (!release) {
       btn.disabled = true;
       btn.textContent = '🔄 Refreshing...';
       
-      fetch('/api/get-release?id=' + releaseId + '&admin=true')
+      fetch('/api/get-release/?id=' + releaseId + '&admin=true')
         .then(function(response) { return response.json(); })
         .then(function(result) {
           if (result.success) {
@@ -1125,7 +1125,7 @@ if (!release) {
         updates.idToken = currentIdToken;
       }
 
-      fetch('/api/update-release', {
+      fetch('/api/update-release/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)

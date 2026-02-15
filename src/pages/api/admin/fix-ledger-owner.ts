@@ -27,8 +27,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!newOwnerId) {
     return new Response(JSON.stringify({
       error: 'Missing newOwnerId',
-      usage: '/api/admin/fix-ledger-owner?orderNumber=xxx&newOwnerId=yyy&confirm=yes',
-      altUsage: '/api/admin/fix-ledger-owner?oldOwnerId=xxx&newOwnerId=yyy&confirm=yes (updates all matching)'
+      usage: '/api/admin/fix-ledger-owner/?orderNumber=xxx&newOwnerId=yyy&confirm=yes',
+      altUsage: '/api/admin/fix-ledger-owner/?oldOwnerId=xxx&newOwnerId=yyy&confirm=yes (updates all matching)'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

@@ -1,6 +1,6 @@
 // src/pages/api/admin/r2-image-scan.ts
 // Scan R2 bucket for problematic images (not WebP, oversized, missing thumbs)
-// GET /api/admin/r2-image-scan?prefix=releases/&cursor=...
+// GET /api/admin/r2-image-scan/?prefix=releases/&cursor=...
 
 import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';

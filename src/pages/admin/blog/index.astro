@@ -191,7 +191,7 @@ export const prerender = false;
     const countEl = document.getElementById('post-count');
 
     try {
-      const response = await fetch('/api/admin/blog');
+      const response = await fetch('/api/admin/blog/');
       const data = await response.json();
 
       if (!data.success) throw new Error(data.error);
@@ -340,7 +340,7 @@ export const prerender = false;
     btn.textContent = 'Deleting...';
 
     try {
-      const response = await fetch(`/api/admin/blog?id=${deletePostId}`, {
+      const response = await fetch(`/api/admin/blog/?id=${deletePostId}`, {
         method: 'DELETE'
       });
       const data = await response.json();

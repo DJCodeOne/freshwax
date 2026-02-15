@@ -782,7 +782,7 @@ const firebaseConfig = {
     searchAbortController = new AbortController();
 
     try {
-      const response = await fetch(`/api/search-releases?q=${encodeURIComponent(query)}&limit=10`, { signal: searchAbortController.signal });
+      const response = await fetch(`/api/search-releases/?q=${encodeURIComponent(query)}&limit=10`, { signal: searchAbortController.signal });
       if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       searchCache.set(query, data);
@@ -876,7 +876,7 @@ const firebaseConfig = {
   // Check live status
   async function checkLiveStatus() {
     try {
-      const response = await fetch('/api/livestream/status');
+      const response = await fetch('/api/livestream/status/');
       const data = await response.json();
       
       document.querySelectorAll('.live-button').forEach(btn => {
@@ -1254,7 +1254,7 @@ const firebaseConfig = {
       if (needsFresh) {
         try {
           const idToken = await user.getIdToken();
-          const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+          const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
             headers: { 'Authorization': `Bearer ${idToken}` }
           });
           const data = await response.json();

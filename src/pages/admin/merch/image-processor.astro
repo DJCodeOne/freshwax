@@ -445,7 +445,7 @@ export const prerender = false;
           formData.append('folder', 'merch/' + folderName);
           formData.append('filename', img.main.filename);
 
-          const response = await fetch('/api/upload-merch-image', {
+          const response = await fetch('/api/upload-merch-image/', {
             method: 'POST',
             headers: { 'X-Admin-Key': window.ADMIN_KEY },
             body: formData

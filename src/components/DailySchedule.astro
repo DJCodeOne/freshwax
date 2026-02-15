@@ -1903,7 +1903,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
     async function updateBookingsDisabled(disabled) {
       try {
-        await fetch('/api/admin/update-settings', {
+        await fetch('/api/admin/update-settings/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1927,7 +1927,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
     async function loadAllowances() {
       try {
-        const response = await fetch('/api/livestream/allowances');
+        const response = await fetch('/api/livestream/allowances/');
         const data = await response.json();
         currentAllowances = data.success ? (data.allowances || []) : [];
         renderAllowancesList();
@@ -1971,7 +1971,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       }
 
       try {
-        const response = await fetch('/api/livestream/allowances', {
+        const response = await fetch('/api/livestream/allowances/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2006,7 +2006,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       if (!confirm('Remove this DJ\'s custom allowance?')) return;
 
       try {
-        const response = await fetch('/api/livestream/allowances', {
+        const response = await fetch('/api/livestream/allowances/', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ djId })

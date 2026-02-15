@@ -2,7 +2,7 @@
 // Stream Key Validation API - Red5 calls this before allowing a publish
 //
 // Configure Red5 to call this endpoint for stream authentication:
-// GET https://freshwax.co.uk/api/livestream/validate-stream?key={streamKey}
+// GET https://freshwax.co.uk/api/livestream/validate-stream/?key={streamKey}
 //
 // Returns:
 // - 200 with { valid: true } if stream is allowed

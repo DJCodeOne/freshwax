@@ -218,7 +218,7 @@ const nonce = (Astro.locals as any).nonce || '';
           for (var i = 0; i < batch.length; i++) {
             try {
               var x = new XMLHttpRequest();
-              x.open('POST', '/api/log-error', true);
+              x.open('POST', '/api/log-error/', true);
               x.setRequestHeader('Content-Type', 'application/json');
               x.send(JSON.stringify(batch[i]));
             } catch(e) {}
@@ -457,7 +457,7 @@ const nonce = (Astro.locals as any).nonce || '';
           }
           // Log consent server-side for GDPR audit trail
           try {
-            fetch('/api/consent-log', {
+            fetch('/api/consent-log/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ necessary: true, analytics: !!analytics, marketing: !!marketing, action: action || 'save' })

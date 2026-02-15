@@ -1410,7 +1410,7 @@ const nonce = (Astro.locals as any).nonce || '';
   let currentCollection = 'all';
 
   // Vinyl API - use local endpoint (fetches from D1/Firebase)
-  const VINYL_API_URL = '/api/vinyl/public';
+  const VINYL_API_URL = '/api/vinyl/public/';
 
   async function loadCollections() {
     const container = document.getElementById('sellerCollections');

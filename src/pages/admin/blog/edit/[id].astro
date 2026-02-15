@@ -580,7 +580,7 @@ const nonce = (Astro.locals as any).nonce || '';
     btn.textContent = 'Saving...';
 
     try {
-      const response = await fetch('/api/admin/blog', {
+      const response = await fetch('/api/admin/blog/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)

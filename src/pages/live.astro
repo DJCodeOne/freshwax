@@ -26,7 +26,7 @@ const firebaseConfig = {
 };
 
 // Dynamic thumbnail URL for social sharing - shows current stream or DJ image when live
-const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail';
+const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail/';
 const nonce = (Astro.locals as any).nonce || '';
 ---
 
@@ -1243,7 +1243,7 @@ const nonce = (Astro.locals as any).nonce || '';
     try {
       const gifHeaders = { 'Content-Type': 'application/json' };
       try { const t = await currentUser.getIdToken(); if (t) gifHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
-      const response = await fetch('/api/livestream/chat', {
+      const response = await fetch('/api/livestream/chat/', {
         method: 'POST',
         headers: gifHeaders,
         body: JSON.stringify({
@@ -1588,7 +1588,7 @@ const nonce = (Astro.locals as any).nonce || '';
         // This ensures emojis broadcast to all viewers (same as fullscreen page)
         console.log('[triggerReaction] Playlist mode - using livestream react API');
         const token = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-        const emojiResponse = await fetch('/api/livestream/react', {
+        const emojiResponse = await fetch('/api/livestream/react/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(token && { 'Authorization': 'Bearer ' + token }) },
           body: JSON.stringify({
@@ -1605,7 +1605,7 @@ const nonce = (Astro.locals as any).nonce || '';
         console.log('[triggerReaction] Playlist emoji result:', emojiResult);
 
         // Also update the global reaction count
-        const countResponse = await fetch('/api/playlist/global', {
+        const countResponse = await fetch('/api/playlist/global/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'react' })
@@ -1618,7 +1618,7 @@ const nonce = (Astro.locals as any).nonce || '';
         // Livestream mode - use livestream react API
         console.log('[triggerReaction] Livestream mode - streamId:', streamId);
         const lsToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-        const emojiResponse = await fetch('/api/livestream/react', {
+        const emojiResponse = await fetch('/api/livestream/react/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(lsToken && { 'Authorization': 'Bearer ' + lsToken }) },
           body: JSON.stringify({
@@ -1700,7 +1700,7 @@ const nonce = (Astro.locals as any).nonce || '';
         try {
           // Send like and broadcast emoji to all viewers
           const likeToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-          fetch('/api/livestream/react', {
+          fetch('/api/livestream/react/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(likeToken && { 'Authorization': 'Bearer ' + likeToken }) },
             body: JSON.stringify({
@@ -1714,7 +1714,7 @@ const nonce = (Astro.locals as any).nonce || '';
           }).catch(() => {});
 
           // Increment like count in database
-          const response = await fetch('/api/livestream/react', {
+          const response = await fetch('/api/livestream/react/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(likeToken && { 'Authorization': 'Bearer ' + likeToken }) },
             body: JSON.stringify({
@@ -2480,7 +2480,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       // Send via API to broadcast to all viewers
       const shoutToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
-      const response = await fetch('/api/livestream/react', {
+      const response = await fetch('/api/livestream/react/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(shoutToken && { 'Authorization': 'Bearer ' + shoutToken }) },
         body: JSON.stringify({
@@ -2963,7 +2963,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const presencePusher = new window.Pusher(config.key, {
         cluster: config.cluster || 'eu',
         forceTLS: true,
-        authEndpoint: '/api/pusher/auth',
+        authEndpoint: '/api/pusher/auth/',
         auth: {
           headers: {
             'x-user-id': userId,
@@ -3121,7 +3121,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function checkUserStatus(userId) {
     try {
       const _token = await currentUser?.getIdToken();
-      const response = await fetch(`/api/get-user-type?uid=${userId}`, {
+      const response = await fetch(`/api/get-user-type/?uid=${userId}`, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
       const result = await response.json();
@@ -3147,7 +3147,7 @@ const nonce = (Astro.locals as any).nonce || '';
         window.userBadge = 'crown'; // Default
         if (userInfo.isPro) {
           try {
-            const badgeRes = await fetch(`/api/get-user-badge?userId=${userId}`);
+            const badgeRes = await fetch(`/api/get-user-badge/?userId=${userId}`);
             const badgeData = await badgeRes.json();
             if (badgeData.success && badgeData.badge) {
               window.userBadge = badgeData.badge;
@@ -3274,7 +3274,7 @@ const nonce = (Astro.locals as any).nonce || '';
       // Fallback: poll API every 10 seconds
       setInterval(async () => {
         try {
-          const response = await fetch(`/api/dj-lobby/takeover?userId=${currentUser.uid}`);
+          const response = await fetch(`/api/dj-lobby/takeover/?userId=${currentUser.uid}`);
           const result = await response.json();
           if (result.success && result.incoming?.status === 'pending') {
             showTakeoverNotification(result.incoming);
@@ -3292,7 +3292,7 @@ const nonce = (Astro.locals as any).nonce || '';
     
     const pusher = new window.Pusher(PUSHER_KEY, {
       cluster: PUSHER_CLUSTER,
-      authEndpoint: '/api/dj-lobby/pusher-auth',
+      authEndpoint: '/api/dj-lobby/pusher-auth/',
       auth: { params: { user_id: currentUser.uid } }
     });
     
@@ -3341,7 +3341,7 @@ const nonce = (Astro.locals as any).nonce || '';
         const keyResult = await keyResponse.json();
 
         // Approve takeover via API (handles Firestore + Pusher)
-        const approveResponse = await fetch('/api/dj-lobby/takeover', {
+        const approveResponse = await fetch('/api/dj-lobby/takeover/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
@@ -3374,7 +3374,7 @@ const nonce = (Astro.locals as any).nonce || '';
       try {
         const token = await currentUser.getIdToken();
         // Decline takeover via API (handles Firestore + Pusher)
-        const response = await fetch('/api/dj-lobby/takeover', {
+        const response = await fetch('/api/dj-lobby/takeover/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
@@ -3596,7 +3596,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       // Register as viewer - this triggers a Pusher broadcast with current viewer count
-      const resp = await fetch('/api/livestream/listeners', {
+      const resp = await fetch('/api/livestream/listeners/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3641,7 +3641,7 @@ const nonce = (Astro.locals as any).nonce || '';
     heartbeatInterval = setInterval(async () => {
       const streamId = window.currentStreamId || 'playlist-global';
       try {
-        await fetch('/api/livestream/listeners', {
+        await fetch('/api/livestream/listeners/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -3663,7 +3663,7 @@ const nonce = (Astro.locals as any).nonce || '';
     }
     // Send leave notification
     const streamId = window.currentStreamId || 'playlist-global';
-    navigator.sendBeacon('/api/livestream/listeners', JSON.stringify({
+    navigator.sendBeacon('/api/livestream/listeners/', JSON.stringify({
       action: 'leave',
       streamId,
       userId: currentUser?.uid || getOrCreateSessionId()
@@ -4059,7 +4059,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function notifySlotAvailable(slotId) {
     try {
       const token = await currentUser?.getIdToken();
-      await fetch('/api/livestream/manage', {
+      await fetch('/api/livestream/manage/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4119,7 +4119,7 @@ const nonce = (Astro.locals as any).nonce || '';
     
     try {
       const token = await currentUser.getIdToken();
-      await fetch('/api/livestream/manage', {
+      await fetch('/api/livestream/manage/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4671,7 +4671,7 @@ const nonce = (Astro.locals as any).nonce || '';
       let freshAvatarUrl = userInfo?.avatar || null;
       try {
         const _tkn = await currentUser.getIdToken();
-        const userTypeRes = await fetch(`/api/get-user-type?uid=${currentUser.uid}`, {
+        const userTypeRes = await fetch(`/api/get-user-type/?uid=${currentUser.uid}`, {
           headers: { 'Authorization': `Bearer ${_tkn}` }
         });
         const userTypeData = await userTypeRes.json();
@@ -4797,7 +4797,7 @@ const nonce = (Astro.locals as any).nonce || '';
       let freshAvatarUrl = userInfo?.avatar || null;
       try {
         const _tkn2 = await currentUser.getIdToken();
-        const userTypeRes = await fetch(`/api/get-user-type?uid=${currentUser.uid}`, {
+        const userTypeRes = await fetch(`/api/get-user-type/?uid=${currentUser.uid}`, {
           headers: { 'Authorization': `Bearer ${_tkn2}` }
         });
         const userTypeData = await userTypeRes.json();
@@ -4907,7 +4907,7 @@ const nonce = (Astro.locals as any).nonce || '';
     
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/manage', {
+      const response = await fetch('/api/livestream/manage/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -4941,7 +4941,7 @@ const nonce = (Astro.locals as any).nonce || '';
     
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch('/api/livestream/manage', {
+      const response = await fetch('/api/livestream/manage/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

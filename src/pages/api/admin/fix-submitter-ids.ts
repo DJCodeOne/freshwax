@@ -1,6 +1,6 @@
 // src/pages/api/admin/fix-submitter-ids.ts
 // Migration script to backfill submitterId on releases and ledger entries
-// Run via: GET /api/admin/fix-submitter-ids?confirm=yes
+// Run via: GET /api/admin/fix-submitter-ids/?confirm=yes
 
 import type { APIRoute } from 'astro';
 

@@ -278,7 +278,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     async function loadStock(user) {
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch('/api/pro/dashboard-data?type=stock', {
+        const response = await fetch('/api/pro/dashboard-data/?type=stock', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await response.json();

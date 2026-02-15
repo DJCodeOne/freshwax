@@ -814,7 +814,7 @@ export const prerender = false;
   // Load settings on page load
   async function loadSettings() {
     try {
-      const response = await fetch('/api/admin/update-settings?action=load');
+      const response = await fetch('/api/admin/update-settings/?action=load');
       const result = await response.json();
       
       if (result.success && result.settings) {
@@ -974,7 +974,7 @@ export const prerender = false;
     try {
       const settings = collectSettingsFromUI();
       
-      const response = await fetch('/api/admin/update-settings', {
+      const response = await fetch('/api/admin/update-settings/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -273,7 +273,7 @@ export const prerender = false;
 
     async function loadSuppliers() {
       try {
-        const response = await fetch('/api/suppliers', {
+        const response = await fetch('/api/suppliers/', {
           headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
@@ -407,7 +407,7 @@ export const prerender = false;
       }
       
       try {
-        const response = await fetch('/api/suppliers', {
+        const response = await fetch('/api/suppliers/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({
@@ -483,7 +483,7 @@ export const prerender = false;
       };
       
       try {
-        const response = await fetch('/api/suppliers', {
+        const response = await fetch('/api/suppliers/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({ ...updates, adminKey: window.ADMIN_KEY })
@@ -503,7 +503,7 @@ export const prerender = false;
       if (!confirm('Are you sure you want to deactivate this supplier? Their products will remain but they won\'t appear in active lists.')) return;
       
       try {
-        const response = await fetch('/api/suppliers', {
+        const response = await fetch('/api/suppliers/', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({ supplierId: id, adminKey: window.ADMIN_KEY })
@@ -520,7 +520,7 @@ export const prerender = false;
 
     async function activateSupplier(id) {
       try {
-        const response = await fetch('/api/suppliers', {
+        const response = await fetch('/api/suppliers/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({ supplierId: id, active: true, adminKey: window.ADMIN_KEY })
@@ -542,7 +542,7 @@ export const prerender = false;
       if (!confirm(`⚠️ DANGER ZONE ⚠️\n\nAre you sure you want to permanently delete "${supplier.name}"?\n\nThis will:\n• Remove the supplier record\n• NOT delete their products (they'll become unassigned)\n\nThis action cannot be undone!`)) return;
       
       try {
-        const response = await fetch('/api/suppliers?id=' + id, {
+        const response = await fetch('/api/suppliers/?id=' + id, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({ supplierId: id, hardDelete: true, adminKey: window.ADMIN_KEY })

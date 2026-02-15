@@ -342,7 +342,7 @@ export const prerender = false;
     // Load all data
     async function loadData() {
       try {
-        const response = await fetch('/api/update-stock', {
+        const response = await fetch('/api/update-stock/', {
           headers: { 'X-Admin-Key': window.ADMIN_KEY }
         });
         const data = await response.json();
@@ -376,7 +376,7 @@ export const prerender = false;
     // Load movement history
     async function loadMovements() {
       try {
-        const response = await fetch('/api/get-stock-movements');
+        const response = await fetch('/api/get-stock-movements/');
         const data = await response.json();
         
         if (data.success && data.movements) {
@@ -516,7 +516,7 @@ export const prerender = false;
     // Quick adjust stock by +/- 1
     async function quickAdjust(productId, variantKey, delta) {
       try {
-        const response = await fetch('/api/update-stock', {
+        const response = await fetch('/api/update-stock/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({
@@ -785,7 +785,7 @@ export const prerender = false;
       document.getElementById('submitText').textContent = 'Processing...';
 
       try {
-        const response = await fetch('/api/update-stock', {
+        const response = await fetch('/api/update-stock/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({
@@ -883,7 +883,7 @@ export const prerender = false;
       const notes = document.getElementById('modalNotes').value.trim();
 
       try {
-        const response = await fetch('/api/update-stock', {
+        const response = await fetch('/api/update-stock/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
           body: JSON.stringify({
@@ -1170,7 +1170,7 @@ export const prerender = false;
         if (adjustment === 0) continue;
 
         try {
-          const response = await fetch('/api/update-stock', {
+          const response = await fetch('/api/update-stock/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
             body: JSON.stringify({

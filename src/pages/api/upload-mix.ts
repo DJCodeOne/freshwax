@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Validate audio file size (100MB max for FormData uploads to avoid Worker memory limits)
-    // Files over 100MB should use the large file upload flow via /api/mix/presign-upload
+    // Files over 100MB should use the large file upload flow via /api/mix/presign-upload/
     const MAX_MIX_SIZE = 100 * 1024 * 1024;
     if (audioFile && audioFile.size > MAX_MIX_SIZE) {
       return new Response(JSON.stringify({

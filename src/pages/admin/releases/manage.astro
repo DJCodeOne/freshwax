@@ -508,7 +508,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
           try {
             // Get release details
-            const releaseRes = await fetch(`/api/get-release?id=${id}&nocache=1`);
+            const releaseRes = await fetch(`/api/get-release/?id=${id}&nocache=1`);
             const releaseData = await releaseRes.json();
 
             if (!releaseData.success || !releaseData.release) {
@@ -601,7 +601,7 @@ const nonce = (Astro.locals as any).nonce || '';
               audioProgressText.textContent = 'Updating database...';
               console.log('[Audio] Updating release with processed tracks:', processedTracks);
 
-              const updateResponse = await fetch('/api/releases/update-tracks', {
+              const updateResponse = await fetch('/api/releases/update-tracks/', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -651,7 +651,7 @@ const nonce = (Astro.locals as any).nonce || '';
           btn.textContent = '...';
           
           try {
-            const response = await fetch('/api/approve-release', {
+            const response = await fetch('/api/approve-release/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
               body: JSON.stringify({ releaseId: id, action: 'approve' })
@@ -723,7 +723,7 @@ const nonce = (Astro.locals as any).nonce || '';
         confirmDeleteBtn.textContent = 'Deleting...';
 
         try {
-          const response = await fetch('/api/delete-release', {
+          const response = await fetch('/api/delete-release/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
             body: JSON.stringify({ releaseId: id })

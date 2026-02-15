@@ -1,6 +1,6 @@
 // src/pages/api/admin/fix-ledger-payout.ts
 // Update ledger entry with artistPayout and artistPayoutStatus from pendingPayouts
-// Usage: GET /api/admin/fix-ledger-payout?orderNumber=FW-xxx&confirm=yes
+// Usage: GET /api/admin/fix-ledger-payout/?orderNumber=FW-xxx&confirm=yes
 
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!orderNumber) {
     return new Response(JSON.stringify({
       error: 'Missing orderNumber',
-      usage: '/api/admin/fix-ledger-payout?orderNumber=FW-xxx&confirm=yes'
+      usage: '/api/admin/fix-ledger-payout/?orderNumber=FW-xxx&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

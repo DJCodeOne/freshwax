@@ -192,7 +192,7 @@ export const prerender = false;
 
   async function loadListing() {
     try {
-      const response = await fetch(`/api/vinyl/listing?id=${listingId}`);
+      const response = await fetch(`/api/vinyl/listing/?id=${listingId}`);
       const data = await response.json();
 
       if (!data.success || !data.listing) {
@@ -277,7 +277,7 @@ export const prerender = false;
         description: formData.get('description')
       };
 
-      const response = await fetch('/api/vinyl/listing', {
+      const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
@@ -307,7 +307,7 @@ export const prerender = false;
     }
 
     try {
-      const response = await fetch('/api/vinyl/listing', {
+      const response = await fetch('/api/vinyl/listing/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

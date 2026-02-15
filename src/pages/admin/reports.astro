@@ -515,7 +515,7 @@ export const prerender = false;
       const params = new URLSearchParams({ status });
       if (type) params.append('type', type);
       
-      const res = await fetch(`/api/reports?${params}`);
+      const res = await fetch(`/api/reports/?${params}`);
       const data = await res.json();
 
       if (data.success) {
@@ -631,7 +631,7 @@ export const prerender = false;
     const notes = document.getElementById('admin-notes').value;
 
     try {
-      await fetch('/api/reports', {
+      await fetch('/api/reports/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reportId: currentReportId, adminNotes: notes })
@@ -648,7 +648,7 @@ export const prerender = false;
 
   async function updateStatus(id, status) {
     try {
-      const res = await fetch('/api/reports', {
+      const res = await fetch('/api/reports/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reportId: id, status })

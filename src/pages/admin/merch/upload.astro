@@ -1199,7 +1199,7 @@ export const prerender = false;
         }
         
         // Submit
-        const response = await fetch('/api/upload-merch', {
+        const response = await fetch('/api/upload-merch/', {
           method: 'POST',
           headers: { 'X-Admin-Key': window.ADMIN_KEY },
           body: formData

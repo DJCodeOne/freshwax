@@ -44,7 +44,7 @@ export function initPlaylistModal() {
   async function fetchVideoDuration(platform: string, embedId: string): Promise<number | null> {
     if (platform === 'youtube' && embedId) {
       try {
-        const response = await fetch(`/api/youtube/duration?videoId=${embedId}`);
+        const response = await fetch(`/api/youtube/duration/?videoId=${embedId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.duration) {
@@ -986,7 +986,7 @@ export function initPlaylistModal() {
       }
 
       // Fetch from server API (global history)
-      const response = await fetch('/api/playlist/history');
+      const response = await fetch('/api/playlist/history/');
       const result = await response.json();
 
       if (result.success && result.items) {
@@ -1095,7 +1095,7 @@ export function initPlaylistModal() {
         if (videoId) {
           try {
             // Use our server-side endpoint to avoid CORS issues
-            const response = await fetch(`/api/youtube/title?videoId=${videoId}`);
+            const response = await fetch(`/api/youtube/title/?videoId=${videoId}`);
             if (response.ok) {
               const data = await response.json();
               if (data.success && data.title) {

@@ -1,6 +1,6 @@
 // src/pages/api/admin/test-order-email.ts
 // Send test confirmation email and check order data
-// Usage: GET /api/admin/test-order-email?orderNumber=FW-260126-1O1JTG&email=test@example.com
+// Usage: GET /api/admin/test-order-email/?orderNumber=FW-260126-1O1JTG&email=test@example.com
 
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
@@ -49,7 +49,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!orderNumber) {
     return new Response(JSON.stringify({
       error: 'Missing orderNumber',
-      usage: '/api/admin/test-order-email?orderNumber=FW-xxx&email=test@example.com&send=yes'
+      usage: '/api/admin/test-order-email/?orderNumber=FW-xxx&email=test@example.com&send=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

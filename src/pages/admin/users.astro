@@ -381,7 +381,7 @@ export const prerender = false;
 
       async function loadUsers() {
         try {
-          const response = await fetch('/api/admin/list-users', {
+          const response = await fetch('/api/admin/list-users/', {
             headers: { 'X-Admin-Key': window.ADMIN_KEY }
           });
 
@@ -657,7 +657,7 @@ export const prerender = false;
           };
 
           // Call server-side API
-          const response = await fetch('/api/admin/update-user', {
+          const response = await fetch('/api/admin/update-user/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -684,7 +684,7 @@ export const prerender = false;
             const emailType = updates.roles.artist && updates.roles.merchSupplier ? 'both' :
                               updates.roles.artist ? 'artist' : 'merch';
             try {
-              await fetch('/api/admin/send-approval-email', {
+              await fetch('/api/admin/send-approval-email/', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -729,7 +729,7 @@ export const prerender = false;
         if (!currentUserId) return;
 
         try {
-          const response = await fetch('/api/admin/update-user', {
+          const response = await fetch('/api/admin/update-user/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -776,7 +776,7 @@ export const prerender = false;
         deleteBtn.disabled = true;
 
         try {
-          const response = await fetch('/api/admin/delete-user', {
+          const response = await fetch('/api/admin/delete-user/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

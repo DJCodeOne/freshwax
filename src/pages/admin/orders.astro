@@ -637,7 +637,7 @@ const nonce = (Astro.locals as any).nonce || '';
           const bodyData = { orderId: id, status };
           if (tracking) bodyData.tracking = tracking;
 
-          const response = await fetch('/api/admin/update-order-status', {
+          const response = await fetch('/api/admin/update-order-status/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bodyData)

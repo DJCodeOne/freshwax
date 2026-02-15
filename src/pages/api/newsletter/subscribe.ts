@@ -158,7 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 async function sendConfirmationEmail(
   apiKey: string, email: string, subscriberId: string, token: string, name?: string
 ): Promise<void> {
-  const confirmUrl = `https://freshwax.co.uk/api/newsletter/confirm?id=${encodeURIComponent(subscriberId)}&token=${encodeURIComponent(token)}`;
+  const confirmUrl = `https://freshwax.co.uk/api/newsletter/confirm/?id=${encodeURIComponent(subscriberId)}&token=${encodeURIComponent(token)}`;
   const greeting = name ? `Hi ${name},` : 'Hi there,';
 
   await fetch('https://api.resend.com/emails', {

@@ -355,7 +355,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       // Check admin status via API
       const idToken = await user.getIdToken();
-      const adminResp = await fetch('/api/admin/check-access', {
+      const adminResp = await fetch('/api/admin/check-access/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       const adminData = await adminResp.json();
@@ -371,7 +371,7 @@ const nonce = (Astro.locals as any).nonce || '';
     async function loadRequests() {
       // Get pending role requests via API (replaces client-side Firestore collection query)
       const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/roles/manage?action=getPendingRequests', {
+      const response = await fetch('/api/roles/manage/?action=getPendingRequests', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       const data = await response.json();
@@ -564,7 +564,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       try {
         const idToken = await auth.currentUser.getIdToken();
-        const response = await fetch('/api/roles/manage', {
+        const response = await fetch('/api/roles/manage/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -598,7 +598,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       try {
         const idToken = await auth.currentUser.getIdToken();
-        const response = await fetch('/api/roles/manage', {
+        const response = await fetch('/api/roles/manage/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

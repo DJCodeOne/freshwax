@@ -1,6 +1,6 @@
 // src/pages/api/livestream/bot.ts
 // Bot API - Send announcements and scheduled messages
-// POST /api/livestream/bot - Send a bot message to a stream
+// POST /api/livestream/bot/ - Send a bot message to a stream
 
 import type { APIRoute } from 'astro';
 import { addDocument, getDocument, queryCollection } from '../../../lib/firebase-rest';

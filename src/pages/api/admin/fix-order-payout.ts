@@ -1,6 +1,6 @@
 // src/pages/api/admin/fix-order-payout.ts
 // Create missing pending payout for a specific order
-// Usage: GET /api/admin/fix-order-payout?orderId=xxx&confirm=yes
+// Usage: GET /api/admin/fix-order-payout/?orderId=xxx&confirm=yes
 
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!orderId) {
     return new Response(JSON.stringify({
       error: 'Missing orderId',
-      usage: '/api/admin/fix-order-payout?orderId=xxx&confirm=yes'
+      usage: '/api/admin/fix-order-payout/?orderId=xxx&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

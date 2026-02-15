@@ -399,7 +399,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function checkIsAdmin(user) {
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch('/api/admin/check-access', {
+      const response = await fetch('/api/admin/check-access/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       const data = await response.json();
@@ -419,7 +419,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
       
       // Use server-side API to fetch partners
-      const response = await fetch(`/api/admin/list-partners?uid=${encodeURIComponent(user.uid)}`);
+      const response = await fetch(`/api/admin/list-partners/?uid=${encodeURIComponent(user.uid)}`);
       const data = await response.json();
       
       if (!data.success) {
@@ -819,7 +819,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
       
       // Use server-side API to update partner
-      const response = await fetch('/api/admin/update-partner', {
+      const response = await fetch('/api/admin/update-partner/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

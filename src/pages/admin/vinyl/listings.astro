@@ -624,7 +624,7 @@ export const prerender = false;
       if (!listingId) return;
 
       try {
-        const response = await fetch(`/api/admin/vinyl/listing?id=${listingId}`);
+        const response = await fetch(`/api/admin/vinyl/listing/?id=${listingId}`);
         const data = await response.json();
 
         if (data.success && data.listing) {
@@ -664,7 +664,7 @@ export const prerender = false;
     const listingId = formData.get('listingId');
 
     try {
-      const response = await fetch('/api/admin/vinyl/listing', {
+      const response = await fetch('/api/admin/vinyl/listing/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -709,7 +709,7 @@ export const prerender = false;
       const listingId = btn.getAttribute('data-listing-id');
 
       try {
-        const response = await fetch('/api/admin/vinyl/listing', {
+        const response = await fetch('/api/admin/vinyl/listing/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'approve', listingId })
@@ -737,7 +737,7 @@ export const prerender = false;
       const listingId = btn.getAttribute('data-listing-id');
 
       try {
-        const response = await fetch('/api/admin/vinyl/listing', {
+        const response = await fetch('/api/admin/vinyl/listing/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'remove', listingId, reason })

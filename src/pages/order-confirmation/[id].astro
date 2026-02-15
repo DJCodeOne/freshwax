@@ -1428,7 +1428,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
     
     try {
       // Use server-side proxy to fetch the file
-      const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
+      const proxyUrl = `/api/download/?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
       
       const response = await fetch(proxyUrl);
       if (!response.ok) {
@@ -1601,7 +1601,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
 
         try {
           // Use server-side proxy to fetch the file
-          const proxyUrl = `/api/download?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
+          const proxyUrl = `/api/download/?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
 
           const response = await fetch(proxyUrl, { signal: abortController.signal });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);

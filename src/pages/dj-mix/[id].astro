@@ -13,7 +13,7 @@ let comments = [];
 
 try {
   // Add nocache timestamp to ensure fresh data (plays/likes/comments update frequently)
-  const apiUrl = `${Astro.url.origin}/api/get-dj-mix?id=${id}&nocache=${Date.now()}`;
+  const apiUrl = `${Astro.url.origin}/api/get-dj-mix/?id=${id}&nocache=${Date.now()}`;
   
   const response = await fetch(apiUrl);
   const data = await response.json();
@@ -960,7 +960,7 @@ Artist - Track Title
         
         if (!window.FreshWaxPlayer.hasTrackedPlay) {
           window.FreshWaxPlayer.hasTrackedPlay = true;
-          fetch('/api/track-mix-play', {
+          fetch('/api/track-mix-play/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mixId: mixId })
@@ -1001,7 +1001,7 @@ Artist - Track Title
           likedMixes.splice(index, 1);
           localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
         }
-        fetch('/api/track-mix-unlike', {
+        fetch('/api/track-mix-unlike/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mixId: mixId })
@@ -1023,7 +1023,7 @@ Artist - Track Title
           likedMixes.push(mixId);
           localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
         }
-        fetch('/api/track-mix-like', {
+        fetch('/api/track-mix-like/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mixId: mixId })
@@ -1060,7 +1060,7 @@ Artist - Track Title
     
     // Track download
     if (mixId) {
-      fetch('/api/track-mix-download', {
+      fetch('/api/track-mix-download/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mixId: mixId })
@@ -1078,7 +1078,7 @@ Artist - Track Title
     
     try {
       // Use server-side proxy to fetch the file
-      const proxyUrl = '/api/download?url=' + encodeURIComponent(audioUrl) + '&filename=' + encodeURIComponent(filename);
+      const proxyUrl = '/api/download/?url=' + encodeURIComponent(audioUrl) + '&filename=' + encodeURIComponent(filename);
       
       const response = await fetch(proxyUrl);
       if (!response.ok) {
@@ -1382,7 +1382,7 @@ Artist - Track Title
           
           // Fetch from consolidated API endpoint
           const _idToken = await user.getIdToken();
-          const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+          const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
             headers: { 'Authorization': `Bearer ${_idToken}` }
           });
           if (response.ok) {
@@ -1507,7 +1507,7 @@ Artist - Track Title
     submitCommentBtn.textContent = 'Posting...';
 
 
-    fetch('/api/add-mix-comment', {
+    fetch('/api/add-mix-comment/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1664,7 +1664,7 @@ Artist - Track Title
           // If not cached, fetch from API
           if (!artistName) {
             const _idToken2 = await user.getIdToken();
-            const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+            const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
               headers: { 'Authorization': `Bearer ${_idToken2}` }
             });
             if (response.ok) {
@@ -1779,7 +1779,7 @@ Artist - Track Title
         console.error('[Tracklist] Auth error:', authErr);
       }
 
-      const response = await fetch('/api/update-mix', {
+      const response = await fetch('/api/update-mix/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1961,7 +1961,7 @@ Artist - Track Title
     }
     
     // Immediately post the GIF
-    fetch('/api/add-mix-comment', {
+    fetch('/api/add-mix-comment/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

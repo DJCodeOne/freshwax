@@ -251,7 +251,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         brand_name: 'Fresh Wax',
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
-        return_url: 'https://freshwax.co.uk/api/paypal/capture-redirect',
+        return_url: 'https://freshwax.co.uk/api/paypal/capture-redirect/',
         cancel_url: 'https://freshwax.co.uk/checkout'
       }
     };

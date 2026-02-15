@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!userId || !role) {
     return new Response(JSON.stringify({
       error: 'Missing userId or role',
-      usage: '/api/admin/update-user-role?userId=xxx&role=artist&value=false&confirm=yes'
+      usage: '/api/admin/update-user-role/?userId=xxx&role=artist&value=false&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

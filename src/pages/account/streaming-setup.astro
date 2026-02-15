@@ -1380,7 +1380,7 @@ const nonce = (Astro.locals as any).nonce || '';
     // Check DJ access
     try {
       const _idToken = await user.getIdToken();
-      const response = await fetch(`/api/get-user-type?uid=${user.uid}`, {
+      const response = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
         headers: { 'Authorization': `Bearer ${_idToken}` }
       });
       const result = await response.json();
@@ -1507,7 +1507,7 @@ const nonce = (Astro.locals as any).nonce || '';
     listEl.innerHTML = '<div class="loading-sources">Loading stations...</div>';
 
     try {
-      const response = await fetch('/api/relay-sources');
+      const response = await fetch('/api/relay-sources/');
       const data = await response.json();
 
       if (data.sources && data.sources.length > 0) {

@@ -1583,7 +1583,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
     // Load current settings
     try {
-      const response = await fetch('/api/admin/get-settings');
+      const response = await fetch('/api/admin/get-settings/');
       const data = await response.json();
       if (data.success && data.settings) {
         toggleMixCharts.checked = data.settings.showMixCharts || false;
@@ -1595,7 +1595,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
     // Save toggle changes
     toggleMixCharts?.addEventListener('change', async function() {
       try {
-        await fetch('/api/admin/update-settings', {
+        await fetch('/api/admin/update-settings/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ showMixCharts: this.checked })
@@ -1728,7 +1728,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   // Auto-expire request on server
   async function autoExpireRequest(requestId) {
     try {
-      await fetch('/api/admin/bypass-requests', {
+      await fetch('/api/admin/bypass-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'expire', requestId })
@@ -1749,7 +1749,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       btn.textContent = 'Approving...';
       
       try {
-        const response = await fetch('/api/admin/bypass-requests', {
+        const response = await fetch('/api/admin/bypass-requests/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'approve', requestId })
@@ -1795,7 +1795,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       btn.textContent = 'Rejecting...';
       
       try {
-        const response = await fetch('/api/admin/bypass-requests', {
+        const response = await fetch('/api/admin/bypass-requests/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'deny', requestId })
@@ -1852,7 +1852,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
   async function fetchHealthData() {
     try {
-      const response = await fetch('/api/admin/health-check', {
+      const response = await fetch('/api/admin/health-check/', {
         headers: { 'X-Admin-Key': window.ADMIN_KEY }
       });
       const data = await response.json();
@@ -2040,7 +2040,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       if (confirmMessage && !confirm(confirmMessage)) return;
 
       try {
-        const response = await fetch('/api/admin/server-control', {
+        const response = await fetch('/api/admin/server-control/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action })
@@ -2066,7 +2066,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       serverStatus.textContent = 'Checking...';
 
       try {
-        const response = await fetch('/api/admin/server-status');
+        const response = await fetch('/api/admin/server-status/');
         const data = await response.json();
 
         if (data.online) {
@@ -2139,7 +2139,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         logsContent.textContent = 'Loading logs...';
 
         try {
-          const response = await fetch('/api/admin/server-logs');
+          const response = await fetch('/api/admin/server-logs/');
           const data = await response.json();
 
           if (data.logs) {
@@ -2178,7 +2178,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         btn.setAttribute('disabled', 'true');
 
         try {
-          const response = await fetch('/api/playlist/global', {
+          const response = await fetch('/api/playlist/global/', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action: 'startAutoPlay' })
@@ -2241,7 +2241,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
       try {
         // Check if playlist API has tracks from the local server
-        const response = await fetch('/api/playlist/global');
+        const response = await fetch('/api/playlist/global/');
         if (response.ok) {
           const result = await response.json();
           const currentTrack = result.playlist?.queue?.[0];
@@ -2261,7 +2261,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
     // Fetch playlist state
     async function fetchPlaylistState() {
       try {
-        const response = await fetch('/api/playlist/global');
+        const response = await fetch('/api/playlist/global/');
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.playlist) {
@@ -2349,7 +2349,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
     // Remove from queue (uses DELETE endpoint with admin override)
     async function removeFromQueue(itemId, addedBy) {
       try {
-        const response = await fetch('/api/playlist/global', {
+        const response = await fetch('/api/playlist/global/', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2375,7 +2375,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       skipBtn.disabled = true;
       skipBtn.querySelector('.btn-label').textContent = 'Skipping...';
       try {
-        const response = await fetch('/api/playlist/global', {
+        const response = await fetch('/api/playlist/global/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'next' })
@@ -2396,7 +2396,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       startBtn.disabled = true;
       startBtn.querySelector('.btn-label').textContent = 'Starting...';
       try {
-        const response = await fetch('/api/playlist/global', {
+        const response = await fetch('/api/playlist/global/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'startAutoPlay' })
@@ -2417,7 +2417,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       stopBtn.disabled = true;
       stopBtn.querySelector('.btn-label').textContent = 'Stopping...';
       try {
-        const response = await fetch('/api/playlist/global', {
+        const response = await fetch('/api/playlist/global/', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'pause' })

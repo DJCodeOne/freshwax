@@ -2,7 +2,7 @@
 // Red5 Pro Webhook Handler - receives stream events from Red5 server
 //
 // Configure Red5 to send webhooks to:
-// POST https://freshwax.co.uk/api/livestream/red5-webhook
+// POST https://freshwax.co.uk/api/livestream/red5-webhook/
 //
 // Events handled:
 // - publish: Stream started

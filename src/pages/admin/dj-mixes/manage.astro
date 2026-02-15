@@ -316,7 +316,7 @@ export const prerender = false;
           btn.disabled = true;
           
           try {
-            const response = await fetch('/api/admin/toggle-mix-publish', {
+            const response = await fetch('/api/admin/toggle-mix-publish/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ mixId: id, published: newStatus, adminKey: window.ADMIN_KEY })
@@ -386,7 +386,7 @@ export const prerender = false;
         confirmDeleteBtn.textContent = 'Deleting...';
 
         try {
-          const response = await fetch('/api/admin/delete-mix', {
+          const response = await fetch('/api/admin/delete-mix/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mixId: id, adminKey: window.ADMIN_KEY })

@@ -313,7 +313,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     async function loadReleases(user) {
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch('/api/pro/dashboard-data?type=releases', {
+        const response = await fetch('/api/pro/dashboard-data/?type=releases', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await response.json();

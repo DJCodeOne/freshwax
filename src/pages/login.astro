@@ -260,7 +260,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Initialize user profile via server API (creates if doesn't exist)
         const idToken = await user.getIdToken();
-        const initResponse = await fetch('/api/auth/init-user', {
+        const initResponse = await fetch('/api/auth/init-user/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -425,14 +425,14 @@ const nonce = (Astro.locals as any).nonce || '';
         try {
           // Use consolidated API endpoint (single call instead of multiple Firebase reads)
           const _idToken = await user.getIdToken();
-          const profileResponse = await fetch(`/api/get-user-type?uid=${encodeURIComponent(user.uid)}`, {
+          const profileResponse = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
             headers: { 'Authorization': `Bearer ${_idToken}` }
           });
           const profile = await profileResponse.json();
 
           // If user doesn't exist in Firestore, create them via server API (handles orphaned Auth accounts)
           if (!profile.success || profile.error === 'User not found') {
-            await fetch('/api/auth/init-user', {
+            await fetch('/api/auth/init-user/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

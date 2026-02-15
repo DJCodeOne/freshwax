@@ -1719,7 +1719,7 @@ const nonce = (Astro.locals as any).nonce || '';
       let _idToken;
       try {
         _idToken = await currentUser?.getIdToken();
-        response = await fetchWithTimeout(`/api/get-user-type?uid=${userId}&email=${userEmail}`, {
+        response = await fetchWithTimeout(`/api/get-user-type/?uid=${userId}&email=${userEmail}`, {
           headers: _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {}
         });
       } catch (e) {
@@ -1763,7 +1763,7 @@ const nonce = (Astro.locals as any).nonce || '';
       log('[DJ Lobby] Checking eligibility...');
       let eligibilityResponse;
       try {
-        eligibilityResponse = await fetchWithTimeout(`/api/check-dj-eligibility?userId=${userId}`, {
+        eligibilityResponse = await fetchWithTimeout(`/api/check-dj-eligibility/?userId=${userId}`, {
           headers: _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {}
         });
       } catch (e) {
@@ -1922,7 +1922,7 @@ const nonce = (Astro.locals as any).nonce || '';
     if (!userInfo?.uid) return;
     
     try {
-      const response = await fetch(`/api/admin/bypass-requests?action=status&userId=${userInfo.uid}`);
+      const response = await fetch(`/api/admin/bypass-requests/?action=status&userId=${userInfo.uid}`);
       const result = await response.json();
       
       if (result.success) {
@@ -1993,7 +1993,7 @@ const nonce = (Astro.locals as any).nonce || '';
     btn.textContent = 'Submitting...';
     
     try {
-      const response = await fetch('/api/admin/bypass-requests', {
+      const response = await fetch('/api/admin/bypass-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2030,7 +2030,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const token = await window.firebaseAuth.currentUser?.getIdToken();
-      const response = await fetch('/api/admin/bypass-requests', {
+      const response = await fetch('/api/admin/bypass-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') },
         body: JSON.stringify({
@@ -2059,7 +2059,7 @@ const nonce = (Astro.locals as any).nonce || '';
   document.getElementById('resubmitBypassRequest')?.addEventListener('click', async () => {
     try {
       const token2 = await window.firebaseAuth.currentUser?.getIdToken();
-      await fetch('/api/admin/bypass-requests', {
+      await fetch('/api/admin/bypass-requests/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token2 || '') },
         body: JSON.stringify({
@@ -2098,7 +2098,7 @@ const nonce = (Astro.locals as any).nonce || '';
     successEl.classList.add('hidden');
 
     try {
-      const response = await fetch('/api/redeem-access-key', {
+      const response = await fetch('/api/redeem-access-key/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2196,7 +2196,7 @@ const nonce = (Astro.locals as any).nonce || '';
     // Check live status for each station via proxy (avoids CORS/CSP issues)
     for (const source of relaySources) {
       try {
-        const response = await fetch(`/api/relay-status?station=${source.id}`, {
+        const response = await fetch(`/api/relay-status/?station=${source.id}`, {
           signal: AbortSignal.timeout(8000)
         });
         if (response.ok) {
@@ -2884,7 +2884,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const token = await currentUser?.getIdToken();
       if (!token) return;
 
-      const response = await fetch('/api/dj-lobby/chat-cleanup', {
+      const response = await fetch('/api/dj-lobby/chat-cleanup/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
@@ -2907,7 +2907,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const token = await currentUser?.getIdToken();
       if (!token) return;
 
-      await fetch('/api/dj-lobby/chat-cleanup', {
+      await fetch('/api/dj-lobby/chat-cleanup/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ action: 'record-stream-end' })
@@ -3140,7 +3140,7 @@ const nonce = (Astro.locals as any).nonce || '';
         const token = await currentUser?.getIdToken();
         if (!token) throw new Error('No auth token');
 
-        const response = await fetch('/api/dj-lobby/broadcast-mode', {
+        const response = await fetch('/api/dj-lobby/broadcast-mode/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ slotId: currentStream.id, mode, hlsUrl })
@@ -3191,7 +3191,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function checkIcecastStatus() {
     // Use API proxy to avoid CORS issues and browser console errors
     try {
-      const response = await fetch('/api/icecast-status', {
+      const response = await fetch('/api/icecast-status/', {
         cache: 'no-store'
       });
       const data = await response.json();
@@ -5088,7 +5088,7 @@ const nonce = (Astro.locals as any).nonce || '';
       // Use fresh=1 to bypass server-side cache when called from Pusher events
       const cacheBuster = Date.now();
       const freshParam = skipCache ? '&fresh=1' : '';
-      const response = await fetch(`/api/livestream/status?_t=${cacheBuster}${freshParam}`);
+      const response = await fetch(`/api/livestream/status/?_t=${cacheBuster}${freshParam}`);
       const result = await response.json();
       
       const statusDot = document.querySelector('.status-dot');
@@ -5534,7 +5534,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const isLive = currentStream && currentStream.id;
 
       // Use listeners endpoint (Firebase/KV-backed) for accurate counts
-      const response = await fetch(`/api/livestream/listeners?streamId=${streamId}`);
+      const response = await fetch(`/api/livestream/listeners/?streamId=${streamId}`);
       const result = await response.json();
 
       const newCount = result.count || 0;
@@ -6562,7 +6562,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const channelId = getDmChannelId(currentUser.uid, dmTargetDj.id);
       const token = await currentUser.getIdToken();
 
-      await fetch('/api/dj-lobby/dm-cleanup', {
+      await fetch('/api/dj-lobby/dm-cleanup/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ channelId })
@@ -7177,7 +7177,7 @@ const nonce = (Astro.locals as any).nonce || '';
         try {
           const token = await currentUser?.getIdToken();
           if (token && currentUser) {
-            await fetch('/api/dj-lobby/presence', {
+            await fetch('/api/dj-lobby/presence/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ action: 'leave', userId: currentUser.uid })
@@ -8215,7 +8215,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Set ready status (but don't go live yet)
         const idToken = await currentUser.getIdToken();
-        await fetch('/api/dj-lobby/presence', {
+        await fetch('/api/dj-lobby/presence/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -8311,7 +8311,7 @@ const nonce = (Astro.locals as any).nonce || '';
         
         // Send takeover request via API (handles Firestore + Pusher)
         const token = await currentUser.getIdToken();
-        const response = await fetch('/api/dj-lobby/takeover', {
+        const response = await fetch('/api/dj-lobby/takeover/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({
@@ -8357,7 +8357,7 @@ const nonce = (Astro.locals as any).nonce || '';
             // Clean up the pending request via API
             try {
               const cancelToken = await currentUser.getIdToken();
-              await fetch('/api/dj-lobby/takeover', {
+              await fetch('/api/dj-lobby/takeover/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cancelToken}` },
                 body: JSON.stringify({
@@ -8493,7 +8493,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     // Load initial messages
     try {
-      const response = await fetch(`/api/livestream/chat?streamId=${streamId}&limit=50`);
+      const response = await fetch(`/api/livestream/chat/?streamId=${streamId}&limit=50`);
       const result = await response.json();
 
       if (result.success && result.messages) {
@@ -8702,7 +8702,7 @@ const nonce = (Astro.locals as any).nonce || '';
       sendBtn.disabled = true;
 
       try {
-        const response = await fetch('/api/livestream/chat', {
+        const response = await fetch('/api/livestream/chat/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -8852,7 +8852,7 @@ const nonce = (Astro.locals as any).nonce || '';
     // Check if relay source is online via server-side API (avoids CORS issues)
     let isRelayLive = false;
     try {
-      const response = await fetch(`/api/relay-status?station=${selectedRelaySource.id}`, {
+      const response = await fetch(`/api/relay-status/?station=${selectedRelaySource.id}`, {
         signal: AbortSignal.timeout(8000)
       });
       if (response.ok) {

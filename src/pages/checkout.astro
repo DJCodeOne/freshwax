@@ -42,7 +42,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
 <script>
   // LIGHTWEIGHT AUTH: Uses window.firebaseAuth + window.authReady from Header.astro
-  // instead of importing ~200KB Firebase SDK. Customer data loaded via /api/checkout-data.
+  // instead of importing ~200KB Firebase SDK. Customer data loaded via /api/checkout-data./
 
   let currentUser = null;
   let customerData = null;
@@ -99,7 +99,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const idToken = await currentUser.getIdToken();
-      const response = await fetch('/api/giftcards/balance', {
+      const response = await fetch('/api/giftcards/balance/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
 
@@ -194,7 +194,7 @@ const nonce = (Astro.locals as any).nonce || '';
     if (!userId) return { duplicates: [], ownedReleases: [] };
     
     try {
-      const response = await fetch('/api/check-duplicates', {
+      const response = await fetch('/api/check-duplicates/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, cartItems: cart })
@@ -290,7 +290,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       if (!idToken) return null;
 
-      const response = await fetch('/api/checkout-data', {
+      const response = await fetch('/api/checkout-data/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       if (response.ok) {
@@ -329,7 +329,7 @@ const nonce = (Astro.locals as any).nonce || '';
     lookupError.style.display = 'none';
     
     try {
-      const response = await fetch(`/api/postcode-lookup?postcode=${encodeURIComponent(postcode)}`);
+      const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`);
       const data = await response.json();
       
       if (!response.ok) {
@@ -859,11 +859,11 @@ const nonce = (Astro.locals as any).nonce || '';
         totals: { subtotal, shipping, freshWaxFee, stripeFee, serviceFees, total },
         hasPhysicalItems,
         appliedCredit: appliedCredit || 0,
-        returnUrl: window.location.origin + '/api/paypal/capture-redirect'
+        returnUrl: window.location.origin + '/api/paypal/capture-redirect/'
       };
 
       // Create PayPal order
-      const response = await fetch('/api/paypal/create-order', {
+      const response = await fetch('/api/paypal/create-order/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
@@ -965,7 +965,7 @@ const nonce = (Astro.locals as any).nonce || '';
         };
 
         // Create PayPal order
-        const response = await fetch('/api/paypal/create-order', {
+        const response = await fetch('/api/paypal/create-order/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData)
@@ -999,7 +999,7 @@ const nonce = (Astro.locals as any).nonce || '';
           }
 
           // Capture the payment
-          const response = await fetch('/api/paypal/capture-order', {
+          const response = await fetch('/api/paypal/capture-order/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1100,7 +1100,7 @@ const nonce = (Astro.locals as any).nonce || '';
     if (saveDetails && currentUser) {
       try {
         const saveToken = await currentUser.getIdToken();
-        await fetch('/api/checkout-data', {
+        await fetch('/api/checkout-data/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1189,7 +1189,7 @@ const nonce = (Astro.locals as any).nonce || '';
         if (orderData.idToken) {
           freeOrderHeaders['Authorization'] = `Bearer ${orderData.idToken}`;
         }
-        const response = await fetch('/api/complete-free-order', {
+        const response = await fetch('/api/complete-free-order/', {
           method: 'POST',
           headers: freeOrderHeaders,
           body: JSON.stringify(orderData)
@@ -1213,7 +1213,7 @@ const nonce = (Astro.locals as any).nonce || '';
         }
       } else {
         // Create Stripe checkout session
-        const response = await fetch('/api/stripe/create-checkout-session', {
+        const response = await fetch('/api/stripe/create-checkout-session/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(orderData)
@@ -1248,7 +1248,7 @@ const nonce = (Astro.locals as any).nonce || '';
   async function checkUserType(uid) {
     try {
       const _token = await currentUser?.getIdToken();
-      const response = await fetch('/api/get-user-type?uid=' + uid, {
+      const response = await fetch('/api/get-user-type/?uid=' + uid, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
       const data = await response.json();

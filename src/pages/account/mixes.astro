@@ -201,7 +201,7 @@ export const prerender = false;
     currentUserId = user.uid;
 
     try {
-      const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(user.uid)}&t=${Date.now()}`);
+      const response = await fetch(`/api/get-dj-mixes/?userId=${encodeURIComponent(user.uid)}&t=${Date.now()}`);
         const data = await response.json();
         
         // Hide loading, show main content
@@ -368,7 +368,7 @@ export const prerender = false;
           const user = window.firebaseAuth?.currentUser;
           const idToken = user ? await user.getIdToken() : null;
 
-          const response = await fetch(`/api/delete-mix?id=${encodeURIComponent(mixId)}`, {
+          const response = await fetch(`/api/delete-mix/?id=${encodeURIComponent(mixId)}`, {
             method: 'DELETE',
             headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
           });
@@ -585,7 +585,7 @@ export const prerender = false;
           formData.append('userId', currentUserId);
         }
         
-        const artworkResponse = await fetch('/api/update-mix-artwork', {
+        const artworkResponse = await fetch('/api/update-mix-artwork/', {
           method: 'POST',
           headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {},
           body: formData
@@ -603,7 +603,7 @@ export const prerender = false;
       }
       
       // Update mix details
-      const response = await fetch('/api/update-mix', {
+      const response = await fetch('/api/update-mix/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(idToken && { 'Authorization': `Bearer ${idToken}` }) },
         body: JSON.stringify({ 
@@ -689,7 +689,7 @@ export const prerender = false;
       const user = window.firebaseAuth?.currentUser;
       const idToken = user ? await user.getIdToken() : null;
 
-      const response = await fetch('/api/delete-mix', {
+      const response = await fetch('/api/delete-mix/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

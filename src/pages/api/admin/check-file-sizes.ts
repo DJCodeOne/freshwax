@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   if (!releaseId) {
     return new Response(JSON.stringify({
       error: 'Missing releaseId',
-      usage: '/api/admin/check-file-sizes?releaseId=xxx'
+      usage: '/api/admin/check-file-sizes/?releaseId=xxx'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

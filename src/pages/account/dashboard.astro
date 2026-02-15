@@ -761,7 +761,7 @@ const nonce = (Astro.locals as any).nonce || '';
   // @ts-nocheck - is:inline bypasses TypeScript
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged, signOut, updateProfile, sendEmailVerification } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-  // Firestore SDK removed (~200KB) - using /api/user-profile server-side API instead
+  // Firestore SDK removed (~200KB) - using /api/user-profile/ server-side API instead
 
   const firebaseConfig = {
     apiKey: (typeof import.meta !== 'undefined' && import.meta.env?.PUBLIC_FIREBASE_API_KEY) || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -798,7 +798,7 @@ const nonce = (Astro.locals as any).nonce || '';
         return {};
       }
 
-      const response = await fetch('/api/user-profile', {
+      const response = await fetch('/api/user-profile/', {
         headers: {
           'Authorization': `Bearer ${idToken}`
         }
@@ -828,7 +828,7 @@ const nonce = (Astro.locals as any).nonce || '';
         return [];
       }
 
-      const response = await fetch(`/api/get-orders?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/get-orders/?userId=${encodeURIComponent(userId)}`, {
         headers: {
           'Authorization': `Bearer ${idToken}`
         }
@@ -864,7 +864,7 @@ const nonce = (Astro.locals as any).nonce || '';
     if (!container) return;
 
     try {
-      const response = await fetch(`/api/get-dj-mixes?userId=${encodeURIComponent(userId)}`);
+      const response = await fetch(`/api/get-dj-mixes/?userId=${encodeURIComponent(userId)}`);
       const data = await response.json();
 
       if (data.success && data.mixes) {
@@ -1015,7 +1015,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/wishlist/?userId=${encodeURIComponent(userId)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -1043,7 +1043,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/wishlist?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/wishlist/?userId=${encodeURIComponent(userId)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -1116,7 +1116,7 @@ const nonce = (Astro.locals as any).nonce || '';
               
               try {
                 const removeToken = await currentUser.getIdToken();
-                const res = await fetch('/api/wishlist', {
+                const res = await fetch('/api/wishlist/', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1229,7 +1229,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/follow-artist?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/follow-artist/?userId=${encodeURIComponent(userId)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -1257,7 +1257,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const token = await currentUser.getIdToken();
-      const response = await fetch(`/api/follow-artist?userId=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/follow-artist/?userId=${encodeURIComponent(userId)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await response.json();
@@ -1315,7 +1315,7 @@ const nonce = (Astro.locals as any).nonce || '';
               
               try {
                 const unfollowToken = await currentUser.getIdToken();
-                const res = await fetch('/api/follow-artist', {
+                const res = await fetch('/api/follow-artist/', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1375,7 +1375,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       const _token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/get-user-type?uid=${encodeURIComponent(userId)}`, {
+      const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(userId)}`, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
       const data = await response.json();
@@ -1725,7 +1725,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const token = await user.getIdToken();
 
       // Request presigned download URL
-      const presignResponse = await fetch('/api/presign-download', {
+      const presignResponse = await fetch('/api/presign-download/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1827,7 +1827,7 @@ const nonce = (Astro.locals as any).nonce || '';
       const token = await user.getIdToken();
 
       // Verify purchase by checking one file (this validates order ownership)
-      const verifyResponse = await fetch('/api/presign-download', {
+      const verifyResponse = await fetch('/api/presign-download/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1924,7 +1924,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         try {
           // Use download proxy API to bypass CORS
-          const proxyUrl = `/api/download?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
+          const proxyUrl = `/api/download/?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
           const fileResponse = await fetch(proxyUrl, { signal: abortController.signal });
           if (!fileResponse.ok) {
             throw new Error(`HTTP ${fileResponse.status}`);
@@ -2287,7 +2287,7 @@ const nonce = (Astro.locals as any).nonce || '';
         lookupSuccess.textContent = '';
         
         try {
-          const response = await fetch(`/api/postcode-lookup?postcode=${encodeURIComponent(postcode)}`);
+          const response = await fetch(`/api/postcode-lookup/?postcode=${encodeURIComponent(postcode)}`);
           const data = await response.json();
           
           if (data.success) {
@@ -2334,7 +2334,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Save profile via API (replaces Firestore SDK setDoc call)
         const idToken = await currentUser.getIdToken();
-        const profileResponse = await fetch('/api/user-profile', {
+        const profileResponse = await fetch('/api/user-profile/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -2412,7 +2412,7 @@ const nonce = (Astro.locals as any).nonce || '';
           // Get idToken for Firestore write authentication
           const idToken = await currentUser.getIdToken();
 
-          const response = await fetch('/api/upload-avatar', {
+          const response = await fetch('/api/upload-avatar/', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${idToken}`
@@ -2513,7 +2513,7 @@ const nonce = (Astro.locals as any).nonce || '';
           // Get idToken for Firestore write authentication
           const idToken = await currentUser.getIdToken();
 
-          const response = await fetch('/api/upload-avatar', {
+          const response = await fetch('/api/upload-avatar/', {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',
@@ -2631,7 +2631,7 @@ const nonce = (Astro.locals as any).nonce || '';
       if (gdprStatus) gdprStatus.textContent = '';
       try {
         const idToken = await currentUser.getIdToken();
-        const res = await fetch('/api/user/export-data', {
+        const res = await fetch('/api/user/export-data/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUser.uid, idToken })
@@ -2795,7 +2795,7 @@ const nonce = (Astro.locals as any).nonce || '';
       
       // Load user's DJ mixes
       try {
-        const mixesResponse = await fetch(`/api/get-dj-mixes?userId=${currentUser.uid}`);
+        const mixesResponse = await fetch(`/api/get-dj-mixes/?userId=${currentUser.uid}`);
         const mixesData = await mixesResponse.json();
         
         if (mixesData.success && mixesData.mixes && mixesData.mixes.length > 0) {
@@ -2895,13 +2895,13 @@ const nonce = (Astro.locals as any).nonce || '';
               if (track.wavUrl || track.url) {
                 const wavUrl = track.wavUrl || track.url;
                 const filename = `${item.artist} - ${track.name}.wav`;
-                window.open(`/api/download?url=${encodeURIComponent(wavUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
+                window.open(`/api/download/?url=${encodeURIComponent(wavUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
                 await new Promise(r => setTimeout(r, 800));
               }
               // Download MP3 version if available
               if (track.mp3Url) {
                 const filename = `${item.artist} - ${track.name}.mp3`;
-                window.open(`/api/download?url=${encodeURIComponent(track.mp3Url)}&filename=${encodeURIComponent(filename)}`, '_blank');
+                window.open(`/api/download/?url=${encodeURIComponent(track.mp3Url)}&filename=${encodeURIComponent(filename)}`, '_blank');
                 await new Promise(r => setTimeout(r, 800));
               }
             }
@@ -2912,7 +2912,7 @@ const nonce = (Astro.locals as any).nonce || '';
             const artworkUrl = typeof item.hasArtwork === 'string' ? item.hasArtwork : null;
             if (artworkUrl) {
               const filename = `${item.artist} - ${item.title} - Artwork.jpg`;
-              window.open(`/api/download?url=${encodeURIComponent(artworkUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
+              window.open(`/api/download/?url=${encodeURIComponent(artworkUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
               await new Promise(r => setTimeout(r, 500));
             }
           }
@@ -2926,7 +2926,7 @@ const nonce = (Astro.locals as any).nonce || '';
           if (mix.audioUrl || mix.url) {
             const mixUrl = mix.audioUrl || mix.url;
             const filename = `${mix.title || 'DJ Mix'}.mp3`;
-            window.open(`/api/download?url=${encodeURIComponent(mixUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
+            window.open(`/api/download/?url=${encodeURIComponent(mixUrl)}&filename=${encodeURIComponent(filename)}`, '_blank');
           }
           downloadCount++;
           await new Promise(r => setTimeout(r, 500));
@@ -3091,7 +3091,7 @@ const nonce = (Astro.locals as any).nonce || '';
       try {
         // Call delete account API (with idToken for GDPR-compliant deletion)
         const idToken = await currentUser.getIdToken();
-        const response = await fetch('/api/delete-account', {
+        const response = await fetch('/api/delete-account/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: currentUser.uid, idToken })
@@ -3137,7 +3137,7 @@ const nonce = (Astro.locals as any).nonce || '';
         return;
       }
 
-      const response = await fetch(`/api/giftcards/balance?userId=${userId}`, {
+      const response = await fetch(`/api/giftcards/balance/?userId=${userId}`, {
         headers: {
           'Authorization': `Bearer ${idToken}`
         }
@@ -3179,7 +3179,7 @@ const nonce = (Astro.locals as any).nonce || '';
       // Get auth token for authenticated API call (use module-level currentUser)
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
-      const response = await fetch(`/api/subscription?userId=${userId}`, {
+      const response = await fetch(`/api/subscription/?userId=${userId}`, {
         headers: idToken ? { 'Authorization': `Bearer ${idToken}` } : {}
       });
       const result = await response.json();
@@ -3327,7 +3327,7 @@ const nonce = (Astro.locals as any).nonce || '';
     try {
       // Fetch referral code from KV-based API
       const token = await auth.currentUser?.getIdToken();
-      const response = await fetch(`/api/get-referral-code?userId=${userId}`, {
+      const response = await fetch(`/api/get-referral-code/?userId=${userId}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       const data = await response.json();
@@ -3432,7 +3432,7 @@ const nonce = (Astro.locals as any).nonce || '';
               const user = auth.currentUser;
               const idToken = user ? await user.getIdToken() : null;
 
-              const res = await fetch('/api/generate-referral-code', {
+              const res = await fetch('/api/generate-referral-code/', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -3477,7 +3477,7 @@ const nonce = (Astro.locals as any).nonce || '';
       if (skipUsageItem) skipUsageItem.classList.remove('hidden');
 
       // Fetch personal playlist count
-      const playlistRes = await fetch(`/api/playlist/personal?userId=${userId}`);
+      const playlistRes = await fetch(`/api/playlist/personal/?userId=${userId}`);
       const playlistData = await playlistRes.json();
       if (playlistData.success) {
         const count = playlistData.playlist?.length || 0;
@@ -3487,7 +3487,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
 
       // Fetch skip usage
-      const skipRes = await fetch(`/api/playlist/skip?userId=${userId}`);
+      const skipRes = await fetch(`/api/playlist/skip/?userId=${userId}`);
       const skipData = await skipRes.json();
       if (skipData.success) {
         if (skipsUsedEl) skipsUsedEl.textContent = skipData.used || 0;
@@ -3532,7 +3532,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     // Load user's current badge from KV
     try {
-      const response = await fetch(`/api/get-user-badge?userId=${userId}`);
+      const response = await fetch(`/api/get-user-badge/?userId=${userId}`);
       const data = await response.json();
       if (data.success && data.badge) {
         selectedBadge = data.badge;
@@ -3577,7 +3577,7 @@ const nonce = (Astro.locals as any).nonce || '';
         const user = auth.currentUser;
         const idToken = user ? await user.getIdToken() : null;
 
-        const response = await fetch('/api/save-user-badge', {
+        const response = await fetch('/api/save-user-badge/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3645,7 +3645,7 @@ const nonce = (Astro.locals as any).nonce || '';
     promoMessage.className = 'promo-message';
 
     try {
-      const response = await fetch('/api/plus/validate-promo', {
+      const response = await fetch('/api/plus/validate-promo/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3748,7 +3748,7 @@ const nonce = (Astro.locals as any).nonce || '';
       // Create Stripe checkout session for Pro subscription
       // Promo uses one-off payment, regular uses subscription
       const isPromo = !!appliedPromoCode;
-      const response = await fetch('/api/create-checkout', {
+      const response = await fetch('/api/create-checkout/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3798,7 +3798,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
     try {
       // Create PayPal order for Plus subscription
-      const response = await fetch('/api/paypal/create-plus-order', {
+      const response = await fetch('/api/paypal/create-plus-order/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3824,7 +3824,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
           // Try to capture the order
           try {
-            const captureResponse = await fetch('/api/paypal/capture-plus-order', {
+            const captureResponse = await fetch('/api/paypal/capture-plus-order/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -4051,7 +4051,7 @@ const nonce = (Astro.locals as any).nonce || '';
         
         try {
           const idToken = await currentUser.getIdToken();
-          const response = await fetch('/api/giftcards/redeem', {
+          const response = await fetch('/api/giftcards/redeem/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
             body: JSON.stringify({ code })

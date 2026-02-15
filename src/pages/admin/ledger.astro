@@ -496,7 +496,7 @@ const formatDate = (dateStr: string) => {
 
       try {
         // First do a dry run
-        const dryRunRes = await fetch('/api/admin/migrate-orders-to-ledger?confirm=yes&dryRun=yes');
+        const dryRunRes = await fetch('/api/admin/migrate-orders-to-ledger/?confirm=yes&dryRun=yes');
         const dryRun = await dryRunRes.json();
 
         if (!confirm(`Dry run complete:\n- Would migrate: ${dryRun.results?.migrated || 0} orders\n- Skipped (already in ledger): ${dryRun.results?.skipped || 0}\n- Cancelled orders: ${dryRun.results?.cancelled || 0}\n\nProceed with actual migration?`)) {
@@ -506,7 +506,7 @@ const formatDate = (dateStr: string) => {
         }
 
         // Run actual migration
-        const res = await fetch('/api/admin/migrate-orders-to-ledger?confirm=yes');
+        const res = await fetch('/api/admin/migrate-orders-to-ledger/?confirm=yes');
         const data = await res.json();
 
         if (data.success) {
@@ -547,7 +547,7 @@ const formatDate = (dateStr: string) => {
   async function checkIsAdmin(user) {
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch('/api/admin/check-access', {
+      const response = await fetch('/api/admin/check-access/', {
         headers: { 'Authorization': `Bearer ${idToken}` }
       });
       const data = await response.json();

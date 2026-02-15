@@ -952,7 +952,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       clearCache('livestreamSlots');
       console.log('[livestream/slots] Cleared firebase-rest cache for livestreamSlots');
 
-      // Also invalidate KV cache so /api/livestream/status returns fresh data
+      // Also invalidate KV cache so /api/livestream/status/ returns fresh data
       await kvDelete('general', { prefix: 'status' });
       console.log('[livestream/slots] Invalidated KV status cache');
 

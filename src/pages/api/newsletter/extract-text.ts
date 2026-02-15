@@ -1,10 +1,13 @@
 // src/pages/api/newsletter/extract-text.ts
 // Extract text content from uploaded PDF or DOCX files for newsletter
 import type { APIRoute } from 'astro';
+import { requireAdminAuth } from '../../../lib/admin';
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;

@@ -28,8 +28,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!catalogNumber) {
     return new Response(JSON.stringify({
       error: 'Missing catalogNumber',
-      usage: '/api/admin/set-catalog-number?releaseId=xxx&catalogNumber=ULR001&confirm=yes',
-      altUsage: '/api/admin/set-catalog-number?releaseName=Curiosity&catalogNumber=ULR001&confirm=yes'
+      usage: '/api/admin/set-catalog-number/?releaseId=xxx&catalogNumber=ULR001&confirm=yes',
+      altUsage: '/api/admin/set-catalog-number/?releaseName=Curiosity&catalogNumber=ULR001&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

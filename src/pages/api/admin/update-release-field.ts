@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!releaseId || !field) {
     return new Response(JSON.stringify({
       error: 'Missing releaseId or field',
-      usage: '/api/admin/update-release-field?releaseId=xxx&field=pricing.digital&value=0&confirm=yes'
+      usage: '/api/admin/update-release-field/?releaseId=xxx&field=pricing.digital&value=0&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

@@ -50,8 +50,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     } else {
       return new Response(JSON.stringify({
         error: 'Missing releaseId or all=true',
-        usage: '/api/admin/sync-release-to-d1?releaseId=xxx&confirm=yes',
-        altUsage: '/api/admin/sync-release-to-d1?all=true&confirm=yes'
+        usage: '/api/admin/sync-release-to-d1/?releaseId=xxx&confirm=yes',
+        altUsage: '/api/admin/sync-release-to-d1/?all=true&confirm=yes'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

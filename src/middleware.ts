@@ -45,38 +45,39 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 // --- API Rate Limiting Tiers ---
 // Endpoints to SKIP rate limiting entirely (they have their own verification)
 const RATE_LIMIT_SKIP = new Set([
-  '/api/stripe/webhook',
-  '/api/stripe/connect/webhook',
-  '/api/livestream/red5-webhook',
-  '/api/icecast-auth',
-  '/api/cron/cleanup-reservations',
-  '/api/cron/retry-payouts',
-  '/api/cron/send-restock-notifications',
-  '/api/cron/stock-alerts',
-  '/api/health/index',
-  '/api/health/payments',
+  '/api/stripe/webhook/',
+  '/api/stripe/connect/webhook/',
+  '/api/livestream/red5-webhook/',
+  '/api/icecast-auth/',
+  '/api/cron/cleanup-reservations/',
+  '/api/cron/retry-payouts/',
+  '/api/cron/send-restock-notifications/',
+  '/api/cron/stock-alerts/',
+  '/api/health/index/',
+  '/api/health/payments/',
 ]);
 
 // Tight limit: search & external proxies (30 req/min)
 const RATE_LIMIT_TIGHT_PREFIXES = [
-  '/api/search-releases',
+  '/api/search-releases/',
   '/api/giphy/',
   '/api/youtube/',
-  '/api/postcode-lookup',
+  '/api/postcode-lookup/',
 ];
 
 // Download limit (20 req/min, 1-min block)
 const RATE_LIMIT_DOWNLOAD_PREFIXES = [
-  '/api/download',      // matches /api/download and /api/download-mix
-  '/api/presign-download',
+  '/api/download/',
+  '/api/download-mix/',
+  '/api/presign-download/',
 ];
 
 // Metrics/tracking (60 req/min — prevent inflation)
 const RATE_LIMIT_METRICS_PREFIXES = [
-  '/api/track-mix-play',
-  '/api/track-mix-download',
-  '/api/track-mix-unlike',
-  '/api/track-mix-like',
+  '/api/track-mix-play/',
+  '/api/track-mix-download/',
+  '/api/track-mix-unlike/',
+  '/api/track-mix-like/',
 ];
 
 function apiRateLimit(pathname: string, request: Request): Response | null {

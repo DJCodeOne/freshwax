@@ -280,7 +280,7 @@ const nonce = (Astro.locals as any).nonce || '';
     async function markEmailVerified(user) {
       try {
         const idToken = await user.getIdToken();
-        await fetch('/api/auth/verify-email-status', {
+        await fetch('/api/auth/verify-email-status/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

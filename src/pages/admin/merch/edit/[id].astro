@@ -587,7 +587,7 @@ const getStockBadgeClass = (stock) => {
     if (orphansRemoved) {
       updateData.variantStock = variantStock;
     }
-    fetch('/api/update-merch', {
+    fetch('/api/update-merch/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify(updateData)
@@ -860,7 +860,7 @@ const getStockBadgeClass = (stock) => {
     });
 
     try {
-      const response = await fetch('/api/update-merch', {
+      const response = await fetch('/api/update-merch/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
         body: JSON.stringify({
@@ -1152,7 +1152,7 @@ const getStockBadgeClass = (stock) => {
         formData.append('folder', `merch/${id}`);
         formData.append('filename', `${Date.now()}_cropped.webp`);
 
-        const response = await fetch('/api/upload-merch-image', {
+        const response = await fetch('/api/upload-merch-image/', {
           method: 'POST',
           headers: { 'X-Admin-Key': window.ADMIN_KEY },
           body: formData
@@ -1221,7 +1221,7 @@ const getStockBadgeClass = (stock) => {
         formData.append('filename', `${Date.now()}_original.webp`);
         formData.append('keepOriginal', 'true'); // Skip cropping, keep original dimensions
 
-        const response = await fetch('/api/upload-merch-image', {
+        const response = await fetch('/api/upload-merch-image/', {
           method: 'POST',
           headers: { 'X-Admin-Key': window.ADMIN_KEY },
           body: formData
@@ -1505,7 +1505,7 @@ const getStockBadgeClass = (stock) => {
       formData.append('folder', `merch/${id}`);
       formData.append('filename', `${Date.now()}_${index}.webp`);
 
-      const response = await fetch('/api/upload-merch-image', {
+      const response = await fetch('/api/upload-merch-image/', {
         method: 'POST',
         headers: { 'X-Admin-Key': window.ADMIN_KEY },
         body: formData
@@ -1535,7 +1535,7 @@ const getStockBadgeClass = (stock) => {
   // Save images to Firebase
   async function saveImages() {
     try {
-      const response = await fetch('/api/update-merch', {
+      const response = await fetch('/api/update-merch/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
         body: JSON.stringify({
@@ -1570,7 +1570,7 @@ const getStockBadgeClass = (stock) => {
       return;
     }
 
-    fetch('/api/delete-merch', {
+    fetch('/api/delete-merch/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY },
       body: JSON.stringify({ productId: id })

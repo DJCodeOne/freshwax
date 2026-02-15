@@ -116,7 +116,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
         // Check if order exists for this session
         console.log('[success] Verifying session:', sessionId);
-        const response = await fetch(`/api/stripe/verify-session?session_id=${sessionId}`);
+        const response = await fetch(`/api/stripe/verify-session/?session_id=${sessionId}`);
         const result = await response.json();
         console.log('[success] Verify result:', JSON.stringify(result));
 
@@ -142,7 +142,7 @@ const nonce = (Astro.locals as any).nonce || '';
           window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
           // Also clear KV cart
-          fetch('/api/cart', { method: 'DELETE' }).catch(() => {});
+          fetch('/api/cart/', { method: 'DELETE' }).catch(() => {});
         }
 
         if (result.success && result.orderId) {

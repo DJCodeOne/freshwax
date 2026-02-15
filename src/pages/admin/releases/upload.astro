@@ -422,7 +422,7 @@ uploadBtn.onclick = async () => {
     debug("Requesting presigned URLs...");
     setProgress(5, "Getting upload URLs...");
 
-    const presignRes = await fetch("/api/releases/presigned-upload", {
+    const presignRes = await fetch("/api/releases/presigned-upload/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -479,7 +479,7 @@ uploadBtn.onclick = async () => {
     debug("Creating release record...");
     setProgress(95, "Creating release record...");
 
-    const completeRes = await fetch("/api/releases/complete-upload", {
+    const completeRes = await fetch("/api/releases/complete-upload/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -624,7 +624,7 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
     setProgress(95, "Updating release record...");
 
     try {
-      const updateResponse = await fetch('/api/releases/update-tracks', {
+      const updateResponse = await fetch('/api/releases/update-tracks/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -686,7 +686,7 @@ manualBtn.onclick = async () => {
 
     setProgress(5, "Getting upload URLs...");
 
-    const presignRes = await fetch("/api/releases/presigned-upload", {
+    const presignRes = await fetch("/api/releases/presigned-upload/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -725,7 +725,7 @@ manualBtn.onclick = async () => {
 
     setProgress(95, "Creating release record...");
 
-    const completeRes = await fetch("/api/releases/complete-upload", {
+    const completeRes = await fetch("/api/releases/complete-upload/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

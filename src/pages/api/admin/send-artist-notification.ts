@@ -1,6 +1,6 @@
 // src/pages/api/admin/send-artist-notification.ts
 // Manually send artist sale notification email for an order
-// Usage: GET /api/admin/send-artist-notification?orderNumber=FW-xxx&send=yes
+// Usage: GET /api/admin/send-artist-notification/?orderNumber=FW-xxx&send=yes
 
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
@@ -144,7 +144,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!orderNumber) {
     return new Response(JSON.stringify({
       error: 'Missing orderNumber',
-      usage: '/api/admin/send-artist-notification?orderNumber=FW-xxx&send=yes'
+      usage: '/api/admin/send-artist-notification/?orderNumber=FW-xxx&send=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

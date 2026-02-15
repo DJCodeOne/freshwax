@@ -262,7 +262,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
     async function loadAccountInfo(user) {
       try {
         const idToken = await user.getIdToken();
-        const response = await fetch('/api/pro/dashboard-data?type=account', {
+        const response = await fetch('/api/pro/dashboard-data/?type=account', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await response.json();

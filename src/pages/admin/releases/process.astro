@@ -85,7 +85,7 @@ const nonce = (Astro.locals as any).nonce || '';
       // Load submissions
       async function loadSubmissions() {
         try {
-          const response = await fetch('/api/list-submissions');
+          const response = await fetch('/api/list-submissions/');
           const data = await response.json();
 
           const submissions = data.submissions || [];
@@ -164,7 +164,7 @@ const nonce = (Astro.locals as any).nonce || '';
         log(`Starting processing: ${submissionId}`);
 
         try {
-          const response = await fetch('/api/process-release', {
+          const response = await fetch('/api/process-release/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ submissionId, adminKey: window.ADMIN_KEY })

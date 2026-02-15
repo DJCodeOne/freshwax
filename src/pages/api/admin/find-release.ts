@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!name) {
     return new Response(JSON.stringify({
       error: 'Missing name parameter',
-      usage: 'GET /api/admin/find-release?name=demo'
+      usage: 'GET /api/admin/find-release/?name=demo'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }

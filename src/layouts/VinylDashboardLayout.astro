@@ -479,7 +479,7 @@ const { title, activeSection } = Astro.props;
       try {
         // Fetch roles and access via API (replaces client-side Firestore reads)
         const idToken = await user.getIdToken();
-        const response = await fetch('/api/user/dashboard-access', {
+        const response = await fetch('/api/user/dashboard-access/', {
           headers: { 'Authorization': `Bearer ${idToken}` }
         });
         const data = await response.json();

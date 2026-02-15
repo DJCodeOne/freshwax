@@ -412,7 +412,7 @@ export class PlaylistManager {
       };
 
       // Send to global API
-      const response = await fetch('/api/playlist/global', {
+      const response = await fetch('/api/playlist/global/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -470,7 +470,7 @@ export class PlaylistManager {
     }
 
     try {
-      const response = await fetch('/api/playlist/global', {
+      const response = await fetch('/api/playlist/global/', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -545,7 +545,7 @@ export class PlaylistManager {
 
     // Fetch latest playlist state to get current trackStartedAt
     try {
-      const response = await fetch('/api/playlist/global');
+      const response = await fetch('/api/playlist/global/');
       const result = await response.json();
       if (result.success && result.playlist) {
         this.playlist = result.playlist;
@@ -614,7 +614,7 @@ export class PlaylistManager {
 
     // Ask SERVER to pick a track - ensures all clients get the same track
     try {
-      const response = await fetch('/api/playlist/global', {
+      const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -646,7 +646,7 @@ export class PlaylistManager {
    */
   private async sendControlAction(action: string): Promise<void> {
     try {
-      const response = await fetch('/api/playlist/global', {
+      const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -847,7 +847,7 @@ export class PlaylistManager {
    */
   private async logToServerHistory(item: GlobalPlaylistItem): Promise<void> {
     try {
-      await fetch('/api/playlist/history', {
+      await fetch('/api/playlist/history/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1341,7 +1341,7 @@ export class PlaylistManager {
 
     // Fallback to server-side YouTube history if local server is unavailable
     try {
-      const response = await fetch('/api/playlist/history');
+      const response = await fetch('/api/playlist/history/');
       const result = await response.json();
       if (result.success && result.items && result.items.length > 0) {
         const serverHistory = result.items;
@@ -1460,7 +1460,7 @@ export class PlaylistManager {
         fetchHeaders['Authorization'] = `Bearer ${idToken}`;
       }
 
-      const response = await fetch('/api/playlist/server-list', {
+      const response = await fetch('/api/playlist/server-list/', {
         headers: fetchHeaders,
         signal: AbortSignal.timeout(5000)
       });
@@ -1563,7 +1563,7 @@ export class PlaylistManager {
     }
 
     try {
-      const response = await fetch(`/api/playlist/personal?userId=${encodeURIComponent(this.userId)}`);
+      const response = await fetch(`/api/playlist/personal/?userId=${encodeURIComponent(this.userId)}`);
       const result = await response.json();
 
       // Check if user has Plus for cloud sync
@@ -1636,7 +1636,7 @@ export class PlaylistManager {
         return;
       }
 
-      const response = await fetch('/api/playlist/personal', {
+      const response = await fetch('/api/playlist/personal/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1866,7 +1866,7 @@ export class PlaylistManager {
     // Tell the SERVER to handle track end - it will pick the next track
     // This ensures all clients play the same track (server is source of truth)
     try {
-      const response = await fetch('/api/playlist/global', {
+      const response = await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1967,7 +1967,7 @@ export class PlaylistManager {
    */
   private async markVideoAsBlocked(url: string, embedId?: string): Promise<void> {
     try {
-      const response = await fetch('/api/playlist/history', {
+      const response = await fetch('/api/playlist/history/', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2038,7 +2038,7 @@ export class PlaylistManager {
    */
   private async loadFromServer(): Promise<void> {
     try {
-      const response = await fetch('/api/playlist/global');
+      const response = await fetch('/api/playlist/global/');
       const result = await response.json();
 
       if (result.success && result.playlist) {
@@ -2099,7 +2099,7 @@ export class PlaylistManager {
       };
 
       // Sync empty state to server
-      await fetch('/api/playlist/global', {
+      await fetch('/api/playlist/global/', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2218,7 +2218,7 @@ export class PlaylistManager {
     if (platform === 'youtube' && embedId) {
       try {
         // Try our API endpoint that can check duration
-        const response = await fetch(`/api/youtube/duration?videoId=${embedId}`);
+        const response = await fetch(`/api/youtube/duration/?videoId=${embedId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.duration) {

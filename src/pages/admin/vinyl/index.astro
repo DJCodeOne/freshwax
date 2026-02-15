@@ -649,7 +649,7 @@ export const prerender = false;
 
       // Fetch seller data
       try {
-        const response = await fetch(`/api/admin/vinyl/seller?id=${sellerId}`);
+        const response = await fetch(`/api/admin/vinyl/seller/?id=${sellerId}`);
         const data = await response.json();
 
         if (data.success && data.seller) {
@@ -680,7 +680,7 @@ export const prerender = false;
     const sellerId = formData.get('sellerId');
 
     try {
-      const response = await fetch('/api/admin/vinyl/seller', {
+      const response = await fetch('/api/admin/vinyl/seller/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -716,7 +716,7 @@ export const prerender = false;
       const sellerId = btn.dataset.sellerId;
 
       try {
-        const response = await fetch('/api/admin/vinyl/seller', {
+        const response = await fetch('/api/admin/vinyl/seller/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'suspend', sellerId })
@@ -743,7 +743,7 @@ export const prerender = false;
       const sellerId = btn.dataset.sellerId;
 
       try {
-        const response = await fetch('/api/admin/vinyl/seller', {
+        const response = await fetch('/api/admin/vinyl/seller/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'unsuspend', sellerId })
