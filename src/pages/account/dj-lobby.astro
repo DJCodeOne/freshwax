@@ -7210,8 +7210,9 @@ const nonce = (Astro.locals as any).nonce || '';
         status.textContent = 'Sending end signal...';
         status.classList.add('ending');
 
-        // Use current stream's DJ ID (for admin ending someone else's stream)
+        // Use current stream's slot ID for direct lookup (more reliable than query)
         const targetDjId = currentStream?.djId || currentUser.uid;
+        const targetSlotId = currentStream?.slotId || currentStream?.id;
 
         const token = await currentUser.getIdToken();
         const response = await fetch('/api/livestream/slots/', {
@@ -7222,6 +7223,7 @@ const nonce = (Astro.locals as any).nonce || '';
           },
           body: JSON.stringify({
             action: 'endStream',
+            slotId: targetSlotId,
             djId: targetDjId,
             isAdmin: userInfo?.isAdmin || false
           })

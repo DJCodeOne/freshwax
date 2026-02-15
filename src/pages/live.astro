@@ -5043,12 +5043,14 @@ const nonce = (Astro.locals as any).nonce || '';
       const token = await currentUser.getIdToken();
       const response = await fetch('/api/livestream/slots/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
         body: JSON.stringify({
           action: 'endStream',
           slotId: slotId,
-          djId: currentUser.uid,
-          token
+          djId: currentUser.uid
         })
       });
       
