@@ -266,7 +266,6 @@ export const prerender = false;
         }
 
         updateExamples();
-        console.log('[settings] Loaded from:', result.source);
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -320,8 +319,6 @@ export const prerender = false;
       if (!result.success) {
         throw new Error(result.error || 'Failed to save settings');
       }
-
-      console.log('[settings] Saved to:', result.storage);
 
       // Update collection number display if newly assigned
       if (result.collectionNumber) {

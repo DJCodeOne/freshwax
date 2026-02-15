@@ -844,7 +844,6 @@ const nonce = Astro.locals.nonce || '';
       script.onload = () => {
         grecaptcha.ready(() => {
           recaptchaReady = true;
-          console.log('[Register] reCAPTCHA ready');
         });
       };
       document.head.appendChild(script);
@@ -1217,7 +1216,6 @@ const nonce = Astro.locals.nonce || '';
             url: window.location.origin + '/login?verified=true',
             handleCodeInApp: false
           });
-          console.log('[Register] Verification email sent to:', user.email);
         } catch (verifyError) {
           console.error('[Register] Failed to send verification email:', verifyError);
           // Continue anyway - they can resend from verify-email page

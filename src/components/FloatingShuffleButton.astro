@@ -86,8 +86,6 @@ const { nonce = '' } = Astro.props;
   window.handleFloatingShuffleClick = function(e) {
     e.preventDefault();
     e.stopPropagation();
-    console.log('[FloatingShuffle] Button clicked');
-
     // Stop any preview clips first
     if (window.AudioManager) {
       window.AudioManager.stopAllTracklistPreviews();
@@ -96,7 +94,6 @@ const { nonce = '' } = Astro.props;
 
     // Check if functions are available
     if (window.FreshWaxPlayer && window.FreshWaxPlayer.isShuffleMode) {
-      console.log('[FloatingShuffle] Already in shuffle mode, playing next');
       // Already in shuffle mode - play next random track
       if (typeof window.playNextShuffleTrack === 'function') {
         window.playNextShuffleTrack();
@@ -106,15 +103,12 @@ const { nonce = '' } = Astro.props;
         if (miniBtn) miniBtn.click();
       }
     } else {
-      console.log('[FloatingShuffle] Starting shuffle, startShuffle exists:', typeof window.startShuffle === 'function');
       // Start shuffle
       if (typeof window.startShuffle === 'function') {
         window.startShuffle();
       } else {
-        console.log('[FloatingShuffle] Falling back to mini button');
         // Fallback: click mini player shuffle button
         var miniBtn = document.getElementById('mini-shuffle-btn');
-        console.log('[FloatingShuffle] Mini button exists:', !!miniBtn);
         if (miniBtn) miniBtn.click();
       }
     }

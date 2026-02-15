@@ -805,9 +805,6 @@ const nonce = Astro.locals.nonce || '';
       }
     };
 
-    console.log('[savePermissions] Saving for partner:', currentEditUser.id);
-    console.log('[savePermissions] Permissions:', permissions);
-
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -826,8 +823,6 @@ const nonce = Astro.locals.nonce || '';
       });
       
       const result = await response.json();
-      console.log('[savePermissions] API response:', result);
-      
       if (!result.success) {
         throw new Error(result.error || 'Failed to save');
       }

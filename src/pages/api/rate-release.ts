@@ -80,23 +80,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
     }
 
-    const existingRating = releaseData.ratings.userRatings?.[userId];
-    
+    if (!releaseData.ratings.userRatings) {
+      releaseData.ratings.userRatings = {};
+    }
+
+    const existingRating = releaseData.ratings.userRatings[userId];
+
     if (existingRating) {
       // Update existing rating
       log.info('[rate-release] Updating existing rating for user:', userId);
-      
+
       const currentAverage = releaseData.ratings.average || 0;
       const ratingsCount = releaseData.ratings.count || 0;
       const fiveStarCount = releaseData.ratings.fiveStarCount || 0;
-      
+
       // Remove old rating from total
       const totalRating = (currentAverage * ratingsCount) - existingRating;
-      
+
       // Add new rating
       const newAverageRating = (totalRating + rating) / ratingsCount;
       const newFiveStarCount = fiveStarCount - (existingRating === 5 ? 1 : 0) + (rating === 5 ? 1 : 0);
-      
+
       releaseData.ratings.average = parseFloat(newAverageRating.toFixed(2));
       releaseData.ratings.fiveStarCount = newFiveStarCount;
       releaseData.ratings.userRatings[userId] = rating;

@@ -197,7 +197,6 @@ export const prerender = false;
     loadingState?.classList.remove('hidden');
     mainContent?.classList.add('hidden');
 
-    console.log('[mixes.astro] User logged in:', user.uid);
     currentUserId = user.uid;
 
     try {
@@ -209,8 +208,6 @@ export const prerender = false;
         mainContent?.classList.remove('hidden');
         
         if (data.success && data.mixes) {
-          console.log('[mixes.astro] Loaded', data.mixes.length, 'mixes');
-          
           // Update stats
           const totalPlays = data.mixes.reduce((sum, m) => sum + (m.plays || m.playCount || 0), 0);
           const totalLikes = data.mixes.reduce((sum, m) => sum + (m.likes || m.likeCount || 0), 0);
@@ -292,7 +289,6 @@ export const prerender = false;
 
   // Handle not logged in
   function showLoginPrompt() {
-    console.log('[mixes.astro] User not logged in');
     loadingState?.classList.add('hidden');
     loginPrompt?.classList.remove('hidden');
   }
@@ -571,13 +567,6 @@ export const prerender = false;
       // If there's new artwork, upload it first
       let artworkUrl = null;
       if (processedArtworkBlob) {
-        console.log('[mixes.astro] Uploading artwork:', {
-          mixId,
-          blobSize: processedArtworkBlob.size,
-          blobType: processedArtworkBlob.type,
-          currentUserId
-        });
-        
         const formData = new FormData();
         formData.append('mixId', mixId);
         formData.append('artwork', processedArtworkBlob, 'artwork.webp');
@@ -592,8 +581,6 @@ export const prerender = false;
         });
         
         const artworkResponseText = await artworkResponse.text();
-        console.log('[mixes.astro] Artwork response:', artworkResponse.status, artworkResponseText);
-        
         if (artworkResponse.ok) {
           const artworkResult = JSON.parse(artworkResponseText);
           artworkUrl = artworkResult.artworkUrl;

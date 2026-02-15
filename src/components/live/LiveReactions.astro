@@ -49,7 +49,6 @@
   if (volumeSlider) {
     volumeSlider.addEventListener('input', (e) => {
       const volume = parseInt(e.target.value);
-      console.log('[Volume] Slider input:', volume);
 
       // Update HLS video if exists
       const hlsVideo = document.getElementById('hlsVideoElement');
@@ -64,6 +63,5 @@
         window.playlistManager.setVolume(volume);
       }
     });
-    console.log('[Volume] LiveReactions slider handler attached');
   }
 </script>

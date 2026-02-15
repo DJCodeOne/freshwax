@@ -180,8 +180,6 @@ async function processZip(file) {
     const files = Object.keys(zip.files);
 
     debug(`Found ${files.length} entries in ZIP`);
-    console.log("ZIP contents:", files);
-
     // Find cover art
     let coverFile = null;
     let coverName = null;
@@ -232,10 +230,9 @@ async function processZip(file) {
           releaseName = parsed.releaseName || parsed.title || parsed.album || "";
           debug(`Parsed JSON - Artist: ${artistName}, Release: ${releaseName}`);
           debug(`JSON keys: ${Object.keys(parsed).join(', ')}`);
-          console.log("Found metadata:", parsed);
         } catch (e) {
           debug(`ERROR parsing JSON: ${e.message}`);
-          console.log("Could not parse JSON:", name, e);
+          console.error("Could not parse JSON:", name, e);
         }
       }
     }
@@ -434,8 +431,6 @@ uploadBtn.onclick = async () => {
     debug(`Presign response status: ${presignRes.status}`);
     const presignData = await presignRes.json();
     debug(`Presign success: ${presignData.success}`);
-    console.log("Presign response:", presignData);
-
     if (!presignData.success) {
       debug(`Presign error: ${presignData.error}`);
       throw new Error(presignData.error || "Failed to get upload URLs");

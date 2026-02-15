@@ -85,9 +85,9 @@ export async function logServerError(
 
 /**
  * Cleanup old error logs (call from a cron or admin action).
- * Keeps last 7 days by default.
+ * Keeps last 30 days by default. Called automatically by /api/cron/cleanup-d1.
  */
-export async function cleanupErrorLogs(env: any, daysToKeep = 7): Promise<number> {
+export async function cleanupErrorLogs(env: any, daysToKeep = 30): Promise<number> {
   try {
     const db = env?.DB;
     if (!db) return 0;

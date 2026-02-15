@@ -342,8 +342,6 @@ export const prerender = false;
             return dateB - dateA;
           });
 
-          console.log('[manage] Loaded', allPartners.length, 'partners from API:', allPartners.map(p => p.name));
-
           updateStats();
           renderPartners();
 

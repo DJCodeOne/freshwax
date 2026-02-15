@@ -177,14 +177,12 @@ const nonce = Astro.locals.nonce || '';
   let vendorRoles = [];
 
   async function init() {
-    console.log('[PaymentSettings] init() called');
     const loadingState = document.getElementById('loading-state');
     const authRequired = document.getElementById('auth-required');
     const notVendor = document.getElementById('not-vendor');
     const mainContent = document.getElementById('payment-main-content');
 
     window.authReady.then(async (user) => {
-      console.log('[PaymentSettings] authReady - user:', user ? user.uid : 'null');
       if (!user) {
         loadingState.style.display = 'none';
         authRequired.style.display = 'block';
@@ -195,14 +193,11 @@ const nonce = Astro.locals.nonce || '';
 
       try {
         // Get user type/roles from existing API
-        console.log('[PaymentSettings] Fetching user type...');
         const _idToken = await user.getIdToken();
         const userRes = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
           headers: { 'Authorization': `Bearer ${_idToken}` }
         });
         const userTypeData = await userRes.json();
-        console.log('[PaymentSettings] User type data:', userTypeData);
-
         // Determine vendor roles
         vendorRoles = [];
         const roles = userTypeData.roles || {};
@@ -210,33 +205,22 @@ const nonce = Astro.locals.nonce || '';
         if (roles.artist === true) vendorRoles.push('artist');
         if (roles.merchSupplier === true) vendorRoles.push('merchSupplier');
         if (roles.vinylSeller === true) vendorRoles.push('vinylSeller');
-        console.log('[PaymentSettings] Vendor roles:', vendorRoles);
-
         // If not a vendor, show message
         if (vendorRoles.length === 0) {
-          console.log('[PaymentSettings] No vendor roles - showing not-vendor screen');
           loadingState.style.display = 'none';
           notVendor.style.display = 'block';
           return;
         }
 
         // Get payment status - use unified endpoint
-        console.log('[PaymentSettings] Fetching payment status...');
         const paymentRes = await fetch(`/api/payment/status/?userId=${user.uid}`);
         const paymentData = await paymentRes.json();
-        console.log('[PaymentSettings] Payment data:', paymentData);
-
         // Store combined data
         userData = paymentData;
 
         // Hide loading, show content
-        console.log('[PaymentSettings] Hiding loading, showing main content');
-        console.log('[PaymentSettings] loadingState element:', loadingState);
-        console.log('[PaymentSettings] mainContent element:', mainContent);
         if (loadingState) loadingState.style.display = 'none';
         if (mainContent) mainContent.style.display = 'block';
-        console.log('[PaymentSettings] After display change - loadingState.style.display:', loadingState?.style?.display);
-        console.log('[PaymentSettings] After display change - mainContent.style.display:', mainContent?.style?.display);
 
         // Show vendor roles
         showVendorRoles();
@@ -314,11 +298,8 @@ const nonce = Astro.locals.nonce || '';
   }
 
   function updateStripeStatus(data) {
-    console.log('[PaymentSettings] updateStripeStatus called with:', data);
     const statusEl = document.getElementById('connect-status');
-    console.log('[PaymentSettings] connect-status element:', statusEl);
     const status = data.stripeStatus || data.status || 'not_started';
-    console.log('[PaymentSettings] Stripe status:', status);
 
     if (status === 'active' || data.stripeConnected) {
       statusEl.innerHTML = `
@@ -356,13 +337,10 @@ const nonce = Astro.locals.nonce || '';
       `;
 
       const continueBtn = document.getElementById('connect-btn');
-      console.log('[PaymentSettings] Continue setup btn found:', !!continueBtn, continueBtn);
       if (continueBtn) {
         continueBtn.addEventListener('click', function(e) {
-          console.log('[PaymentSettings] Continue btn CLICKED');
           startStripeConnect();
         });
-        console.log('[PaymentSettings] Click listener added to continue btn');
       }
     } else {
       statusEl.innerHTML = `
@@ -382,21 +360,16 @@ const nonce = Astro.locals.nonce || '';
       `;
 
       const connectBtn = document.getElementById('connect-btn');
-      console.log('[PaymentSettings] Connect btn found:', !!connectBtn, connectBtn);
       if (connectBtn) {
         connectBtn.addEventListener('click', function(e) {
-          console.log('[PaymentSettings] Connect btn CLICKED');
           startStripeConnect();
         });
-        console.log('[PaymentSettings] Click listener added to connect btn');
       }
     }
   }
 
   function updatePayPalStatus(data) {
-    console.log('[PaymentSettings] updatePayPalStatus called with:', data);
     const statusEl = document.getElementById('paypal-status');
-    console.log('[PaymentSettings] paypal-status element:', statusEl);
 
     if (data.paypalLinked) {
       statusEl.innerHTML = `
@@ -432,13 +405,10 @@ const nonce = Astro.locals.nonce || '';
       `;
 
       const linkBtn = document.getElementById('paypal-link-btn');
-      console.log('[PaymentSettings] PayPal link btn found:', !!linkBtn, linkBtn);
       if (linkBtn) {
         linkBtn.addEventListener('click', function(e) {
-          console.log('[PaymentSettings] PayPal link btn CLICKED');
           linkPayPal();
         });
-        console.log('[PaymentSettings] Click listener added to PayPal link btn');
       }
     }
   }
@@ -473,7 +443,6 @@ const nonce = Astro.locals.nonce || '';
   }
 
   async function startStripeConnect() {
-    console.log('[PaymentSettings] startStripeConnect called, userId:', currentUserId);
     const btn = document.getElementById('connect-btn');
     if (btn) {
       btn.disabled = true;
@@ -481,7 +450,6 @@ const nonce = Astro.locals.nonce || '';
     }
 
     try {
-      console.log('[PaymentSettings] Calling Stripe Connect API...');
       // Use user endpoint that works for all vendor types
       const res = await fetch('/api/stripe/connect/user/create-account/', {
         method: 'POST',
@@ -510,12 +478,9 @@ const nonce = Astro.locals.nonce || '';
   }
 
   async function linkPayPal() {
-    console.log('[PaymentSettings] linkPayPal called');
     const input = document.getElementById('paypal-email-input');
     const btn = document.getElementById('paypal-link-btn');
     const email = input ? input.value.trim() : '';
-    console.log('[PaymentSettings] PayPal email:', email);
-
     if (!email || !email.includes('@')) {
       alert('Please enter a valid email address');
       return;

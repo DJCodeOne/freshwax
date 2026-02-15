@@ -393,8 +393,6 @@ export const prerender = false;
           });
 
           const result = await response.json();
-          console.log('[delete-mix] Response:', response.status, result);
-
           if (!response.ok) throw new Error(result.details || result.error || 'Failed to delete');
 
           const row = btn.closest('tr');

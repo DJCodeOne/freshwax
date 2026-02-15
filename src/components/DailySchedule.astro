@@ -1333,17 +1333,12 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         const startDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
         const endDate = new Date(Date.UTC(year, month, day + 1, 0, 0, 0, 0));
 
-        console.log('[loadBookings] Fetching range:', startDate.toISOString(), 'to', endDate.toISOString());
-
         const response = await fetch(
           `/api/livestream/slots/?start=${startDate.toISOString()}&end=${endDate.toISOString()}&fresh=1&_t=${Date.now()}`
         );
         
         const data = await response.json();
         bookings = data.success ? (data.slots || []) : [];
-
-        console.log('[loadBookings] Loaded', bookings.length, 'bookings:',
-          bookings.map(b => ({ id: b.id, djName: b.djName, start: b.startTime, status: b.status })));
 
         // Check if bookings are disabled (admin)
         if (scheduleMode === 'admin' && data.bookingsDisabled !== undefined) {
@@ -1526,14 +1521,6 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         const bookingEnd = new Date(booking.endTime).getTime();
         const match = slotStart >= bookingStart && slotStart < bookingEnd;
 
-        // Debug: log comparison for scheduled bookings
-        if (booking.status === 'scheduled') {
-          console.log('[findBooking] Checking slot:', slotTime.toISOString(),
-            'against booking:', booking.startTime, '-', booking.endTime,
-            'match:', match,
-            'slotStart:', slotStart, 'bookingStart:', bookingStart, 'bookingEnd:', bookingEnd);
-        }
-
         return match;
       });
 
@@ -1591,8 +1578,6 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     }
 
     async function saveBooking() {
-      console.log('[DailySchedule] saveBooking called', { selectedSlots, currentUserId, userDisplayName });
-
       // Validate we have slots selected
       if (selectedSlots.length === 0) {
         alert('Please select at least one time slot');
@@ -1625,35 +1610,20 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           return a.hour - b.hour;
         });
 
-        console.log('[DailySchedule] Sorted slots:', sortedSlots);
-
         // Create bookings
         for (const slot of sortedSlots) {
           // Parse the date string properly
           const [year, month, day] = slot.date.split('-').map(Number);
 
-          // DEBUG: Log the raw slot data
-          console.log('[DailySchedule] Raw slot:', slot);
-          console.log('[DailySchedule] Parsed date parts:', { year, month, day, hour: slot.hour });
-
           // Create date in UTC to avoid timezone issues
           // slot.hour is the UTC hour (grid shows UTC times)
           const startTime = new Date(Date.UTC(year, month - 1, day, slot.hour, 0, 0, 0));
-
-          console.log('[DailySchedule] Creating booking:', {
-            slot,
-            startTimeLocal: new Date(year, month - 1, day, slot.hour, 0, 0, 0).toString(),
-            startTimeUTC: startTime.toISOString(),
-            djId: currentUserId,
-            djName: userDisplayName
-          });
 
           // Get Firebase idToken for authenticated write
           let idToken = null;
           try {
             if (window.firebaseAuth?.currentUser) {
               idToken = await window.firebaseAuth.currentUser.getIdToken();
-              console.log('[DailySchedule] Got idToken for authenticated write');
             }
           } catch (tokenErr) {
             console.warn('[DailySchedule] Could not get idToken:', tokenErr);
@@ -1669,18 +1639,13 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             idToken: idToken
           };
 
-          console.log('[DailySchedule] POST body:', { ...requestBody, idToken: idToken ? '[PRESENT]' : null });
-
           const response = await fetch('/api/livestream/slots/', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
           });
 
-          console.log('[DailySchedule] Response status:', response.status);
-
           const data = await response.json();
-          console.log('[DailySchedule] Response data:', data);
 
           if (!data.success) {
             throw new Error(data.error || 'Booking failed');
@@ -2047,10 +2012,8 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     // Public API
     window[`schedule_${id}`] = {
       setUser(userId, displayName) {
-        console.log(`[DailySchedule ${id}] setUser called:`, { userId, displayName });
         currentUserId = userId;
         userDisplayName = displayName || 'DJ';
-        console.log(`[DailySchedule ${id}] User set:`, { currentUserId, userDisplayName });
       },
       refresh: loadAndRender,
       getSelectedSlots: () => [...selectedSlots],

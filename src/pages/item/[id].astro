@@ -300,6 +300,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     availability: productAvailability,
     brand: artistName,
     category: 'Music > Digital Downloads',
+    priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     ...(overallRating.count > 0 ? { reviews: { rating: overallRating.average, count: overallRating.count } } : {})
   } : undefined}
   breadcrumbs={release ? [
@@ -1407,7 +1408,6 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
         const cachedAuth = JSON.parse(cached);
         // Only use cache if less than 24 hours old
         if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000 && cachedAuth.loggedIn) {
-          console.log('[Comments] Restored auth from cache:', cachedAuth.id);
           // Store cached values for immediate use
           currentUserName = cachedAuth.displayName || cachedAuth.name;
           currentUserAvatar = cachedAuth.avatar || null;

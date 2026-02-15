@@ -2712,16 +2712,13 @@ export const prerender = false;
   function initArtistAccount() {
     // Prevent multiple initializations
     if (window._artistAccountInitialized) {
-      console.log('[ArtistAccount] Already initialized, skipping');
       return;
     }
     window._artistAccountInitialized = true;
 
-    console.log('[ArtistAccount] Initializing...');
     const partnerId = document.cookie.split('; ')
       .find(row => row.startsWith('partnerId='))
       ?.split('=')[1] || '';
-    console.log('[ArtistAccount] Partner ID:', partnerId);
 
     // Edit Profile Toggle
     const editBtn = document.getElementById('edit-profile-btn');
@@ -2789,7 +2786,6 @@ export const prerender = false;
     if (!paymentSection) return;
     const isCollapsed = paymentSection.dataset.collapsed === 'true';
     paymentSection.dataset.collapsed = isCollapsed ? 'false' : 'true';
-    console.log('[ArtistAccount] Payment section collapsed:', paymentSection.dataset.collapsed);
   }
 
   // Click on header to toggle
@@ -2838,9 +2834,7 @@ export const prerender = false;
 
   // Stripe Connect - Start onboarding
   const stripeConnectBtn = document.getElementById('stripe-connect-btn');
-  console.log('[ArtistAccount] Stripe Connect btn:', stripeConnectBtn);
   stripeConnectBtn?.addEventListener('click', async () => {
-    console.log('[ArtistAccount] Stripe Connect btn CLICKED');
     stripeConnectBtn.textContent = 'Creating account...';
     stripeConnectBtn.disabled = true;
 
@@ -2870,9 +2864,7 @@ export const prerender = false;
 
   // Stripe Connect - Continue onboarding
   const stripeContinueBtn = document.getElementById('stripe-continue-btn');
-  console.log('[ArtistAccount] Stripe Continue btn:', stripeContinueBtn);
   stripeContinueBtn?.addEventListener('click', async () => {
-    console.log('[ArtistAccount] Stripe Continue btn CLICKED');
     stripeContinueBtn.textContent = 'Loading...';
     stripeContinueBtn.disabled = true;
 
@@ -2949,10 +2941,7 @@ export const prerender = false;
   // PayPal Link
   const paypalLinkBtn = document.getElementById('paypal-link-btn');
   const paypalEmailInput = document.getElementById('paypal-email-input');
-  console.log('[ArtistAccount] PayPal Link btn:', paypalLinkBtn);
-
   paypalLinkBtn?.addEventListener('click', async () => {
-    console.log('[ArtistAccount] PayPal Link btn CLICKED');
     const email = paypalEmailInput?.value?.trim();
 
     if (!email || !email.includes('@')) {
@@ -2976,10 +2965,7 @@ export const prerender = false;
       });
 
       const result = await response.json();
-      console.log('[ArtistAccount] PayPal link response:', result);
-
       if (result.success) {
-        console.log('[ArtistAccount] PayPal saved data:', result.savedData);
         window.location.reload();
       } else {
         alert(result.error || 'Failed to link PayPal');

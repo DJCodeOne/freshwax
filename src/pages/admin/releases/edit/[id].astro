@@ -708,7 +708,6 @@ if (!release) {
         firebaseAuth.onAuthStateChanged(auth, async function(user) {
           if (user) {
             currentIdToken = await user.getIdToken();
-            console.log('[Admin] Auth ready');
           }
         });
       } catch (err) {

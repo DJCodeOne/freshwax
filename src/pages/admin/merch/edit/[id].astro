@@ -489,10 +489,6 @@ const getStockBadgeClass = (stock) => {
 </div>
 
 <script define:vars={{ id, product }} nonce={nonce}>
-  console.log('EDIT PAGE SCRIPT LOADED - v4');
-  console.log('product.stock:', product.stock, typeof product.stock);
-  console.log('product.totalStock:', product.totalStock, typeof product.totalStock);
-
   // Get initial images array
   let images = [];
   if (product.images && product.images.length > 0) {
@@ -512,7 +508,6 @@ const getStockBadgeClass = (stock) => {
   let sizes = Array.isArray(product.sizes) ? product.sizes.filter(s => typeof s === 'string') : [];
 
   // Load variantStock - handle mixed old (number) and new (object) formats
-  console.log('Raw product.variantStock from server:', product.variantStock);
   let variantStock = {};
   if (product.variantStock && typeof product.variantStock === 'object' && !Array.isArray(product.variantStock)) {
     // Process each entry individually - data might have mixed formats
@@ -523,14 +518,9 @@ const getStockBadgeClass = (stock) => {
       } else if (typeof value === 'number') {
         // Old format (e.g., "Cherry Red-XS": 0) - skip these legacy entries
         // They'll be recreated when user sets stock in the grid
-        console.log('Skipping old format entry:', key, value);
       }
     });
   }
-
-  console.log('Loaded colors:', colors);
-  console.log('Loaded sizes:', sizes);
-  console.log('Loaded variantStock:', variantStock);
 
   // Clean up orphaned variantStock entries that don't match current sizes/colors
   let orphansRemoved = false;
@@ -548,7 +538,6 @@ const getStockBadgeClass = (stock) => {
       const colorValid = validColorsLower.includes(keyColor) || keyColor === 'default';
 
       if (!sizeValid || !colorValid) {
-        console.log('Removing orphaned variant stock:', key, '(size valid:', sizeValid, ', color valid:', colorValid, ')');
         delete variantStock[key];
         orphansRemoved = true;
       }
@@ -573,12 +562,6 @@ const getStockBadgeClass = (stock) => {
                    storedTotal !== calculatedTotalStock;
 
   if (needsFix) {
-    console.log('Syncing stock data...', {
-      originalTotalStock: product.totalStock,
-      originalStock: product.stock,
-      calculatedTotalStock,
-      orphansRemoved
-    });
     // Auto-save the fix - include cleaned variantStock if orphans were removed
     const updateData = {
       productId: id,
@@ -593,7 +576,6 @@ const getStockBadgeClass = (stock) => {
       body: JSON.stringify(updateData)
     }).then(r => r.json()).then(result => {
       if (result.success) {
-        console.log('Synced totalStock to:', calculatedTotalStock, orphansRemoved ? '(orphans cleaned)' : '');
         // Update the display
         const stockInput = document.querySelector('input[name="stock"]');
         if (stockInput) stockInput.value = calculatedTotalStock;
@@ -706,7 +688,6 @@ const getStockBadgeClass = (stock) => {
       // Remove all variantStock entries for this size
       Object.keys(variantStock).forEach(key => {
         if (key.startsWith(sizeLower + '_')) {
-          console.log('Removing orphaned variant stock:', key);
           delete variantStock[key];
         }
       });
@@ -796,11 +777,6 @@ const getStockBadgeClass = (stock) => {
     }
 
     section.style.display = 'block';
-
-    // Debug: log variantStock to help diagnose display issues
-    console.log('renderVariantGrid - variantStock:', JSON.stringify(variantStock, null, 2));
-    console.log('renderVariantGrid - colors:', colors);
-    console.log('renderVariantGrid - sizes:', sizes);
 
     let html = `<table class="variant-table">
       <thead>
@@ -993,7 +969,6 @@ const getStockBadgeClass = (stock) => {
       const containerSize = container.offsetWidth;
       const maxDim = Math.max(editorState.imgNaturalWidth, editorState.imgNaturalHeight);
       const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.70); // 70% to show full image with margin
-      console.log('Edit page - Container:', containerSize, 'MaxDim:', maxDim, 'Zoom:', initialZoom);
       editorState.zoom = Math.max(10, Math.min(300, initialZoom));
       zoomSlider.value = editorState.zoom;
       zoomValue.textContent = editorState.zoom + '%';
@@ -1080,20 +1055,6 @@ const getStockBadgeClass = (stock) => {
     const left = (containerSize - actualWidth) / 2 + editorState.panX;
     const top = (containerSize - actualHeight) / 2 + editorState.panY;
 
-    console.log('updateCropPreview:', {
-      containerSize,
-      naturalW: editorState.imgNaturalWidth,
-      naturalH: editorState.imgNaturalHeight,
-      zoom: editorState.zoom,
-      scale,
-      actualWidth,
-      actualHeight,
-      left,
-      top,
-      panX: editorState.panX,
-      panY: editorState.panY
-    });
-
     cropImage.style.width = actualWidth + 'px';
     cropImage.style.height = actualHeight + 'px';
     cropImage.style.left = left + 'px';
@@ -1159,8 +1120,6 @@ const getStockBadgeClass = (stock) => {
         });
 
         const result = await response.json();
-        console.log('Crop upload result:', result);
-
         if (result.success) {
           if (editorState.imageIndex >= 0) {
             // Editing existing image - replace
@@ -1176,7 +1135,6 @@ const getStockBadgeClass = (stock) => {
           }
           renderImages();
           await saveImages();
-          console.log('Image saved successfully');
         } else {
           alert('Failed to upload: ' + (result.error || result.details || 'Unknown error'));
         }
@@ -1192,8 +1150,6 @@ const getStockBadgeClass = (stock) => {
 
   window.useOriginalImage = async function() {
     // Use the original image without any cropping
-    console.log('useOriginalImage called', { imageIndex: editorState.imageIndex, hasFile: !!editorState.originalFile });
-
     if (editorState.imageIndex >= 0) {
       // Editing existing image - nothing to change, just close
       alert('Cannot use original for existing images - they are already uploaded');
@@ -1228,18 +1184,14 @@ const getStockBadgeClass = (stock) => {
         });
 
         const result = await response.json();
-        console.log('Upload result:', result);
-
         if (result.success) {
           images.push({
             url: result.url,
             key: result.key,
             index: images.length
           });
-          console.log('Image added, total:', images.length);
           renderImages();
           await saveImages();
-          console.log('Images saved to Firebase');
         } else {
           console.error('Upload failed:', result);
           alert('Failed to upload: ' + (result.error || result.details || 'Unknown error'));

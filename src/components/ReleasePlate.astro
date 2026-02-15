@@ -1799,7 +1799,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           url: d.url
         });
       } catch (err) {
-        console.log('Share cancelled or failed');
+        // Share cancelled or failed
       }
     });
 
@@ -1914,7 +1914,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
                 // CLIP RESTRICTION: Stop playback at CLIP_END_TIME (150s)
                 if (currentTime >= CLIP_END_TIME) {
-                  console.log('[Player] Clip limit reached (90s preview), stopping');
+                  console.debug('[Player] Clip limit reached (90s preview), stopping');
                   audio.pause();
                   audio.volume = currentVolume; // Reset volume after fade
                   audio.currentTime = CLIP_START_TIME;
@@ -2297,7 +2297,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
     }
 
     var wishlistButtons = document.querySelectorAll('.wishlist-btn');
-    console.log('initWishlistSystem called, found buttons:', wishlistButtons.length);
 
     // Function to fetch and update wishlist state
     async function fetchWishlistState() {
@@ -2321,10 +2320,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
               }
             })
             .catch(function(err) {
-              console.log('Failed to load wishlist state:', err);
+              console.error('Failed to load wishlist state:', err);
             });
         } catch (err) {
-          console.log('Failed to get auth token for wishlist:', err);
+          console.error('Failed to get auth token for wishlist:', err);
         }
       }
     }

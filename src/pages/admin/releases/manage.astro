@@ -599,8 +599,6 @@ const nonce = Astro.locals.nonce || '';
             if (processedTracks.length > 0) {
               // Update release with processed URLs
               audioProgressText.textContent = 'Updating database...';
-              console.log('[Audio] Updating release with processed tracks:', processedTracks);
-
               const updateResponse = await fetch('/api/releases/update-tracks/', {
                 method: 'POST',
                 headers: {
@@ -614,8 +612,6 @@ const nonce = Astro.locals.nonce || '';
               });
 
               const updateResult = await updateResponse.json();
-              console.log('[Audio] Update response:', updateResult);
-
               if (updateResult.success) {
                 finishAudioModal(true, `Successfully processed ${processedTracks.length} track${processedTracks.length > 1 ? 's' : ''}!`);
                 btn.textContent = '✓';

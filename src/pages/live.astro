@@ -1071,7 +1071,6 @@ const nonce = Astro.locals.nonce || '';
 
   // Toggle emoji picker
   window.toggleEmojiPicker = function() {
-    console.log('[Picker] Toggle emoji picker');
     const emojiPicker = document.getElementById('emojiPicker');
     const giphyPicker = document.getElementById('giphyPicker');
     const emojiBtn = document.getElementById('emojiBtn');
@@ -1095,7 +1094,6 @@ const nonce = Astro.locals.nonce || '';
 
   // Toggle GIF picker
   window.toggleGiphyPicker = function() {
-    console.log('[Picker] Toggle GIF picker');
     const emojiPicker = document.getElementById('emojiPicker');
     const giphyPicker = document.getElementById('giphyPicker');
     const emojiBtn = document.getElementById('emojiBtn');
@@ -1119,7 +1117,6 @@ const nonce = Astro.locals.nonce || '';
 
   // Switch emoji category
   window.switchEmojiCategory = function(category) {
-    console.log('[Picker] Switch emoji category:', category);
     currentEmojiCategory = category;
 
     // Update active button
@@ -1169,7 +1166,6 @@ const nonce = Astro.locals.nonce || '';
 
   // Insert emoji into chat input
   window.insertEmoji = function(emoji) {
-    console.log('[Picker] Insert emoji:', emoji);
     const chatInput = document.getElementById('chatInput');
     if (chatInput) {
       chatInput.value += emoji;
@@ -1220,8 +1216,6 @@ const nonce = Astro.locals.nonce || '';
 
   // Select a GIF to send
   window.selectGif = async function(giphyUrl, giphyId) {
-    console.log('[Picker] Select GIF:', giphyUrl);
-
     // Close picker
     document.getElementById('giphyPicker')?.classList.add('hidden');
     document.getElementById('giphyBtn')?.classList.remove('active');
@@ -1286,7 +1280,6 @@ const nonce = Astro.locals.nonce || '';
     }
   });
 
-  console.log('[Picker] Emoji & GIF picker functions loaded');
 </script>
 
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
@@ -1539,12 +1532,9 @@ const nonce = Astro.locals.nonce || '';
 
   async function triggerReaction(e) {
     e.preventDefault();
-    console.log('[triggerReaction] Called');
-
     // Require login for all reactions
     const auth = window.firebaseAuth;
     const user = auth?.currentUser;
-    console.log('[triggerReaction] User:', user ? user.uid : 'NOT LOGGED IN');
 
     if (!user) {
       alert('Please sign in to react');
@@ -1554,7 +1544,6 @@ const nonce = Astro.locals.nonce || '';
     // Cooldown to prevent spam
     const now = Date.now();
     if (now - lastReactionTime < REACTION_COOLDOWN) {
-      console.log('[triggerReaction] Cooldown active, skipping');
       return;
     }
     lastReactionTime = now;
@@ -1562,8 +1551,6 @@ const nonce = Astro.locals.nonce || '';
     const btn = e.currentTarget || e.target;
     const emojiList = btn?.dataset?.emoji?.split(',') || ['❤️'];
     const emojiType = btn?.id?.replace('Btn', '') || 'like';
-    console.log('[triggerReaction] Emoji:', emojiList, 'Type:', emojiType);
-
     // Trigger visual animation locally
     triggerReactionBurst(btn, emojiList);
     btn?.classList.add('liked');
@@ -1582,7 +1569,6 @@ const nonce = Astro.locals.nonce || '';
       if (isPlaylistMode) {
         // Playlist mode - use livestream react API with playlist-global streamId
         // This ensures emojis broadcast to all viewers (same as fullscreen page)
-        console.log('[triggerReaction] Playlist mode - using livestream react API');
         const token = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
         const emojiResponse = await fetch('/api/livestream/react/', {
           method: 'POST',
@@ -1598,8 +1584,6 @@ const nonce = Astro.locals.nonce || '';
           })
         });
         const emojiResult = await emojiResponse.json();
-        console.log('[triggerReaction] Playlist emoji result:', emojiResult);
-
         // Also update the global reaction count
         const countResponse = await fetch('/api/playlist/global/', {
           method: 'PUT',
@@ -1612,7 +1596,6 @@ const nonce = Astro.locals.nonce || '';
         }
       } else if (streamId) {
         // Livestream mode - use livestream react API
-        console.log('[triggerReaction] Livestream mode - streamId:', streamId);
         const lsToken = await window.firebaseAuth?.currentUser?.getIdToken?.().catch(() => null);
         const emojiResponse = await fetch('/api/livestream/react/', {
           method: 'POST',
@@ -1628,14 +1611,11 @@ const nonce = Astro.locals.nonce || '';
           })
         });
         const emojiResult = await emojiResponse.json();
-        console.log('[triggerReaction] Emoji broadcast result:', emojiResult);
-
         // Update with actual count from server if available (only if > 0)
         if (emojiResult.success && emojiResult.totalLikes > 0 && likeCountEl) {
           likeCountEl.textContent = emojiResult.totalLikes;
         }
       } else {
-        console.log('[Reaction] No active stream or playlist to react to');
         if (likeCountEl) likeCountEl.textContent = currentCount;
       }
     } catch (error) {
@@ -1647,13 +1627,10 @@ const nonce = Astro.locals.nonce || '';
   
   // Setup reaction button click handlers
   setTimeout(() => {
-    console.log('[Reaction Setup] Attaching click handlers...');
     ['likeBtn', 'fireBtn', 'explosionBtn', 'starBtn', 'bassBtn', 'fistBtn', 'clapBtn', 'rocketBtn'].forEach(id => {
       const btn = document.getElementById(id);
-      console.log(`[Reaction Setup] Button ${id}:`, btn ? 'FOUND' : 'NOT FOUND');
       if (btn) {
         btn.addEventListener('click', (e) => {
-          console.log(`[Reaction] ${id} clicked!`);
           triggerReaction(e);
         });
       }
@@ -1676,7 +1653,6 @@ const nonce = Astro.locals.nonce || '';
 
         const streamId = window.currentStreamId;
         if (!streamId) {
-          console.log('[Like] No active stream');
           return;
         }
 
@@ -1863,7 +1839,6 @@ const nonce = Astro.locals.nonce || '';
     if (btn.id === 'fsAnimToggleBtn') return;
 
     btn.addEventListener('click', (e) => {
-      console.log('[Reaction] Button clicked:', btn.dataset.emoji);
       triggerReaction(e);
     });
   });
@@ -2382,7 +2357,7 @@ const nonce = Astro.locals.nonce || '';
           url: getShareUrl()
         });
       } catch (e) {
-        console.log('Share cancelled');
+        // Share cancelled
       }
     }
   });
@@ -2548,7 +2523,6 @@ const nonce = Astro.locals.nonce || '';
       cachedAuth = JSON.parse(cached);
       // Only use cache if less than 24 hours old
       if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000) {
-        console.log('[Live] Restored auth from cache:', cachedAuth.id);
       } else {
         cachedAuth = null;
         sessionStorage.removeItem('fw_auth_cache');
@@ -2570,16 +2544,11 @@ const nonce = Astro.locals.nonce || '';
 
   // Function to setup booking button - needs to be re-attached on View Transitions
   function setupBookingButtons() {
-    console.log('[Live] Setting up booking buttons...');
-
     const bookSlotBtn = document.getElementById('bookSlotBtn');
     if (bookSlotBtn && !bookSlotBtn._listenerAttached) {
       bookSlotBtn._listenerAttached = true;
       bookSlotBtn.addEventListener('click', () => {
-        console.log('[Live] Book Slot button clicked');
-
         const checkAuth = async () => {
-          console.log('[Live] Checking auth state...');
           let user = null;
           let cachedUid = null;
           try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
@@ -2588,18 +2557,14 @@ const nonce = Astro.locals.nonce || '';
             // First check if we already have a current user
             if (window.firebaseAuth?.currentUser) {
               user = window.firebaseAuth.currentUser;
-              console.log('[Live] Using firebaseAuth.currentUser');
             } else if (window.authReady) {
-              console.log('[Live] Using window.authReady');
               user = await window.authReady;
             }
 
             // If no user but we have cached UID, wait for auth to sync
             if (!user && cachedUid) {
-              console.log('[Live] No user but have cached UID, waiting for auth sync...');
               const auth = window.firebaseAuth;
               if (!auth) {
-                console.log('[Live] No firebaseAuth available');
                 user = null;
               } else {
                 const { onAuthStateChanged } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
@@ -2607,14 +2572,12 @@ const nonce = Astro.locals.nonce || '';
                 // Wait up to 2 seconds for auth to sync
                 user = await new Promise((resolve) => {
                   const timeout = setTimeout(() => {
-                    console.log('[Live] Auth sync timeout');
                     resolve(auth.currentUser);
                   }, 2000);
 
                   const unsubscribe = onAuthStateChanged(auth, (u) => {
                     clearTimeout(timeout);
                     unsubscribe();
-                    console.log('[Live] onAuthStateChanged resolved:', u?.uid);
                     resolve(u);
                   });
                 });
@@ -2624,22 +2587,17 @@ const nonce = Astro.locals.nonce || '';
             console.error('[Live] Auth check error:', err);
           }
 
-          console.log('[Live] User:', user ? { uid: user.uid, displayName: user.displayName } : null);
-
           if (!user) {
-            console.log('[Live] No user, redirecting to login');
             window.location.href = '/login/?redirect=/live/';
             return;
           }
 
           const displayName = user.displayName || user.email?.split('@')[0] || 'DJ';
-          console.log('[Live] Opening booking schedule with:', { uid: user.uid, displayName });
           window.openBookingSchedule(user.uid, displayName);
         };
 
         checkAuth();
       });
-      console.log('[Live] Book Slot button listener attached');
     }
 
     const viewScheduleBtn = document.getElementById('viewScheduleBtn');
@@ -2672,7 +2630,6 @@ const nonce = Astro.locals.nonce || '';
 
   // Re-setup on View Transitions navigation
   document.addEventListener('astro:page-load', () => {
-    console.log('[Live] astro:page-load - re-setting up booking buttons');
     // Reset listener flags since View Transitions may have replaced elements
     const bookSlotBtn = document.getElementById('bookSlotBtn');
     const viewScheduleBtn = document.getElementById('viewScheduleBtn');
@@ -2690,7 +2647,6 @@ const nonce = Astro.locals.nonce || '';
     const stereoMeters = document.getElementById('stereoMeters');
 
     if (!toggleBtn || !stereoMeters) {
-      console.log('[Meters] Toggle elements not found');
       return;
     }
 
@@ -2714,17 +2670,12 @@ const nonce = Astro.locals.nonce || '';
     toggleBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      console.log('[Meters] Toggle clicked');
-
       const isHidden = stereoMeters.classList.toggle('meters-hidden');
       toggleBtn.classList.toggle('meters-off', isHidden);
       if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
       if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
       try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e) {}
-      console.log('[Meters] Meters hidden:', isHidden);
     });
-
-    console.log('[Meters] Toggle setup complete');
   }
 
   // Initial LED meters toggle setup - wait for DOM
@@ -2771,7 +2722,6 @@ const nonce = Astro.locals.nonce || '';
     if (fsChatMessages) {
       fsChatMessages.innerHTML = '<div class="chat-system-message">Chat cleared</div>';
     }
-    console.log('[Chat] Cleared chat messages 20 minutes after stream ended');
   }
   
   function scheduleChatClear() {
@@ -2782,14 +2732,12 @@ const nonce = Astro.locals.nonce || '';
     }
     // Schedule chat clear in 20 minutes
     chatClearTimer = setTimeout(clearChatMessages, CHAT_CLEAR_DELAY);
-    console.log('[Chat] Chat will be cleared in 20 minutes');
   }
   
   function cancelChatClear() {
     if (chatClearTimer) {
       clearTimeout(chatClearTimer);
       chatClearTimer = null;
-      console.log('[Chat] Chat clear cancelled - new stream started');
     }
   }
 
@@ -2797,26 +2745,21 @@ const nonce = Astro.locals.nonce || '';
   async function startPlaylistFallback() {
     const playlistManager = window.playlistManager;
     if (!playlistManager) {
-      console.log('[Playlist] Manager not available');
       return;
     }
 
     // Check if already playing
     if (playlistManager.isPlaying && playlistManager.queue?.length > 0) {
-      console.log('[Playlist] Already playing, resuming...');
       await playlistManager.resume?.();
       return;
     }
 
     // Try to start auto-play from history
-    console.log('[Playlist] Starting auto-play from history...');
     const started = await playlistManager.startAutoPlay?.();
     if (started) {
-      console.log('[Playlist] Auto-play started successfully');
       const offlineOverlay = document.getElementById('offlineOverlay');
       if (offlineOverlay) offlineOverlay.classList.add('hidden');
     } else {
-      console.log('[Playlist] No tracks available for auto-play');
     }
   }
 
@@ -2825,21 +2768,18 @@ const nonce = Astro.locals.nonce || '';
     cancelPlaylistFallback();
     // Schedule playlist fallback in 10 seconds
     playlistFallbackTimer = setTimeout(startPlaylistFallback, PLAYLIST_FALLBACK_DELAY);
-    console.log('[Playlist] Will start auto-play in 10 seconds if no stream');
   }
 
   function cancelPlaylistFallback() {
     if (playlistFallbackTimer) {
       clearTimeout(playlistFallbackTimer);
       playlistFallbackTimer = null;
-      console.log('[Playlist] Auto-play timer cancelled - stream active');
     }
   }
 
   async function pausePlaylistForStream() {
     const playlistManager = window.playlistManager;
     if (playlistManager) {
-      console.log('[Playlist] Stopping for live stream');
       playlistManager.wasPausedForStream = playlistManager.isPlaying;
       // Completely stop and clear the playlist
       await playlistManager.pause?.();
@@ -2886,7 +2826,6 @@ const nonce = Astro.locals.nonce || '';
   function setupLiveStatusListener() {
     const config = window.PUSHER_CONFIG;
     if (!config?.key) {
-      console.log('[LiveStatus] Pusher config not ready');
       return;
     }
 
@@ -2899,7 +2838,6 @@ const nonce = Astro.locals.nonce || '';
       const liveStatusChannel = statusPusher.subscribe('live-status');
 
       liveStatusChannel.bind('stream-started', (data) => {
-        console.log('[LiveStatus] DJ went live:', data.djName);
         // Pause playlist when DJ goes live
         pausePlaylistForStream();
         // Trigger live-stream.js to fetch stream and load HLS player - skip cache for fresh data
@@ -2912,7 +2850,6 @@ const nonce = Astro.locals.nonce || '';
       });
 
       liveStatusChannel.bind('stream-ended', (data) => {
-        console.log('[LiveStatus] Stream ended:', data.djName);
         // Refresh schedule immediately to remove completed DJ
         scheduleCache = null;
         loadSchedule(true);
@@ -2920,14 +2857,12 @@ const nonce = Astro.locals.nonce || '';
         setTimeout(() => {
           const playlistManager = window.playlistManager;
           if (playlistManager?.wasPausedForStream) {
-            console.log('[Playlist] Resuming after stream ended (10s delay)');
             playlistManager.wasPausedForStream = false;
             playlistManager.play?.();
           }
         }, 10000);
       });
 
-      console.log('[LiveStatus] Subscribed to live-status channel');
 
       // Subscribe to presence channel for viewer tracking (no Firebase needed!)
       const streamId = window.currentStreamId || 'playlist-global';
@@ -2954,7 +2889,6 @@ const nonce = Astro.locals.nonce || '';
       const userName = userInfo?.name || cachedAuth?.name || currentUser?.displayName || 'Viewer';
       const userAvatar = userInfo?.avatar || cachedAuth?.avatarUrl || currentUser?.photoURL || '';
 
-      console.log('[Presence] Subscribing as:', userName, 'with ID:', userId);
 
       // Create Pusher instance with presence auth
       // Note: Authorization header added only on re-subscription (after user info loads)
@@ -2983,8 +2917,6 @@ const nonce = Astro.locals.nonce || '';
       function updateOnlineUsers() {
         const channel = window.presenceChannel;
         const count = channel?.members?.count || 0;
-        console.log('[Presence] Member count:', count);
-
         // Update count displays
         const viewerEl = document.getElementById('viewerCount');
         const fsViewers = document.getElementById('fsViewers');
@@ -3027,7 +2959,6 @@ const nonce = Astro.locals.nonce || '';
 
       // Log connection state changes
       presencePusher.connection.bind('state_change', (states) => {
-        console.log('[Presence] Connection state changed:', states.previous, '->', states.current);
       });
 
       presencePusher.connection.bind('error', (err) => {
@@ -3035,10 +2966,6 @@ const nonce = Astro.locals.nonce || '';
       });
 
       presenceChannel.bind('pusher:subscription_succeeded', (members) => {
-        console.log('[Presence] Subscribed to channel:', presenceChannelName);
-        console.log('[Presence] My user ID:', members.myID);
-        console.log('[Presence] Member count:', members.count);
-        console.log('[Presence] All member IDs:', Object.keys(members.members || {}));
         updateOnlineUsers();
       });
 
@@ -3048,12 +2975,10 @@ const nonce = Astro.locals.nonce || '';
       });
 
       presenceChannel.bind('pusher:member_added', (member) => {
-        console.log('[Presence] Member joined:', member.id, member.info?.name);
         updateOnlineUsers();
       });
 
       presenceChannel.bind('pusher:member_removed', (member) => {
-        console.log('[Presence] Member left:', member.id, member.info?.name);
         updateOnlineUsers();
       });
 
@@ -3069,7 +2994,6 @@ const nonce = Astro.locals.nonce || '';
 
       // Listen for like count updates from all reactions
       reactionChannel.bind('like-update', (data) => {
-        console.log('[Reactions] Like count update from Pusher:', data);
         if (data.totalLikes > 0) {
           const likeCountEl = document.getElementById('likeCount');
           const fsLikes = document.getElementById('fsLikes');
@@ -3080,7 +3004,6 @@ const nonce = Astro.locals.nonce || '';
 
       // Listen for viewer count updates from listeners endpoint (fallback)
       reactionChannel.bind('viewer-update', (data) => {
-        console.log('[Viewers] Count update from Pusher:', data);
         if (data.count !== undefined) {
           const viewerEl = document.getElementById('viewerCount');
           const fsViewers = document.getElementById('fsViewers');
@@ -3090,9 +3013,6 @@ const nonce = Astro.locals.nonce || '';
           if (chatViewers) chatViewers.textContent = `${data.count} watching`;
         }
       });
-
-      console.log('[Presence] Subscribed to:', presenceChannelName);
-      console.log('[Reactions] Subscribed to:', reactionChannelName);
 
     } catch (err) {
       console.warn('[LiveStatus] Failed to setup Pusher:', err);
@@ -3181,8 +3101,6 @@ const nonce = Astro.locals.nonce || '';
         if (window.presencePusher && window.presenceChannel) {
           const streamId = window.currentStreamId || 'playlist-global';
           const channelName = `presence-stream-${streamId}`;
-          console.log('[Presence] Re-subscribing with correct user info:', displayName);
-
           // Unsubscribe and re-subscribe with correct auth headers
           window.presencePusher.unsubscribe(channelName);
 
@@ -3201,7 +3119,6 @@ const nonce = Astro.locals.nonce || '';
 
           // Re-bind events
           newChannel.bind('pusher:subscription_succeeded', () => {
-            console.log('[Presence] Re-subscribed with correct user info');
             if (typeof window.updateOnlineUsers === 'function') {
               window.updateOnlineUsers();
             }
@@ -3244,7 +3161,7 @@ const nonce = Astro.locals.nonce || '';
         }
       }
     } catch (e) {
-      console.log('Could not check user status:', e);
+      console.error('Could not check user status:', e);
     }
   }
   
@@ -3297,7 +3214,6 @@ const nonce = Astro.locals.nonce || '';
     const privateChannel = pusher.subscribe(`private-dj-${currentUser.uid}`);
     
     privateChannel.bind('takeover-request', (data) => {
-      console.log('[Takeover] Received request via Pusher:', data);
       showTakeoverNotification(data);
     });
     
@@ -3305,7 +3221,6 @@ const nonce = Astro.locals.nonce || '';
       hideTakeoverNotification();
     });
     
-    console.log('[Takeover] Subscribed to Pusher channel');
   }
   
   function showTakeoverNotification(data) {
@@ -3439,8 +3354,6 @@ const nonce = Astro.locals.nonce || '';
           checkMyUpcomingSlot();
         }
         
-        console.log('[Schedule] Loaded', allSlots.length, 'slots, upcoming:', result.upcoming?.length || 0);
-
         // Inject Event structured data (JSON-LD) for SEO
         updateEventJsonLd(result.currentLive, result.upcoming, allSlots);
       }
@@ -3605,8 +3518,6 @@ const nonce = Astro.locals.nonce || '';
         })
       });
       const data = await resp.json();
-      console.log('[Viewers] Registered, active viewers:', data.activeViewers);
-
       // Update viewer count immediately from response
       if (data.activeViewers !== undefined) {
         const viewerEl = document.getElementById('viewerCount');
@@ -4048,8 +3959,6 @@ const nonce = Astro.locals.nonce || '';
   }
   
   function handleSlotExpired(slot) {
-    console.log('[Lobby] Slot expired for DJ:', slot.djName);
-    
     // Notify server that slot is available for takeover
     notifySlotAvailable(slot.id);
   }
@@ -4126,7 +4035,6 @@ const nonce = Astro.locals.nonce || '';
           token
         })
       });
-      console.log('[Lobby] DJ marked as ready');
     } catch (err) {
       console.error('Failed to notify ready status:', err);
     }
@@ -4346,18 +4254,10 @@ const nonce = Astro.locals.nonce || '';
     const offlineMainText = document.getElementById('offlineMainText');
     const offlineSubText = document.getElementById('offlineSubText');
     
-    // DEBUG: Log state at start of updateLiveQueueBar
-    console.log('[updateLiveQueueBar] Called with:', {
-      currentLive: currentLive ? currentLive.djName : null,
-      isLiveStreamActive: window.isLiveStreamActive,
-      streamDetectedThisSession: window.streamDetectedThisSession
-    });
-
     // Track live status changes for chat clear timer and playlist fallback
     // If live-stream.js already detected an active stream, don't override with slots API data
     // This handles audio-only/BUTT streams where slots API returns currentLive: null
     if (!currentLive && (window.isLiveStreamActive || window.streamDetectedThisSession)) {
-      console.log('[Schedule] Skipping offline state - live-stream.js detected active stream');
       return;
     }
 
@@ -4517,13 +4417,7 @@ const nonce = Astro.locals.nonce || '';
 
         // Show offline overlay if playlist isn't covering it AND no stream was detected
         // Double-check streamDetectedThisSession to handle race conditions with live-stream.js
-        console.log('[updateLiveQueueBar] Offline check:', {
-          playlistPlaying: playlistManager?.isPlaying,
-          streamDetected: window.streamDetectedThisSession,
-          isLiveActive: window.isLiveStreamActive
-        });
         if (!playlistManager?.isPlaying && !window.streamDetectedThisSession && !window.isLiveStreamActive) {
-          console.log('[updateLiveQueueBar] SHOWING offline overlay!');
           offlineOverlay?.classList.remove('hidden');
           // Update offline overlay text from loading state
           if (offlineIconText) offlineIconText.textContent = 'OFFLINE';
@@ -4679,7 +4573,7 @@ const nonce = Astro.locals.nonce || '';
           if (userInfo) userInfo.avatar = freshAvatarUrl;
         }
       } catch (e) {
-        console.log('[Booking] Could not fetch fresh avatar:', e);
+        console.error('[Booking] Could not fetch fresh avatar:', e);
       }
 
       const token = await currentUser.getIdToken();
@@ -4805,7 +4699,7 @@ const nonce = Astro.locals.nonce || '';
           if (userInfo) userInfo.avatar = freshAvatarUrl;
         }
       } catch (e) {
-        console.log('[Go Live] Could not fetch fresh avatar:', e);
+        console.error('[Go Live] Could not fetch fresh avatar:', e);
       }
 
       const token = await currentUser.getIdToken();
@@ -5134,7 +5028,6 @@ const nonce = Astro.locals.nonce || '';
   
   // Listen for schedule updates from booking modal
   window.addEventListener('schedule-updated', () => {
-    console.log('[Schedule] Booking update detected, refreshing lineup...');
     scheduleCache = null;
     loadSchedule(true);
   });

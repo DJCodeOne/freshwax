@@ -68,8 +68,6 @@ const nonce = Astro.locals.nonce || '';
 
     // Handle PayPal return
     if (paypalOrderId) {
-      console.log('[giftcard-success] PayPal order:', paypalOrderId);
-
       try {
         const response = await fetch('/api/giftcards/capture-paypal-order/', {
           method: 'POST',
@@ -78,8 +76,6 @@ const nonce = Astro.locals.nonce || '';
         });
 
         const result = await response.json();
-        console.log('[giftcard-success] PayPal capture result:', result);
-
         if (result.success) {
           loadingState.style.display = 'none';
           successState.style.display = 'block';
@@ -110,8 +106,6 @@ const nonce = Astro.locals.nonce || '';
       return;
     }
 
-    console.log('[giftcard-success] Stripe session:', sessionId);
-
     // Poll for gift card creation (webhook may take a moment)
     const maxRetries = 5;
     const baseDelay = 2000;
@@ -119,13 +113,10 @@ const nonce = Astro.locals.nonce || '';
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const delay = attempt === 1 ? baseDelay : baseDelay * Math.pow(1.5, attempt - 1);
-        console.log(`[giftcard-success] Attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
 
         const response = await fetch(`/api/giftcards/verify-session/?session_id=${sessionId}`);
         const result = await response.json();
-        console.log('[giftcard-success] Verify result:', result);
-
         if (result.success && result.giftCard) {
           loadingState.style.display = 'none';
           successState.style.display = 'block';
@@ -138,7 +129,6 @@ const nonce = Astro.locals.nonce || '';
         if (result.paymentStatus === 'paid') {
           // Payment successful, webhook might still be processing
           if (attempt < maxRetries) {
-            console.log('[giftcard-success] Payment OK, waiting for webhook...');
             continue;
           }
 

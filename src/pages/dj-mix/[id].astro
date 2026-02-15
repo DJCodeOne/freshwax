@@ -1272,7 +1272,7 @@ Artist - Track Title
         url: currentShareData.url
       });
     } catch (err) {
-      console.log('Share cancelled or failed');
+      // Share cancelled or failed
     }
   });
 
@@ -1298,7 +1298,6 @@ Artist - Track Title
       const cachedAuth = JSON.parse(cached);
       // Only use cache if less than 24 hours old
       if (cachedAuth.cachedAt && Date.now() - cachedAuth.cachedAt < 86400000 && cachedAuth.loggedIn) {
-        console.log('[Comments] Restored auth from cache:', cachedAuth.id);
         // Store cached values for immediate use
         currentUserName = cachedAuth.displayName || cachedAuth.name;
         currentUserAvatar = cachedAuth.avatar || null;

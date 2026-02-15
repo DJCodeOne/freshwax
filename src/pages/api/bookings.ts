@@ -249,6 +249,12 @@ export const POST: APIRoute = async ({ request }) => {
 
       // Parse slots
       const slotDates = slots.map((s: string) => new Date(s));
+      if (slotDates.length === 0) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'No valid slot dates provided'
+        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      }
       const bookingDate = slotDates[0];
 
       // Check daily allowance

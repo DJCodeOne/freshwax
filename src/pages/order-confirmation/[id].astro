@@ -1414,7 +1414,6 @@ const physicalItems = enrichedItems.filter((item: any) =>
       }
       localStorage.removeItem('cart');
       window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
-      console.log('[order-confirmation] Cart cleared after purchase');
     } catch (e) {
       console.error('[order-confirmation] Error clearing cart:', e);
     }

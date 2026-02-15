@@ -171,8 +171,6 @@ import DailySchedule from './DailySchedule.astro';
 
     // Open Booking Schedule
     window.openBookingSchedule = function(userId, displayName) {
-      console.log('[ScheduleModal] openBookingSchedule called:', { userId, displayName });
-
       if (!userId) {
         console.error('[ScheduleModal] No userId provided!');
         alert('You must be logged in to book a slot.');
@@ -182,7 +180,6 @@ import DailySchedule from './DailySchedule.astro';
       // Set user info on the schedule component
       if (window.schedule_bookingSchedule) {
         window.schedule_bookingSchedule.setUser(userId, displayName);
-        console.log('[ScheduleModal] User set on schedule component');
       } else {
         console.error('[ScheduleModal] schedule_bookingSchedule not found!');
       }

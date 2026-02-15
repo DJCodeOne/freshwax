@@ -52,9 +52,9 @@ const RATE_LIMIT_SKIP = new Set([
   '/api/cron/cleanup-reservations/',
   '/api/cron/retry-payouts/',
   '/api/cron/send-restock-notifications/',
-  '/api/cron/stock-alerts/',
   '/api/cron/image-scan/',
   '/api/cron/verification-reminders/',
+  '/api/cron/cleanup-d1/',
   '/api/health/index/',
   '/api/health/payments/',
 ]);
@@ -140,7 +140,9 @@ const securityHeaders: Record<string, string> = {
   'X-Frame-Options': 'DENY',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Permissions-Policy': 'camera=(), microphone=(self), geolocation=(), payment=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=(), hid=()',
+  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+  'Cross-Origin-Resource-Policy': 'cross-origin',
   'X-XSS-Protection': '1; mode=block',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
 };

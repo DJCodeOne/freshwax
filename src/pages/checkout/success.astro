@@ -66,8 +66,6 @@ const nonce = Astro.locals.nonce || '';
 
     // Handle free orders (have orderId instead of session_id)
     if (orderId) {
-      console.log('[success] Free order detected:', orderId);
-
       // Track purchase before clearing cart
       const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
       try {
@@ -111,18 +109,13 @@ const nonce = Astro.locals.nonce || '';
       try {
         // Wait before checking (longer on each retry)
         const delay = attempt === 1 ? baseDelay : baseDelay * Math.pow(1.5, attempt - 1);
-        console.log(`[success] Attempt ${attempt}/${maxRetries}, waiting ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
 
-        // Check if order exists for this session
-        console.log('[success] Verifying session:', sessionId);
         const response = await fetch(`/api/stripe/verify-session/?session_id=${sessionId}`);
         const result = await response.json();
-        console.log('[success] Verify result:', JSON.stringify(result));
 
         // Clear cart for any successful payment (both localStorage and KV)
         if (result.success || result.paymentStatus === 'paid') {
-          console.log('[success] Payment successful, clearing cart');
           const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
 
           // Track purchase before clearing cart
@@ -157,12 +150,10 @@ const nonce = Astro.locals.nonce || '';
         } else if (result.success || result.paymentStatus === 'paid') {
           // Payment successful but order might not have been created yet
           if (attempt < maxRetries) {
-            console.log(`[success] Payment OK but no orderId yet. Retrying (${attempt}/${maxRetries})...`);
             continue; // Try again
           }
 
           // Last attempt - show success anyway
-          console.log('[success] Payment OK but no orderId after retries. Redirecting to orders.');
           if (loadingState) loadingState.style.display = 'none';
           if (successState) successState.style.display = 'block';
 
@@ -173,7 +164,6 @@ const nonce = Astro.locals.nonce || '';
         } else {
           // Payment failed or not completed
           if (attempt < maxRetries && result.error !== 'Payment not completed') {
-            console.log(`[success] Verification failed, retrying (${attempt}/${maxRetries})...`);
             continue;
           }
 

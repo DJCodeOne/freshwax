@@ -106,14 +106,10 @@
 
   // Send GIF using existing globals from live-stream.js
   async function sendGifToChat(giphyUrl, giphyId) {
-    console.log('[GIF] sendGifToChat called:', { giphyUrl, giphyId });
-
     // Use existing globals set by live-stream.js
     const streamId = window.currentStreamId;
     const auth = window.firebaseAuth;
     const user = auth?.currentUser;
-
-    console.log('[GIF] streamId:', streamId, 'user:', !!user);
 
     if (!user) {
       console.error('[GIF] No current user');
@@ -148,7 +144,6 @@
           giphyId
         })
       });
-      console.log('[GIF] Sent successfully:', response.ok);
     } catch (error) {
       console.error('[GIF] Error sending:', error);
     }
@@ -169,12 +164,9 @@
     const gifSearch = document.getElementById('gifSearchInput');
 
     if (!emojiBtn || !emojiPanel) {
-      console.log('[Picker] Elements not found, retrying...');
       setTimeout(init, 500);
       return;
     }
-
-    console.log('[Picker] Initializing fresh picker buttons');
 
     // Render emojis
     function renderEmojis(cat) {
@@ -193,14 +185,12 @@
 
     // Expose toggle functions globally and bind via addEventListener (CSP-safe)
     window.toggleEmojiPanel = function() {
-      console.log('[Picker] Emoji toggle called');
       const isVisible = emojiPanel.style.display !== 'none';
       emojiPanel.style.display = isVisible ? 'none' : 'block';
       if (!isVisible) renderEmojis(currentCategory);
     };
 
     window.toggleGifModal = function() {
-      console.log('[Picker] GIF toggle called, gifModal:', !!gifModal, 'gifResults:', !!gifResults);
       if (!gifModal) {
         console.error('[Picker] GIF modal element not found!');
         return;
@@ -268,8 +258,6 @@
     // Load GIFs from Giphy
     async function loadGifs(category, searchQuery = null) {
       const apiKey = window.GIPHY_API_KEY || document.documentElement.dataset.giphyKey || '';
-      console.log('[GIF] Loading GIFs, apiKey available:', !!apiKey, 'category:', category, 'query:', searchQuery, 'gifResults:', !!gifResults);
-
       if (!gifResults) {
         console.error('[GIF] gifResults element not found!');
         return;
@@ -287,9 +275,7 @@
           url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(category)}&limit=24&rating=pg-13`;
         }
 
-        console.log('[GIF] Fetching:', url.replace(apiKey, 'KEY'));
         const res = await fetch(url);
-        console.log('[GIF] Response status:', res.status);
 
         if (!res.ok) {
           const errText = await res.text();
@@ -299,7 +285,6 @@
         }
 
         const data = await res.json();
-        console.log('[GIF] Got', data.data?.length || 0, 'results');
 
         if (data.data?.length > 0) {
           gifResults.innerHTML = data.data.map(gif => `
@@ -310,7 +295,6 @@
 
           gifResults.querySelectorAll('.gif-result-item').forEach(item => {
             item.addEventListener('click', () => {
-              console.log('[GIF] Selected:', item.dataset.url);
               // Send GIF using local function
               sendGifToChat(item.dataset.url, item.dataset.id);
               gifModal.style.display = 'none';

@@ -1527,7 +1527,7 @@ const nonce = Astro.locals.nonce || '';
 
   // Stream key for preview (can be set via ?testPreview=key for testing)
   const urlParams = new URLSearchParams(window.location.search);
-  console.log('[Test Mode] URL params:', window.location.search);
+  console.debug('[Test Mode] URL params:', window.location.search);
   let currentStreamKey = urlParams.get('testPreview') || null;
 
   // Helper function to update BUTT password when stream key changes
@@ -1548,17 +1548,17 @@ const nonce = Astro.locals.nonce || '';
   const testHlsBase = urlParams.get('hlsBase');
   if (testHlsBase) {
     window.HLS_BASE_URL = testHlsBase;
-    console.log('[Test Mode] Using custom HLS base URL:', testHlsBase);
+    console.debug('[Test Mode] Using custom HLS base URL:', testHlsBase);
   }
   // Test preview function - can be triggered by button or URL param
   function loadTestPreview() {
-    console.log('[Test Mode] Loading test video...');
+    console.debug('[Test Mode] Loading test video...');
     const videoEl = document.getElementById('obsVideo');
     const offlineState = document.getElementById('obsOfflineState');
     const videoPreview = document.getElementById('obsVideoPreview');
     const customUrlInput = document.getElementById('customHlsUrl');
 
-    console.log('[Test Mode] Elements:', { videoEl: !!videoEl, offlineState: !!offlineState, videoPreview: !!videoPreview });
+    console.debug('[Test Mode] Elements:', { videoEl: !!videoEl, offlineState: !!offlineState, videoPreview: !!videoPreview });
 
     if (videoEl && offlineState && videoPreview) {
       offlineState.classList.add('hidden');
@@ -1567,20 +1567,20 @@ const nonce = Astro.locals.nonce || '';
       // Use custom URL if provided, otherwise use Big Buck Bunny test stream
       const customUrl = customUrlInput?.value?.trim();
       const testUrl = customUrl || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-      console.log('[Test Mode] Loading URL:', testUrl, customUrl ? '(custom)' : '(default test)');
+      console.debug('[Test Mode] Loading URL:', testUrl, customUrl ? '(custom)' : '(default test)');
 
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-        console.log('[Test Mode] Using HLS.js');
+        console.debug('[Test Mode] Using HLS.js');
         const hls = new Hls();
         hls.loadSource(testUrl);
         hls.attachMedia(videoEl);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log('[Test Mode] HLS manifest parsed, playing...');
+          console.debug('[Test Mode] HLS manifest parsed, playing...');
           videoEl.play().catch(e => console.error('[Test Mode] Play error:', e));
         });
         hls.on(Hls.Events.ERROR, (e, data) => console.error('[Test Mode] HLS error:', data));
       } else {
-        console.log('[Test Mode] Using native HLS');
+        console.debug('[Test Mode] Using native HLS');
         videoEl.src = testUrl;
         videoEl.play().catch(e => console.error('[Test Mode] Play error:', e));
       }
@@ -1604,23 +1604,23 @@ const nonce = Astro.locals.nonce || '';
     }
     offlineState?.classList.remove('hidden');
     videoPreview?.classList.add('hidden');
-    console.log('[Test Mode] Preview stopped');
+    console.debug('[Test Mode] Preview stopped');
   });
 
   // Direct test mode - use ?directTest to load a known working test video
   const directTest = urlParams.has('directTest');
   if (directTest) {
-    console.log('[Test Mode] DIRECT TEST - Loading test video immediately');
+    console.debug('[Test Mode] DIRECT TEST - Loading test video immediately');
     setTimeout(loadTestPreview, 1000);
   }
 
   if (currentStreamKey) {
-    console.log('[Test Mode] Using test preview stream key:', currentStreamKey);
+    console.debug('[Test Mode] Using test preview stream key:', currentStreamKey);
     if (forcePreview) {
-      console.log('[Test Mode] Force preview enabled - skipping availability check');
+      console.debug('[Test Mode] Force preview enabled - skipping availability check');
       // Force start preview check immediately after page loads
       setTimeout(() => {
-        console.log('[Test Mode] Force starting preview check...');
+        console.debug('[Test Mode] Force starting preview check...');
         startObsPreviewCheck();
       }, 2000);
     }
@@ -1813,14 +1813,11 @@ const nonce = Astro.locals.nonce || '';
 
   // Handle ViewTransitions navigation - re-init if already logged in
   document.addEventListener('astro:page-load', async () => {
-    console.log('[DJ Lobby] astro:page-load fired, lobbyInitialized:', lobbyInitialized, 'currentUser:', !!currentUser);
     // If user is already authenticated but lobby wasn't initialized (ViewTransitions navigation)
     if (currentUser && !lobbyInitialized) {
-      console.log('[DJ Lobby] Re-initializing after ViewTransitions navigation');
       await checkDjAccess(currentUser.uid);
     } else if (currentUser && lobbyInitialized) {
       // Already initialized, but reload slot data in case it changed
-      console.log('[DJ Lobby] Refreshing slot data after navigation');
       await loadMySlot();
     }
   });
@@ -2184,7 +2181,6 @@ const nonce = Astro.locals.nonce || '';
       // Determine if we have an HTTPS playback URL
       const hasHttpsUrl = !!(s.httpsStreamUrl || s.streamUrl.startsWith('https://'));
       const playbackUrl = s.httpsStreamUrl || (s.streamUrl.startsWith('https://') ? s.streamUrl : null);
-      console.log(`[Relay] Station ${s.id}: canPlay=${hasHttpsUrl}, playbackUrl=${playbackUrl}`);
       return {
         ...s,
         isCurrentlyLive: false,
@@ -2209,7 +2205,6 @@ const nonce = Astro.locals.nonce || '';
           }
           source.nowPlaying = nowPlaying;
           source.listeners = result.listeners || 0;
-          console.log('[Relay] Status:', source.name, source.isCurrentlyLive ? 'LIVE' : 'offline', source.nowPlaying, 'canPlay:', source.canPlay);
         }
       } catch (err) {
         console.warn('[Relay] Check failed for', source.name, err.message);
@@ -2430,7 +2425,7 @@ const nonce = Astro.locals.nonce || '';
     const relayDot = document.getElementById('relayDot');
     const previewRelayDot = document.getElementById('previewRelayDot');
 
-    console.log('[RelayPreview] Starting relay audio preview:', stationUrl);
+    console.debug('[RelayPreview] Starting relay audio preview:', stationUrl);
 
     if (!relayAudio) {
       console.error('[RelayPreview] relayAudio element not found');
@@ -2450,7 +2445,7 @@ const nonce = Astro.locals.nonce || '';
 
     // Set up event listeners
     relayAudio.onplaying = () => {
-      console.log('[RelayPreview] Audio connected and playing, volume:', relayAudio.volume, 'muted:', relayAudio.muted);
+      console.debug('[RelayPreview] Audio connected and playing, volume:', relayAudio.volume, 'muted:', relayAudio.muted);
       relayDot?.classList.remove('disconnected');
       relayDot?.classList.add('connected');
       previewRelayDot?.classList.remove('disconnected');
@@ -2459,7 +2454,7 @@ const nonce = Astro.locals.nonce || '';
       // Set up icecast analysers and start LED meters when audio plays
       if (!icecastAudioContext) {
         setupIcecastAnalysers(relayAudio);
-        console.log('[RelayPreview] Icecast analysers initialized');
+        console.debug('[RelayPreview] Icecast analysers initialized');
       }
       currentPreviewSource = 'relay';
       // Start LED meters after short delay to ensure analysers are ready
@@ -2481,18 +2476,13 @@ const nonce = Astro.locals.nonce || '';
       previewRelayDot?.classList.add('disconnected');
     };
 
-    relayAudio.onloadstart = () => console.log('[RelayPreview] Loading started');
-    relayAudio.oncanplay = () => console.log('[RelayPreview] Can play, duration:', relayAudio.duration);
-    relayAudio.onstalled = () => console.log('[RelayPreview] Stalled - buffering');
-    relayAudio.onwaiting = () => console.log('[RelayPreview] Waiting for data');
-
     // Ensure volume is set and not muted
     relayAudio.volume = 1.0;
     relayAudio.muted = false;
 
     // Check if it's an HLS stream
     if (stationUrl.includes('.m3u8')) {
-      console.log('[RelayPreview] Using HLS.js for m3u8 stream');
+      console.debug('[RelayPreview] Using HLS.js for m3u8 stream');
       if (typeof Hls !== 'undefined' && Hls.isSupported()) {
         relayHlsPlayer = new Hls({
           enableWorker: true,
@@ -2501,7 +2491,7 @@ const nonce = Astro.locals.nonce || '';
         relayHlsPlayer.loadSource(stationUrl);
         relayHlsPlayer.attachMedia(relayAudio);
         relayHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-          console.log('[RelayPreview] HLS manifest parsed, playing...');
+          console.debug('[RelayPreview] HLS manifest parsed, playing...');
           relayAudio.play().catch(e => {
             console.error('[RelayPreview] HLS play failed:', e.name, e.message);
           });
@@ -2519,13 +2509,13 @@ const nonce = Astro.locals.nonce || '';
     } else {
       // Direct audio stream
       relayAudio.src = stationUrl;
-      console.log('[RelayPreview] Set src, attempting to play...');
+      console.debug('[RelayPreview] Set src, attempting to play...');
       relayAudio.play().then(() => {
-        console.log('[RelayPreview] Play started successfully');
+        console.debug('[RelayPreview] Play started successfully');
       }).catch(e => {
         console.error('[RelayPreview] Audio play failed:', e.name, e.message);
         if (e.name === 'NotAllowedError') {
-          console.log('[RelayPreview] Autoplay blocked - user interaction needed');
+          console.debug('[RelayPreview] Autoplay blocked - user interaction needed');
         }
       });
     }
@@ -2585,7 +2575,7 @@ const nonce = Astro.locals.nonce || '';
         updateRelayPreview();
         // Start playing the relay audio preview - use the playbackUrl from source config
         const previewUrl = selectedRelaySource.playbackUrl || `https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8`;
-        console.log('[Relay] Using preview URL:', previewUrl);
+        console.debug('[Relay] Using preview URL:', previewUrl);
         startRelayAudioPreview(previewUrl);
         // Show broadcast audio panel so DJ can check levels before going live
         document.getElementById('broadcastAudioPanel')?.classList.remove('hidden');
@@ -2797,12 +2787,12 @@ const nonce = Astro.locals.nonce || '';
         mutations.forEach((mutation) => {
           if (mutation.attributeName === 'class') {
             const isHidden = audioPreviewEl.classList.contains('hidden');
-            console.log('[Stream DEBUG] audioPreview class changed! hidden=' + isHidden, new Error().stack?.split('\n').slice(0, 5));
+            console.debug('[Stream DEBUG] audioPreview class changed! hidden=' + isHidden, new Error().stack?.split('\n').slice(0, 5));
           }
         });
       });
       lobbyAudioPreviewObserver.observe(audioPreviewEl, { attributes: true, attributeFilter: ['class'] });
-      console.log('[Stream DEBUG] MutationObserver attached to audioPreview');
+      console.debug('[Stream DEBUG] MutationObserver attached to audioPreview');
     }
 
     // Initialize livestream chat with default welcome message
@@ -3121,7 +3111,7 @@ const nonce = Astro.locals.nonce || '';
     if (toggleLabel) {
       toggleLabel.textContent = mode === 'placeholder' ? 'Placeholder' : 'OBS Video';
     }
-    console.log('[Broadcast] Mode set to:', mode);
+    console.debug('[Broadcast] Mode set to:', mode);
 
     // If we're live, update Firestore with the new mode and hlsUrl
     if (currentStream && currentStream.id) {
@@ -3147,7 +3137,7 @@ const nonce = Astro.locals.nonce || '';
         });
         const result = await response.json();
         if (!result.success) throw new Error(result.error);
-        console.log('[Broadcast] Updated via API:', { mode, hlsUrl });
+        console.debug('[Broadcast] Updated via API:', { mode, hlsUrl });
       } catch (error) {
         console.error('[Broadcast] Failed to update broadcast mode:', error);
       }
@@ -3202,15 +3192,15 @@ const nonce = Astro.locals.nonce || '';
 
       if (icecastStreamConnected && !wasConnected) {
         updateButtIndicator(true);
-        console.log('[Icecast] Stream detected');
+        console.debug('[Icecast] Stream detected');
         // Auto-switch to BUTT preview if OBS is not connected
         if (currentPreviewSource !== 'butt' && !currentObsPreviewUrl) {
-          console.log('[Icecast] Auto-switching to BUTT preview');
+          console.debug('[Icecast] Auto-switching to BUTT preview');
           setPreviewSource('butt');
         }
       } else if (!icecastStreamConnected && wasConnected) {
         updateButtIndicator(false);
-        console.log('[Icecast] No stream');
+        console.debug('[Icecast] No stream');
       }
 
       // Update BUTT stream title from Icecast metadata
@@ -3369,17 +3359,17 @@ const nonce = Astro.locals.nonce || '';
     const icecastAudio = document.getElementById('icecastAudio');
     if (icecastAudio) {
       icecastAudio.addEventListener('error', () => {
-        console.log('[Icecast] Audio error - stream disconnected');
+        console.debug('[Icecast] Audio error - stream disconnected');
         icecastConnected = false;
         updateButtIndicator(false);
       });
       icecastAudio.addEventListener('ended', () => {
-        console.log('[Icecast] Audio ended - stream stopped');
+        console.debug('[Icecast] Audio ended - stream stopped');
         icecastConnected = false;
         updateButtIndicator(false);
       });
       icecastAudio.addEventListener('stalled', () => {
-        console.log('[Icecast] Audio stalled - connection issues');
+        console.debug('[Icecast] Audio stalled - connection issues');
       });
     }
   }
@@ -3387,7 +3377,7 @@ const nonce = Astro.locals.nonce || '';
   function switchAudioSource(source) {
     // Switch between OBS and BUTT audio sources for broadcast panel
     buttAudioSource = source;
-    console.log('[Audio] Switching audio source to:', source);
+    console.debug('[Audio] Switching audio source to:', source);
 
     const icecastAudio = document.getElementById('icecastAudio');
 
@@ -3397,13 +3387,13 @@ const nonce = Astro.locals.nonce || '';
       if (icecastAudio) {
         // Set source if not already set or if paused
         if (!icecastAudio.src || icecastAudio.paused) {
-          console.log('[Audio] Connecting to Icecast stream...');
+          console.debug('[Audio] Connecting to Icecast stream...');
           icecastAudio.src = 'https://icecast.freshwax.co.uk/live';
           icecastAudio.load();
         }
 
         icecastAudio.play().then(() => {
-          console.log('[Audio] Icecast stream playing');
+          console.debug('[Audio] Icecast stream playing');
           icecastConnected = true;
           updateButtIndicator(true);
           // Setup analysers if not already done
@@ -3421,7 +3411,7 @@ const nonce = Astro.locals.nonce || '';
             animateLiveMeters();
           }
         }).catch(err => {
-          console.log('[Audio] Icecast play error:', err.message);
+          console.debug('[Audio] Icecast play error:', err.message);
           // Try again with muted (for autoplay policy)
           icecastAudio.muted = true;
           icecastAudio.play().then(() => {
@@ -3442,7 +3432,7 @@ const nonce = Astro.locals.nonce || '';
               animateLiveMeters();
             }
           }).catch(() => {
-            console.log('[Audio] Icecast autoplay blocked - needs user interaction');
+            console.debug('[Audio] Icecast autoplay blocked - needs user interaction');
             updateButtIndicator(false);
           });
         });
@@ -3451,7 +3441,7 @@ const nonce = Astro.locals.nonce || '';
       // Switch to OBS audio - pause Icecast stream
       if (icecastAudio && icecastConnected) {
         icecastAudio.pause();
-        console.log('[Audio] Paused Icecast stream');
+        console.debug('[Audio] Paused Icecast stream');
       }
     }
 
@@ -3562,7 +3552,7 @@ const nonce = Astro.locals.nonce || '';
       icecastGainNode.connect(limiter);
       limiter.connect(icecastAudioContext.destination);
 
-      console.log('[Audio] Icecast analysers initialized with K-weighting, GainNode, and limiter');
+      console.debug('[Audio] Icecast analysers initialized with K-weighting, GainNode, and limiter');
     } catch (e) {
       console.error('[Audio] Icecast analyser setup error:', e);
     }
@@ -3621,7 +3611,7 @@ const nonce = Astro.locals.nonce || '';
         updateTwitchIndicator('connected');
       }
     } catch (e) {
-      console.log('[RelayHealth] Check failed:', e.message);
+      console.debug('[RelayHealth] Check failed:', e.message);
       // On error, assume connected if stream is live
       if (currentStream) {
         updateYoutubeIndicator('connected');
@@ -3658,7 +3648,7 @@ const nonce = Astro.locals.nonce || '';
       });
 
       if (response.ok) {
-        console.log('[ObsPreview] Stream available at:', previewUrl);
+        console.debug('[ObsPreview] Stream available at:', previewUrl);
         updateObsIndicator(true);
         obsPreviewFailCount = 0; // Reset fail counter on success
 
@@ -3692,7 +3682,7 @@ const nonce = Astro.locals.nonce || '';
 
       // Only destroy after many consecutive failures (and not actively streaming)
       if (obsPreviewFailCount >= OBS_PREVIEW_MAX_FAILS) {
-        console.log('[ObsPreview] Too many failures, destroying player');
+        console.debug('[ObsPreview] Too many failures, destroying player');
         updateObsIndicator(false);
         currentObsPreviewUrl = null;
         obsPreviewFailCount = 0;
@@ -3739,19 +3729,19 @@ const nonce = Astro.locals.nonce || '';
       });
       obsHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
         if (data.fatal) {
-          console.log('[ObsPreview] Fatal HLS error:', data.type, data.details);
+          console.debug('[ObsPreview] Fatal HLS error:', data.type, data.details);
           // Try to recover from fatal errors
           switch (data.type) {
             case Hls.ErrorTypes.NETWORK_ERROR:
-              console.log('[ObsPreview] Network error, attempting recovery...');
+              console.debug('[ObsPreview] Network error, attempting recovery...');
               obsHlsPlayer.startLoad();
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.log('[ObsPreview] Media error, attempting recovery...');
+              console.debug('[ObsPreview] Media error, attempting recovery...');
               obsHlsPlayer.recoverMediaError();
               break;
             default:
-              console.log('[ObsPreview] Unrecoverable error, destroying player');
+              console.debug('[ObsPreview] Unrecoverable error, destroying player');
               destroyObsPreviewPlayer();
               break;
           }
@@ -4381,7 +4371,7 @@ const nonce = Astro.locals.nonce || '';
         btn.textContent = '−';
         // Restart meters when expanding panel (they may have stopped)
         if (!broadcastMeterAnimationId) {
-          console.log('[BroadcastMeters] Restarting meters after panel expand');
+          console.debug('[BroadcastMeters] Restarting meters after panel expand');
           animateBroadcastMeters();
         }
       } else {
@@ -4402,13 +4392,13 @@ const nonce = Astro.locals.nonce || '';
 
         // Allow toggle if we have at least one set of analysers
         if (!hasIcecastAnalysers && !hasLiveAnalysers) {
-          console.log('[AudioToggle] Cannot toggle - no analysers available');
+          console.debug('[AudioToggle] Cannot toggle - no analysers available');
           return;
         }
 
         // Set up live analysers if needed when switching to live mode
         if (broadcastAudioSource === 'preview' && !hasLiveAnalysers && liveAudio && !liveAudio.paused) {
-          console.log('[AudioToggle] Setting up live analysers for relay mode');
+          console.debug('[AudioToggle] Setting up live analysers for relay mode');
           const result = setupAudioMeter(liveAudio, 'LiveAudio');
           if (result) {
             liveAudioContext = result.audioContext;
@@ -4418,7 +4408,7 @@ const nonce = Astro.locals.nonce || '';
         }
       }
       broadcastAudioSource = broadcastAudioSource === 'preview' ? 'live' : 'preview';
-      console.log('[AudioToggle] Switched to:', broadcastAudioSource);
+      console.debug('[AudioToggle] Switched to:', broadcastAudioSource);
       const label = document.querySelector('#audioSourceToggle .source-label');
       if (label) label.textContent = broadcastAudioSource.toUpperCase();
 
@@ -4503,7 +4493,7 @@ const nonce = Astro.locals.nonce || '';
       if (document.visibilityState === 'visible') {
         const panel = document.getElementById('broadcastAudioPanel');
         if (panel && !panel.classList.contains('hidden') && !broadcastMeterAnimationId) {
-          console.log('[BroadcastMeters] Restarting meters after tab visible');
+          console.debug('[BroadcastMeters] Restarting meters after tab visible');
           animateBroadcastMeters();
         }
       }
@@ -4532,7 +4522,7 @@ const nonce = Astro.locals.nonce || '';
     try {
     // Keep AudioContext active - browsers may suspend it after inactivity
     if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
-      console.log('[BroadcastMeters] Resuming suspended icecastAudioContext');
+      console.debug('[BroadcastMeters] Resuming suspended icecastAudioContext');
       icecastAudioContext.resume().catch(() => {});
     }
 
@@ -4555,7 +4545,7 @@ const nonce = Astro.locals.nonce || '';
         peakR = Math.max(...testDataR);
       }
 
-      console.log('[BroadcastMeters] Status:', {
+      console.debug('[BroadcastMeters] Status:', {
         frames: broadcastMeterFrameCount,
         animationId: broadcastMeterAnimationId,
         icecastState: icecastAudioContext?.state,
@@ -4729,7 +4719,7 @@ const nonce = Astro.locals.nonce || '';
     lastPPMValue[channel] = percentage;
     const ppmNow = Date.now();
     if (ppmNow - lastPPMDebugTime > 5000 && channel === 'L') {
-      console.log('[PPM Debug]', { updates: ppmUpdateCount, fillElExists: !!fillEl, peakElExists: !!peakEl, ppmL: lastPPMValue.L?.toFixed(1), ppmR: lastPPMValue.R?.toFixed(1), dbL: db?.toFixed(1) });
+      console.debug('[PPM Debug]', { updates: ppmUpdateCount, fillElExists: !!fillEl, peakElExists: !!peakEl, ppmL: lastPPMValue.L?.toFixed(1), ppmR: lastPPMValue.R?.toFixed(1), dbL: db?.toFixed(1) });
       lastPPMDebugTime = ppmNow;
       ppmUpdateCount = 0;
     }
@@ -5106,7 +5096,7 @@ const nonce = Astro.locals.nonce || '';
       const noStreamTakeover = document.getElementById('noStreamTakeover');
 
       if (result.success && result.isLive && result.primaryStream) {
-        console.log('[Stream DEBUG] loadStreamStatus found LIVE stream:', result.primaryStream.djName);
+        console.debug('[Stream DEBUG] loadStreamStatus found LIVE stream:', result.primaryStream.djName);
         currentStream = result.primaryStream;
 
         // Set global stream ID for LiveChat component
@@ -5230,7 +5220,7 @@ const nonce = Astro.locals.nonce || '';
         } else {
           // Audio-only stream (BUTT/Icecast/Relay)
           log('[Stream] Showing audio placeholder for audio-only stream');
-          console.log('[Stream DEBUG] Before: offlineState hidden?', offlineState?.classList.contains('hidden'), 'audioPreview hidden?', audioPreview?.classList.contains('hidden'));
+          console.debug('[Stream DEBUG] Before: offlineState hidden?', offlineState?.classList.contains('hidden'), 'audioPreview hidden?', audioPreview?.classList.contains('hidden'));
           audioPreview?.classList.remove('hidden');
           videoPreview?.classList.add('hidden');
           offlineState?.classList.add('hidden'); // Ensure offline state is hidden
@@ -5239,9 +5229,9 @@ const nonce = Astro.locals.nonce || '';
           const playerWrapper = document.querySelector('.preview-player');
           if (playerWrapper) {
             playerWrapper.classList.remove('fading-out', 'faded-out', 'fading-in');
-            console.log('[Stream DEBUG] Removed fade classes from playerWrapper');
+            console.debug('[Stream DEBUG] Removed fade classes from playerWrapper');
           }
-          console.log('[Stream DEBUG] After: offlineState hidden?', offlineState?.classList.contains('hidden'), 'audioPreview hidden?', audioPreview?.classList.contains('hidden'));
+          console.debug('[Stream DEBUG] After: offlineState hidden?', offlineState?.classList.contains('hidden'), 'audioPreview hidden?', audioPreview?.classList.contains('hidden'));
           // Debug: Check actual element dimensions and computed styles
           setTimeout(() => {
             const ap = document.getElementById('audioPreview');
@@ -5251,10 +5241,10 @@ const nonce = Astro.locals.nonce || '';
               const pwRect = pw.getBoundingClientRect();
               const apStyle = getComputedStyle(ap);
               const pwClasses = pw.className;
-              console.log('[Stream DEBUG] audioPreview dimensions:', { width: apRect.width, height: apRect.height, top: apRect.top, left: apRect.left });
-              console.log('[Stream DEBUG] previewPlayer dimensions:', { width: pwRect.width, height: pwRect.height });
-              console.log('[Stream DEBUG] previewPlayer classes:', pwClasses);
-              console.log('[Stream DEBUG] audioPreview computed style:', { display: apStyle.display, visibility: apStyle.visibility, opacity: apStyle.opacity, zIndex: apStyle.zIndex });
+              console.debug('[Stream DEBUG] audioPreview dimensions:', { width: apRect.width, height: apRect.height, top: apRect.top, left: apRect.left });
+              console.debug('[Stream DEBUG] previewPlayer dimensions:', { width: pwRect.width, height: pwRect.height });
+              console.debug('[Stream DEBUG] previewPlayer classes:', pwClasses);
+              console.debug('[Stream DEBUG] audioPreview computed style:', { display: apStyle.display, visibility: apStyle.visibility, opacity: apStyle.opacity, zIndex: apStyle.zIndex });
             }
           }, 200);
           cleanupHlsPlayer();
@@ -5290,24 +5280,24 @@ const nonce = Astro.locals.nonce || '';
           // Setup audio stream with auto-play
           const audioEl = document.getElementById('audioElement');
           const audioUrl = currentStream.audioStreamUrl || currentStream.streamUrl;
-          console.log('[Stream DEBUG] Audio setup - audioStreamUrl:', currentStream.audioStreamUrl, 'streamUrl:', currentStream.streamUrl, 'using:', audioUrl);
+          console.debug('[Stream DEBUG] Audio setup - audioStreamUrl:', currentStream.audioStreamUrl, 'streamUrl:', currentStream.streamUrl, 'using:', audioUrl);
           if (audioEl && audioUrl) {
             log('[Audio] Setting up audio stream:', audioUrl);
             audioEl.src = audioUrl;
             audioEl.muted = false; // Ensure not muted
             audioEl.volume = 1;    // Ensure full volume
             audioEl.play().then(() => {
-              console.log('[Stream DEBUG] Audio play() succeeded, paused:', audioEl.paused, 'muted:', audioEl.muted, 'volume:', audioEl.volume);
+              console.debug('[Stream DEBUG] Audio play() succeeded, paused:', audioEl.paused, 'muted:', audioEl.muted, 'volume:', audioEl.volume);
               // Check state again after 2 seconds to catch anything that might mute/stop it
               setTimeout(() => {
-                console.log('[Stream DEBUG] Audio state after 2s - paused:', audioEl.paused, 'muted:', audioEl.muted, 'volume:', audioEl.volume, 'src:', audioEl.src);
+                console.debug('[Stream DEBUG] Audio state after 2s - paused:', audioEl.paused, 'muted:', audioEl.muted, 'volume:', audioEl.volume, 'src:', audioEl.src);
               }, 2000);
             }).catch(e => {
               log('[Audio] Auto-play blocked, user interaction required:', e.message);
-              console.log('[Stream DEBUG] Audio play() failed:', e.message);
+              console.debug('[Stream DEBUG] Audio play() failed:', e.message);
             });
           } else {
-            console.log('[Stream DEBUG] Audio NOT setup - audioEl:', !!audioEl, 'audioUrl:', audioUrl);
+            console.debug('[Stream DEBUG] Audio NOT setup - audioEl:', !!audioEl, 'audioUrl:', audioUrl);
           }
         }
 
@@ -5327,14 +5317,14 @@ const nonce = Astro.locals.nonce || '';
           const liveAudioEl = document.getElementById('audioElement');
           if (liveAudioEl) {
             liveAudioEl.muted = false;
-            console.log('[Stream] Unmuted live audioElement for DJ monitoring');
+            console.debug('[Stream] Unmuted live audioElement for DJ monitoring');
           }
           // Also try to update the toggle UI when it's ready
           setTimeout(() => {
             if (typeof activeAudioSource !== 'undefined' && typeof updateAudioSourceUI === 'function') {
               activeAudioSource = 'live';
               updateAudioSourceUI();
-              console.log('[Stream] Switched audio toggle to LIVE for monitoring');
+              console.debug('[Stream] Switched audio toggle to LIVE for monitoring');
             }
           }, 500);
 
@@ -5343,7 +5333,7 @@ const nonce = Astro.locals.nonce || '';
           if (currentStream.isRelay && currentStream.audioStreamUrl) {
             const relayAudio = document.getElementById('relayAudio');
             if (relayAudio && relayAudio.paused) {
-              console.log('[Stream] Restarting relay audio preview for own live stream');
+              console.debug('[Stream] Restarting relay audio preview for own live stream');
 
               // Set selectedRelaySource from the current stream's relay info
               // This ensures the relay preview shows the correct station
@@ -5355,16 +5345,16 @@ const nonce = Astro.locals.nonce || '';
                   nowPlaying: currentStream.title || '',
                   listeners: 0
                 };
-                console.log('[Stream] Set selectedRelaySource from live stream:', selectedRelaySource.name);
+                console.debug('[Stream] Set selectedRelaySource from live stream:', selectedRelaySource.name);
               }
 
               // Switch to relay mode - this handles all UI, tabs, and indicators
               setPreviewSource('relay');
-              console.log('[Stream] Switched to relay mode');
+              console.debug('[Stream] Switched to relay mode');
 
               relayAudio.src = currentStream.audioStreamUrl;
               relayAudio.play().then(() => {
-                console.log('[Stream] Relay audio restarted successfully');
+                console.debug('[Stream] Relay audio restarted successfully');
                 // Set up icecast analysers if not already done
                 if (!icecastAudioContext) {
                   setupIcecastAnalysers(relayAudio);
@@ -5376,7 +5366,7 @@ const nonce = Astro.locals.nonce || '';
                   relayAudio.volume = 0;
                 }
                 // Start LED meter animations now that analysers are set up
-                console.log('[Stream] Starting LED meters for relay reconnect');
+                console.debug('[Stream] Starting LED meters for relay reconnect');
                 // Start left LED strip (preview meters)
                 if (window.startPreviewMeterAnimation) {
                   window.startPreviewMeterAnimation();
@@ -5418,9 +5408,9 @@ const nonce = Astro.locals.nonce || '';
           const hasAnalysers = (icecastAnalyserL && icecastAnalyserR) || (liveAnalyserL && liveAnalyserR);
           if (hasAnalysers) {
             animateLiveMeters();
-            console.log('[Stream] Started live LED meters (analysers ready)');
+            console.debug('[Stream] Started live LED meters (analysers ready)');
           } else {
-            console.log('[Stream] Deferred live LED meters (waiting for analysers)');
+            console.debug('[Stream] Deferred live LED meters (waiting for analysers)');
           }
         }
         // Expand video player to use the extra space
@@ -5438,8 +5428,8 @@ const nonce = Astro.locals.nonce || '';
         // Update stream info panel with live data
         updateStreamInfoPanel(true, currentStream);
       } else {
-        console.log('[Stream DEBUG] loadStreamStatus returned NO STREAM - hiding player');
-        console.log('[Stream DEBUG] API result:', result);
+        console.debug('[Stream DEBUG] loadStreamStatus returned NO STREAM - hiding player');
+        console.debug('[Stream DEBUG] API result:', result);
         currentStream = null;
         streamStartTime = null;
         streamEndTime = null;
@@ -5516,7 +5506,7 @@ const nonce = Astro.locals.nonce || '';
 
   // Expose function to reset userIsStreaming flag (called by Pusher when user's stream ends)
   window.resetUserIsStreaming = function() {
-    console.log('[DJLobby] Resetting userIsStreaming flag');
+    console.debug('[DJLobby] Resetting userIsStreaming flag');
     userIsStreaming = false;
   };
 
@@ -5527,7 +5517,7 @@ const nonce = Astro.locals.nonce || '';
   window.restoreIcecastGain = function() {
     if (icecastGainNode) {
       icecastGainNode.gain.value = 1;
-      console.log('[DJLobby] Restored GainNode to 1');
+      console.debug('[DJLobby] Restored GainNode to 1');
     }
   };
 
@@ -5768,7 +5758,7 @@ const nonce = Astro.locals.nonce || '';
       // Skip fade if current user is the streaming DJ (they can see their own stream regardless of schedule)
       // Also skip if the stream is a relay (relay streams continue until manually ended)
       if (currentStream && (currentStream.djId === currentUser?.uid || currentStream.isRelay)) {
-        console.log('[Stream DEBUG] Skipping fade - own stream or relay, djId:', currentStream.djId, 'isRelay:', currentStream.isRelay);
+        console.debug('[Stream DEBUG] Skipping fade - own stream or relay, djId:', currentStream.djId, 'isRelay:', currentStream.isRelay);
         return;
       }
       // Trigger fade out when time is up (only if DJ is actually changing)
@@ -5817,7 +5807,7 @@ const nonce = Astro.locals.nonce || '';
   // Fade out video and audio gradually
   let isFadingOut = false;
   function startGradualFadeOut(progress) {
-    console.log('[Stream DEBUG] startGradualFadeOut called! progress:', progress);
+    console.debug('[Stream DEBUG] startGradualFadeOut called! progress:', progress);
     const videoEl = document.getElementById('hlsVideo');
     const audioEl = document.getElementById('audioElement');
     const playerWrapper = document.querySelector('.preview-player');
@@ -5840,8 +5830,8 @@ const nonce = Astro.locals.nonce || '';
 
   // Trigger full fade out
   function triggerStreamFadeOut() {
-    console.log('[Stream DEBUG] triggerStreamFadeOut called! Stack:', new Error().stack?.split('\n').slice(0, 5));
-    console.log('[Stream DEBUG] streamEndTime:', streamEndTime, 'now:', new Date());
+    console.debug('[Stream DEBUG] triggerStreamFadeOut called! Stack:', new Error().stack?.split('\n').slice(0, 5));
+    console.debug('[Stream DEBUG] streamEndTime:', streamEndTime, 'now:', new Date());
     if (isFadingOut) return;
     isFadingOut = true;
 
@@ -6385,7 +6375,7 @@ const nonce = Astro.locals.nonce || '';
   }
   
   function openDmModal() {
-    console.log('[DM] openDmModal called');
+    console.debug('[DM] openDmModal called');
     try {
       const modal = document.getElementById('dmModal');
       const selectView = document.getElementById('dmSelectView');
@@ -6396,22 +6386,22 @@ const nonce = Astro.locals.nonce || '';
         return;
       }
 
-      console.log('[DM] Modal found, removing hidden class');
+      console.debug('[DM] Modal found, removing hidden class');
       modal.classList.remove('hidden');
       selectView?.classList.remove('hidden');
       chatView?.classList.add('hidden');
       populateDmDjList();
-      console.log('[DM] Modal opened successfully');
+      console.debug('[DM] Modal opened successfully');
     } catch (e) {
       console.error('[DM] Error opening modal:', e);
     }
   }
   // Attach DM button click handler
   document.getElementById('openDmBtn')?.addEventListener('click', () => {
-    console.log('[DM] Button clicked');
+    console.debug('[DM] Button clicked');
     openDmModal();
   });
-  console.log('[DM] openDmModal listener attached');
+  console.debug('[DM] openDmModal listener attached');
   
   function closeDmModal() {
     document.getElementById('dmModal')?.classList.add('hidden');
@@ -6798,45 +6788,45 @@ const nonce = Astro.locals.nonce || '';
     // Use GainNode to silence relay audio without breaking Web Audio API analyser
     // Setting element.volume=0 can break analyser on some browsers
     const relayAudio = document.getElementById('relayAudio');
-    console.log('[GoLive] Relay audio element:', relayAudio, 'paused:', relayAudio?.paused);
-    console.log('[GoLive] currentPreviewSource:', currentPreviewSource);
-    console.log('[GoLive] icecastAudioContext:', icecastAudioContext?.state);
-    console.log('[GoLive] icecastAnalyserL:', !!icecastAnalyserL, 'icecastAnalyserR:', !!icecastAnalyserR);
-    console.log('[GoLive] icecastGainNode:', !!icecastGainNode);
+    console.debug('[GoLive] Relay audio element:', relayAudio, 'paused:', relayAudio?.paused);
+    console.debug('[GoLive] currentPreviewSource:', currentPreviewSource);
+    console.debug('[GoLive] icecastAudioContext:', icecastAudioContext?.state);
+    console.debug('[GoLive] icecastAnalyserL:', !!icecastAnalyserL, 'icecastAnalyserR:', !!icecastAnalyserR);
+    console.debug('[GoLive] icecastGainNode:', !!icecastGainNode);
 
     if (relayAudio && !relayAudio.paused) {
       // Use GainNode to mute - keeps audio flowing through analyser
       if (icecastGainNode) {
         icecastGainNode.gain.value = 0;
-        console.log('[GoLive] Set GainNode to 0 (audio still flows to analyser)');
+        console.debug('[GoLive] Set GainNode to 0 (audio still flows to analyser)');
       } else {
         // Fallback to volume if GainNode not available
         relayAudio.volume = 0;
-        console.log('[GoLive] Fallback: Set relay audio volume to 0');
+        console.debug('[GoLive] Fallback: Set relay audio volume to 0');
       }
 
       // Resume audio context if suspended (required for meters to work)
       if (icecastAudioContext && icecastAudioContext.state === 'suspended') {
         await icecastAudioContext.resume();
-        console.log('[GoLive] Resumed icecast audio context, new state:', icecastAudioContext.state);
+        console.debug('[GoLive] Resumed icecast audio context, new state:', icecastAudioContext.state);
       }
 
       // Ensure meters are running for relay mode
       if (icecastAnalyserL && icecastAnalyserR) {
-        console.log('[GoLive] Analysers available, liveMeterAnimationId:', liveMeterAnimationId, 'broadcastMeterAnimationId:', broadcastMeterAnimationId);
+        console.debug('[GoLive] Analysers available, liveMeterAnimationId:', liveMeterAnimationId, 'broadcastMeterAnimationId:', broadcastMeterAnimationId);
         if (!liveMeterAnimationId && typeof animateLiveMeters === 'function') {
           animateLiveMeters();
-          console.log('[GoLive] Started live meters for relay');
+          console.debug('[GoLive] Started live meters for relay');
         }
         if (!broadcastMeterAnimationId) {
           initBroadcastMeters();
-          console.log('[GoLive] Started broadcast meters for relay');
+          console.debug('[GoLive] Started broadcast meters for relay');
         }
       } else {
         console.warn('[GoLive] Icecast analysers not available');
       }
     } else {
-      console.log('[GoLive] Relay audio not playing or not found');
+      console.debug('[GoLive] Relay audio not playing or not found');
     }
 
     // Get title and genre from inline fields
@@ -6847,7 +6837,7 @@ const nonce = Astro.locals.nonce || '';
     // Use the configured playback URL for relay (HLS stream from MediaMTX)
     const userRelayUrl = isRelayMode && selectedRelaySource ? (selectedRelaySource.playbackUrl || `https://stream.freshwax.co.uk/live/freshwax-main/index.m3u8`) : null;
     const relaySourceName = selectedRelaySource?.name || 'External Source';
-    console.log('[GoLive] Relay mode:', isRelayMode, 'URL:', userRelayUrl);
+    console.debug('[GoLive] Relay mode:', isRelayMode, 'URL:', userRelayUrl);
 
     // For relay mode, use now playing as title; for direct mode, use input field
     if (isRelayMode && selectedRelaySource?.nowPlaying) {
@@ -7557,7 +7547,7 @@ const nonce = Astro.locals.nonce || '';
           liveKWeightedAnalyserR = kWeightedAnalyserR;
         }
 
-        console.log(`[${prefix}] Audio meter with K-weighting and limiter initialized`);
+        console.debug(`[${prefix}] Audio meter with K-weighting and limiter initialized`);
         return { audioContext, analyserL, analyserR, kWeightedAnalyserL, kWeightedAnalyserR };
       } catch (e) {
         console.error(`[${prefix}] Audio meter setup error:`, e);
@@ -7635,7 +7625,7 @@ const nonce = Astro.locals.nonce || '';
     window.startPreviewMeterAnimation = function() {
       if (!obsMeterAnimationId) {
         animateObsMeters();
-        console.log('[Audio] Preview LED meter animation started');
+        console.debug('[Audio] Preview LED meter animation started');
       }
     };
 
@@ -7646,7 +7636,7 @@ const nonce = Astro.locals.nonce || '';
         obsMeterAnimationId = null;
       }
       animateObsMeters();
-      console.log('[Audio] Preview LED meters force-started');
+      console.debug('[Audio] Preview LED meters force-started');
     };
 
     // Force start live meters (bypasses animation ID check for relay mode)
@@ -7656,7 +7646,7 @@ const nonce = Astro.locals.nonce || '';
         liveMeterAnimationId = null;
       }
       animateLiveMeters();
-      console.log('[Audio] Live LED meters force-started');
+      console.debug('[Audio] Live LED meters force-started');
     };
 
     function animateObsMeters() {
@@ -7708,7 +7698,7 @@ const nonce = Astro.locals.nonce || '';
             obsAudioContext = result.audioContext;
             obsAnalyserL = result.analyserL;
             obsAnalyserR = result.analyserR;
-            console.log('[Audio] OBS analysers initialized');
+            console.debug('[Audio] OBS analysers initialized');
           }
         }
         if (obsAudioContext?.state === 'suspended') {
@@ -7740,7 +7730,7 @@ const nonce = Astro.locals.nonce || '';
             liveAudioContext = result.audioContext;
             liveAnalyserL = result.analyserL;
             liveAnalyserR = result.analyserR;
-            console.log('[Audio] Live analysers initialized');
+            console.debug('[Audio] Live analysers initialized');
           }
         }
         if (liveAudioContext?.state === 'suspended') {
@@ -7774,7 +7764,7 @@ const nonce = Astro.locals.nonce || '';
             liveAudioContext = result.audioContext;
             liveAnalyserL = result.analyserL;
             liveAnalyserR = result.analyserR;
-            console.log('[Audio] Live audio analysers initialized from audioElement');
+            console.debug('[Audio] Live audio analysers initialized from audioElement');
           }
         }
         if (liveAudioContext?.state === 'suspended') {
@@ -7782,7 +7772,7 @@ const nonce = Astro.locals.nonce || '';
         }
         if (!liveMeterAnimationId) {
           animateLiveMeters();
-          console.log('[Audio] Started live meters from audioElement play');
+          console.debug('[Audio] Started live meters from audioElement play');
         }
       });
       audioEl.addEventListener('pause', () => {
@@ -7803,28 +7793,28 @@ const nonce = Astro.locals.nonce || '';
     setTimeout(() => {
       const audioEl = document.getElementById('audioElement');
       if (audioEl && !audioEl.paused && !liveAudioContext) {
-        console.log('[Audio] audioElement already playing, setting up live analysers');
+        console.debug('[Audio] audioElement already playing, setting up live analysers');
         const result = setupAudioMeter(audioEl, 'LiveAudio');
         if (result) {
           liveAudioContext = result.audioContext;
           liveAnalyserL = result.analyserL;
           liveAnalyserR = result.analyserR;
-          console.log('[Audio] Live audio analysers initialized from delayed check');
+          console.debug('[Audio] Live audio analysers initialized from delayed check');
         }
         if (!liveMeterAnimationId) {
           animateLiveMeters();
-          console.log('[Audio] Started live meters from delayed check');
+          console.debug('[Audio] Started live meters from delayed check');
         }
       }
 
       // Also check relayAudio for icecast analysers
       const relayAudio = document.getElementById('relayAudio');
       if (relayAudio && !relayAudio.paused && !icecastAudioContext) {
-        console.log('[Audio] relayAudio already playing, setting up icecast analysers');
+        console.debug('[Audio] relayAudio already playing, setting up icecast analysers');
         setupIcecastAnalysers(relayAudio);
         if (!obsMeterAnimationId) {
           animateObsMeters();
-          console.log('[Audio] Started preview meters from delayed check');
+          console.debug('[Audio] Started preview meters from delayed check');
         }
       }
     }, 1000); // Wait 1 second for any autoplay to complete
@@ -7859,11 +7849,11 @@ const nonce = Astro.locals.nonce || '';
         // CRITICAL: Relay audio goes through icecastGainNode, not HTML element muted
         if (icecastGainNode) {
           icecastGainNode.gain.value = 1;
-          console.log('[Audio Toggle] Set icecastGainNode gain to 1 (unmuted)');
+          console.debug('[Audio Toggle] Set icecastGainNode gain to 1 (unmuted)');
         }
         if (liveVid) liveVid.muted = true;
         if (liveAudio) liveAudio.muted = true;
-        console.log('[Audio Toggle] Switched to PREVIEW - relayAudio muted:', relayAudio?.muted, 'liveAudio muted:', liveAudio?.muted);
+        console.debug('[Audio Toggle] Switched to PREVIEW - relayAudio muted:', relayAudio?.muted, 'liveAudio muted:', liveAudio?.muted);
       } else {
         // Live active
         leftArrow?.classList.remove('active');
@@ -7876,11 +7866,11 @@ const nonce = Astro.locals.nonce || '';
         // CRITICAL: Relay audio goes through icecastGainNode, not HTML element muted
         if (icecastGainNode) {
           icecastGainNode.gain.value = 0;
-          console.log('[Audio Toggle] Set icecastGainNode gain to 0 (muted)');
+          console.debug('[Audio Toggle] Set icecastGainNode gain to 0 (muted)');
         }
         if (liveVid) liveVid.muted = false;
         if (liveAudio) liveAudio.muted = false;
-        console.log('[Audio Toggle] Switched to LIVE - relayAudio muted:', relayAudio?.muted, 'liveAudio muted:', liveAudio?.muted);
+        console.debug('[Audio Toggle] Switched to LIVE - relayAudio muted:', relayAudio?.muted, 'liveAudio muted:', liveAudio?.muted);
       }
     }
 
@@ -7904,28 +7894,28 @@ const nonce = Astro.locals.nonce || '';
 
       // Resume audio contexts if suspended (browser policy)
       if (icecastAudioContext?.state === 'suspended') {
-        icecastAudioContext.resume().then(() => console.log('[Audio Toggle] Resumed icecast context'));
+        icecastAudioContext.resume().catch(() => {});
       }
       if (liveAudioContext?.state === 'suspended') {
-        liveAudioContext.resume().then(() => console.log('[Audio Toggle] Resumed live context'));
+        liveAudioContext.resume().catch(() => {});
       }
 
       // For relay/BUTT preview mode, ensure relay audio is playing and meters running
       if ((currentPreviewSource === 'relay' || currentPreviewSource === 'butt') && activeAudioSource === 'preview') {
         const relayAudio = document.getElementById('relayAudio');
         if (relayAudio && relayAudio.paused && relayAudio.src) {
-          console.log('[Audio Toggle] Starting relay audio playback');
-          relayAudio.play().catch(e => console.log('[Audio Toggle] Relay play failed:', e.message));
+          console.debug('[Audio Toggle] Starting relay audio playback');
+          relayAudio.play().catch(() => {});
         }
         // Set up icecast analysers if not already done (handles race conditions)
         if (relayAudio && !relayAudio.paused && !icecastAudioContext) {
-          console.log('[Audio Toggle] Setting up icecast analysers for relay audio');
+          console.debug('[Audio Toggle] Setting up icecast analysers for relay audio');
           setupIcecastAnalysers(relayAudio);
         }
         // Start preview LED strip animation (left side)
         if (!obsMeterAnimationId && typeof animateObsMeters === 'function') {
           animateObsMeters();
-          console.log('[Audio Toggle] Started preview LED meters');
+          console.debug('[Audio Toggle] Started preview LED meters');
         }
         // Restart broadcast meters if not running
         if (!broadcastMeterAnimationId) {
@@ -7937,12 +7927,12 @@ const nonce = Astro.locals.nonce || '';
       if ((currentPreviewSource === 'butt' || currentPreviewSource === 'relay') && activeAudioSource === 'live') {
         const liveAudio = document.getElementById('audioElement');
         if (liveAudio && liveAudio.paused && liveAudio.src) {
-          console.log('[Audio Toggle] Starting live audio playback');
-          liveAudio.play().catch(e => console.log('[Audio Toggle] Live play failed:', e.message));
+          console.debug('[Audio Toggle] Starting live audio playback');
+          liveAudio.play().catch(() => {});
         }
         // Set up live analysers if not already done (handles race conditions)
         if (liveAudio && !liveAudio.paused && !liveAudioContext) {
-          console.log('[Audio Toggle] Setting up live analysers for audioElement');
+          console.debug('[Audio Toggle] Setting up live analysers for audioElement');
           const result = setupAudioMeter(liveAudio, 'LiveAudio');
           if (result) {
             liveAudioContext = result.audioContext;
@@ -7953,7 +7943,7 @@ const nonce = Astro.locals.nonce || '';
         // Start live LED strip animation (right side)
         if (!liveMeterAnimationId) {
           animateLiveMeters();
-          console.log('[Audio Toggle] Started live LED meters');
+          console.debug('[Audio Toggle] Started live LED meters');
         }
         // Keep preview LED strip running too (shows at 50% opacity)
         if (!obsMeterAnimationId && typeof animateObsMeters === 'function') {
@@ -7967,7 +7957,7 @@ const nonce = Astro.locals.nonce || '';
       // Diagnostic logging
       const relayEl = document.getElementById('relayAudio');
       const liveEl = document.getElementById('audioElement');
-      console.log('[Audio Toggle] Complete state:', {
+      console.debug('[Audio Toggle] Complete state:', {
         mode: currentPreviewSource,
         source: activeAudioSource,
         icecastCtx: icecastAudioContext?.state,
@@ -7991,7 +7981,7 @@ const nonce = Astro.locals.nonce || '';
     // This ensures meters are ready to respond as soon as audio becomes available
     if (!obsMeterAnimationId) {
       animateObsMeters();
-      console.log('[Audio] Preview LED meters auto-started on page load');
+      console.debug('[Audio] Preview LED meters auto-started on page load');
     }
     // =============== END AUDIO SOURCE TOGGLE ===============
 
@@ -8120,7 +8110,7 @@ const nonce = Astro.locals.nonce || '';
           countdownEl.classList.add('slot-now');
         }
 
-        console.log('[DJ Lobby] Spawned key:', mySlot.id);
+        console.debug('[DJ Lobby] Spawned key:', mySlot.id);
 
       } catch (error) {
         console.error('[DJ Lobby] Spawn key error:', error);
@@ -8155,7 +8145,7 @@ const nonce = Astro.locals.nonce || '';
 
         // AUTO-BOOK: If no slot booked AND no DJ is currently live AND not relay mode, auto-book a slot
         if (!mySlot && !currentStream && !isRelayModeNow) {
-          console.log('[DJ Lobby] No slot booked and no DJ live - auto-booking slot');
+          console.debug('[DJ Lobby] No slot booked and no DJ live - auto-booking slot');
           btnText.textContent = '⏳ Booking slot...';
 
           const token = await currentUser.getIdToken();
@@ -8192,7 +8182,7 @@ const nonce = Astro.locals.nonce || '';
           mySlot = bookResult.slot;
           currentStreamKey = mySlot.streamKey;
           updateButtPassword(mySlot.streamKey); // Update BUTT password field
-          console.log('[DJ Lobby] Auto-booked slot:', mySlot.id);
+          console.debug('[DJ Lobby] Auto-booked slot:', mySlot.id);
 
           // Update the stream key display
           const streamKeyEl = document.getElementById('myStreamKey');
@@ -8493,7 +8483,7 @@ const nonce = Astro.locals.nonce || '';
   async function initLivestreamChat(streamId) {
     if (!streamId) return;
 
-    console.log('[LivestreamChat] Initializing chat for stream:', streamId);
+    console.debug('[LivestreamChat] Initializing chat for stream:', streamId);
     window.livestreamChatInitialized = true;
 
     // Load initial messages
@@ -8517,18 +8507,18 @@ const nonce = Astro.locals.nonce || '';
       }
 
       const channelName = `stream-${streamId}`;
-      console.log('[LivestreamChat] Subscribing to channel:', channelName);
+      console.debug('[LivestreamChat] Subscribing to channel:', channelName);
 
       livestreamChatChannel = window.livestreamPusher.subscribe(channelName);
 
       livestreamChatChannel.bind('new-message', (data) => {
-        console.log('[LivestreamChat] New message:', data);
+        console.debug('[LivestreamChat] New message:', data);
         appendLivestreamMessage(data);
       });
 
       // Listen for viewer count updates via Pusher (saves polling)
       livestreamChatChannel.bind('viewer-update', (data) => {
-        console.log('[LivestreamChat] Viewer update:', data);
+        console.debug('[LivestreamChat] Viewer update:', data);
         const viewerCount = data.count ?? data.currentViewers ?? data.totalViews ?? 0;
         updateCenterStats({ viewers: viewerCount });
         // Also update the chat header watching count
@@ -8756,7 +8746,7 @@ const nonce = Astro.locals.nonce || '';
     window.livestreamChatInitialized = false;
     window.currentStreamId = 'playlist-global';
     initLivestreamChat('playlist-global');
-    console.log('[LivestreamChat] Switched to playlist-global for DJ waitlist monitoring');
+    console.debug('[LivestreamChat] Switched to playlist-global for DJ waitlist monitoring');
   }
 
   // =============== INITIALIZATION MODAL ===============
@@ -8863,7 +8853,7 @@ const nonce = Astro.locals.nonce || '';
       if (response.ok) {
         const result = await response.json();
         isRelayLive = result.isLive || false;
-        console.log('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
+        console.debug('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
       }
     } catch (err) {
       console.warn('[Relay] Live check failed:', err.message);

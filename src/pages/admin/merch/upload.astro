@@ -598,7 +598,6 @@ export const prerender = false;
 
         // Start with zoom that makes the largest dimension fit within the container with padding
         const initialZoom = Math.floor((containerSize / maxDim) * 100 * 0.70); // 70% to show full image with margin
-        console.log('Upload - Container:', containerSize, 'Natural:', editorState.imgNaturalWidth, 'x', editorState.imgNaturalHeight, 'MaxDim:', maxDim, 'Zoom:', initialZoom);
         editorState.zoom = Math.max(10, Math.min(300, initialZoom));
         zoomSlider.value = editorState.zoom;
         document.getElementById('zoomValue').textContent = editorState.zoom + '%';
@@ -733,8 +732,6 @@ export const prerender = false;
       const destW = displayWidth * outputScale;
       const destH = displayHeight * outputScale;
 
-      console.log('Save - destX:', destX, 'destY:', destY, 'destW:', destW, 'destH:', destH);
-
       // Draw the full source image at the calculated position/size
       ctx.drawImage(
         cropImage,
@@ -774,8 +771,6 @@ export const prerender = false;
       const file = editorState.originalFile;
       const dataUrl = editorState.originalDataUrl;
 
-      console.log('useOriginalImage called', { file: !!file, dataUrl: !!dataUrl, imageIndex: editorState.imageIndex });
-
       if (!file || !dataUrl) {
         alert('Error: No original file available');
         closeImageEditor();
@@ -791,13 +786,11 @@ export const prerender = false;
           colorHex: null,
           keepOriginal: true
         });
-        console.log('Added new image with keepOriginal=true, total images:', uploadedImages.length);
       } else {
         // Editing existing - restore original and mark as keepOriginal
         uploadedImages[editorState.imageIndex].file = file;
         uploadedImages[editorState.imageIndex].dataUrl = dataUrl;
         uploadedImages[editorState.imageIndex].keepOriginal = true;
-        console.log('Updated existing image at index', editorState.imageIndex);
       }
 
       renderImagePreviews();

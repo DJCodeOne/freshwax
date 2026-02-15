@@ -2251,7 +2251,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
         filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
         limit: 1
       });
-      order = orders[0];
+      order = orders.length > 0 ? orders[0] : null;
     }
 
     // Find related transfers by transfer_group (orderId)
