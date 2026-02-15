@@ -4,7 +4,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { initFirebaseEnv } from './lib/firebase-rest';
 import { initKVCache } from './lib/kv-cache';
-import { initRateLimitKV } from './lib/rate-limit';
+import { initRateLimitKV, checkRateLimit, getClientId, rateLimitResponse } from './lib/rate-limit';
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
@@ -39,6 +39,96 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     };
   }
   return {};
+}
+
+// --- API Rate Limiting Tiers ---
+// Endpoints to SKIP rate limiting entirely (they have their own verification)
+const RATE_LIMIT_SKIP = new Set([
+  '/api/stripe/webhook',
+  '/api/stripe/connect/webhook',
+  '/api/livestream/red5-webhook',
+  '/api/icecast-auth',
+  '/api/cron/cleanup-reservations',
+  '/api/cron/retry-payouts',
+  '/api/cron/send-restock-notifications',
+  '/api/cron/stock-alerts',
+  '/api/health/index',
+  '/api/health/payments',
+]);
+
+// Tight limit: search & external proxies (30 req/min)
+const RATE_LIMIT_TIGHT_PREFIXES = [
+  '/api/search-releases',
+  '/api/giphy/',
+  '/api/youtube/',
+  '/api/postcode-lookup',
+];
+
+// Download limit (20 req/min, 1-min block)
+const RATE_LIMIT_DOWNLOAD_PREFIXES = [
+  '/api/download',      // matches /api/download and /api/download-mix
+  '/api/presign-download',
+];
+
+// Metrics/tracking (60 req/min — prevent inflation)
+const RATE_LIMIT_METRICS_PREFIXES = [
+  '/api/track-mix-play',
+  '/api/track-mix-download',
+  '/api/track-mix-unlike',
+  '/api/track-mix-like',
+];
+
+function apiRateLimit(pathname: string, request: Request): Response | null {
+  // Skip webhooks, cron, health checks
+  if (RATE_LIMIT_SKIP.has(pathname)) return null;
+
+  const clientId = getClientId(request);
+
+  // Tight: search & proxy endpoints
+  for (const prefix of RATE_LIMIT_TIGHT_PREFIXES) {
+    if (pathname.startsWith(prefix)) {
+      const result = checkRateLimit(`api-tight:${clientId}:${prefix}`, {
+        maxRequests: 30,
+        windowMs: 60_000,
+      });
+      return result.allowed ? null : rateLimitResponse(result.retryAfter!);
+    }
+  }
+
+  // Downloads
+  for (const prefix of RATE_LIMIT_DOWNLOAD_PREFIXES) {
+    if (pathname.startsWith(prefix)) {
+      const result = checkRateLimit(`api-dl:${clientId}`, {
+        maxRequests: 20,
+        windowMs: 60_000,
+        blockDurationMs: 60_000,
+      });
+      return result.allowed ? null : rateLimitResponse(result.retryAfter!);
+    }
+  }
+
+  // Metrics tracking
+  for (const prefix of RATE_LIMIT_METRICS_PREFIXES) {
+    if (pathname.startsWith(prefix)) {
+      const result = checkRateLimit(`api-metrics:${clientId}`, {
+        maxRequests: 60,
+        windowMs: 60_000,
+      });
+      return result.allowed ? null : rateLimitResponse(result.retryAfter!);
+    }
+  }
+
+  // Global catch-all: 120 req/min for reads, 60 req/min for writes
+  const isWrite = request.method !== 'GET' && request.method !== 'HEAD';
+  const globalKey = isWrite ? `api-w:${clientId}` : `api-r:${clientId}`;
+  const globalLimit = isWrite ? 60 : 120;
+
+  const result = checkRateLimit(globalKey, {
+    maxRequests: globalLimit,
+    windowMs: 60_000,
+  });
+
+  return result.allowed ? null : rateLimitResponse(result.retryAfter!);
 }
 
 // Security headers to apply to all responses (CSP is added dynamically per-request)
@@ -93,6 +183,12 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
 
   const isApiRoute = pathname.startsWith('/api/');
   const origin = request.headers.get('origin');
+
+  // --- API Rate Limiting (before any handler runs) ---
+  if (isApiRoute && request.method !== 'OPTIONS') {
+    const rlResult = apiRateLimit(pathname, request);
+    if (rlResult) return rlResult;
+  }
 
   // Handle CORS preflight for API routes
   if (isApiRoute && request.method === 'OPTIONS') {
