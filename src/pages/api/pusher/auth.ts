@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -48,10 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!appId || !key || !secret) {
       console.error('[Pusher Auth] Missing credentials');
-      return new Response(JSON.stringify({ error: 'Pusher not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notConfigured('Pusher');
     }
 
     // Parse the request body (Pusher sends form data)
@@ -60,18 +58,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const channelName = formData.get('channel_name') as string;
 
     if (!socketId || !channelName) {
-      return new Response(JSON.stringify({ error: 'Missing socket_id or channel_name' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing socket_id or channel_name');
     }
 
     // Only allow presence channels
     if (!channelName.startsWith('presence-')) {
-      return new Response(JSON.stringify({ error: 'Only presence channels supported' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Only presence channels supported');
     }
 
     // SECURITY: Use verified Firebase token for user identity when available
@@ -138,9 +130,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Pusher Auth] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ error: 'Auth failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Auth failed');
   }
 };

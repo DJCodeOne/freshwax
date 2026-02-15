@@ -197,6 +197,7 @@ describe('errorResponse', () => {
     const res = errorResponse('Something broke', 500);
     expect(res.status).toBe(500);
     const body = await res.json();
+    expect(body.success).toBe(false);
     expect(body.error).toBe('Something broke');
   });
 });

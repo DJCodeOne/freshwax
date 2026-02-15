@@ -50,34 +50,18 @@ if (partnerId) {
   try {
     partner = await getDocument('artists', partnerId);
     if (partner) {
-      // Query releases by user ID fields
+      // Query releases by user ID fields (parallel batch)
       const releaseMap = new Map<string, any>();
 
-      // Query by submitterId (primary - used for payouts)
-      const bySubmitterId = await queryCollection('releases', {
-        filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }]
-      });
-      bySubmitterId.forEach(r => releaseMap.set(r.id, r));
+      const releaseQueries = [
+        queryCollection('releases', { filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }] }),
+        queryCollection('releases', { filters: [{ field: 'uploadedBy', op: 'EQUAL', value: partnerId }] }),
+        queryCollection('releases', { filters: [{ field: 'userId', op: 'EQUAL', value: partnerId }] }),
+        ...(partner.email ? [queryCollection('releases', { filters: [{ field: 'submitterEmail', op: 'EQUAL', value: partner.email }] })] : [])
+      ];
 
-      // Query by uploadedBy (fallback)
-      const byUploadedBy = await queryCollection('releases', {
-        filters: [{ field: 'uploadedBy', op: 'EQUAL', value: partnerId }]
-      });
-      byUploadedBy.forEach(r => releaseMap.set(r.id, r));
-
-      // Query by userId (fallback)
-      const byUserId = await queryCollection('releases', {
-        filters: [{ field: 'userId', op: 'EQUAL', value: partnerId }]
-      });
-      byUserId.forEach(r => releaseMap.set(r.id, r));
-
-      // Query by submitterEmail (email-based matching)
-      if (partner.email) {
-        const byEmail = await queryCollection('releases', {
-          filters: [{ field: 'submitterEmail', op: 'EQUAL', value: partner.email }]
-        });
-        byEmail.forEach(r => releaseMap.set(r.id, r));
-      }
+      const releaseResults = await Promise.all(releaseQueries);
+      releaseResults.forEach(results => results.forEach((r: any) => releaseMap.set(r.id, r)));
 
       releases = Array.from(releaseMap.values());
       const releaseIds = releases.map(r => r.id);

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { addDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,10 +21,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { necessary, analytics, marketing, action } = body;
 
     if (typeof analytics !== 'boolean' || typeof marketing !== 'boolean') {
-      return new Response(JSON.stringify({ error: 'Invalid consent data' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid consent data');
     }
 
     await addDocument('consentLogs', {

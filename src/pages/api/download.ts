@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser, queryCollection } from '../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -21,20 +22,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   // SECURITY: Require authentication - downloads are for purchased content
   const { userId, error: authError } = await verifyRequestUser(request);
   if (authError || !userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: authError || 'Authentication required'
-    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized(authError || 'Authentication required');
   }
 
   const fileUrl = url.searchParams.get('url');
   const filename = url.searchParams.get('filename') || 'download';
-  
+
   if (!fileUrl) {
-    return new Response(JSON.stringify({ error: 'Missing url parameter' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing url parameter');
   }
   
   // Validate URL is from allowed domains
@@ -50,17 +45,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const parsedUrl = new URL(fileUrl);
     isAllowed = allowedDomains.some(domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain));
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'Invalid URL' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid URL');
   }
-  
+
   if (!isAllowed) {
-    return new Response(JSON.stringify({ error: 'Domain not allowed' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('Domain not allowed');
   }
 
   // SECURITY: Verify user has purchased content containing this URL
@@ -82,17 +71,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     );
 
     if (!hasPurchased) {
-      return new Response(JSON.stringify({ error: 'Purchase required' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Purchase required');
     }
   } catch (purchaseErr) {
     log.error('[download] Purchase verification error:', purchaseErr);
-    return new Response(JSON.stringify({ error: 'Could not verify purchase' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Could not verify purchase');
   }
 
   try {
@@ -102,13 +85,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     if (!response.ok) {
       log.error('[download] Fetch failed:', response.status);
-      return new Response(JSON.stringify({
-        error: 'Failed to fetch file',
-        status: response.status
-      }), {
-        status: response.status,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Failed to fetch file', response.status);
     }
 
     let contentType = response.headers.get('content-type') || 'application/octet-stream';
@@ -148,11 +125,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error) {
     log.error('[download] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Download failed',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Download failed');
   }
 };

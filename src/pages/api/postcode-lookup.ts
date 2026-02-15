@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -30,19 +31,13 @@ export const GET: APIRoute = async ({ request }) => {
   log.info('[postcode-lookup] Raw input:', rawPostcode, 'Cleaned:', postcode);
   
   if (!postcode) {
-    return new Response(JSON.stringify({ error: 'Postcode is required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Postcode is required');
   }
-  
+
   // Validate UK postcode format (basic validation)
   const postcodeRegex = /^[A-Z]{1,2}[0-9][0-9A-Z]?[0-9][A-Z]{2}$/;
   if (!postcodeRegex.test(postcode)) {
-    return new Response(JSON.stringify({ error: 'Invalid UK postcode format' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid UK postcode format');
   }
   
   try {
@@ -67,21 +62,15 @@ export const GET: APIRoute = async ({ request }) => {
     
     if (!response.ok) {
       if (response.status === 404) {
-        return new Response(JSON.stringify({ error: 'Postcode not found. Please check and try again.' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Postcode not found. Please check and try again.');
       }
       throw new Error(`Postcodes.io error: ${response.status}`);
     }
-    
+
     const data = await response.json();
-    
+
     if (data.status !== 200 || !data.result) {
-      return new Response(JSON.stringify({ error: 'Postcode not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Postcode not found');
     }
     
     const result = data.result;
@@ -137,15 +126,9 @@ export const GET: APIRoute = async ({ request }) => {
     console.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));
 
     if (error instanceof Error && error.name === 'AbortError') {
-      return new Response(JSON.stringify({ error: 'Request timed out. Please try again.' }), {
-        status: 504,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Request timed out. Please try again.', 504);
     }
-    
-    return new Response(JSON.stringify({ error: 'Failed to lookup postcode. Please try again.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+
+    return errorResponse('Failed to lookup postcode. Please try again.');
   }
 };

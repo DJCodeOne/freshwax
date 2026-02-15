@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -73,27 +74,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // SECURITY: Require authentication and verify userId matches
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   const url = new URL(request.url);
   const userId = url.searchParams.get('userId');
   const releaseId = url.searchParams.get('releaseId');
   const trackId = url.searchParams.get('trackId'); // Optional - for checking specific track
-  
+
   if (!userId || !releaseId) {
-    return new Response(JSON.stringify({ error: 'userId and releaseId are required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('userId and releaseId are required');
   }
 
   if (authUserId !== userId) {
-    return new Response(JSON.stringify({ error: 'Access denied' }), {
-      status: 403, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('Access denied');
   }
   
   try {
@@ -119,9 +113,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[check-ownership] Error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to check ownership' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Failed to check ownership');
   }
 };

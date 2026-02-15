@@ -100,13 +100,14 @@ export function successResponse<T extends Record<string, unknown>>(
 
 /**
  * Create an error response with standard format
+ * Returns { success: false, error: "message" }
  */
 export function errorResponse(
   message: string,
   status: number = 500,
   options?: ApiResponseOptions
 ): Response {
-  return jsonResponse({ error: message }, status, options);
+  return jsonResponse({ success: false as const, error: message }, status, options);
 }
 
 /**

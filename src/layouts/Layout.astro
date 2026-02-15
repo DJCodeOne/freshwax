@@ -164,15 +164,21 @@ const nonce = Astro.locals.nonce || '';
     <meta name="msapplication-TileColor" content="#8b5cf6" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
 
-    <!-- Preconnect for performance -->
+    <!-- Preconnect for performance (critical third-party origins) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cdn.freshwax.co.uk" crossorigin />
     <link rel="preconnect" href="https://firestore.googleapis.com" />
     <link rel="preconnect" href="https://js.pusher.com" crossorigin />
     <link rel="preconnect" href="https://ws-eu.pusher.com" crossorigin />
     <link rel="preconnect" href="https://sockjs-eu.pusher.com" crossorigin />
+    <!-- DNS prefetch for origins used on some pages -->
+    <link rel="dns-prefetch" href="https://cdn.freshwax.co.uk" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    <link rel="dns-prefetch" href="https://www.google.com" />
+    <link rel="dns-prefetch" href="https://www.gstatic.com" />
+    <link rel="dns-prefetch" href="https://api.giphy.com" />
 
     <!-- Font preload - discover the Google Fonts stylesheet early -->
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Bebas+Neue&display=swap" />
