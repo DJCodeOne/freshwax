@@ -56,9 +56,9 @@ async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPl
     }
     
     return { isLive: false, nowPlaying: '', listeners: undefined };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // AbortError means timeout - stream might still be there but slow
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       return { isLive: false, nowPlaying: '', listeners: undefined };
     }
 
@@ -203,8 +203,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
             lastChecked: new Date().toISOString()
           });
           
-        } catch (error: any) {
-          console.error(`Error checking ${source.name}:`, error.message);
+        } catch (error: unknown) {
+          console.error(`Error checking ${source.name}:`, error instanceof Error ? error.message : String(error));
         }
         
         return {
@@ -236,7 +236,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error checking relay sources:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,

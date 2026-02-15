@@ -426,7 +426,8 @@ const nonce = (Astro.locals as any).nonce || '';
       (function() {
         // Helper to read consent state
         function getConsent() {
-          var raw = localStorage.getItem('cookie-consent');
+          var raw = null;
+          try { raw = localStorage.getItem('cookie-consent'); } catch(e) {}
           if (!raw) return null;
           // Backward compat: old string values
           if (raw === 'accepted') return { necessary: true, analytics: true, marketing: true };
@@ -447,7 +448,7 @@ const nonce = (Astro.locals as any).nonce || '';
         // Helper to save and close
         function saveConsent(analytics, marketing, action) {
           var consent = { necessary: true, analytics: !!analytics, marketing: !!marketing, timestamp: new Date().toISOString() };
-          localStorage.setItem('cookie-consent', JSON.stringify(consent));
+          try { localStorage.setItem('cookie-consent', JSON.stringify(consent)); } catch(e) {}
           var el = document.getElementById('cookie-consent');
           if (el) el.remove();
           if (consent.analytics) {

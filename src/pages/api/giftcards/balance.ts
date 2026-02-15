@@ -154,8 +154,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (condError: any) {
-        if (attempt < MAX_RETRIES - 1 && condError?.message?.includes('condition')) {
+      } catch (condError: unknown) {
+        if (attempt < MAX_RETRIES - 1 && condError instanceof Error && condError.message.includes('condition')) {
           console.warn('[giftcards/balance] Concurrent modification, retrying...', attempt + 1);
           continue;
         }

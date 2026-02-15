@@ -336,8 +336,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error: any) {
-    console.error('[dj-lobby/presence] GET Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[dj-lobby/presence] GET Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to get online DJs'
@@ -483,8 +483,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-  } catch (error: any) {
-    console.error('[dj-lobby/presence] POST Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[dj-lobby/presence] POST Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update presence'

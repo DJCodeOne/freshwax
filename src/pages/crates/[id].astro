@@ -12,6 +12,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
 // Fetch listing data server-side for OG meta tags (social crawlers can't execute JS)
 let pageTitle = 'Vinyl Details - Crates';
+let pageBreadcrumbName = 'Vinyl Details';
 let pageDescription = 'Browse vinyl records for sale on Fresh Wax Crates. Jungle, drum & bass, and breakbeat vinyl from independent sellers.';
 let pageImage: string | undefined;
 let productMeta: any = undefined;
@@ -25,6 +26,7 @@ try {
     if (data.success && data.listing) {
       const l = data.listing;
       pageTitle = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'} - Crates`;
+      pageBreadcrumbName = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'}`;
       pageDescription = `${l.title || 'Vinyl'} by ${l.artist || 'Unknown Artist'}`;
       if (l.format) pageDescription += ` (${l.format})`;
       pageDescription += '. Available on Fresh Wax Crates.';
@@ -52,6 +54,10 @@ try {
   image={pageImage}
   type="product"
   product={productMeta}
+  breadcrumbs={[
+    { name: 'Crates', url: '/crates/' },
+    { name: pageBreadcrumbName, url: `/crates/${id}/` }
+  ]}
 >
   <Header />
 
@@ -1567,7 +1573,9 @@ try {
       };
 
       // Add to localStorage bag
-      let bag = JSON.parse(localStorage.getItem('freshwax_bag') || '[]');
+      let bagRaw = '[]';
+      try { bagRaw = localStorage.getItem('freshwax_bag') || bagRaw; } catch (e) {}
+      let bag = JSON.parse(bagRaw);
 
       // Check if already in bag
       const existingIndex = bag.findIndex(b => b.id === item.id && b.type === 'vinyl');
@@ -1581,7 +1589,7 @@ try {
       }
 
       bag.push(item);
-      localStorage.setItem('freshwax_bag', JSON.stringify(bag));
+      try { localStorage.setItem('freshwax_bag', JSON.stringify(bag)); } catch (e) {}
 
       // Update bag count in header if exists
       const bagCountEl = document.querySelector('.bag-count');

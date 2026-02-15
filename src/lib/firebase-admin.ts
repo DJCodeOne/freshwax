@@ -87,13 +87,13 @@ async function ensureInitializedAsync(): Promise<void> {
     _db = getFirestore();
 
     console.log('[firebase-admin] Successfully initialized');
-  } catch (error: any) {
-    _initError = error?.message || 'Unknown error';
+  } catch (error: unknown) {
+    _initError = error instanceof Error ? error.message : 'Unknown error';
     console.error('[firebase-admin] Failed to initialize:', {
-      message: error?.message,
-      code: error?.code,
-      name: error?.name,
-      stack: error?.stack?.substring(0, 500)
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as any)?.code,
+      name: error instanceof Error ? error.name : undefined,
+      stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined
     });
     _app = null;
     _db = null;

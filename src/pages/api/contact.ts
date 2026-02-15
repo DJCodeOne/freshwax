@@ -123,8 +123,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[Contact] Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[Contact] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to send message. Please try again.'

@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         status: 'ok',
         latency: Date.now() - stripeStart
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.checks.stripe = {
         status: 'error',
         error: 'Internal error'
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 'ok',
       latency: Date.now() - fbStart
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     result.checks.firebase = {
       status: 'error',
       error: 'Internal error'
@@ -123,7 +123,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (failedPayouts.length > 0) {
       issues.push(`${failedPayouts.length} payouts have failed multiple times`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Health Check] Error checking payouts:', error);
   }
 
@@ -142,7 +142,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (webhookStats.total >= 10 && result.checks.webhookHealth.successRate < 95) {
       issues.push(`Webhook success rate is ${result.checks.webhookHealth.successRate}%`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Health Check] Error checking webhook stats:', error);
   }
 

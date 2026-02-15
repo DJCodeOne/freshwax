@@ -124,12 +124,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     initServices(locals);
-  } catch (initError: any) {
-    console.error('[DEBUG] slots.ts initServices error:', initError?.message || initError);
+  } catch (initError: unknown) {
+    const initErrMsg = initError instanceof Error ? initError.message : String(initError);
+    console.error('[DEBUG] slots.ts initServices error:', initErrMsg);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to initialize services',
-      details: initError?.message || 'Unknown error'
+      details: initErrMsg
     }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 
@@ -1250,12 +1251,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           hlsUrl: newSlot.hlsUrl,
           message: 'You are now live!'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      } catch (createError: any) {
+      } catch (createError: unknown) {
         console.error('[go_live] Failed to create slot:', createError);
         return new Response(JSON.stringify({
           success: false,
           error: 'Failed to create live slot',
-          details: createError?.message || 'Unknown error'
+          details: createError instanceof Error ? createError.message : 'Unknown error'
         }), { status: 500, headers: { 'Content-Type': 'application/json' } });
       }
     }
@@ -1539,11 +1540,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       status: 200, headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[livestream/slots] DELETE Error:', error?.message || error);
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error('[livestream/slots] DELETE Error:', errMsg);
     return new Response(JSON.stringify({
       success: false,
-      error: error?.message || 'Failed to cancel slot'
+      error: errMsg || 'Failed to cancel slot'
     }), {
       status: 500, headers: { 'Content-Type': 'application/json' }
     });

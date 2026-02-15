@@ -197,8 +197,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               updatedAt: new Date().toISOString()
             });
           }
-        } catch (lockErr: any) {
-          if (lockErr.message?.includes('CONFLICT')) {
+        } catch (lockErr: unknown) {
+          if (lockErr instanceof Error && lockErr.message.includes('CONFLICT')) {
             console.log('[Retry Payouts] Skipping payout (already being processed by another run):', pending.id);
             results.skipped++;
             continue;
@@ -324,13 +324,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           transactionId
         });
 
-      } catch (transferError: any) {
-        console.error('[Retry Payouts] ✕ Failed:', pending.id, transferError.message);
+      } catch (transferError: unknown) {
+        const transferErrMsg = transferError instanceof Error ? transferError.message : String(transferError);
+        console.error('[Retry Payouts] ✕ Failed:', pending.id, transferErrMsg);
 
         // Update with failure reason
         await updateDocument('pendingPayouts', pending.id, {
           status: 'retry_pending',
-          failureReason: transferError.message,
+          failureReason: transferErrMsg,
           lastRetryFailedAt: new Date().toISOString(),
           retryCount: (pending.retryCount || 0) + 1,
           updatedAt: new Date().toISOString()

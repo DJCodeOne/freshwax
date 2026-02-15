@@ -120,8 +120,8 @@ export const POST: APIRoute = async ({ request }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-  } catch (error: any) {
-    console.error('[dj-lobby/chat-cleanup] Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[dj-lobby/chat-cleanup] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'

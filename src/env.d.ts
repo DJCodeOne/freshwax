@@ -128,7 +128,7 @@ interface CloudflareEnv {
   CACHE: KVNamespace;
   /** Alias used in some health-check code */
   KV: KVNamespace;
-  /** Alias used in some health-check code */
+  /** KV namespace for Astro session driver (wrangler.toml: binding = "SESSION") */
   SESSION: KVNamespace;
   /** R2 bucket binding (used in health checks) */
   R2: R2Bucket;

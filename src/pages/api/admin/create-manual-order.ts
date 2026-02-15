@@ -418,7 +418,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
             console.error('[admin] Auto-payout failed:', payoutResult.error);
           }
-        } catch (err: any) {
+        } catch (err: unknown) {
           payoutResults.push({
             artistId: payment.artistId,
             artistName: payment.artistName,
@@ -426,7 +426,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             status: 'error',
             error: 'Payout processing failed'
           });
-          console.error('[admin] Auto-payout error:', err.message);
+          console.error('[admin] Auto-payout error:', err instanceof Error ? err.message : String(err));
         }
       }
     }

@@ -310,7 +310,8 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
 
       // Check consent (supports both old string and new granular JSON format)
       function hasAnalyticsConsent() {
-        var raw = localStorage.getItem('cookie-consent');
+        var raw = null;
+        try { raw = localStorage.getItem('cookie-consent'); } catch(e) {}
         if (!raw) return false;
         if (raw === 'accepted') return true;
         if (raw === 'rejected') return false;

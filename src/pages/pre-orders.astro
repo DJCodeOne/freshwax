@@ -785,7 +785,8 @@ export const prerender = false;
         e.preventDefault();
         
         // Check for customer login
-        var customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id');
+        var customerId = null;
+        try { customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id'); } catch (e) {}
         if (!customerId) {
           window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
           return;
@@ -799,7 +800,9 @@ export const prerender = false;
         var releaseDate = btn.getAttribute('data-release-date');
         
         // Get cart
-        var cart = JSON.parse(localStorage.getItem('freshwax_cart') || '{"items":[]}');
+        var cartRaw = '{"items":[]}';
+        try { cartRaw = localStorage.getItem('freshwax_cart') || cartRaw; } catch (e) {}
+        var cart = JSON.parse(cartRaw);
         var items = cart.items || [];
         
         // Check if already in cart
@@ -836,7 +839,7 @@ export const prerender = false;
         
         // Save cart
         cart.items = items;
-        localStorage.setItem('freshwax_cart', JSON.stringify(cart));
+        try { localStorage.setItem('freshwax_cart', JSON.stringify(cart)); } catch (e) {}
         
         // Update cart count in header
         var cartCountEl = document.querySelector('.cart-count');

@@ -125,9 +125,20 @@ const otherGenres = sortedGenres.filter(g => !coreGenres.includes(g.genre));
 
 // Preload first mix artwork for faster LCP
 const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
+
+// Build ItemList structured data for SEO
+const mixesItemList = {
+  name: 'DJ Mixes - Jungle & DnB Sets',
+  items: mixes.map((mix, i) => ({
+    name: `${mix.title || 'Untitled Mix'} - ${mix.dj_name || mix.djName || 'Unknown DJ'}`,
+    url: `/dj-mix/${mix.id}/`,
+    image: mix.artwork_url || mix.artworkUrl || undefined,
+    position: i + 1,
+  }))
+};
 ---
 
-<Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax. Jungle, drum & bass, and breakbeat sets from UK underground DJs.">
+<Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax. Jungle, drum & bass, and breakbeat sets from UK underground DJs." itemList={mixesItemList}>
   {firstMixArtwork && <link rel="preload" href={firstMixArtwork} as="image" slot="head" />}
   <Header />
 
@@ -1247,32 +1258,35 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
       btn.setAttribute('data-like-init', 'true');
       
       var mixId = btn.getAttribute('data-mix-id');
-      var likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+      var likedMixes = [];
+      try { likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]'); } catch (e) {}
       var likeText = btn.querySelector('.like-text-btn');
       var likedText = btn.querySelector('.liked-text-btn');
-      
+
       if (likedMixes.includes(mixId)) {
         btn.setAttribute('data-liked', 'true');
         if (likeText) likeText.style.display = 'none';
         if (likedText) likedText.style.display = 'inline';
       }
-      
+
       btn.onclick = function() {
         var isLiked = btn.getAttribute('data-liked') === 'true';
-        
+
         if (isLiked) {
           // Optimistic UI update
           btn.setAttribute('data-liked', 'false');
           if (likeText) likeText.style.display = 'inline';
           if (likedText) likedText.style.display = 'none';
-          
-          var liked = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
-          var idx = liked.indexOf(mixId);
-          if (idx > -1) {
-            liked.splice(idx, 1);
-            localStorage.setItem('liked-mixes', JSON.stringify(liked));
-          }
-          
+
+          try {
+            var liked = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+            var idx = liked.indexOf(mixId);
+            if (idx > -1) {
+              liked.splice(idx, 1);
+              localStorage.setItem('liked-mixes', JSON.stringify(liked));
+            }
+          } catch (e) {}
+
           trackUnlike(mixId).then(function(result) {
             if (result && result.likes !== undefined) updateLikeCount(mixId, result.likes);
           });
@@ -1281,13 +1295,15 @@ const firstMixArtwork = mixes[0]?.artwork_url || mixes[0]?.artworkUrl;
           btn.setAttribute('data-liked', 'true');
           if (likeText) likeText.style.display = 'none';
           if (likedText) likedText.style.display = 'inline';
-          
-          var liked = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
-          if (!liked.includes(mixId)) {
-            liked.push(mixId);
-            localStorage.setItem('liked-mixes', JSON.stringify(liked));
-          }
-          
+
+          try {
+            var liked = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+            if (!liked.includes(mixId)) {
+              liked.push(mixId);
+              localStorage.setItem('liked-mixes', JSON.stringify(liked));
+            }
+          } catch (e) {}
+
           trackLike(mixId).then(function(result) {
             if (result && result.likes !== undefined) updateLikeCount(mixId, result.likes);
           });

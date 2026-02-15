@@ -49,11 +49,11 @@ export async function GET({ request, locals }: APIContext) {
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Server not running or network error - return clean response
     return new Response(JSON.stringify({
       online: false,
-      error: error.name === 'AbortError' ? 'Timeout' : 'Not connected'
+      error: error instanceof Error && error.name === 'AbortError' ? 'Timeout' : 'Not connected'
     }), {
       status: 200, // Return 200 to avoid console errors
       headers: { 'Content-Type': 'application/json' }

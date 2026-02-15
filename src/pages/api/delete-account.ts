@@ -176,8 +176,8 @@ async function safeDelete(collection: string, docId: string): Promise<DeletionRe
     if (!doc) return { success: true, count: 0 };
     await deleteDocument(collection, docId);
     return { success: true, count: 1 };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Unknown error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
 
@@ -201,8 +201,8 @@ async function deleteByQuery(collection: string, field: string, value: string): 
       }
     }
     return { success: true, count };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Unknown error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
 
@@ -231,8 +231,8 @@ async function anonymizeOrders(userId: string, timestamp: string): Promise<Delet
       }
     }
     return { success: true, count };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Unknown error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
 
@@ -261,8 +261,8 @@ async function anonymizeComments(userId: string): Promise<DeletionResult> {
       }
     }
     return { success: true, count };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'Unknown error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
 }
 
@@ -302,8 +302,8 @@ async function cleanupD1(db: any, userId: string, userEmail: string): Promise<De
     totalAffected += c5?.meta?.changes || 0;
 
     return { success: true, count: totalAffected };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'D1 cleanup error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'D1 cleanup error' };
   }
 }
 
@@ -320,7 +320,7 @@ async function cleanupKV(cache: any, userId: string): Promise<DeletionResult> {
       try { await cache.delete(key); } catch (_) {}
     }
     return { success: true, count: keys.length };
-  } catch (e: any) {
-    return { success: false, error: e.message || 'KV cleanup error' };
+  } catch (e: unknown) {
+    return { success: false, error: e instanceof Error ? e.message : 'KV cleanup error' };
   }
 }

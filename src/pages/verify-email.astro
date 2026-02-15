@@ -21,6 +21,7 @@ const nonce = (Astro.locals as any).nonce || '';
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
+  <main id="main-content">
   <div class="container">
     <div class="card">
       <a href="/" class="logo-link">
@@ -394,5 +395,6 @@ const nonce = (Astro.locals as any).nonce || '';
       }
     });
   </script>
+  </main>
 </body>
 </html>

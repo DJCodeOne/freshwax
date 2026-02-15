@@ -49,7 +49,7 @@ async function checkFirebase(): Promise<ServiceStatus> {
       return { name: 'Firebase', status: 'ok', latency, lastChecked: new Date().toISOString() };
     }
     return { name: 'Firebase', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
-  } catch (e: any) {
+  } catch (e: unknown) {
     return { name: 'Firebase', status: 'error', message: 'Connection failed', lastChecked: new Date().toISOString() };
   }
 }
@@ -68,7 +68,7 @@ async function checkR2(): Promise<ServiceStatus> {
       return { name: 'R2 Storage', status: 'ok', latency, lastChecked: new Date().toISOString() };
     }
     return { name: 'R2 Storage', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
-  } catch (e: any) {
+  } catch (e: unknown) {
     return { name: 'R2 Storage', status: 'error', message: 'Connection failed', lastChecked: new Date().toISOString() };
   }
 }
@@ -89,7 +89,7 @@ async function checkStripe(): Promise<ServiceStatus> {
       return { name: 'Stripe', status: 'ok', latency, lastChecked: new Date().toISOString() };
     }
     return { name: 'Stripe', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
-  } catch (e: any) {
+  } catch (e: unknown) {
     return { name: 'Stripe', status: 'error', message: 'Connection failed', lastChecked: new Date().toISOString() };
   }
 }
@@ -114,7 +114,7 @@ async function checkPlaylist(): Promise<ServiceStatus> {
       return { name: 'Playlist Server', status: 'ok', latency, message: 'Online (auth required)', lastChecked: new Date().toISOString() };
     }
     return { name: 'Playlist Server', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
-  } catch (e: any) {
+  } catch (e: unknown) {
     return { name: 'Playlist Server', status: 'warning', message: 'Server offline or unreachable', lastChecked: new Date().toISOString() };
   }
 }
@@ -138,7 +138,7 @@ async function checkIcecast(): Promise<ServiceStatus> {
       return { name: 'Icecast', status: 'ok', latency, message: 'Online', lastChecked: new Date().toISOString() };
     }
     return { name: 'Icecast', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
-  } catch (e: any) {
+  } catch (e: unknown) {
     return { name: 'Icecast', status: 'warning', message: 'Server offline or unreachable', lastChecked: new Date().toISOString() };
   }
 }
@@ -163,7 +163,7 @@ async function checkStreaming(): Promise<ServiceStatus> {
       return { name: 'Stream Server', status: 'ok', latency, message, lastChecked: new Date().toISOString() };
     }
     return { name: 'Stream Server', status: 'warning', latency, message: `HTTP ${response.status}`, lastChecked: new Date().toISOString() };
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Streaming server might be offline or tunnel not running
     return { name: 'Stream Server', status: 'warning', message: 'Server offline or unreachable', lastChecked: new Date().toISOString() };
   }

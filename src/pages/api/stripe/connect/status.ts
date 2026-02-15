@@ -110,11 +110,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       canAccessDashboard: account.charges_enabled && account.payouts_enabled
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Stripe Connect] Status error:', error);
 
     // Handle deleted/invalid account
-    if (error.code === 'account_invalid') {
+    if ((error as any)?.code === 'account_invalid') {
       return new Response(JSON.stringify({
         success: true,
         connected: false,

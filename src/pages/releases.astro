@@ -44,9 +44,23 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 // Preload the first visible release cover image for faster LCP
 const firstLabel = sortedLabels[0];
 const firstCoverArt = firstLabel ? releasesByLabel[firstLabel]?.[0]?.coverArtUrl : null;
+
+// Build ItemList structured data for SEO (all releases flattened)
+let itemPosition = 0;
+const releaseItemList = {
+  name: 'All Releases - Jungle & DnB Music',
+  items: sortedLabels.flatMap(label =>
+    releasesByLabel[label].map(r => ({
+      name: `${r.releaseName || 'Untitled'} - ${r.artistName || 'Unknown Artist'}`,
+      url: `/item/${r.id}/`,
+      image: r.coverArtUrl || undefined,
+      position: ++itemPosition,
+    }))
+  )
+};
 ---
 
-<Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases. Digital downloads and limited edition vinyl from Fresh Wax.">
+<Layout title="All Releases - Jungle & DnB Music" description="Browse all jungle and drum & bass releases. Digital downloads and limited edition vinyl from Fresh Wax." itemList={releaseItemList}>
   {firstCoverArt && <link rel="preload" href={firstCoverArt} as="image" slot="head" />}
   <Header />
   
@@ -232,6 +246,11 @@ const firstCoverArt = firstLabel ? releasesByLabel[firstLabel]?.[0]?.coverArtUrl
     document.querySelectorAll('.label-section').forEach(section => {
       observer.observe(section);
     });
+
+    // Cleanup observer on page navigation (Astro View Transitions)
+    document.addEventListener('astro:before-swap', () => {
+      observer.disconnect();
+    }, { once: true });
 
     // Buy All Discography functionality — uses global FreshWaxCart from freshwax-cart.js
 

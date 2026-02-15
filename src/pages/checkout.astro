@@ -234,9 +234,13 @@ const nonce = (Astro.locals as any).nonce || '';
     });
     
     // Save updated cart
-    const cartKey = 'freshwax_cart_' + customerId;
-    localStorage.setItem(cartKey, JSON.stringify({ items: cart, updatedAt: Date.now() }));
-    
+    try {
+      const cartKey = 'freshwax_cart_' + customerId;
+      localStorage.setItem(cartKey, JSON.stringify({ items: cart, updatedAt: Date.now() }));
+    } catch (e) {
+      // localStorage may throw in Safari private browsing
+    }
+
     // Dispatch cart update event
     window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { count: cart.reduce((sum, item) => sum + item.quantity, 0) } }));
   }
@@ -869,7 +873,7 @@ const nonce = (Astro.locals as any).nonce || '';
       }
 
       // Store order data for capture
-      localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData));
+      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e) {}
 
       // Redirect to PayPal approval URL
       if (result.approvalUrl) {
@@ -1006,11 +1010,13 @@ const nonce = (Astro.locals as any).nonce || '';
 
           if (result.success) {
             // Clear cart
-            const customerId = getCustomerIdFromCookie();
-            if (customerId) {
-              localStorage.removeItem('freshwax_cart_' + customerId);
-            }
-            localStorage.removeItem('cart');
+            try {
+              const customerId = getCustomerIdFromCookie();
+              if (customerId) {
+                localStorage.removeItem('freshwax_cart_' + customerId);
+              }
+              localStorage.removeItem('cart');
+            } catch (e) {}
             window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
             // Redirect to confirmation
@@ -1194,10 +1200,12 @@ const nonce = (Astro.locals as any).nonce || '';
           // Free order completed successfully
 
           // Clear cart
-          const customerId = getCustomerIdFromCookie();
-          if (customerId) {
-            localStorage.removeItem('freshwax_cart_' + customerId);
-          }
+          try {
+            const customerId = getCustomerIdFromCookie();
+            if (customerId) {
+              localStorage.removeItem('freshwax_cart_' + customerId);
+            }
+          } catch (e) {}
 
           // Redirect to success page
           window.location.href = '/checkout/success/?orderId=' + result.orderId;

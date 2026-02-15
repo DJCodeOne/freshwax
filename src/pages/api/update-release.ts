@@ -248,9 +248,9 @@ export async function POST({ request, locals }: any) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
-    console.error('[update-release] Critical error:', error.message);
-    console.error('[update-release] Stack:', error.stack);
+  } catch (error: unknown) {
+    console.error('[update-release] Critical error:', error instanceof Error ? error.message : String(error));
+    console.error('[update-release] Stack:', error instanceof Error ? error.stack : undefined);
 
     return new Response(JSON.stringify({
       error: 'Internal server error',

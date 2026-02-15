@@ -1740,3 +1740,30 @@ button,
 .light-bg .brand-logo .brand-fresh {
   color: #000;
 }
+
+/* ============================================
+   REDUCED MOTION - Accessibility
+   Disable significant animations for users
+   who prefer reduced motion.
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .release-item,
+  .mix-card,
+  .admin-module-card,
+  .admin-stat-card,
+  .cta-button-primary {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .release-item {
+    opacity: 1 !important;
+  }
+}

@@ -759,7 +759,8 @@ const nonce = (Astro.locals as any).nonce || '';
     // Wait for auth state - always use onAuthStateChanged to ensure Firebase has synced
     async function waitForAuth() {
       // Check if we have cached auth info first (for faster initial check)
-      const cachedUid = localStorage.getItem('fw_uid');
+      let cachedUid = null;
+      try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
 
       // Always wait for Firebase onAuthStateChanged to ensure proper sync
       // This is more reliable than window.authReady during View Transitions
@@ -821,14 +822,13 @@ const nonce = (Astro.locals as any).nonce || '';
 
       if (!user) {
         // No user - redirect to login
-        localStorage.removeItem('fw_uid');
-        localStorage.removeItem('fw_displayName');
+        try { localStorage.removeItem('fw_uid'); localStorage.removeItem('fw_displayName'); } catch (e) {}
         window.location.href = '/login/?redirect=/dj-lobby/book/';
         return;
       }
 
       // Cache auth info for faster subsequent loads
-      localStorage.setItem('fw_uid', user.uid);
+      try { localStorage.setItem('fw_uid', user.uid); } catch (e) {}
       currentUser = user;
 
       // Get user data via API (replaces client-side Firestore read)
@@ -852,7 +852,7 @@ const nonce = (Astro.locals as any).nonce || '';
 
       // Cache display name
       if (userData.displayName) {
-        localStorage.setItem('fw_displayName', userData.displayName);
+        try { localStorage.setItem('fw_displayName', userData.displayName); } catch (e) {}
       }
 
       // Check subscription tier for booking limits
@@ -880,9 +880,13 @@ const nonce = (Astro.locals as any).nonce || '';
       mainContent.classList.remove('hidden');
 
       // Set user info
-      const displayName = userData.displayName || localStorage.getItem('fw_displayName') || user.email;
-      document.getElementById('userName').textContent = displayName;
-      document.getElementById('djName').value = displayName;
+      let cachedDisplayName = '';
+      try { cachedDisplayName = localStorage.getItem('fw_displayName') || ''; } catch (e) {}
+      const displayName = userData.displayName || cachedDisplayName || user.email;
+      const userNameEl = document.getElementById('userName');
+      const djNameEl = document.getElementById('djName');
+      if (userNameEl) userNameEl.textContent = displayName;
+      if (djNameEl) djNameEl.value = displayName;
 
       // Initialize form and load data
       if (!formInitialized) {

@@ -597,7 +597,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     } else {
       console.log('[Stripe Webhook] ⚠️ DEV MODE: Skipping signature verification');
-      event = JSON.parse(payload);
+      try {
+        event = JSON.parse(payload);
+      } catch (parseErr) {
+        console.error('[Stripe Webhook] ❌ Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
+        return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
     console.log('[Stripe Webhook] Event type:', event.type);
     console.log('[Stripe Webhook] Event ID:', event.id || 'no-id');

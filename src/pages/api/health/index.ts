@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // Check KV
   try {
-    const kv = env?.KV || env?.SESSION;
+    const kv = env?.CACHE || env?.KV;
     if (kv) {
       const kvStart = Date.now();
       await kv.get('health-check');

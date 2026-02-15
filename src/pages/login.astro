@@ -38,6 +38,7 @@ const nonce = (Astro.locals as any).nonce || '';
 </head>
 <body>
   <a href="#login-form" class="skip-link">Skip to login form</a>
+  <main id="main-content">
   <div class="split-container">
     <!-- Left Side - Branding -->
     <div class="branding-side">
@@ -309,21 +310,29 @@ const nonce = (Astro.locals as any).nonce || '';
 
     // Restore remember me preference
     const rememberMeCheckbox = document.getElementById('rememberMe');
-    if (localStorage.getItem('fw_remember_me') === 'true') {
-      rememberMeCheckbox.checked = true;
-    }
-    
-    // Restore saved email if remember me was checked
-    const savedEmail = localStorage.getItem('fw_saved_email');
-    if (savedEmail && rememberMeCheckbox.checked) {
-      document.getElementById('email').value = savedEmail;
+    try {
+      if (rememberMeCheckbox && localStorage.getItem('fw_remember_me') === 'true') {
+        rememberMeCheckbox.checked = true;
+      }
+
+      // Restore saved email if remember me was checked
+      const savedEmail = localStorage.getItem('fw_saved_email');
+      if (savedEmail && rememberMeCheckbox?.checked) {
+        const emailInput = document.getElementById('email');
+        if (emailInput) emailInput.value = savedEmail;
+      }
+    } catch (e) {
+      // localStorage may throw in Safari private browsing
     }
 
     // Toggle password visibility
-    document.querySelector('.toggle-password').addEventListener('click', function() {
-      const input = document.getElementById('password');
-      input.type = input.type === 'password' ? 'text' : 'password';
-    });
+    const togglePasswordBtn = document.querySelector('.toggle-password');
+    if (togglePasswordBtn) {
+      togglePasswordBtn.addEventListener('click', function() {
+        const input = document.getElementById('password');
+        if (input) input.type = input.type === 'password' ? 'text' : 'password';
+      });
+    }
 
     // Form submission
     const form = document.getElementById('loginForm');
@@ -372,12 +381,16 @@ const nonce = (Astro.locals as any).nonce || '';
         await setPersistence(auth, browserLocalPersistence);
         
         // Save remember me preference
-        if (rememberMe) {
-          localStorage.setItem('fw_remember_me', 'true');
-          localStorage.setItem('fw_saved_email', email);
-        } else {
-          localStorage.removeItem('fw_remember_me');
-          localStorage.removeItem('fw_saved_email');
+        try {
+          if (rememberMe) {
+            localStorage.setItem('fw_remember_me', 'true');
+            localStorage.setItem('fw_saved_email', email);
+          } else {
+            localStorage.removeItem('fw_remember_me');
+            localStorage.removeItem('fw_saved_email');
+          }
+        } catch (e) {
+          // localStorage may throw in Safari private browsing
         }
         
         // Normalize email (gmail/googlemail are the same)
@@ -942,5 +955,6 @@ const nonce = (Astro.locals as any).nonce || '';
       outline-offset: 2px;
     }
   </style>
+  </main>
 </body>
 </html>

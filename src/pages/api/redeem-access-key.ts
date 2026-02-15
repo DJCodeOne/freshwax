@@ -144,12 +144,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     try {
       await updateDocument('users', userId, userUpdateData);
-    } catch (updateError: any) {
+    } catch (updateError: unknown) {
       try {
         await setDocument('users', userId, userUpdateData);
-      } catch (createError: any) {
+      } catch (createError: unknown) {
         // Log but don't fail - djLobbyBypass entry was created successfully
-        console.warn(`[redeem-access-key] Could not set user bypass flag: ${createError.message}`);
+        console.warn(`[redeem-access-key] Could not set user bypass flag: ${createError instanceof Error ? createError.message : String(createError)}`);
       }
     }
 
@@ -178,7 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[redeem-access-key] Error:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,

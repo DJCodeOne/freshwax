@@ -113,6 +113,10 @@ export const prerender = false;
     condition: 'NewCondition',
     category: product.category,
   } : undefined}
+  breadcrumbs={product ? [
+    { name: 'Merchandise', url: '/merch/' },
+    { name: product.name, url: `/merch/${id}/` }
+  ] : undefined}
 >
   <Header />
   

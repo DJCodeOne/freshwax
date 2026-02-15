@@ -2,6 +2,7 @@
 // Approves or rejects pending releases in Firebase
 import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest.js';
 import { d1UpsertRelease } from '../../lib/d1-catalog.ts';
+import { requireAdminAuth } from '../../lib/admin.ts';
 
 export const prerender = false;
 
@@ -15,9 +16,13 @@ export async function POST({ request, locals }) {
   // Initialize Firebase env for write operations (Cloudflare runtime)
   const env = locals?.runtime?.env;
 
-
   try {
     const body = await request.json();
+
+    // Admin authentication required
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
     const { releaseId, action } = body;
 
     // Validate input

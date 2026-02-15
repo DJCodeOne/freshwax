@@ -302,6 +302,10 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     category: 'Music > Digital Downloads',
     ...(overallRating.count > 0 ? { reviews: { rating: overallRating.average, count: overallRating.count } } : {})
   } : undefined}
+  breadcrumbs={release ? [
+    { name: 'Releases', url: '/releases/' },
+    { name: `${releaseName} - ${artistName}`, url: `/item/${id}/` }
+  ] : undefined}
 >
   {coverArtUrl && coverArtUrl !== '/place-holder.webp' && <link rel="preload" href={coverArtUrl} as="image" slot="head" />}
   <Header />

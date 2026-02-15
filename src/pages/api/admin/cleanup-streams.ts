@@ -27,7 +27,7 @@ async function checkStreamHealth(streamKey: string): Promise<{ isLive: boolean; 
       signal: AbortSignal.timeout(5000)
     });
     return { isLive: response.ok || response.status === 200 };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { isLive: false, error: 'Connection failed' };
   }
 }
@@ -104,7 +104,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to list streams'
@@ -197,7 +197,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             reason: cleanupReason,
             status: 'cleaned',
           });
-        } catch (e: any) {
+        } catch (e: unknown) {
           results.push({
             id: slot.id,
             djName: slot.djName,
@@ -227,7 +227,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to clean up streams'

@@ -275,7 +275,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.error('D1 dual-write failed (non-critical):', d1Error);
         }
       }
-    } catch (setError: any) {
+    } catch (setError: unknown) {
       log.error('Firebase write failed:', setError);
       // Return more detailed error
       return new Response(JSON.stringify({

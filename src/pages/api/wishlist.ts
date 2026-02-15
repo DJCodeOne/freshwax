@@ -75,7 +75,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[WISHLIST API] Error:', error);
     return new Response(JSON.stringify({
       success: false,
@@ -245,9 +245,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[WISHLIST API] Error:', error);
-    console.error('[WISHLIST API] Error stack:', error.stack);
+    console.error('[WISHLIST API] Error stack:', error instanceof Error ? error.stack : undefined);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update wishlist',

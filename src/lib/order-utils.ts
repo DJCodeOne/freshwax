@@ -149,11 +149,12 @@ export async function reserveStock(
           reserved = true;
           reservedSoFar.push(res);
           break;
-        } catch (err: any) {
-          if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (errMsg.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
           if (attempt === MAX_RETRIES - 1) {
             await rollbackReservations(reservedSoFar);
-            return { success: false, error: `Failed to reserve stock: ${err.message}` };
+            return { success: false, error: `Failed to reserve stock: ${errMsg}` };
           }
         }
       }
@@ -190,11 +191,12 @@ export async function reserveStock(
           reserved = true;
           reservedSoFar.push(res);
           break;
-        } catch (err: any) {
-          if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (errMsg.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
           if (attempt === MAX_RETRIES - 1) {
             await rollbackReservations(reservedSoFar);
-            return { success: false, error: `Failed to reserve vinyl stock: ${err.message}` };
+            return { success: false, error: `Failed to reserve vinyl stock: ${errMsg}` };
           }
         }
       }
@@ -229,11 +231,12 @@ export async function reserveStock(
           reserved = true;
           reservedSoFar.push(res);
           break;
-        } catch (err: any) {
-          if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : String(err);
+          if (errMsg.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
           if (attempt === MAX_RETRIES - 1) {
             await rollbackReservations(reservedSoFar);
-            return { success: false, error: `Failed to reserve listing: ${err.message}` };
+            return { success: false, error: `Failed to reserve listing: ${errMsg}` };
           }
         }
       }
@@ -328,8 +331,8 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
               await updateDocument('merch', res.productId, updateData);
             }
             break;
-          } catch (err: any) {
-            if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+          } catch (err: unknown) {
+            if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
             console.error('[order-utils] Failed to release merch reservation for', res.productId, err);
           }
         }
@@ -350,8 +353,8 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
               await updateDocument('releases', res.productId, updateData);
             }
             break;
-          } catch (err: any) {
-            if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+          } catch (err: unknown) {
+            if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
             console.error('[order-utils] Failed to release vinyl reservation for', res.productId, err);
           }
         }
@@ -473,8 +476,8 @@ export async function cleanupExpiredReservations(): Promise<number> {
                 });
               }
               break;
-            } catch (err: any) {
-              if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+            } catch (err: unknown) {
+              if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
               console.error('[order-utils] Cleanup: failed to release merch stock for', res.productId);
             }
           }
@@ -495,8 +498,8 @@ export async function cleanupExpiredReservations(): Promise<number> {
                 await updateDocument('releases', res.productId, updateData);
               }
               break;
-            } catch (err: any) {
-              if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+            } catch (err: unknown) {
+              if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
               console.error('[order-utils] Cleanup: failed to release vinyl stock for', res.productId);
             }
           }
@@ -568,8 +571,8 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
             });
           }
           break;
-        } catch (err: any) {
-          if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+        } catch (err: unknown) {
+          if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
           console.error('[order-utils] Rollback failed for merch', res.productId, err);
         }
       }
@@ -590,8 +593,8 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
             await updateDocument('releases', res.productId, updateData);
           }
           break;
-        } catch (err: any) {
-          if (err.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
+        } catch (err: unknown) {
+          if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
           console.error('[order-utils] Rollback failed for vinyl release', res.productId, err);
         }
       }
@@ -1078,8 +1081,8 @@ export async function processVinylCratesOrders(
           console.error('[order-utils] Listing already sold or missing:', listingId);
         }
         log.info('[order-utils] ✓ Listing marked as sold:', listingId);
-      } catch (markSoldErr: any) {
-        if (markSoldErr.message?.includes('CONFLICT')) {
+      } catch (markSoldErr: unknown) {
+        if (markSoldErr instanceof Error && markSoldErr.message.includes('CONFLICT')) {
           console.error('[order-utils] Listing was modified concurrently (possible double-sell prevented):', listingId);
         } else {
           console.error('[order-utils] Failed to mark listing as sold:', markSoldErr);
@@ -1446,8 +1449,8 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
             stockUpdated = true;
             log.info('[order-utils] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
             break; // Success - exit retry loop
-          } catch (conflictErr: any) {
-            if (conflictErr.message?.includes('CONFLICT') && attempt < MAX_RETRIES - 1) {
+          } catch (conflictErr: unknown) {
+            if (conflictErr instanceof Error && conflictErr.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) {
               log.info('[order-utils] Stock conflict for', item.name, '- retrying...');
               continue;
             }

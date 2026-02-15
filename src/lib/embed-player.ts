@@ -75,9 +75,9 @@ export class EmbedPlayerManager {
       }
 
       this.currentPlatform = item.platform;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] Error loading item:', error);
-      this.callbacks.onError?.(error.message || 'Failed to load media');
+      this.callbacks.onError?.(error instanceof Error ? error.message : 'Failed to load media');
     }
   }
 
@@ -348,8 +348,8 @@ export class EmbedPlayerManager {
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch((err: any) => {
-            if (err?.name !== 'AbortError') {
+          video.play().catch((err: unknown) => {
+            if (err instanceof Error && err.name !== 'AbortError') {
               console.error('[Direct] Autoplay failed:', err);
             }
           });
@@ -364,8 +364,8 @@ export class EmbedPlayerManager {
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         // Native HLS support (Safari)
         video.src = item.url;
-        video.play().catch((err: any) => {
-          if (err?.name !== 'AbortError') {
+        video.play().catch((err: unknown) => {
+          if (err instanceof Error && err.name !== 'AbortError') {
             console.error('[Direct] Autoplay failed:', err);
           }
         });
@@ -399,8 +399,8 @@ export class EmbedPlayerManager {
       this.directVideo = audio as any;
 
       audio.src = item.url;
-      audio.play().catch((err: any) => {
-        if (err?.name !== 'AbortError') {
+      audio.play().catch((err: unknown) => {
+        if (err instanceof Error && err.name !== 'AbortError') {
           console.error('[Direct] Audio autoplay failed:', err);
         }
       });
@@ -413,8 +413,8 @@ export class EmbedPlayerManager {
       this.directVideo = video;
 
       video.src = item.url;
-      video.play().catch((err: any) => {
-        if (err?.name !== 'AbortError') {
+      video.play().catch((err: unknown) => {
+        if (err instanceof Error && err.name !== 'AbortError') {
           console.error('[Direct] Autoplay failed:', err);
         }
       });
@@ -478,9 +478,9 @@ export class EmbedPlayerManager {
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
         await this.directVideo.play();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // AbortError happens when play() is interrupted by pause() - this is expected during rapid state changes
-      if (error?.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         // console.log('[EmbedPlayerManager] Play interrupted (normal during state changes)');
         return;
       }

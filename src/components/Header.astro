@@ -42,7 +42,7 @@ const firebaseConfig = {
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
             <span class="fwx-cart-text">Bag</span>
-            <span id="cart-count-mobile" class="fwx-cart-count fwx-hidden" aria-label="items in bag">0</span>
+            <span id="cart-count-mobile" class="fwx-cart-count fwx-hidden" aria-live="polite" aria-label="items in bag">0</span>
           </a>
 
           <!-- Burger Menu Button -->
@@ -74,7 +74,7 @@ const firebaseConfig = {
           aria-haspopup="listbox"
         />
         <!-- Mobile Search Results Dropdown -->
-        <div id="search-results-mobile" class="fwx-search-results fwx-hidden" role="listbox" aria-label="Search results">
+        <div id="search-results-mobile" class="fwx-search-results fwx-hidden" role="listbox" aria-label="Search results" aria-live="polite">
           <div id="search-results-content-mobile" class="fwx-search-content"></div>
         </div>
       </div>
@@ -189,7 +189,7 @@ const firebaseConfig = {
           aria-haspopup="listbox"
         />
         <!-- Search Results Dropdown -->
-        <div id="search-results" class="fwx-search-results fwx-hidden" role="listbox" aria-label="Search results">
+        <div id="search-results" class="fwx-search-results fwx-hidden" role="listbox" aria-label="Search results" aria-live="polite">
           <div id="search-results-content" class="fwx-search-content"></div>
         </div>
       </div>
@@ -266,7 +266,7 @@ const firebaseConfig = {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
         </svg>
         Bag
-        <span id="cart-count" class="fwx-cart-count fwx-hidden" aria-label="items in bag">0</span>
+        <span id="cart-count" class="fwx-cart-count fwx-hidden" aria-live="polite" aria-label="items in bag">0</span>
       </a>
 
       <!-- LIVE Button -->
@@ -519,7 +519,8 @@ const firebaseConfig = {
     window._gtState.ready = true;
 
     // After widget is created, apply saved language by selecting it in the dropdown.
-    var lang = localStorage.getItem('fw_translate_lang');
+    var lang = null;
+    try { lang = localStorage.getItem('fw_translate_lang'); } catch (e) {}
     if (lang) {
       waitForSelect(function(sel) {
         if (sel.value !== lang) {
@@ -574,15 +575,17 @@ const firebaseConfig = {
       sel.addEventListener('change', function() {
         var val = sel.value;
         var domainCookie = location.hostname.indexOf('.') !== -1 ? ';domain=.' + location.hostname : '';
-        if (val && val !== 'en') {
-          localStorage.setItem('fw_translate_lang', val);
-          document.cookie = 'googtrans=/en/' + val + ';path=/';
-          if (domainCookie) document.cookie = 'googtrans=/en/' + val + ';path=/' + domainCookie;
-        } else {
-          localStorage.removeItem('fw_translate_lang');
-          document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-          if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
-        }
+        try {
+          if (val && val !== 'en') {
+            localStorage.setItem('fw_translate_lang', val);
+            document.cookie = 'googtrans=/en/' + val + ';path=/';
+            if (domainCookie) document.cookie = 'googtrans=/en/' + val + ';path=/' + domainCookie;
+          } else {
+            localStorage.removeItem('fw_translate_lang');
+            document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+            if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
+          }
+        } catch (e) {}
       });
     }
 
@@ -667,7 +670,7 @@ const firebaseConfig = {
     window._gtNavHooked = true;
 
     document.addEventListener('click', function(e) {
-      if (!localStorage.getItem('fw_translate_lang')) return;
+      try { if (!localStorage.getItem('fw_translate_lang')) return; } catch (ex) { return; }
       var a = e.target.closest('a[href]');
       if (!a) return;
       var href = a.getAttribute('href');
@@ -682,7 +685,8 @@ const firebaseConfig = {
   }
 
   // On page load, if there's a saved language, set cookie and load GT
-  var savedLang = localStorage.getItem('fw_translate_lang');
+  var savedLang = null;
+  try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e) {}
   if (savedLang) {
     // Set cookie on both path and domain for maximum compatibility
     document.cookie = 'googtrans=/en/' + savedLang + ';path=/';

@@ -256,8 +256,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         result.success++;
         result.updates.push({ sku, oldStock, newStock });
 
-      } catch (rowErr: any) {
-        result.errors.push(`Row ${rowNum}: ${rowErr.message}`);
+      } catch (rowErr: unknown) {
+        result.errors.push(`Row ${rowNum}: ${rowErr instanceof Error ? rowErr.message : String(rowErr)}`);
         result.failed++;
       }
     }
@@ -270,7 +270,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[bulk-stock-upload] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to process CSV'
@@ -344,7 +344,7 @@ SKU003,2,subtract`;
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({ error: 'Internal error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

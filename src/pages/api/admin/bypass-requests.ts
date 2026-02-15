@@ -86,8 +86,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (queryError: any) {
-        console.warn('[bypass-requests] Status check query error:', queryError.message);
+      } catch (queryError: unknown) {
+        console.warn('[bypass-requests] Status check query error:', queryError instanceof Error ? queryError.message : String(queryError));
         // Return empty status on error
         return new Response(JSON.stringify({
           success: true,
@@ -183,8 +183,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
-    } catch (queryError: any) {
-      console.warn('[bypass-requests] List query error:', queryError.message);
+    } catch (queryError: unknown) {
+      console.warn('[bypass-requests] List query error:', queryError instanceof Error ? queryError.message : String(queryError));
       return new Response(JSON.stringify({
         success: true,
         requests: []
@@ -318,7 +318,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             console.log('[bypass-requests] Adding to djLobbyBypass...');
             await setDocument('djLobbyBypass', targetUserId, bypassData);
             console.log('[bypass-requests] Added to djLobbyBypass');
-          } catch (userUpdateError: any) {
+          } catch (userUpdateError: unknown) {
             console.error('[bypass-requests] Error updating user:', userUpdateError);
             throw userUpdateError;
           }
@@ -396,8 +396,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         limit: 1,
         skipCache: true
       });
-    } catch (queryError: any) {
-      console.warn('[bypass-requests] Check existing query error:', queryError.message);
+    } catch (queryError: unknown) {
+      console.warn('[bypass-requests] Check existing query error:', queryError instanceof Error ? queryError.message : String(queryError));
       // Continue - allow request even if we can't check for duplicates
     }
 

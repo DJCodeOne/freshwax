@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[lobby-bypass] Error listing:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
@@ -164,13 +164,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         // Try to update existing user document
         await updateDocument('users', targetUserId, userUpdateData);
-      } catch (updateError: any) {
+      } catch (updateError: unknown) {
         // If update fails (doc doesn't exist or permission), try to create
         try {
           await setDocument('users', targetUserId, userUpdateData);
-        } catch (createError: any) {
+        } catch (createError: unknown) {
           // Log but don't fail - the djLobbyBypass entry was created successfully
-          console.warn(`[lobby-bypass] Could not set user bypass flag: ${createError.message}`);
+          console.warn(`[lobby-bypass] Could not set user bypass flag: ${createError instanceof Error ? createError.message : String(createError)}`);
         }
       }
 
@@ -223,7 +223,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[lobby-bypass] Error:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,

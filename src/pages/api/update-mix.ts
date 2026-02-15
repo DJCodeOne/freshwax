@@ -116,7 +116,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     try {
       await updateDocument('dj-mixes', mixId, updateData);
-    } catch (updateError: any) {
+    } catch (updateError: unknown) {
       console.error('[update-mix] updateDocument error:', updateError);
       return new Response(JSON.stringify({
         success: false,
@@ -150,7 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating mix:', error);
     return new Response(JSON.stringify({
       success: false,

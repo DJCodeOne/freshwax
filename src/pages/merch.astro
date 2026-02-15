@@ -137,9 +137,20 @@ const nonce = (Astro.locals as any).nonce || '';
 
 // Preload first product image for faster LCP
 const firstProductImage = products[0]?.imageUrl;
+
+// Build ItemList structured data for SEO
+const merchItemList = {
+  name: 'Official Merchandise',
+  items: products.map((p, i) => ({
+    name: p.name || p.title || 'Product',
+    url: `/merch/${p.id}/`,
+    image: p.imageUrl || undefined,
+    position: i + 1,
+  }))
+};
 ---
 
-<Layout title="Official Merchandise" description="Official merchandise from Fresh Wax, sound systems, labels and DJs. T-shirts, hoodies, hats and more.">
+<Layout title="Official Merchandise" description="Official merchandise from Fresh Wax, sound systems, labels and DJs. T-shirts, hoodies, hats and more." itemList={merchItemList}>
   {firstProductImage && <link rel="preload" href={firstProductImage} as="image" slot="head" />}
   <PageLoader nonce={nonce} />
   <Header />
@@ -779,7 +790,7 @@ const firstProductImage = products[0]?.imageUrl;
       var thumbs = document.getElementById('modalThumbs');
       if (thumbs && product.images?.length > 1) {
         thumbs.innerHTML = product.images.map(function(img, i) {
-          return '<button class="thumb ' + (i === 0 ? 'active' : '') + '" data-src="' + img + '"><img src="' + img + '" alt="" /></button>';
+          return '<button class="thumb ' + (i === 0 ? 'active' : '') + '" data-src="' + img + '"><img src="' + img + '" alt="' + product.name + ' thumbnail ' + (i + 1) + '" /></button>';
         }).join('');
         thumbs.querySelectorAll('.thumb').forEach(function(t) {
           t.addEventListener('click', function() {

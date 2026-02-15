@@ -133,10 +133,10 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
     
-  } catch (error: any) {
-    console.error('[postcode-lookup] Error:', error.message || error);
-    
-    if (error.name === 'AbortError') {
+  } catch (error: unknown) {
+    console.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));
+
+    if (error instanceof Error && error.name === 'AbortError') {
       return new Response(JSON.stringify({ error: 'Request timed out. Please try again.' }), {
         status: 504,
         headers: { 'Content-Type': 'application/json' }

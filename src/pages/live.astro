@@ -58,7 +58,7 @@ const nonce = (Astro.locals as any).nonce || '';
           <span class="fs-live-dot"></span>
           <span id="fsLiveStatus">LOADING...</span>
         </div>
-        <h1 id="fsStreamTitle">No Live Streams</h1>
+        <h2 id="fsStreamTitle">No Live Streams</h2>
         <div class="fs-dj-info">
           <img id="fsDjAvatar" src="/place-holder.webp" alt="DJ" />
           <span id="fsDjName">-</span>
@@ -220,7 +220,7 @@ const nonce = (Astro.locals as any).nonce || '';
     <div class="live-layout">
       <aside class="schedule-column">
         <div class="schedule-header">
-          <h2>LIVE <span class="red">STREAM</span></h2>
+          <h1>LIVE <span class="red">STREAM</span></h1>
           <p>Watch live DJ sets</p>
           <div id="djButtons" class="schedule-buttons">
             <button id="goLiveNowBtn" class="go-live-now-btn">
@@ -332,7 +332,7 @@ const nonce = (Astro.locals as any).nonce || '';
             <div class="countdown-content">
               <h2>NEXT DJ STARTING SOON</h2>
               <div class="countdown-dj">
-                <img id="countdownDjAvatar" src="/place-holder.webp" alt="" class="countdown-avatar" />
+                <img id="countdownDjAvatar" src="/place-holder.webp" alt="Next DJ avatar" class="countdown-avatar" />
                 <span id="countdownDjName">-</span>
               </div>
               <div class="countdown-timer">
@@ -901,7 +901,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <div class="takeover-current-dj">
           <span class="lobby-label">Currently Live:</span>
           <div class="current-dj-info">
-            <img id="takeoverDjAvatar" src="/place-holder.webp" alt="" class="current-dj-avatar" />
+            <img id="takeoverDjAvatar" src="/place-holder.webp" alt="Current DJ avatar" class="current-dj-avatar" />
             <span id="takeoverDjName">-</span>
           </div>
         </div>
@@ -947,7 +947,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <span class="pulse-badge-large">⚡ TAKEOVER REQUEST</span>
       </div>
       <div class="incoming-takeover-dj">
-        <img id="incomingTakeoverAvatar" src="/place-holder.webp" alt="" />
+        <img id="incomingTakeoverAvatar" src="/place-holder.webp" alt="Requesting DJ avatar" />
         <div>
           <strong id="incomingTakeoverName">DJ Name</strong>
           <span>wants to take over your stream</span>
@@ -971,7 +971,7 @@ const nonce = (Astro.locals as any).nonce || '';
         <div class="share-preview">
           <div class="share-preview-badge">LIVE NOW</div>
           <div class="share-preview-dj">
-            <img id="sharePreviewAvatar" src="/place-holder.webp" alt="" />
+            <img id="sharePreviewAvatar" src="/place-holder.webp" alt="DJ avatar" />
             <div class="share-preview-info">
               <h3 id="sharePreviewName">DJ Name</h3>
               <p id="sharePreviewCrew">Fresh Wax Live Stream</p>
@@ -2581,7 +2581,8 @@ const nonce = (Astro.locals as any).nonce || '';
         const checkAuth = async () => {
           console.log('[Live] Checking auth state...');
           let user = null;
-          const cachedUid = localStorage.getItem('fw_uid');
+          let cachedUid = null;
+          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
 
           try {
             // First check if we already have a current user
@@ -2697,7 +2698,8 @@ const nonce = (Astro.locals as any).nonce || '';
     const hiddenIcon = toggleBtn.querySelector('.meters-hidden-icon');
 
     // Check localStorage for saved preference
-    const metersHidden = localStorage.getItem('fw_meters_hidden') === 'true';
+    let metersHidden = false;
+    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e) {}
     if (metersHidden) {
       stereoMeters.classList.add('meters-hidden');
       toggleBtn.classList.add('meters-off');
@@ -2718,7 +2720,7 @@ const nonce = (Astro.locals as any).nonce || '';
       toggleBtn.classList.toggle('meters-off', isHidden);
       if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
       if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
-      localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false');
+      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e) {}
       console.log('[Meters] Meters hidden:', isHidden);
     });
 
@@ -3564,7 +3566,7 @@ const nonce = (Astro.locals as any).nonce || '';
       if (listeners.length > 0) {
         listenersList.innerHTML = listeners.map(listener => `
           <div class="listener-item">
-            <img class="listener-avatar" src="${listener.avatar || '/place-holder.webp'}" alt="" />
+            <img class="listener-avatar" src="${listener.avatar || '/place-holder.webp'}" alt="${listener.name} avatar" />
             <span class="listener-name">${listener.name}</span>
           </div>
         `).join('');
@@ -5298,8 +5300,13 @@ const nonce = (Astro.locals as any).nonce || '';
   // Observe play state changes
   const playBtn = document.getElementById('playBtn');
   if (playBtn) {
-    const observer = new MutationObserver(syncMiniPlayer);
-    observer.observe(playBtn, { attributes: true, attributeFilter: ['class'] });
+    const miniPlayerObserver = new MutationObserver(syncMiniPlayer);
+    miniPlayerObserver.observe(playBtn, { attributes: true, attributeFilter: ['class'] });
+
+    // Cleanup observer on page navigation (Astro View Transitions)
+    document.addEventListener('astro:before-swap', () => {
+      miniPlayerObserver.disconnect();
+    }, { once: true });
   }
   
   // ============================================

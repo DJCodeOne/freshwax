@@ -345,8 +345,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               status: 400, headers: { 'Content-Type': 'application/json' }
             });
           }
-        } catch (stripeErr: any) {
-          log.error('Stripe verification failed:', stripeErr?.message);
+        } catch (stripeErr: unknown) {
+          log.error('Stripe verification failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr));
           return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
             status: 402, headers: { 'Content-Type': 'application/json' }
           });
@@ -389,8 +389,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               status: 402, headers: { 'Content-Type': 'application/json' }
             });
           }
-        } catch (paypalErr: any) {
-          log.error('PayPal verification failed:', paypalErr?.message);
+        } catch (paypalErr: unknown) {
+          log.error('PayPal verification failed:', paypalErr instanceof Error ? paypalErr.message : String(paypalErr));
           return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
             status: 402, headers: { 'Content-Type': 'application/json' }
           });

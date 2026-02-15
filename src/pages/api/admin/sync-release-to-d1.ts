@@ -122,7 +122,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           ).run();
           results.push({ id: release.id, action: 'inserted' });
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         results.push({ id: release.id, action: 'error', error: 'Sync failed' });
       }
     }

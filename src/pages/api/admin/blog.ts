@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[blog API] Error:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
@@ -136,7 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[blog API] Create error:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
@@ -193,7 +193,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[blog API] Update error:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,
@@ -233,7 +233,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[blog API] Delete error:', error);
     return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
       status: 500,

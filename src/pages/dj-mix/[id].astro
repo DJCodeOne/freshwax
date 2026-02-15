@@ -156,6 +156,10 @@ const nonce = (Astro.locals as any).nonce || '';
     genre: genre ? [genre] : undefined,
     tracklist: tracklist.length > 0 ? tracklist : undefined
   } : undefined}
+  breadcrumbs={mix ? [
+    { name: 'DJ Mixes', url: '/dj-mixes/' },
+    { name: `${title} - ${dj_name}`, url: `/dj-mix/${id}/` }
+  ] : undefined}
 >
   <Header />
   
@@ -977,30 +981,33 @@ Artist - Track Title
 });
   // Like button
   if (likeBtn && mixId) {
-    const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+    let likedMixes = [];
+    try { likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]'); } catch (e) {}
     const likeText = likeBtn.querySelector('.like-text');
     const likedText = likeBtn.querySelector('.liked-text');
-    
+
     if (likedMixes.includes(mixId)) {
       likeBtn.setAttribute('data-liked', 'true');
       if (likeText) likeText.style.display = 'none';
       if (likedText) likedText.style.display = 'inline';
     }
-    
+
     likeBtn.addEventListener('click', function() {
       const isLiked = likeBtn.getAttribute('data-liked') === 'true';
       const likesCount = document.getElementById('likes-count');
-      
+
       if (isLiked) {
         likeBtn.setAttribute('data-liked', 'false');
         if (likeText) likeText.style.display = 'inline';
         if (likedText) likedText.style.display = 'none';
-        const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
-        const index = likedMixes.indexOf(mixId);
-        if (index > -1) {
-          likedMixes.splice(index, 1);
-          localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
-        }
+        try {
+          const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+          const index = likedMixes.indexOf(mixId);
+          if (index > -1) {
+            likedMixes.splice(index, 1);
+            localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
+          }
+        } catch (e) {}
         fetch('/api/track-mix-unlike/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1018,11 +1025,13 @@ Artist - Track Title
         likeBtn.setAttribute('data-liked', 'true');
         if (likeText) likeText.style.display = 'none';
         if (likedText) likedText.style.display = 'inline';
-        const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
-        if (!likedMixes.includes(mixId)) {
-          likedMixes.push(mixId);
-          localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
-        }
+        try {
+          const likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]');
+          if (!likedMixes.includes(mixId)) {
+            likedMixes.push(mixId);
+            localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
+          }
+        } catch (e) {}
         fetch('/api/track-mix-like/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

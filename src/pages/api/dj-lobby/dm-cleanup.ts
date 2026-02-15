@@ -116,8 +116,8 @@ export const POST: APIRoute = async ({ request }) => {
       messagesDeleted: messageIds.length
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[dj-lobby/dm-cleanup] Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[dj-lobby/dm-cleanup] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to clean up DMs'

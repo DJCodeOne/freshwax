@@ -116,8 +116,8 @@ export async function POST({ request, locals }: APIContext) {
       if (data && data.items) {
         history = data.items;
       }
-    } catch (readError: any) {
-      console.warn('[PlaylistHistory] Could not read existing history:', readError.message);
+    } catch (readError: unknown) {
+      console.warn('[PlaylistHistory] Could not read existing history:', readError instanceof Error ? readError.message : String(readError));
     }
 
     // Check if URL already exists - update timestamp and move to front

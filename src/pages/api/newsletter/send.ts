@@ -183,9 +183,9 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
           }
 
           results.sent++;
-        } catch (err: any) {
+        } catch (err: unknown) {
           results.failed++;
-          results.errors.push(`${subscriber.email}: ${err.message}`);
+          results.errors.push(`${subscriber.email}: ${err instanceof Error ? err.message : String(err)}`);
           console.error(`[Newsletter] Failed to send to ${subscriber.email}:`, err);
         }
       }));

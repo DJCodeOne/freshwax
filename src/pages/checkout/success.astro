@@ -70,8 +70,8 @@ const nonce = (Astro.locals as any).nonce || '';
 
       // Track purchase before clearing cart
       const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
-      if (customerId) {
-        try {
+      try {
+        if (customerId) {
           const cartData = localStorage.getItem('freshwax_cart_' + customerId);
           if (cartData) {
             const parsed = JSON.parse(cartData);
@@ -79,15 +79,15 @@ const nonce = (Astro.locals as any).nonce || '';
             const total = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
             window.trackPurchase?.(orderId, total, items, 0);
           }
-        } catch (e) { /* ignore parse errors */ }
-        localStorage.removeItem('freshwax_cart_' + customerId);
-      }
-      localStorage.removeItem('cart');
+          localStorage.removeItem('freshwax_cart_' + customerId);
+        }
+        localStorage.removeItem('cart');
+      } catch (e) { /* localStorage may throw in Safari private browsing */ }
       window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
       // Show success and redirect to order confirmation
-      loadingState.style.display = 'none';
-      successState.style.display = 'block';
+      if (loadingState) loadingState.style.display = 'none';
+      if (successState) successState.style.display = 'block';
 
       setTimeout(() => {
         window.location.href = `/order-confirmation/${orderId}/`;
@@ -97,9 +97,9 @@ const nonce = (Astro.locals as any).nonce || '';
 
     if (!sessionId) {
       // No session ID - something went wrong
-      loadingState.style.display = 'none';
-      errorState.style.display = 'block';
-      errorMessage.textContent = 'No payment session found.';
+      if (loadingState) loadingState.style.display = 'none';
+      if (errorState) errorState.style.display = 'block';
+      if (errorMessage) errorMessage.textContent = 'No payment session found.';
       return;
     }
 
@@ -126,8 +126,8 @@ const nonce = (Astro.locals as any).nonce || '';
           const customerId = document.cookie.split(';').find(c => c.trim().startsWith('customerId='))?.split('=')[1];
 
           // Track purchase before clearing cart
-          if (customerId) {
-            try {
+          try {
+            if (customerId) {
               const cartData = localStorage.getItem('freshwax_cart_' + customerId);
               if (cartData) {
                 const parsed = JSON.parse(cartData);
@@ -135,10 +135,10 @@ const nonce = (Astro.locals as any).nonce || '';
                 const total = items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
                 window.trackPurchase?.(result.orderId || sessionId, total, items, 0);
               }
-            } catch (e) { /* ignore parse errors */ }
-            localStorage.removeItem('freshwax_cart_' + customerId);
-          }
-          localStorage.removeItem('cart');
+              localStorage.removeItem('freshwax_cart_' + customerId);
+            }
+            localStorage.removeItem('cart');
+          } catch (e) { /* localStorage may throw in Safari private browsing */ }
           window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
           // Also clear KV cart
@@ -146,8 +146,8 @@ const nonce = (Astro.locals as any).nonce || '';
         }
 
         if (result.success && result.orderId) {
-          loadingState.style.display = 'none';
-          successState.style.display = 'block';
+          if (loadingState) loadingState.style.display = 'none';
+          if (successState) successState.style.display = 'block';
 
           // Redirect to order confirmation
           setTimeout(() => {
@@ -163,8 +163,8 @@ const nonce = (Astro.locals as any).nonce || '';
 
           // Last attempt - show success anyway
           console.log('[success] Payment OK but no orderId after retries. Redirecting to orders.');
-          loadingState.style.display = 'none';
-          successState.style.display = 'block';
+          if (loadingState) loadingState.style.display = 'none';
+          if (successState) successState.style.display = 'block';
 
           setTimeout(() => {
             window.location.href = '/account/orders/';
@@ -178,17 +178,17 @@ const nonce = (Astro.locals as any).nonce || '';
           }
 
           console.error('[success] Payment verification failed:', result.error);
-          loadingState.style.display = 'none';
-          errorState.style.display = 'block';
-          errorMessage.textContent = result.error || 'Payment verification failed';
+          if (loadingState) loadingState.style.display = 'none';
+          if (errorState) errorState.style.display = 'block';
+          if (errorMessage) errorMessage.textContent = result.error || 'Payment verification failed';
           return;
         }
       } catch (error) {
         console.error(`[success] Verification error (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
-          loadingState.style.display = 'none';
-          errorState.style.display = 'block';
-          errorMessage.textContent = 'Unable to verify payment. Please check your orders.';
+          if (loadingState) loadingState.style.display = 'none';
+          if (errorState) errorState.style.display = 'block';
+          if (errorMessage) errorMessage.textContent = 'Unable to verify payment. Please check your orders.';
           return;
         }
         // Continue to next retry

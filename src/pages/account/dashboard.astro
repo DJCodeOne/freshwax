@@ -1623,7 +1623,7 @@ const nonce = (Astro.locals as any).nonce || '';
               const itemImage = item.image || item.artwork || item.artworkUrl || item.coverArtUrl || item.downloads?.artworkUrl || '/place-holder.webp';
               return `
                 <div class="order-item">
-                  <img src="${itemImage}" alt="" class="order-item-image">
+                  <img src="${itemImage}" alt="${item.name || item.title || 'Order item'}" class="order-item-image">
                   <div class="order-item-details">
                     <div class="order-item-name">${item.name || item.title || 'Item'}</div>
                     <div class="order-item-meta">

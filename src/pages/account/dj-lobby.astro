@@ -4357,8 +4357,14 @@ const nonce = (Astro.locals as any).nonce || '';
   let stereoCanvasCtx = null;
 
   // Calibration settings (stored in localStorage)
-  let calGainOffset = parseFloat(localStorage.getItem('calGainOffset') || '0');
-  let calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-14');
+  let calGainOffset = 0;
+  let calRefLevel = -14;
+  try {
+    calGainOffset = parseFloat(localStorage.getItem('calGainOffset') || '0');
+    calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-14');
+  } catch (e) {
+    // localStorage may throw in Safari private browsing
+  }
 
   function initBroadcastMeters() {
     const canvas = document.getElementById('stereoCanvas');
@@ -4445,7 +4451,7 @@ const nonce = (Astro.locals as any).nonce || '';
       gainSlider.addEventListener('input', (e) => {
         calGainOffset = parseFloat(e.target.value);
         if (gainValue) gainValue.textContent = `${calGainOffset > 0 ? '+' : ''}${calGainOffset} dB`;
-        localStorage.setItem('calGainOffset', calGainOffset.toString());
+        try { localStorage.setItem('calGainOffset', calGainOffset.toString()); } catch (e) {}
       });
     }
 
@@ -4455,7 +4461,7 @@ const nonce = (Astro.locals as any).nonce || '';
       refSelect.value = calRefLevel.toString();
       refSelect.addEventListener('change', (e) => {
         calRefLevel = parseInt(e.target.value);
-        localStorage.setItem('calRefLevel', calRefLevel.toString());
+        try { localStorage.setItem('calRefLevel', calRefLevel.toString()); } catch (e) {}
         // Update LUFS target marker position
         const marker = document.querySelector('.lufs-target-marker');
         if (marker) {
@@ -4470,8 +4476,7 @@ const nonce = (Astro.locals as any).nonce || '';
     document.getElementById('calReset')?.addEventListener('click', () => {
       calGainOffset = 0;
       calRefLevel = -14;
-      localStorage.removeItem('calGainOffset');
-      localStorage.removeItem('calRefLevel');
+      try { localStorage.removeItem('calGainOffset'); localStorage.removeItem('calRefLevel'); } catch (e) {}
       if (gainSlider) gainSlider.value = 0;
       if (gainValue) gainValue.textContent = '0 dB';
       if (refSelect) refSelect.value = '-23';

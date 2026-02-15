@@ -133,8 +133,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         currentBalance: 0,
         isActive: false
       }, updateTime);
-    } catch (redeemErr: any) {
-      if (redeemErr.message?.includes('CONFLICT')) {
+    } catch (redeemErr: unknown) {
+      if (redeemErr instanceof Error && redeemErr.message.includes('CONFLICT')) {
         return new Response(JSON.stringify({
           success: false,
           error: 'This gift card was just redeemed. Please try again.'

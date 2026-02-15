@@ -71,8 +71,8 @@ export const POST: APIRoute = async ({ request }) => {
       hlsUrl
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error: any) {
-    console.error('[dj-lobby/broadcast-mode] Error:', error?.message || error);
+  } catch (error: unknown) {
+    console.error('[dj-lobby/broadcast-mode] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to update broadcast mode'

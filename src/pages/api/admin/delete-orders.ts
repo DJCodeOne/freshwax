@@ -63,9 +63,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await deleteDocument('orders', orderId);
         results.push({ id: orderId, success: true });
         console.log(`[delete-orders] Deleted order: ${orderId}`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         results.push({ id: orderId, success: false, error: 'Internal error' });
-        console.error(`[delete-orders] Failed to delete ${orderId}:`, error.message);
+        console.error(`[delete-orders] Failed to delete ${orderId}:`, error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[delete-orders] Error:', error);
     return new Response(JSON.stringify({
       success: false,

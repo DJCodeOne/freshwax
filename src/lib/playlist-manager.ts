@@ -454,9 +454,9 @@ export class PlaylistManager {
 
       this.renderUI();
       return { success: true, message: result.message || 'Added to queue' };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error adding item:', error);
-      return { success: false, error: error.message || 'Failed to add to queue' };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to add to queue' };
     }
   }
 
@@ -1732,9 +1732,9 @@ export class PlaylistManager {
       this.renderUI();
 
       return { success: true, message: 'Added to your playlist' };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error adding to personal playlist:', error);
-      return { success: false, error: error.message || 'Failed to add to playlist' };
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to add to playlist' };
     }
   }
 
