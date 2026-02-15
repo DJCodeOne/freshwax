@@ -165,7 +165,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       title: slot.title || `${slot.djName}'s Stream`,
       djName: slot.djName,
       djId: slot.djId,
-      djAvatar: slot.djAvatar || '/placeholder.webp',
+      djAvatar: slot.djAvatar || '/place-holder.webp',
       genre: slot.genre || 'Jungle / D&B',
       description: slot.description || '',
       isLive: true,
@@ -189,7 +189,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       totalViews: slot.totalViews || 0,
       totalLikes: slot.totalLikes || 0,
       averageRating: slot.averageRating || 0,
-      coverImage: slot.coverImage || '/placeholder.webp',
+      coverImage: slot.coverImage || '/place-holder.webp',
     }));
 
     // Also check legacy livestreams collection

@@ -360,7 +360,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         
         return `
           <div class="release-card" data-id="${release.id}">
-            <img src="${release.artwork || '/images/placeholder-album.jpg'}" alt="${escapeHtml(release.title)}" class="release-artwork">
+            <img src="${release.artwork || '/place-holder.webp'}" alt="${escapeHtml(release.title)}" class="release-artwork">
             <div class="release-info">
               <div class="release-title">${escapeHtml(release.title || 'Untitled')}</div>
               <div class="release-meta">${escapeHtml(release.artistName || 'Unknown Artist')} • ${release.trackCount || 0} tracks</div>

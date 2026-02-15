@@ -34,9 +34,9 @@ export const GET: APIRoute = async ({ request }) => {
       isLive = true;
 
       // Priority: cover image > DJ avatar > logo
-      if (liveStream.coverImage && liveStream.coverImage !== '/placeholder.webp' && !liveStream.coverImage.includes('placeholder')) {
+      if (liveStream.coverImage && liveStream.coverImage !== '/place-holder.webp' && !liveStream.coverImage.includes('place-holder')) {
         imageUrl = liveStream.coverImage;
-      } else if (liveStream.djAvatar && liveStream.djAvatar !== '/placeholder.webp' && !liveStream.djAvatar.includes('placeholder')) {
+      } else if (liveStream.djAvatar && liveStream.djAvatar !== '/place-holder.webp' && !liveStream.djAvatar.includes('place-holder')) {
         imageUrl = liveStream.djAvatar;
       } else {
         imageUrl = '/logo.webp'; // Branded Fresh Wax logo

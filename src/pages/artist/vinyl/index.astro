@@ -184,7 +184,7 @@ export const prerender = false;
     grid.style.display = 'grid';
 
     grid.innerHTML = filtered.map(l => {
-      const imageUrl = l.images && l.images[0] ? l.images[0] : '/placeholder-vinyl.png';
+      const imageUrl = l.images && l.images[0] ? l.images[0] : '/place-holder.webp';
       const statusClass = getStatusClass(l.status);
       const statusLabel = getStatusLabel(l.status);
 
