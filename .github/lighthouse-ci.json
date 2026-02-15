@@ -1,0 +1,31 @@
+{
+  "ci": {
+    "collect": {
+      "url": [
+        "http://localhost:4321/",
+        "http://localhost:4321/releases/",
+        "http://localhost:4321/merch/",
+        "http://localhost:4321/dj-mixes/",
+        "http://localhost:4321/checkout/",
+        "http://localhost:4321/login/"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "preset": "desktop"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["error", { "minScore": 0.85, "aggregationMethod": "median-run" }],
+        "categories:accessibility": ["warn", { "minScore": 0.90, "aggregationMethod": "median-run" }],
+        "categories:best-practices": ["warn", { "minScore": 0.90, "aggregationMethod": "median-run" }],
+        "categories:seo": ["error", { "minScore": 0.95, "aggregationMethod": "median-run" }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500, "aggregationMethod": "median-run" }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1, "aggregationMethod": "median-run" }]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}

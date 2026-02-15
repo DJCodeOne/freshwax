@@ -1382,11 +1382,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 403, headers: { 'Content-Type': 'application/json' } });
       }
 
-      // TODO: In production, you would:
-      // 1. Check if the DJ has a booked slot at this time
-      // 2. Start the FFmpeg relay process to pull from relayUrl
-      // 3. Verify the external stream is actually live
-      // For now, we'll create the slot and trust the relay is working
+      // Verify the DJ has a booked slot covering the current time
+      const djSlots = await queryCollection('livestreamSlots', {
+        filters: [{ field: 'djId', op: 'EQUAL', value: djId }],
+        skipCache: true
+      });
+
+      const bookedSlot = djSlots.find((slot: any) => {
+        if (slot.status !== 'scheduled' && slot.status !== 'in_lobby') return false;
+        const slotStart = new Date(slot.startTime).getTime();
+        const slotEnd = new Date(slot.endTime).getTime();
+        return slotStart <= now.getTime() && now.getTime() < slotEnd;
+      });
+
+      if (!bookedSlot) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'You must have a booked slot to start a relay stream'
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
 
       // Calculate end time (top of next hour)
       const endTime = new Date(now);

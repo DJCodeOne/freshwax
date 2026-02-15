@@ -11,6 +11,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
+    "test:lighthouse": "lhci autorun --config=.github/lighthouse-ci.json",
+    "test:lighthouse:prod": "lhci autorun --config=.github/lighthouse-ci-production.json",
     "astro": "astro"
   },
   "dependencies": {
@@ -28,6 +30,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.58.2",
     "@types/adm-zip": "^0.5.7",
     "@vitest/coverage-v8": "^4.0.16",

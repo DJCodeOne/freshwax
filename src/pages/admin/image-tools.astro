@@ -106,6 +106,10 @@ export const prerender = false;
   <div id="resultsSection" class="card mb-4" style="display: none;">
     <div class="card-header">
       <h2>Reprocess Results</h2>
+      <div class="flex gap-1 items-center">
+        <span id="syncStatus" style="font-size: 0.8rem; color: var(--text-secondary);"></span>
+        <button id="syncFirebaseBtn" class="btn btn-sm btn-primary" style="display: none;">Sync to Firebase</button>
+      </div>
     </div>
     <div class="card-body" style="padding: 0;">
       <div class="table-wrapper">
@@ -147,6 +151,7 @@ export const prerender = false;
   let currentPrefix = '';
   let totalScanned = 0;
   let cumulativeSummary = { notWebp: 0, oversized: 0, missingThumb: 0 };
+  let allReprocessResults: Array<{ key: string; newKey: string; status: string; thumbKey?: string }> = [];
 
   // DOM references
   const scanStatus = document.getElementById('scanStatus')!;
@@ -164,6 +169,8 @@ export const prerender = false;
   const resultsBody = document.getElementById('resultsBody')!;
   const logSection = document.getElementById('logSection')!;
   const logEntries = document.getElementById('logEntries')!;
+  const syncFirebaseBtn = document.getElementById('syncFirebaseBtn') as HTMLButtonElement;
+  const syncStatus = document.getElementById('syncStatus')!;
 
   function formatBytes(bytes: number): string {
     if (bytes === 0) return '-';
@@ -297,6 +304,9 @@ export const prerender = false;
     reprocessBtn.textContent = 'Processing...';
     resultsSection.style.display = '';
     resultsBody.innerHTML = '';
+    allReprocessResults = [];
+    syncFirebaseBtn.style.display = 'none';
+    syncStatus.textContent = '';
 
     const deleteOriginals = deleteOriginalsCheckbox.checked;
 
@@ -371,6 +381,16 @@ export const prerender = false;
           }
         }
 
+        // Accumulate results for Firebase sync
+        for (const result of data.results) {
+          allReprocessResults.push({
+            key: result.key,
+            newKey: result.newKey || '',
+            status: result.status,
+            thumbKey: result.thumbKey,
+          });
+        }
+
         addLog(`Batch ${b + 1} complete: ${data.processed} processed, ${data.failed} failed`, data.failed > 0 ? 'error' : 'success');
 
       } catch (err) {
@@ -382,9 +402,76 @@ export const prerender = false;
     (window as any).showToast?.(`Done: ${totalProcessed} processed, ${totalFailed} failed`, totalFailed > 0 ? 'warning' : 'success');
     reprocessBtn.disabled = false;
     updateSelectedCount();
+
+    // Show sync button if there are successful results to sync
+    const successCount = allReprocessResults.filter(r => r.status === 'success' && r.newKey).length;
+    if (successCount > 0) {
+      syncFirebaseBtn.style.display = '';
+      syncFirebaseBtn.textContent = `Sync to Firebase (${successCount})`;
+      syncStatus.textContent = '';
+    }
+  }
+
+  // Sync reprocess results to Firebase
+  async function syncToFirebase() {
+    const successResults = allReprocessResults.filter(r => r.status === 'success' && r.newKey);
+    if (successResults.length === 0) return;
+
+    syncFirebaseBtn.disabled = true;
+    syncFirebaseBtn.textContent = 'Syncing...';
+    syncStatus.textContent = '';
+    addLog(`Syncing ${successResults.length} reprocessed images to Firebase...`);
+
+    try {
+      const res = await fetch('/api/admin/r2-image-sync/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ results: successResults }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        addLog(`Firebase sync failed: ${data.error || res.statusText}`, 'error');
+        (window as any).showToast?.('Firebase sync failed', 'error');
+        syncFirebaseBtn.disabled = false;
+        syncFirebaseBtn.textContent = `Sync to Firebase (${successResults.length})`;
+        return;
+      }
+
+      const { synced, failed, skipped, details } = data;
+
+      // Log details
+      for (const detail of details || []) {
+        if (detail.status === 'synced') {
+          addLog(`Synced ${detail.collection}/${detail.docId}: ${detail.updatedFields?.join(', ')}`, 'success');
+        } else if (detail.status === 'failed') {
+          addLog(`Failed ${detail.collection}/${detail.docId}: ${detail.error}`, 'error');
+        } else if (detail.status === 'skipped') {
+          addLog(`Skipped ${detail.key}: ${detail.error}`, 'info');
+        }
+      }
+
+      addLog(`Firebase sync complete: ${synced} synced, ${failed} failed, ${skipped} skipped`, failed > 0 ? 'error' : 'success');
+      (window as any).showToast?.(`Firebase sync: ${synced} synced, ${failed} failed`, failed > 0 ? 'warning' : 'success');
+
+      syncFirebaseBtn.textContent = 'Synced';
+      syncFirebaseBtn.disabled = true;
+      syncStatus.textContent = `${synced} synced`;
+      syncStatus.style.color = failed > 0 ? 'var(--accent-red)' : 'var(--accent-green)';
+      if (failed > 0) syncStatus.textContent += `, ${failed} failed`;
+
+    } catch (err) {
+      addLog(`Firebase sync error: ${err}`, 'error');
+      (window as any).showToast?.('Firebase sync failed', 'error');
+      syncFirebaseBtn.disabled = false;
+      syncFirebaseBtn.textContent = `Sync to Firebase (${successResults.length})`;
+    }
   }
 
   // Event listeners
+  syncFirebaseBtn.addEventListener('click', syncToFirebase);
+
   document.querySelectorAll('.scan-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const prefix = (btn as HTMLElement).dataset.prefix || '';
