@@ -3,9 +3,15 @@
 // Uses soft-delete approach (sets deleted flag) since Firestore rules block hard deletes
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, invalidateUsersCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
+
+const deleteUserSchema = z.object({
+  userId: z.string().min(1),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -29,18 +35,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Parse request body
     const body = await request.json();
-    const { userId } = body;
 
     // SECURITY: Require admin authentication via admin key (not spoofable UID)
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    if (!userId) {
+    const parsed = deleteUserSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing userId'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { userId } = parsed.data;
 
     const results = {
       customers: false,

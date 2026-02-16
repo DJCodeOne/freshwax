@@ -2,10 +2,18 @@
 // Captures a PayPal Plus order and activates the subscription
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for PayPal Plus capture
+const PayPalPlusCaptureSchema = z.object({
+  paypalOrderId: z.string().min(1, 'PayPal order ID required'),
+  orderData: z.any().optional(),
+  expectedAmount: z.number().positive().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -83,15 +91,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const body = await request.json();
-    const { paypalOrderId, orderData: clientOrderData, expectedAmount } = body;
+    const rawBody = await request.json();
 
-    if (!paypalOrderId) {
+    const parseResult = PayPalPlusCaptureSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing PayPal order ID'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { paypalOrderId, orderData: clientOrderData, expectedAmount } = parseResult.data;
 
     console.log('[PayPal Plus] Capturing order:', paypalOrderId);
 

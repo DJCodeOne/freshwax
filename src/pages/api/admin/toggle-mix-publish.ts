@@ -1,10 +1,17 @@
 // src/pages/api/admin/toggle-mix-publish.ts
 // Toggle DJ mix publish status
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { updateDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const toggleMixPublishSchema = z.object({
+  mixId: z.string().min(1),
+  published: z.boolean(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -21,17 +28,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   try {
-    const { mixId, published } = body;
-
-    if (!mixId) {
+    const parsed = toggleMixPublishSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'mixId is required'
+        error: 'Invalid request'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { mixId, published } = parsed.data;
 
     await updateDocument('dj-mixes', mixId, {
       published: !!published,

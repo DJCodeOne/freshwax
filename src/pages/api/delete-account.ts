@@ -3,8 +3,14 @@
 // Purges PII from all Firestore collections, anonymizes financial records, cleans D1 and KV
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, deleteDocument, queryCollection, verifyUserToken } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const DeleteAccountSchema = z.object({
+  userId: z.string().min(1, 'userId is required').max(200),
+  idToken: z.string().min(1, 'Authentication required').max(5000),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -37,28 +43,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { userId, idToken } = body;
-
-    if (!userId) {
+    const parsed = DeleteAccountSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'userId is required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // SECURITY: Verify the user is deleting their OWN account via Firebase ID token
-    if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { userId, idToken } = parsed.data;
 
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {

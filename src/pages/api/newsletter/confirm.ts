@@ -3,20 +3,29 @@
 // Validates token, activates subscription, sends welcome email
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+const ConfirmSchema = z.object({
+  id: z.string().min(1).max(500),
+  token: z.string().min(1).max(500),
+});
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals, redirect }) => {
   const url = new URL(request.url);
-  const subscriberId = url.searchParams.get('id');
-  const token = url.searchParams.get('token');
-
-  if (!subscriberId || !token) {
+  const parsed = ConfirmSchema.safeParse({
+    id: url.searchParams.get('id') ?? '',
+    token: url.searchParams.get('token') ?? '',
+  });
+  if (!parsed.success) {
     return redirect('/newsletter/?error=invalid-link');
   }
+  const subscriberId = parsed.data.id;
+  const token = parsed.data.token;
 
   try {
     const subscriber = await getDocument('subscribers', subscriberId);

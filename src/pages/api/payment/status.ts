@@ -3,10 +3,17 @@
 // Uses KV caching to reduce Firebase reads
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
 import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+
+// Zod schema for payment status query params
+const PaymentStatusSchema = z.object({
+  userId: z.string().min(1, 'User ID required'),
+  refresh: z.enum(['true', 'false', '']).optional(),
+});
 
 export const prerender = false;
 
@@ -15,12 +22,20 @@ const CACHE_PREFIX = 'payment';
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
-  const userId = url.searchParams.get('userId');
-  const refresh = url.searchParams.get('refresh') === 'true';
+  const rawParams = {
+    userId: url.searchParams.get('userId') || '',
+    refresh: url.searchParams.get('refresh') || undefined,
+  };
 
-  if (!userId) {
-    return ApiErrors.badRequest('User ID required');
+  const parseResult = PaymentStatusSchema.safeParse(rawParams);
+  if (!parseResult.success) {
+    return new Response(JSON.stringify({
+      error: 'Invalid request',
+      details: parseResult.error.issues
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { userId } = parseResult.data;
+  const refresh = parseResult.data.refresh === 'true';
 
   const env = locals.runtime.env;
 

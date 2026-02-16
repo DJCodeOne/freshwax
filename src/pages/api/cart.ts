@@ -3,7 +3,19 @@
 // Uses the CACHE KV namespace with cart:{userId} keys
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { verifyRequestUser } from '../../lib/firebase-rest';
+
+const CartItemSchema = z.object({
+  id: z.string().min(1).max(200),
+  name: z.string().max(500).optional(),
+  price: z.number().min(0).optional(),
+  quantity: z.number().int().min(1).max(100).optional(),
+}).catchall(z.unknown());
+
+const CartSaveSchema = z.object({
+  items: z.array(CartItemSchema).max(100),
+});
 
 export const prerender = false;
 
@@ -109,17 +121,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { items } = body;
-
-    if (!Array.isArray(items)) {
+    const parsed = CartSaveSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Invalid cart data'
+        error: 'Invalid cart data',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { items } = parsed.data;
 
     const env = locals.runtime.env;
     const kv = env?.CACHE;

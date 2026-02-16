@@ -5,8 +5,24 @@
 // Note: initFirebaseEnv is called by middleware, no need to call it here
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const UserProfileUpdateSchema = z.object({
+  firstName: z.string().max(200).optional(),
+  lastName: z.string().max(200).optional(),
+  fullName: z.string().max(200).optional(),
+  displayName: z.string().max(200).optional(),
+  displayNameLower: z.string().max(200).optional(),
+  phone: z.string().max(200).optional(),
+  address1: z.string().max(200).optional(),
+  address2: z.string().max(200).optional(),
+  city: z.string().max(200).optional(),
+  county: z.string().max(200).optional(),
+  postcode: z.string().max(200).optional(),
+  country: z.string().max(200).optional(),
+}).catchall(z.unknown());
 
 export const prerender = false;
 
@@ -98,6 +114,17 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const body = await request.json();
+    const parsed = UserProfileUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Validate and sanitize input - only allow known profile fields
     const allowedFields = [

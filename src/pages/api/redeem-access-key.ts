@@ -2,8 +2,16 @@
 // API for users to redeem a quick access key and gain DJ lobby access
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const RedeemAccessKeySchema = z.object({
+  code: z.string().min(1, 'Access code is required').max(100),
+  userId: z.string().min(1, 'User ID is required').max(200),
+  userEmail: z.string().email().max(320).optional().nullable(),
+  userName: z.string().max(200).optional().nullable(),
+});
 
 // Helper to initialize Firebase
 function initFirebase(locals: App.Locals) {
@@ -22,17 +30,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { code, userId, userEmail, userName } = data;
-
-    if (!code || !userId) {
+    const parsed = RedeemAccessKeySchema.safeParse(data);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Access code and user ID are required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { code, userId, userEmail, userName } = parsed.data;
 
     // SECURITY: Verify authentication matches userId
     const { userId: authUserId, error: authError } = await verifyRequestUser(request);

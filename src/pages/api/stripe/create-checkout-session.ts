@@ -2,12 +2,66 @@
 // Creates Stripe checkout session for product purchases
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
+
+// Zod schema for Stripe checkout session creation
+const CheckoutItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string().optional(),
+  releaseId: z.string().optional(),
+  trackId: z.string().optional(),
+  name: z.string().min(1, 'Item name required').max(500),
+  type: z.enum(['digital', 'track', 'release', 'vinyl', 'merch']).optional(),
+  price: z.number().positive('Price must be positive'),
+  quantity: z.number().int().min(1).max(99).default(1),
+  size: z.string().optional(),
+  color: z.string().optional(),
+  image: z.string().optional(),
+  artwork: z.string().optional(),
+  artist: z.string().optional(),
+  artistId: z.string().optional(),
+  artistName: z.string().optional(),
+  title: z.string().optional(),
+  isPreOrder: z.boolean().optional(),
+  releaseDate: z.string().optional(),
+  sellerId: z.string().optional(),
+}).passthrough();
+
+const CheckoutCustomerSchema = z.object({
+  email: z.string().email('Valid email required'),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  displayName: z.string().optional(),
+  phone: z.string().optional(),
+  userId: z.string().optional(),
+}).passthrough();
+
+const CheckoutShippingSchema = z.object({
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  city: z.string().optional(),
+  county: z.string().optional(),
+  postcode: z.string().optional(),
+  country: z.string().optional(),
+}).passthrough().optional();
+
+const StripeCheckoutSchema = z.object({
+  items: z.array(CheckoutItemSchema).min(1, 'At least one item required').max(50),
+  customer: CheckoutCustomerSchema,
+  shipping: CheckoutShippingSchema,
+  hasPhysicalItems: z.boolean().optional(),
+  totals: z.object({
+    subtotal: z.number().optional(),
+    shipping: z.number().optional(),
+    total: z.number().optional(),
+  }).passthrough().optional(),
+}).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
@@ -29,22 +83,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const orderData = await request.json();
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (!orderData.items || orderData.items.length === 0) {
+    // Validate input with Zod
+    const parseResult = StripeCheckoutSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'No items in order'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    if (!orderData.customer?.email) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Customer email required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    const orderData = parseResult.data;
 
     // SECURITY: Validate stock availability before allowing checkout
     const stockCheck = await validateStock(orderData.items);

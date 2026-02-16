@@ -3,9 +3,23 @@
 // Usage: POST { productIds: [...], sellerId, collection: 'merch' | 'releases', adminKey }
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const assignSellerSchema = z.object({
+  productIds: z.array(z.string().min(1)).optional(),
+  sellerId: z.string().optional(),
+  sellerName: z.string().optional(),
+  category: z.string().optional(),
+  categoryName: z.string().optional(),
+  productType: z.string().optional(),
+  collection: z.enum(['merch', 'releases']).optional(),
+  searchTerm: z.string().optional(),
+  listAll: z.boolean().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -41,7 +55,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { productIds, sellerId, sellerName, category, categoryName, productType, collection, searchTerm, listAll } = body;
+    const parsed = assignSellerSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { productIds, sellerId, sellerName, category, categoryName, productType, collection, searchTerm, listAll } = parsed.data;
 
     // sellerId, category, categoryName, or productType required if not listing
     if (!sellerId && !category && !categoryName && !productType && !listAll) {
@@ -52,12 +74,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const collectionName = collection || 'merch';
-    if (!['merch', 'releases'].includes(collectionName)) {
-      return new Response(JSON.stringify({ error: 'collection must be "merch" or "releases"' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const serviceAccountKey = getServiceAccountKey(env);

@@ -4,11 +4,23 @@
 // Supports both Stripe Connect and PayPal based on artist preference
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
+
+const triggerPayoutSchema = z.object({
+  orderId: z.string().min(1),
+  artistId: z.string().optional(),
+  payeeType: z.enum(['artist', 'supplier', 'seller']).optional(),
+  payeeId: z.string().optional(),
+  payeeName: z.string().optional(),
+  payeeEmail: z.string().email().optional(),
+  amount: z.number().positive().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -31,14 +43,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-    const { orderId, artistId, payeeType, payeeId, payeeName, payeeEmail, amount } = bodyData;
-
-    if (!orderId) {
-      return new Response(JSON.stringify({ error: 'orderId required' }), {
+    const parsed = triggerPayoutSchema.safeParse(bodyData);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { orderId, artistId, payeeType, payeeId, payeeName, payeeEmail, amount } = parsed.data;
 
     // Get order
     const order = await getDocument('orders', orderId);

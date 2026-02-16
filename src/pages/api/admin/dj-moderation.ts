@@ -6,9 +6,20 @@
 // NOTE: getUserByEmail requires Firebase Admin SDK which doesn't work on Cloudflare
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const djModerationPostSchema = z.object({
+  action: z.enum(['ban', 'unban', 'hold', 'release', 'kick']),
+  email: z.string().email().optional(),
+  userId: z.string().optional(),
+  reason: z.string().optional(),
+  adminKey: z.string().optional(),
+  targetUserId: z.string().optional(),
+  targetUserName: z.string().optional(),
+});
 
 // Helper to get admin key from environment
 function getAdminKey(locals: App.Locals): string {
@@ -106,7 +117,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const saQuery = getSaQuery(locals);
   try {
     const data = await request.json();
-    const { action, email, userId, reason, adminKey, targetUserId, targetUserName } = data;
 
     // SECURITY: Use requireAdminAuth for consistent timing-safe comparison
     const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
@@ -114,6 +124,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
     const postAuthError = await requireAdminAuth(request, locals, data);
     if (postAuthError) return postAuthError;
+
+    const parsed = djModerationPostSchema.safeParse(data);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { action, email, userId, reason } = parsed.data;
 
     // Note: getUserByEmail requires Firebase Admin SDK which doesn't work on Cloudflare
     // Instead, the admin interface should provide userId directly

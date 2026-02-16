@@ -2,10 +2,15 @@
 // Admin endpoint to send email verification link to a user
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
+
+const sendVerificationEmailSchema = z.object({
+  email: z.string().email(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -28,14 +33,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { email } = body;
-
-    if (!email) {
-      return new Response(JSON.stringify({ error: 'Email required' }), {
+    const parsed = sendVerificationEmailSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { email } = parsed.data;
 
     // Get Firebase Admin credentials
     const FIREBASE_PROJECT_ID = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';

@@ -2,9 +2,15 @@
 // Redeem a gift card code and add to user's credit balance
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+// Zod schema for gift card redemption
+const RedeemSchema = z.object({
+  code: z.string().min(1, 'Gift card code is required').max(50),
+}).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: destructive operation - 3 per hour (prevent brute force)
@@ -28,15 +34,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const data = await request.json();
-    const { code } = data;
+    const rawBody = await request.json();
 
-    if (!code) {
+    const parseResult = RedeemSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Gift card code is required'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { code } = parseResult.data;
 
     const normalizedCode = code.toUpperCase().trim();
 

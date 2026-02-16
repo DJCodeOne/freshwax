@@ -3,12 +3,17 @@
 
 import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saDeleteDocument, saAddDocument } from '../../lib/firebase-service-account';
 import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
+
+const deleteMerchSchema = z.object({
+  productId: z.string().min(1),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -91,14 +96,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(R2_CONFIG);
 
   try {
-    const { productId } = await request.json();
-
-    if (!productId) {
+    const body = await request.json();
+    const parsed = deleteMerchSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Product ID is required'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { productId } = parsed.data;
 
     log.info('[delete-merch] Deleting product:', productId);
 

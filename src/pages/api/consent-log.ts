@@ -3,9 +3,17 @@
 // Logs consent choices with timestamp, IP, and categories to Firestore
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { addDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
+
+const ConsentLogSchema = z.object({
+  necessary: z.boolean().optional(),
+  analytics: z.boolean(),
+  marketing: z.boolean(),
+  action: z.enum(['accept_all', 'reject_all', 'save']).optional().default('save'),
+});
 
 export const prerender = false;
 
@@ -18,11 +26,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { necessary, analytics, marketing, action } = body;
-
-    if (typeof analytics !== 'boolean' || typeof marketing !== 'boolean') {
+    const parsed = ConsentLogSchema.safeParse(body);
+    if (!parsed.success) {
       return ApiErrors.badRequest('Invalid consent data');
     }
+    const { analytics, marketing, action } = parsed.data;
 
     await addDocument('consentLogs', {
       necessary: true,

@@ -2,10 +2,21 @@
 // Handles all stock operations: receive, adjust, transfer, reserve, sell
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, queryCollection, clearAllMerchCache, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
+
+const updateStockSchema = z.object({
+  productId: z.string().min(1),
+  variantKey: z.string().optional().default('default'),
+  operation: z.enum(['receive', 'adjust', 'sell', 'return', 'reserve', 'unreserve', 'damaged', 'transfer', 'set']),
+  quantity: z.number(),
+  notes: z.string().optional().default(''),
+  orderId: z.string().optional(),
+  userId: z.string().optional().default('admin'),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -76,26 +87,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const { key: serviceAccountKey, projectId } = getServiceAccountKey(env);
 
   try {
-    const body = await request.json() as StockUpdate;
+    const body = await request.json();
+
+    const parsed = updateStockSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid request'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
 
     const {
       productId,
-      variantKey = 'default',
+      variantKey,
       operation,
       quantity,
-      notes = '',
+      notes,
       orderId,
-      userId = 'admin'
-    } = body;
+      userId
+    } = parsed.data;
 
     log.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
-
-    if (!productId || !operation || quantity === undefined) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required fields: productId, operation, quantity'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
 
     if (quantity < 0 && !['adjust', 'damaged', 'set'].includes(operation)) {
       return new Response(JSON.stringify({

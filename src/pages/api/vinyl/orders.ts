@@ -3,9 +3,18 @@
 // Uses Firebase REST API with service account
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+
+const vinylOrderPostSchema = z.object({
+  action: z.enum(['mark-shipped', 'add-tracking']),
+  orderId: z.string().min(1),
+  sellerId: z.string().min(1),
+  carrier: z.string().optional(),
+  trackingNumber: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -149,14 +158,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { action, orderId, sellerId, carrier, trackingNumber } = body;
 
-    if (!orderId || !sellerId) {
-      return new Response(JSON.stringify({ success: false, error: 'Order ID and Seller ID required' }), {
+    const parsed = vinylOrderPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { action, orderId, sellerId, carrier, trackingNumber } = parsed.data;
 
     // Verify user owns this order (is the seller)
     if (verifiedUserId !== sellerId) {

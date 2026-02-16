@@ -2,12 +2,23 @@
 // Admin API endpoint to process Stripe refunds
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const processRefundSchema = z.object({
+  orderId: z.string().min(1),
+  amount: z.union([z.number().positive(), z.literal('full'), z.null()]).optional(),
+  reason: z.enum(['duplicate', 'fraudulent', 'requested_by_customer']).optional(),
+  refundItems: z.array(z.object({
+    id: z.string().min(1),
+  }).passthrough()).optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -32,14 +43,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const { orderId, amount, reason, refundItems } = body;
-
-    if (!orderId) {
-      return new Response(JSON.stringify({ error: 'Order ID required' }), {
+    const parsed = processRefundSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { orderId, amount, reason, refundItems } = parsed.data;
 
     // Get order data
     const order = await getDocument('orders', orderId);

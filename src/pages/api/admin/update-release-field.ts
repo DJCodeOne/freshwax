@@ -2,10 +2,18 @@
 // Update a specific field on a release
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateReleaseFieldParamsSchema = z.object({
+  releaseId: z.string().min(1),
+  field: z.string().min(1),
+  value: z.string().optional(),
+  confirm: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -20,20 +28,25 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   const url = new URL(request.url);
-  const releaseId = url.searchParams.get('releaseId');
-  const field = url.searchParams.get('field');
-  const value = url.searchParams.get('value');
-  const confirm = url.searchParams.get('confirm');
+  const params = {
+    releaseId: url.searchParams.get('releaseId') || undefined,
+    field: url.searchParams.get('field') || undefined,
+    value: url.searchParams.get('value') || undefined,
+    confirm: url.searchParams.get('confirm') || undefined,
+  };
 
-  if (!releaseId || !field) {
+  const parsed = updateReleaseFieldParamsSchema.safeParse(params);
+  if (!parsed.success) {
     return new Response(JSON.stringify({
-      error: 'Missing releaseId or field',
+      error: 'Invalid request',
       usage: '/api/admin/update-release-field/?releaseId=xxx&field=pricing.digital&value=0&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  const { releaseId, field, value, confirm } = parsed.data;
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;

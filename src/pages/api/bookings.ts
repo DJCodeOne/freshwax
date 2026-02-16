@@ -1,6 +1,24 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const BookingsGetSchema = z.object({
+  action: z.enum(['getDailyInfo', 'getSchedule', 'getMyBookings']),
+  uid: z.string().min(1).max(200).optional(),
+  date: z.string().min(1).max(30).optional(),
+});
+
+const BookingsPostSchema = z.object({
+  action: z.enum(['createBooking', 'cancelBooking']),
+  uid: z.string().min(1).max(200).optional(),
+  djName: z.string().min(1).max(200).optional(),
+  streamTitle: z.string().min(1).max(300).optional(),
+  description: z.string().max(1000).optional(),
+  slots: z.array(z.string().max(50)).max(10).optional(),
+  durationType: z.enum(['1hr', '2hr']).optional(),
+  bookingId: z.string().min(1).max(200).optional(),
+});
 
 const MAX_DAILY_HOURS = 2;
 const PROJECT_ID = 'freshwax-store';
@@ -84,9 +102,21 @@ function generateId(): string {
 export const GET: APIRoute = async ({ request, url, locals }) => {
   const env = locals.runtime.env;
 
-  const action = url.searchParams.get('action');
-  const uid = url.searchParams.get('uid');
-  const dateStr = url.searchParams.get('date');
+  const parsedGet = BookingsGetSchema.safeParse({
+    action: url.searchParams.get('action') ?? '',
+    uid: url.searchParams.get('uid') || undefined,
+    date: url.searchParams.get('date') || undefined,
+  });
+  if (!parsedGet.success) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Invalid request',
+      details: parsedGet.error.issues.map(i => i.message)
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+  const action = parsedGet.data.action;
+  const uid = parsedGet.data.uid || null;
+  const dateStr = parsedGet.data.date || null;
 
   try {
     // Get user's daily bookings and allowance — requires auth
@@ -217,7 +247,15 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const body = await request.json();
-    const { action, uid, djName, streamTitle, description, slots, durationType } = body;
+    const parsedPost = BookingsPostSchema.safeParse(body);
+    if (!parsedPost.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid request',
+        details: parsedPost.error.issues.map(i => i.message)
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const { action, uid, djName, streamTitle, description, slots, durationType } = parsedPost.data;
 
     // Verify the authenticated user matches the uid in the request
     if (uid && verifiedUserId !== uid) {
@@ -330,7 +368,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     // Cancel booking
     if (action === 'cancelBooking') {
-      const { bookingId } = body;
+      const bookingId = parsedPost.data.bookingId;
 
       if (!bookingId) {
         return new Response(JSON.stringify({

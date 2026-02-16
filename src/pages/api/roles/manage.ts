@@ -1,6 +1,23 @@
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
+
+const rolesManagePostSchema = z.object({
+  action: z.enum(['requestRole', 'approveRole', 'denyRole', 'revokeRole']),
+  uid: z.string().min(1),
+  roleType: z.string().optional(),
+  reason: z.string().optional(),
+  artistName: z.string().optional(),
+  bio: z.string().optional(),
+  links: z.string().optional(),
+  businessName: z.string().optional(),
+  description: z.string().optional(),
+  website: z.string().optional(),
+  storeName: z.string().optional(),
+  location: z.string().optional(),
+  discogsUrl: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -111,14 +128,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { action, uid, roleType, reason, artistName, bio, links, businessName, description, website, storeName, location, discogsUrl } = body;
+
+    const parsed = rolesManagePostSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid request'
+      }), { status: 400 });
+    }
+
+    const { action, uid, roleType, reason, artistName, bio, links, businessName, description, website, storeName, location, discogsUrl } = parsed.data;
 
     // Request a role (user action)
     if (action === 'requestRole') {
-      if (!uid || !roleType) {
+      if (!roleType) {
         return new Response(JSON.stringify({
           success: false,
-          error: 'Missing uid or roleType'
+          error: 'Missing roleType'
         }), { status: 400 });
       }
 

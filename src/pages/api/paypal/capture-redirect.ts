@@ -3,10 +3,17 @@
 // Captures the payment and redirects to order confirmation
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for PayPal redirect query params
+const PayPalRedirectParamsSchema = z.object({
+  token: z.string().min(1, 'PayPal token required'),
+  PayerID: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -41,15 +48,20 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string, mode
 
 export const GET: APIRoute = async ({ request, locals, redirect }) => {
   const url = new URL(request.url);
-  const paypalOrderId = url.searchParams.get('token');
-  const payerId = url.searchParams.get('PayerID');
+  const rawParams = {
+    token: url.searchParams.get('token') || '',
+    PayerID: url.searchParams.get('PayerID') || undefined,
+  };
 
-  console.log('[PayPal Redirect] Token:', paypalOrderId, 'PayerID:', payerId);
-
-  if (!paypalOrderId) {
-    console.error('[PayPal Redirect] No token in URL');
+  const paramResult = PayPalRedirectParamsSchema.safeParse(rawParams);
+  if (!paramResult.success) {
+    console.error('[PayPal Redirect] Invalid params');
     return redirect('/checkout?error=missing_token');
   }
+  const paypalOrderId = paramResult.data.token;
+  const payerId = paramResult.data.PayerID;
+
+  console.log('[PayPal Redirect] Token:', paypalOrderId, 'PayerID:', payerId);
 
   try {
     const env = locals.runtime.env;

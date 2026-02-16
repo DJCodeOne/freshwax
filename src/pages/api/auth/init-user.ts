@@ -3,8 +3,30 @@
 // Replaces client-side Firestore SDK calls (~200KB saved from login/register pages)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument, setDocument, queryCollection } from '../../../lib/firebase-rest';
+
+const InitUserSchema = z.object({
+  action: z.enum(['login', 'register', 'google-login', 'google-register']),
+  displayName: z.string().max(100).optional(),
+  email: z.string().email().max(320).optional(),
+  provider: z.enum(['email', 'Google']).optional(),
+  photoURL: z.string().url().max(2048).optional().nullable(),
+  requestArtist: z.boolean().optional(),
+  requestMerchSeller: z.boolean().optional(),
+  requestVinylSeller: z.boolean().optional(),
+  artistName: z.string().max(200).optional(),
+  artistBio: z.string().max(2000).optional(),
+  artistLinks: z.string().max(1000).optional(),
+  businessName: z.string().max(200).optional(),
+  merchDescription: z.string().max(2000).optional(),
+  merchWebsite: z.string().max(500).optional(),
+  vinylStoreName: z.string().max(200).optional(),
+  vinylDescription: z.string().max(2000).optional(),
+  vinylLocation: z.string().max(200).optional(),
+  vinylDiscogsUrl: z.string().max(500).optional(),
+});
 
 export const prerender = false;
 
@@ -26,26 +48,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   }
 
-  let body: any;
+  let rawBody: any;
   try {
-    body = await request.json();
+    rawBody = await request.json();
   } catch {
     return new Response(JSON.stringify({ success: false, error: 'Invalid JSON body' }), {
       status: 400, headers: { 'Content-Type': 'application/json' }
     });
   }
 
+  const parsed = InitUserSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
+      status: 400, headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const {
-    action,         // 'login' | 'register' | 'google-login' | 'google-register'
-    displayName,    // For registration
-    email,          // User email
-    provider,       // 'email' | 'Google'
-    photoURL,       // For Google sign-in
-    // Role requests (register only)
+    action,
+    displayName,
+    email,
+    provider,
+    photoURL,
     requestArtist,
     requestMerchSeller,
     requestVinylSeller,
-    // Role request details
     artistName,
     artistBio,
     artistLinks,
@@ -56,13 +83,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     vinylDescription,
     vinylLocation,
     vinylDiscogsUrl,
-  } = body;
-
-  if (!action) {
-    return new Response(JSON.stringify({ success: false, error: 'Missing action' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  } = parsed.data;
 
   try {
     const now = new Date().toISOString();

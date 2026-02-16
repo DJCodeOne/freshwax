@@ -2,9 +2,16 @@
 // Start, stop, and update live streams
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const livestreamManageSchema = z.object({
+  action: z.enum(['start', 'stop', 'update', 'schedule', 'dj_ready', 'slot_expired', 'claim_slot']),
+  djId: z.string().min(1),
+  streamId: z.string().optional(),
+}).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: stream management - 30 per minute
@@ -28,14 +35,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const data = await request.json();
-    const { action, djId, streamId, ...streamData } = data;
 
-    if (!djId) {
+    const parsed = livestreamManageSchema.safeParse(data);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'DJ ID is required'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { action, djId, streamId, ...streamData } = parsed.data;
 
     // SECURITY: Verify the authenticated user matches the claimed djId
     if (authenticatedUserId !== djId) {

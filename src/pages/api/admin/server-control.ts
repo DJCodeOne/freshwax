@@ -1,12 +1,22 @@
 // src/pages/api/admin/server-control.ts
 // Admin server control API - handles start/stop/restart and maintenance actions
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, updateDocument, deleteDocument, clearCache as clearFirebaseCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
+
+const serverControlSchema = z.object({
+  action: z.enum([
+    'start-server', 'stop-server', 'restart-server', 'force-end-streams',
+    'clear-chat', 'kick-viewers', 'clear-cache', 'sync-data',
+    'cleanup-db', 'test-stream', 'health-check'
+  ]),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -22,18 +32,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { action } = body;
 
     // SECURITY: Require admin authentication
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    if (!action) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing action' }), {
+    const parsed = serverControlSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { action } = parsed.data;
 
     let result: { success: boolean; message?: string; error?: string };
 

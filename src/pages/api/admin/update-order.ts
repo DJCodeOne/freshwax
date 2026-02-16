@@ -2,11 +2,24 @@
 // Admin endpoint to update order details (totals, items, etc.)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateOrderSchema = z.object({
+  orderId: z.string().min(1),
+  updates: z.object({
+    totals: z.record(z.any()).optional(),
+    status: z.string().optional(),
+    paymentMethod: z.string().optional(),
+    items: z.array(z.any()).optional(),
+    notes: z.string().optional(),
+  }).passthrough().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -53,14 +66,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const { orderId, updates } = body;
-
-    if (!orderId) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing orderId' }), {
+    const parsed = updateOrderSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { orderId, updates } = parsed.data;
 
     // Get service account token for write permission
     const serviceAccountKey = getServiceAccountKey(env);

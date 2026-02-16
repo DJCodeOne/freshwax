@@ -2,9 +2,15 @@
 // Bulk stock upload via CSV
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const bulkStockUploadSchema = z.object({
+  adminKey: z.string().min(1),
+  operation: z.enum(['set', 'add', 'subtract']).default('set'),
+});
 
 export const prerender = false;
 
@@ -64,11 +70,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Parse form data
   const formData = await request.formData();
   const csvFile = formData.get('csv') as File | null;
-  const adminKey = formData.get('adminKey') as string;
-  const operation = (formData.get('operation') as string) || 'set';
+  const rawAdminKey = formData.get('adminKey') as string;
+  const rawOperation = formData.get('operation') as string;
+
+  // Validate non-file fields
+  const parsed = bulkStockUploadSchema.safeParse({
+    adminKey: rawAdminKey,
+    operation: rawOperation || 'set',
+  });
+  if (!parsed.success) {
+    return new Response(JSON.stringify({ error: 'Invalid request' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const { adminKey, operation } = parsed.data;
 
   // SECURITY: Use timing-safe admin key verification
-  if (!adminKey || !verifyAdminKey(adminKey, locals)) {
+  if (!verifyAdminKey(adminKey, locals)) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }

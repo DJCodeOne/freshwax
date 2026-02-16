@@ -3,8 +3,16 @@
 // Uses Firebase REST API efficiently, Pusher for real-time updates
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+
+const vinylListingPostSchema = z.object({
+  action: z.enum(['create', 'update', 'publish', 'unpublish', 'delete']),
+  sellerId: z.string().min(1),
+  sellerName: z.string().optional(),
+  listingId: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -209,14 +217,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { action, sellerId, sellerName, listingId, ...data } = body;
 
-    if (!sellerId) {
-      return new Response(JSON.stringify({ success: false, error: 'Seller ID required' }), {
+    const parsed = vinylListingPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { action, sellerId, sellerName, listingId, ...data } = parsed.data;
 
     // Verify the authenticated user matches the sellerId
     if (verifiedUserId !== sellerId) {

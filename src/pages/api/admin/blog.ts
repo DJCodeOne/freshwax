@@ -2,11 +2,32 @@
 // Blog post CRUD API for admin
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const blogCreateSchema = z.object({
+  title: z.string().min(1),
+  slug: z.string().optional(),
+  content: z.string().optional(),
+  excerpt: z.string().optional(),
+  featuredImage: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  status: z.enum(['draft', 'published']).optional(),
+  author: z.string().optional(),
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  adminKey: z.string().optional(),
+});
+
+const blogUpdateSchema = z.object({
+  id: z.string().min(1),
+  adminKey: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -91,15 +112,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   try {
-    const data = body;
-    const { title, slug, content, excerpt, featuredImage, category, tags, status, author, seoTitle, seoDescription } = data;
-
-    if (!title) {
-      return new Response(JSON.stringify({ success: false, error: 'Title is required' }), {
+    const parsed = blogCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { title, slug, content, excerpt, featuredImage, category, tags, status, author, seoTitle, seoDescription } = parsed.data;
 
     // Generate slug if not provided
     const postSlug = slug || title.toLowerCase()
@@ -159,15 +180,15 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   try {
-    const data = body;
-    const { id, ...updateData } = data;
-
-    if (!id) {
-      return new Response(JSON.stringify({ success: false, error: 'Post ID is required' }), {
+    const parsed = blogUpdateSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { id, ...updateData } = parsed.data;
 
     // Check post exists
     const existing = await getDocument('blog-posts', id);

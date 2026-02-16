@@ -3,10 +3,17 @@
 // Dual-write: D1 (primary) + Firebase (backup)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { saUpdateDocument, saQueryCollection, saDeleteDocument } from '../../../lib/firebase-service-account';
 import { d1GetLedgerEntries, d1UpdateLedgerEntry, d1DeleteLedgerEntry } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateLedgerEntrySchema = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('list'), adminKey: z.string().optional() }),
+  z.object({ action: z.literal('update'), ledgerId: z.string().min(1), updates: z.record(z.any()), adminKey: z.string().optional() }),
+  z.object({ action: z.literal('delete'), ledgerId: z.string().min(1), adminKey: z.string().optional() }),
+]);
 
 export const prerender = false;
 
@@ -44,7 +51,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { action, ledgerId, updates } = body;
+    const parsed = updateLedgerEntrySchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { action } = parsed.data;
+    const ledgerId = 'ledgerId' in parsed.data ? parsed.data.ledgerId : undefined;
+    const updates = 'updates' in parsed.data ? parsed.data.updates : undefined;
 
     const db = env?.DB;
 

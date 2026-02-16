@@ -3,9 +3,16 @@
 // Uses Firebase REST API - only updates fields allowed by Firestore rules
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, clearCache } from '../../../lib/firebase-rest';
 import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updatePartnerSchema = z.object({
+  adminUid: z.string().min(1),
+  partnerId: z.string().min(1),
+  updates: z.object({}).passthrough().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -28,16 +35,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { adminUid, idToken, partnerId, updates } = body;
-
-    console.log('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
-
-    if (!adminUid || !partnerId) {
+    const parsed = updatePartnerSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing adminUid or partnerId'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { adminUid, partnerId, updates } = parsed.data;
+    const idToken = (body as any).idToken;
+
+    console.log('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
 
     const now = new Date().toISOString();
     const results: string[] = [];

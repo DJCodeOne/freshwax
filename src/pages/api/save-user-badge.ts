@@ -1,6 +1,7 @@
 // src/pages/api/save-user-badge.ts
 // Save user's Plus badge to KV storage (minimal Firebase usage)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 
 export const prerender = false;
@@ -13,7 +14,12 @@ const VALID_BADGES = [
   'crown', 'fire', 'headphones', 'skull', 'lion', 'leopard', 'palm', 'lightning',
   'vinyl', 'speaker', 'moon', 'star', 'diamond', 'snake', 'bat', 'mic', 'leaf',
   'gorilla', 'spider', 'alien'
-];
+] as const;
+
+const SaveBadgeSchema = z.object({
+  userId: z.string().min(1, 'Missing userId').max(200),
+  badge: z.enum(VALID_BADGES, { message: 'Invalid badge' }),
+});
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -31,22 +37,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authHeader = request.headers.get('Authorization');
     const idToken = authHeader?.replace('Bearer ', '') || undefined;
 
-    const { userId, badge } = await request.json();
-
-    if (!userId || !badge) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing userId or badge' }), {
+    const rawBody = await request.json();
+    const parsed = SaveBadgeSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Validate badge
-    if (!VALID_BADGES.includes(badge)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid badge' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { userId, badge } = parsed.data;
 
     // Require auth token
     if (!idToken) {

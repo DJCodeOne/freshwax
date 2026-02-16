@@ -2,12 +2,20 @@
 // Captures a PayPal order after customer approval and creates the order in Firebase
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for PayPal capture request
+const PayPalCaptureSchema = z.object({
+  paypalOrderId: z.string().min(1, 'PayPal order ID required'),
+  orderData: z.any().optional(),
+  idToken: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -69,18 +77,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const body = await request.json();
-    const { paypalOrderId, orderData: clientOrderData, idToken } = body;
+    const rawBody = await request.json();
 
-    if (!paypalOrderId) {
+    const parseResult = PayPalCaptureSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing PayPal order ID'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { paypalOrderId, orderData: clientOrderData, idToken } = parseResult.data;
 
     console.log('[PayPal] Capturing order:', paypalOrderId);
 

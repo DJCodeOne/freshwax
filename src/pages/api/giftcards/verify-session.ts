@@ -2,9 +2,15 @@
 // Verifies a Stripe checkout session for gift card purchase
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for gift card verify-session query params
+const GiftCardVerifyParamsSchema = z.object({
+  session_id: z.string().min(1, 'session_id required'),
+});
 
 export const prerender = false;
 
@@ -19,14 +25,15 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   console.log('[giftcard-verify] ========== VERIFY SESSION REQUEST ==========');
 
   try {
-    const sessionId = url.searchParams.get('session_id');
-
-    if (!sessionId) {
+    const rawParams = { session_id: url.searchParams.get('session_id') || '' };
+    const paramResult = GiftCardVerifyParamsSchema.safeParse(rawParams);
+    if (!paramResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing session_id'
+        error: 'Invalid request',
+        details: paramResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const sessionId = paramResult.data.session_id;
 
     const env = locals.runtime.env;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;

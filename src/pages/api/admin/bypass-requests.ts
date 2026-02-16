@@ -1,11 +1,28 @@
 // src/pages/api/admin/bypass-requests.ts
 // Handle DJ bypass requests - DJs can request immediate access to go live
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const bypassRequestPostSchema = z.object({
+  action: z.enum(['approve', 'deny', 'expire']).optional(),
+  requestId: z.string().optional(),
+  userId: z.string().optional(),
+  userEmail: z.string().optional(),
+  userName: z.string().optional(),
+  email: z.string().optional(),
+  djName: z.string().optional(),
+  requestType: z.string().optional(),
+  reason: z.string().optional(),
+  stationName: z.string().optional(),
+  relayUrl: z.string().optional(),
+  mixCount: z.number().optional(),
+  bestMixLikes: z.number().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -215,7 +232,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const saQuery = getSaQuery(locals);
   try {
     const body = await request.json();
-    const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, stationName, relayUrl, mixCount, bestMixLikes } = body;
+
+    const parsed = bypassRequestPostSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid request'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, stationName, relayUrl, mixCount, bestMixLikes } = parsed.data;
 
     // Admin action: approve, deny, or expire — REQUIRES admin auth
     if (action === 'approve' || action === 'deny' || action === 'expire') {

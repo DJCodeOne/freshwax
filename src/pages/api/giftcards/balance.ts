@@ -2,7 +2,15 @@
 // Get user's credit balance and transaction history - uses Firebase REST API
 // SECURITY: Requires authentication - user can only view their own balance
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, updateDocumentConditional, verifyRequestUser } from '../../../lib/firebase-rest';
+
+// Zod schema for applying credit to an order
+const ApplyCreditSchema = z.object({
+  amount: z.number().positive('Amount must be positive'),
+  orderId: z.string().optional(),
+  orderNumber: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -78,15 +86,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const data = await request.json();
-    const { amount, orderId, orderNumber } = data;
+    const rawBody = await request.json();
 
-    if (!amount || amount <= 0) {
+    const parseResult = ApplyCreditSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { amount, orderId, orderNumber } = parseResult.data;
 
     // SECURITY: Use conditional update to prevent double-spend race conditions
     // Retry up to 3 times in case of concurrent modification

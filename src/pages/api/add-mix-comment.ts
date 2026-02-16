@@ -3,11 +3,20 @@
 // Dual-write: Firebase + D1
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, arrayUnion, clearCache } from '../../lib/firebase-rest';
 import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
+
+const AddMixCommentSchema = z.object({
+  mixId: z.string().min(1, 'Mix ID is required').max(200),
+  comment: z.string().max(300).optional(),
+  userName: z.string().max(30).optional(),
+  gifUrl: z.string().url().max(2048).optional().nullable(),
+  avatarUrl: z.string().url().max(2048).optional().nullable(),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -113,7 +122,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { mixId, comment, userName: bodyUserName, gifUrl, avatarUrl } = await request.json();
+    const rawBody = await request.json();
+    const parsed = AddMixCommentSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const { mixId, comment, userName: bodyUserName, gifUrl, avatarUrl } = parsed.data;
 
     // SECURITY: Get verified display name from user document instead of trusting body
     let userName = bodyUserName?.trim() || 'User';

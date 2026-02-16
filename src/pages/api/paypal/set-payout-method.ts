@@ -2,8 +2,17 @@
 // Set preferred payout method (stripe or paypal)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
+
+// Zod schema for set payout method
+const SetPayoutMethodSchema = z.object({
+  entityType: z.enum(['artist', 'supplier', 'user']),
+  entityId: z.string().optional(),
+  payoutMethod: z.enum(['stripe', 'paypal']),
+  accessCode: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -42,8 +51,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await request.json();
-    const { entityType, entityId, payoutMethod, accessCode } = body;
+    const rawBody = await request.json();
+
+    const parseResult = SetPayoutMethodSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const { entityType, entityId, payoutMethod, accessCode } = parseResult.data;
 
     // SECURITY: Verify the authenticated user matches the entity being modified
     if ((entityType === 'user' || entityType === 'artist') && entityId && authUserId !== entityId) {
@@ -51,21 +68,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Forbidden'
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate
-    if (!['artist', 'supplier', 'user'].includes(entityType)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid entity type'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    if (!['stripe', 'paypal'].includes(payoutMethod)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid payout method. Must be: stripe or paypal'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get entity

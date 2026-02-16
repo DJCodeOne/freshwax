@@ -2,11 +2,20 @@
 // Admin API for managing return requests
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const manageReturnPostSchema = z.object({
+  returnId: z.string().min(1),
+  action: z.enum(['approve', 'reject', 'received', 'refund']),
+  notes: z.string().optional(),
+  refundAmount: z.number().positive().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -26,13 +35,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const { returnId, action, notes, refundAmount } = body;
-
-    if (!returnId || !action) {
+    const parsed = manageReturnPostSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
-        error: 'Return ID and action required'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { returnId, action, notes, refundAmount } = parsed.data;
 
     const returnRequest = await getDocument('returns', returnId);
     if (!returnRequest) {

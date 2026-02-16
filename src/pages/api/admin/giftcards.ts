@@ -2,10 +2,47 @@
 // Admin API for gift cards management - list, create, analytics
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+const giftcardsPostSchema = z.discriminatedUnion('action', [
+  z.object({
+    action: z.literal('createCard'),
+    value: z.number().positive(),
+    type: z.string().optional(),
+    description: z.string().optional(),
+    expiresInDays: z.number().int().positive().optional(),
+    adminKey: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal('adjustBalance'),
+    userId: z.string().min(1),
+    amount: z.union([z.number(), z.string()]),
+    reason: z.string().optional(),
+    adminKey: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal('deactivateCard'),
+    cardId: z.string().min(1),
+    adminKey: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal('reactivateCard'),
+    cardId: z.string().min(1),
+    adminKey: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal('resendEmail'),
+    cardId: z.string().min(1),
+    code: z.string().optional(),
+    recipientEmail: z.string().email(),
+    recipientName: z.string().optional(),
+    adminKey: z.string().optional(),
+  }),
+]);
 
 const FROM_EMAIL = 'Fresh Wax <noreply@freshwax.co.uk>';
 
@@ -248,7 +285,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
   try {
     const data = await request.json();
-    const { action, adminKey } = data;
 
     // Validate admin auth (timing-safe comparison)
     const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
@@ -257,6 +293,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, data);
     if (authError) return authError;
 
+    const parsed = giftcardsPostSchema.safeParse(data);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Invalid request'
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const { action } = parsed.data;
     const now = new Date().toISOString();
 
     if (action === 'createCard') {

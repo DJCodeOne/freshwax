@@ -1,9 +1,20 @@
 // src/pages/api/contact.ts
 // Contact form endpoint - sends email via Resend
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { escapeHtml } from '../../lib/escape-html';
+
+const ContactSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(200),
+  email: z.string().email('Invalid email format').max(320),
+  subject: z.string().min(1, 'Subject is required').max(200),
+  message: z.string().min(1, 'Message is required').max(5000),
+  orderNumber: z.string().max(100).optional(),
+  reportType: z.string().max(100).optional(),
+  reportedUser: z.string().max(500).optional(),
+});
 
 export const prerender = false;
 
@@ -32,30 +43,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const resend = new Resend(apiKey);
     const body = await request.json();
-    const { name, email, subject, message, orderNumber, reportType, reportedUser } = body;
-
-    // Validate required fields
-    if (!name || !email || !subject || !message) {
+    const parsed = ContactSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing required fields'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid email format'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { name, email, subject, message, orderNumber, reportType, reportedUser } = parsed.data;
 
     const esc = (s: string) => escapeHtml(s);
 

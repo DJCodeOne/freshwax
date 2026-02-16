@@ -1,9 +1,14 @@
 // src/pages/api/admin/delete-orders.ts
 // Admin endpoint to delete orders - requires admin key
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const deleteOrdersSchema = z.object({
+  orderIds: z.array(z.string().min(1)).min(1).max(50),
+}).passthrough();
 
 export const prerender = false;
 
@@ -33,28 +38,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const { orderIds } = body;
-
-    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+    const parsed = deleteOrdersSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'orderIds array is required'
+        error: 'Invalid request'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Safety limit
-    if (orderIds.length > 50) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Maximum 50 orders can be deleted at once'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { orderIds } = parsed.data;
 
     const results: { id: string; success: boolean; error?: string }[] = [];
 

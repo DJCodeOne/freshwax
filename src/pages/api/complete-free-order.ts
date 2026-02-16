@@ -2,10 +2,51 @@
 // Handles free orders (total = 0) and credit-paid orders without payment processing
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { createOrder, validateStock } from '../../lib/order-utils';
 import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
+
+// Zod schemas for free/credit order
+const FreeOrderItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string().optional(),
+  releaseId: z.string().optional(),
+  trackId: z.string().optional(),
+  name: z.string().min(1).max(500),
+  type: z.enum(['digital', 'track', 'release', 'vinyl', 'merch']).optional(),
+  price: z.number().min(0),
+  quantity: z.number().int().min(1).max(99).default(1),
+  size: z.string().optional(),
+  color: z.string().optional(),
+  artist: z.string().optional(),
+  artistId: z.string().optional(),
+  sellerId: z.string().optional(),
+}).passthrough();
+
+const FreeOrderCustomerSchema = z.object({
+  email: z.string().email('Valid email required'),
+  firstName: z.string().min(1, 'First name required'),
+  lastName: z.string().min(1, 'Last name required'),
+  phone: z.string().optional(),
+  userId: z.string().optional(),
+}).passthrough();
+
+const FreeOrderSchema = z.object({
+  customer: FreeOrderCustomerSchema,
+  items: z.array(FreeOrderItemSchema).min(1, 'At least one item required').max(50),
+  shipping: z.object({
+    address1: z.string().optional(),
+    address2: z.string().optional(),
+    city: z.string().optional(),
+    county: z.string().optional(),
+    postcode: z.string().optional(),
+    country: z.string().optional(),
+  }).passthrough().optional().nullable(),
+  appliedCredit: z.number().min(0).optional(),
+  idToken: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -83,41 +124,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-    // Parse request body
-    const orderData = await request.json();
+    // Parse and validate request body
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (!orderData.customer?.email || !orderData.customer?.firstName || !orderData.customer?.lastName) {
+    const parseResult = FreeOrderSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required customer details'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-
-    if (!orderData.items || orderData.items.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Order must contain at least one item'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Validate item count and quantities
-    if (orderData.items.length > 50) {
-      return new Response(JSON.stringify({ success: false, error: 'Too many items (max 50)' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    if (orderData.items.some((item: any) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 99)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid item quantity (1-99)' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const orderData = parseResult.data;
 
     // SECURITY: Validate item prices server-side (prevent getting items for free)
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);

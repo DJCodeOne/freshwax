@@ -2,10 +2,16 @@
 // Captures a PayPal order for gift card purchase and creates the gift card
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, deleteDocument, queryCollection, addDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for gift card PayPal capture
+const GiftCardCaptureSchema = z.object({
+  paypalOrderId: z.string().min(1, 'PayPal order ID required'),
+}).passthrough();
 
 export const prerender = false;
 
@@ -61,15 +67,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const body = await request.json();
-    const { paypalOrderId } = body;
+    const rawBody = await request.json();
 
-    if (!paypalOrderId) {
+    const parseResult = GiftCardCaptureSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing PayPal order ID'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { paypalOrderId } = parseResult.data;
 
     console.log('[GiftCard PayPal] Capturing order:', paypalOrderId);
 

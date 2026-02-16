@@ -3,9 +3,34 @@
 // Uses Firebase REST API to bypass Firestore rules
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateUserSchema = z.object({
+  userId: z.string().min(1),
+  sourceCollection: z.string().optional(),
+  updates: z.object({
+    displayName: z.string().optional(),
+    fullName: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    address: z.any().optional(),
+    roles: z.object({
+      customer: z.boolean().optional(),
+      dj: z.boolean().optional(),
+      artist: z.boolean().optional(),
+      merchSupplier: z.boolean().optional(),
+    }).passthrough().optional(),
+    isAdmin: z.boolean().optional(),
+    permissions: z.any().optional(),
+    approved: z.boolean().optional(),
+    suspended: z.boolean().optional(),
+    adminNotes: z.string().optional(),
+  }).passthrough(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -29,18 +54,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Parse request body
     const body = await request.json();
-    const { userId, sourceCollection, updates } = body;
 
     // SECURITY: Require admin authentication via admin key (not spoofable UID)
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    if (!userId || !updates) {
+    const parsed = updateUserSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing userId or updates'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { userId, sourceCollection, updates } = parsed.data;
 
     const timestamp = new Date().toISOString();
     const results = {

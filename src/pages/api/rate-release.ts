@@ -2,10 +2,16 @@
 // Uses Firebase as source of truth, dual-writes to D1
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+
+const RateReleaseSchema = z.object({
+  releaseId: z.string().min(1, 'Release ID is required').max(200),
+  rating: z.number().int().min(1).max(5),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -40,21 +46,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { releaseId, rating } = body;
-
-    log.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
-
-    // Validate rating
-    if (!releaseId || !rating || rating < 1 || rating > 5) {
-      log.info('[rate-release] Invalid rating:', releaseId, rating);
+    const parsed = RateReleaseSchema.safeParse(body);
+    if (!parsed.success) {
+      log.info('[rate-release] Validation failed:', parsed.error.issues);
       return new Response(JSON.stringify({
         success: false,
-        error: 'Invalid rating (must be 1-5)'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { releaseId, rating } = parsed.data;
+
+    log.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
 
     // Get release from Firebase
     const releaseData: any = await getDocument('releases', releaseId);

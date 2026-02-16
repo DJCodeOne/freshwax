@@ -6,10 +6,18 @@
 // 4. User must click link to activate (handled by confirm.ts)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, createDocumentIfNotExists, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+const SubscribeSchema = z.object({
+  email: z.string().email('Invalid email format').max(320),
+  source: z.string().max(50).optional().default('footer'),
+  consent: z.literal(true, { message: 'You must agree to receive marketing emails' }),
+  name: z.string().max(100).optional(),
+});
 
 function emailToDocId(email: string): string {
   return email.toLowerCase().trim().replace(/[.@]/g, '_');
@@ -39,31 +47,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { email, source = 'footer', consent, name } = body;
-
-    if (!email) {
+    const parsed = SubscribeSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Email is required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid email format'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // GDPR: Require explicit consent
-    if (!consent) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You must agree to receive marketing emails'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    const { email, source, consent, name } = parsed.data;
 
     const normalizedEmail = email.toLowerCase().trim();
     const subscriberId = emailToDocId(normalizedEmail);

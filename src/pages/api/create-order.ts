@@ -2,12 +2,68 @@
 // Creates order in Firebase and sends confirmation email
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, addDocument, clearCache, atomicIncrement, updateDocumentConditional } from '../../lib/firebase-rest';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
 import { SITE_URL } from '../../lib/constants';
 import { fetchWithTimeout } from '../../lib/api-utils';
+
+// Zod schemas for order creation
+const OrderItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string().optional(),
+  releaseId: z.string().optional(),
+  trackId: z.string().optional(),
+  name: z.string().min(1, 'Item name required').max(500),
+  type: z.enum(['digital', 'track', 'release', 'vinyl', 'merch']).optional(),
+  price: z.number().positive('Price must be positive'),
+  quantity: z.number().int().min(1).max(99).default(1),
+  size: z.string().optional(),
+  color: z.string().optional(),
+  image: z.string().optional(),
+  artwork: z.string().optional(),
+  artist: z.string().optional(),
+  artistId: z.string().optional(),
+  artistName: z.string().optional(),
+  artistEmail: z.string().optional(),
+  title: z.string().optional(),
+  isPreOrder: z.boolean().optional(),
+  releaseDate: z.string().optional(),
+  sellerId: z.string().optional(),
+}).passthrough();
+
+const OrderCustomerSchema = z.object({
+  email: z.string().email('Valid email required'),
+  firstName: z.string().min(1, 'First name required'),
+  lastName: z.string().min(1, 'Last name required'),
+  phone: z.string().optional(),
+  userId: z.string().optional(),
+}).passthrough();
+
+const OrderShippingSchema = z.object({
+  address1: z.string().optional(),
+  address2: z.string().optional(),
+  city: z.string().optional(),
+  county: z.string().optional(),
+  postcode: z.string().optional(),
+  country: z.string().optional(),
+}).passthrough().optional().nullable();
+
+const CreateOrderSchema = z.object({
+  customer: OrderCustomerSchema,
+  items: z.array(OrderItemSchema).min(1, 'At least one item required').max(50, 'Too many items (max 50)'),
+  shipping: OrderShippingSchema,
+  hasPhysicalItems: z.boolean().optional(),
+  totals: z.object({
+    subtotal: z.number().optional(),
+    shipping: z.number().optional(),
+    total: z.number().positive('Total must be positive'),
+  }).passthrough().optional(),
+  paymentMethod: z.string().optional(),
+  idToken: z.string().optional(),
+}).passthrough();
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -190,53 +246,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const orderData = await request.json();
+    const rawBody = await request.json();
+
+    // Zod input validation
+    const parseResult = CreateOrderSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const orderData = parseResult.data;
 
     // Extract idToken for authenticated Firebase writes
     const idToken = orderData.idToken;
-
-    log.info('[create-order] Processing order for user:', orderData.customer?.userId || 'guest');
-
-    // Validate required fields
-    if (!orderData.customer?.email || !orderData.customer?.firstName || !orderData.customer?.lastName) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required customer information'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    if (!orderData.items || orderData.items.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No items in order'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate item count and quantities
-    if (orderData.items.length > MAX_ITEMS_PER_ORDER) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Too many items in order (max ${MAX_ITEMS_PER_ORDER})`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-    if (orderData.items.some((item: any) => !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > MAX_QUANTITY_PER_ITEM)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid item quantity (1-99)'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate price floor - reject zero or negative prices
-    if (orderData.items.some((item: any) => typeof item.price !== 'number' || item.price <= 0)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid item price' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    if (orderData.totals?.total <= 0) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid order total' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
-    }
 
     // Check shipping for physical items
     if (orderData.hasPhysicalItems && !orderData.shipping?.address1) {

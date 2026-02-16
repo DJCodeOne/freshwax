@@ -1,11 +1,16 @@
 // src/pages/api/delete-release.ts
 // Deletes a release from Firebase (releases collection + master list)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+
+const deleteReleaseSchema = z.object({
+  releaseId: z.string().min(1),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -52,17 +57,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
     const body = await request.json();
-    const { releaseId } = body;
 
-    if (!releaseId) {
+    const parsed = deleteReleaseSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'releaseId is required'
+        error: 'Invalid request'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { releaseId } = parsed.data;
 
     log.info(`[delete-release] Deleting: ${releaseId}`);
 

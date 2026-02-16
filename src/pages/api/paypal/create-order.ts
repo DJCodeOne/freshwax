@@ -2,11 +2,51 @@
 // Creates a PayPal order for checkout
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schemas for PayPal order creation (same structure as Stripe checkout)
+const PayPalItemSchema = z.object({
+  id: z.string().optional(),
+  productId: z.string().optional(),
+  releaseId: z.string().optional(),
+  trackId: z.string().optional(),
+  name: z.string().min(1, 'Item name required').max(500),
+  type: z.enum(['digital', 'track', 'release', 'vinyl', 'merch']).optional(),
+  price: z.number().positive('Price must be positive'),
+  quantity: z.number().int().min(1).max(99).default(1),
+  size: z.string().optional(),
+  color: z.string().optional(),
+  image: z.string().optional(),
+  artwork: z.string().optional(),
+  artist: z.string().optional(),
+  artistId: z.string().optional(),
+  sellerId: z.string().optional(),
+}).passthrough();
+
+const PayPalCreateOrderSchema = z.object({
+  items: z.array(PayPalItemSchema).min(1, 'At least one item required').max(50),
+  customer: z.object({
+    email: z.string().email('Valid email required'),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    phone: z.string().optional(),
+    userId: z.string().optional(),
+  }).passthrough().optional(),
+  shipping: z.object({
+    address1: z.string().optional(),
+    address2: z.string().optional(),
+    city: z.string().optional(),
+    county: z.string().optional(),
+    postcode: z.string().optional(),
+    country: z.string().optional(),
+  }).passthrough().optional().nullable(),
+  hasPhysicalItems: z.boolean().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -72,19 +112,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const orderData = await request.json();
-    console.log('[PayPal] Creating order');
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (!orderData.items || orderData.items.length === 0) {
+    // Zod input validation
+    const parseResult = PayPalCreateOrderSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'No items in order'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const orderData = parseResult.data;
+    console.log('[PayPal] Creating order');
 
     // SECURITY: Validate stock availability before allowing checkout
     console.log('[PayPal] Validating stock availability...');

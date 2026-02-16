@@ -2,6 +2,7 @@
 // API endpoint to update order status with optional tracking info
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
@@ -9,7 +10,18 @@ import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Valid status transitions
-const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
+
+const updateOrderStatusSchema = z.object({
+  orderId: z.string().min(1),
+  status: z.enum(validStatuses),
+  tracking: z.object({
+    courier: z.string().optional(),
+    trackingNumber: z.string().optional(),
+    trackingUrl: z.string().url().optional(),
+  }).optional(),
+  adminKey: z.string().optional(),
+});
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -26,21 +38,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const { orderId, status, tracking } = body;
-
-    if (!orderId || !status) {
-      return new Response(JSON.stringify({ error: 'Order ID and status required' }), {
+    const parsed = updateOrderStatusSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    if (!validStatuses.includes(status)) {
-      return new Response(JSON.stringify({ error: 'Invalid status' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { orderId, status, tracking } = parsed.data;
 
     const now = new Date().toISOString();
 

@@ -2,9 +2,21 @@
 // Creates Stripe checkout session for Plus subscription upgrade
 // Supports unique referral codes from KV (new) and Firebase giftCards (legacy)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
 import { fetchWithTimeout } from '../../lib/api-utils';
+
+// Zod schema for Plus subscription checkout
+const CreateCheckoutSchema = z.object({
+  type: z.string().optional(),
+  priceId: z.string().min(1, 'Price ID required'),
+  userId: z.string().min(1, 'User ID required'),
+  email: z.string().email('Valid email required'),
+  promoCode: z.string().max(50).optional(),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -26,16 +38,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const body = await request.json();
-    const { type, priceId, userId, email, promoCode, successUrl, cancelUrl } = body;
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (!userId || !email) {
+    // Zod input validation
+    const parseResult = CreateCheckoutSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required fields'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const body = parseResult.data;
+    const { type, priceId, userId, email, promoCode, successUrl, cancelUrl } = body;
 
     // Verify the authenticated user matches the userId in the request
     if (verifiedUserId !== userId) {

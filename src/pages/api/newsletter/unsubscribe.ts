@@ -1,7 +1,12 @@
 // src/pages/api/newsletter/unsubscribe.ts
 // Public endpoint for users to unsubscribe from newsletter
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
+
+const UnsubscribeSchema = z.object({
+  email: z.string().email('Invalid email format').max(320),
+});
 
 export const prerender = false;
 
@@ -10,17 +15,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { email } = body;
-
-    if (!email) {
+    const parsed = UnsubscribeSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Email is required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { email } = parsed.data;
 
     const normalizedEmail = email.toLowerCase().trim();
 

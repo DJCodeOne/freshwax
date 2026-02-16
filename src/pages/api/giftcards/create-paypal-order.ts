@@ -2,10 +2,26 @@
 // Creates a PayPal order for gift card purchases
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for gift card PayPal order creation
+const GiftCardPayPalSchema = z.object({
+  amount: z.union([z.number(), z.string()]).refine(val => {
+    const num = typeof val === 'string' ? parseInt(val) : val;
+    return num >= 5 && num <= 500;
+  }, 'Amount must be between 5 and 500'),
+  buyerUserId: z.string().min(1, 'Buyer user ID required'),
+  buyerEmail: z.string().email('Valid buyer email required'),
+  buyerName: z.string().max(200).optional(),
+  recipientType: z.enum(['self', 'gift']).optional(),
+  recipientName: z.string().max(200).optional(),
+  recipientEmail: z.string().email().optional(),
+  message: z.string().max(500).optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -73,7 +89,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 500, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const data = await request.json();
+    const rawBody = await request.json();
+
+    const parseResult = GiftCardPayPalSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const data = parseResult.data;
     const {
       amount,
       buyerUserId,
@@ -93,22 +118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Validate amount
-    const numAmount = parseInt(amount);
-    if (!numAmount || numAmount < 5 || numAmount > 500) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid amount. Must be between £5 and £500.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate buyer
-    if (!buyerUserId || !buyerEmail) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Must be logged in to purchase'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
-    }
+    const numAmount = parseInt(String(amount));
 
     // Validate recipient email for gift type
     const targetEmail = recipientType === 'gift' ? recipientEmail : buyerEmail;

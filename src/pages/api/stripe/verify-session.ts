@@ -3,9 +3,15 @@
 // Also creates order as fallback if webhook hasn't processed it
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for verify-session query params
+const VerifySessionParamsSchema = z.object({
+  session_id: z.string().min(1, 'session_id required'),
+});
 
 export const prerender = false;
 
@@ -28,19 +34,17 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   console.log('[verify-session] Authenticated user:', authUserId);
 
   try {
-    const sessionId = url.searchParams.get('session_id');
-    console.log('[verify-session] Session ID:', sessionId || 'MISSING');
-
-    if (!sessionId) {
-      console.log('[verify-session] ❌ No session_id provided');
+    const rawParams = { session_id: url.searchParams.get('session_id') || '' };
+    const paramResult = VerifySessionParamsSchema.safeParse(rawParams);
+    if (!paramResult.success) {
+      console.log('[verify-session] Invalid params');
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing session_id'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        error: 'Invalid request',
+        details: paramResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const sessionId = paramResult.data.session_id;
+    console.log('[verify-session] Session ID:', sessionId);
 
     const env = locals.runtime.env;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;

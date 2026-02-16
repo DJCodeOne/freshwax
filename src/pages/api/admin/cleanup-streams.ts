@@ -4,11 +4,19 @@
 // POST: Mark stale/disconnected streams as completed
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const cleanupStreamsPostSchema = z.object({
+  maxAgeHours: z.number().positive().optional(),
+  ids: z.array(z.string().min(1)).optional(),
+  cleanDisconnected: z.boolean().optional(),
+  disconnectThreshold: z.number().positive().optional(),
+}).passthrough();
 
 function initServices(locals: App.Locals) {
   const env = locals.runtime.env;

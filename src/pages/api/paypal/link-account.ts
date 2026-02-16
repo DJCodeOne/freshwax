@@ -2,8 +2,25 @@
 // Link a PayPal email for payouts (artists, suppliers, users)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
+
+// Zod schemas for PayPal link account
+const LinkAccountPostSchema = z.object({
+  entityType: z.enum(['artist', 'supplier', 'user']),
+  entityId: z.string().optional(),
+  paypalEmail: z.string().email('Valid PayPal email required'),
+  accessCode: z.string().optional(),
+}).passthrough();
+
+const LinkAccountGetSchema = z.object({
+  entityType: z.enum(['artist', 'supplier', 'user']),
+  entityId: z.string().optional(),
+  accessCode: z.string().optional(),
+}).refine(data => data.entityId || data.accessCode, {
+  message: 'Entity ID or access code required',
+});
 
 export const prerender = false;
 
@@ -42,8 +59,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const body = await request.json();
-    const { entityType, entityId, paypalEmail, accessCode } = body;
+    const rawBody = await request.json();
+
+    const parseResult = LinkAccountPostSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const { entityType, entityId, paypalEmail, accessCode } = parseResult.data;
 
     // SECURITY: Verify the authenticated user matches the entity being modified
     if ((entityType === 'user' || entityType === 'artist') && entityId && authUserId !== entityId) {
@@ -51,23 +76,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         success: false,
         error: 'Forbidden'
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate entity type
-    if (!['artist', 'supplier', 'user'].includes(entityType)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid entity type. Must be: artist, supplier, or user'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!paypalEmail || !emailRegex.test(paypalEmail)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Valid PayPal email required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Get the entity document
@@ -153,16 +161,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // GET - Check PayPal link status
 export const GET: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
-  const entityType = url.searchParams.get('entityType');
-  const entityId = url.searchParams.get('entityId');
-  const accessCode = url.searchParams.get('accessCode');
+  const rawParams = {
+    entityType: url.searchParams.get('entityType') || '',
+    entityId: url.searchParams.get('entityId') || undefined,
+    accessCode: url.searchParams.get('accessCode') || undefined,
+  };
 
-  if (!entityType || (!entityId && !accessCode)) {
+  const paramResult = LinkAccountGetSchema.safeParse(rawParams);
+  if (!paramResult.success) {
     return new Response(JSON.stringify({
-      success: false,
-      error: 'Entity type and ID (or access code) required'
+      error: 'Invalid request',
+      details: paramResult.error.issues
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { entityType, entityId, accessCode } = paramResult.data;
 
   const env = locals.runtime.env;
 

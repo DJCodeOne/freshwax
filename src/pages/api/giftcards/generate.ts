@@ -2,8 +2,18 @@
 // Generate a new gift card (admin/system use)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
+
+// Zod schema for gift card generation
+const GenerateGiftCardSchema = z.object({
+  type: z.enum(['welcome', 'promotional']),
+  value: z.number().positive().optional(),
+  description: z.string().max(500).optional(),
+  createdFor: z.string().optional(),
+  systemKey: z.string().min(1, 'System key required'),
+}).passthrough();
 
 // Timing-safe string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {
@@ -26,11 +36,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   try {
-    const data = await request.json();
-    const { type, value, description, createdFor, systemKey } = data;
+    const rawBody = await request.json();
+
+    const parseResult = GenerateGiftCardSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const { type, value, description, createdFor, systemKey } = parseResult.data;
 
     // For security, require a system key for direct API calls
-    // This allows registration flow to create cards programmatically
     const validSystemKey = env?.GIFTCARD_SYSTEM_KEY || import.meta.env.GIFTCARD_SYSTEM_KEY;
 
     // SECURITY: No fallback key - must be configured in environment
@@ -43,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Use proper timing-safe comparison to prevent timing attacks
-    if (!systemKey || !timingSafeEqual(validSystemKey, systemKey)) {
+    if (!timingSafeEqual(validSystemKey, systemKey)) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Unauthorized'
@@ -54,7 +71,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (type === 'welcome') {
       giftCard = createWelcomeGiftCard(createdFor);
-    } else if (type === 'promotional') {
+    } else {
+      // type === 'promotional' (validated by Zod enum)
       if (!value || value <= 0) {
         return new Response(JSON.stringify({
           success: false,
@@ -62,11 +80,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }), { status: 400, headers: { 'Content-Type': 'application/json' } });
       }
       giftCard = createPromotionalGiftCard(value, description || `£${value} Gift Card`, createdFor);
-    } else {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid gift card type'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Check code doesn't already exist (extremely unlikely but safe)

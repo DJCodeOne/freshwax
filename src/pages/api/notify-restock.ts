@@ -2,8 +2,22 @@
 // Back-in-stock notification system
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { addDocument, queryCollection, deleteDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const NotifyRestockSchema = z.object({
+  email: z.string().email('Invalid email address').max(320),
+  productId: z.string().min(1, 'Product ID is required').max(200),
+  productType: z.string().max(50).optional().default('merch'),
+  productName: z.string().max(300).optional().default('Unknown Product'),
+  variantKey: z.string().max(200).optional().nullable(),
+});
+
+const RestockDeleteSchema = z.object({
+  email: z.string().email().max(320),
+  productId: z.string().min(1).max(200),
+});
 
 export const prerender = false;
 
@@ -21,21 +35,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { email, productId, productType, productName, variantKey } = body;
-
-    if (!email || !productId) {
+    const parsed = NotifyRestockSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
-        error: 'Email and product ID required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return new Response(JSON.stringify({
-        error: 'Invalid email address'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    const { email, productId, productType, productName, variantKey } = parsed.data;
 
     // Check if already subscribed
     const existing = await queryCollection('restockNotifications', {
@@ -81,14 +88,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE - Unsubscribe from notifications
 export const DELETE: APIRoute = async ({ request, locals }) => {
   const url = new URL(request.url);
-  const email = url.searchParams.get('email');
-  const productId = url.searchParams.get('productId');
-
-  if (!email || !productId) {
+  const parsed = RestockDeleteSchema.safeParse({
+    email: url.searchParams.get('email') ?? '',
+    productId: url.searchParams.get('productId') ?? '',
+  });
+  if (!parsed.success) {
     return new Response(JSON.stringify({
-      error: 'Email and product ID required'
+      error: 'Invalid request',
+      details: parsed.error.issues.map(i => i.message)
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { email, productId } = parsed.data;
 
   const env = locals.runtime.env;
 

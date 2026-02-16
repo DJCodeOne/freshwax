@@ -3,9 +3,16 @@
 // Checks KV storage first (new system), then falls back to Firebase giftCards (legacy)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+// Zod schema for promo code validation
+const ValidatePromoSchema = z.object({
+  code: z.string().min(1, 'Referral code is required').max(50),
+  userId: z.string().min(1, 'User ID is required'),
+}).passthrough();
 
 export const prerender = false;
 
@@ -25,15 +32,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE as KVNamespace | undefined;
 
     const body = await request.json();
-    const { code, userId } = body;
 
-    if (!code || !userId) {
+    const parseResult = ValidatePromoSchema.safeParse(body);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        valid: false,
-        error: 'Missing code or userId'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { code, userId } = parseResult.data;
 
     const normalizedCode = code.toUpperCase().trim();
     initFirebase(locals);

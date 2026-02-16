@@ -1,11 +1,18 @@
 // src/pages/api/update-release.ts
 // Firebase-based release update API - uses service account for writes
+import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+
+const updateReleaseSchema = z.object({
+  id: z.string().min(1),
+  idToken: z.string().optional(),
+  adminKey: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -66,17 +73,18 @@ export async function POST({ request, locals }: any) {
     // Initialize Firebase environment for reads
 
 
-    const { id, idToken, adminKey, ...updateData } = updates;
-
-    if (!id) {
-      log.error('[update-release] No release ID provided');
+    const parsed = updateReleaseSchema.safeParse(updates);
+    if (!parsed.success) {
+      log.error('[update-release] Invalid request');
       return new Response(JSON.stringify({
-        error: 'Release ID is required'
+        error: 'Invalid request'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { id, idToken, adminKey, ...updateData } = parsed.data;
 
     log.info('[update-release] Updating release:', id);
 

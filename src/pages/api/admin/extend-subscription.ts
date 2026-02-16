@@ -2,10 +2,18 @@
 // Admin endpoint to extend a user's Plus subscription
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const extendSubscriptionSchema = z.object({
+  userId: z.string().min(1),
+  days: z.union([z.number().int().positive(), z.string().regex(/^\d+$/)]),
+  reason: z.string().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -21,18 +29,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { userId, days, reason } = body;
 
     // SECURITY: Require admin authentication
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    if (!userId || !days) {
+    const parsed = extendSubscriptionSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'User ID and days required'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { userId, days, reason } = parsed.data;
 
     // Get current user data
     const user = await getDocument('users', userId);

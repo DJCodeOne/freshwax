@@ -3,6 +3,7 @@
 // Uses service account for Firebase writes to bypass auth requirements
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saSetDocument, saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -11,6 +12,47 @@ import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+const createManualOrderSchema = z.object({
+  orderData: z.object({
+    customer: z.object({
+      email: z.string().email(),
+      firstName: z.string().optional(),
+      lastName: z.string().optional(),
+      phone: z.string().optional(),
+      userId: z.string().optional(),
+    }),
+    items: z.array(z.object({
+      id: z.string().optional(),
+      releaseId: z.string().optional(),
+      productId: z.string().optional(),
+      trackId: z.string().optional(),
+      name: z.string().optional(),
+      type: z.string().optional(),
+      price: z.number().nonnegative().optional(),
+      quantity: z.number().int().positive().optional(),
+      size: z.string().optional(),
+      color: z.string().optional(),
+      image: z.string().optional(),
+      artwork: z.string().optional(),
+      artist: z.string().optional(),
+      artistId: z.string().optional(),
+    }).passthrough()).min(1),
+    totals: z.object({
+      subtotal: z.number().optional(),
+      shipping: z.number().optional(),
+      total: z.number().optional(),
+      freshWaxFee: z.number().optional(),
+      stripeFee: z.number().optional(),
+      serviceFees: z.number().optional(),
+    }).optional(),
+    shipping: z.any().optional(),
+    paymentMethod: z.string().optional(),
+    paymentIntentId: z.string().optional(),
+    paypalOrderId: z.string().optional(),
+  }),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -61,29 +103,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { orderData } = bodyData;
-
-    if (!orderData) {
-      return new Response(JSON.stringify({ error: 'orderData required' }), {
+    const parsed = createManualOrderSchema.safeParse(bodyData);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Validate required fields
-    if (!orderData.customer?.email) {
-      return new Response(JSON.stringify({ error: 'customer.email required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    if (!orderData.items || orderData.items.length === 0) {
-      return new Response(JSON.stringify({ error: 'items required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    const { orderData } = parsed.data;
 
     const now = new Date().toISOString();
     const orderNumber = generateOrderNumber();

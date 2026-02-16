@@ -4,10 +4,15 @@
 
 import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const DeleteAvatarSchema = z.object({
+  userId: z.string().min(1, 'Missing user ID').max(200),
+});
 
 // Avatar size - small for icon use
 const AVATAR_SIZE = 128;
@@ -234,14 +239,15 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   try {
     const data = await request.json();
-    const { userId } = data;
-
-    if (!userId) {
+    const parsed = DeleteAvatarSchema.safeParse(data);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing user ID'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { userId } = parsed.data;
 
     // SECURITY: Verify the requesting user owns this userId
     const { verifyUserToken } = await import('../../lib/firebase-rest');

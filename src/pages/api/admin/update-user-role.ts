@@ -2,10 +2,18 @@
 // Update user roles in the users collection
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 
 import { saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateUserRoleParamsSchema = z.object({
+  userId: z.string().min(1),
+  role: z.string().min(1),
+  value: z.string().optional(),
+  confirm: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -20,20 +28,25 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   const url = new URL(request.url);
-  const userId = url.searchParams.get('userId');
-  const role = url.searchParams.get('role');
-  const value = url.searchParams.get('value');
-  const confirm = url.searchParams.get('confirm');
+  const params = {
+    userId: url.searchParams.get('userId') || undefined,
+    role: url.searchParams.get('role') || undefined,
+    value: url.searchParams.get('value') || undefined,
+    confirm: url.searchParams.get('confirm') || undefined,
+  };
 
-  if (!userId || !role) {
+  const parsed = updateUserRoleParamsSchema.safeParse(params);
+  if (!parsed.success) {
     return new Response(JSON.stringify({
-      error: 'Missing userId or role',
+      error: 'Invalid request',
       usage: '/api/admin/update-user-role/?userId=xxx&role=artist&value=false&confirm=yes'
     }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  const { userId, role, value, confirm } = parsed.data;
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;

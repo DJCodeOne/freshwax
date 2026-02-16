@@ -3,12 +3,27 @@
 // For customer purchases, use create-stripe-session.ts or create-paypal-order.ts
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for admin gift card creation
+const AdminGiftCardSchema = z.object({
+  amount: z.union([z.number(), z.string()]).refine(val => {
+    const num = typeof val === 'string' ? parseInt(val) : val;
+    return num >= 5 && num <= 500;
+  }, 'Amount must be between 5 and 500'),
+  buyerUserId: z.string().min(1, 'Buyer user ID required'),
+  buyerEmail: z.string().email('Valid buyer email required'),
+  recipientType: z.enum(['self', 'gift']).optional(),
+  recipientName: z.string().max(200).optional(),
+  recipientEmail: z.string().email().optional(),
+  message: z.string().max(500).optional(),
+}).passthrough();
 
 // Helper to initialize Firebase
 function initFirebase(locals: App.Locals) {
@@ -235,15 +250,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   try {
-    const data = await request.json();
+    const rawBody = await request.json();
 
     // SECURITY: Require admin authentication
-    // This endpoint is for promotional/complimentary gift cards only
-    // Customer purchases must go through Stripe or PayPal payment flow
-    const authError = await requireAdminAuth(request, locals, data);
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) {
       return authError;
     }
+
+    // Zod input validation
+    const parseResult = AdminGiftCardSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+    const data = parseResult.data;
     const {
       amount,
       buyerUserId,
@@ -254,22 +277,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message
     } = data;
 
-    // Validate amount
-    const numAmount = parseInt(amount);
-    if (!numAmount || numAmount < 5 || numAmount > 500) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid amount. Must be between £5 and £500.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
-
-    // Validate buyer
-    if (!buyerUserId || !buyerEmail) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Must be logged in to purchase'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    const numAmount = parseInt(String(amount));
 
     // Validate recipient email
     const targetEmail = recipientType === 'gift' ? recipientEmail : buyerEmail;

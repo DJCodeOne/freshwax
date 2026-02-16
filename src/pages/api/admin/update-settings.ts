@@ -2,9 +2,18 @@
 // Comprehensive admin settings API - handles artist permissions, livestream config, and system settings
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument } from '../../../lib/firebase-rest';
 import { successResponse, errorResponse, ApiErrors, getEnv, parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateSettingsSchema = z.object({
+  action: z.enum(['save', 'reset']),
+  settings: z.record(z.any()).optional(),
+  section: z.string().optional(),
+  sectionData: z.record(z.any()).optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -145,12 +154,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = getEnv(locals);
 
   try {
-    const data = await parseJsonBody<{ action?: string; settings?: any; adminKey?: string; section?: string; sectionData?: any }>(request);
+    const data = await parseJsonBody<Record<string, unknown>>(request);
     if (!data) {
       return ApiErrors.badRequest('Invalid request body');
     }
 
-    const { action, settings, adminKey, section, sectionData } = data;
+    const parsed = updateSettingsSchema.safeParse(data);
+    if (!parsed.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+
+    const { action, settings, section, sectionData } = parsed.data;
 
     // Validate admin auth (timing-safe comparison)
     const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');

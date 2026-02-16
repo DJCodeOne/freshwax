@@ -2,10 +2,23 @@
 // Apply a referral code to a Pro subscription upgrade
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+// Zod schemas for referral endpoints
+const ReferralGetSchema = z.object({
+  code: z.string().min(1, 'Referral code is required'),
+});
+
+const ReferralPostSchema = z.object({
+  code: z.string().min(1, 'Referral code is required').max(50),
+  userId: z.string().optional(),
+  paymentId: z.string().optional(),
+  userName: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -21,14 +34,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   const url = new URL(request.url);
-  const code = url.searchParams.get('code');
-
-  if (!code) {
+  const rawParams = { code: url.searchParams.get('code') || '' };
+  const paramResult = ReferralGetSchema.safeParse(rawParams);
+  if (!paramResult.success) {
     return new Response(JSON.stringify({
-      success: false,
-      error: 'Referral code is required'
+      error: 'Invalid request',
+      details: paramResult.error.issues
     }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const code = paramResult.data.code;
 
   const normalizedCode = code.toUpperCase().trim();
 
@@ -128,14 +142,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const { code, userId, paymentId, userName } = await request.json();
+    const rawBody = await request.json();
 
-    if (!code) {
+    const parseResult = ReferralPostSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Referral code is required'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { code, userId, paymentId, userName } = parseResult.data;
 
     // Verify the authenticated user matches the userId in the request
     if (userId && verifiedUserId !== userId) {

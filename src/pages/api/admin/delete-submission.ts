@@ -2,8 +2,15 @@
 // Delete a submission folder from R2 (for cleanup)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const deleteSubmissionSchema = z.object({
+  submissionId: z.string().min(1),
+  location: z.string().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -12,18 +19,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const bodyData = await request.json();
-    const { submissionId, location } = bodyData;
 
     // Admin auth - pass body for adminKey check
     const authError = await requireAdminAuth(request, locals, bodyData);
     if (authError) return authError;
 
-    if (!submissionId) {
-      return new Response(JSON.stringify({ error: 'submissionId required' }), {
+    const parsed = deleteSubmissionSchema.safeParse(bodyData);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { submissionId, location } = parsed.data;
 
     const r2: R2Bucket = locals.runtime.env.R2;
 

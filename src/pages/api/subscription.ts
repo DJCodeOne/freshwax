@@ -1,6 +1,7 @@
 // src/pages/api/subscription.ts
 // Subscription management API - check limits, get status, upgrade
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import {
   SUBSCRIPTION_TIERS,
@@ -33,19 +34,39 @@ function initFirebase(locals: App.Locals) {
   initAdminEnv(env);
 }
 
+// Zod schemas for subscription endpoints
+const SubscriptionGetSchema = z.object({
+  userId: z.string().min(1, 'userId required'),
+  action: z.enum(['status', 'canUploadMix', 'canStream']).default('status'),
+});
+
+const SubscriptionPostSchema = z.object({
+  action: z.enum(['recordMixUpload', 'recordStreamTime', 'activatePro']),
+  userId: z.string().min(1, 'userId required'),
+  minutes: z.number().int().positive().optional(),
+  paymentId: z.string().min(1).optional(),
+  paymentMethod: z.enum(['stripe', 'paypal']).optional(),
+  userName: z.string().optional(),
+}).passthrough();
+
 // GET: Check subscription status and limits
 export const GET: APIRoute = async ({ request, locals }) => {
   initFirebase(locals);
 
   const url = new URL(request.url);
-  const userId = url.searchParams.get('userId');
-  const action = url.searchParams.get('action') || 'status';
+  const rawParams = {
+    userId: url.searchParams.get('userId') || '',
+    action: url.searchParams.get('action') || 'status',
+  };
 
-  if (!userId) {
-    return new Response(JSON.stringify({ success: false, error: 'userId required' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
+  const paramResult = SubscriptionGetSchema.safeParse(rawParams);
+  if (!paramResult.success) {
+    return new Response(JSON.stringify({
+      error: 'Invalid request',
+      details: paramResult.error.issues
+    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
+  const { userId, action } = paramResult.data;
 
   // Verify the authenticated user matches the requested userId
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
@@ -201,13 +222,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const idToken = authHeader?.replace('Bearer ', '') || undefined;
 
   try {
-    const { action, userId, ...data } = await request.json();
+    const rawBody = await request.json();
 
-    if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'userId required' }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
+    const parseResult = SubscriptionPostSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { action, userId, ...data } = parseResult.data;
 
     // SECURITY: Verify the requesting user owns this userId
     const { verifyUserToken } = await import('../../lib/firebase-rest');

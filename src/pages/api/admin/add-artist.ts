@@ -1,9 +1,22 @@
 // src/pages/api/admin/add-artist.ts
 // Manually add an artist to the artists collection
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const addArtistSchema = z.object({
+  userId: z.string().min(1),
+  artistName: z.string().min(1),
+  email: z.string().email().optional(),
+  bio: z.string().optional(),
+  links: z.string().optional(),
+  isArtist: z.boolean().optional(),
+  isDJ: z.boolean().optional(),
+  isMerchSupplier: z.boolean().optional(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -69,14 +82,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { userId, artistName, email, bio, links, isArtist, isDJ, isMerchSupplier } = body;
-
-    if (!userId || !artistName) {
-      return new Response(JSON.stringify({ success: false, error: 'userId and artistName are required' }), {
+    const parsed = addArtistSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { userId, artistName, email, bio, links, isArtist, isDJ, isMerchSupplier } = parsed.data;
 
     // Create artist document
     const artistData = {

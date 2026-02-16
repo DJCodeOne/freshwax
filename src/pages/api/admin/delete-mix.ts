@@ -5,11 +5,17 @@ export const prerender = false;
 
 import '../../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const deleteMixSchema = z.object({
+  mixId: z.string().min(1),
+  folderPath: z.string().optional(),
+}).passthrough();
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -62,17 +68,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(R2_CONFIG);
 
   try {
-    const { mixId, folderPath } = body;
-
-    if (!mixId) {
+    const parsed = deleteMixSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Mix ID is required'
+        error: 'Invalid request'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { mixId, folderPath } = parsed.data;
 
     log.info('[admin/delete-mix] Deleting mix:', mixId);
 

@@ -2,10 +2,17 @@
 // Sends approval confirmation email to artists/partners
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+const sendApprovalEmailSchema = z.object({
+  email: z.string().email(),
+  name: z.string().optional(),
+  type: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -18,20 +25,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json().catch(() => ({})) as { email?: string; name?: string; type?: string; adminKey?: string };
+    const body = await request.json().catch(() => ({}));
 
     // SECURITY: Require admin authentication via admin key (not spoofable UID)
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { email, name, type } = body || {};
-
-    if (!email) {
+    const parsed = sendApprovalEmailSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Email address required'
+        error: 'Invalid request'
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+
+    const { email, name, type } = parsed.data;
 
     // Get Resend API key from runtime env or import.meta.env
     const runtime = locals.runtime.env || {};

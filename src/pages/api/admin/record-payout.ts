@@ -2,10 +2,16 @@
 // Admin endpoint to record a manual payout (when artist has already been paid outside the system)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const recordPayoutSchema = z.object({
+  orderId: z.string().min(1),
+  notes: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -44,14 +50,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const serviceAccountKey = getServiceAccountKey(env);
 
-    const { orderId, notes } = bodyData;
-
-    if (!orderId) {
-      return new Response(JSON.stringify({ error: 'orderId required' }), {
+    const parsed = recordPayoutSchema.safeParse(bodyData);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { orderId, notes } = parsed.data;
 
     // Get order
     const order = await getDocument('orders', orderId);

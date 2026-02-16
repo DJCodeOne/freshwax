@@ -3,8 +3,14 @@
 // Returns all user data as downloadable JSON
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const ExportDataSchema = z.object({
+  userId: z.string().min(1, 'userId is required').max(200),
+  idToken: z.string().min(1, 'idToken is required').max(5000),
+});
 
 export const prerender = false;
 
@@ -17,14 +23,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { userId, idToken } = body;
-
-    if (!userId || !idToken) {
-      return new Response(JSON.stringify({ error: 'userId and idToken required' }), {
+    const parsed = ExportDataSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { userId, idToken } = parsed.data;
 
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {

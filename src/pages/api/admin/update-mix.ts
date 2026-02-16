@@ -1,10 +1,26 @@
 // src/pages/api/admin/update-mix.ts
 // Admin endpoint to update DJ mix metadata (no ownership check)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { invalidateMixesCache } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updateMixSchema = z.object({
+  mixId: z.string().min(1),
+  title: z.string().max(80).optional().nullable(),
+  djName: z.string().max(50).optional().nullable(),
+  genre: z.string().max(30).optional().nullable(),
+  description: z.string().max(500).optional().nullable(),
+  artworkUrl: z.string().optional().nullable(),
+  tracklist: z.string().max(2000).optional().nullable(),
+  published: z.boolean().optional(),
+  allowDownload: z.boolean().optional(),
+  featured: z.boolean().optional(),
+  durationSeconds: z.union([z.number(), z.string()]).optional().nullable(),
+  userId: z.string().optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -21,17 +37,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { mixId } = body;
-
-    if (!mixId) {
+    const parsed = updateMixSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'mixId is required'
+        error: 'Invalid request'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { mixId } = parsed.data;
 
     // Build update object
     const updateData: Record<string, any> = {

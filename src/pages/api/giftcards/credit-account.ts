@@ -2,8 +2,20 @@
 // Directly credit an account with store credit (for testing / admin use)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+
+// Zod schema for admin credit account
+const CreditAccountSchema = z.object({
+  userId: z.string().min(1, 'User ID required'),
+  amount: z.union([z.number(), z.string()]).refine(val => {
+    const num = typeof val === 'string' ? parseFloat(val) : val;
+    return !isNaN(num) && num > 0;
+  }, 'Amount must be a positive number'),
+  reason: z.string().max(500).optional(),
+  isWelcomeCredit: z.boolean().optional(),
+}).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase for Cloudflare runtime
@@ -14,26 +26,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const env2 = locals.runtime.env;
     initAdminEnv({ ADMIN_UIDS: env2?.ADMIN_UIDS, ADMIN_EMAILS: env2?.ADMIN_EMAILS });
 
-    const data = await request.json();
-    const authError = await requireAdminAuth(request, locals, data);
+    const rawBody = await request.json();
+    const authError = await requireAdminAuth(request, locals, rawBody);
     if (authError) return authError;
 
-    const { userId, amount, reason, isWelcomeCredit } = data;
-
-    if (!userId || !amount) {
+    const parseResult = CreditAccountSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID and amount are required'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { userId, amount, reason, isWelcomeCredit } = parseResult.data;
 
-    const creditAmount = parseFloat(amount);
-    if (isNaN(creditAmount) || creditAmount <= 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid amount'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }
+    const creditAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
 
     const now = new Date().toISOString();
     const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

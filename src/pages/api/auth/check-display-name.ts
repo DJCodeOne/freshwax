@@ -3,8 +3,13 @@
 // Replaces client-side Firestore query (~200KB SDK saved)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { queryCollection } from '../../../lib/firebase-rest';
+
+const CheckDisplayNameSchema = z.object({
+  name: z.string().min(2, 'Display name must be at least 2 characters').max(50),
+});
 
 export const prerender = false;
 
@@ -17,16 +22,17 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   const url = new URL(request.url);
-  const name = url.searchParams.get('name');
-
-  if (!name || name.trim().length < 2) {
+  const parsed = CheckDisplayNameSchema.safeParse({ name: url.searchParams.get('name') ?? '' });
+  if (!parsed.success) {
     return new Response(JSON.stringify({
       success: false,
-      error: 'Display name must be at least 2 characters'
+      error: 'Invalid request',
+      details: parsed.error.issues.map(i => i.message)
     }), {
       status: 400, headers: { 'Content-Type': 'application/json' }
     });
   }
+  const { name } = parsed.data;
 
   try {
     const normalizedName = name.trim().toLowerCase();

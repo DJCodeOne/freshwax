@@ -1,8 +1,13 @@
 // src/pages/api/generate-referral-code.ts
 // Generate a referral code for Plus members - uses KV storage (not Firebase)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
+
+const GenerateReferralSchema = z.object({
+  userId: z.string().min(1, 'Missing userId').max(200),
+});
 
 export const prerender = false;
 
@@ -23,14 +28,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authHeader = request.headers.get('Authorization');
     const idToken = authHeader?.replace('Bearer ', '') || undefined;
 
-    const { userId } = await request.json();
-
-    if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing userId' }), {
+    const rawBody = await request.json();
+    const parsed = GenerateReferralSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { userId } = parsed.data;
 
     // Require auth token
     if (!idToken) {

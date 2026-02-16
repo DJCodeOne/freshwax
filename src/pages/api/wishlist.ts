@@ -1,8 +1,14 @@
 // src/pages/api/wishlist.ts
 // Wishlist management API - uses Firebase REST API
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, getDocumentsBatch, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const WishlistSchema = z.object({
+  releaseId: z.string().min(1, 'Release ID required').max(200),
+  action: z.enum(['add', 'remove', 'toggle', 'check']),
+});
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
   // Initialize Firebase from runtime env
@@ -115,17 +121,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { releaseId, action } = body;
-
-    if (!releaseId) {
+    const parsed = WishlistSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Release ID required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { releaseId, action } = parsed.data;
 
     const now = new Date().toISOString();
 

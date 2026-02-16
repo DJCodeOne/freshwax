@@ -3,11 +3,19 @@
 // Usage: POST with { orderNumber, actualPaypalFee, artistPayout, adminKey }
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const updatePayoutAmountSchema = z.object({
+  orderNumber: z.string().min(1),
+  actualPaypalFee: z.number().nonnegative().optional(),
+  artistPayout: z.number().nonnegative(),
+  adminKey: z.string().optional(),
+});
 
 export const prerender = false;
 
@@ -43,17 +51,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { orderNumber, actualPaypalFee, artistPayout } = body;
-
-    if (!orderNumber || artistPayout === undefined) {
+    const parsed = updatePayoutAmountSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
-        error: 'Missing required fields',
+        error: 'Invalid request',
         usage: 'POST { orderNumber, actualPaypalFee, artistPayout, adminKey }'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { orderNumber, actualPaypalFee, artistPayout } = parsed.data;
 
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const serviceAccountKey = getServiceAccountKey(env);

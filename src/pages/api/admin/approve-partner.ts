@@ -2,10 +2,16 @@
 // API endpoint to approve a partner
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const approvePartnerSchema = z.object({
+  partnerId: z.string().min(1),
+  adminKey: z.string().optional(),
+});
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -22,14 +28,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const { partnerId } = body;
-
-    if (!partnerId) {
-      return new Response(JSON.stringify({ error: 'Partner ID required' }), {
+    const parsed = approvePartnerSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { partnerId } = parsed.data;
 
     const now = new Date().toISOString();
 

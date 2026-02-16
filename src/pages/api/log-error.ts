@@ -2,8 +2,17 @@
 // Receives client-side error reports and stores in D1
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 import { logError } from '../../lib/error-logger';
+
+const LogErrorSchema = z.object({
+  message: z.string().min(1, 'Missing message').max(2000),
+  stack: z.string().max(5000).optional(),
+  url: z.string().max(500).optional(),
+  level: z.enum(['error', 'warn', 'fatal']).optional().default('error'),
+  metadata: z.record(z.unknown()).optional(),
+});
 
 export const prerender = false;
 
@@ -19,23 +28,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     const body = await request.json();
-    const { message, stack, url, level, metadata } = body;
-
-    if (!message || typeof message !== 'string') {
-      return new Response(JSON.stringify({ success: false, error: 'Missing message' }), {
+    const parsed = LogErrorSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
+    const { message, stack, url, level, metadata } = parsed.data;
 
     const env = locals.runtime.env;
 
     await logError({
       source: 'client',
-      level: level === 'warn' ? 'warn' : level === 'fatal' ? 'fatal' : 'error',
-      message: String(message).slice(0, 2000),
-      stack: stack ? String(stack).slice(0, 5000) : undefined,
-      url: url ? String(url).slice(0, 500) : undefined,
+      level,
+      message,
+      stack: stack || undefined,
+      url: url || undefined,
       userAgent: request.headers.get('User-Agent') || undefined,
       ip: request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() || undefined,
       metadata: metadata && typeof metadata === 'object' ? metadata : undefined,

@@ -5,8 +5,23 @@
 // Note: initFirebaseEnv is called by middleware, no need to call it here
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+// Zod schema for checkout data save
+const CheckoutDataSchema = z.object({
+  firstName: z.string().max(200).optional(),
+  lastName: z.string().max(200).optional(),
+  email: z.string().email().max(200).optional(),
+  phone: z.string().max(200).optional(),
+  address1: z.string().max(200).optional(),
+  address2: z.string().max(200).optional(),
+  city: z.string().max(200).optional(),
+  county: z.string().max(200).optional(),
+  postcode: z.string().max(200).optional(),
+  country: z.string().max(200).optional(),
+}).strict();
 
 export const prerender = false;
 
@@ -92,14 +107,21 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-    const body = await request.json();
+    const rawBody = await request.json();
 
-    // Validate and sanitize input - only allow known fields
-    const allowedFields = ['firstName', 'lastName', 'email', 'phone', 'address1', 'address2', 'city', 'county', 'postcode', 'country'];
+    // Zod input validation - only allows known fields via strict mode
+    const parseResult = CheckoutDataSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({
+        error: 'Invalid request',
+        details: parseResult.error.issues
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const sanitized: Record<string, string> = {};
-    for (const field of allowedFields) {
-      if (body[field] !== undefined) {
-        sanitized[field] = String(body[field]).slice(0, 200); // Limit field length
+    for (const [key, value] of Object.entries(parseResult.data)) {
+      if (value !== undefined) {
+        sanitized[key] = String(value);
       }
     }
     sanitized.updatedAt = new Date().toISOString();

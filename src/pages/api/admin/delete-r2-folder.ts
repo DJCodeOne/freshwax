@@ -2,8 +2,13 @@
 // Delete a folder and all its contents from R2
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const deleteR2FolderSchema = z.object({
+  folder: z.string().min(1),
+}).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -14,14 +19,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const { folder } = await request.json();
-
-    if (!folder) {
-      return new Response(JSON.stringify({ error: 'Folder name required' }), {
+    const body = await request.json();
+    const parsed = deleteR2FolderSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+
+    const { folder } = parsed.data;
 
     const r2: R2Bucket = locals.runtime.env.R2;
 

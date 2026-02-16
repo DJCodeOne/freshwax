@@ -2,10 +2,17 @@
 // Creates a PayPal order for Plus subscription purchase
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+
+// Zod schema for PayPal Plus order creation
+const PayPalPlusOrderSchema = z.object({
+  email: z.string().email('Valid email required'),
+  promoCode: z.string().max(50).optional(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -83,17 +90,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 401, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const body = await request.json();
-    const { email, promoCode } = body;
-    const userId = verifiedUserId;
+    const rawBody = await request.json();
 
-    // Validate required fields
-    if (!email) {
+    const parseResult = PayPalPlusOrderSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required fields'
+        error: 'Invalid request',
+        details: parseResult.error.issues
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
+    const { email, promoCode } = parseResult.data;
+    const userId = verifiedUserId;
 
     console.log('[PayPal Plus] Creating order for:', email);
 

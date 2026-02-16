@@ -2,8 +2,13 @@
 // Tracks DJ mix likes using atomic increments
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const MixIdSchema = z.object({
+  mixId: z.string().min(1, 'Invalid mixId').max(200),
+});
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -23,14 +28,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db = env?.DB; // D1 database binding
 
   try {
-    const { mixId } = await request.json();
-
-    if (!mixId) {
-      return new Response(JSON.stringify({ error: 'Invalid mixId' }), {
+    const body = await request.json();
+    const parsed = MixIdSchema.safeParse(body);
+    if (!parsed.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { mixId } = parsed.data;
 
     // Atomically increment likes field and update last_liked_date
     const { newValues } = await atomicIncrement('dj-mixes', mixId, { likes: 1 });

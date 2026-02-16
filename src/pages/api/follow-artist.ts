@@ -1,8 +1,17 @@
 // src/pages/api/follow-artist.ts
 // Follow/unfollow artists API - uses Firebase REST API
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, queryCollection, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const FollowArtistSchema = z.object({
+  artistName: z.string().min(1).max(200).optional(),
+  artistId: z.string().min(1).max(200).optional(),
+  action: z.enum(['follow', 'unfollow', 'toggle', 'check']),
+}).refine(data => data.artistName || data.artistId, {
+  message: 'Either artistName or artistId is required',
+});
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
   // Rate limit: standard - 60 per minute
@@ -156,20 +165,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = await request.json();
-    const { artistName, artistId, action } = body;
-
-    // Use artistName as the primary identifier, fall back to artistId
-    const artistIdentifier = artistName || artistId;
-
-    if (!artistIdentifier) {
+    const parsed = FollowArtistSchema.safeParse(body);
+    if (!parsed.success) {
       return new Response(JSON.stringify({
         success: false,
-        error: 'Artist name/ID required'
+        error: 'Invalid request',
+        details: parsed.error.issues.map(i => i.message)
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { artistName, artistId, action } = parsed.data;
+
+    // Use artistName as the primary identifier, fall back to artistId
+    const artistIdentifier = artistName || artistId!;
 
     const now = new Date().toISOString();
 
