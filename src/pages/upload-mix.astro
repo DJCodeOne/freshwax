@@ -1378,6 +1378,9 @@ Artist - Track Title
 
   // Quick Drop upload
   quickDropConfirm.addEventListener('click', async () => {
+    // Prevent double-submit
+    if (quickDropConfirm.disabled) return;
+
     if (!quickDropFile) {
       alert('No file selected');
       return;
@@ -1662,6 +1665,9 @@ Artist - Track Title
   // Form submission
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // Prevent double-submit
+    if (submitBtn.disabled) return;
 
     // Wait for auth to be ready
     const user = await getAuthUser();

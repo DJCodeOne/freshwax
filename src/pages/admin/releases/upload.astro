@@ -395,6 +395,9 @@ async function uploadFileWithProgress(url, blob, contentType, fileName) {
 
 // Upload extracted files
 uploadBtn.onclick = async () => {
+  // Prevent double-submit
+  if (uploadBtn.disabled) return;
+
   debug("Upload button clicked");
   if (!extractedData) {
     debug("ERROR: No extracted data");
@@ -654,6 +657,9 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
 
 // Manual upload handler
 manualBtn.onclick = async () => {
+  // Prevent double-submit
+  if (manualBtn.disabled) return;
+
   const artistName = artistInput.value.trim();
   const releaseName = releaseInput.value.trim();
 

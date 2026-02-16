@@ -13,6 +13,9 @@ function initNewsletterForm() {
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    // Prevent double-submit
+    if (btn.disabled) return;
+
     var email = emailInput ? emailInput.value.trim() : '';
     if (!email) return;
 

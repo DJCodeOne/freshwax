@@ -134,6 +134,9 @@ import Footer from '../components/Footer.astro';
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
 
+      // Prevent double-submit
+      if (btn.disabled) return;
+
       const email = emailInput?.value?.trim();
       const name = nameInput?.value?.trim();
       if (!email) return;

@@ -123,14 +123,14 @@ const nonce = Astro.locals.nonce || '';
         <form id="loginForm">
           <div class="form-group">
             <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" required placeholder="you@example.com" autocomplete="email">
+            <input type="email" id="email" name="email" required placeholder="you@example.com" autocomplete="email" aria-describedby="emailError">
             <p class="field-error" id="emailError" role="alert"></p>
           </div>
 
           <div class="form-group">
             <label for="password">Password</label>
             <div class="password-wrapper">
-              <input type="password" id="password" name="password" required placeholder="Your password" autocomplete="current-password">
+              <input type="password" id="password" name="password" required placeholder="Your password" autocomplete="current-password" aria-describedby="passwordError">
               <button type="button" class="toggle-password" aria-label="Toggle password visibility">
                 <svg class="eye-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -245,6 +245,13 @@ const nonce = Astro.locals.nonce || '';
     const googleBtn = document.getElementById('googleSignIn');
 
     googleBtn.addEventListener('click', async () => {
+      // Prevent double-submit
+      if (googleBtn.disabled) return;
+
+      googleBtn.disabled = true;
+      const originalText = googleBtn.innerHTML;
+      googleBtn.innerHTML = '<span>Signing in...</span>';
+
       errorMessage.style.display = 'none';
       successMessage.style.display = 'none';
 
@@ -300,11 +307,15 @@ const nonce = Astro.locals.nonce || '';
         console.error('[Login] Google sign-in error:', error);
 
         if (error.code === 'auth/popup-closed-by-user') {
+          googleBtn.disabled = false;
+          googleBtn.innerHTML = originalText;
           return;
         }
 
         errorMessage.textContent = 'Google sign-in failed. Please try again.';
         errorMessage.style.display = 'block';
+        googleBtn.disabled = false;
+        googleBtn.innerHTML = originalText;
       }
     });
 
@@ -334,37 +345,123 @@ const nonce = Astro.locals.nonce || '';
       });
     }
 
+    // Inline validation helpers
+    function validateEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
+    function setFieldError(fieldId, message) {
+      const field = document.getElementById(fieldId);
+      const errorEl = document.getElementById(fieldId + 'Error');
+      if (field) field.setAttribute('aria-invalid', 'true');
+      if (errorEl) {
+        errorEl.textContent = message;
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function clearFieldError(fieldId) {
+      const field = document.getElementById(fieldId);
+      const errorEl = document.getElementById(fieldId + 'Error');
+      if (field) field.removeAttribute('aria-invalid');
+      if (errorEl) {
+        errorEl.textContent = '';
+        errorEl.style.display = 'none';
+      }
+    }
+
+    // Email field validation on blur
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+      emailInput.addEventListener('blur', () => {
+        const email = emailInput.value.trim();
+        if (!email) {
+          setFieldError('email', 'Email is required');
+        } else if (!validateEmail(email)) {
+          setFieldError('email', 'Please enter a valid email address');
+        } else {
+          clearFieldError('email');
+        }
+      });
+
+      emailInput.addEventListener('input', () => {
+        if (emailInput.hasAttribute('aria-invalid')) {
+          clearFieldError('email');
+        }
+      });
+    }
+
+    // Password field validation on blur
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+      passwordInput.addEventListener('blur', () => {
+        const password = passwordInput.value;
+        if (!password) {
+          setFieldError('password', 'Password is required');
+        } else {
+          clearFieldError('password');
+        }
+      });
+
+      passwordInput.addEventListener('input', () => {
+        if (passwordInput.hasAttribute('aria-invalid')) {
+          clearFieldError('password');
+        }
+      });
+    }
+
     // Form submission
     const form = document.getElementById('loginForm');
     const submitBtn = document.getElementById('submitBtn');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
+      // Prevent double-submit
+      if (submitBtn.disabled) return;
+
       // Clear messages
-      document.querySelectorAll('.field-error').forEach(el => el.textContent = '');
+      document.querySelectorAll('.field-error').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+      });
+      document.querySelectorAll('input').forEach(input => input.removeAttribute('aria-invalid'));
       errorMessage.textContent = '';
       errorMessage.style.display = 'none';
       successMessage.style.display = 'none';
-      
+
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       const rememberMe = document.getElementById('rememberMe').checked;
-      
+
       // Validation
       let hasErrors = false;
-      
+      let firstErrorField = null;
+
       if (!email) {
-        document.getElementById('emailError').textContent = 'Email is required';
+        setFieldError('email', 'Email is required');
         hasErrors = true;
+        firstErrorField = firstErrorField || 'email';
+      } else if (!validateEmail(email)) {
+        setFieldError('email', 'Please enter a valid email address');
+        hasErrors = true;
+        firstErrorField = firstErrorField || 'email';
       }
-      
+
       if (!password) {
-        document.getElementById('passwordError').textContent = 'Password is required';
+        setFieldError('password', 'Password is required');
         hasErrors = true;
+        firstErrorField = firstErrorField || 'password';
       }
-      
-      if (hasErrors) return;
+
+      if (hasErrors) {
+        // Focus first error field
+        if (firstErrorField) {
+          document.getElementById(firstErrorField)?.focus();
+        }
+        return;
+      }
       
       // Show loading
       submitBtn.disabled = true;

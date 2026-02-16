@@ -147,14 +147,16 @@ const faqs = [
             <div class="form-row">
               <div class="form-group">
                 <label for="recipientName">Recipient's Name</label>
-                <input type="text" id="recipientName" placeholder="Their name" maxlength="50" />
+                <input type="text" id="recipientName" placeholder="Their name" maxlength="50" aria-describedby="recipientNameError" />
+                <span id="recipientNameError" class="field-error" role="alert"></span>
               </div>
               <div class="form-group">
                 <label for="recipientEmail">Recipient's Email *</label>
-                <input type="email" id="recipientEmail" placeholder="their@email.com" required />
+                <input type="email" id="recipientEmail" placeholder="their@email.com" required aria-describedby="recipientEmailError" />
+                <span id="recipientEmailError" class="field-error" role="alert"></span>
               </div>
             </div>
-            
+
             <div class="form-group">
               <label for="giftMessage">Personal Message (optional)</label>
               <textarea id="giftMessage" placeholder="Write a message to include in the email..." maxlength="500" rows="3"></textarea>
@@ -342,23 +344,27 @@ const faqs = [
   if (redeemForm) {
     redeemForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
+      const btn = document.getElementById('redeemBtn');
+
+      // Prevent double-submit
+      if (btn.disabled) return;
+
       if (!currentUser) {
         document.getElementById('redeemError').textContent = 'Please sign in to redeem';
         document.getElementById('redeemError').style.display = 'block';
         return;
       }
-      
+
       const code = document.getElementById('giftCardCode').value.trim();
-      const btn = document.getElementById('redeemBtn');
       const btnText = btn.querySelector('.btn-text');
       const btnLoading = btn.querySelector('.btn-loading');
       const errorEl = document.getElementById('redeemError');
       const successEl = document.getElementById('redeemSuccess');
-      
+
       errorEl.style.display = 'none';
       successEl.style.display = 'none';
-      
+
       btn.disabled = true;
       btnText.classList.add('hidden');
       btnLoading.classList.remove('hidden');
@@ -693,48 +699,51 @@ const faqs = [
   // Purchase gift card
   purchaseBtn?.addEventListener('click', async (e) => {
     e.preventDefault();
-    
+
+    // Prevent double-submit
+    if (purchaseBtn.disabled) return;
+
     const errorEl = document.getElementById('purchaseError');
-    
+
     if (!currentUser) {
       errorEl.textContent = 'Please sign in to purchase';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     // Validate amount is selected
     if (!selectedAmount || selectedAmount < 5) {
       errorEl.textContent = 'Please select an amount (minimum £5)';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     const recipientType = document.querySelector('input[name="recipientType"]:checked')?.value || 'gift';
     const recipientName = document.getElementById('recipientName')?.value.trim() || '';
     const recipientEmail = document.getElementById('recipientEmail')?.value.trim() || '';
     const message = document.getElementById('giftMessage')?.value.trim() || '';
-    
+
     // Validate recipient email for gifts
     if (recipientType === 'gift' && !recipientEmail) {
       errorEl.textContent = 'Please enter the recipient\'s email address';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     // Email validation
     if (recipientType === 'gift' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
       errorEl.textContent = 'Please enter a valid email address';
       errorEl.style.display = 'block';
       return;
     }
-    
+
     const successEl = document.getElementById('purchaseSuccess');
     const btnText = purchaseBtn.querySelector('.btn-text');
     const btnLoading = purchaseBtn.querySelector('.btn-loading');
-    
+
     errorEl.style.display = 'none';
     successEl.classList.add('hidden');
-    
+
     purchaseBtn.disabled = true;
     btnText.classList.add('hidden');
     btnLoading.classList.remove('hidden');

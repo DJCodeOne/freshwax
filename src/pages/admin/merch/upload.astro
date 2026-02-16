@@ -1121,8 +1121,11 @@ export const prerender = false;
 
     async function handleSubmit(e) {
       e.preventDefault();
-      
+
       const submitBtn = document.getElementById('submitBtn');
+      // Prevent double-submit
+      if (submitBtn.disabled) return;
+
       submitBtn.disabled = true;
       submitBtn.textContent = 'Uploading...';
       

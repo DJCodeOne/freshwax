@@ -61,21 +61,22 @@ const nonce = Astro.locals.nonce || '';
         <div class="form-group">
           <label for="displayName">Display Name</label>
           <div class="input-with-status">
-            <input type="text" id="displayName" name="displayName" required placeholder="Enter the name you want use across the site" minlength="2" maxlength="30">
+            <input type="text" id="displayName" name="displayName" required placeholder="Enter the name you want use across the site" minlength="2" maxlength="30" aria-describedby="displayNameHint">
             <span class="input-status" id="displayNameStatus"></span>
           </div>
-          <small class="input-hint" id="displayNameHint"></small>
+          <small class="input-hint" id="displayNameHint" role="alert"></small>
         </div>
 
         <div class="form-group">
           <label for="email">Email</label>
-          <input type="email" id="email" name="email" required placeholder="your@email.com">
+          <input type="email" id="email" name="email" required placeholder="your@email.com" aria-describedby="emailError">
+          <p class="field-error" id="emailError" role="alert"></p>
         </div>
 
         <div class="form-group password-field">
           <label for="password">Password</label>
           <div class="input-wrapper">
-            <input type="password" id="password" name="password" required minlength="8">
+            <input type="password" id="password" name="password" required minlength="8" aria-describedby="passwordRequirements">
             <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
               <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -104,7 +105,7 @@ const nonce = Astro.locals.nonce || '';
         <div class="form-group password-field">
           <label for="confirmPassword">Confirm Password</label>
           <div class="input-wrapper">
-            <input type="password" id="confirmPassword" name="confirmPassword" required>
+            <input type="password" id="confirmPassword" name="confirmPassword" required aria-describedby="confirmPasswordError">
             <button type="button" class="password-toggle" data-target="confirmPassword" aria-label="Show password">
               <svg class="eye-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -116,6 +117,7 @@ const nonce = Astro.locals.nonce || '';
               </svg>
             </button>
           </div>
+          <p class="field-error" id="confirmPasswordError" role="alert"></p>
         </div>
 
         <div class="form-divider">
@@ -676,6 +678,13 @@ const nonce = Astro.locals.nonce || '';
       color: #22c55e;
     }
 
+    .field-error {
+      display: none;
+      color: #ef4444;
+      font-size: 0.875rem;
+      margin-top: 0.375rem;
+    }
+
     /* Password Strength Indicator */
     .password-strength {
       margin-top: 0.5rem;
@@ -928,6 +937,78 @@ const nonce = Astro.locals.nonce || '';
 
     passwordInput.addEventListener('input', () => {
       checkPasswordStrength(passwordInput.value);
+      // Clear aria-invalid on input
+      if (passwordInput.hasAttribute('aria-invalid')) {
+        passwordInput.removeAttribute('aria-invalid');
+      }
+    });
+
+    // Email validation on blur
+    const emailInput = document.getElementById('email');
+    const emailError = document.getElementById('emailError');
+    if (emailInput && emailError) {
+      emailInput.addEventListener('blur', () => {
+        const email = emailInput.value.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email) {
+          emailInput.setAttribute('aria-invalid', 'true');
+          emailError.textContent = 'Email is required';
+          emailError.style.display = 'block';
+        } else if (!emailRegex.test(email)) {
+          emailInput.setAttribute('aria-invalid', 'true');
+          emailError.textContent = 'Please enter a valid email address';
+          emailError.style.display = 'block';
+        } else {
+          emailInput.removeAttribute('aria-invalid');
+          emailError.textContent = '';
+          emailError.style.display = 'none';
+        }
+      });
+
+      emailInput.addEventListener('input', () => {
+        if (emailInput.hasAttribute('aria-invalid')) {
+          emailInput.removeAttribute('aria-invalid');
+          emailError.textContent = '';
+          emailError.style.display = 'none';
+        }
+      });
+    }
+
+    // Confirm password validation on blur
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const confirmPasswordError = document.getElementById('confirmPasswordError');
+    if (confirmPasswordInput && confirmPasswordError) {
+      confirmPasswordInput.addEventListener('blur', () => {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        if (confirmPassword && password !== confirmPassword) {
+          confirmPasswordInput.setAttribute('aria-invalid', 'true');
+          confirmPasswordError.textContent = 'Passwords do not match';
+          confirmPasswordError.style.display = 'block';
+        } else {
+          confirmPasswordInput.removeAttribute('aria-invalid');
+          confirmPasswordError.textContent = '';
+          confirmPasswordError.style.display = 'none';
+        }
+      });
+
+      confirmPasswordInput.addEventListener('input', () => {
+        if (confirmPasswordInput.hasAttribute('aria-invalid')) {
+          confirmPasswordInput.removeAttribute('aria-invalid');
+          confirmPasswordError.textContent = '';
+          confirmPasswordError.style.display = 'none';
+        }
+      });
+    }
+
+    // Display name validation
+    displayNameInput.addEventListener('blur', () => {
+      const name = displayNameInput.value.trim();
+      if (name.length > 0 && name.length < 2) {
+        displayNameInput.setAttribute('aria-invalid', 'true');
+      } else if (name.length >= 2) {
+        displayNameInput.removeAttribute('aria-invalid');
+      }
     });
 
     // ==================== DISPLAY NAME AVAILABILITY CHECK ====================
@@ -1012,6 +1093,13 @@ const nonce = Astro.locals.nonce || '';
     const googleBtn = document.getElementById('googleSignIn');
 
     googleBtn.addEventListener('click', async () => {
+      // Prevent double-submit
+      if (googleBtn.disabled) return;
+
+      googleBtn.disabled = true;
+      const originalText = googleBtn.innerHTML;
+      googleBtn.innerHTML = '<span>Signing in...</span>';
+
       formError.style.display = 'none';
 
       try {
@@ -1079,11 +1167,15 @@ const nonce = Astro.locals.nonce || '';
         console.error('[Register] Google sign-in error:', error);
 
         if (error.code === 'auth/popup-closed-by-user') {
+          googleBtn.disabled = false;
+          googleBtn.innerHTML = originalText;
           return;
         }
 
         formError.textContent = 'Google sign-in failed. Please try again.';
         formError.style.display = 'block';
+        googleBtn.disabled = false;
+        googleBtn.innerHTML = originalText;
       }
     });
 
@@ -1116,9 +1208,21 @@ const nonce = Astro.locals.nonce || '';
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Reset messages
+      // Prevent double-submit
+      if (submitBtn.disabled) return;
+
+      // Reset messages and aria-invalid
       formError.style.display = 'none';
       formSuccess.style.display = 'none';
+      document.querySelectorAll('input').forEach(input => input.removeAttribute('aria-invalid'));
+      if (emailError) {
+        emailError.textContent = '';
+        emailError.style.display = 'none';
+      }
+      if (confirmPasswordError) {
+        confirmPasswordError.textContent = '';
+        confirmPasswordError.style.display = 'none';
+      }
 
       // Get form data
       const displayName = document.getElementById('displayName').value.trim();
@@ -1129,31 +1233,69 @@ const nonce = Astro.locals.nonce || '';
       const requestMerchSeller = merchCheckbox.checked;
       const requestVinylSeller = vinylCheckbox.checked;
 
+      let firstErrorField = null;
+
       // Validation
       if (displayName.length < 2) {
+        displayNameInput.setAttribute('aria-invalid', 'true');
         formError.textContent = 'Display name must be at least 2 characters';
         formError.style.display = 'block';
+        firstErrorField = displayNameInput;
+        if (firstErrorField) firstErrorField.focus();
         return;
       }
 
       // Check if display name is taken
       if (displayNameStatus.className.includes('taken')) {
+        displayNameInput.setAttribute('aria-invalid', 'true');
         formError.textContent = 'Please choose a different display name';
         formError.style.display = 'block';
+        firstErrorField = displayNameInput;
+        if (firstErrorField) firstErrorField.focus();
+        return;
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email) {
+        emailInput.setAttribute('aria-invalid', 'true');
+        emailError.textContent = 'Email is required';
+        emailError.style.display = 'block';
+        formError.textContent = 'Please fill in all required fields';
+        formError.style.display = 'block';
+        firstErrorField = emailInput;
+        if (firstErrorField) firstErrorField.focus();
+        return;
+      } else if (!emailRegex.test(email)) {
+        emailInput.setAttribute('aria-invalid', 'true');
+        emailError.textContent = 'Please enter a valid email address';
+        emailError.style.display = 'block';
+        formError.textContent = 'Please enter a valid email address';
+        formError.style.display = 'block';
+        firstErrorField = emailInput;
+        if (firstErrorField) firstErrorField.focus();
         return;
       }
 
       if (password !== confirmPassword) {
+        confirmPasswordInput.setAttribute('aria-invalid', 'true');
+        confirmPasswordError.textContent = 'Passwords do not match';
+        confirmPasswordError.style.display = 'block';
         formError.textContent = 'Passwords do not match';
         formError.style.display = 'block';
+        firstErrorField = confirmPasswordInput;
+        if (firstErrorField) firstErrorField.focus();
         return;
       }
 
       // Check password strength
       const pwChecks = checkPasswordStrength(password);
       if (!pwChecks.length || !pwChecks.upper || !pwChecks.number || !pwChecks.special) {
+        passwordInput.setAttribute('aria-invalid', 'true');
         formError.textContent = 'Password must be at least 8 characters and include an uppercase letter, a number, and a special character';
         formError.style.display = 'block';
+        firstErrorField = passwordInput;
+        if (firstErrorField) firstErrorField.focus();
         return;
       }
 
