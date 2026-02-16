@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const rolesManagePostSchema = z.object({
   action: z.enum(['requestRole', 'approveRole', 'denyRole', 'revokeRole']),
@@ -34,19 +35,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (action === 'getUserRoles' && uid) {
       const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
       if (authError || !verifiedUid || verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unauthorized'
-        }), { status: 401 });
+        return ApiErrors.unauthorized('Unauthorized');
       }
 
       const userData = await getDocument('users', uid);
 
       if (!userData) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found'
-        }), { status: 404 });
+        return ApiErrors.notFound('User not found');
       }
       return new Response(JSON.stringify({
         success: true,
@@ -59,10 +54,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (action === 'getPendingRequests') {
       const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
       if (authError || !verifiedUid || !(await isAdmin(verifiedUid))) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unauthorized'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Unauthorized');
       }
 
       // Query the pendingRoleRequests collection (publicly readable)
@@ -98,17 +90,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }));
     }
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Invalid action' 
-    }), { status: 400 });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('Roles API GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Internal error' 
-    }), { status: 500 });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -121,20 +107,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify Firebase token for all POST actions
     const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUid) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401 });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
 
     const parsed = rolesManagePostSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400 });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action, uid, roleType, reason, artistName, bio, links, businessName, description, website, storeName, location, discogsUrl } = parsed.data;
@@ -142,51 +122,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Request a role (user action)
     if (action === 'requestRole') {
       if (!roleType) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing roleType'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Missing roleType');
       }
 
       // SECURITY: Verify the requesting user matches the uid
       if (verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Cannot request roles for another user'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Cannot request roles for another user');
       }
 
       const validRoles = ['artist', 'merchSeller', 'vinylSeller', 'djBypass'];
       if (!validRoles.includes(roleType)) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid role type'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Invalid role type');
       }
 
       const userData = await getDocument('users', uid);
 
       if (!userData) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found'
-        }), { status: 404 });
+        return ApiErrors.notFound('User not found');
       }
       
       // Check if already has role
       if (userData?.roles?.[roleType === 'djBypass' ? 'djEligible' : roleType]) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Already has this role' 
-        }), { status: 400 });
+        return ApiErrors.badRequest('Already has this role');
       }
 
       // Check if already pending
       if (userData?.pendingRoles?.[roleType]?.status === 'pending') {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Request already pending' 
-        }), { status: 400 });
+        return ApiErrors.badRequest('Request already pending');
       }
 
       // Build request data based on role type
@@ -242,18 +204,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Approve role (admin action)
     if (action === 'approveRole') {
       if (!(await isAdmin(verifiedUid))) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unauthorized'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Unauthorized');
       }
       const adminUid = verifiedUid;
 
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing uid or roleType'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Missing uid or roleType');
       }
 
       const roleKey = roleType === 'djBypass' ? 'djEligible' : roleType;
@@ -431,18 +387,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Deny role (admin action)
     if (action === 'denyRole') {
       if (!(await isAdmin(verifiedUid))) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unauthorized'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Unauthorized');
       }
       const adminUid = verifiedUid;
 
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing uid or roleType'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Missing uid or roleType');
       }
 
       await updateDocument('users', uid, {
@@ -483,18 +433,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Revoke role (admin action)
     if (action === 'revokeRole') {
       if (!(await isAdmin(verifiedUid))) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unauthorized'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Unauthorized');
       }
       const adminUid = verifiedUid;
 
       if (!uid || !roleType) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing uid or roleType'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Missing uid or roleType');
       }
 
       const roleKey = roleType === 'djBypass' ? 'djEligible' : roleType;
@@ -567,16 +511,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }));
     }
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Invalid action' 
-    }), { status: 400 });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('Roles API POST error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Internal error' 
-    }), { status: 500 });
+    return ApiErrors.serverError('Internal error');
   }
 };

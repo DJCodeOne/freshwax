@@ -7,6 +7,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const extendSubscriptionSchema = z.object({
   userId: z.string().min(1),
@@ -36,10 +37,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = extendSubscriptionSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { userId, days, reason } = parsed.data;
@@ -48,10 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const user = await getDocument('users', userId);
 
     if (!user) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('User not found');
     }
 
     // Calculate new expiry date
@@ -101,10 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
     if (!clientEmail || !privateKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Service account not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Construct service account key JSON from individual env vars
@@ -139,9 +131,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[extend-subscription] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to extend subscription'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to extend subscription');
   }
 };

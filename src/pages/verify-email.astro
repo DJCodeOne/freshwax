@@ -9,18 +9,49 @@ const firebaseConfig = {
   projectId: "freshwax-store"
 };
 const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Verify Your Email - Fresh Wax</title>
   <meta name="robots" content="noindex" />
   <meta name="description" content="Verify your email address to activate your Fresh Wax account." />
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
+  <script is:inline>
+    (function() {
+      var originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        init = init || {};
+        var method = (init.method || 'GET').toUpperCase();
+        if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+          var url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+          var isSameOrigin = !url || url.startsWith('/') || url.startsWith(location.origin);
+          if (isSameOrigin) {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            var token = meta ? meta.getAttribute('content') : '';
+            if (token) {
+              if (init.headers instanceof Headers) {
+                if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', token);
+              } else if (Array.isArray(init.headers)) {
+                var hasIt = init.headers.some(function(h) { return h[0].toLowerCase() === 'x-csrf-token'; });
+                if (!hasIt) init.headers.push(['X-CSRF-Token', token]);
+              } else {
+                init.headers = Object.assign({}, init.headers || {});
+                if (!init.headers['X-CSRF-Token']) init.headers['X-CSRF-Token'] = token;
+              }
+            }
+          }
+        }
+        return originalFetch.call(this, input, init);
+      };
+    })();
+  </script>
   <main id="main-content">
   <div class="container">
     <div class="card">

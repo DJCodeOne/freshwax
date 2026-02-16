@@ -8,6 +8,7 @@ import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -80,10 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Early Content-Length check to reject oversized requests before reading body into memory
   const contentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (contentLength > MAX_UPLOAD_MIX_REQUEST_SIZE) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Request too large. Maximum 120MB for direct upload. For files over 100MB, use the large file upload option.'
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Request too large. Maximum 120MB for direct upload. For files over 100MB, use the large file upload option.', 413);
   }
 
   // Initialize Firebase for Cloudflare runtime
@@ -114,51 +112,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify the authenticated user matches the claimed userId
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required to upload mixes'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required to upload mixes');
     }
     if (userId && userId !== verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID mismatch - you can only upload mixes for your own account'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('User ID mismatch - you can only upload mixes for your own account');
     }
 
     // Validate audio file type
     const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
     if (audioFile && !allowedAudioTypes.includes(audioFile.type) && !audioFile.name.toLowerCase().match(/\.(mp3|wav)$/)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid audio format. Only MP3 and WAV files are allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid audio format. Only MP3 and WAV files are allowed.');
     }
 
     // Validate audio file size (100MB max for FormData uploads to avoid Worker memory limits)
     // Files over 100MB should use the large file upload flow via /api/mix/presign-upload/
     const MAX_MIX_SIZE = 100 * 1024 * 1024;
     if (audioFile && audioFile.size > MAX_MIX_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Audio file too large for this upload method. Maximum 100MB allowed via direct upload. For files up to 500MB, please use the large file upload option which uploads directly to cloud storage.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Audio file too large for this upload method. Maximum 100MB allowed via direct upload. For files up to 500MB, please use the large file upload option which uploads directly to cloud storage.');
     }
 
     // Validate artwork file type if provided
     if (artworkFile && artworkFile.size > 0) {
       const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
       if (!allowedImageTypes.includes(artworkFile.type)) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid artwork format. Only JPEG, PNG, and WebP are allowed.'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid artwork format. Only JPEG, PNG, and WebP are allowed.');
       }
       if (artworkFile.size > 10 * 1024 * 1024) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Artwork too large. Maximum 10MB allowed.'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Artwork too large. Maximum 10MB allowed.');
       }
 
       // Magic byte validation: verify file content matches claimed MIME type
@@ -175,10 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         magicValid = true; // GIF
       }
       if (!magicValid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Artwork file content does not match its claimed type. Please upload a valid image.'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Artwork file content does not match its claimed type. Please upload a valid image.');
       }
     }
     
@@ -214,13 +191,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate required fields
     if (!audioFile || !djName || !mixTitle || !genre) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Missing required fields (djName, mixTitle, genre, or audioFile)' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing required fields (djName, mixTitle, genre, or audioFile)');
     }
 
     // Generate unique ID and folder structure
@@ -413,12 +384,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to upload mix'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to upload mix');
   }
 };

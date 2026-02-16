@@ -7,6 +7,7 @@
 // Logs findings to D1 — does NOT auto-convert (admin triggers reprocess manually).
 
 import type { APIRoute } from 'astro';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -31,10 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     (adminKey && xAdminKey === adminKey);
 
   if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Unauthorized');
   }
 
   const r2: R2Bucket | undefined = env?.R2;
@@ -42,10 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (!r2) {
     console.error('[Image Scan] R2 binding not available');
-    return new Response(JSON.stringify({ error: 'R2 binding not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('R2 binding not configured');
   }
 
   try {
@@ -163,13 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Image Scan] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 

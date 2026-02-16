@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const STATION_CHECK_URLS: Record<string, string | null> = {
   'underground-lair': 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get',
@@ -20,14 +21,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const stationId = url.searchParams.get('station');
 
   if (!stationId || !(stationId in STATION_CHECK_URLS)) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown station',
-      isLive: false
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Unknown station');
   }
 
   const checkUrl = STATION_CHECK_URLS[stationId];

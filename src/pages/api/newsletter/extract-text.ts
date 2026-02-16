@@ -2,6 +2,7 @@
 // Extract text content from uploaded PDF or DOCX files for newsletter
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -13,26 +14,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const file = formData.get('file') as File;
     
     if (!file) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'No file uploaded' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No file uploaded');
     }
     
     const filename = file.name.toLowerCase();
     const ext = filename.split('.').pop();
     
     if (!['pdf', 'docx', 'txt'].includes(ext || '')) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Unsupported file type. Please upload .txt, .pdf, or .docx' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Unsupported file type. Please upload .txt, .pdf, or .docx');
     }
     
     let text = '';
@@ -52,13 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     
     if (!text.trim()) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Could not extract text from file. Try copy-pasting content manually.' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Could not extract text from file. Try copy-pasting content manually.');
     }
     
     return new Response(JSON.stringify({ 
@@ -72,13 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[extract-text] Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to process file. Try copy-pasting content manually.'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process file. Try copy-pasting content manually.');
   }
 };
 

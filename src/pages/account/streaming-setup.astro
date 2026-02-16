@@ -3,6 +3,7 @@
 // Streaming setup guide with OBS/BUTT instructions and speed test
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 
 <!DOCTYPE html>
@@ -10,6 +11,7 @@ const nonce = Astro.locals.nonce || '';
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content={csrfToken} />
   <title>Streaming Setup - Fresh Wax</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -17,6 +19,7 @@ const nonce = Astro.locals.nonce || '';
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <!-- Auth Gate -->
   <div id="authGate" class="auth-gate">
     <div class="loading-spinner"></div>

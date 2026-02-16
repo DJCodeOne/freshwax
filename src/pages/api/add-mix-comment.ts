@@ -9,6 +9,7 @@ import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 const AddMixCommentSchema = z.object({
   mixId: z.string().min(1, 'Mix ID is required').max(200),
@@ -113,19 +114,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You must be logged in to comment'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('You must be logged in to comment');
     }
 
     const rawBody = await request.json();
     const parsed = AddMixCommentSchema.safeParse(rawBody);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { mixId, comment, userName: bodyUserName, gifUrl, avatarUrl } = parsed.data;
 
@@ -145,13 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
 
     if (!mixId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Missing required fields' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing required fields');
     }
 
     // Validate gifUrl if provided (must be from Giphy domain)
@@ -159,68 +148,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let validGif = false;
       try { const u = new URL(gifUrl); validGif = u.hostname === 'giphy.com' || u.hostname.endsWith('.giphy.com'); } catch {}
       if (!validGif) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid GIF URL'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid GIF URL');
       }
     }
 
     if (userName.trim().length > 30) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Username must be 30 characters or less' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Username must be 30 characters or less');
     }
 
     if (comment.trim().length > 300) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Comment must be 300 characters or less' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Comment must be 300 characters or less');
     }
 
     const contentValidation = validateContent(comment);
     if (!contentValidation.valid) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: contentValidation.error 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest(contentValidation.error);
     }
 
     const usernameValidation = validateContent(userName);
     if (!usernameValidation.valid) {
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Username contains inappropriate content' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Username contains inappropriate content');
     }
 
     const mixData = await getDocument('dj-mixes', mixId);
 
     if (!mixData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Mix not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Mix not found');
     }
 
     const newComment = {
@@ -287,12 +240,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[add-mix-comment] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save comment'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save comment');
   }
 };

@@ -2,6 +2,7 @@
 // DJ Lobby chat cleanup - check and clean up old chat messages, record stream end times
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, deleteDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -29,25 +30,16 @@ export const POST: APIRoute = async ({ request }) => {
     const authHeader = request.headers.get('Authorization');
     const idToken = authHeader?.replace('Bearer ', '') || undefined;
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const userId = await verifyUserToken(idToken);
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid token'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Invalid token');
     }
 
     // Only DJs and admins can manage chat cleanup
     if (!(await isDjOrAdmin(userId))) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'DJ or admin access required'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('DJ or admin access required');
     }
 
     const data = await request.json();
@@ -114,17 +106,11 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid action. Use check-and-cleanup or record-stream-end'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid action. Use check-and-cleanup or record-stream-end');
     }
 
   } catch (error: unknown) {
     console.error('[dj-lobby/chat-cleanup] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Internal error');
   }
 };

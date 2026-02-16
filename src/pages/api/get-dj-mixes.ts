@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../lib/kv-cache';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -175,12 +176,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     // Only log errors in development
     if (isDev) console.error('[get-dj-mixes] Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: 'Failed to fetch DJ mixes'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch DJ mixes');
   }
 };

@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -32,55 +33,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { payoutId } = body;
 
     if (!payoutId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payout ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Payout ID required');
     }
 
     // Get the pending payout
     const pendingPayout = await getDocument('pendingPayouts', payoutId);
 
     if (!pendingPayout) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Pending payout not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Pending payout not found');
     }
 
     // Check status is retryable
     if (pendingPayout.status !== 'retry_pending' && pendingPayout.status !== 'awaiting_connect') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Cannot retry payout with status: ${pendingPayout.status}`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Cannot retry payout with status: ${pendingPayout.status}');
     }
 
     // Get the artist to check their Stripe Connect status
     const artist = await getDocument('artists', pendingPayout.artistId);
 
     if (!artist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Artist not found');
     }
 
     if (!artist.stripeConnectId || artist.stripeConnectStatus !== 'active') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist has not completed Stripe Connect setup'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Artist has not completed Stripe Connect setup');
     }
 
     // Get Stripe key
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stripe not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Stripe not configured');
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -163,17 +146,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updatedAt: new Date().toISOString()
       });
 
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Transfer failed'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Transfer failed');
     }
 
   } catch (error) {
     console.error('[retry-payout] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to retry payout'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to retry payout');
   }
 };

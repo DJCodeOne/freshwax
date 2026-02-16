@@ -7,6 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -29,13 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (authError) return authError;
 
     if (!streamId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Stream ID is required');
     }
 
     const now = new Date().toISOString();
@@ -90,13 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!ended) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream not found in any collection'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Stream not found in any collection');
     }
 
     // Mark all viewer sessions as ended
@@ -131,12 +120,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[stream/end] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

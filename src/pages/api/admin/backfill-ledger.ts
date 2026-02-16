@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -30,10 +31,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Firebase service account not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Firebase service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -53,10 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       console.log('[backfill] Got', ordersData.length, 'orders from SA query');
     } catch (ordersErr) {
       console.error('[backfill] Orders query failed:', ordersErr);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Orders query failed: ' + (ordersErr instanceof Error ? ordersErr.message : String(ordersErr))
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Orders query failed: ');
     }
 
     try {
@@ -296,12 +291,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[backfill-ledger] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

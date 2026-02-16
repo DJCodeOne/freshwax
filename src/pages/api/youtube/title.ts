@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -17,24 +18,12 @@ export const GET: APIRoute = async ({ request, url }) => {
   const videoId = url.searchParams.get('videoId');
 
   if (!videoId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Missing videoId parameter'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing videoId parameter');
   }
 
   // Validate video ID format (11 characters, alphanumeric + dash/underscore)
   if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid video ID format'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid video ID format');
   }
 
   try {
@@ -65,13 +54,6 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   } catch (error: unknown) {
     console.error('[youtube/title] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      title: null,
-      error: 'Failed to fetch title'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch title');
   }
 };

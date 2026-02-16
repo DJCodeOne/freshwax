@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 import { processImageToSquareWebP } from '../../../lib/image-processing';
 
@@ -52,10 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Reject oversized JSON bodies before reading into memory
   const reqContentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (reqContentLength > MAX_FINALIZE_BODY_SIZE) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Request body too large. Maximum 1MB for metadata.'
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Request body too large. Maximum 1MB for metadata.', 413);
   }
 
   // Rate limit: upload operations - 10 per hour
@@ -71,10 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Require authenticated user
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
   if (authError || !verifiedUserId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: authError || 'Authentication required'
-    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized(authError || 'Authentication required');
   }
 
   try {
@@ -95,20 +89,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Verify the authenticated user matches the claimed userId
     if (userId && userId !== verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID mismatch - you can only finalize uploads for your own account'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('User ID mismatch - you can only finalize uploads for your own account');
     }
 
     if (!mixId || !audioUrl) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'mixId and audioUrl are required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('mixId and audioUrl are required');
     }
 
     // CRITICAL: Verify the audio file actually exists in R2 before saving metadata
@@ -119,38 +104,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (!verifyResponse.ok) {
         console.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Audio file upload incomplete or failed. Please try uploading again.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');
       }
 
       // Also check file has content (not empty)
       const contentLength = verifyResponse.headers.get('content-length');
       if (!contentLength || parseInt(contentLength) < 1000) {
         console.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Audio file appears to be empty or incomplete. Please try uploading again.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Audio file appears to be empty or incomplete. Please try uploading again.');
       }
 
       console.log(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
     } catch (verifyError) {
       console.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Could not verify audio file. Please try uploading again.'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Could not verify audio file. Please try uploading again.');
     }
 
     // Use verified userId from auth token (not the untrusted body value)
@@ -295,13 +262,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[finalize-upload] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };
 

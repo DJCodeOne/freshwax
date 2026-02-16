@@ -8,6 +8,7 @@ import { saUpdateDocument, saQueryCollection, saDeleteDocument } from '../../../
 import { d1GetLedgerEntries, d1UpdateLedgerEntry, d1DeleteLedgerEntry } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const updateLedgerEntrySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('list'), adminKey: z.string().optional() }),
@@ -29,10 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
     if (!clientEmail || !privateKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     const serviceAccountKey = JSON.stringify({
@@ -53,10 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = updateLedgerEntrySchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action } = parsed.data;
@@ -145,26 +140,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action',
-      usage: {
-        list: { action: 'list' },
-        update: { action: 'update', ledgerId: 'xxx', updates: { grossTotal: 2.00, paypalFee: 0.23 } },
-        delete: { action: 'delete', ledgerId: 'xxx' }
-      }
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

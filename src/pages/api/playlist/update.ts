@@ -2,7 +2,7 @@
 // Update playlist state (currentIndex, isPlaying, etc.)
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
 
 export const prerender = false;
@@ -15,13 +15,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Get update params from body (safe since userId comes from token)
@@ -36,13 +30,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const existingPlaylist = await getDocument('userPlaylists', userId) as UserPlaylist | null;
 
     if (!existingPlaylist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Playlist not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Playlist not found');
     }
 
     // Prepare update data
@@ -53,13 +41,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     // Validate and add currentIndex if provided
     if (typeof currentIndex === 'number') {
       if (currentIndex < 0 || currentIndex >= existingPlaylist.queue.length) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid currentIndex'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid currentIndex');
       }
       updates.currentIndex = currentIndex;
     }
@@ -82,12 +64,6 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[playlist/update] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update playlist'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update playlist');
   }
 };

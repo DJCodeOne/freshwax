@@ -2,7 +2,7 @@
 // Server-side GIPHY proxy to keep API key secure
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -45,13 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const offset = parseInt(url.searchParams.get('offset') || '0');
 
   if (endpoint === 'search' && !query) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Query parameter required for search'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Query parameter required for search');
   }
 
   // Get API key from server environment (never exposed to client)
@@ -59,13 +53,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const apiKey = env?.GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'GIPHY API not configured'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('GIPHY API not configured');
   }
 
   // Check cache
@@ -128,12 +116,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[GIPHY Proxy] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch from GIPHY'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch from GIPHY');
   }
 };

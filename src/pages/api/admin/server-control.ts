@@ -8,6 +8,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const serverControlSchema = z.object({
   action: z.enum([
@@ -39,10 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = serverControlSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action } = parsed.data;
@@ -105,13 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[ServerControl] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Server control action failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server control action failed');
   }
 };
 

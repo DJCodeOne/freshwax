@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Zod schemas for PayPal link account
 const LinkAccountPostSchema = z.object({
@@ -35,15 +36,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   if (!clientEmail || !privateKey) {
     console.error('[PayPal] Service account not configured');
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Service account not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   // Build service account key
@@ -63,19 +61,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parseResult = LinkAccountPostSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { entityType, entityId, paypalEmail, accessCode } = parseResult.data;
 
     // SECURITY: Verify the authenticated user matches the entity being modified
     if ((entityType === 'user' || entityType === 'artist') && entityId && authUserId !== entityId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Forbidden'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Forbidden');
     }
 
     // Get the entity document
@@ -119,10 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!entity) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `${entityType} not found`
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('${entityType} not found');
     }
 
     // Update with PayPal info using service account auth
@@ -151,10 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[PayPal] Link account error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to link PayPal account'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to link PayPal account');
   }
 };
 
@@ -169,10 +155,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const paramResult = LinkAccountGetSchema.safeParse(rawParams);
   if (!paramResult.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      details: paramResult.error.issues
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid request');
   }
   const { entityType, entityId, accessCode } = paramResult.data;
 
@@ -182,15 +165,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   // SECURITY: Verify the authenticated user matches the entity being queried
   if ((entityType === 'user' || entityType === 'artist') && entityId && authUserId !== entityId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Forbidden'
-    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.forbidden('Forbidden');
   }
 
   try {
@@ -217,10 +197,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (!entity) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `${entityType} not found`
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('${entityType} not found');
     }
 
     return new Response(JSON.stringify({
@@ -234,9 +211,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[PayPal] Get status error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get PayPal status'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get PayPal status');
   }
 };

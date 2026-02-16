@@ -9,6 +9,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const updatePayoutAmountSchema = z.object({
   orderNumber: z.string().min(1),
@@ -53,13 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = updatePayoutAmountSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        usage: 'POST { orderNumber, actualPaypalFee, artistPayout, adminKey }'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderNumber, actualPaypalFee, artistPayout } = parsed.data;
@@ -68,10 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const serviceAccountKey = getServiceAccountKey(env);
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     const saQuery = getSaQuery(locals);
@@ -83,10 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (orders.length === 0) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     const order = orders[0];
@@ -149,11 +138,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[update-payout-amount] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

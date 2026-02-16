@@ -12,6 +12,7 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 // Image processing settings
 const IMAGE_SIZE = 800;
@@ -121,10 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Early Content-Length check to reject oversized requests before reading body into memory
   const contentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (contentLength > MAX_MERCH_REQUEST_SIZE) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Request too large. Maximum 50MB allowed for merch uploads.'
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Request too large. Maximum 50MB allowed for merch uploads.', 413);
   }
 
   // Rate limit: upload operations - 10 per hour
@@ -185,39 +183,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[upload-merch] Product:', productName, productType);
 
     if (!productName) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Product name is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Product name is required');
     }
 
     if (!productType || !PRODUCT_TYPES[productType]) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Valid product type is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Valid product type is required');
     }
 
     if (retailPrice <= 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Retail price must be greater than 0'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Retail price must be greater than 0');
     }
 
     if (imageCount === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'At least one product image is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('At least one product image is required');
     }
 
     // Safety limit on image count to prevent runaway uploads
     if (imageCount > MAX_IMAGES) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Maximum ${MAX_IMAGES} images allowed per product`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Maximum ${MAX_IMAGES} images allowed per product');
     }
 
     const timestamp = Date.now();
@@ -256,10 +239,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Validate individual image file size
       if (imageFile.size > MAX_MERCH_IMAGE_FILE_SIZE) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.`
-        }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+        return errorResponse('Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.', 413);
       }
 
       log.info('[upload-merch] Processing image', i + 1);
@@ -313,10 +293,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (uploadedImages.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to upload any images'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Failed to upload any images');
     }
 
     const variantStock: Record<string, {
@@ -523,12 +500,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[upload-merch] Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to upload product'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to upload product');
   }
 };

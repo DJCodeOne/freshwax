@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument } from '../../../lib/firebase-service-account';
-import { getAdminKey } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -42,10 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
 
   if (!adminKey || adminKey !== expectedAdminKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Admin authentication required'
-    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Admin authentication required');
   }
 
   try {
@@ -54,26 +51,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { releaseId, tracks } = body;
 
     if (!releaseId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'releaseId is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('releaseId is required');
     }
 
     if (!tracks || !Array.isArray(tracks)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'tracks array is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('tracks array is required');
     }
 
     // Get existing release
     const existingRelease = await getDocument('releases', releaseId);
     if (!existingRelease) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Release not found');
     }
 
     log.info(`Updating tracks for release: ${releaseId}`);
@@ -138,9 +126,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('Failed to update tracks:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update tracks'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update tracks');
   }
 };

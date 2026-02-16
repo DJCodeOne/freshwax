@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, clearCache } from '../../../lib/firebase-rest';
 import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const updatePartnerSchema = z.object({
   adminUid: z.string().min(1),
@@ -37,10 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = updatePartnerSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { adminUid, partnerId, updates } = parsed.data;
@@ -92,10 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[update-partner] Updated artists:', artistUpdate);
       } catch (e) {
         console.error('[update-partner] artists update failed:', e);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Failed to update partner: ' + (e instanceof Error ? e.message : 'Unknown error')
-        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.serverError('Failed to update partner: ');
       }
     }
 
@@ -258,9 +253,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[update-partner] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update partner'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update partner');
   }
 };

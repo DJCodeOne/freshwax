@@ -4,6 +4,7 @@
 // GET ?type=releases|merch|orders|stock|analytics|account|overview
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -12,13 +13,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const url = new URL(request.url);

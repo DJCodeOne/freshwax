@@ -7,6 +7,7 @@ import { getDocument, setDocument, verifyRequestUser } from '../../../lib/fireba
 import { d1GetVinylSeller, d1UpsertVinylSeller, d1GetNextCollectionNumber } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { saSetDocument } from '../../../lib/firebase-service-account';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -56,10 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const userId = url.searchParams.get('userId');
 
   if (!userId) {
-    return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('User ID required');
   }
 
   // Rate limit
@@ -125,10 +123,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/settings GET] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch settings' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch settings');
   }
 };
 
@@ -152,28 +147,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify authentication
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
     const { userId } = body;
 
     if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('User ID required');
     }
 
     // Verify user is updating their own settings
     if (verifiedUserId !== userId) {
-      return new Response(JSON.stringify({ success: false, error: 'You can only update your own settings' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only update your own settings');
     }
 
     // Validate and sanitize data
@@ -263,10 +249,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // At least one storage must succeed
     if (!d1Success && !firebaseSuccess) {
-      return new Response(JSON.stringify({ success: false, error: 'Failed to save settings' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to save settings');
     }
 
     return new Response(JSON.stringify({
@@ -282,9 +265,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/settings POST] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };

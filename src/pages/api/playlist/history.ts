@@ -4,6 +4,7 @@
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const KV_HISTORY_KEY = 'playlist-history';
 const MAX_HISTORY_SIZE = 500;
@@ -36,14 +37,7 @@ export async function GET({ request, locals }: APIContext) {
   try {
     const kv = getKV(locals);
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available',
-        items: []
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('KV storage not available');
     }
 
     // Read from KV - single key, no chunks needed
@@ -63,14 +57,7 @@ export async function GET({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[PlaylistHistory] GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error',
-      items: []
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 
@@ -100,13 +87,7 @@ export async function POST({ request, locals }: APIContext) {
     const { item } = body;
 
     if (!item || !item.url) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing item or URL'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing item or URL');
     }
 
     // Get current history from KV
@@ -186,26 +167,14 @@ export async function DELETE({ request, locals }: APIContext) {
   try {
     const kv = getKV(locals);
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('KV storage not available');
     }
 
     const body = await request.json();
     const { url, embedId, reason } = body;
 
     if (!url) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing URL'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing URL');
     }
 
     console.log(`[PlaylistHistory] Removing blocked video: ${url} (reason: ${reason})`);
@@ -252,12 +221,6 @@ export async function DELETE({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[PlaylistHistory] DELETE error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }

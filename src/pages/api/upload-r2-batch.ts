@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -49,19 +50,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { userId, error: authError } = await verifyRequestUser(request);
     if (!userId || authError) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const R2_CONFIG = getR2Config(env);
 
     // Validate R2 config
     if (!R2_CONFIG.accountId || !R2_CONFIG.accessKeyId || !R2_CONFIG.secretAccessKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'R2 configuration missing'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('R2 configuration missing');
     }
 
     const formData = await request.formData();
@@ -71,10 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const fileType = formData.get('fileType') as string; // metadata, track, preview, artwork
 
     if (!file || !rawReleaseId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing file or releaseId'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Missing file or releaseId');
     }
 
     // SECURITY: Sanitize releaseId and filename to prevent path traversal
@@ -83,10 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const filename = sanitizedName;
 
     if (!releaseId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid releaseId'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid releaseId');
     }
 
     // Create S3 client for R2
@@ -138,12 +128,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[upload-r2-batch] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Upload failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Upload failed');
   }
 };

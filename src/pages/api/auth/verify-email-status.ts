@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,13 +20,7 @@ export const POST: APIRoute = async ({ request }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     // Verify with Firebase Auth that email is actually verified
@@ -47,26 +41,14 @@ export const POST: APIRoute = async ({ request }) => {
     );
 
     if (!lookupResponse.ok) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to verify email status with Firebase Auth'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to verify email status with Firebase Auth');
     }
 
     const lookupData = await lookupResponse.json();
     const firebaseUser = lookupData.users?.[0];
 
     if (!firebaseUser?.emailVerified) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Email has not been verified in Firebase Auth yet'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Email has not been verified in Firebase Auth yet');
     }
 
     // Email is confirmed verified in Firebase Auth — update Firestore
@@ -81,12 +63,6 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error: unknown) {
     console.error('[verify-email-status] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update verification status'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update verification status');
   }
 };

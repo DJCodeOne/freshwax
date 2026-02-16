@@ -1,6 +1,7 @@
 // src/pages/api/update-master-json.js
 // FIXED: Sets status to 'pending' by default, admin must approve before going live
 import { getDocument, updateDocument, setDocument } from '../../lib/firebase-rest.js';
+import { requireAdminAuth } from '../../lib/admin.ts';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -15,7 +16,13 @@ export async function POST({ request, locals }) {
   const env = locals?.runtime?.env;
 
   try {
-    const { release } = await request.json();
+    const body = await request.json();
+
+    // SECURITY: Require admin authentication
+    const authError = await requireAdminAuth(request, locals, body);
+    if (authError) return authError;
+
+    const { release } = body;
 
     if (!release || !release.id) {
       return new Response(JSON.stringify({

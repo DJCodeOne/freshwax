@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -23,10 +24,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Get single source
       const doc = await getDocument('relaySources', sourceId);
       if (!doc) {
-        return new Response(JSON.stringify({ success: false, error: 'Source not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Source not found');
       }
       return new Response(JSON.stringify({ success: true, source: doc }), {
         headers: { 'Content-Type': 'application/json' }
@@ -43,10 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Error fetching relay sources:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -61,10 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { name, streamUrl, websiteUrl, logoUrl, genre, description, checkMethod, statusUrl } = data;
     
     if (!name || !streamUrl) {
-      return new Response(JSON.stringify({ success: false, error: 'Name and stream URL are required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Name and stream URL are required');
     }
     
     const now = new Date().toISOString();
@@ -96,10 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Error creating relay source:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -113,10 +102,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const { id, ...updates } = data;
     
     if (!id) {
-      return new Response(JSON.stringify({ success: false, error: 'Source ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Source ID is required');
     }
     
     // Remove fields that shouldn't be updated directly
@@ -130,10 +116,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Error updating relay source:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -147,10 +130,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const id = url.searchParams.get('id');
     
     if (!id) {
-      return new Response(JSON.stringify({ success: false, error: 'Source ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Source ID is required');
     }
     
     await deleteDocument('relaySources', id);
@@ -160,9 +140,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Error deleting relay source:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

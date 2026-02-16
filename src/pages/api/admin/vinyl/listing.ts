@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
+import { ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -33,20 +34,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const listingId = url.searchParams.get('id');
 
   if (!listingId) {
-    return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Listing ID required');
   }
 
   try {
     const listing = await getDocument('vinylListings', listingId);
 
     if (!listing) {
-      return new Response(JSON.stringify({ success: false, error: 'Listing not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Listing not found');
     }
 
     return new Response(JSON.stringify({ success: true, listing }), {
@@ -55,10 +50,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     console.error('[API vinyl/listing] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch listing' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch listing');
   }
 };
 
@@ -86,18 +78,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, listingId } = body;
 
     if (!listingId) {
-      return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Listing ID required');
     }
 
     const listing = await getDocument('vinylListings', listingId);
     if (!listing) {
-      return new Response(JSON.stringify({ success: false, error: 'Listing not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Listing not found');
     }
 
     switch (action) {
@@ -168,16 +154,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid action');
     }
   } catch (error) {
     console.error('[API vinyl/listing] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };

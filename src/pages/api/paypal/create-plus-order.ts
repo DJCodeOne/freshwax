@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for PayPal Plus order creation
 const PayPalPlusOrderSchema = z.object({
@@ -72,32 +72,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!paypalClientId || !paypalSecret) {
       console.error('[PayPal Plus] Missing credentials');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'PayPal not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('PayPal not configured');
     }
 
     // SECURITY: Verify the authenticated user
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const rawBody = await request.json();
 
     const parseResult = PayPalPlusOrderSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { email, promoCode } = parseResult.data;
     const userId = verifiedUserId;
@@ -109,10 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userDoc?.subscription?.tier === 'pro') {
       const expiresAt = userDoc.subscription.expiresAt;
       if (expiresAt && new Date(expiresAt) > new Date()) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You already have an active Plus subscription'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('You already have an active Plus subscription');
       }
     }
 
@@ -136,10 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           finalPrice = PLUS_PROMO_PRICE;
           console.log(`[PayPal Plus] Valid KV referral code ${normalizedCode}, referred by ${referredBy}`);
         } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
-          return new Response(JSON.stringify({
-            success: false,
-            error: kvResult.error
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest(kvResult.error);
         }
       }
 
@@ -157,17 +139,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const referralCard = giftCards[0];
 
           if (!referralCard.isActive || referralCard.redeemedBy) {
-            return new Response(JSON.stringify({
-              success: false,
-              error: 'This referral code has already been used'
-            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            return ApiErrors.badRequest('This referral code has already been used');
           }
 
           if (referralCard.createdByUserId === userId) {
-            return new Response(JSON.stringify({
-              success: false,
-              error: 'You cannot use your own referral code'
-            }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+            return ApiErrors.badRequest('You cannot use your own referral code');
           }
 
           validatedPromoCode = normalizedCode;
@@ -176,10 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           finalPrice = PLUS_PROMO_PRICE;
           console.log(`[PayPal Plus] Valid Firebase referral code ${normalizedCode}, referred by ${referredBy}`);
         } else {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Invalid referral code'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Invalid referral code');
         }
       }
     }
@@ -226,10 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!paypalResponse.ok) {
       const errorData = await paypalResponse.json();
       console.error('[PayPal Plus] Order creation failed:', errorData);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to create PayPal order'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to create PayPal order');
     }
 
     const paypalOrder = await paypalResponse.json();
@@ -279,9 +249,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[PayPal Plus] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create PayPal order',
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to create PayPal order');
   }
 };

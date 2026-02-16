@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -49,10 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Early Content-Length check to reject oversized requests before reading body into memory
   const contentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (contentLength > MAX_MERCH_IMAGE_REQUEST_SIZE) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Request too large. Maximum 50MB allowed.'
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Request too large. Maximum 50MB allowed.', 413);
   }
 
   const env = locals.runtime.env;
@@ -67,27 +65,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let filename = (formData.get('filename') as string) || file?.name || 'image.webp';
 
     if (!file || file.size === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No file provided'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('No file provided');
     }
 
     // Validate file type
     const validTypes = ['image/webp', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid file type. Only WebP, PNG, JPEG, and GIF are allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid file type. Only WebP, PNG, JPEG, and GIF are allowed.');
     }
 
     // Max 10MB input (will be compressed)
     if (file.size > 10 * 1024 * 1024) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'File too large. Maximum 10MB allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('File too large. Maximum 10MB allowed.');
     }
 
     const inputBuffer = await file.arrayBuffer();
@@ -157,12 +146,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[upload-merch-image] Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process and upload image'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process and upload image');
   }
 };

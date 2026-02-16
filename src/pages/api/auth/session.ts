@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -29,7 +30,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         message: error || 'No valid session'
       }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
       });
     }
 
@@ -49,18 +50,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       } : null
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
 
   } catch (error: unknown) {
     console.error('[auth/session] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      authenticated: false,
-      error: 'Session verification failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Session verification failed');
   }
 };

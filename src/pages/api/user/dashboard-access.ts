@@ -4,6 +4,7 @@
 // GET: Returns user roles, admin status, subscription, and seller data
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -12,13 +13,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { userId, email, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     // Check admin status
@@ -111,12 +106,6 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error: unknown) {
     console.error('[dashboard-access] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to check access'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to check access');
   }
 };

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Pusher configuration is loaded from env at runtime (not module level)
 // This is required for Cloudflare Workers compatibility
@@ -338,10 +339,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[dj-lobby/presence] GET Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get online DJs'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get online DJs');
   }
 };
 
@@ -368,10 +366,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, userId, name, avatar, avatarLetter, isReady } = data;
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('User ID required');
     }
 
     const now = new Date();
@@ -477,18 +472,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid action'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid action');
     }
 
   } catch (error: unknown) {
     console.error('[dj-lobby/presence] POST Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update presence'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update presence');
   }
 };
 
@@ -530,9 +519,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/presence] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Cleanup failed'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Cleanup failed');
   }
 };

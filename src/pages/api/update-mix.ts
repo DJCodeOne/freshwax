@@ -6,6 +6,7 @@ import { d1UpsertMix } from '../../lib/d1-catalog';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: write operations - 30 per minute
@@ -21,34 +22,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify authentication via token (not cookies which are spoofable)
     const { userId: currentUserId, error: authError } = await verifyRequestUser(request);
     if (!currentUserId || authError) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const { mixId, title, description, tracklist, artworkUrl, partnerId } = await request.json();
 
     if (!mixId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing mixId'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing mixId');
     }
 
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);
 
     if (!mixData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Mix not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Mix not found');
     }
 
     // Check ownership - allow if userId matches
@@ -61,13 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!isOwner && !canBackfillOwnership) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authorized to edit this mix'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Not authorized to edit this mix');
     }
 
     // Build update object
@@ -119,13 +100,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await updateDocument('dj-mixes', mixId, updateData);
     } catch (updateError: unknown) {
       console.error('[update-mix] updateDocument error:', updateError);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Database update failed'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Database update failed');
     }
 
     // Dual-write to D1 (secondary, non-blocking)
@@ -159,12 +134,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('Error updating mix:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update mix'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update mix');
   }
 };

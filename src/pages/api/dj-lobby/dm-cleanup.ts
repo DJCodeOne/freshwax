@@ -2,6 +2,7 @@
 // Clean up DJ direct messages when a DM conversation is closed
 import type { APIRoute } from 'astro';
 import { deleteDocument, verifyUserToken } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -64,37 +65,25 @@ export const POST: APIRoute = async ({ request }) => {
     const authHeader = request.headers.get('Authorization');
     const idToken = authHeader?.replace('Bearer ', '') || undefined;
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const userId = await verifyUserToken(idToken);
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid token'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Invalid token');
     }
 
     const data = await request.json();
     const { channelId } = data;
 
     if (!channelId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Channel ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Channel ID required');
     }
 
     // Verify the user is part of this DM channel
     // Channel IDs are formatted as sorted uid pair: "uid1_uid2"
     const channelParts = channelId.split('_');
     if (!channelParts.includes(userId)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only clean up your own DM channels'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only clean up your own DM channels');
     }
 
     // List all messages in the subcollection
@@ -118,9 +107,6 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error: unknown) {
     console.error('[dj-lobby/dm-cleanup] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to clean up DMs'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to clean up DMs');
   }
 };

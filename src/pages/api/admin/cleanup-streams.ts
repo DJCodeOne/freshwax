@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const cleanupStreamsPostSchema = z.object({
@@ -113,13 +113,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to list streams'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to list streams');
   }
 };
 
@@ -236,12 +230,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to clean up streams'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to clean up streams');
   }
 };

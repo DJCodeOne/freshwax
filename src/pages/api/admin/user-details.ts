@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -32,20 +33,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const userId = url.searchParams.get('userId');
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('User ID required');
     }
 
     // Get user from users collection
     const user = await getDocument('users', userId);
 
     if (!user) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('User not found');
     }
 
     // Return user data (sanitized)
@@ -65,9 +60,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error) {
     console.error('[user-details] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch user details'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to fetch user details');
   }
 };

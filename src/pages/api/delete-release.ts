@@ -7,6 +7,7 @@ import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-a
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 const deleteReleaseSchema = z.object({
   releaseId: z.string().min(1),
@@ -60,13 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = deleteReleaseSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { releaseId } = parsed.data;
@@ -79,27 +74,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!serviceAccountKey) {
       log.error('[delete-release] Service account not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Service account not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Verify release exists
     const releaseDoc = await getDocument('releases', releaseId);
 
     if (!releaseDoc) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release not found',
-        releaseId: releaseId
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     const releaseData = releaseDoc;
@@ -111,13 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (!isOwner) {
         const userIsAdmin = await isAdmin(currentUserId);
         if (!userIsAdmin) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Not authorized to delete this release'
-          }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Not authorized to delete this release');
         }
       }
     }
@@ -181,12 +157,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal server error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal server error');
   }
 };

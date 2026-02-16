@@ -2,6 +2,7 @@
 // Get user's Plus badge from KV storage (no Firebase reads)
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -24,10 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const userId = url.searchParams.get('userId');
 
     if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing userId' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing userId');
     }
 
     // Try KV first (fast, no quota impact)

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { addDocument, queryCollection, deleteDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const NotifyRestockSchema = z.object({
   email: z.string().email('Invalid email address').max(320),
@@ -37,10 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = NotifyRestockSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { email, productId, productType, productName, variantKey } = parsed.data;
 
@@ -79,9 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[notify-restock] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      error: 'Failed to subscribe to notifications'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to subscribe to notifications');
   }
 };
 
@@ -93,10 +89,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     productId: url.searchParams.get('productId') ?? '',
   });
   if (!parsed.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      details: parsed.error.issues.map(i => i.message)
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid request');
   }
   const { email, productId } = parsed.data;
 
@@ -123,8 +116,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[notify-restock] DELETE error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      error: 'Failed to unsubscribe'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to unsubscribe');
   }
 };

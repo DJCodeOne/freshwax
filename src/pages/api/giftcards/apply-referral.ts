@@ -7,6 +7,7 @@ import { getDocument, updateDocument, setDocument, queryCollection, verifyReques
 import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Zod schemas for referral endpoints
 const ReferralGetSchema = z.object({
@@ -37,20 +38,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rawParams = { code: url.searchParams.get('code') || '' };
   const paramResult = ReferralGetSchema.safeParse(rawParams);
   if (!paramResult.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      details: paramResult.error.issues
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid request');
   }
   const code = paramResult.data.code;
 
   const normalizedCode = code.toUpperCase().trim();
 
   if (!isValidCodeFormat(normalizedCode)) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid code format'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid code format');
   }
 
   try {
@@ -60,44 +55,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     if (giftCardResults.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Code not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Code not found');
     }
 
     const giftCard = giftCardResults[0];
 
     // Check if it's a referral code
     if (giftCard.restrictedTo !== 'pro_upgrade') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This is not a referral code. Please use it on the gift card redemption page instead.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This is not a referral code. Please use it on the gift card redemption page instead.');
     }
 
     // Check if already redeemed
     if (giftCard.redeemedBy) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This referral code has already been used'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This referral code has already been used');
     }
 
     // Check if active
     if (!giftCard.isActive) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This referral code is no longer active'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This referral code is no longer active');
     }
 
     // Check if expired
     if (isExpired(giftCard.expiresAt)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This referral code has expired'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This referral code has expired');
     }
 
     return new Response(JSON.stringify({
@@ -114,10 +94,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[apply-referral] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to validate referral code'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to validate referral code');
   }
 };
 
@@ -136,29 +113,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify the user is authenticated
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const rawBody = await request.json();
 
     const parseResult = ReferralPostSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { code, userId, paymentId, userName } = parseResult.data;
 
     // Verify the authenticated user matches the userId in the request
     if (userId && verifiedUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only apply referral codes to your own account'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only apply referral codes to your own account');
     }
 
     // Use the verified userId for all operations
@@ -168,10 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate code format
     if (!isValidCodeFormat(normalizedCode)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid referral code format'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid referral code format');
     }
 
     // Find the gift card
@@ -181,10 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (giftCardResults.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Referral code not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Referral code not found');
     }
 
     const giftCard = giftCardResults[0];
@@ -192,40 +154,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate it's a referral code
     if (giftCard.restrictedTo !== 'pro_upgrade') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This is not a valid referral code'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This is not a valid referral code');
     }
 
     // Check if user is trying to use their own referral code
     if (giftCard.createdByUserId === authenticatedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You cannot use your own referral code'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('You cannot use your own referral code');
     }
 
     // Standard validation checks
     if (giftCard.redeemedBy) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This referral code has already been used'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This referral code has already been used');
     }
 
     if (!giftCard.isActive) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This referral code is no longer active'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This referral code is no longer active');
     }
 
     if (isExpired(giftCard.expiresAt)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This referral code has expired'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This referral code has expired');
     }
 
     // Check if user already has Pro
@@ -233,10 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userDoc.subscription?.tier === SUBSCRIPTION_TIERS.PRO) {
       const expiresAt = userDoc.subscription.expiresAt;
       if (!expiresAt || new Date(expiresAt) > new Date()) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You already have an active Pro subscription'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('You already have an active Pro subscription');
       }
     }
 
@@ -299,9 +243,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[apply-referral] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to apply referral code'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to apply referral code');
   }
 };

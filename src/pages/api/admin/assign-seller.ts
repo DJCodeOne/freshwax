@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const assignSellerSchema = z.object({
   productIds: z.array(z.string().min(1)).optional(),
@@ -57,20 +58,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = assignSellerSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { productIds, sellerId, sellerName, category, categoryName, productType, collection, searchTerm, listAll } = parsed.data;
 
     // sellerId, category, categoryName, or productType required if not listing
     if (!sellerId && !category && !categoryName && !productType && !listAll) {
-      return new Response(JSON.stringify({ error: 'sellerId, category, categoryName, or productType required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('sellerId, category, categoryName, or productType required');
     }
 
     const collectionName = collection || 'merch';
@@ -79,10 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const serviceAccountKey = getServiceAccountKey(env);
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     let idsToUpdate: string[] = productIds || [];
@@ -144,13 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!idsToUpdate.length) {
-      return new Response(JSON.stringify({
-        error: 'No products to update. Provide productIds or searchTerm.',
-        hint: 'Example: { "searchTerm": "bakkus", "sellerId": "xxx", "collection": "merch" }'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No products to update. Provide productIds or searchTerm.');
     }
 
     const results: string[] = [];
@@ -227,11 +213,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[assign-seller] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

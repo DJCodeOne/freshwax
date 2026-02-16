@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const updateReleaseFieldParamsSchema = z.object({
   releaseId: z.string().min(1),
@@ -37,13 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const parsed = updateReleaseFieldParamsSchema.safeParse(params);
   if (!parsed.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      usage: '/api/admin/update-release-field/?releaseId=xxx&field=pricing.digital&value=0&confirm=yes'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid request');
   }
 
   const { releaseId, field, value, confirm } = parsed.data;
@@ -53,10 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -110,11 +102,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

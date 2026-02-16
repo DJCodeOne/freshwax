@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -21,10 +22,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const db = env?.DB;
   if (!db) {
-    return new Response(JSON.stringify({ error: 'D1 database not available' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('D1 database not available');
   }
 
   const url = new URL(request.url);
@@ -72,12 +70,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (err) {
     console.error('[Admin] Error querying pending_orders:', err);
-    return new Response(JSON.stringify({
-      error: 'Failed to query pending orders',
-      details: err instanceof Error ? err.message : 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to query pending orders');
   }
 };

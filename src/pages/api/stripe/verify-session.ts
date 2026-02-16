@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for verify-session query params
 const VerifySessionParamsSchema = z.object({
@@ -23,13 +23,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
     console.log('[verify-session] Authentication failed:', authError || 'No user');
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Authentication required'
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
   console.log('[verify-session] Authenticated user:', authUserId);
 
@@ -38,10 +32,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const paramResult = VerifySessionParamsSchema.safeParse(rawParams);
     if (!paramResult.success) {
       console.log('[verify-session] Invalid params');
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: paramResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const sessionId = paramResult.data.session_id;
     console.log('[verify-session] Session ID:', sessionId);
@@ -55,13 +46,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     if (!stripeSecretKey) {
       console.log('[verify-session] ❌ Stripe not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stripe not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Stripe not configured');
     }
 
     // Retrieve the session from Stripe
@@ -81,13 +66,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (!sessionResponse.ok) {
       const errorText = await sessionResponse.text();
       console.log('[verify-session] ❌ Invalid session response:', errorText);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid session'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid session');
     }
 
     const session = await sessionResponse.json();
@@ -100,14 +79,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     // Check if payment was successful
     if (session.payment_status !== 'paid') {
       console.log('[verify-session] ❌ Payment not completed, status:', session.payment_status);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment not completed',
-        status: session.payment_status
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Payment not completed');
     }
 
     console.log('[verify-session] ✓ Payment status is PAID');
@@ -351,22 +323,15 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       success: true,
       orderId: null,
       paymentStatus: session.payment_status,
-      message: 'Payment successful, order being processed',
-      error: result.error
+      message: 'Payment successful, order being processed'
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[verify-session] ❌ EXCEPTION:', errorMessage);
+    console.error('[verify-session] EXCEPTION:', errorMessage);
     console.error('[verify-session] Stack:', error instanceof Error ? error.stack : 'no stack');
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Session verification failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Session verification failed');
   }
 };

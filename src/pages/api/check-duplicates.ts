@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -82,10 +83,7 @@ export const POST: APIRoute = async ({ request }) => {
     // SECURITY: Verify the authenticated user
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const { cartItems } = await request.json();
@@ -151,9 +149,6 @@ export const POST: APIRoute = async ({ request }) => {
     
   } catch (error) {
     console.error('[check-duplicates] Error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to check duplicates' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to check duplicates');
   }
 };

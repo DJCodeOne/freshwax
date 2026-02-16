@@ -8,7 +8,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { getAdminKey } from '../../../lib/api-utils';
+import { getAdminKey, errorResponse, ApiErrors } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
@@ -40,38 +40,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!isAdmin) {
     const { userId, error: authError } = await verifyRequestUser(request);
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
   }
 
   // Reject oversized JSON bodies (max 1MB for metadata-only requests)
   const reqContentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (reqContentLength > 1 * 1024 * 1024) {
-    return new Response(JSON.stringify({ error: 'Request body too large' }), {
-      status: 413, headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Request body too large', 413);
   }
 
   try {
     const { key, contentType, contentLength, bucket } = await request.json();
 
     if (!key || !contentType) {
-      return new Response(JSON.stringify({ error: 'key and contentType are required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('key and contentType are required');
     }
 
     // Validate declared file size if provided (500MB max for releases)
     const MAX_RELEASE_FILE_SIZE = 500 * 1024 * 1024;
     if (contentLength && contentLength > MAX_RELEASE_FILE_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'File too large. Maximum file size is 500MB.'
-      }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+      return errorResponse('File too large. Maximum file size is 500MB.', 413);
     }
 
     // SECURITY: Validate the key to prevent path traversal and uploading to arbitrary locations
@@ -85,10 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       normalizedKey.startsWith('/') ||
       !ALLOWED_PREFIXES.some((prefix: string) => normalizedKey.startsWith(prefix))
     ) {
-      return new Response(JSON.stringify({ error: 'Invalid upload path' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid upload path');
     }
 
     const config = getR2Config(env);
@@ -98,10 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
       console.error('[Presign] Missing R2 credentials');
-      return new Response(JSON.stringify({ error: 'R2 configuration missing' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('R2 configuration missing');
     }
 
     // Use releases bucket for everything (submissions go to submissions/ folder)
@@ -134,11 +117,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Presign] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to generate upload URL'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to generate upload URL');
   }
 };

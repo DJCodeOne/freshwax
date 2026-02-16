@@ -8,6 +8,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToWebP } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -58,10 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Require authenticated user
   const { userId, error: authError } = await verifyRequestUser(request);
   if (authError || !userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Authentication required'
-    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   const r2Config = getR2Config(env);
@@ -76,67 +74,43 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const imageIndex = parseInt(formData.get('imageIndex') as string || '0', 10);
 
     if (!file || file.size === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No file provided'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('No file provided');
     }
 
     if (!sellerId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Seller ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Seller ID required');
     }
 
     // Verify seller owns this upload
     if (sellerId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only upload images for your own listings'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only upload images for your own listings');
     }
 
     // If listingId is a real listing (not temp), verify ownership
     if (listingId && !listingId.startsWith('temp_')) {
       const listing = await getDocument('vinylListings', listingId);
       if (!listing) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Listing not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Listing not found');
       }
       if (listing.sellerId !== userId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You can only upload images for your own listings'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.forbidden('You can only upload images for your own listings');
       }
     }
 
     // Validate image index
     if (imageIndex < 0 || imageIndex >= MAX_IMAGES_PER_LISTING) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Image index must be between 0 and ${MAX_IMAGES_PER_LISTING - 1}`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Image index must be between 0 and ${MAX_IMAGES_PER_LISTING - 1}');
     }
 
     // Validate file type
     const validTypes = ['image/webp', 'image/png', 'image/jpeg', 'image/jpg', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid file type. Only WebP, PNG, JPEG, and GIF are allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid file type. Only WebP, PNG, JPEG, and GIF are allowed.');
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'File too large. Maximum 10MB allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('File too large. Maximum 10MB allowed.');
     }
 
     const inputBuffer = await file.arrayBuffer();
@@ -182,12 +156,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/upload-image] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process and upload image'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process and upload image');
   }
 };

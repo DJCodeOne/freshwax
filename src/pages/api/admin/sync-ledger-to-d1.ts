@@ -6,6 +6,7 @@ import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { d1InsertLedgerEntry, d1GetLedgerEntryById } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -27,17 +28,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const db = env?.DB;
 
     if (!clientEmail || !privateKey) {
-      return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     if (!db) {
-      return new Response(JSON.stringify({ error: 'D1 database not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('D1 database not configured');
     }
 
     const serviceAccountKey = JSON.stringify({
@@ -99,11 +94,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[sync-ledger] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

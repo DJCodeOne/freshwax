@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase
 function initFirebase(locals: App.Locals) {
@@ -171,10 +172,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[livestream/switchover] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Switchover check failed'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Switchover check failed');
   }
 };
 
@@ -220,9 +218,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[livestream/switchover] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get queue status'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get queue status');
   }
 };

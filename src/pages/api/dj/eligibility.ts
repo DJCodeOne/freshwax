@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase
 function initFirebase(locals: App.Locals) {
@@ -49,10 +50,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // SECURITY: Verify the user is checking their own eligibility
       const { userId: verifiedUid } = await verifyRequestUser(request).catch(() => ({ userId: null }));
       if (!verifiedUid || verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Authentication required'
-        }), { status: 401 });
+        return ApiErrors.unauthorized('Authentication required');
       }
       const settings = await getSettings();
 
@@ -167,17 +165,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }));
     }
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Invalid action' 
-    }), { status: 400 });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('DJ Eligibility API GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Internal error' 
-    }), { status: 500 });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -194,10 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify Firebase token for all POST actions
     const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUid) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401 });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
@@ -206,18 +195,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Check and update eligibility (called after a mix gets likes)
     if (action === 'checkAndUpdate') {
       if (!uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing uid'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Missing uid');
       }
 
       // SECURITY: Verify the user is checking their own eligibility
       if (verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Cannot update eligibility for another user'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Cannot update eligibility for another user');
       }
 
       const settings = await getSettings();
@@ -226,10 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const userData = await getDocument('users', uid);
 
       if (!userData) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found'
-        }), { status: 404 });
+        return ApiErrors.notFound('User not found');
       }
       
       // If already eligible, no action needed
@@ -296,52 +276,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Request bypass
     if (action === 'requestBypass') {
       if (!uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing uid'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Missing uid');
       }
 
       // SECURITY: Verify the user is requesting bypass for themselves
       if (verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Cannot request bypass for another user'
-        }), { status: 403 });
+        return ApiErrors.forbidden('Cannot request bypass for another user');
       }
 
       const settings = await getSettings();
 
       if (!settings.allowBypassRequests) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Bypass requests are currently disabled'
-        }), { status: 400 });
+        return ApiErrors.badRequest('Bypass requests are currently disabled');
       }
 
       const userData = await getDocument('users', uid);
 
       if (!userData) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found'
-        }), { status: 404 });
+        return ApiErrors.notFound('User not found');
       }
 
       // Check if already eligible
       if (userData?.roles?.djEligible) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Already DJ eligible' 
-        }), { status: 400 });
+        return ApiErrors.badRequest('Already DJ eligible');
       }
 
       // Check if already has pending request
       if (userData?.pendingRoles?.djBypass?.status === 'pending') {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          error: 'Bypass request already pending' 
-        }), { status: 400 });
+        return ApiErrors.badRequest('Bypass request already pending');
       }
 
       // Submit bypass request
@@ -360,16 +322,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }));
     }
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Invalid action' 
-    }), { status: 400 });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('DJ Eligibility API POST error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Internal error' 
-    }), { status: 500 });
+    return ApiErrors.serverError('Internal error');
   }
 };

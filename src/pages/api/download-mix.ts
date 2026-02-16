@@ -1,6 +1,7 @@
 // src/pages/api/download-mix.ts
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -25,10 +26,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // SECURITY: Require authentication
   const { userId, error: authError } = await verifyRequestUser(request);
   if (!userId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   const url = new URL(request.url);
@@ -38,10 +36,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const filename = rawFilename.replace(/[^a-zA-Z0-9._\-() ]/g, '_').slice(0, 200);
 
   if (!audioUrl) {
-    return new Response(JSON.stringify({ error: 'Missing audio URL' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing audio URL');
   }
 
   // SECURITY: Validate URL is from allowed domains only, https required
@@ -49,24 +44,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const parsedUrl = new URL(audioUrl);
     if (parsedUrl.protocol !== 'https:') {
-      return new Response(JSON.stringify({ error: 'Only HTTPS URLs allowed' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Only HTTPS URLs allowed');
     }
     isAllowed = ALLOWED_DOMAINS.some(domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain));
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid URL' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid URL');
   }
 
   if (!isAllowed) {
-    return new Response(JSON.stringify({ error: 'Domain not allowed' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('Domain not allowed');
   }
 
   try {
@@ -103,6 +89,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[download-mix] Error:', error);
-    return new Response('Failed to download file', { status: 500 });
+    return ApiErrors.serverError('Failed to download file');
   }
 };

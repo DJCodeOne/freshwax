@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for gift card verify-session query params
 const GiftCardVerifyParamsSchema = z.object({
@@ -28,10 +28,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const rawParams = { session_id: url.searchParams.get('session_id') || '' };
     const paramResult = GiftCardVerifyParamsSchema.safeParse(rawParams);
     if (!paramResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: paramResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const sessionId = paramResult.data.session_id;
 
@@ -39,10 +36,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stripe not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Stripe not configured');
     }
 
     // Retrieve the session from Stripe
@@ -58,10 +52,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     );
 
     if (!sessionResponse.ok) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid session'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid session');
     }
 
     const session = await sessionResponse.json();
@@ -69,11 +60,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Check if payment was successful
     if (session.payment_status !== 'paid') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment not completed',
-        paymentStatus: session.payment_status
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Payment not completed');
     }
 
     // Try to find gift card by payment intent ID
@@ -116,9 +103,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[giftcard-verify] Error:', errorMessage);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };

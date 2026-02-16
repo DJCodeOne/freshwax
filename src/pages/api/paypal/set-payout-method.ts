@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for set payout method
 const SetPayoutMethodSchema = z.object({
@@ -27,15 +28,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   if (!clientEmail || !privateKey) {
     console.error('[Payout] Service account not configured');
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Service account not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   // Build service account key
@@ -55,19 +53,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parseResult = SetPayoutMethodSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { entityType, entityId, payoutMethod, accessCode } = parseResult.data;
 
     // SECURITY: Verify the authenticated user matches the entity being modified
     if ((entityType === 'user' || entityType === 'artist') && entityId && authUserId !== entityId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Forbidden'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Forbidden');
     }
 
     // Get entity
@@ -106,26 +98,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!entity) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `${entityType} not found`
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('${entityType} not found');
     }
 
     // Verify the chosen method is available
     if (payoutMethod === 'stripe') {
       if (!entity.stripeConnectId || entity.stripeConnectStatus !== 'active') {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Stripe Connect not set up. Please complete Stripe onboarding first.'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Stripe Connect not set up. Please complete Stripe onboarding first.');
       }
     } else if (payoutMethod === 'paypal') {
       if (!entity.paypalEmail) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'PayPal not linked. Please link your PayPal email first.'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('PayPal not linked. Please link your PayPal email first.');
       }
     }
 
@@ -146,9 +129,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Payout] Set method error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to set payout method'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to set payout method');
   }
 };

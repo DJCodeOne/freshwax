@@ -1,11 +1,19 @@
 // src/middleware.ts
 // Initialize Firebase env from Cloudflare runtime on every request
-// Add security headers and CORS to all responses
+// Add security headers, CORS, and CSRF protection to all responses
 import { defineMiddleware } from 'astro:middleware';
 import { initFirebaseEnv } from './lib/firebase-rest';
 import { initKVCache } from './lib/kv-cache';
 import { initRateLimitKV, checkRateLimit, getClientId, rateLimitResponse } from './lib/rate-limit';
 import { logServerError } from './lib/error-logger';
+import {
+  generateCsrfToken,
+  getCsrfCookie,
+  getSubmittedCsrfToken,
+  validateCsrfToken,
+  buildCsrfCookie,
+  shouldSkipCsrf,
+} from './lib/csrf';
 
 // Webhook endpoints that bypass Content-Type validation (they have their own body parsing)
 const CONTENT_TYPE_SKIP = new Set([
@@ -52,7 +60,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
     return {
       'Access-Control-Allow-Origin': origin!,
       'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token',
       'Access-Control-Allow-Credentials': 'true',
       'Access-Control-Max-Age': '86400', // 24 hours
     };
@@ -178,6 +186,13 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
     initRateLimitKV(runtime.env?.CACHE || runtime.env?.KV);
   }
 
+  // --- CSRF Token (double-submit cookie pattern) ---
+  // Reuse existing cookie token or generate a fresh one.
+  const existingCsrfToken = getCsrfCookie(request);
+  const csrfToken = existingCsrfToken || generateCsrfToken();
+  locals.csrfToken = csrfToken;
+  const isSecure = request.url.startsWith('https');
+
   const url = new URL(request.url);
 
   // WWW canonicalization — redirect www to non-www
@@ -243,6 +258,48 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
           { status: 413, headers: { 'Content-Type': 'application/json' } }
         );
       }
+    }
+  }
+
+  // --- CSRF Validation for state-changing requests ---
+  // Validates double-submit cookie: cookie value must match header or body field.
+  // API routes: check X-CSRF-Token header (set by global fetch interceptor).
+  // Page routes: check _csrf form field (for traditional <form method="POST">).
+  const isStateChanging = request.method === 'POST' || request.method === 'PUT' ||
+                          request.method === 'PATCH' || request.method === 'DELETE';
+  if (isStateChanging && !shouldSkipCsrf(pathname)) {
+    let submittedToken = getSubmittedCsrfToken(request);
+
+    // For non-API page POSTs with form-urlencoded body, parse _csrf from the body.
+    // We clone the request so downstream handlers can still read the body.
+    if (!submittedToken && !isApiRoute) {
+      const ct = (request.headers.get('content-type') || '').toLowerCase();
+      if (ct.startsWith('application/x-www-form-urlencoded') || ct.startsWith('multipart/form-data')) {
+        try {
+          const cloned = request.clone();
+          const formData = await cloned.formData();
+          const csrfField = formData.get('_csrf');
+          if (typeof csrfField === 'string') {
+            submittedToken = csrfField;
+          }
+        } catch {
+          // Body parse failed — token stays null, validation will reject
+        }
+      }
+    }
+
+    if (!validateCsrfToken(existingCsrfToken, submittedToken)) {
+      if (isApiRoute) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'CSRF token mismatch' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      // For page routes, return a simple HTML error
+      return new Response(
+        '<html><body><h1>403 Forbidden</h1><p>CSRF token validation failed. Please go back and try again.</p></body></html>',
+        { status: 403, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+      );
     }
   }
 
@@ -314,6 +371,9 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   // Add basic security headers to ALL responses (JS, CSS, SVG, etc.)
   newHeaders.set('X-Content-Type-Options', 'nosniff');
   newHeaders.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+
+  // Set CSRF cookie on every response (refresh token)
+  newHeaders.append('Set-Cookie', buildCsrfCookie(csrfToken, isSecure));
 
   // Return modified response
   return new Response(response.body, {

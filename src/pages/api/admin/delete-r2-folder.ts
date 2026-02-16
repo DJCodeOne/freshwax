@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const deleteR2FolderSchema = z.object({
   folder: z.string().min(1),
@@ -22,10 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = deleteR2FolderSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { folder } = parsed.data;
@@ -68,11 +66,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[delete-r2-folder] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to delete folder'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete folder');
   }
 };

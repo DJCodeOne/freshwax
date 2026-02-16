@@ -6,6 +6,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -246,9 +247,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({
-          error: 'Invalid export type. Valid types: orders, sales, products, payouts, refunds, customers'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid export type. Valid types: orders, sales, products, payouts, refunds, customers');
     }
 
     return new Response(csv, {
@@ -261,11 +260,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[export-analytics] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      error: 'Export failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Export failed');
   }
 };

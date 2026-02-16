@@ -6,6 +6,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -19,10 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -45,31 +43,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { releaseId, newOwnerId } = body;
 
     if (!releaseId || !newOwnerId) {
-      return new Response(JSON.stringify({
-        error: 'Missing releaseId or newOwnerId',
-        usage: 'POST { releaseId: "xxx", newOwnerId: "partnerId" }'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing releaseId or newOwnerId');
     }
 
     // Get the release to verify it exists
     const release = await getDocument('releases', releaseId);
     if (!release) {
-      return new Response(JSON.stringify({ error: 'Release not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     // Get the artist to verify they exist
     const artist = await getDocument('artists', newOwnerId);
     if (!artist) {
-      return new Response(JSON.stringify({ error: 'Artist not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Artist not found');
     }
 
     // Update the release with all ownership fields
@@ -98,11 +84,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[fix-release-owner] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

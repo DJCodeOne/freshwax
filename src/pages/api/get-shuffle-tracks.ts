@@ -2,6 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getLiveReleases, extractTracksFromReleases, shuffleArray } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -120,13 +121,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
     
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch tracks',
-      tracks: []
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch tracks');
   }
 };

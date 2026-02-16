@@ -10,6 +10,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const triggerPayoutSchema = z.object({
   orderId: z.string().min(1),
@@ -45,10 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = triggerPayoutSchema.safeParse(bodyData);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderId, artistId, payeeType, payeeId, payeeName, payeeEmail, amount } = parsed.data;
@@ -56,10 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get order
     const order = await getDocument('orders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     console.log('[admin] Triggering payout for order:', order.orderNumber);
@@ -76,10 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const paypalAmount = amount - paypalPayoutFee;
 
       if (!paypalConfig) {
-        return new Response(JSON.stringify({ error: 'PayPal not configured' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.serverError('PayPal not configured');
       }
 
       try {
@@ -167,23 +159,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { 'Content-Type': 'application/json' }
           });
         } else {
-          return new Response(JSON.stringify({
-            success: false,
-            error: payoutResult.error || 'PayPal payout failed'
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.serverError(payoutResult.error || 'PayPal payout failed');
         }
       } catch (err: unknown) {
         console.error('[admin] PayPal payout error:', err);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Payout error'
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.serverError('Payout error');
       }
     }
 
@@ -446,11 +426,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin] Trigger payout error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to trigger payout'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to trigger payout');
   }
 };

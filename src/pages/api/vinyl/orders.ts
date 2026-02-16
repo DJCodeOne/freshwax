@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const vinylOrderPostSchema = z.object({
   action: z.enum(['mark-shipped', 'add-tracking']),
@@ -58,26 +59,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const sellerId = url.searchParams.get('sellerId');
 
   if (!sellerId) {
-    return new Response(JSON.stringify({ success: false, error: 'Seller ID required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Seller ID required');
   }
 
   // SECURITY: Verify authentication and that user is the seller
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
   if (authError || !verifiedUserId) {
-    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   if (verifiedUserId !== sellerId) {
-    return new Response(JSON.stringify({ success: false, error: 'You can only view your own orders' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('You can only view your own orders');
   }
 
   // Rate limit
@@ -96,10 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Query vinylOrders collection for this seller
@@ -124,10 +113,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/orders GET] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch orders' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch orders');
   }
 };
 
@@ -151,40 +137,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify authentication
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
 
     const parsed = vinylOrderPostSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action, orderId, sellerId, carrier, trackingNumber } = parsed.data;
 
     // Verify user owns this order (is the seller)
     if (verifiedUserId !== sellerId) {
-      return new Response(JSON.stringify({ success: false, error: 'You can only update your own orders' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only update your own orders');
     }
 
     const serviceAccountKey = getServiceAccountKey(env);
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Import the update function
@@ -193,17 +167,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get the order first to verify ownership
     const order = await saGetDocument(serviceAccountKey, projectId, 'vinylOrders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ success: false, error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     if (order.sellerId !== sellerId) {
-      return new Response(JSON.stringify({ success: false, error: 'Not authorized to update this order' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Not authorized to update this order');
     }
 
     switch (action) {
@@ -244,17 +212,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid action');
     }
 
   } catch (error) {
     console.error('[vinyl/orders POST] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };

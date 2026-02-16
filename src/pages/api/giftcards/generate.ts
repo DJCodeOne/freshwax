@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for gift card generation
 const GenerateGiftCardSchema = z.object({
@@ -40,10 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parseResult = GenerateGiftCardSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { type, value, description, createdFor, systemKey } = parseResult.data;
 
@@ -53,18 +51,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: No fallback key - must be configured in environment
     if (!validSystemKey) {
       console.error('[giftcards/generate] GIFTCARD_SYSTEM_KEY not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Gift card system not configured'
-      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+      return errorResponse('Gift card system not configured', 503);
     }
 
     // SECURITY: Use proper timing-safe comparison to prevent timing attacks
     if (!timingSafeEqual(validSystemKey, systemKey)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Unauthorized');
     }
 
     let giftCard;
@@ -74,10 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else {
       // type === 'promotional' (validated by Zod enum)
       if (!value || value <= 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid gift card value'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid gift card value');
       }
       giftCard = createPromotionalGiftCard(value, description || `£${value} Gift Card`, createdFor);
     }
@@ -116,9 +105,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[giftcards/generate] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to generate gift card'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to generate gift card');
   }
 };

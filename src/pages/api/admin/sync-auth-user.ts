@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -21,10 +22,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
     if (!clientEmail || !privateKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     const serviceAccountKey = JSON.stringify({
@@ -46,27 +44,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { uid, email, displayName } = body;
 
     if (!uid || !email) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required fields: uid and email',
-        usage: { uid: 'firebase-auth-uid', email: 'user@example.com', displayName: 'Optional Name' }
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing required fields: uid and email');
     }
 
     // Check if user already exists
     const existing = await saGetDocument(serviceAccountKey, projectId, 'users', uid);
     if (existing) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User already exists in Firestore',
-        user: existing
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('User already exists in Firestore');
     }
 
     // Create user document
@@ -108,12 +92,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[sync-auth-user] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

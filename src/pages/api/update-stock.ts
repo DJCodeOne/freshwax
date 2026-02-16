@@ -7,6 +7,7 @@ import { getDocument, queryCollection, clearAllMerchCache, clearCache } from '..
 import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
+import { ApiErrors } from '../../lib/api-utils';
 
 const updateStockSchema = z.object({
   productId: z.string().min(1),
@@ -91,10 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = updateStockSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const {
@@ -110,28 +108,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
 
     if (quantity < 0 && !['adjust', 'damaged', 'set'].includes(operation)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Quantity must be positive for this operation'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Quantity must be positive for this operation');
     }
 
     const product = await getDocument('merch', productId);
 
     if (!product) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Product not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Product not found');
     }
 
     const variantStock = product.variantStock || {};
 
     if (!variantStock[variantKey]) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Variant not found: ' + variantKey
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Variant not found: ');
     }
 
     // Handle both old (number) and new (object) formats
@@ -165,10 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'sell':
         if (previousStock < quantity) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Insufficient stock. Available: ' + previousStock
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Insufficient stock. Available: ');
         }
         newStock = previousStock - quantity;
         stockDelta = -quantity;
@@ -183,10 +169,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'reserve':
         if (previousStock < quantity) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Insufficient stock to reserve. Available: ' + previousStock
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Insufficient stock to reserve. Available: ');
         }
         newStock = previousStock - quantity;
         stockDelta = -quantity;
@@ -211,10 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         break;
 
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unknown operation: ' + operation
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Unknown operation: ');
     }
 
     newStock = Math.max(0, newStock);
@@ -340,13 +320,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[update-stock] Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update stock'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update stock');
   }
 };
 
@@ -367,10 +341,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
       const data = await getDocument('merch', productId);
 
       if (!data) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Product not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Product not found');
       }
 
       return new Response(JSON.stringify({
@@ -491,12 +462,6 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
   } catch (error) {
     log.error('[get-stock] Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch stock'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch stock');
   }
 };

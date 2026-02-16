@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -57,14 +57,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       try {
         const { userId: verifiedId } = await verifyRequestUser(request);
         if (!verifiedId || verifiedId !== userId) {
-          return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-            status: 403, headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Unauthorized');
         }
       } catch {
-        return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-          status: 401, headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.unauthorized('Authentication required');
       }
     } else {
       // All other GET actions require admin auth
@@ -212,13 +208,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
   } catch (error) {
     console.error('Error fetching bypass requests:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch requests'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch requests');
   }
 };
 
@@ -235,13 +225,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = bypassRequestPostSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action, requestId, userId, userEmail, userName, email, djName, requestType, reason, stationName, relayUrl, mixCount, bestMixLikes } = parsed.data;
@@ -252,25 +236,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (authError) return authError;
 
       if (!requestId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Request ID required'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Request ID required');
       }
 
       // Get the request
       const existingRequest = await getDocument('bypassRequests', requestId);
       if (!existingRequest) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Request not found'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Request not found');
       }
 
       // Handle expire action
@@ -392,23 +364,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { userId: vId } = await verifyRequestUser(request);
       verifiedUserId = vId;
     } catch {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     if (!verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Use verified userId, not body-supplied userId
@@ -431,13 +391,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (existingRequests.length > 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You already have a pending request'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('You already have a pending request');
     }
 
     // Create new request
@@ -470,13 +424,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Error processing bypass request:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process request'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process request');
   }
 };
 
@@ -496,13 +444,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const requestId = url.searchParams.get('id');
 
     if (!requestId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Request ID required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Request ID required');
     }
 
     await deleteDocument('bypassRequests', requestId);
@@ -517,12 +459,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Error deleting bypass request:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete request'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete request');
   }
 };

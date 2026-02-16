@@ -7,6 +7,7 @@ import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 const updateReleaseSchema = z.object({
   id: z.string().min(1),
@@ -57,10 +58,7 @@ export async function POST({ request, locals }: any) {
     updates = await request.json();
     log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
   } catch (e) {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid JSON body');
   }
 
   // Admin authentication required - pass body data for adminKey check
@@ -76,12 +74,7 @@ export async function POST({ request, locals }: any) {
     const parsed = updateReleaseSchema.safeParse(updates);
     if (!parsed.success) {
       log.error('[update-release] Invalid request');
-      return new Response(JSON.stringify({
-        error: 'Invalid request'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { id, idToken, adminKey, ...updateData } = parsed.data;
@@ -93,13 +86,7 @@ export async function POST({ request, locals }: any) {
 
     if (!releaseDoc) {
       log.error('[update-release] Release not found:', id);
-      return new Response(JSON.stringify({
-        error: 'Release not found',
-        id: id
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     // Verify ownership: authenticated user must own the release or be a super admin
@@ -109,12 +96,7 @@ export async function POST({ request, locals }: any) {
       if (!isOwner) {
         const userIsAdmin = await isAdmin(currentUserId);
         if (!userIsAdmin) {
-          return new Response(JSON.stringify({
-            error: 'Not authorized to edit this release'
-          }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Not authorized to edit this release');
         }
       }
     }
@@ -184,12 +166,7 @@ export async function POST({ request, locals }: any) {
 
     if (!serviceAccountKey) {
       log.error('[update-release] Service account not configured');
-      return new Response(JSON.stringify({
-        error: 'Service account not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Update in Firestore using service account auth
@@ -265,11 +242,6 @@ export async function POST({ request, locals }: any) {
     console.error('[update-release] Critical error:', error instanceof Error ? error.message : String(error));
     console.error('[update-release] Stack:', error instanceof Error ? error.stack : undefined);
 
-    return new Response(JSON.stringify({
-      error: 'Internal server error',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal server error');
   }
 }

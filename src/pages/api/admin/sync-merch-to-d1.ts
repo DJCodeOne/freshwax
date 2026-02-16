@@ -6,6 +6,7 @@ import { queryCollection, clearCache } from '../../../lib/firebase-rest';
 import { d1UpsertMerch, d1DeleteMerch } from '../../../lib/d1-catalog';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -22,10 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db = env?.DB;
 
   if (!db) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'D1 database not available'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('D1 database not available');
   }
 
   try {
@@ -89,9 +87,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[sync-merch-to-d1] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Unknown error');
   }
 };

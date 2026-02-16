@@ -10,6 +10,7 @@ import { saUpdateDocument, saDeleteDocument, saAddDocument } from '../../lib/fir
 import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
+import { ApiErrors } from '../../lib/api-utils';
 
 const deleteMerchSchema = z.object({
   productId: z.string().min(1),
@@ -99,10 +100,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = deleteMerchSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { productId } = parsed.data;
@@ -112,10 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const product = await getDocument('merch', productId);
 
     if (!product) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Product not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Product not found');
     }
 
     // Delete images from R2
@@ -214,12 +209,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[delete-merch] Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete product'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete product');
   }
 };

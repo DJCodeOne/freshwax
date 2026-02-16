@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const deleteSubmissionSchema = z.object({
   submissionId: z.string().min(1),
@@ -26,10 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = deleteSubmissionSchema.safeParse(bodyData);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { submissionId, location } = parsed.data;
@@ -60,14 +58,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (keys.length === 0) {
-      return new Response(JSON.stringify({
-        error: 'No files found',
-        prefix,
-        deleted: 0
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('No files found');
     }
 
     // Batch delete all files
@@ -87,11 +78,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[delete-submission] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to delete'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete');
   }
 };

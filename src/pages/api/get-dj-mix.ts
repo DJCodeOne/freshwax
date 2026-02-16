@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -25,13 +26,7 @@ export const GET: APIRoute = async ({ request }) => {
   const noCache = url.searchParams.get('nocache'); // Bypass cache if present
   
   if (!mixId) {
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: 'Mix ID required' 
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Mix ID required');
   }
   
   log.info('[get-dj-mix] Fetching mix:', mixId, noCache ? '(nocache)' : '');
@@ -46,13 +41,7 @@ export const GET: APIRoute = async ({ request }) => {
     
     if (!mix) {
       log.info('[get-dj-mix] Not found:', mixId);
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Mix not found' 
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Mix not found');
     }
     
     const normalized = {
@@ -92,12 +81,6 @@ export const GET: APIRoute = async ({ request }) => {
     
   } catch (error) {
     log.error('[get-dj-mix] Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: 'Failed to fetch mix'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch mix');
   }
 };

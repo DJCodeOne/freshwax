@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -22,23 +22,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const releaseId = url.searchParams.get('releaseId');
 
   if (!releaseId) {
-    return new Response(JSON.stringify({
-      error: 'Missing releaseId',
-      usage: '/api/admin/check-file-sizes/?releaseId=xxx'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing releaseId');
   }
 
   try {
     const release = await getDocument('releases', releaseId);
 
     if (!release) {
-      return new Response(JSON.stringify({ error: 'Release not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     const tracks = release.tracks || [];
@@ -115,11 +106,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

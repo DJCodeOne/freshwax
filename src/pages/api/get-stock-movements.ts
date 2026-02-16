@@ -1,13 +1,19 @@
 // src/pages/api/get-stock-movements.ts
-// Get stock movement history
+// Get stock movement history (admin-only)
 
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
+import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, url }) => {
+export const GET: APIRoute = async ({ request, url, locals }) => {
+  // SECURITY: Require admin authentication
+  const authError = await requireAdminAuth(request, locals);
+  if (authError) return authError;
+
   // Rate limit: standard API - 60 per minute
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`get-stock-movements:${clientId}`, RateLimiters.standard);
@@ -85,12 +91,6 @@ export const GET: APIRoute = async ({ request, url }) => {
   } catch (error) {
     console.error('[get-stock-movements] Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch movements'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch movements');
   }
 };

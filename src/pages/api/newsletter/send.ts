@@ -5,7 +5,7 @@ import { queryCollection, addDocument, updateDocument, atomicIncrement } from '.
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { escapeHtml } from '../../../lib/api-utils';
+import { escapeHtml, ApiErrors } from '../../../lib/api-utils';
 import { SITE_URL } from '../../../lib/constants';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
@@ -48,13 +48,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     } = body;
 
     if (!subject || !content) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Subject and content are required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Subject and content are required');
     }
 
     // Get subscribers
@@ -84,23 +78,11 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         subscribers.push(...batchResults);
       }
     } else {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No subscribers selected'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No subscribers selected');
     }
 
     if (subscribers.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No active subscribers found'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No active subscribers found');
     }
 
     // Limit subscribers per send to prevent massive operations
@@ -130,13 +112,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         });
       } catch (emailError) {
         console.error('[Newsletter] Preview email failed:', emailError);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Failed to send preview email'
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.serverError('Failed to send preview email');
       }
     }
 
@@ -222,13 +198,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Send error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send newsletter'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to send newsletter');
   }
 };
 

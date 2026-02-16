@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saDeleteDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -64,12 +65,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     console.error('[list-payouts] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to list payouts'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to list payouts');
   }
 };
 
@@ -85,10 +81,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const payoutId = url.searchParams.get('id');
 
   if (!payoutId) {
-    return new Response(JSON.stringify({ error: 'Payout ID required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Payout ID required');
   }
 
   const authError = await requireAdminAuth(request, locals);
@@ -109,11 +102,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     console.error('[list-payouts] Delete error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to delete payout'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete payout');
   }
 };

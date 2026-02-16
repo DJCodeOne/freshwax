@@ -10,6 +10,7 @@
 
 import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -33,19 +34,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     (adminKey && xAdminKey === adminKey);
 
   if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Unauthorized');
   }
 
   const db = env?.DB;
   if (!db) {
     console.error('[Cleanup D1] D1 binding not available');
-    return new Response(JSON.stringify({ error: 'D1 not available' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('D1 not available');
   }
 
   const results: Record<string, any> = {};

@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
-import { fetchWithTimeout } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
 
 // Zod schema for Plus subscription checkout
 const CreateCheckoutSchema = z.object({
@@ -32,10 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify user authentication
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const rawBody = await request.json();
@@ -43,30 +40,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Zod input validation
     const parseResult = CreateCheckoutSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const body = parseResult.data;
     const { type, priceId, userId, email, promoCode, successUrl, cancelUrl } = body;
 
     // Verify the authenticated user matches the userId in the request
     if (verifiedUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only create checkouts for your own account'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only create checkouts for your own account');
     }
     const kv = env?.CACHE as KVNamespace | undefined;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
       console.log('[create-checkout] Stripe not configured - Plus upgrades not available');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Plus upgrades are coming soon! Payment system is being configured.'
-      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+      return errorResponse('Plus upgrades are coming soon! Payment system is being configured.', 503);
     }
 
     // Validate referral code if provided
@@ -88,10 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.log(`[create-checkout] Valid KV referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
         } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
           // KV code exists but has an error
-          return new Response(JSON.stringify({
-            success: false,
-            error: kvResult.error
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest(kvResult.error);
         }
       }
 
@@ -108,26 +93,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         if (!giftCards || giftCards.length === 0) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Invalid referral code'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Invalid referral code');
         }
 
         const referralCard = giftCards[0];
 
         if (!referralCard.isActive || referralCard.redeemedBy) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'This referral code has already been used'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('This referral code has already been used');
         }
 
         if (referralCard.createdByUserId === userId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'You cannot use your own referral code'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('You cannot use your own referral code');
         }
 
         validatedPromoCode = normalizedCode;
@@ -145,10 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const stripePriceId = PRICE_MAP[priceId];
     if (!stripePriceId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid price selected'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid price selected');
     }
 
     // Build metadata - include referral info if used
@@ -190,10 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
       console.error('[create-checkout] Stripe error:', errorData);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to create checkout session'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to create checkout session');
     }
 
     const session = await stripeResponse.json();
@@ -206,9 +176,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[create-checkout] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process checkout request'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to process checkout request');
   }
 };

@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { d1SearchPublishedReleases, d1SearchPublishedMixes, d1SearchPublishedMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,7 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const limit = limitParam ? parseInt(limitParam) : 20;
 
   if (!query || query.length < 2) {
-    return new Response(JSON.stringify({ success: false, error: 'Search query must be at least 2 characters' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Search query must be at least 2 characters');
   }
 
   // Get D1 database from Cloudflare runtime
@@ -34,7 +35,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const db = env?.DB;
 
   if (!db) {
-    return new Response(JSON.stringify({ success: false, error: 'Database not available' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Database not available');
   }
 
   log.info('[search] Searching for:', query);
@@ -100,6 +101,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[search] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Search failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Search failed');
   }
 };

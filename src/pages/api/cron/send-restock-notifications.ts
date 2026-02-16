@@ -9,7 +9,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -32,10 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     (adminKey && xAdminKey === adminKey);
 
   if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Unauthorized');
   }
 
 
@@ -201,13 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 

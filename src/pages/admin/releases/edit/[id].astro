@@ -14,6 +14,7 @@ export const prerender = false;
 
 const { id } = Astro.params;
 const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
 
 // Fetch release from Firebase REST API
 let release = null;
@@ -42,9 +43,11 @@ if (!release) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Edit Release - {release.releaseName} - Fresh Wax Admin</title>
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <div class="container">
     <div class="header-bar">
       <img src="/logo.webp" alt="Fresh Wax" class="logo" data-fallback="hide">

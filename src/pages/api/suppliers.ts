@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
-import { parseJsonBody } from '../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -41,10 +41,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       const supplier = await getDocument('merch-suppliers', supplierId);
 
       if (!supplier) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Supplier not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Supplier not found');
       }
 
       // Get their products if requested
@@ -92,10 +89,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       const supplierDoc = matchedSuppliers[0] || null;
 
       if (!supplierDoc) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid access code'
-        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.unauthorized('Invalid access code');
       }
 
       const supplier: any = supplierDoc;
@@ -243,13 +237,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   } catch (error) {
     log.error('[suppliers] GET Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch suppliers',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch suppliers');
   }
 };
 
@@ -277,10 +265,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } = body;
 
     if (!name || !type || !code) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Name, type, and code are required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Name, type, and code are required');
     }
 
     // Generate supplier ID and access code
@@ -326,13 +311,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[suppliers] POST Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create supplier',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to create supplier');
   }
 };
 
@@ -350,10 +329,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const { supplierId, ...updates } = body;
 
     if (!supplierId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Supplier ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Supplier ID is required');
     }
 
     // Prevent updating certain fields
@@ -382,13 +358,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[suppliers] PUT Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update supplier',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update supplier');
   }
 };
 
@@ -406,10 +376,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const { supplierId, hardDelete } = body;
 
     if (!supplierId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Supplier ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Supplier ID is required');
     }
 
     if (hardDelete) {
@@ -444,12 +411,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[suppliers] DELETE Error:', error);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete supplier',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete supplier');
   }
 };

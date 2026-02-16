@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { saGetDocument, saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -41,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (!serviceAccountKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured - need FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY' }), { status: 500 });
+    return ApiErrors.notConfigured('Service account (need FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY)');
   }
 
   try {
@@ -69,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!releaseId) {
-      return new Response(JSON.stringify({ error: 'releaseId required' }), { status: 400 });
+      return ApiErrors.badRequest('releaseId required');
     }
 
     // Create new release mode
@@ -97,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get current release using service account
     const release = await saGetDocument(serviceAccountKey, projectId, 'releases', releaseId);
     if (!release) {
-      return new Response(JSON.stringify({ error: 'Release not found' }), { status: 404 });
+      return ApiErrors.notFound('Release not found');
     }
 
     // Function to replace URL prefix
@@ -140,8 +141,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Fix URLs error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed'
-    }), { status: 500 });
+    return ApiErrors.serverError('Failed');
   }
 };

@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/firebase-service-account';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -83,10 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Simple admin key check
     if (adminKey !== getAdminKey(locals)) {
-      return new Response(JSON.stringify({ success: false, error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Unauthorized');
     }
 
     // Look up user by email if no userId provided
@@ -97,13 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!userId && email) {
       const user = await findUserByEmail(email);
       if (!user) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found with that email. They need to create an account first.'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('User not found with that email. They need to create an account first.');
       }
       userId = user.userId;
       displayName = djName || user.displayName;
@@ -111,10 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'Email or User ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Email or User ID required');
     }
 
     // Get service account for writes
@@ -122,10 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Generate mount point based on user ID
@@ -180,9 +166,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[dj-settings] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

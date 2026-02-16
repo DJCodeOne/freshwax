@@ -6,6 +6,7 @@ import type { APIContext } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -105,13 +106,7 @@ export async function POST({ request, locals }: APIContext) {
     const { userId, userName, command, args, streamId, streamStartTime, currentTrack } = body;
 
     if (!userId || !command) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing userId or command'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing userId or command');
     }
 
     // SECURITY: Verify the requesting user owns this userId
@@ -120,23 +115,11 @@ export async function POST({ request, locals }: APIContext) {
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
 
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only use commands as yourself'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only use commands as yourself');
     }
 
     // Check if user has Plus or is admin
@@ -254,13 +237,7 @@ export async function POST({ request, locals }: APIContext) {
         break;
 
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Unknown command: ${command}`
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Unknown command: ${command}');
     }
 
     return new Response(JSON.stringify({
@@ -275,12 +252,6 @@ export async function POST({ request, locals }: APIContext) {
 
   } catch (error: unknown) {
     console.error('[Plus Command API] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }

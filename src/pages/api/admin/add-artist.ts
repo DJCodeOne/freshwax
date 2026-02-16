@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const addArtistSchema = z.object({
   userId: z.string().min(1),
@@ -84,10 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = addArtistSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { userId, artistName, email, bio, links, isArtist, isDJ, isMerchSupplier } = parsed.data;
@@ -142,12 +140,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[add-artist] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to add artist'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to add artist');
   }
 };

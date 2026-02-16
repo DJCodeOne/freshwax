@@ -13,6 +13,7 @@ import { queryCollection, updateDocument, addDocument, getDocument, updateDocume
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -40,10 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (!isAuthorized) {
     console.log('[Retry Payouts] Unauthorized - missing or invalid credentials');
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Unauthorized');
   }
 
   // Initialize Firebase
@@ -53,10 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   if (!stripeSecretKey) {
     console.error('[Retry Payouts] Stripe not configured');
-    return new Response(JSON.stringify({ error: 'Stripe not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -368,13 +363,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Retry Payouts] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };
 

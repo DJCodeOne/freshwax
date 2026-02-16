@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -27,10 +28,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE as KVNamespace | undefined;
 
     if (!kv) {
-      return new Response(JSON.stringify({ success: false, error: 'Storage not available' }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Storage not available', 503);
     }
 
     // Get auth token
@@ -40,45 +38,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const rawBody = await request.json();
     const parsed = SaveBadgeSchema.safeParse(rawBody);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { userId, badge } = parsed.data;
 
     // Require auth token
     if (!idToken) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Verify the token matches the userId
     try {
       const tokenUserId = await verifyUserToken(idToken);
       if (tokenUserId !== userId) {
-        return new Response(JSON.stringify({ success: false, error: 'User mismatch' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.forbidden('User mismatch');
       }
     } catch (e) {
       console.error('[save-user-badge] Token verification failed:', e);
-      return new Response(JSON.stringify({ success: false, error: 'Invalid authentication token' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Invalid authentication token');
     }
 
     // Check if user is Plus member (this is the only Firebase read - on save only)
     const userDoc = await getDocument('users', userId);
     if (!userDoc) {
-      return new Response(JSON.stringify({ success: false, error: 'User not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('User not found');
     }
 
     let isPro = false;
@@ -91,13 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!isPro) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Only Plus members can customize their badge'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Only Plus members can customize their badge');
     }
 
     // Save badge to KV (no Firebase write, no quota impact)
@@ -115,12 +92,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[save-user-badge] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save badge'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save badge');
   }
 };

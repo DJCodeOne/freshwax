@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
+import { ApiErrors } from '../../lib/api-utils';
 
 const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
@@ -22,10 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = MixIdSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { mixId } = parsed.data;
 
@@ -55,11 +53,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[track-mix-download] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to track download'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to track download');
   }
 };

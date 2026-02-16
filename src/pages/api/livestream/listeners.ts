@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { initKVCache, kvGet, kvSet, kvDelete } from '../../../lib/kv-cache';
 import { triggerPusher } from '../../../lib/pusher';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -140,10 +141,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const streamId = url.searchParams.get('streamId');
 
     if (!streamId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Stream ID required');
     }
 
     const { count, listeners } = await getListenerCount(streamId);
@@ -159,12 +157,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Error fetching listeners:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch listeners',
-      listeners: [],
-      count: 0
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to fetch listeners');
   }
 };
 
@@ -194,10 +187,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, streamId, userId: bodyUserId, userName, avatarUrl } = body;
 
     if (!streamId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Stream ID required');
     }
 
     // SECURITY: Verify userId from auth token when present, fall back to body for anonymous tracking
@@ -264,9 +254,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Error updating listener:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update listener status'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update listener status');
   }
 };

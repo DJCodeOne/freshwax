@@ -6,6 +6,7 @@ import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { SITE_URL } from '../../../../lib/constants';
+import { ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -24,10 +25,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
   // Get Stripe secret key
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Stripe not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -37,10 +35,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
 
     if (!verifiedUserId || authError) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const artistId = verifiedUserId;
@@ -48,18 +43,12 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     // Get artist document
     const artist = await getDocument('artists', artistId);
     if (!artist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Artist not found');
     }
 
     // Check if artist is approved
     if (!artist.approved) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist account must be approved before connecting Stripe'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Artist account must be approved before connecting Stripe');
     }
 
     // Check if already has a Connect account
@@ -68,11 +57,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       const account = await stripe.accounts.retrieve(artist.stripeConnectId);
 
       if (account.charges_enabled && account.payouts_enabled) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Stripe Connect already set up',
-          status: 'active'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Stripe Connect already set up');
       }
 
       // Onboarding incomplete - return new link
@@ -142,10 +127,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] Create account error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create Stripe account'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to create Stripe account');
   }
 };
 

@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const FollowArtistSchema = z.object({
   artistName: z.string().min(1).max(200).optional(),
@@ -30,13 +31,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Get user's followed artists
@@ -127,13 +122,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error: unknown) {
     console.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get followed artists'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to get followed artists');
   }
 };
 
@@ -155,26 +144,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
     const parsed = FollowArtistSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { artistName, artistId, action } = parsed.data;
 
@@ -259,22 +235,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action. Use: follow, unfollow, toggle, or check'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action. Use: follow, unfollow, toggle, or check');
 
   } catch (error: unknown) {
     console.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update follow status'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update follow status');
   }
 };

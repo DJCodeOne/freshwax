@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const deleteMixSchema = z.object({
@@ -70,13 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = deleteMixSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { mixId, folderPath } = parsed.data;
@@ -156,12 +150,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[admin/delete-mix] Error:', error);
     console.error('[admin/delete-mix] Stack:', error instanceof Error ? error.stack : 'No stack');
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete mix'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete mix');
   }
 };

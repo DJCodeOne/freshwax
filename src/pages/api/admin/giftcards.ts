@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 const giftcardsPostSchema = z.discriminatedUnion('action', [
@@ -270,10 +270,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin/giftcards] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch gift card data'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to fetch gift card data');
   }
 };
 
@@ -296,10 +293,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = giftcardsPostSchema.safeParse(data);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action } = parsed.data;
@@ -310,10 +304,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { value, type, description, expiresInDays } = data;
 
       if (!value || value <= 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid value'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid value');
       }
 
       // Generate code
@@ -358,10 +349,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { userId, amount, reason } = data;
 
       if (!userId || amount === undefined) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User ID and amount required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('User ID and amount required');
       }
 
       const adjustAmount = parseFloat(amount);
@@ -428,10 +416,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { cardId } = data;
 
       if (!cardId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Card ID required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Card ID required');
       }
 
       await updateDocument('giftCards', cardId, {
@@ -454,26 +439,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { cardId } = data;
 
       if (!cardId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Card ID required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Card ID required');
       }
 
       // Get the card to check it hasn't been redeemed
       const cardDoc = await getDocument('giftCards', cardId);
       if (!cardDoc) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Card not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Card not found');
       }
 
       if (cardDoc.redeemedBy) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Cannot reactivate a redeemed card'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Cannot reactivate a redeemed card');
       }
 
       await updateDocument('giftCards', cardId, {
@@ -498,19 +474,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { cardId, code, recipientEmail, recipientName } = data;
 
       if (!cardId || !recipientEmail) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Card ID and recipient email required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Card ID and recipient email required');
       }
 
       // Get the card details
       const cardDoc = await getDocument('giftCards', cardId);
       if (!cardDoc) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Card not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Card not found');
       }
 
       const amount = cardDoc.originalValue || 0;
@@ -597,23 +567,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       } catch (emailError) {
         console.error('[admin/giftcards] Email error:', emailError);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Failed to send email'
-        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.serverError('Failed to send email');
       }
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error) {
     console.error('[admin/giftcards] POST Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process request'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to process request');
   }
 };

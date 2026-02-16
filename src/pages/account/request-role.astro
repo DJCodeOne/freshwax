@@ -2,15 +2,18 @@
 // Request Role Page
 // Users can request Artist, Merch Seller, or Vinyl Seller roles
 import '../../styles/global.css';
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Request Pro Access | Fresh Wax</title>
   <meta name="robots" content="noindex, nofollow" />
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <div class="page-container">
     <header class="page-header">
       <a href="/account/dashboard/" class="back-link">← Back to Account</a>

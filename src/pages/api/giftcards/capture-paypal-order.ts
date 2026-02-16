@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, deleteDocument, queryCollection, addDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for gift card PayPal capture
 const GiftCardCaptureSchema = z.object({
@@ -61,20 +61,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'PayPal not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('PayPal not configured');
     }
 
     const rawBody = await request.json();
 
     const parseResult = GiftCardCaptureSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { paypalOrderId } = parseResult.data;
 
@@ -111,19 +105,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!pendingOrder) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Order not found or expired'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Order not found or expired');
     }
 
     // SECURITY: Verify the caller is the buyer who created this order
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId && verifiedUserId !== pendingOrder.buyerUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only capture your own orders'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only capture your own orders');
     }
 
     // Get access token
@@ -143,20 +131,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!captureResponse.ok) {
       const error = await captureResponse.text();
       console.error('[GiftCard PayPal] Capture error:', error);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to capture PayPal payment'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to capture PayPal payment');
     }
 
     const captureResult = await captureResponse.json();
     console.log('[GiftCard PayPal] Capture result:', captureResult.status);
 
     if (captureResult.status !== 'COMPLETED') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment not completed'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Payment not completed');
     }
 
     // Validate captured amount matches expected
@@ -166,10 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (Math.abs(capturedAmount - pendingOrder.amount) > 0.01) {
       console.error('[GiftCard PayPal] Amount mismatch! Expected:', pendingOrder.amount, 'Got:', capturedAmount);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment amount mismatch'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Payment amount mismatch');
     }
 
     // Create the gift card
@@ -192,10 +171,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!result.success) {
       console.error('[GiftCard PayPal] Failed to create gift card:', result.error);
-      return new Response(JSON.stringify({
-        success: false,
-        error: result.error || 'Failed to create gift card'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError(result.error || 'Failed to create gift card');
     }
 
     // Clean up pending order
@@ -217,9 +193,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[GiftCard PayPal] Error:', errorMessage);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };

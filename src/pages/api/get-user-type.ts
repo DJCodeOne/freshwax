@@ -5,7 +5,7 @@ import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-
 import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { fetchWithTimeout } from '../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,27 +26,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const uid = url.searchParams.get('uid');
 
   if (!uid) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Missing uid'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing uid');
   }
 
   // SECURITY: Require authentication and verify uid matches token
   // Email comes from the verified token, NOT from query params (prevents privilege escalation)
   const { userId: authUserId, email: authEmail, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
   if (authUserId !== uid) {
-    return new Response(JSON.stringify({ success: false, error: 'Not authorized to query this user' }), {
-      status: 403, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('Not authorized to query this user');
   }
 
   try {
@@ -271,12 +261,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     console.error('[get-user-type] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch user type'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch user type');
   }
 };

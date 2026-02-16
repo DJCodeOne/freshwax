@@ -9,6 +9,7 @@ import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -77,10 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { productId, images, primaryImage } = data;
 
       if (!productId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Product ID is required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Product ID is required');
       }
 
       log.info('[update-merch] JSON update for product:', productId);
@@ -88,10 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const productDoc = await getDocument('merch', productId);
 
       if (!productDoc) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Product not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Product not found');
       }
 
       const updates: any = {
@@ -220,10 +215,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const productId = formData.get('productId') as string;
 
     if (!productId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Product ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Product ID is required');
     }
 
     log.info('[update-merch] Updating product:', productId);
@@ -231,10 +223,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const existingProduct = await getDocument('merch', productId);
 
     if (!existingProduct) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Product not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Product not found');
     }
 
     const updates: any = {
@@ -471,12 +460,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update product'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update product');
   }
 };

@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { deleteDocument, getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const rejectPartnerSchema = z.object({
@@ -31,10 +31,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = rejectPartnerSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { partnerId } = parsed.data;
@@ -67,9 +64,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Error rejecting partner:', error);
-    return new Response(JSON.stringify({ error: 'Failed to reject partner' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to reject partner');
   }
 };

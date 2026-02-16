@@ -29,10 +29,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const parseResult = PaymentStatusSchema.safeParse(rawParams);
   if (!parseResult.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      details: parseResult.error.issues
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid request');
   }
   const { userId } = parseResult.data;
   const refresh = parseResult.data.refresh === 'true';

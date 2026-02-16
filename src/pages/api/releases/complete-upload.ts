@@ -9,6 +9,7 @@ import { processImageToSquareWebP } from '../../../lib/image-processing';
 import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -147,10 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Reject oversized JSON bodies before reading into memory
   const contentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (contentLength > MAX_COMPLETE_UPLOAD_BODY_SIZE) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Request body too large. Maximum 1MB for metadata.'
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Request body too large. Maximum 1MB for metadata.', 413);
   }
 
   try {
@@ -169,24 +167,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } = body;
 
     if (!releaseId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'releaseId is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('releaseId is required');
     }
 
     if (!artistName || !releaseName) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'artistName and releaseName are required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('artistName and releaseName are required');
     }
 
     if (!tracks || !Array.isArray(tracks) || tracks.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'At least one track is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('At least one track is required');
     }
 
     // Check if release already exists (for updates)
@@ -290,10 +279,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } catch (setError: unknown) {
       log.error('Firebase write failed:', setError);
       // Return more detailed error
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to save release data'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to save release data');
     }
 
     return new Response(JSON.stringify({
@@ -308,9 +294,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('Failed to complete upload:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to complete upload'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to complete upload');
   }
 };

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -51,11 +52,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[list-r2-folders] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to list folders'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to list folders');
   }
 };

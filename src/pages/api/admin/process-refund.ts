@@ -6,7 +6,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -36,19 +36,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return new Response(JSON.stringify({ error: 'Stripe not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   try {
     const parsed = processRefundSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderId, amount, reason, refundItems } = parsed.data;
@@ -56,27 +50,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get order data
     const order = await getDocument('orders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     // Check if order has a payment intent
     const paymentIntentId = order.paymentIntentId;
     if (!paymentIntentId) {
-      return new Response(JSON.stringify({ error: 'Order has no payment intent - cannot refund' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Order has no payment intent - cannot refund');
     }
 
     // Check if already fully refunded
     if (order.refundStatus === 'full') {
-      return new Response(JSON.stringify({ error: 'Order already fully refunded' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Order already fully refunded');
     }
 
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -97,21 +82,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Partial refund
       refundAmountPence = Math.round(parseFloat(amount) * 100);
       if (refundAmountPence > maxRefundable) {
-        return new Response(JSON.stringify({
-          error: `Refund amount exceeds maximum refundable (£${(maxRefundable / 100).toFixed(2)})`
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Refund amount exceeds maximum refundable (£${(maxRefundable / 100).toFixed(2)})');
       }
       isFullRefund = refundAmountPence === maxRefundable && previouslyRefunded === 0;
     }
 
     if (refundAmountPence <= 0) {
-      return new Response(JSON.stringify({ error: 'Invalid refund amount' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid refund amount');
     }
 
     // Create Stripe refund
@@ -235,15 +212,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle specific Stripe errors
     const stripeType = (error as any)?.type;
     if (stripeType === 'StripeCardError' || stripeType === 'StripeInvalidRequestError') {
-      return new Response(JSON.stringify({ error: 'Refund request failed' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Refund request failed');
     }
 
-    return new Response(JSON.stringify({ error: 'Failed to process refund' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process refund');
   }
 };

@@ -8,7 +8,7 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
 import { SITE_URL } from '../../lib/constants';
-import { fetchWithTimeout } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
 
 // Zod schemas for order creation
 const OrderItemSchema = z.object({
@@ -251,10 +251,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Zod input validation
     const parseResult = CreateOrderSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const orderData = parseResult.data;
 
@@ -263,10 +260,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check shipping for physical items
     if (orderData.hasPhysicalItems && !orderData.shipping?.address1) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Shipping address required for physical items'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Shipping address required for physical items');
     }
 
     // IMPORTANT: Verify user is a customer (only customers can purchase)
@@ -282,10 +276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // If user is an artist but NOT a customer, deny the order
       if (isArtist && !isCustomer) {
         log.info('[create-order] ✗ Denied: Artist account attempting to purchase');
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Artist accounts cannot make purchases. Please create a separate customer account to buy items.'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.forbidden('Artist accounts cannot make purchases. Please create a separate customer account to buy items.');
       }
 
       // Log warning if no customer record found but still allow guest checkout
@@ -306,10 +297,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems: pricedItems, serverSubtotal, hasMismatch, validationError } = await validateOrderPrices(orderData.items);
 
     if (validationError) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: validationError
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest(validationError);
     }
 
     // Server-side shipping calculation — never trust client-submitted shipping
@@ -368,10 +356,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const clientTotal = orderData.totals?.total || 0;
     if (serverTotal > 0 && clientTotal < serverTotal * 0.95) {
       console.error('[create-order] SECURITY: Client total', clientTotal, 'is below server total', serverTotal, '(subtotal:', serverSubtotal, 'shipping:', serverShipping, ')');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Price validation failed. Please refresh and try again.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Price validation failed. Please refresh and try again.');
     }
 
     // Get download URLs for digital items
@@ -1023,13 +1008,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[create-order] Error:', errorMessage);
     console.error('[create-order] Stack:', errorStack);
     // SECURITY: Don't expose internal error details to client
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create order. Please try again or contact support.'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to create order. Please try again or contact support.');
   }
 };
 

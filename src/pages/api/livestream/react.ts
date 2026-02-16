@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, atomicIncrement, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { triggerPusher } from '../../../lib/pusher';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase and return env for Pusher
 function initFirebase(locals: App.Locals) {
@@ -43,10 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const userId = verifiedUserId || (isWriteAction ? null : bodyUserId);
 
     if (!streamId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Stream ID is required');
     }
 
     // Rate limit emoji/star reactions (30 per minute per client)
@@ -116,10 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         if (!pusherSuccess) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Failed to broadcast reaction via Pusher'
-          }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.serverError('Failed to broadcast reaction via Pusher');
         }
 
         return new Response(JSON.stringify({
@@ -151,10 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       case 'like': {
         if (!userId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Must be logged in to like'
-          }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.unauthorized('Must be logged in to like');
         }
 
         // Always add a like (no toggle - reactions accumulate)
@@ -200,17 +192,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       case 'rate': {
         if (!userId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Must be logged in to rate'
-          }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.unauthorized('Must be logged in to rate');
         }
         
         if (!rating || rating < 1 || rating > 5) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Rating must be between 1 and 5'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Rating must be between 1 and 5');
         }
         
         // Check for existing rating
@@ -225,10 +211,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const { doc: streamData, collection: rateCollection } = await getStreamDocument(streamId);
         if (!streamData) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Stream not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Stream not found');
         }
 
         let newAverage: number;
@@ -384,17 +367,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const { message } = data;
 
         if (!userId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Must be logged in to shoutout'
-          }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.unauthorized('Must be logged in to shoutout');
         }
 
         if (!message || message.length > 30) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Shoutout must be 1-30 characters'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Shoutout must be 1-30 characters');
         }
 
         const shoutoutChannel = `stream-${streamId}`;
@@ -407,10 +384,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[react.ts] Shoutout broadcast result:', shoutoutSuccess);
 
         if (!shoutoutSuccess) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Failed to broadcast shoutout via Pusher'
-          }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.serverError('Failed to broadcast shoutout via Pusher');
         }
 
         return new Response(JSON.stringify({
@@ -420,18 +394,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid action'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid action');
     }
     
   } catch (error) {
     console.error('[livestream/react] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process reaction'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to process reaction');
   }
 };
 
@@ -444,19 +412,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const userId = url.searchParams.get('userId');
 
     if (!streamId || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID and User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Stream ID and User ID required');
     }
 
     // SECURITY: Verify the user is querying their own reactions
     const { userId: verifiedUid } = await verifyRequestUser(request).catch(() => ({ userId: null }));
     if (!verifiedUid || verifiedUid !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     
     const reactions = await queryCollection('livestream-reactions', {
@@ -482,9 +444,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[livestream/react] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get reactions'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get reactions');
   }
 };

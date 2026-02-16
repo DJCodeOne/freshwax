@@ -11,7 +11,7 @@ import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-uti
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 const createManualOrderSchema = z.object({
   orderData: z.object({
@@ -97,18 +97,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ error: 'Firebase service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Firebase service account not configured');
     }
 
     const parsed = createManualOrderSchema.safeParse(bodyData);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderData } = parsed.data;
@@ -474,12 +468,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin] Error creating manual order:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to create order'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to create order');
   }
 };
 

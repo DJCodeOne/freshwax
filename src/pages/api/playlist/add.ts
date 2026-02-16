@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
 
 export const prerender = false;
@@ -62,25 +62,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify authentication
     const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
     if (!authenticatedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const body = await parseJsonBody<{ url: string }>(request);
 
     if (!body?.url) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'URL required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('URL required');
     }
 
     // Use authenticated user's ID - ignore any userId in body
@@ -90,24 +78,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Sanitize and parse URL
     const sanitizedUrl = sanitizeUrl(url);
     if (!sanitizedUrl) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid URL - potential security issue detected'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid URL - potential security issue detected');
     }
 
     const parsed = parseMediaUrl(sanitizedUrl);
     if (!parsed.isValid) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: parsed.error || 'Invalid or unsupported URL format'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest(parsed.error || 'Invalid or unsupported URL format');
     }
 
     // Get current playlist
@@ -116,13 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check max queue size
     if (currentQueue.length >= MAX_QUEUE_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Queue is full (${MAX_QUEUE_SIZE} items max). Wait for the current track to end before trying again.`
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Queue is full (${MAX_QUEUE_SIZE} items max). Wait for the current track to end before trying again.');
     }
 
     // Fetch video metadata (title, thumbnail)
@@ -168,12 +138,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[playlist/add] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to add to playlist'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to add to playlist');
   }
 };

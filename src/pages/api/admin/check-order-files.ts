@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -22,23 +22,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const orderId = url.searchParams.get('orderId');
 
   if (!orderId) {
-    return new Response(JSON.stringify({
-      error: 'Missing orderId',
-      usage: '/api/admin/check-order-files/?orderId=xxx'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing orderId');
   }
 
   try {
     const order = await getDocument('orders', orderId);
 
     if (!order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     const items = order.items || [];
@@ -152,11 +143,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

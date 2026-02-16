@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import type { UserPlaylist } from '../../../lib/types';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -21,13 +22,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Verify authentication
     const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
     if (!authenticatedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     // Use authenticated user's ID - ignore any userId in query params
@@ -63,12 +58,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[playlist/get] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get playlist'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to get playlist');
   }
 };

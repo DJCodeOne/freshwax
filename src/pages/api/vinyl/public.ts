@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { d1GetAllCollections } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -70,10 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service not configured');
     }
 
     // Get single listing
@@ -81,10 +79,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const listing = await saGetDocument(serviceAccountKey, projectId, 'vinylListings', listingId);
 
       if (!listing || listing.status !== 'published') {
-        return new Response(JSON.stringify({ success: false, error: 'Listing not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Listing not found');
       }
 
       return new Response(JSON.stringify({ success: true, listing }), {
@@ -209,9 +204,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/public GET] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch data' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch data');
   }
 };

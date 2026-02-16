@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, setDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -110,12 +110,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[sync-artists] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to sync artists'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to sync artists');
   }
 };

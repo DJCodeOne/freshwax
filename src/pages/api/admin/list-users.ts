@@ -7,6 +7,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -213,9 +214,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin/list-users] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to load users'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to load users');
   }
 };

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -44,10 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db = env.DB;
 
   if (!db) {
-    return new Response(JSON.stringify({ success: false, error: 'D1 not available' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('D1 not available');
   }
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
@@ -59,10 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Firebase not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Firebase not configured');
     }
 
     console.log('[sync-vinyl-to-d1] Fetching listings from Firebase...');
@@ -183,12 +178,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[sync-vinyl-to-d1] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Migration failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Migration failed');
   }
 };

@@ -15,17 +15,48 @@ const firebaseConfig = {
 // reCAPTCHA site key (v3)
 const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Register | Fresh Wax</title>
   <meta name="robots" content="noindex" />
   <meta name="description" content="Create a Fresh Wax account. Buy music, upload DJ mixes, and join the jungle and drum & bass community." />
   <!-- reCAPTCHA v3 - loaded dynamically if site key is configured -->
 </head>
 <body>
+  <script is:inline>
+    (function() {
+      var originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        init = init || {};
+        var method = (init.method || 'GET').toUpperCase();
+        if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+          var url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+          var isSameOrigin = !url || url.startsWith('/') || url.startsWith(location.origin);
+          if (isSameOrigin) {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            var token = meta ? meta.getAttribute('content') : '';
+            if (token) {
+              if (init.headers instanceof Headers) {
+                if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', token);
+              } else if (Array.isArray(init.headers)) {
+                var hasIt = init.headers.some(function(h) { return h[0].toLowerCase() === 'x-csrf-token'; });
+                if (!hasIt) init.headers.push(['X-CSRF-Token', token]);
+              } else {
+                init.headers = Object.assign({}, init.headers || {});
+                if (!init.headers['X-CSRF-Token']) init.headers['X-CSRF-Token'] = token;
+              }
+            }
+          }
+        }
+        return originalFetch.call(this, input, init);
+      };
+    })();
+  </script>
   <a href="#register-form" class="skip-link">Skip to registration form</a>
   <main class="auth-container">
     <div class="auth-card" id="register-form">

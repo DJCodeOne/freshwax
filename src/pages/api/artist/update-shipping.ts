@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -44,28 +45,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify user authentication
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
     const { artistId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShipsFrom } = body;
 
     if (!artistId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Artist ID required');
     }
 
     // Verify the authenticated user matches the artistId
     if (verifiedUserId !== artistId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only update your own shipping rates'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only update your own shipping rates');
     }
 
     // Validate shipping rates (must be non-negative if provided)
@@ -87,10 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify artist exists
     const artist = await getDocument('artists', artistId);
     if (!artist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Artist not found');
     }
 
     // Build update object (only include non-null values)
@@ -118,10 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!serviceAccountKey) {
       console.error('[Artist] Service account not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Service account not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     await saUpdateDocument(serviceAccountKey, projectId, 'artists', artistId, updateData);
@@ -141,9 +127,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Artist] Update shipping error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update shipping rates'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update shipping rates');
   }
 };

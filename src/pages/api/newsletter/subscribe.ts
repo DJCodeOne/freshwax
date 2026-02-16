@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, createDocumentIfNotExists, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const SubscribeSchema = z.object({
@@ -50,11 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = SubscribeSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { email, source, consent, name } = parsed.data;
 
@@ -143,10 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Subscribe error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to subscribe. Please try again.'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to subscribe. Please try again.');
   }
 };
 

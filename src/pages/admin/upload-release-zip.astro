@@ -9,6 +9,7 @@ import '../../styles/admin/upload-release-zip.css';
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 
 <!DOCTYPE html>
@@ -16,10 +17,12 @@ if (authResult) return Astro.redirect('/login');
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Upload Release ZIP - Fresh Wax Admin</title>
 </head>
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <div class="admin-logo-header">
     <img src="/logo.webp" alt="Fresh Wax" class="admin-logo">
   </div>

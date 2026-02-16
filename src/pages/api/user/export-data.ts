@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const ExportDataSchema = z.object({
   userId: z.string().min(1, 'userId is required').max(200),
@@ -25,19 +26,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = ExportDataSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { userId, idToken } = parsed.data;
 
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({ error: 'You can only export your own data' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only export your own data');
     }
 
     const exportData: Record<string, any> = {
@@ -137,17 +132,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[export-data] Error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to export data' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to export data');
   }
 };
 
 // GET forwards to POST for manual triggering from dashboard
 export const GET: APIRoute = async (context) => {
-  return new Response(JSON.stringify({ error: 'Use POST with userId and idToken' }), {
-    status: 405,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return ApiErrors.methodNotAllowed('Use POST with userId and idToken');
 };

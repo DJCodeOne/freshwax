@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, addDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import type { EventRequest } from '../../../lib/subscription';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -49,6 +50,16 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         });
       }
     } else if (userId) {
+      // SECURITY: Verify the requesting user matches the userId
+      const { verifyRequestUser } = await import('../../../lib/firebase-rest');
+      const { userId: verifiedUserId, error: verifyError } = await verifyRequestUser(request);
+      if (verifyError || !verifiedUserId) {
+        return ApiErrors.unauthorized('Authentication required');
+      }
+      if (verifiedUserId !== userId) {
+        return ApiErrors.forbidden('You can only view your own event requests');
+      }
+
       // User sees their own requests
       requests = await queryCollection('event-requests', {
         filters: [{ field: 'userId', op: 'EQUAL', value: userId }],
@@ -56,10 +67,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         limit: 50
       });
     } else {
-      return new Response(JSON.stringify({ success: false, error: 'userId required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('userId required');
     }
 
     return new Response(JSON.stringify({ success: true, requests }), {
@@ -69,13 +77,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error) {
     console.error('[event-requests] GET error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch event requests'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch event requests');
   }
 };
 
@@ -92,13 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { userId, userEmail, userName, eventName, eventDescription, eventDate, hoursRequested } = body;
 
       if (!userId || !eventName || !eventDate || !hoursRequested) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing required fields: userId, eventName, eventDate, hoursRequested'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Missing required fields: userId, eventName, eventDate, hoursRequested');
       }
 
       // SECURITY: Verify the requesting user owns this userId
@@ -107,23 +103,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { verifyUserToken } = await import('../../../lib/firebase-rest');
 
       if (!idToken) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Authentication required'
-        }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.unauthorized('Authentication required');
       }
       const tokenUserId = await verifyUserToken(idToken);
       if (!tokenUserId || tokenUserId !== userId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You can only create event requests for yourself'
-        }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.forbidden('You can only create event requests for yourself');
       }
 
       // Validate event date is in the future
@@ -131,24 +115,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (eventDateObj < today) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Event date must be in the future'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Event date must be in the future');
       }
 
       // Validate hours (reasonable limit)
       if (hoursRequested < 1 || hoursRequested > 12) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Hours requested must be between 1 and 12'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Hours requested must be between 1 and 12');
       }
 
       // Check for existing pending request for same date
@@ -162,13 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       if (existingRequests.length > 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You already have a pending request for this date'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('You already have a pending request for this date');
       }
 
       const newRequest: EventRequest = {
@@ -213,18 +179,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { requestId, adminId } = body;
 
       if (!requestId) {
-        return new Response(JSON.stringify({ success: false, error: 'requestId required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('requestId required');
       }
 
       const existingRequest = await getDocument('event-requests', requestId);
       if (!existingRequest) {
-        return new Response(JSON.stringify({ success: false, error: 'Request not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Request not found');
       }
 
       await updateDocument('event-requests', requestId, {
@@ -260,18 +220,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { requestId, adminId, reason } = body;
 
       if (!requestId) {
-        return new Response(JSON.stringify({ success: false, error: 'requestId required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('requestId required');
       }
 
       const existingRequest = await getDocument('event-requests', requestId);
       if (!existingRequest) {
-        return new Response(JSON.stringify({ success: false, error: 'Request not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Request not found');
       }
 
       await updateDocument('event-requests', requestId, {
@@ -290,19 +244,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error) {
     console.error('[event-requests] POST error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process request'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process request');
   }
 };

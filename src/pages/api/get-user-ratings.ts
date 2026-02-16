@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -32,26 +33,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authenticated'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Not authenticated');
     }
 
     const body = await request.json();
     const { releaseIds } = body;
 
     if (!releaseIds || !Array.isArray(releaseIds) || releaseIds.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'releaseIds array required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('releaseIds array required');
     }
 
     // Limit to 50 releases per request
@@ -137,12 +126,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[get-user-ratings] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch user ratings'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch user ratings');
   }
 };

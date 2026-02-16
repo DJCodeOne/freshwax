@@ -8,12 +8,14 @@ const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Image Processor | Fresh Wax Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -117,6 +119,7 @@ export const prerender = false;
   </style>
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <header class="header">
     <h1>Fresh <span>Wax</span> Image Processor</h1>
     <nav class="header-nav">

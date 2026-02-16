@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocumentsBatch, CACHE_TTL } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -55,13 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { releaseIds } = body;
     
     if (!releaseIds || !Array.isArray(releaseIds)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'releaseIds array required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('releaseIds array required');
     }
     
     // Limit batch size to prevent abuse
@@ -122,13 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     console.error('[get-ratings-batch] Error:', error);
     
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch ratings'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch ratings');
   }
 };
 
@@ -138,25 +127,13 @@ export const GET: APIRoute = async ({ request }) => {
   const idsParam = url.searchParams.get('ids');
   
   if (!idsParam) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'ids query parameter required (comma-separated)'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('ids query parameter required (comma-separated)');
   }
   
   const releaseIds = idsParam.split(',').map(id => id.trim()).filter(Boolean);
   
   if (releaseIds.length === 0) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'No valid release IDs provided'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('No valid release IDs provided');
   }
   
   // Reuse POST logic

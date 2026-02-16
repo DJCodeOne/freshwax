@@ -7,6 +7,7 @@ import { addDocument, getDocument, queryCollection } from '../../../lib/firebase
 import { BOT_USER, BOT_ANNOUNCEMENTS } from '../../../lib/chatbot';
 import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin';
 import { triggerPusher } from '../../../lib/pusher';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase and return env
 function initFirebase(locals: App.Locals) {
@@ -58,10 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const serverKey = request.headers.get('x-server-key');
       const expectedKey = env?.STREAM_SERVER_KEY || import.meta.env.STREAM_SERVER_KEY;
       if (!expectedKey || !serverKey || serverKey !== expectedKey) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Unauthorized'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.forbidden('Unauthorized');
       }
     } else {
       // Human admin calls must pass requireAdminAuth
@@ -70,10 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!streamId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Stream ID is required');
     }
 
     let messageText = message;
@@ -95,18 +90,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           messageText = BOT_ANNOUNCEMENTS.milestone(data.viewers || 100);
           break;
         default:
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Unknown announcement type'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Unknown announcement type');
       }
     }
 
     if (!messageText) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Message or announcement type is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Message or announcement type is required');
     }
 
     const result = await sendBotMessage(streamId, messageText, env);
@@ -121,10 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[bot] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send bot message',
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to send bot message');
   }
 };
 
@@ -177,9 +163,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[bot] GET Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get bot info'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get bot info');
   }
 };

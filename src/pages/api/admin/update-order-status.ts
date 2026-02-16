@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -40,10 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = updateOrderStatusSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderId, status, tracking } = parsed.data;
@@ -166,9 +163,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('Error updating order status:', error);
-    return new Response(JSON.stringify({ error: 'Failed to update order status' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update order status');
   }
 };

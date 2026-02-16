@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Helper to get admin key from environment
 function getAdminKey(locals: App.Locals): string {
@@ -45,10 +46,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const action = url.searchParams.get('action');
 
   if (action !== 'list') {
-    return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
   }
 
   try {
@@ -70,10 +68,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('[lobby-bypass] Error listing:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -98,10 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'grant') {
       if (!email) {
-        return new Response(JSON.stringify({ success: false, error: 'Email required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Email required');
       }
 
       // Find user by email in Firestore (Firebase Auth Admin SDK doesn't work on Cloudflare)
@@ -136,13 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (!targetUserId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found with that email. They need to create an account first.'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('User not found with that email. They need to create an account first.');
       }
 
       // Grant bypass - write to djLobbyBypass collection
@@ -187,10 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'revoke') {
       if (!userId) {
-        return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('User ID required');
       }
 
       // Revoke bypass from collection
@@ -217,17 +200,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid action');
     }
 
   } catch (error: unknown) {
     console.error('[lobby-bypass] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for admin credit account
 const CreditAccountSchema = z.object({
@@ -32,10 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parseResult = CreditAccountSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { userId, amount, reason, isWelcomeCredit } = parseResult.data;
 
@@ -102,9 +100,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[credit-account] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to credit account'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to credit account');
   }
 };

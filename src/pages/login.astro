@@ -22,12 +22,14 @@ const firebaseConfig = {
   appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
 };
 const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
@@ -37,6 +39,35 @@ const nonce = Astro.locals.nonce || '';
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 </head>
 <body>
+  <script is:inline>
+    (function() {
+      var originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        init = init || {};
+        var method = (init.method || 'GET').toUpperCase();
+        if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+          var url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+          var isSameOrigin = !url || url.startsWith('/') || url.startsWith(location.origin);
+          if (isSameOrigin) {
+            var meta = document.querySelector('meta[name="csrf-token"]');
+            var token = meta ? meta.getAttribute('content') : '';
+            if (token) {
+              if (init.headers instanceof Headers) {
+                if (!init.headers.has('X-CSRF-Token')) init.headers.set('X-CSRF-Token', token);
+              } else if (Array.isArray(init.headers)) {
+                var hasIt = init.headers.some(function(h) { return h[0].toLowerCase() === 'x-csrf-token'; });
+                if (!hasIt) init.headers.push(['X-CSRF-Token', token]);
+              } else {
+                init.headers = Object.assign({}, init.headers || {});
+                if (!init.headers['X-CSRF-Token']) init.headers['X-CSRF-Token'] = token;
+              }
+            }
+          }
+        }
+        return originalFetch.call(this, input, init);
+      };
+    })();
+  </script>
   <a href="#login-form" class="skip-link">Skip to login form</a>
   <main id="main-content">
   <div class="split-container">

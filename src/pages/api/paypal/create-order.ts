@@ -7,7 +7,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schemas for PayPal order creation (same structure as Stripe checkout)
 const PayPalItemSchema = z.object({
@@ -103,13 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!paypalClientId || !paypalSecret) {
       console.error('[PayPal] Missing credentials');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'PayPal not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('PayPal not configured');
     }
 
     const rawBody = await request.json();
@@ -117,10 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Zod input validation
     const parseResult = PayPalCreateOrderSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const orderData = parseResult.data;
     console.log('[PayPal] Creating order');
@@ -130,20 +121,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stockCheck = await validateStock(orderData.items);
     if (!stockCheck.available) {
       console.warn('[PayPal] Stock validation failed:', stockCheck.unavailableItems);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Some items are no longer available',
-        unavailableItems: stockCheck.unavailableItems
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Some items are no longer available');
     }
 
     // Reserve stock to prevent overselling
     reservation = await reserveStock(orderData.items, 'paypal_' + Date.now().toString(36), orderData.customer?.userId);
     if (!reservation.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: reservation.error || 'Failed to reserve stock'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest(reservation.error || 'Failed to reserve stock');
     }
 
     // SECURITY: Validate prices server-side to prevent manipulation
@@ -152,9 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (validationError) {
       if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
-      return new Response(JSON.stringify({ success: false, error: validationError }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest(validationError);
     }
 
     if (hasPriceMismatch) {
@@ -331,13 +313,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const error = await createResponse.text();
       console.error('[PayPal] Create order error:', error);
       if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to create PayPal order'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to create PayPal order');
     }
 
     const paypalResult = await createResponse.json();
@@ -403,20 +379,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       approvalUrl: approvalUrl
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[PayPal] Error:', errorMessage);
     if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };
 

@@ -1,6 +1,7 @@
 // src/pages/api/reports.ts
 import type { APIRoute } from 'astro';
 import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -82,9 +83,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       counts: { pending: pendingReports.length, reviewing: reviewingReports.length }
     }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -96,13 +95,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = data;
 
     if (!type || !REPORT_TYPES.includes(type)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid report type' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid report type');
     }
     if (!category || !REPORT_CATEGORIES.includes(category)) {
-      return new Response(JSON.stringify({ success: false, error: 'Please select a category' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Please select a category');
     }
     if (!description || description.trim().length < 10) {
-      return new Response(JSON.stringify({ success: false, error: 'Please provide a description (at least 10 characters)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Please provide a description (at least 10 characters)');
     }
 
     if (reporterId && targetId) {
@@ -126,7 +125,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }),
       ]);
       if (pendingReports.length > 0 || reviewingReports.length > 0) {
-        return new Response(JSON.stringify({ success: false, error: 'You have already reported this content' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('You have already reported this content');
       }
     }
 
@@ -150,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -173,7 +172,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   try {
     const data = await request.json();
     const { reportId, status, resolution, adminNotes, adminId } = data;
-    if (!reportId) return new Response(JSON.stringify({ success: false, error: 'Report ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    if (!reportId) return ApiErrors.badRequest('Report ID required');
 
     const updates: any = { updatedAt: new Date() };
     if (status) {
@@ -189,7 +188,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     await updateDocument('reports', reportId, updates);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -212,10 +211,10 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
     const url = new URL(request.url);
     const reportId = url.searchParams.get('id');
-    if (!reportId) return new Response(JSON.stringify({ success: false, error: 'Report ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    if (!reportId) return ApiErrors.badRequest('Report ID required');
     await deleteDocument('reports', reportId);
     return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Internal error');
   }
 };

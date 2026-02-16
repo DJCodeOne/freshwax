@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -37,18 +37,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = manageReturnPostSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { returnId, action, notes, refundAmount } = parsed.data;
 
     const returnRequest = await getDocument('returns', returnId);
     if (!returnRequest) {
-      return new Response(JSON.stringify({
-        error: 'Return not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Return not found');
     }
 
     const now = new Date().toISOString();
@@ -104,9 +100,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Process refund via Stripe
         const order = await getDocument('orders', returnRequest.orderId);
         if (!order?.paymentIntentId) {
-          return new Response(JSON.stringify({
-            error: 'Cannot refund - no payment intent found'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Cannot refund - no payment intent found');
         }
 
         const finalRefundAmount = refundAmount || returnRequest.refundAmount;
@@ -128,9 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const refundResult = await refundResponse.json();
 
         if (!refundResponse.ok) {
-          return new Response(JSON.stringify({
-            error: refundResult.error || 'Refund failed'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest(refundResult.error || 'Refund failed');
         }
 
         updateData.status = 'refunded';
@@ -163,9 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         break;
 
       default:
-        return new Response(JSON.stringify({
-          error: 'Invalid action'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid action');
     }
 
     // Update return request
@@ -211,12 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[manage-return] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      error: 'Failed to update return'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update return');
   }
 };
 
@@ -275,11 +260,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[manage-return] GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      error: 'Failed to fetch returns'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch returns');
   }
 };

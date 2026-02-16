@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -24,10 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // SECURITY: Require authentication
   const { userId, error: authError } = await verifyRequestUser(request);
   if (!userId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required', files: [] }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   try {
@@ -38,10 +36,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     if (!response.ok) {
-      return new Response(JSON.stringify({ error: 'Playlist server unavailable', files: [] }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Playlist server unavailable', 502);
     }
 
     const data = await response.json();
@@ -54,9 +49,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Playlist server error', files: [] }), {
-      status: 502,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Playlist server error', 502);
   }
 };

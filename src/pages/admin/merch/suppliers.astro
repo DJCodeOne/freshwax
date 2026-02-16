@@ -8,6 +8,7 @@ const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
+const csrfToken = Astro.locals.csrfToken || '';
 
 ---
 
@@ -16,6 +17,7 @@ export const prerender = false;
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <title>Manage Suppliers - Fresh Wax Admin</title>
   <style is:global>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -107,6 +109,7 @@ export const prerender = false;
   </style>
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <header class="header">
     <h1>👥 Manage Suppliers</h1>
     <nav class="header-nav">

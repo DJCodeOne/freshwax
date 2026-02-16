@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Viewer info structure
 interface ViewerInfo {
@@ -112,10 +113,7 @@ export const POST: APIRoute = async ({ request }) => {
     const { streamId, sessionId, action } = body;
 
     if (!streamId || !sessionId) {
-      return new Response(JSON.stringify({ error: 'Missing streamId or sessionId' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing streamId or sessionId');
     }
 
     // SECURITY: Only use user info from verified auth, not from body
@@ -157,10 +155,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
   } catch (error) {
     console.error('Heartbeat error:', error);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };
 
@@ -175,10 +170,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   const streamId = url.searchParams.get('streamId');
 
   if (!streamId) {
-    return new Response(JSON.stringify({ error: 'Missing streamId' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing streamId');
   }
 
   const count = getViewerCount(streamId);

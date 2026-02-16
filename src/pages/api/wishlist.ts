@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, getDocumentsBatch, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const WishlistSchema = z.object({
   releaseId: z.string().min(1, 'Release ID required').max(200),
@@ -21,13 +22,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Get user's wishlist
@@ -83,13 +78,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error: unknown) {
     console.error('[WISHLIST API] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get wishlist'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to get wishlist');
   }
 };
 
@@ -111,26 +100,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
     const parsed = WishlistSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { releaseId, action } = parsed.data;
 
@@ -141,10 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const customerDoc = await getDocument('users', userId);
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       if (currentWishlist.length >= 500) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Wishlist is full (max 500 items)'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Wishlist is full (max 500 items)');
       }
 
       // Atomic arrayUnion prevents lost items under concurrent writes
@@ -223,23 +196,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action. Use: add, remove, toggle, or check'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action. Use: add, remove, toggle, or check');
 
   } catch (error: unknown) {
     console.error('[WISHLIST API] Error:', error);
     console.error('[WISHLIST API] Error stack:', error instanceof Error ? error.stack : undefined);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update wishlist',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update wishlist');
   }
 };

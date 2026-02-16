@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument, setDocument, queryCollection } from '../../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 const InitUserSchema = z.object({
   action: z.enum(['login', 'register', 'google-login', 'google-register']),
@@ -43,25 +44,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Verify the Firebase ID token
   const { userId, email: authEmail, error: authError } = await verifyRequestUser(request);
   if (!userId || authError) {
-    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   let rawBody: any;
   try {
     rawBody = await request.json();
   } catch {
-    return new Response(JSON.stringify({ success: false, error: 'Invalid JSON body' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid JSON body');
   }
 
   const parsed = InitUserSchema.safeParse(rawBody);
   if (!parsed.success) {
-    return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid request');
   }
 
   const {
@@ -122,13 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       if (nameCheck.length > 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'display_name_taken',
-          message: `The display name "${googleDisplayName}" is already taken. Please register with email and choose a different display name.`
-        }), {
-          status: 409, headers: { 'Content-Type': 'application/json' }
-        });
+        return errorResponse(`The display name "${googleDisplayName}" is already taken. Please register with email and choose a different display name.`, 409);
       }
 
       // Create the user document
@@ -204,9 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // ==================== EMAIL REGISTRATION ====================
     if (action === 'register') {
       if (!displayName || displayName.length < 2) {
-        return new Response(JSON.stringify({ success: false, error: 'Display name is required (min 2 chars)' }), {
-          status: 400, headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Display name is required (min 2 chars)');
       }
 
       // Build user document
@@ -324,17 +311,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('[auth/init-user] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to initialize user profile'
-    }), {
-      status: 500, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to initialize user profile');
   }
 };

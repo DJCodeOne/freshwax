@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
@@ -36,10 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = sendVerificationEmailSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { email } = parsed.data;
@@ -50,10 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = env.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: 'Email service not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Email service not configured');
     }
 
     // First, look up the user by email using Firebase REST API
@@ -130,12 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!resendResponse.ok) {
       console.error('[SendVerification] Resend error:', resendResult);
-      return new Response(JSON.stringify({
-        error: 'Failed to send email'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to send email');
     }
 
     console.log('[SendVerification] Email sent to:', email, 'ID:', resendResult.id);
@@ -151,11 +140,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[SendVerification] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      error: 'Failed to send verification email'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to send verification email');
   }
 };

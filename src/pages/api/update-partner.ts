@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
+import { ApiErrors } from '../../lib/api-utils';
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -34,13 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify Firebase token instead of trusting cookies
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const data = await request.json();
@@ -48,26 +43,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const partnerId = verifiedUserId;
 
     if (id !== partnerId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authorized to update this profile'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Not authorized to update this profile');
     }
     
     // Get partner document
     const partnerData = await getDocument('artists', partnerId);
 
     if (!partnerData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Partner not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Partner not found');
     }
     
     // Build clean update object (only allowed fields)
@@ -101,13 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!serviceAccountKey) {
       console.error('[update-partner] Service account not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Service account not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Use service account for the write operation
@@ -123,12 +100,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('Error updating partner:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to update profile' 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update profile');
   }
 };

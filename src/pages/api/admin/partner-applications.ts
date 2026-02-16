@@ -2,7 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -167,13 +167,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, applicationId, source } = body;
 
     if (!applicationId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Application ID required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Application ID required');
     }
 
     // Try to find in pendingRoleRequests first, then partnerApplications
@@ -186,13 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!application) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Application not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Application not found');
     }
 
     // Normalize field names from pendingRoleRequests format
@@ -326,22 +314,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Invalid action' 
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error) {
     console.error('Error processing application:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to process application' 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process application');
   }
 };

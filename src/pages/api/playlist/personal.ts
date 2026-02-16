@@ -6,6 +6,7 @@ import type { APIContext } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 function initEnv(locals: App.Locals) {
   const env = locals.runtime.env;
@@ -46,13 +47,7 @@ export async function GET({ request, locals }: APIContext) {
     const userId = url.searchParams.get('userId');
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing userId'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing userId');
     }
 
     // Get user tier info
@@ -95,13 +90,7 @@ export async function GET({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[PersonalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 
@@ -127,45 +116,21 @@ export async function POST({ request, locals }: APIContext) {
     const { userId, items } = body;
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing userId'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing userId');
     }
 
     // Verify user token matches userId
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only save your own playlist'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only save your own playlist');
     }
 
     if (!Array.isArray(items)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Items must be an array'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Items must be an array');
     }
 
     // Get user tier info and enforce track limit
@@ -173,27 +138,13 @@ export async function POST({ request, locals }: APIContext) {
 
     if (items.length > trackLimit) {
       const upgradeMsg = !isPlus ? ' Go Plus for up to 1,000 tracks.' : '';
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Playlist exceeds ${trackLimit} track limit.${upgradeMsg}`,
-        isPlus,
-        trackLimit
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Playlist exceeds ${trackLimit} track limit.${upgradeMsg}');
     }
 
     // Save to D1
     if (!db) {
       console.error('[PersonalPlaylist] D1 database not available');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Database not available'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Database not available');
     }
 
     const playlistJson = JSON.stringify(items);
@@ -218,12 +169,6 @@ export async function POST({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[PersonalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }

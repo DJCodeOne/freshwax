@@ -8,11 +8,13 @@ export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
 Astro.response.headers.set('Pragma', 'no-cache');
 const nonce = Astro.locals.nonce || '';
+const csrfToken = Astro.locals.csrfToken || '';
 ---
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content={csrfToken} />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <title>Book a Slot | Fresh Wax</title>
@@ -32,6 +34,7 @@ const nonce = Astro.locals.nonce || '';
   </script>
 </head>
 <body>
+  <script is:inline src="/csrf-protect.js"></script>
   <!-- Loading -->
   <div id="loadingGate" class="loading-gate">
     <div class="loader"></div>

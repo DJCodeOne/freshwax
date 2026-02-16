@@ -5,6 +5,7 @@ import { getDocument, clearCache, verifyRequestUser } from '../../lib/firebase-r
 import { normalizeRelease } from '../../lib/releases';
 import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -41,13 +42,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   if (!releaseId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Release ID required'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Release ID required');
   }
 
   log.info('[get-release] Fetching:', releaseId, noCache ? '(nocache)' : '', isAdminUser ? '(admin)' : '');
@@ -62,25 +57,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     if (!release) {
       log.info('[get-release] Not found:', releaseId);
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Release not found' 
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
     
     // Only check status for public requests (non-admin)
     if (!isAdminUser && release.status !== 'live') {
       log.info('[get-release] Not live:', releaseId, release.status);
-      return new Response(JSON.stringify({ 
-        success: false,
-        error: 'Release not available' 
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not available');
     }
     
     const normalized = normalizeRelease(release, releaseId);
@@ -122,12 +105,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     log.error('[get-release] Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: 'Failed to fetch release'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch release');
   }
 };

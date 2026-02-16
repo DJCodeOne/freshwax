@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Simple MD5 implementation for Cloudflare Workers
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -241,9 +242,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // SECURITY: Require authentication and verify userId matches
     const { userId: authUserId, error: authError } = await verifyRequestUser(request);
     if (!authUserId || authError) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const url = new URL(request.url);
@@ -253,16 +252,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('User ID required');
     }
 
     if (authUserId !== userId) {
-      return new Response(JSON.stringify({ success: false, error: 'Access denied' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Access denied');
     }
 
     // Get list of conversations for this user
@@ -288,10 +282,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Get messages for specific conversation
     if (!targetId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Target ID required for messages'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Target ID required for messages');
     }
 
     const channelId = getDmChannelId(userId, targetId);
@@ -317,10 +308,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/dm] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get messages'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get messages');
   }
 };
 
@@ -338,10 +326,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { senderId, senderName, receiverId, receiverName, text, senderAvatar } = data;
 
     if (!senderId || !receiverId || !text?.trim()) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Sender ID, receiver ID, and message text required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Sender ID, receiver ID, and message text required');
     }
 
     // SECURITY: Verify the requesting user owns this senderId
@@ -350,17 +335,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
 
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== senderId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only send DMs as yourself'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only send DMs as yourself');
     }
 
     const cleanText = text.trim().substring(0, 500);
@@ -422,10 +401,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/dm] POST Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send message'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to send message');
   }
 };
 
@@ -445,10 +421,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const action = url.searchParams.get('action'); // 'clear' or 'delete'
 
     if (!userId || !targetId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID and target ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('User ID and target ID required');
     }
 
     // SECURITY: Verify the requesting user owns this userId
@@ -457,17 +430,11 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
 
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only delete your own conversations'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only delete your own conversations');
     }
 
     const channelId = getDmChannelId(userId, targetId);
@@ -496,9 +463,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/dm] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete conversation'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to delete conversation');
   }
 };

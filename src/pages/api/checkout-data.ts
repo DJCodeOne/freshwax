@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 // Zod schema for checkout data save
 const CheckoutDataSchema = z.object({
@@ -31,13 +32,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { userId, email, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const userDoc = await getDocument('users', userId);
@@ -75,13 +70,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   } catch (error) {
     console.error('[checkout-data] GET error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to load customer data'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to load customer data');
   }
 };
 
@@ -98,13 +87,7 @@ export const POST: APIRoute = async ({ request }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const rawBody = await request.json();
@@ -112,10 +95,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Zod input validation - only allows known fields via strict mode
     const parseResult = CheckoutDataSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const sanitized: Record<string, string> = {};
@@ -140,12 +120,6 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error) {
     console.error('[checkout-data] POST error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save customer data'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save customer data');
   }
 };

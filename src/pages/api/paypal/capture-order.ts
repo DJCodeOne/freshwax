@@ -8,7 +8,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for PayPal capture request
 const PayPalCaptureSchema = z.object({
@@ -68,23 +68,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'PayPal not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('PayPal not configured');
     }
 
     const rawBody = await request.json();
 
     const parseResult = PayPalCaptureSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { paypalOrderId, orderData: clientOrderData, idToken } = parseResult.data;
 
@@ -114,13 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyErr);
       // Don't proceed - we can't verify if this order was already processed
       // Customer can retry when Firebase is back
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unable to verify order status. Please try again in a moment.'
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Unable to verify order status. Please try again in a moment.', 503);
     }
 
     // SECURITY: Retrieve order data from Firebase - never trust client-submitted data
@@ -154,23 +139,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // SECURITY: Reject if no server-side order exists.
         // The pending order is created during create-order and must exist for a legitimate flow.
         console.error('[PayPal] SECURITY: No pending order found for', paypalOrderId, '- rejecting capture');
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Order session expired or invalid. Please try again.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Order session expired or invalid. Please try again.');
       }
     } catch (fetchErr) {
       console.error('[PayPal] Error fetching pending order:', fetchErr);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Could not verify order data. Please try again.'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Could not verify order data. Please try again.');
     }
 
     // P0 FIX: Validate stock BEFORE capturing payment to prevent overselling
@@ -179,26 +152,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const stockCheck = await validateStock(orderData.items || []);
       if (!stockCheck.available) {
         console.error('[PayPal] Stock unavailable before capture:', stockCheck.unavailableItems);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Some items are no longer available',
-          unavailableItems: stockCheck.unavailableItems
-        }), {
-          status: 409,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.conflict('Some items are no longer available');
       }
     } catch (stockErr) {
       console.error('[PayPal] Stock validation error (Firebase may be unreachable):', stockErr);
       // Fail closed: if we can't verify stock (Firebase down), don't capture payment
       // Payment hasn't been captured yet so customer isn't charged - they can retry
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unable to verify stock availability. Please try again in a moment.'
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Unable to verify stock availability. Please try again in a moment.', 503);
     }
 
     // Get access token
@@ -218,13 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!captureResponse.ok) {
       const error = await captureResponse.text();
       console.error('[PayPal] Capture error:', error);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to capture PayPal payment'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to capture PayPal payment');
     }
 
     const captureResult = await captureResponse.json();
@@ -233,13 +187,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify payment was captured successfully
     if (captureResult.status !== 'COMPLETED') {
       console.error('[PayPal] Payment not completed:', captureResult.status);
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Payment ${captureResult.status.toLowerCase()}`
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Payment was not completed. Please try again.');
     }
 
     // Get capture details
@@ -420,13 +368,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error('[PayPal] ORPHANED PAYMENT - Order creation failed after capture.',
         'PayPal Order:', paypalOrderId, 'Capture:', captureId, 'Amount:', capturedAmount,
         'Customer:', orderData.customer?.email, 'Error:', result.error);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment was captured but order creation failed. Your payment is safe — our team has been notified and will process your order shortly.'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Payment was captured but order creation failed. Your payment is safe — our team has been notified and will process your order shortly.');
     }
 
     console.log('[PayPal] Order created:', result.orderNumber);
@@ -649,19 +591,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       captureId: captureId
     }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[PayPal] Error:', errorMessage);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };
 

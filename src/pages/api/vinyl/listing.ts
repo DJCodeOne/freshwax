@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const vinylListingPostSchema = z.object({
   action: z.enum(['create', 'update', 'publish', 'unpublish', 'delete']),
@@ -98,10 +99,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (listingId) {
       const listing = await getDocument('vinylListings', listingId);
       if (!listing) {
-        return new Response(JSON.stringify({ success: false, error: 'Listing not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Listing not found');
       }
       return new Response(JSON.stringify({ success: true, listing }), {
         status: 200,
@@ -111,10 +109,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Seller's listings - use direct Firestore REST query for efficiency
     if (!sellerId) {
-      return new Response(JSON.stringify({ success: false, error: 'Seller ID or Listing ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Seller ID or Listing ID required');
     }
 
     // Query listings by sellerId (single read operation)
@@ -183,10 +178,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/listing GET] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch listings' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch listings');
   }
 };
 
@@ -210,30 +202,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify the user is authenticated
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
 
     const parsed = vinylListingPostSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action, sellerId, sellerName, listingId, ...data } = parsed.data;
 
     // Verify the authenticated user matches the sellerId
     if (verifiedUserId !== sellerId) {
-      return new Response(JSON.stringify({ success: false, error: 'You can only manage your own listings' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only manage your own listings');
     }
 
     switch (action) {
@@ -241,10 +224,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Validate data
         const validation = validateListing(data);
         if (!validation.valid) {
-          return new Response(JSON.stringify({ success: false, error: validation.error }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest(validation.error);
         }
 
         const newId = generateListingId();
@@ -327,25 +307,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'update': {
         if (!listingId) {
-          return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Listing ID required');
         }
 
         // Verify ownership
         const existing = await getDocument('vinylListings', listingId);
         if (!existing) {
-          return new Response(JSON.stringify({ success: false, error: 'Listing not found' }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.notFound('Listing not found');
         }
         if (existing.sellerId !== sellerId) {
-          return new Response(JSON.stringify({ success: false, error: 'Not authorized to edit this listing' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Not authorized to edit this listing');
         }
 
         // Build update object
@@ -408,10 +379,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const testData = { ...existing, ...updateData };
         const validation = validateListing(testData);
         if (!validation.valid) {
-          return new Response(JSON.stringify({ success: false, error: validation.error }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest(validation.error);
         }
 
         await updateDocument('vinylListings', listingId, updateData);
@@ -424,26 +392,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'publish': {
         if (!listingId) {
-          return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Listing ID required');
         }
 
         const existing = await getDocument('vinylListings', listingId);
         if (!existing || existing.sellerId !== sellerId) {
-          return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Not authorized');
         }
 
         // Must have at least one image
         if (!existing.images || existing.images.length === 0) {
-          return new Response(JSON.stringify({ success: false, error: 'At least one image required to publish' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('At least one image required to publish');
         }
 
         // Go live immediately - no approval needed
@@ -461,18 +420,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'unpublish': {
         if (!listingId) {
-          return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Listing ID required');
         }
 
         const existing = await getDocument('vinylListings', listingId);
         if (!existing || existing.sellerId !== sellerId) {
-          return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Not authorized');
         }
 
         await updateDocument('vinylListings', listingId, {
@@ -488,18 +441,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'delete': {
         if (!listingId) {
-          return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Listing ID required');
         }
 
         const existing = await getDocument('vinylListings', listingId);
         if (!existing || existing.sellerId !== sellerId) {
-          return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
-            status: 403,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.forbidden('Not authorized');
         }
 
         // Soft delete
@@ -517,17 +464,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid action');
     }
 
   } catch (error) {
     console.error('[vinyl/listing POST] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };

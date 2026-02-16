@@ -7,6 +7,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -67,36 +68,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Require authentication
     const { userId, error: authError } = await verifyRequestUser(request);
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
     const body = await request.json();
     const { orderId, releaseId, trackIndex, fileType } = body;
 
     // Validate required fields
     if (!orderId || releaseId === undefined || trackIndex === undefined || !fileType) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required fields: orderId, releaseId, trackIndex, fileType'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing required fields: orderId, releaseId, trackIndex, fileType');
     }
 
     if (!['mp3', 'wav', 'artwork'].includes(fileType)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid fileType. Must be mp3, wav, or artwork'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid fileType. Must be mp3, wav, or artwork');
     }
 
     log.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
@@ -105,37 +88,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const order = await getDocument('orders', orderId);
 
     if (!order) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Order not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     // Verify user owns this order
     const orderUserId = order.customer?.userId || order.userId || order.customerId;
     if (orderUserId !== userId) {
       log.error('[presign-download] Unauthorized access attempt:', { orderId, orderUserId, requestingUserId: userId });
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Unauthorized');
     }
 
     // SECURITY: Verify payment is completed before allowing download
     if (order.paymentStatus !== 'completed') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment not yet completed for this order'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Payment not yet completed for this order');
     }
 
     // Find the item in the order that matches the releaseId
@@ -145,26 +110,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!item) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Item not found in order'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Item not found in order');
     }
 
     // Validate trackIndex is a non-negative integer for non-artwork requests
     if (fileType !== 'artwork') {
       const idx = Number(trackIndex);
       if (!Number.isInteger(idx) || idx < 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid trackIndex: must be a non-negative integer'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid trackIndex: must be a non-negative integer');
       }
     }
 
@@ -191,13 +144,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else {
           // Full release - validate trackIndex bounds
           if (trackIndex >= orderTracks.length) {
-            return new Response(JSON.stringify({
-              success: false,
-              error: `Track index ${trackIndex} out of bounds (release has ${orderTracks.length} tracks)`
-            }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
-            });
+            return ApiErrors.badRequest('Track index ${trackIndex} out of bounds (release has ${orderTracks.length} tracks)');
           }
           const orderTrack = orderTracks[trackIndex];
           if (orderTrack) {
@@ -213,13 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const releaseData = await getDocument('releases', releaseId);
 
       if (!releaseData) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Release not found'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Release not found');
       }
 
       if (fileType === 'artwork') {
@@ -240,13 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else {
           // Validate trackIndex bounds against release tracks
           if (trackIndex >= tracks.length) {
-            return new Response(JSON.stringify({
-              success: false,
-              error: `Track index ${trackIndex} out of bounds (release has ${tracks.length} tracks)`
-            }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
-            });
+            return ApiErrors.badRequest('Track index ${trackIndex} out of bounds (release has ${tracks.length} tracks)');
           }
           // For full release purchases, use trackIndex
           const track = tracks[trackIndex];
@@ -259,13 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!fileUrl) {
       log.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
-      return new Response(JSON.stringify({
-        success: false,
-        error: `${fileType} file not available for this item`
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('${fileType} file not available for this item');
     }
 
     const config = getR2Config(env);
@@ -276,25 +205,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!objectKey) {
       // If it's not a recognized R2 URL, reject the request
       log.error('[presign-download] Unrecognized URL format:', fileUrl);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid file URL format'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid file URL format');
     }
 
     // Validate R2 configuration
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
       log.error('[presign-download] Missing R2 credentials');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Server configuration error'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Server configuration error');
     }
 
     // Create S3 client for R2
@@ -329,12 +246,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[presign-download] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to generate download URL',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to generate download URL');
   }
 };

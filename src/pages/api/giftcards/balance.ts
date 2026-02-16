@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, updateDocumentConditional, verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for applying credit to an order
 const ApplyCreditSchema = z.object({
@@ -24,10 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     // Get user credit document
@@ -61,10 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[giftcards/balance] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get balance'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get balance');
   }
 };
 
@@ -80,20 +75,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const rawBody = await request.json();
 
     const parseResult = ApplyCreditSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { amount, orderId, orderNumber } = parseResult.data;
 
@@ -105,19 +94,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const creditData = await getDocument('userCredits', userId);
 
       if (!creditData) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'No credit balance found'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('No credit balance found');
       }
 
       const currentBalance = creditData.balance || 0;
 
       if (amount > currentBalance) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Insufficient credit balance'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Insufficient credit balance');
       }
 
       const newBalance = currentBalance - amount;
@@ -172,16 +155,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Could not apply credit due to concurrent access. Please try again.'
-    }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.conflict('Could not apply credit due to concurrent access. Please try again.');
 
   } catch (error) {
     console.error('[giftcards/balance] Error applying credit:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to apply credit'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to apply credit');
   }
 };

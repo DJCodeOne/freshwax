@@ -7,6 +7,7 @@ import { createOrder, validateStock } from '../../lib/order-utils';
 import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
+import { ApiErrors } from '../../lib/api-utils';
 
 // Zod schemas for free/credit order
 const FreeOrderItemSchema = z.object({
@@ -129,10 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parseResult = FreeOrderSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const orderData = parseResult.data;
 
@@ -148,27 +146,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Reject orders with items that failed price validation
     const failedItems = validatedItems.filter((item: any) => item.priceValidationFailed);
     if (failedItems.length > 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unable to verify item prices. Please try again.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Unable to verify item prices. Please try again.');
     }
 
     // SECURITY: Always require authentication for free/credit orders
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     // Verify the userId in the order matches the authenticated user
     if (orderData.customer?.userId && orderData.customer.userId !== verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User mismatch'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('User mismatch');
     }
 
     // SECURITY: If credit is applied, verify balance covers the order
@@ -176,31 +165,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const creditData = await getDocument('userCredits', verifiedUserId);
       const actualBalance = creditData?.balance || 0;
       if (actualBalance < validatedTotal) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Insufficient credit balance'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Insufficient credit balance');
       }
     }
 
     // SECURITY: Validate stock availability before processing order
     const stockCheck = await validateStock(validatedItems);
     if (!stockCheck.available) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Some items are no longer available',
-        unavailableItems: stockCheck.unavailableItems
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Some items are no longer available');
     }
 
     // Reserve and immediately convert stock for free orders
     const { reserveStock, convertReservation } = await import('../../lib/order-utils');
     const reservation = await reserveStock(validatedItems, 'free_' + Date.now().toString(36), verifiedUserId);
     if (!reservation.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: reservation.error || 'Failed to reserve stock'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest(reservation.error || 'Failed to reserve stock');
     }
 
     // SECURITY: Idempotency check - prevent duplicate free orders
@@ -236,13 +215,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify this is actually a free/credit-paid order (no payment due)
     const paymentDue = Math.max(0, validatedTotal - appliedCredit);
     if (paymentDue > 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This endpoint is only for free or fully credit-paid orders'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('This endpoint is only for free or fully credit-paid orders');
     }
 
     // SECURITY: Deduct credit BEFORE creating order to prevent race condition
@@ -255,10 +228,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         console.log('[FreeOrder] Credit deducted before order creation:', appliedCredit);
       } catch (creditErr) {
         console.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Failed to apply credit. Please try again.'
-        }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.serverError('Failed to apply credit. Please try again.');
       }
     }
 
@@ -419,24 +389,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }
       }
-      return new Response(JSON.stringify({
-        success: false,
-        error: result.error || 'Failed to create order'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError(result.error || 'Failed to create order');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[complete-free-order] Error:', errorMessage);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };

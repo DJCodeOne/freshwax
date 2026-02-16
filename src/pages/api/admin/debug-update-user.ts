@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -72,10 +73,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -151,14 +149,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const patchResult = await patchResponse.json();
 
     if (!patchResponse.ok) {
-      return new Response(JSON.stringify({
-        error: 'PATCH failed',
-        status: patchResponse.status,
-        result: patchResult
-      }, null, 2), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('PATCH failed');
     }
 
     // Verify by fetching again
@@ -186,11 +177,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }, null, 2), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

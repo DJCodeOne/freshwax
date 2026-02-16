@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -59,10 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Get single post
       const post = await getDocument('blog-posts', postId);
       if (!post) {
-        return new Response(JSON.stringify({ success: false, error: 'Post not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Post not found');
       }
       return new Response(JSON.stringify({ success: true, post: { id: postId, ...post } }), {
         status: 200,
@@ -91,10 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[blog API] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -114,10 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = blogCreateSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { title, slug, content, excerpt, featuredImage, category, tags, status, author, seoTitle, seoDescription } = parsed.data;
@@ -159,10 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[blog API] Create error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -182,10 +170,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = blogUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { id, ...updateData } = parsed.data;
@@ -193,10 +178,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     // Check post exists
     const existing = await getDocument('blog-posts', id);
     if (!existing) {
-      return new Response(JSON.stringify({ success: false, error: 'Post not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Post not found');
     }
 
     const now = new Date().toISOString();
@@ -216,10 +198,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[blog API] Update error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -241,10 +220,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const postId = url.searchParams.get('id');
 
     if (!postId) {
-      return new Response(JSON.stringify({ success: false, error: 'Post ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Post ID is required');
     }
 
     await deleteDocument('blog-posts', postId);
@@ -256,9 +232,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[blog API] Delete error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

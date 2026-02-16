@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -35,10 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { streamId, action } = data;
     
     if (!streamId) {
-      return new Response(JSON.stringify({ success: false, error: 'Stream ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Stream ID required');
     }
     
     if (action === 'schedule') {
@@ -93,16 +91,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
     
-    return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
   } catch (error: unknown) {
     console.error('Chat cleanup error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -182,10 +174,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Chat cleanup check error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 

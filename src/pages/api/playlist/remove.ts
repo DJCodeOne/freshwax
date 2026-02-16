@@ -2,7 +2,7 @@
 // Remove item from user's playlist
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
 
 export const prerender = false;
@@ -15,13 +15,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Get itemId from body (safe since we verify userId from token)
@@ -29,39 +23,21 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const itemId = body?.itemId;
 
     if (!itemId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Item ID required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Item ID required');
     }
 
     // Get current playlist
     const existingPlaylist = await getDocument('userPlaylists', userId) as UserPlaylist | null;
 
     if (!existingPlaylist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Playlist not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Playlist not found');
     }
 
     // Remove item from queue
     const updatedQueue = existingPlaylist.queue.filter(item => item.id !== itemId);
 
     if (updatedQueue.length === existingPlaylist.queue.length) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Item not found in queue'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Item not found in queue');
     }
 
     // Adjust currentIndex if needed
@@ -98,12 +74,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[playlist/remove] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to remove from playlist'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to remove from playlist');
   }
 };

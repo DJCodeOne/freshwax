@@ -7,7 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 export const prerender = false;
@@ -99,10 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: 'Resend API key not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Resend API key not configured');
     }
 
     // Test mode: send email to testEmail only
@@ -135,10 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       } else {
         const error = await response.text();
-        return new Response(JSON.stringify({ error: `Failed to send test email: ${error}` }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.serverError('Failed to send test email: ${error}');
       }
     }
 
@@ -147,10 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const serviceAccountKey = getServiceAccountKey(env);
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Fetch all users
@@ -265,11 +256,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[plus-upgrade-all] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -22,10 +23,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const db = env?.DB;
 
   if (!db) {
-    return new Response(JSON.stringify({ error: 'D1 database not available' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('D1 database not available');
   }
 
   try {
@@ -36,10 +34,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       ).bind(releaseId).first();
 
       if (!result) {
-        return new Response(JSON.stringify({ error: 'Release not found in D1' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('Release not found in D1');
       }
 
       const data = JSON.parse(result.data);
@@ -78,11 +73,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

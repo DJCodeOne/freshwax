@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 
 import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -52,18 +52,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { payoutData, updateArtistBalance } = body;
 
     if (!payoutData) {
-      return new Response(JSON.stringify({ success: false, error: 'payoutData required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('payoutData required');
     }
 
     const serviceAccountKey = getServiceAccountKey(env);
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     const now = new Date().toISOString();
@@ -112,12 +106,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[create-pending-payout] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocumentsBatch, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -28,13 +29,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
 
   if (authError || !verifiedUserId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: authError || 'Authentication required'
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized(authError || 'Authentication required');
   }
 
   // User can only fetch their own orders
@@ -206,12 +201,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error) {
     log.error('[get-orders] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch orders',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch orders');
   }
 };

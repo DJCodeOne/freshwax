@@ -7,6 +7,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -51,14 +52,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
     if (!clientEmail || !privateKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Firebase service account not configured',
-        hint: 'FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY must be set'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Firebase service account not configured');
     }
 
     // Build service account key JSON from individual parts
@@ -81,14 +75,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5000
       });
     } catch (orderErr) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to fetch orders: ' + (orderErr instanceof Error ? orderErr.message : 'Unknown error'),
-        hint: 'Check that the service account has Firestore access'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to fetch orders: ');
     }
 
     console.log(`[Migration] Found ${orders.length} orders`);
@@ -266,12 +253,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Migration] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Migration failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Migration failed');
   }
 };

@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
+import { ApiErrors } from '../../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -13,10 +14,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
 
   if (!supplierId && !accessCode) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Supplier ID or access code required'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Supplier ID or access code required');
   }
 
   const env = locals.runtime.env;
@@ -39,10 +37,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (!supplier) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Supplier not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Supplier not found');
     }
 
     // Get payouts
@@ -111,9 +106,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] Supplier payouts error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get payouts'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get payouts');
   }
 };

@@ -229,6 +229,8 @@ declare namespace App {
     runtime: CloudflareRuntime;
     /** CSP nonce generated per-request in middleware */
     nonce: string;
+    /** CSRF token for double-submit cookie pattern (set in middleware) */
+    csrfToken: string;
   }
 }
 

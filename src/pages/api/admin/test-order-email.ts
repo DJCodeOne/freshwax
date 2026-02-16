@@ -9,6 +9,7 @@ import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -47,13 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const sendEmail = url.searchParams.get('send') === 'yes';
 
   if (!orderNumber) {
-    return new Response(JSON.stringify({
-      error: 'Missing orderNumber',
-      usage: '/api/admin/test-order-email/?orderNumber=FW-xxx&email=test@example.com&send=yes'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing orderNumber');
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -69,10 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     if (orders.length === 0) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     const order = orders[0];
@@ -179,11 +171,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[test-order-email] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

@@ -2,6 +2,7 @@
 // DJ Takeover request system - uses Firebase REST API
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Pusher configuration
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -44,10 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const type = url.searchParams.get('type');
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('User ID required');
     }
 
     // SECURITY: Verify the requesting user matches the userId
@@ -55,17 +53,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const authHeader = request.headers.get('Authorization');
     const idToken = authHeader?.replace('Bearer ', '') || undefined;
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const verifiedUid = await verifyUserToken(idToken);
     if (!verifiedUid || verifiedUid !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only check your own takeover requests'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only check your own takeover requests');
     }
 
     if (type === 'incoming') {
@@ -123,10 +115,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/takeover] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get takeover status'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get takeover status');
   }
 };
 
@@ -139,10 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, requesterId, requesterName, requesterAvatar, targetDjId, targetDjName } = data;
 
     if (!requesterId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Requester ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Requester ID required');
     }
 
     // SECURITY: Verify the requesting user owns this requesterId
@@ -151,17 +137,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
 
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== requesterId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only create takeover requests as yourself'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only create takeover requests as yourself');
     }
 
     const now = new Date().toISOString();
@@ -169,10 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     switch (action) {
       case 'request': {
         if (!targetDjId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Target DJ ID required'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Target DJ ID required');
         }
 
         const requestData = {
@@ -212,10 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const requestDoc = await getDocument('djTakeoverRequests', requesterId);
 
         if (!requestDoc) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Request not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Request not found');
         }
 
         await updateDocument('djTakeoverRequests', requesterId, {
@@ -250,10 +224,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const requestDoc = await getDocument('djTakeoverRequests', requesterId);
 
         if (!requestDoc) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Request not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Request not found');
         }
 
         await updateDocument('djTakeoverRequests', requesterId, {
@@ -300,18 +271,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid action'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid action');
     }
 
   } catch (error) {
     console.error('[dj-lobby/takeover] POST Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process takeover request'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to process takeover request');
   }
 };
 
@@ -344,9 +309,6 @@ export const DELETE: APIRoute = async ({ locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/takeover] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Cleanup failed'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Cleanup failed');
   }
 };

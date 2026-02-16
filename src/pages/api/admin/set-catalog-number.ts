@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,14 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const confirm = url.searchParams.get('confirm');
 
   if (!catalogNumber) {
-    return new Response(JSON.stringify({
-      error: 'Missing catalogNumber',
-      usage: '/api/admin/set-catalog-number/?releaseId=xxx&catalogNumber=ULR001&confirm=yes',
-      altUsage: '/api/admin/set-catalog-number/?releaseName=Curiosity&catalogNumber=ULR001&confirm=yes'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing catalogNumber');
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -41,10 +35,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -72,30 +63,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       );
 
       if (!found) {
-        return new Response(JSON.stringify({
-          error: `No release found matching "${releaseName}"`,
-          availableReleases: releases.map((r: any) => ({
-            id: r.id,
-            releaseName: r.releaseName,
-            artistName: r.artistName,
-            currentCatalogNumber: r.catalogNumber || r.labelCode || '(none)'
-          }))
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound(`No release found matching "${releaseName}"`);
       }
 
       targetReleaseId = found.id;
     }
 
     if (!targetReleaseId) {
-      return new Response(JSON.stringify({
-        error: 'Must provide releaseId or releaseName'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Must provide releaseId or releaseName');
     }
 
     // Get current release data
@@ -105,10 +80,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const release = releases.find((r: any) => r.id === targetReleaseId);
 
     if (!release) {
-      return new Response(JSON.stringify({ error: 'Release not found', releaseId: targetReleaseId }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     if (confirm !== 'yes') {
@@ -142,11 +114,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

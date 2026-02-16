@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const updateOrderSchema = z.object({
@@ -68,10 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = updateOrderSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderId, updates } = parsed.data;
@@ -79,20 +76,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get service account token for write permission
     const serviceAccountKey = getServiceAccountKey(env);
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
     const token = await getServiceAccountToken(serviceAccountKey);
 
     // Get current order
     const order = await getDocument('orders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ success: false, error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     // Build update object
@@ -174,12 +165,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[update-order] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

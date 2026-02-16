@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const djModerationPostSchema = z.object({
   action: z.enum(['ban', 'unban', 'hold', 'release', 'kick']),
@@ -58,10 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const action = url.searchParams.get('action');
 
   if (action !== 'list') {
-    return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
   }
 
   try {
@@ -100,10 +98,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('[dj-moderation] Error listing:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -127,10 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = djModerationPostSchema.safeParse(data);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action, email, userId, reason } = parsed.data;
@@ -166,21 +158,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'ban') {
       if (!email) {
-        return new Response(JSON.stringify({ success: false, error: 'Email required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Email required');
       }
 
       const user = await getUserIdFromEmail(email);
       if (!user) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found with that email'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('User not found with that email');
       }
 
       // Add to moderation collection
@@ -223,10 +206,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'unban') {
       if (!userId) {
-        return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('User ID required');
       }
 
       await deleteDocument('djModeration', userId);
@@ -243,21 +223,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'hold') {
       if (!email) {
-        return new Response(JSON.stringify({ success: false, error: 'Email required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Email required');
       }
 
       const user = await getUserIdFromEmail(email);
       if (!user) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'User not found with that email'
-        }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.notFound('User not found with that email');
       }
 
       // Add to moderation collection with hold status
@@ -300,10 +271,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'release') {
       if (!userId) {
-        return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('User ID required');
       }
 
       await deleteDocument('djModeration', userId);
@@ -320,10 +288,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } else if (action === 'kick') {
       if (!userId) {
-        return new Response(JSON.stringify({ success: false, error: 'User ID required' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('User ID required');
       }
 
       // End any active stream but don't ban
@@ -337,13 +302,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
       if (activeStreams.length === 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'DJ is not currently streaming'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('DJ is not currently streaming');
       }
 
       for (const stream of activeStreams) {
@@ -375,17 +334,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
 
     } else {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid action');
     }
 
   } catch (error: unknown) {
     console.error('[dj-moderation] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

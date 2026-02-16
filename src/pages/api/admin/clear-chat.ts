@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 import {
   checkRateLimit,
   checkBatchLimit,
@@ -81,14 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!batchCheck.allowed) {
       console.warn(`[Admin] Batch limit exceeded for clear-chat: ${batchCheck.error}`);
-      return new Response(JSON.stringify({
-        success: false,
-        error: batchCheck.error,
-        maxAllowed: batchCheck.maxAllowed
-      }), {
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.tooManyRequests(batchCheck.error);
     }
 
     console.log(`[Admin] Starting to delete ${chatMessages.length} chat messages (limit: ${requestLimit})`);
@@ -133,13 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Clear chat error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to clear chat'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to clear chat');
   }
 };
 
@@ -177,12 +165,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error: unknown) {
     console.error('Get chat count error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get chat count'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to get chat count');
   }
 };

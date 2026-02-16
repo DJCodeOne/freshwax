@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 import { logError } from '../../lib/error-logger';
+import { ApiErrors } from '../../lib/api-utils';
 
 const LogErrorSchema = z.object({
   message: z.string().min(1, 'Missing message').max(2000),
@@ -30,10 +31,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = LogErrorSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { message, stack, url, level, metadata } = parsed.data;
 

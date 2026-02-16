@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const updateUserRoleParamsSchema = z.object({
   userId: z.string().min(1),
@@ -37,13 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const parsed = updateUserRoleParamsSchema.safeParse(params);
   if (!parsed.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      usage: '/api/admin/update-user-role/?userId=xxx&role=artist&value=false&confirm=yes'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid request');
   }
 
   const { userId, role, value, confirm } = parsed.data;
@@ -53,10 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -75,10 +67,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const user = await saGetDocument(serviceAccountKey, projectId, 'users', userId);
 
     if (!user) {
-      return new Response(JSON.stringify({ error: 'User not found', userId }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('User not found');
     }
 
     const currentRoles = user.roles || {};
@@ -121,11 +110,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

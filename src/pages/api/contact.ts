@@ -6,6 +6,7 @@ import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { escapeHtml } from '../../lib/escape-html';
 import { emailWrapper } from '../../lib/email-wrapper';
+import { ApiErrors } from '../../lib/api-utils';
 
 const ContactSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -33,27 +34,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!apiKey) {
       console.error('[Contact] RESEND_API_KEY not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Email service not configured'
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Email service not configured');
     }
 
     const resend = new Resend(apiKey);
     const body = await request.json();
     const parsed = ContactSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { name, email, subject, message, orderNumber, reportType, reportedUser } = parsed.data;
 
@@ -123,12 +111,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Contact] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send message. Please try again.'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to send message. Please try again.');
   }
 };

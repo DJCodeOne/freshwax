@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const livestreamManageSchema = z.object({
   action: z.enum(['start', 'stop', 'update', 'schedule', 'dj_ready', 'slot_expired', 'claim_slot']),
@@ -28,30 +29,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !authenticatedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const data = await request.json();
 
     const parsed = livestreamManageSchema.safeParse(data);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { action, djId, streamId, ...streamData } = parsed.data;
 
     // SECURITY: Verify the authenticated user matches the claimed djId
     if (authenticatedUserId !== djId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only manage your own streams'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only manage your own streams');
     }
     
     const now = new Date();
@@ -62,18 +54,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Check if DJ is approved
         const artistDoc = await getDocument('artists', djId);
         if (!artistDoc) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'DJ not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('DJ not found');
         }
 
         const artistData = artistDoc;
         if (!artistData.approved) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'You must be an approved DJ to go live'
-          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.forbidden('You must be an approved DJ to go live');
         }
 
         // Check if DJ already has a live stream
@@ -86,11 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         if (existingLive.length > 0) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'You already have a live stream running',
-            existingStreamId: existingLive[0].id
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('You already have a live stream running');
         }
 
         // Generate stream ID - we'll create it manually
@@ -167,27 +149,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       case 'stop': {
         if (!streamId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Stream ID is required'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Stream ID is required');
         }
 
         const stream = await getDocument('livestreams', streamId);
 
         if (!stream) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Stream not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Stream not found');
         }
 
         // Verify ownership
         if (stream.djId !== djId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'You can only stop your own stream'
-          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.forbidden('You can only stop your own stream');
         }
 
         // End the stream
@@ -224,19 +197,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       case 'update': {
         if (!streamId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Stream ID is required'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Stream ID is required');
         }
 
         const stream = await getDocument('livestreams', streamId);
 
         if (!stream) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Stream not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Stream not found');
         }
 
         // Update allowed fields
@@ -305,27 +272,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Mark DJ as ready in their slot
         const { slotId } = data;
         if (!slotId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Slot ID is required'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Slot ID is required');
         }
         
         const slotData = await getDocument('livestreamSlots', slotId);
 
         if (!slotData) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Slot not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Slot not found');
         }
 
         // Verify this is the DJ's slot
         if (slotData.djId !== djId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'This is not your slot'
-          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.forbidden('This is not your slot');
         }
 
         // Mark as ready
@@ -350,28 +308,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Mark slot as expired/available for takeover
         const { slotId } = data;
         if (!slotId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Slot ID is required'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('Slot ID is required');
         }
         
         const slotData = await getDocument('livestreamSlots', slotId);
 
         if (!slotData) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Slot not found'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('Slot not found');
         }
 
         // Only the original DJ or an admin can mark their slot as expired
         // (This gets called when the 3-minute grace period ends)
         if (slotData.djId !== djId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Cannot expire another DJ\'s slot'
-          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.forbidden('Cannot expire another DJ slot');
         }
 
         // Mark as available for takeover
@@ -407,10 +356,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         if (availableSlots.length === 0) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'No slots available'
-          }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.notFound('No slots available');
         }
 
         const availableSlot = availableSlots[0];
@@ -420,10 +366,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Check if DJ is approved
         const artistDoc = await getDocument('artists', djId);
         if (!artistDoc || !artistDoc.approved) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'You must be an approved DJ to claim slots'
-          }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.forbidden('You must be an approved DJ to claim slots');
         }
 
         const artistData = artistDoc;
@@ -432,10 +375,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Double-check still available
         const freshSlot = await getDocument('livestreamSlots', slotId);
         if (!freshSlot || freshSlot.status !== 'available') {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Slot no longer available'
-          }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.conflict('Slot no longer available');
         }
 
         // Claim the slot
@@ -465,17 +405,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       
       default:
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid action'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid action');
     }
     
   } catch (error) {
     console.error('[livestream/manage] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to manage stream'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to manage stream');
   }
 };

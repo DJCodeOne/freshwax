@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { addDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -77,10 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stripe not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notConfigured('Stripe');
     }
 
     const rawBody = await request.json();
@@ -88,10 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate input with Zod
     const parseResult = StripeCheckoutSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const orderData = parseResult.data;
@@ -100,20 +94,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stockCheck = await validateStock(orderData.items);
     if (!stockCheck.available) {
       console.warn('[Stripe] Stock validation failed:', stockCheck.unavailableItems);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Some items are no longer available',
-        unavailableItems: stockCheck.unavailableItems
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Some items are no longer available');
     }
 
     // Reserve stock to prevent overselling
     reservation = await reserveStock(orderData.items, 'stripe_' + Date.now().toString(36), orderData.customer?.userId);
     if (!reservation.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: reservation.error || 'Failed to reserve stock'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest(reservation.error || 'Failed to reserve stock');
     }
 
     // SECURITY: Validate prices server-side to prevent manipulation
@@ -121,9 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (validationError) {
       if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
-      return new Response(JSON.stringify({ success: false, error: validationError }), {
-        status: 400, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest(validationError);
     }
 
     if (hasPriceMismatch) {
@@ -377,10 +362,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const errorData = await stripeResponse.json();
       console.error('[Stripe] Create session error:', errorData);
       if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
-      return new Response(JSON.stringify({
-        success: false,
-        error: errorData.error?.message || 'Failed to create checkout session'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to create checkout session');
     }
 
     const session = await stripeResponse.json();
@@ -389,17 +371,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       success: true,
       sessionId: session.id,
       checkoutUrl: session.url
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Stripe] Error:', errorMessage);
     // Release any reservation made before the error
     if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };
 

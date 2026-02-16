@@ -7,6 +7,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -44,33 +45,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const confirm = url.searchParams.get('confirm');
 
   if (!orderId) {
-    return new Response(JSON.stringify({
-      error: 'Missing orderId',
-      usage: '/api/admin/fix-order-payout/?orderId=xxx&confirm=yes'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing orderId');
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
   const serviceAccountKey = getServiceAccountKey(env);
   if (!serviceAccountKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   try {
     // Get order
     const order = await getDocument('orders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     // Check if payout already exists for this order
@@ -95,10 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     );
 
     if (digitalItems.length === 0) {
-      return new Response(JSON.stringify({ error: 'No digital items in order' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No digital items in order');
     }
 
     // Calculate payouts by artist
@@ -142,10 +128,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (Object.keys(artistPayouts).length === 0) {
-      return new Response(JSON.stringify({ error: 'Could not determine artist for any items' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Could not determine artist for any items');
     }
 
     if (confirm !== 'yes') {
@@ -232,11 +215,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[fix-order-payout] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

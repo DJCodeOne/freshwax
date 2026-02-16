@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { verifyUserToken } from '../../lib/firebase-rest';
 import { getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,20 +21,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE as KVNamespace | undefined;
 
     if (!kv) {
-      return new Response(JSON.stringify({ success: false, error: 'Storage not available' }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Storage not available', 503);
     }
 
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
 
     if (!userId) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing userId' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing userId');
     }
 
     // SECURITY: Require authentication and verify userId matches
@@ -41,16 +36,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const idToken = authHeader?.replace('Bearer ', '') || '';
 
     if (!idToken) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({ success: false, error: 'Not authorized' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Not authorized');
     }
 
     // Get user's code from KV
@@ -88,12 +79,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[get-referral-code] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get code'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to get code');
   }
 };

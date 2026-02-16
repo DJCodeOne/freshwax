@@ -9,6 +9,7 @@ import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from 
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
 import { kvDelete } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -64,25 +65,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const { mixId, folderPath } = await request.json();
 
     if (!mixId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Mix ID is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Mix ID is required');
     }
 
     log.info('[delete-mix] Deleting mix:', mixId, 'for user:', userId);
@@ -103,13 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify the user owns this mix
     if (mixData.userId !== userId) {
       log.error('[delete-mix] User', userId, 'does not own mix', mixId, '(owner:', mixData.userId + ')');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You do not have permission to delete this mix'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You do not have permission to delete this mix');
     }
 
     // SECURITY: Always derive R2 path from verified mix document, never from client input
@@ -191,13 +174,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     log.error('[delete-mix] Error:', error);
 
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to delete mix'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete mix');
   }
 };
 // Support DELETE method with query params
@@ -206,13 +183,7 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
   const mixId = url.searchParams.get('id');
 
   if (!mixId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Mix ID is required'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Mix ID is required');
   }
 
   // Create a mock request with JSON body for the POST handler

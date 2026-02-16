@@ -6,7 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { getAdminKey } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
 
 export const prerender = false;
@@ -75,10 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!isAdmin) {
     const { userId, error: authError } = await verifyRequestUser(request);
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
   }
 
@@ -87,10 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!r2Config.accountId || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
       log.error('R2 credentials not configured');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Storage not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Storage not configured');
     }
 
     const body = await request.json();
@@ -103,19 +97,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } = body;
 
     if (!files || !Array.isArray(files) || files.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No files specified'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('No files specified');
     }
 
     // Validate all file types
     for (const file of files) {
       if (!ALLOWED_TYPES[file.contentType]) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: `Unsupported file type: ${file.contentType}. Supported: MP3, WAV, FLAC, AIFF, M4A, JPG, PNG, WEBP, ZIP`
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Unsupported file type: ${file.contentType}. Supported: MP3, WAV, FLAC, AIFF, M4A, JPG, PNG, WEBP, ZIP');
       }
     }
 
@@ -193,9 +181,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('Failed to generate presigned URLs:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to generate upload URLs'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to generate upload URLs');
   }
 };

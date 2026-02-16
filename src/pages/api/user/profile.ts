@@ -3,6 +3,7 @@
 // SECURITY: Requires authentication - user can only view their own profile
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -18,13 +19,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     // User can only fetch their own profile
@@ -60,12 +55,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[user/profile] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch user profile'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch user profile');
   }
 };

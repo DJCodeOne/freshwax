@@ -7,6 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const recordPayoutSchema = z.object({
   orderId: z.string().min(1),
@@ -52,10 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = recordPayoutSchema.safeParse(bodyData);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderId, notes } = parsed.data;
@@ -63,10 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get order
     const order = await getDocument('orders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     console.log('[admin] Recording manual payout for order:', order.orderNumber || orderId);
@@ -219,11 +214,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin] Record payout error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to record payout'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to record payout');
   }
 };

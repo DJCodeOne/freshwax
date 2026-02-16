@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,10 +21,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
   const db = env?.DB;
   if (!db) {
-    return new Response(JSON.stringify({ success: false, error: 'D1 not available' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return ApiErrors.notConfigured('D1');
   }
 
   const url = new URL(request.url);
@@ -86,13 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : 'Query failed',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return ApiErrors.serverError('Failed to query error logs');
   }
 };
 

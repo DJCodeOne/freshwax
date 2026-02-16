@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../../../lib/firebase-rest';
+import { ApiErrors } from '../../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -12,10 +13,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100);
 
   if (!userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'User ID required'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('User ID required');
   }
 
   const env = locals.runtime.env;
@@ -24,25 +22,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   // SECURITY: Verify the authenticated user matches the requested userId
   if (authUserId !== userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Forbidden'
-    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.forbidden('Forbidden');
   }
 
   try {
     const user = await getDocument('users', userId);
 
     if (!user) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('User not found');
     }
 
     // Get crate seller payouts
@@ -113,9 +105,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] User payouts error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get payouts'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get payouts');
   }
 };

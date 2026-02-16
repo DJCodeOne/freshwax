@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 // Zod schema for admin gift card creation
@@ -191,10 +191,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Zod input validation
     const parseResult = AdminGiftCardSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const data = parseResult.data;
     const {
@@ -212,10 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate recipient email
     const targetEmail = recipientType === 'gift' ? recipientEmail : buyerEmail;
     if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid recipient email address'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid recipient email address');
     }
 
     // Generate unique code
@@ -357,9 +351,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[giftcards/purchase] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create gift card'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to create gift card');
   }
 };

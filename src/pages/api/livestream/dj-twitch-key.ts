@@ -5,6 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 function timingSafeEqual(a: string, b: string): boolean {
   const maxLen = Math.max(a.length, b.length);
@@ -28,23 +29,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const expectedServerKey = env?.STREAM_SERVER_KEY || import.meta.env.STREAM_SERVER_KEY;
     if (!expectedServerKey || !serverKey || !timingSafeEqual(serverKey, expectedServerKey)) {
       console.warn('[dj-twitch-key] Unauthorized access attempt');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Unauthorized');
     }
 
     if (!streamKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'streamKey required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('streamKey required');
     }
 
     // Find the slot by stream key

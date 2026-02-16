@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const RedeemAccessKeySchema = z.object({
   code: z.string().min(1, 'Access code is required').max(100),
@@ -32,76 +33,41 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const data = await request.json();
     const parsed = RedeemAccessKeySchema.safeParse(data);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { code, userId, userEmail, userName } = parsed.data;
 
     // SECURITY: Verify authentication matches userId
     const { userId: authUserId, error: authError } = await verifyRequestUser(request);
     if (!authUserId || authError) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
     if (authUserId !== userId) {
-      return new Response(JSON.stringify({ success: false, error: 'User ID does not match authentication' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('User ID does not match authentication');
     }
 
     // Get the quick access key document
     const keyDoc = await getDocument('system', 'quickAccessKey');
 
     if (!keyDoc) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid access code'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid access code');
     }
 
     // Validate the code matches (case-insensitive)
     if (keyDoc.code.toUpperCase() !== code.toUpperCase()) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid access code'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid access code');
     }
 
     // Check if key is active
     if (!keyDoc.active) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This access code has been revoked'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('This access code has been revoked');
     }
 
     // Check if key has expired
     if (keyDoc.expiresAt) {
       const expiryDate = new Date(keyDoc.expiresAt);
       if (expiryDate < new Date()) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'This access code has expired'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('This access code has expired');
       }
     }
 
@@ -110,25 +76,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const alreadyRedeemed = usedBy.some((u: any) => u.userId === userId);
 
     if (alreadyRedeemed) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You have already redeemed this access code'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('You have already redeemed this access code');
     }
 
     // Check if user already has bypass access (check djLobbyBypass which is publicly readable)
     const existingBypass = await getDocument('djLobbyBypass', userId);
     if (existingBypass) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You already have DJ lobby access'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('You already have DJ lobby access');
     }
 
     const now = new Date().toISOString();
@@ -189,9 +143,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[redeem-access-key] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

@@ -7,6 +7,7 @@ import { getDocument, updateDocument, setDocument, deleteDocument, queryCollecti
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // ============================================
 // CONTENT MODERATION
@@ -381,10 +382,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const after = url.searchParams.get('after'); // For pagination
     
     if (!streamId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stream ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Stream ID is required');
     }
     
     // Note: firebase-rest doesn't support startAfter, so we'll skip pagination for now
@@ -431,10 +429,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[livestream/chat] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get messages'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get messages');
   }
 };
 
@@ -452,7 +447,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Verify authenticated user
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   try {
@@ -462,10 +457,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const userId = authUserId;
 
     if (!streamId || !userId || !message) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing required fields'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Missing required fields');
     }
     
     // Special case: playlist-global is always allowed for DJ waitlist chat
@@ -484,10 +476,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (!streamDoc || !isStreamLive) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Stream is not live'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Stream is not live');
       }
     }
     
@@ -495,10 +484,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (type !== 'giphy') {
       const moderationResult = moderateMessage(message);
       if (!moderationResult.allowed) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: moderationResult.reason
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest(moderationResult.reason);
       }
     }
     
@@ -517,10 +503,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const lastMessage = recentMessages[0];
         const timeSince = Date.now() - new Date(lastMessage.createdAt).getTime();
         if (timeSince < 1000) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'Slow down! Wait a moment before sending another message.'
-          }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.tooManyRequests('Slow down! Wait a moment before sending another message.');
         }
       }
     } catch (rateLimitError) {
@@ -693,10 +676,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[livestream/chat] POST Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send message',
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to send message');
   }
 };
 
@@ -707,7 +687,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   // Verify authenticated user
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   try {
@@ -715,10 +695,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const messageId = url.searchParams.get('messageId');
 
     if (!messageId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Message ID is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Message ID is required');
     }
 
     // Check if the verified user is admin or owns the message
@@ -726,10 +703,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const userIsAdmin = await isAdmin(authUserId);
 
     if (!userIsAdmin && chatMessage?.userId !== authUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authorized to delete this message'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Not authorized to delete this message');
     }
 
     // Mark as moderated rather than delete
@@ -749,9 +723,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[livestream/chat] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete message'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to delete message');
   }
 };

@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -61,10 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Require authenticated user
   const { userId, error: authError } = await verifyRequestUser(request);
   if (authError || !userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Authentication required'
-    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   const r2Config = getR2Config(env);
@@ -79,58 +77,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const duration = parseFloat(formData.get('duration') as string || '0');
 
     if (!file || file.size === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'No file provided'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('No file provided');
     }
 
     if (!sellerId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Seller ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Seller ID required');
     }
 
     // Verify seller owns this upload
     if (sellerId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only upload audio for your own listings'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only upload audio for your own listings');
     }
 
     // Validate file type - must be MP3
     if (file.type !== 'audio/mpeg' && file.type !== 'audio/mp3') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid file type. Only MP3 files are allowed. Please convert your audio to MP3 128kbps before uploading.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid file type. Only MP3 files are allowed. Please convert your audio to MP3 128kbps before uploading.');
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `File too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)}MB allowed (90 seconds at 128kbps).`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('File too large. Maximum ${MAX_FILE_SIZE / (1024 * 1024)}MB allowed (90 seconds at 128kbps).');
     }
 
     // Validate duration if provided
     if (duration > 0 && duration > MAX_DURATION_SECONDS) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Audio too long. Maximum ${MAX_DURATION_SECONDS} seconds (1:30) allowed.`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Audio too long. Maximum ${MAX_DURATION_SECONDS} seconds (1:30) allowed.');
     }
 
     // Estimate duration from file size as backup check
     const estimatedDuration = estimateDuration(file.size, EXPECTED_BITRATE);
     if (estimatedDuration > MAX_DURATION_SECONDS * 1.5) { // 50% tolerance for bitrate variance
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Audio appears to be too long (estimated ${Math.round(estimatedDuration)}s). Maximum 90 seconds allowed.`
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Audio appears to be too long (estimated ${Math.round(estimatedDuration)}s). Maximum 90 seconds allowed.');
     }
 
     const audioBuffer = await file.arrayBuffer();
@@ -169,12 +146,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[vinyl/upload-audio] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to upload audio'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to upload audio');
   }
 };

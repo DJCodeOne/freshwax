@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
+import { ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -24,10 +25,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
 
     if (!verifiedUserId || authError) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const artistId = verifiedUserId;
@@ -35,10 +33,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     // Get artist document for summary stats
     const artist = await getDocument('artists', artistId);
     if (!artist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Artist not found');
     }
 
     const url = new URL(request.url);
@@ -97,9 +92,6 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] Payouts error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch payouts'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to fetch payouts');
   }
 };

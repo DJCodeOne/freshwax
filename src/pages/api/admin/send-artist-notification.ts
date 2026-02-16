@@ -9,7 +9,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton, detailBox, esc as escWrap } from '../../../lib/email-wrapper';
 
 export const prerender = false;
@@ -102,13 +102,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const send = url.searchParams.get('send') === 'yes';
 
   if (!orderNumber) {
-    return new Response(JSON.stringify({
-      error: 'Missing orderNumber',
-      usage: '/api/admin/send-artist-notification/?orderNumber=FW-xxx&send=yes'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing orderNumber');
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -125,10 +119,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     if (orders.length === 0) {
-      return new Response(JSON.stringify({ error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     const order = orders[0];
@@ -138,10 +129,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     );
 
     if (digitalItems.length === 0) {
-      return new Response(JSON.stringify({ error: 'No digital items in order' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No digital items in order');
     }
 
     // Get pending payouts for this order to get actual amounts
@@ -202,10 +190,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (Object.keys(artistEmails).length === 0) {
-      return new Response(JSON.stringify({ error: 'Could not find artist email for any items' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Could not find artist email for any items');
     }
 
     const results: any = {
@@ -227,10 +212,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: 'Resend API key not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Resend API key not configured');
     }
 
     // Send emails
@@ -281,11 +263,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[send-artist-notification] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

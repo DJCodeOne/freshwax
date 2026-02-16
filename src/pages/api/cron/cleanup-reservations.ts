@@ -8,6 +8,7 @@
 import type { APIRoute } from 'astro';
 
 import { cleanupExpiredReservations } from '../../../lib/order-utils';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -28,10 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     (adminKey && xAdminKey === adminKey);
 
   if (!isAuthorized) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Unauthorized');
   }
 
   try {
@@ -46,10 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
   } catch (err: unknown) {
     console.error('[Cleanup Reservations] Error:', err instanceof Error ? err.message : String(err));
-    return new Response(JSON.stringify({ error: 'Cleanup failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Cleanup failed');
   }
 };
 

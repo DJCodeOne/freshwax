@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const deleteOrdersSchema = z.object({
   orderIds: z.array(z.string().min(1)).min(1).max(50),
@@ -24,13 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     body = await request.json();
   } catch {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid JSON body'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid JSON body');
   }
 
   // Check admin auth (supports Authorization header, X-Admin-Key header, or adminKey in body)
@@ -40,13 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const parsed = deleteOrdersSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { orderIds } = parsed.data;
@@ -79,12 +68,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[delete-orders] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

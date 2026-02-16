@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const UserProfileUpdateSchema = z.object({
   firstName: z.string().max(200).optional(),
@@ -32,13 +33,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { userId, email, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const userDoc = await getDocument('users', userId);
@@ -81,13 +76,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   } catch (error) {
     console.error('[user-profile] GET error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to load user profile'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to load user profile');
   }
 };
 
@@ -104,26 +93,13 @@ export const POST: APIRoute = async ({ request }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const body = await request.json();
     const parsed = UserProfileUpdateSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     // Validate and sanitize input - only allow known profile fields
@@ -153,12 +129,6 @@ export const POST: APIRoute = async ({ request }) => {
 
   } catch (error) {
     console.error('[user-profile] POST error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save profile data'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save profile data');
   }
 };

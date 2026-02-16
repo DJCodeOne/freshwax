@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { queryCollection } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const CheckDisplayNameSchema = z.object({
   name: z.string().min(2, 'Display name must be at least 2 characters').max(50),
@@ -24,13 +25,7 @@ export const GET: APIRoute = async ({ request }) => {
   const url = new URL(request.url);
   const parsed = CheckDisplayNameSchema.safeParse({ name: url.searchParams.get('name') ?? '' });
   if (!parsed.success) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid request',
-      details: parsed.error.issues.map(i => i.message)
-    }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid request');
   }
   const { name } = parsed.data;
 
@@ -58,11 +53,6 @@ export const GET: APIRoute = async ({ request }) => {
     });
   } catch (error: unknown) {
     console.error('[check-display-name] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to check display name'
-    }), {
-      status: 500, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to check display name');
   }
 };

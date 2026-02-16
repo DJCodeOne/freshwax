@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getLiveReleases, CACHE_TTL } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -121,13 +122,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     log.error('Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false,
-      error: 'Failed to fetch suggestions',
-      suggestions: []
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch suggestions');
   }
 };

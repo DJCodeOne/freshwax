@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
+import { ApiErrors } from '../../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -14,10 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Stripe not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -27,10 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { supplierId, accessCode } = body;
 
     if (!supplierId && !accessCode) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Supplier ID or access code required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Supplier ID or access code required');
     }
 
     // Get supplier
@@ -47,17 +42,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!supplier) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Supplier not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Supplier not found');
     }
 
     if (!supplier.stripeConnectId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Supplier has no Connect account. Create one first.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Supplier has no Connect account. Create one first.');
     }
 
     // Create fresh onboarding link
@@ -75,10 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] Supplier refresh link error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create onboarding link'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to create onboarding link');
   }
 };
 

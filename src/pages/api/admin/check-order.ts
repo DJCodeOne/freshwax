@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,10 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const order = await getDocument('orders', orderId);
 
     if (!order) {
-      return new Response(JSON.stringify({ success: false, error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     // Calculate what payout should be
@@ -69,12 +67,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

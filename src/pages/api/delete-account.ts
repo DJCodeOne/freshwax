@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, deleteDocument, queryCollection, verifyUserToken } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const DeleteAccountSchema = z.object({
   userId: z.string().min(1, 'userId is required').max(200),
@@ -45,26 +46,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = DeleteAccountSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { userId, idToken } = parsed.data;
 
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only delete your own account'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only delete your own account');
     }
 
     log.info('[delete-account] Starting GDPR deletion for user:', userId);
@@ -135,13 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check if at least user doc existed
     if (!results.users?.success && !results.artists?.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Account not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Account not found');
     }
 
     return new Response(JSON.stringify({
@@ -155,13 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[delete-account] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete account'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete account');
   }
 };
 

@@ -18,7 +18,7 @@ import {
 } from '../../lib/subscription';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { isAdmin, initAdminEnv } from '../../lib/admin';
-import { fetchWithTimeout } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -61,25 +61,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const paramResult = SubscriptionGetSchema.safeParse(rawParams);
   if (!paramResult.success) {
-    return new Response(JSON.stringify({
-      error: 'Invalid request',
-      details: paramResult.error.issues
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid request');
   }
   const { userId, action } = paramResult.data;
 
   // Verify the authenticated user matches the requested userId
   const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
   if (authError || !verifiedUserId) {
-    return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   if (verifiedUserId !== userId) {
-    return new Response(JSON.stringify({ success: false, error: 'You can only view your own subscription' }), {
-      status: 403, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('You can only view your own subscription');
   }
 
   try {
@@ -207,10 +200,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to check subscription'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to check subscription');
   }
 };
 
@@ -226,25 +216,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parseResult = SubscriptionPostSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { action, userId, ...data } = parseResult.data;
 
     // SECURITY: Verify the requesting user owns this userId
     const { verifyUserToken } = await import('../../lib/firebase-rest');
     if (!idToken) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({ success: false, error: 'You can only modify your own subscription data' }), {
-        status: 403, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only modify your own subscription data');
     }
 
     // Action: Record a mix upload
@@ -317,9 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { paymentId, paymentMethod, userName } = data;
 
       if (!paymentId) {
-        return new Response(JSON.stringify({ success: false, error: 'Payment ID required' }), {
-          status: 400, headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Payment ID required');
       }
 
       // SECURITY: Verify payment is real and completed before activating Pro
@@ -329,9 +310,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (method === 'stripe') {
         const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
         if (!stripeSecretKey) {
-          return new Response(JSON.stringify({ success: false, error: 'Payment verification unavailable' }), {
-            status: 500, headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.serverError('Payment verification unavailable');
         }
         try {
           const Stripe = (await import('stripe')).default;
@@ -340,41 +319,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (paymentId.startsWith('pi_')) {
             const pi = await stripe.paymentIntents.retrieve(paymentId);
             if (pi.status !== 'succeeded') {
-              return new Response(JSON.stringify({ success: false, error: 'Payment not completed' }), {
-                status: 402, headers: { 'Content-Type': 'application/json' }
-              });
+              return errorResponse('Payment not completed', 402);
             }
             // Verify payment amount matches Pro price (amount is in pence)
             if (pi.amount < PRO_ANNUAL_PRICE * 100) {
               log.error('Payment amount too low:', pi.amount, 'expected at least', PRO_ANNUAL_PRICE * 100);
-              return new Response(JSON.stringify({ success: false, error: 'Payment amount insufficient' }), {
-                status: 402, headers: { 'Content-Type': 'application/json' }
-              });
+              return errorResponse('Payment amount insufficient', 402);
             }
           } else if (paymentId.startsWith('cs_')) {
             const session = await stripe.checkout.sessions.retrieve(paymentId);
             if (session.payment_status !== 'paid') {
-              return new Response(JSON.stringify({ success: false, error: 'Payment not completed' }), {
-                status: 402, headers: { 'Content-Type': 'application/json' }
-              });
+              return errorResponse('Payment not completed', 402);
             }
             // Verify session amount matches Pro price (amount_total is in pence)
             if ((session.amount_total || 0) < PRO_ANNUAL_PRICE * 100) {
               log.error('Session amount too low:', session.amount_total, 'expected at least', PRO_ANNUAL_PRICE * 100);
-              return new Response(JSON.stringify({ success: false, error: 'Payment amount insufficient' }), {
-                status: 402, headers: { 'Content-Type': 'application/json' }
-              });
+              return errorResponse('Payment amount insufficient', 402);
             }
           } else {
-            return new Response(JSON.stringify({ success: false, error: 'Invalid payment ID format' }), {
-              status: 400, headers: { 'Content-Type': 'application/json' }
-            });
+            return ApiErrors.badRequest('Invalid payment ID format');
           }
         } catch (stripeErr: unknown) {
           log.error('Stripe verification failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr));
-          return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
-            status: 402, headers: { 'Content-Type': 'application/json' }
-          });
+          return errorResponse('Payment verification failed', 402);
         }
       } else if (method === 'paypal') {
         const paypalClientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
@@ -383,9 +350,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const paypalBase = paypalMode === 'live' ? 'https://api-m.paypal.com' : 'https://api-m.sandbox.paypal.com';
 
         if (!paypalClientId || !paypalSecret) {
-          return new Response(JSON.stringify({ success: false, error: 'Payment verification unavailable' }), {
-            status: 500, headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.serverError('Payment verification unavailable');
         }
         try {
           const authResponse = await fetchWithTimeout(`${paypalBase}/v1/oauth2/token`, {
@@ -402,28 +367,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, 10000);
           const orderData = await orderResponse.json();
           if (orderData.status !== 'COMPLETED') {
-            return new Response(JSON.stringify({ success: false, error: 'PayPal payment not completed' }), {
-              status: 402, headers: { 'Content-Type': 'application/json' }
-            });
+            return errorResponse('PayPal payment not completed', 402);
           }
           // Verify PayPal amount matches Pro price
           const ppAmount = parseFloat(orderData.purchase_units?.[0]?.amount?.value || '0');
           if (ppAmount < PRO_ANNUAL_PRICE) {
             log.error('PayPal amount too low:', ppAmount, 'expected at least', PRO_ANNUAL_PRICE);
-            return new Response(JSON.stringify({ success: false, error: 'Payment amount insufficient' }), {
-              status: 402, headers: { 'Content-Type': 'application/json' }
-            });
+            return errorResponse('Payment amount insufficient', 402);
           }
         } catch (paypalErr: unknown) {
           log.error('PayPal verification failed:', paypalErr instanceof Error ? paypalErr.message : String(paypalErr));
-          return new Response(JSON.stringify({ success: false, error: 'Payment verification failed' }), {
-            status: 402, headers: { 'Content-Type': 'application/json' }
-          });
+          return errorResponse('Payment verification failed', 402);
         }
       } else {
-        return new Response(JSON.stringify({ success: false, error: 'Unknown payment method' }), {
-          status: 400, headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Unknown payment method');
       }
 
       // SECURITY: Prevent payment ID reuse across users
@@ -433,9 +390,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       if (existingUsers.length > 0 && existingUsers[0].id !== userId) {
         log.error('Payment ID already used by another user:', paymentId);
-        return new Response(JSON.stringify({ success: false, error: 'Payment already used' }), {
-          status: 400, headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Payment already used');
       }
 
       log.info('Payment verified for', userId, '- paymentId:', paymentId, '- method:', method);
@@ -492,15 +447,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    return new Response(JSON.stringify({ success: false, error: 'Unknown action' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Unknown action');
 
   } catch (error) {
     log.error('Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process request'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to process request');
   }
 };

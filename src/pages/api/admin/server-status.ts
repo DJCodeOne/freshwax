@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -84,13 +85,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[ServerStatus] Error:', error);
-    return new Response(JSON.stringify({
-      online: false,
-      status: 'error',
-      error: 'Server status check failed'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server status check failed');
   }
 };

@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { saUpdateDocument, getServiceAccountToken } from '../../../lib/firebase-service-account';
+import { ApiErrors } from '../../../lib/api-utils';
 
 function timingSafeEqual(a: string, b: string): boolean {
   const maxLen = Math.max(a.length, b.length);
@@ -23,17 +24,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Require admin key for security (timing-safe comparison)
     const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
     if (!adminKey || !expectedAdminKey || !timingSafeEqual(adminKey, expectedAdminKey)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Unauthorized'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Unauthorized');
     }
 
     if (!slotId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'slotId is required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('slotId is required');
     }
 
     // Build service account key from env vars
@@ -70,9 +65,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[update-slot-title] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update title'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update title');
   }
 };

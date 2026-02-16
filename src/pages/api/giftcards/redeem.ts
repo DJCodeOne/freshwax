@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for gift card redemption
 const RedeemSchema = z.object({
@@ -28,20 +29,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify authentication - get userId from token, not request body
     const { userId, error: authError } = await verifyRequestUser(request);
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'You must be logged in to redeem a gift card'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'You must be logged in to redeem a gift card');
     }
 
     const rawBody = await request.json();
 
     const parseResult = RedeemSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { code } = parseResult.data;
 
@@ -49,10 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate code format
     if (!isValidCodeFormat(normalizedCode)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid Gift Card Code'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid Gift Card Code');
     }
 
     // Find the gift card
@@ -62,10 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (giftCardResults.length === 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Gift card not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Gift card not found');
     }
 
     const giftCard = giftCardResults[0];
@@ -73,44 +62,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check if already redeemed
     if (giftCard.redeemedBy) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This gift card has already been redeemed'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This gift card has already been redeemed');
     }
 
     // Check if active
     if (!giftCard.isActive) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This gift card is no longer active'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This gift card is no longer active');
     }
 
     // Check if expired
     if (isExpired(giftCard.expiresAt)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This gift card has expired'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This gift card has expired');
     }
 
     // Check balance
     if (giftCard.currentBalance <= 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This gift card has no remaining balance'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This gift card has no remaining balance');
     }
 
     // Check if this is a referral code (restricted to Pro upgrade only)
     if (giftCard.restrictedTo === 'pro_upgrade') {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'This is a referral code that can only be used for Pro subscription upgrades. Apply it during checkout when upgrading to Pro.',
-        isReferralCode: true,
-        restrictedTo: 'pro_upgrade'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('This is a referral code that can only be used for Pro subscription upgrades. Apply it during checkout when upgrading to Pro.');
     }
 
     const amountToCredit = giftCard.currentBalance;
@@ -126,10 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Re-fetch to get _updateTime for safe conditional write
         const refetchedCard = await getDocument('giftCards', giftCardId);
         if (!refetchedCard || refetchedCard.redeemedBy) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: 'This gift card has already been redeemed'
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest('This gift card has already been redeemed');
         }
         updateTime = refetchedCard._updateTime;
       }
@@ -142,10 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }, updateTime);
     } catch (redeemErr: unknown) {
       if (redeemErr instanceof Error && redeemErr.message.includes('CONFLICT')) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'This gift card was just redeemed. Please try again.'
-        }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.conflict('This gift card was just redeemed. Please try again.');
       }
       throw redeemErr;
     }
@@ -210,9 +176,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[giftcards/redeem] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to redeem gift card'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to redeem gift card');
   }
 };

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const sendApprovalEmailSchema = z.object({
@@ -34,10 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = sendApprovalEmailSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { email, name, type } = parsed.data;
@@ -162,10 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!response.ok) {
       console.error('[send-approval-email] Resend error:', result);
-      return new Response(JSON.stringify({
-        success: false,
-        error: result.message || 'Failed to send email'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError(result.message || 'Failed to send email');
     }
 
     console.log('[send-approval-email] Email sent successfully to:', email);
@@ -177,9 +171,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[send-approval-email] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send approval email'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to send approval email');
   }
 };

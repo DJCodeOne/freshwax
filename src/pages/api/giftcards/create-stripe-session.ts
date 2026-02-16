@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for gift card Stripe session creation
 const GiftCardStripeSchema = z.object({
@@ -38,29 +38,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify the requesting user's identity
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Stripe not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Stripe not configured');
     }
 
     const rawBody = await request.json();
 
     const parseResult = GiftCardStripeSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const data = parseResult.data;
     const {
@@ -76,10 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // SECURITY: Ensure the authenticated user matches the buyer
     if (buyerUserId !== verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only purchase gift cards for your own account'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only purchase gift cards for your own account');
     }
 
     const numAmount = parseInt(String(amount));
@@ -87,10 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate recipient email for gift type
     const targetEmail = recipientType === 'gift' ? recipientEmail : buyerEmail;
     if (!targetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid recipient email address'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid recipient email address');
     }
 
     console.log('[GiftCard Stripe] Creating session for:', buyerEmail, 'amount:', numAmount);
@@ -152,10 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
       console.error('[GiftCard Stripe] Create session error:', errorData);
-      return new Response(JSON.stringify({
-        success: false,
-        error: errorData.error?.message || 'Failed to create checkout session'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError(errorData.error?.message || 'Failed to create checkout session');
     }
 
     const session = await stripeResponse.json();
@@ -170,9 +152,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[GiftCard Stripe] Error:', errorMessage);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'An internal error occurred'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('An internal error occurred');
   }
 };

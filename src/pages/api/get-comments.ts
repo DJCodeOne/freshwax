@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { d1GetComments } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -35,13 +36,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const releaseId = url.searchParams.get('releaseId');
 
     if (!releaseId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release ID required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Release ID required');
     }
 
     log.info('[get-comments] Fetching comments for:', releaseId);
@@ -74,13 +69,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const release = await getDocument('releases', releaseId);
 
     if (!release) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     const comments = release.comments || [];
@@ -108,12 +97,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[get-comments] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch comments'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch comments');
   }
 };

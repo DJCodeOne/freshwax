@@ -1607,6 +1607,8 @@ Artist - Track Title
           });
 
           xhr.open('POST', '/api/upload-mix/');
+          const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+          if (csrfMeta) xhr.setRequestHeader('X-CSRF-Token', csrfMeta.getAttribute('content') || '');
           xhr.send(formData);
         });
       }
@@ -1941,6 +1943,8 @@ Artist - Track Title
           });
 
           xhr.open('POST', '/api/upload-mix/');
+          const csrfMeta2 = document.querySelector('meta[name="csrf-token"]');
+          if (csrfMeta2) xhr.setRequestHeader('X-CSRF-Token', csrfMeta2.getAttribute('content') || '');
           xhr.send(formData);
         });
       }

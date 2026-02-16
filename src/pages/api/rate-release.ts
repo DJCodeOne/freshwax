@@ -7,6 +7,7 @@ import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 const RateReleaseSchema = z.object({
   releaseId: z.string().min(1, 'Release ID is required').max(200),
@@ -36,27 +37,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You must be logged in to rate releases'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('You must be logged in to rate releases');
     }
 
     const body = await request.json();
     const parsed = RateReleaseSchema.safeParse(body);
     if (!parsed.success) {
       log.info('[rate-release] Validation failed:', parsed.error.issues);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { releaseId, rating } = parsed.data;
 
@@ -67,13 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!releaseData) {
       log.info('[rate-release] Release not found:', releaseId);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     // Initialize ratings structure if needed
@@ -186,12 +168,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[rate-release] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save rating'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save rating');
   }
 };

@@ -4,7 +4,7 @@ import { getDocument, updateDocument, addDocument } from '../../../../lib/fireba
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { escapeHtml } from '../../../../lib/escape-html';
-import { fetchWithTimeout } from '../../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -36,20 +36,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const orderId = url.searchParams.get('id');
 
   if (!orderId) {
-    return new Response(JSON.stringify({ success: false, error: 'Order ID required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Order ID required');
   }
 
   try {
     const order = await getDocument('vinylOrders', orderId);
 
     if (!order) {
-      return new Response(JSON.stringify({ success: false, error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     return new Response(JSON.stringify({ success: true, order }), {
@@ -58,10 +52,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
   } catch (error) {
     console.error('[API vinyl/order] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch order' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch order');
   }
 };
 
@@ -89,18 +80,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, orderId } = body;
 
     if (!orderId) {
-      return new Response(JSON.stringify({ success: false, error: 'Order ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Order ID required');
     }
 
     const order = await getDocument('vinylOrders', orderId);
     if (!order) {
-      return new Response(JSON.stringify({ success: false, error: 'Order not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Order not found');
     }
 
     switch (action) {
@@ -109,10 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
 
         if (!validStatuses.includes(status)) {
-          return new Response(JSON.stringify({ success: false, error: 'Invalid status' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Invalid status');
         }
 
         const updateData: any = {
@@ -152,44 +134,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
       case 'refund': {
         // Prevent double refund
         if (order.status === 'refunded') {
-          return new Response(JSON.stringify({ success: false, error: 'Order already refunded' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Order already refunded');
         }
 
         // 1. Look up parent order to get paymentIntentId
         const parentOrderId = order.orderId;
         if (!parentOrderId) {
-          return new Response(JSON.stringify({ success: false, error: 'Vinyl order has no linked parent order' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Vinyl order has no linked parent order');
         }
 
         const parentOrder = await getDocument('orders', parentOrderId);
         if (!parentOrder) {
-          return new Response(JSON.stringify({ success: false, error: 'Parent order not found' }), {
-            status: 404,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.notFound('Parent order not found');
         }
 
         const paymentIntentId = parentOrder.paymentIntentId;
         if (!paymentIntentId) {
-          return new Response(JSON.stringify({ success: false, error: 'Parent order has no payment intent - cannot refund' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Parent order has no payment intent - cannot refund');
         }
 
         // 2. Initialize Stripe
         const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
         if (!stripeSecretKey) {
-          return new Response(JSON.stringify({ success: false, error: 'Stripe not configured' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.serverError('Stripe not configured');
         }
 
         const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -211,22 +178,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Partial refund
           refundAmountPence = Math.round(parseFloat(refundAmount) * 100);
           if (refundAmountPence > maxRefundable) {
-            return new Response(JSON.stringify({
-              success: false,
-              error: `Refund amount exceeds maximum refundable (\u00a3${(maxRefundable / 100).toFixed(2)})`
-            }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
-            });
+            return ApiErrors.badRequest('Refund amount exceeds maximum refundable (\u00a3${(maxRefundable / 100).toFixed(2)})');
           }
           isFullRefund = refundAmountPence === maxRefundable && previouslyRefunded === 0;
         }
 
         if (refundAmountPence <= 0) {
-          return new Response(JSON.stringify({ success: false, error: 'Invalid refund amount' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.badRequest('Invalid refund amount');
         }
 
         // 4. Create Stripe refund — do this BEFORE updating any records
@@ -252,15 +210,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           console.error('[vinyl/order refund] Stripe refund failed:', stripeErr);
           const stripeType = (stripeErr as any)?.type;
           if (stripeType === 'StripeCardError' || stripeType === 'StripeInvalidRequestError') {
-            return new Response(JSON.stringify({ success: false, error: 'Stripe refund request failed' }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' }
-            });
+            return ApiErrors.badRequest('Stripe refund request failed');
           }
-          return new Response(JSON.stringify({ success: false, error: 'Failed to create Stripe refund' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return ApiErrors.serverError('Failed to create Stripe refund');
         }
 
         const refundAmountPounds = refundAmountPence / 100;
@@ -531,16 +483,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       default:
-        return new Response(JSON.stringify({ success: false, error: 'Invalid action' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.badRequest('Invalid action');
     }
   } catch (error) {
     console.error('[API vinyl/order] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };

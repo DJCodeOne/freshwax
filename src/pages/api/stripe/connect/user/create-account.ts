@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
+import { ApiErrors } from '../../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -14,10 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Stripe not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -25,7 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   try {
@@ -45,10 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const user = await getDocument('users', userId);
 
     if (!user) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('User not found');
     }
 
     // Check if already has a Connect account
@@ -56,11 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const account = await stripe.accounts.retrieve(user.stripeConnectId);
 
       if (account.charges_enabled && account.payouts_enabled) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Stripe Connect already set up',
-          status: 'active'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Stripe Connect already set up');
       }
 
       // Onboarding incomplete - return new link
@@ -131,10 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] User create account error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to create Stripe account'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to create Stripe account');
   }
 };
 

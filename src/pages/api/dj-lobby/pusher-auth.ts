@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {
@@ -42,9 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify the user is authenticated via Firebase token
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const formData = await request.formData();
@@ -52,16 +51,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const channelName = formData.get('channel_name') as string;
 
     if (!socketId || !channelName) {
-      return new Response(JSON.stringify({
-        error: 'Missing socket_id or channel_name'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Missing socket_id or channel_name');
     }
 
     if (!PUSHER_KEY || !PUSHER_SECRET) {
       console.error('[pusher-auth] Missing Pusher configuration');
-      return new Response(JSON.stringify({
-        error: 'Server configuration error'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Server configuration error');
     }
 
     // Validate that the authenticated user is authorized for this private channel
@@ -71,9 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Verified user must match the channel they're subscribing to
       if (channelUserId !== verifiedUserId) {
-        return new Response(JSON.stringify({
-          error: 'Forbidden - cannot subscribe to another user\'s private channel'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.forbidden('Forbidden - cannot subscribe to another user channel');
       }
     }
 
@@ -90,8 +83,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[pusher-auth] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Authentication failed'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Authentication failed');
   }
 };

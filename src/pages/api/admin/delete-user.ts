@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, invalidateUsersCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const deleteUserSchema = z.object({
   userId: z.string().min(1),
@@ -42,10 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = deleteUserSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { userId } = parsed.data;
@@ -107,10 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const anySuccess = results.customers || results.users || results.artists;
 
     if (!anySuccess) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found in any collection'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('User not found in any collection');
     }
 
     // Invalidate users cache so the list refreshes immediately
@@ -127,9 +122,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin/delete-user] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete user'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to delete user');
   }
 };

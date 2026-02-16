@@ -6,6 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -32,65 +33,45 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Require authenticated user (all registered users can upload mixes)
   const { userId, error: authError } = await verifyRequestUser(request);
   if (authError || !userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: authError || 'Authentication required'
-    }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized(authError || 'Authentication required');
   }
 
   // Reject oversized JSON bodies (max 1MB for metadata-only requests)
   const reqContentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (reqContentLength > 1 * 1024 * 1024) {
-    return new Response(JSON.stringify({ error: 'Request body too large' }), {
-      status: 413, headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Request body too large', 413);
   }
 
   try {
     const { fileName, contentType, fileSize, mixId, artworkFileName, artworkContentType } = await request.json();
 
     if (!fileName || !contentType) {
-      return new Response(JSON.stringify({ error: 'fileName and contentType are required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('fileName and contentType are required');
     }
 
     // Validate file size (500MB max for large file upload path)
     const MAX_LARGE_FILE_SIZE = 500 * 1024 * 1024; // 500MB
     if (fileSize && fileSize > MAX_LARGE_FILE_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'File too large. Maximum file size is 500MB.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('File too large. Maximum file size is 500MB.');
     }
 
     // Validate content type is audio
     const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
     if (!allowedAudioTypes.includes(contentType) && !fileName.toLowerCase().match(/\.(mp3|wav)$/)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid audio format. Only MP3 and WAV files are allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid audio format. Only MP3 and WAV files are allowed.');
     }
 
     // Validate filename has a valid extension
     const validExtensions = /\.(mp3|wav)$/i;
     if (!validExtensions.test(fileName)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid file extension. Only .mp3 and .wav files are allowed.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid file extension. Only .mp3 and .wav files are allowed.');
     }
 
     const config = getR2Config(env);
 
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
       console.error('[Mix Presign] Missing R2 credentials');
-      return new Response(JSON.stringify({ error: 'R2 configuration missing' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('R2 configuration missing');
     }
 
     // Generate a unique folder path for this mix
@@ -160,12 +141,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Mix Presign] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

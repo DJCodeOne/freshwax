@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit as checkGlobalRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Simple MD5 implementation for Cloudflare Workers (same as presence.ts)
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -287,10 +288,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/chat] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get messages'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get messages');
   }
 };
 
@@ -315,10 +313,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, name, text, avatar } = data;
 
     if (!userId || !text?.trim()) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User ID and message text required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('User ID and message text required');
     }
 
     // SECURITY: Verify the requesting user owns this userId
@@ -327,25 +322,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { verifyUserToken } = await import('../../../lib/firebase-rest');
 
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only send messages as yourself'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only send messages as yourself');
     }
 
     // Rate limiting
     if (!checkRateLimit(userId)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Slow down! Wait a moment before sending another message.'
-      }), { status: 429, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.tooManyRequests('Slow down! Wait a moment before sending another message.');
     }
 
     // Basic content validation
@@ -355,10 +341,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const lowerText = cleanText.toLowerCase();
     const spamPatterns = ['http://', 'https://', '.com/', '.co.uk/', 'discord.gg'];
     if (spamPatterns.some(pattern => lowerText.includes(pattern))) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Links are not allowed in chat'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Links are not allowed in chat');
     }
 
     const now = new Date();
@@ -392,10 +375,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/chat] POST Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to send message'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to send message');
   }
 };
 
@@ -416,29 +396,21 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify user identity via Firebase token
     const { userId: authUserId, error: authError } = await verifyRequestUser(request);
     if (!authUserId || authError) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const url = new URL(request.url);
     const messageId = url.searchParams.get('messageId');
 
     if (!messageId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Message ID required'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Message ID required');
     }
 
     // Get the message to verify ownership
     const messageData = await getDocument('djLobbyChat', messageId);
 
     if (!messageData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Message not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Message not found');
     }
 
     // SECURITY: Use verified userId for authorization check
@@ -446,10 +418,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const isOwner = messageData?.odamiMa === authUserId;
 
     if (!userIsAdmin && !isOwner) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authorized to delete this message'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('Not authorized to delete this message');
     }
 
     // Delete the message
@@ -469,9 +438,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[dj-lobby/chat] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete message'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to delete message');
   }
 };

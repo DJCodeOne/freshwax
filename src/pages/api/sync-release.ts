@@ -2,9 +2,13 @@ import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
 import { processImageToSquareWebP } from '../../lib/image-processing';
+import { requireAdminAuth } from '../../lib/admin';
 import AdmZip from 'adm-zip';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ApiErrors } from '../../lib/api-utils';
+
+export const prerender = false;
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -19,19 +23,17 @@ const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
 export const POST = async ({ request, locals }: any) => {
   try {
+    // SECURITY: Require admin authentication
+    const authError = await requireAdminAuth(request, locals);
+    if (authError) return authError;
+
     log.info('[sync-release] Sync release API called');
 
     const formData = await request.formData();
     const zipFile = formData.get('zipFile');
 
     if (!zipFile) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'No ZIP file provided' 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('No ZIP file provided');
     }
 
     const env = locals?.runtime?.env || {};
@@ -130,13 +132,7 @@ export const POST = async ({ request, locals }: any) => {
   } catch (error) {
     log.error('[sync-release] Sync failed:', error);
     
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Sync failed',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Sync failed');
   }
 };
 

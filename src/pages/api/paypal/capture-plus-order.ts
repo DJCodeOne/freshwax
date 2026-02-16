@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { redeemReferralCode } from '../../../lib/referral-codes';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 // Zod schema for PayPal Plus capture
 const PayPalPlusCaptureSchema = z.object({
@@ -76,29 +76,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'PayPal not configured'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('PayPal not configured');
     }
 
     // SECURITY: Verify the authenticated user
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const rawBody = await request.json();
 
     const parseResult = PayPalPlusCaptureSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({
-        error: 'Invalid request',
-        details: parseResult.error.issues
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { paypalOrderId, orderData: clientOrderData, expectedAmount } = parseResult.data;
 
@@ -110,10 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // SECURITY: Reject if no server-side pending order exists.
       // Never trust client-provided order data for payment captures.
       console.error('[PayPal Plus] No valid pending order found for:', paypalOrderId);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Plus order not found or expired. Please try again.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Plus order not found or expired. Please try again.');
     }
 
     const { userId, email, amount, promoCode, isKvCode, referralCardId, referredBy } = pendingOrder;
@@ -134,20 +122,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!captureResponse.ok) {
       const errorData = await captureResponse.json();
       console.error('[PayPal Plus] Capture failed:', errorData);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment capture failed'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Payment capture failed');
     }
 
     const captureData = await captureResponse.json();
 
     if (captureData.status !== 'COMPLETED') {
       console.error('[PayPal Plus] Capture not completed:', captureData.status);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment not completed'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Payment not completed');
     }
 
     // Get capture ID
@@ -158,10 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const capturedAmount = parseFloat(captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '0');
     if (Math.abs(capturedAmount - amount) > 0.01) {
       console.error('[PayPal Plus] Amount mismatch! Expected:', amount, 'Got:', capturedAmount);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Payment amount mismatch'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Payment amount mismatch');
     }
 
     // Delete pending order
@@ -206,10 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!updateResponse.ok) {
       const errorText = await updateResponse.text();
       console.error('[PayPal Plus] Failed to update subscription:', errorText);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to activate subscription'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to activate subscription');
     }
 
     console.log('[PayPal Plus] ✓ Plus subscription activated for:', userId);
@@ -283,9 +259,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[PayPal Plus] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to process payment',
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to process payment');
   }
 };

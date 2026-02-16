@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
+import { ApiErrors } from '../../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -12,10 +13,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const userId = url.searchParams.get('userId');
 
   if (!userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'User ID required'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('User ID required');
   }
 
   const env = locals.runtime.env;
@@ -24,23 +22,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    return new Response(JSON.stringify({ error: 'Authentication required' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   // SECURITY: Verify the authenticated user matches the requested userId
   if (authUserId !== userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Forbidden'
-    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.forbidden('Forbidden');
   }
 
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Stripe not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -49,10 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const user = await getDocument('users', userId);
 
     if (!user) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('User not found');
     }
 
     // No Connect account yet
@@ -116,9 +105,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[Stripe Connect] User status error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get status'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get status');
   }
 };

@@ -5,6 +5,7 @@ import type { APIContext } from 'astro';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, canSkipTrack, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -24,13 +25,7 @@ export async function POST({ request, locals }: APIContext) {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Admins can always skip
@@ -48,13 +43,7 @@ export async function POST({ request, locals }: APIContext) {
     // Get user data
     const userDoc = await getDocument('users', userId);
     if (!userDoc) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('User not found');
     }
 
     // Check subscription tier
@@ -115,13 +104,7 @@ export async function POST({ request, locals }: APIContext) {
 
   } catch (error: unknown) {
     console.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 
@@ -134,13 +117,7 @@ export async function GET({ request, locals }: APIContext) {
     const userId = url.searchParams.get('userId');
 
     if (!userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing userId'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing userId');
     }
 
     // Admins have unlimited skips
@@ -158,13 +135,7 @@ export async function GET({ request, locals }: APIContext) {
     // Get user data
     const userDoc = await getDocument('users', userId);
     if (!userDoc) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'User not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('User not found');
     }
 
     // Check subscription tier
@@ -200,12 +171,6 @@ export async function GET({ request, locals }: APIContext) {
 
   } catch (error: unknown) {
     console.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }

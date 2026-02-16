@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -118,10 +118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const serverKey = request.headers.get('x-server-key');
   const expectedServerKey = env?.STREAM_SERVER_KEY || import.meta.env.STREAM_SERVER_KEY;
   if (!expectedServerKey || !serverKey || !timingSafeEqual(serverKey, expectedServerKey)) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unauthorized'
-    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.forbidden('Unauthorized');
   }
 
   try {
@@ -207,10 +204,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[youtube-live-id] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Unknown error'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Unknown error');
   }
 };
 

@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
+import { ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -23,10 +24,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Get Stripe secret key
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
   if (!stripeSecretKey) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Stripe not configured'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Stripe not configured');
   }
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -35,20 +33,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify user authentication via Firebase token (no cookie fallback)
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const artistId = verifiedUserId;
 
     // Get artist document
     const artist = await getDocument('artists', artistId);
     if (!artist) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Artist not found'
-      }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Artist not found');
     }
 
     // If no Connect account
@@ -126,9 +118,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to get account status'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to get account status');
   }
 };

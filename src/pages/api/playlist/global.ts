@@ -6,6 +6,7 @@ import type { APIContext } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // KV keys for playlist data
 const KV_PLAYLIST_KEY = 'global-playlist';
@@ -49,10 +50,7 @@ export async function GET({ request, locals }: APIContext) {
     const kv = getKV(locals);
     if (!kv) {
       console.error('[GlobalPlaylist] KV not available');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available'
-      }), { status: 500, headers });
+      return ApiErrors.notConfigured('KV storage');
     }
 
     // Get playlist from KV
@@ -72,13 +70,7 @@ export async function GET({ request, locals }: APIContext) {
     }), { headers });
   } catch (error: unknown) {
     console.error('[GlobalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 
@@ -94,18 +86,12 @@ export async function POST({ request, locals }: APIContext) {
     const env = locals.runtime.env;
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const kv = getKV(locals);
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('KV storage not available');
     }
 
     const body = await request.json();
@@ -114,13 +100,7 @@ export async function POST({ request, locals }: APIContext) {
     const userId = verifiedUserId;
 
     if (!item || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing item or userId'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing item or userId');
     }
 
     // Get current playlist from KV
@@ -146,25 +126,13 @@ export async function POST({ request, locals }: APIContext) {
 
     // Check queue size
     if (playlist.queue.length >= MAX_QUEUE_SIZE) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Queue is full (${MAX_QUEUE_SIZE} items max)`
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Queue is full (${MAX_QUEUE_SIZE} items max)');
     }
 
     // DJ Waitlist: Check if user already has max tracks in queue (2 tracks per DJ)
     const userTracksInQueue = playlist.queue.filter(item => item.addedBy === userId).length;
     if (userTracksInQueue >= 2) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You already have 2 tracks in the queue. Wait for one to play or remove it first.'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('You already have 2 tracks in the queue. Wait for one to play or remove it first.');
     }
 
     // Add item with user info
@@ -206,13 +174,7 @@ export async function POST({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[GlobalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 
@@ -228,18 +190,12 @@ export async function DELETE({ request, locals }: APIContext) {
     const env = locals.runtime.env;
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (!verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: authError || 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
     const kv = getKV(locals);
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('KV storage not available');
     }
 
     const body = await request.json();
@@ -250,25 +206,13 @@ export async function DELETE({ request, locals }: APIContext) {
     const userIsAdmin = await checkIsAdmin(userId);
 
     if (!itemId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing itemId'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing itemId');
     }
 
     const data = await kv.get(KV_PLAYLIST_KEY, 'json');
 
     if (!data) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Playlist not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Playlist not found');
     }
 
     let playlist: GlobalPlaylist = {
@@ -282,25 +226,13 @@ export async function DELETE({ request, locals }: APIContext) {
     // Find and remove item (only if user owns it or is admin)
     const itemIndex = playlist.queue.findIndex(item => item.id === itemId);
     if (itemIndex === -1) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Item not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Item not found');
     }
 
     const item = playlist.queue[itemIndex];
     // Allow removal if user owns the item OR is verified admin
     if (!userIsAdmin && item.addedBy !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only remove your own items'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('You can only remove your own items');
     }
 
     const wasCurrentlyPlaying = itemIndex === playlist.currentIndex;
@@ -346,13 +278,7 @@ export async function DELETE({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[GlobalPlaylist] DELETE error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 
@@ -366,10 +292,7 @@ export async function PUT({ request, locals }: APIContext) {
   try {
     const kv = getKV(locals);
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('KV storage not available');
     }
 
     // Set KV cache for helper functions
@@ -380,13 +303,7 @@ export async function PUT({ request, locals }: APIContext) {
     const { action, userId, playlist: syncPlaylist } = body;
 
     if (!action) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing action'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing action');
     }
 
     let playlist: GlobalPlaylist;
@@ -614,13 +531,7 @@ export async function PUT({ request, locals }: APIContext) {
     });
   } catch (error: unknown) {
     console.error('[GlobalPlaylist] PUT error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 }
 

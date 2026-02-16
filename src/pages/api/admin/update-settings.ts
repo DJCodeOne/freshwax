@@ -125,23 +125,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error) {
     console.error('[update-settings] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to load settings'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to load settings');
   }
 };
 

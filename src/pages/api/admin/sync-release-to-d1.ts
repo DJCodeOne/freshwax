@@ -6,6 +6,7 @@ import { getDocument, queryCollection, invalidateReleasesCache } from '../../../
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,10 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const db = env?.DB;
 
   if (!db) {
-    return new Response(JSON.stringify({ error: 'D1 database not available' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('D1 database not available');
   }
 
   try {
@@ -48,21 +46,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
         releases = [{ ...release, id: releaseId }];
       }
     } else {
-      return new Response(JSON.stringify({
-        error: 'Missing releaseId or all=true',
-        usage: '/api/admin/sync-release-to-d1/?releaseId=xxx&confirm=yes',
-        altUsage: '/api/admin/sync-release-to-d1/?all=true&confirm=yes'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Missing releaseId or all=true');
     }
 
     if (releases.length === 0) {
-      return new Response(JSON.stringify({ error: 'No releases found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('No releases found');
     }
 
     if (confirm !== 'yes') {
@@ -141,11 +129,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const updateUserSchema = z.object({
   userId: z.string().min(1),
@@ -61,10 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const parsed = updateUserSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
 
     const { userId, sourceCollection, updates } = parsed.data;
@@ -183,10 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const anySuccess = results.customers || results.users || results.artists;
 
     if (!anySuccess) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to update any collections'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to update any collections');
     }
 
     return new Response(JSON.stringify({
@@ -200,9 +195,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin/update-user] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update user'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to update user');
   }
 };

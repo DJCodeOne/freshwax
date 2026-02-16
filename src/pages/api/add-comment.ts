@@ -8,6 +8,7 @@ import { containsProfanity } from '../../lib/validation';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 const AddCommentSchema = z.object({
   releaseId: z.string().min(1, 'Release ID is required').max(200),
@@ -40,13 +41,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId, error: authError } = await verifyRequestUser(request);
 
     if (authError || !userId) {
-      return new Response(JSON.stringify({ success: false, error: 'You must be logged in to comment' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('You must be logged in to comment');
     }
 
     const rawBody = await request.json();
     const parsed = AddCommentSchema.safeParse(rawBody);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { releaseId, comment, userName: bodyUserName, gifUrl, avatarUrl } = parsed.data;
 
@@ -67,7 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Allow GIF-only comments (no text required if GIF present)
     if (!releaseId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing required fields' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Missing required fields');
     }
 
     // Validate gifUrl if provided (must be from Giphy domain)
@@ -75,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let validGif = false;
       try { const u = new URL(gifUrl); validGif = u.hostname === 'giphy.com' || u.hostname.endsWith('.giphy.com'); } catch {}
       if (!validGif) {
-        return new Response(JSON.stringify({ success: false, error: 'Invalid GIF URL' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Invalid GIF URL');
       }
     }
 
@@ -83,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (comment?.trim()) {
       const profanityCheck = containsProfanity(comment);
       if (profanityCheck.found) {
-        return new Response(JSON.stringify({ success: false, error: 'Please keep comments clean and respectful' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Please keep comments clean and respectful');
       }
     }
 
@@ -91,14 +92,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userName?.trim()) {
       const userNameCheck = containsProfanity(userName);
       if (userNameCheck.found) {
-        return new Response(JSON.stringify({ success: false, error: 'Username contains inappropriate content' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Username contains inappropriate content');
       }
     }
 
     const release = await getDocument('releases', releaseId);
 
     if (!release) {
-      return new Response(JSON.stringify({ success: false, error: 'Release not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.notFound('Release not found');
     }
 
     const newComment = {
@@ -156,6 +157,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     log.error('[add-comment] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to add comment' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to add comment');
   }
 };

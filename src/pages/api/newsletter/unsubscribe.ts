@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const UnsubscribeSchema = z.object({
   email: z.string().email('Invalid email format').max(320),
@@ -17,14 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = UnsubscribeSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { email } = parsed.data;
 
@@ -66,12 +60,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Unsubscribe error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to unsubscribe. Please try again.'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to unsubscribe. Please try again.');
   }
 };

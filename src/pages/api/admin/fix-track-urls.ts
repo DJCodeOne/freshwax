@@ -6,6 +6,7 @@ import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -70,13 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // trackFixes: [{ trackIndex: 0, mp3Url: "...", wavUrl: "..." }, ...]
 
   if (!releaseId || !trackFixes) {
-    return new Response(JSON.stringify({
-      error: 'Missing releaseId or trackFixes',
-      usage: 'POST { releaseId: "xxx", trackFixes: [{ trackIndex: 0, mp3Url: "...", wavUrl: "..." }] }'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing releaseId or trackFixes');
   }
 
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -84,10 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 
   if (!clientEmail || !privateKey) {
-    return new Response(JSON.stringify({ error: 'Service account not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Service account not configured');
   }
 
   const serviceAccountKey = JSON.stringify({
@@ -105,10 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get current release
     const release = await getDocument('releases', releaseId);
     if (!release) {
-      return new Response(JSON.stringify({ error: 'Release not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Release not found');
     }
 
     const tracks = release.tracks || [];
@@ -163,13 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!patchResponse.ok) {
       const errorData = await patchResponse.json();
-      return new Response(JSON.stringify({
-        error: 'Failed to update',
-        details: errorData
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Failed to update');
     }
 
     // Sync updated release to D1 if available
@@ -205,11 +188,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Unknown error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Unknown error');
   }
 };

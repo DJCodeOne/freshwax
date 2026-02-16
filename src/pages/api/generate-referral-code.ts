@@ -4,6 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 const GenerateReferralSchema = z.object({
   userId: z.string().min(1, 'Missing userId').max(200),
@@ -18,10 +19,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!kv) {
       console.error('[generate-referral-code] KV namespace not available');
-      return new Response(JSON.stringify({ success: false, error: 'Storage not available' }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Storage not available', 503);
     }
 
     // Get auth token
@@ -31,36 +29,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const rawBody = await request.json();
     const parsed = GenerateReferralSchema.safeParse(rawBody);
     if (!parsed.success) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request', details: parsed.error.issues.map(i => i.message) }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { userId } = parsed.data;
 
     // Require auth token
     if (!idToken) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     // Verify the token matches the userId
     try {
       const tokenUserId = await verifyUserToken(idToken);
       if (tokenUserId !== userId) {
-        return new Response(JSON.stringify({ success: false, error: 'User mismatch' }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return ApiErrors.forbidden('User mismatch');
       }
     } catch (e) {
       console.error('[generate-referral-code] Token verification failed:', e);
-      return new Response(JSON.stringify({ success: false, error: 'Invalid authentication token' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Invalid authentication token');
     }
 
     // Check if user already has a referral code in KV
@@ -82,10 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Get user document to verify Plus status (read-only, doesn't count much against quota)
     const userDoc = await getDocument('users', userId);
     if (!userDoc) {
-      return new Response(JSON.stringify({ success: false, error: 'User not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('User not found');
     }
 
     // Check if user is Plus member
@@ -99,13 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!isPro) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Only Plus members can generate referral codes'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Only Plus members can generate referral codes');
     }
 
     // Generate referral code
@@ -137,12 +114,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[generate-referral-code] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to generate code'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to generate code');
   }
 };

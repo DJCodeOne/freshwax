@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -62,13 +63,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Get subscribers error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch subscribers'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch subscribers');
   }
 };
 
@@ -83,13 +78,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     const { email, name, source } = body;
 
     if (!email) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Email is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Email is required');
     }
 
     // Check if email already exists
@@ -99,13 +88,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     });
 
     if (existing.length > 0) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Email already subscribed'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Email already subscribed');
     }
 
     // Add subscriber
@@ -130,13 +113,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Add subscriber error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to add subscriber'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to add subscriber');
   }
 };
 
@@ -151,13 +128,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
     const { subscriberId } = body;
 
     if (!subscriberId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Subscriber ID required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Subscriber ID required');
     }
 
     await deleteDocument('subscribers', subscriberId);
@@ -172,13 +143,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Delete subscriber error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to delete subscriber'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to delete subscriber');
   }
 };
 
@@ -193,23 +158,11 @@ export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
     const { subscriberId, status } = body;
 
     if (!subscriberId || !status) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Subscriber ID and status required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Subscriber ID and status required');
     }
 
     if (!['active', 'unsubscribed'].includes(status)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid status'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid status');
     }
 
     await updateDocument('subscribers', subscriberId, {
@@ -227,12 +180,6 @@ export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
 
   } catch (error) {
     console.error('[Newsletter] Update subscriber error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to update subscriber'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update subscriber');
   }
 };

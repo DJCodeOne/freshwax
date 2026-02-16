@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase
 function initFirebase(locals: App.Locals) {
@@ -73,13 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[allowances] GET Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch allowances'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch allowances');
   }
 };
 
@@ -95,13 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { djId, weeklySlots, maxHoursPerDay, reason, djName } = body;
 
     if (!djId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'DJ ID is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('DJ ID is required');
     }
 
     // Validate values
@@ -157,13 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[allowances] POST Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save allowance'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save allowance');
   }
 };
 
@@ -179,13 +162,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const { djId } = body;
 
     if (!djId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'DJ ID is required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('DJ ID is required');
     }
 
     const docId = djId.includes('@') ? djId.replace(/[.@]/g, '_') : djId;
@@ -201,13 +178,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[allowances] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to remove allowance'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to remove allowance');
   }
 };
 

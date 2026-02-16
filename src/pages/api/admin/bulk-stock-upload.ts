@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 const bulkStockUploadSchema = z.object({
   adminKey: z.string().min(1),
@@ -79,27 +80,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     operation: rawOperation || 'set',
   });
   if (!parsed.success) {
-    return new Response(JSON.stringify({ error: 'Invalid request' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Invalid request');
   }
 
   const { adminKey, operation } = parsed.data;
 
   // SECURITY: Use timing-safe admin key verification
   if (!verifyAdminKey(adminKey, locals)) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Unauthorized');
   }
 
   if (!csvFile) {
-    return new Response(JSON.stringify({ error: 'No CSV file provided' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('No CSV file provided');
   }
 
 
@@ -113,15 +105,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const quantityIndex = headers.indexOf('quantity');
 
     if (skuIndex === -1) {
-      return new Response(JSON.stringify({
-        error: 'CSV must have "sku" column'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('CSV must have "sku" column');
     }
 
     if (quantityIndex === -1) {
-      return new Response(JSON.stringify({
-        error: 'CSV must have "quantity" column'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('CSV must have "quantity" column');
     }
 
     // Optional columns
@@ -292,12 +280,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     console.error('[bulk-stock-upload] Error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to process CSV'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to process CSV');
   }
 };
 
@@ -365,9 +348,6 @@ SKU003,2,subtract`;
     });
 
   } catch (error: unknown) {
-    return new Response(JSON.stringify({ error: 'Internal error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Internal error');
   }
 };

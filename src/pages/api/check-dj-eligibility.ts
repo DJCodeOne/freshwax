@@ -8,6 +8,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 const REQUIRED_LIKES = 10;
@@ -30,35 +31,17 @@ export const GET: APIRoute = async ({ request }) => {
   const userId = url.searchParams.get('userId');
   
   if (!userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Missing userId parameter'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing userId parameter');
   }
 
   // Require authentication — only allow checking own eligibility (or admin)
   const { userId: authenticatedUserId, error: authError } = await verifyRequestUser(request);
   if (!authenticatedUserId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Authentication required'
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Authentication required');
   }
 
   if (authenticatedUserId !== userId && !(await isAdmin(authenticatedUserId))) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'You can only check your own eligibility'
-    }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.forbidden('You can only check your own eligibility');
   }
 
   log.info('[check-dj-eligibility] Checking eligibility for:', userId);
@@ -222,12 +205,6 @@ export const GET: APIRoute = async ({ request }) => {
     
   } catch (error: unknown) {
     log.error('[check-dj-eligibility] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to check eligibility'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to check eligibility');
   }
 };

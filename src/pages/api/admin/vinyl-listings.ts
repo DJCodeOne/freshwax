@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saUpdateDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -65,10 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Query pending vinyl listings
@@ -93,10 +91,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin/vinyl-listings GET] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to fetch listings' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to fetch listings');
   }
 };
 
@@ -125,36 +120,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { action, listingId } = body;
 
     if (!listingId) {
-      return new Response(JSON.stringify({ success: false, error: 'Listing ID required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Listing ID required');
     }
 
     if (!['approve', 'reject'].includes(action)) {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid action (approve or reject)' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid action (approve or reject)');
     }
 
     const serviceAccountKey = getServiceAccountKey(env);
     const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      return new Response(JSON.stringify({ success: false, error: 'Service account not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.serverError('Service account not configured');
     }
 
     // Get the listing first
     const listing = await saGetDocument(serviceAccountKey, projectId, 'vinylListings', listingId);
     if (!listing) {
-      return new Response(JSON.stringify({ success: false, error: 'Listing not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Listing not found');
     }
 
     const now = new Date().toISOString();
@@ -189,9 +172,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[admin/vinyl-listings POST] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Server error');
   }
 };

@@ -6,6 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
+import { ApiErrors } from '../../lib/api-utils';
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -41,9 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Verify authentication via token (not cookies/form data which are spoofable)
     const { userId: currentUserId, error: authError } = await verifyRequestUser(request);
     if (!currentUserId || authError) {
-      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const formData = await request.formData();
@@ -61,13 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!mixId || !artworkFile) {
       console.log('[update-mix-artwork] Missing required fields:', { mixId: !!mixId, artworkFile: !!artworkFile });
-      return new Response(JSON.stringify({
-        success: false,
-        error: `Missing ${!mixId ? 'mixId' : 'artwork file'}`
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest(`Missing ${!mixId ? 'mixId' : 'artwork file'}`);
     }
 
     console.log('[update-mix-artwork] Auth check:', { currentUserId });
@@ -76,13 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const mixData = await getDocument('dj-mixes', mixId);
 
     if (!mixData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Mix not found'
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.notFound('Mix not found');
     }
     
     // Check ownership - allow if:
@@ -99,25 +86,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!isOwner && !canBackfillOwnership) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Not authorized to edit this mix'
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.forbidden('Not authorized to edit this mix');
     }
     
     // Validate file size (max 500KB for safety, should be under 200KB from client)
     if (artworkFile.size > 500 * 1024) {
       console.log('[update-mix-artwork] File too large:', artworkFile.size);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: `Artwork file too large (${Math.round(artworkFile.size / 1024)}KB, max 500KB)` 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Artwork file too large (${Math.round(artworkFile.size / 1024)}KB, max 500KB)');
     }
     
     // Process artwork to WebP and upload to R2
@@ -205,12 +180,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
   } catch (error) {
     console.error('[update-mix-artwork] Error:', error);
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: 'Failed to update artwork' 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to update artwork');
   }
 };

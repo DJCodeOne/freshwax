@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,13 +21,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const name = url.searchParams.get('name') || '';
 
   if (!name) {
-    return new Response(JSON.stringify({
-      error: 'Missing name parameter',
-      usage: 'GET /api/admin/find-release/?name=demo'
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.badRequest('Missing name parameter');
   }
 
   try {
@@ -55,11 +50,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error) {
-    return new Response(JSON.stringify({
-      error: 'Failed to search releases'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to search releases');
   }
 };

@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { ApiErrors } from '../../lib/api-utils';
 
 const BookingsGetSchema = z.object({
   action: z.enum(['getDailyInfo', 'getSchedule', 'getMyBookings']),
@@ -108,11 +109,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     date: url.searchParams.get('date') || undefined,
   });
   if (!parsedGet.success) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid request',
-      details: parsedGet.error.issues.map(i => i.message)
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid request');
   }
   const action = parsedGet.data.action;
   const uid = parsedGet.data.uid || null;
@@ -123,10 +120,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (action === 'getDailyInfo' && uid && dateStr) {
       const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
       if (authError || !verifiedUid || verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Authentication required'
-        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.unauthorized('Authentication required');
       }
 
       const date = new Date(dateStr);
@@ -179,10 +173,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (action === 'getMyBookings' && uid) {
       const { userId: verifiedUid, error: authErr } = await verifyRequestUser(request);
       if (authErr || !verifiedUid || verifiedUid !== uid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Authentication required'
-        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.unauthorized('Authentication required');
       }
       const now = new Date();
       now.setHours(now.getHours() - 2); // Include currently live
@@ -214,17 +205,11 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('Bookings API GET error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Internal error');
   }
 };
 
@@ -240,29 +225,19 @@ export const POST: APIRoute = async ({ request }) => {
     // Verify the user is authenticated
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
 
     const body = await request.json();
     const parsedPost = BookingsPostSchema.safeParse(body);
     if (!parsedPost.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsedPost.error.issues.map(i => i.message)
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { action, uid, djName, streamTitle, description, slots, durationType } = parsedPost.data;
 
     // Verify the authenticated user matches the uid in the request
     if (uid && verifiedUserId !== uid) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only manage your own bookings'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only manage your own bookings');
     }
 
     // Use verified userId for all operations
@@ -271,27 +246,18 @@ export const POST: APIRoute = async ({ request }) => {
     // Create booking(s)
     if (action === 'createBooking') {
       if (!djName || !streamTitle || !slots || slots.length === 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing required fields: djName, streamTitle, and slots are required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Missing required fields: djName, streamTitle, and slots are required');
       }
 
       // Verify DJ eligibility
       if (!(await isDJEligible(authenticatedUid))) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You are not DJ eligible'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.forbidden('You are not DJ eligible');
       }
 
       // Parse slots
       const slotDates = slots.map((s: string) => new Date(s));
       if (slotDates.length === 0) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'No valid slot dates provided'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('No valid slot dates provided');
       }
       const bookingDate = slotDates[0];
 
@@ -300,10 +266,7 @@ export const POST: APIRoute = async ({ request }) => {
       const requestedHours = durationType === '2hr' ? 2 : slotDates.length;
 
       if (usedHours + requestedHours > MAX_DAILY_HOURS) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: `You only have ${MAX_DAILY_HOURS - usedHours} hours remaining today`
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('You only have ${MAX_DAILY_HOURS - usedHours} hours remaining today');
       }
 
       // Validate slots are available
@@ -312,10 +275,7 @@ export const POST: APIRoute = async ({ request }) => {
         const availability = await isSlotAvailable(slotDate, duration);
 
         if (!availability.available) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: availability.conflict
-          }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+          return ApiErrors.badRequest(availability.conflict);
         }
       }
 
@@ -371,28 +331,19 @@ export const POST: APIRoute = async ({ request }) => {
       const bookingId = parsedPost.data.bookingId;
 
       if (!bookingId) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Booking ID required'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Booking ID required');
       }
 
       // Get booking
       const booking = await getDocument('livestream-bookings', bookingId);
 
       if (!booking) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Booking not found'
-        }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.notFound('Booking not found');
       }
 
       // Verify ownership using authenticated user ID
       if (booking.djId !== authenticatedUid) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'You can only cancel your own bookings'
-        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.forbidden('You can only cancel your own bookings');
       }
 
       // Check if booking can be cancelled (at least 30 mins before)
@@ -401,10 +352,7 @@ export const POST: APIRoute = async ({ request }) => {
       const thirtyMinsFromNow = new Date(now.getTime() + 30 * 60 * 1000);
 
       if (startTime <= thirtyMinsFromNow) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Cannot cancel within 30 minutes of start time'
-        }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.badRequest('Cannot cancel within 30 minutes of start time');
       }
 
       // Mark as cancelled (or delete)
@@ -420,16 +368,10 @@ export const POST: APIRoute = async ({ request }) => {
       }), { headers: { 'Content-Type': 'application/json' } });
     }
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Invalid action'
-    }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
     console.error('Bookings API POST error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Internal error');
   }
 };

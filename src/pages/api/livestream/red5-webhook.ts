@@ -13,6 +13,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
+import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase and Red5
 function initServices(locals: App.Locals) {
@@ -43,28 +44,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Reject if no proper secret configured in production
     if (isProduction && (!webhookSecret || webhookSecret === 'webhook-secret-change-in-production')) {
       console.error('[red5-webhook] CRITICAL: No webhook secret configured in production');
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Webhook security not configured'
-      }), { status: 503, headers: { 'Content-Type': 'application/json' } });
+      return errorResponse('Webhook security not configured', 503);
     }
 
     // Always verify signature when secret is properly configured
     if (webhookSecret && webhookSecret !== 'webhook-secret-change-in-production') {
       if (!signature) {
         console.error('[red5-webhook] Missing webhook signature');
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Missing webhook signature'
-        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.unauthorized('Missing webhook signature');
       }
 
       if (!verifyWebhookSignature(rawBody, signature)) {
         console.error('[red5-webhook] Invalid signature');
-        return new Response(JSON.stringify({
-          success: false,
-          error: 'Invalid webhook signature'
-        }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+        return ApiErrors.unauthorized('Invalid webhook signature');
       }
     }
     
@@ -74,10 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       event = JSON.parse(rawBody);
     } catch (parseErr) {
       console.error('[red5-webhook] Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid JSON payload'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid JSON payload');
     }
     
     console.log('[red5-webhook] Received event:', event.event, 'streamKey:', event.streamKey?.substring(0, 8) + '...');

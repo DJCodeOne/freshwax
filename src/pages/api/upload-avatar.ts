@@ -9,6 +9,7 @@ import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
 const DeleteAvatarSchema = z.object({
   userId: z.string().min(1, 'Missing user ID').max(200),
@@ -60,10 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Early Content-Length check to reject oversized requests before reading body into memory
   const contentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (contentLength > MAX_AVATAR_REQUEST_SIZE) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Request too large. Maximum avatar file size is 2MB.'
-    }), { status: 413, headers: { 'Content-Type': 'application/json' } });
+    return errorResponse('Request too large. Maximum avatar file size is 2MB.', 413);
   }
 
   const env = locals.runtime.env;
@@ -85,44 +83,29 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const finalIdToken = idToken || formIdToken || undefined;
 
     if (!file || !userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Missing file or user ID'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Missing file or user ID');
     }
 
     // SECURITY: Verify the requesting user owns this userId
     const { verifyUserToken } = await import('../../lib/firebase-rest');
     if (!finalIdToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(finalIdToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only upload your own avatar'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only upload your own avatar');
     }
 
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
     if (!validTypes.includes(file.type)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid file type. Use JPG, PNG, WebP or GIF.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid file type. Use JPG, PNG, WebP or GIF.');
     }
 
     // Validate file size (2MB max for upload, will be compressed)
     const maxSize = 2 * 1024 * 1024;
     if (file.size > maxSize) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'File too large. Max 2MB.'
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('File too large. Max 2MB.');
     }
 
     // Convert file to buffer
@@ -135,11 +118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       processed = await processImageToSquareWebP(arrayBuffer, AVATAR_SIZE, 60);
     } catch (processError) {
       console.error('[upload-avatar] Image processing failed:', processError);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to process image. Try a different image format (JPG or PNG recommended).',
-        details: processError instanceof Error ? processError.message : 'Processing error'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to process image. Try a different image format (JPG or PNG recommended).');
     }
 
     const originalSize = file.size;
@@ -175,11 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.log(`[upload-avatar] R2 upload successful`);
     } catch (r2Error) {
       console.error('[upload-avatar] R2 upload failed:', r2Error);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Failed to upload to storage',
-        details: r2Error instanceof Error ? r2Error.message : 'R2 error'
-      }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.serverError('Failed to upload to storage');
     }
 
     const avatarUrl = `${r2Config.publicUrl}/${filename}?t=${Date.now()}`;
@@ -218,10 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[upload-avatar] Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to upload avatar'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to upload avatar');
   }
 };
 
@@ -241,28 +213,18 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const data = await request.json();
     const parsed = DeleteAvatarSchema.safeParse(data);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid request',
-        details: parsed.error.issues.map(i => i.message)
-      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.badRequest('Invalid request');
     }
     const { userId } = parsed.data;
 
     // SECURITY: Verify the requesting user owns this userId
     const { verifyUserToken } = await import('../../lib/firebase-rest');
     if (!idToken) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Authentication required'
-      }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.unauthorized('Authentication required');
     }
     const tokenUserId = await verifyUserToken(idToken);
     if (!tokenUserId || tokenUserId !== userId) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'You can only delete your own avatar'
-      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      return ApiErrors.forbidden('You can only delete your own avatar');
     }
 
     // Delete WebP avatar (and any old formats)
@@ -295,9 +257,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[upload-avatar] DELETE Error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to remove avatar'
-    }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return ApiErrors.serverError('Failed to remove avatar');
   }
 };

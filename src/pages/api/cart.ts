@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../lib/firebase-rest';
+import { ApiErrors } from '../../lib/api-utils';
 
 const CartItemSchema = z.object({
   id: z.string().min(1).max(200),
@@ -56,13 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const userId = await getUserId(request, locals);
 
   if (!userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Not authenticated'
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Not authenticated');
   }
 
   try {
@@ -95,13 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Cart API] GET error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to retrieve cart'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to retrieve cart');
   }
 };
 
@@ -110,27 +99,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const userId = await getUserId(request, locals);
 
   if (!userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Not authenticated'
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Not authenticated');
   }
 
   try {
     const body = await request.json();
     const parsed = CartSaveSchema.safeParse(body);
     if (!parsed.success) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Invalid cart data',
-        details: parsed.error.issues.map(i => i.message)
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return ApiErrors.badRequest('Invalid cart data');
     }
     const { items } = parsed.data;
 
@@ -171,13 +147,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Cart API] POST error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to save cart'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to save cart');
   }
 };
 
@@ -186,13 +156,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const userId = await getUserId(request, locals);
 
   if (!userId) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Not authenticated'
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.unauthorized('Not authenticated');
   }
 
   try {
@@ -221,12 +185,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error) {
     console.error('[Cart API] DELETE error:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to clear cart'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return ApiErrors.serverError('Failed to clear cart');
   }
 };
