@@ -623,8 +623,8 @@ const mixesItemList = {
 
   // Floating chart functionality
   document.addEventListener('DOMContentLoaded', async function() {
-    const floatingChart = document.getElementById('floatingChart');
-    const chartToggleBtn = document.getElementById('chartToggleBtn');
+    const floatingChart = document.getElementById('floating-chart');
+    const chartToggleBtn = document.getElementById('toggle-chart');
     const closeChart = document.getElementById('closeChart');
     const chartList = document.getElementById('chartList');
 
@@ -1440,13 +1440,7 @@ const mixesItemList = {
     });
   }
 
-  // Initialize
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMixCards);
-  } else {
-    initMixCards();
-  }
-
+  // Initialize — astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', function() {
     setTimeout(initMixCards, 50);
   });

@@ -323,11 +323,13 @@ const faqs = [
 </style>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
+  function initContactForm() {
     const form = document.getElementById('contact-form') as HTMLFormElement;
     const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
     const formMessage = document.getElementById('form-message') as HTMLParagraphElement;
     const subjectSelect = document.getElementById('subject') as HTMLSelectElement;
+
+    if (!form) return;
 
     // Report-related elements
     const reportTypeSection = document.getElementById('reportTypeSection');
@@ -420,11 +422,11 @@ const faqs = [
         }
       });
     }
-    
+
     // Toggle report fields based on subject selection
     function toggleReportFields() {
       const isReport = subjectSelect?.value === 'report';
-      
+
       if (isReport) {
         reportTypeSection?.classList.remove('hidden');
         reportedUserSection?.classList.remove('hidden');
@@ -441,9 +443,9 @@ const faqs = [
         if (reportTypeSelect) reportTypeSelect.required = false;
       }
     }
-    
+
     subjectSelect?.addEventListener('change', toggleReportFields);
-    
+
     // Main contact form submission
     form?.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -525,12 +527,12 @@ const faqs = [
         }
         return;
       }
-      
+
       // Update button state
       submitBtn.disabled = true;
       submitBtn.textContent = isReport ? 'SUBMITTING REPORT...' : 'SENDING...';
       formMessage.classList.add('hidden');
-      
+
       try {
         // Send to API endpoint
         const response = await fetch('/api/contact/', {
@@ -538,11 +540,11 @@ const faqs = [
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-          formMessage.textContent = isReport 
+          formMessage.textContent = isReport
             ? 'Report submitted successfully. Thank you for helping keep Fresh Wax safe.'
             : 'Message sent successfully! We\'ll get back to you soon.';
           formMessage.className = 'text-center text-sm text-green-500';
@@ -555,7 +557,7 @@ const faqs = [
       } catch (err) {
         console.error('[Contact] Form error:', err);
         // Fallback: open mailto link
-        const subjectLine = isReport 
+        const subjectLine = isReport
           ? `[REPORT] ${data.reportType}`
           : `[${data.subject}] Contact Form Submission`;
         const subject = encodeURIComponent(subjectLine);
@@ -563,7 +565,7 @@ const faqs = [
           `Name: ${data.name}\nEmail: ${data.email}\n${data.orderNumber ? `Order: ${data.orderNumber}\n` : ''}\n${data.message}`
         );
         window.location.href = `mailto:contact@freshwax.co.uk?subject=${subject}&body=${body}`;
-        
+
         formMessage.textContent = 'Opening your email client...';
         formMessage.className = 'text-center text-sm text-gray-400';
         formMessage.classList.remove('hidden');
@@ -572,13 +574,8 @@ const faqs = [
         submitBtn.textContent = 'SEND MESSAGE';
       }
     });
-  });
-  
-  // Re-init on View Transitions
-  document.addEventListener('astro:page-load', () => {
-    const form = document.getElementById('contact-form');
-    if (form) {
-      // Script will re-run and attach listeners
-    }
-  });
+  }
+
+  // Initialize only from astro:page-load (fires on both initial load and View Transitions)
+  document.addEventListener('astro:page-load', initContactForm);
 </script>

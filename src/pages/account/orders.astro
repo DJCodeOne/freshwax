@@ -591,14 +591,7 @@ const nonce = Astro.locals.nonce || '';
     });
   }
   
-  // Initialize
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initOrders);
-  } else {
-    initOrders();
-  }
-  
-  // Also handle Astro page transitions
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', function() {
     ordersInitialized = false;
     initOrders();

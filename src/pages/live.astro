@@ -1056,6 +1056,8 @@ const nonce = Astro.locals.nonce || '';
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
 <script>
+  function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
+
   // Speed Test - Download and Upload
   async function runSpeedTest() {
     const btn = document.getElementById('speedTestBtn');
@@ -2258,7 +2260,7 @@ const nonce = Astro.locals.nonce || '';
     const shoutout = shoutoutQueue.shift();
     
     if (shoutoutTrack) {
-      shoutoutTrack.innerHTML = `<span class="shoutout-message"><span class="shoutout-name">${shoutout.name}:</span> ${shoutout.message}</span>`;
+      shoutoutTrack.innerHTML = `<span class="shoutout-message"><span class="shoutout-name">${escapeHtml(shoutout.name)}:</span> ${escapeHtml(shoutout.message)}</span>`;
       shoutoutTrack.classList.remove('scrolling');
       
       // Trigger reflow to restart animation
@@ -2460,6 +2462,8 @@ const nonce = Astro.locals.nonce || '';
 <script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
   import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
   import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+  function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
   // Prevent duplicate app initialization
   const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -2714,9 +2718,9 @@ const nonce = Astro.locals.nonce || '';
               const name = member.info?.name || 'Viewer';
 
               if (avatar) {
-                userEl.innerHTML = `<div class="online-user-avatar"><img src="${avatar}" alt="${name}" /></div><span class="online-user-name">${name}</span>`;
+                userEl.innerHTML = `<div class="online-user-avatar"><img src="${escapeHtml(avatar)}" alt="${escapeHtml(name)}" /></div><span class="online-user-name">${escapeHtml(name)}</span>`;
               } else {
-                userEl.innerHTML = `<div class="online-user-avatar">${name.charAt(0).toUpperCase()}</div><span class="online-user-name">${name}</span>`;
+                userEl.innerHTML = `<div class="online-user-avatar">${escapeHtml(name.charAt(0).toUpperCase())}</div><span class="online-user-name">${escapeHtml(name)}</span>`;
               }
 
               usersList.appendChild(userEl);

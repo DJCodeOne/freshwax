@@ -1918,13 +1918,6 @@ const nonce = Astro.locals.nonce || '';
     loadListings();
   }
 
-  // Run on initial load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCrates);
-  } else {
-    initCrates();
-  }
-
-  // Re-run on Astro page transitions
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', initCrates);
 </script>

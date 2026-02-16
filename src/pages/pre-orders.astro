@@ -769,10 +769,7 @@ export const prerender = false;
 
 <script>
   // Pre-order button functionality
-  document.addEventListener('DOMContentLoaded', function() {
-    initPreorderButtons();
-  });
-  
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', function() {
     initPreorderButtons();
   });

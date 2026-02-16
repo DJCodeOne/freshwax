@@ -1356,21 +1356,8 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
       
     }
     
-    // Initialize on DOM ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initItemPageAudioControl);
-    } else {
-      initItemPageAudioControl();
-    }
-
-    // Re-initialize after Astro page transitions
+    // astro:page-load fires on both initial load and View Transitions
     document.addEventListener('astro:page-load', initItemPageAudioControl);
-
-    // Cleanup on Astro View Transition swap to prevent duplicate listeners
-    document.addEventListener('astro:before-swap', function() {
-      document.removeEventListener('DOMContentLoaded', initItemPageAudioControl);
-      document.removeEventListener('astro:page-load', initItemPageAudioControl);
-    }, { once: true });
   })();
 </script>
 
@@ -2084,12 +2071,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     initFollowCheck();
   }
   
-  // Initialize on DOM ready and Astro page transitions
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initFollowButton);
-  } else {
-    initFollowButton();
-  }
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', initFollowButton);
 
   // Wishlist Button Functionality
@@ -2262,21 +2244,8 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     initWishlistCheck();
   }
   
-  // Initialize wishlist button on DOM ready and Astro page transitions
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initWishlistButton);
-  } else {
-    initWishlistButton();
-  }
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', initWishlistButton);
-
-  // Cleanup on Astro View Transition swap to prevent duplicate listeners
-  document.addEventListener('astro:before-swap', function() {
-    document.removeEventListener('DOMContentLoaded', initFollowButton);
-    document.removeEventListener('astro:page-load', initFollowButton);
-    document.removeEventListener('DOMContentLoaded', initWishlistButton);
-    document.removeEventListener('astro:page-load', initWishlistButton);
-  }, { once: true });
 </script>
 
 <!-- NYOP Price Selection Modal -->
@@ -2502,19 +2471,8 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     });
   }
 
-  // Initialize on load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initNYOPItem);
-  } else {
-    initNYOPItem();
-  }
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', initNYOPItem);
-
-  // Cleanup on Astro View Transition swap to prevent duplicate listeners
-  document.addEventListener('astro:before-swap', function() {
-    document.removeEventListener('DOMContentLoaded', initNYOPItem);
-    document.removeEventListener('astro:page-load', initNYOPItem);
-  }, { once: true });
 </script>
 
 <!-- OPTIMIZED: Pass SSR data to client to avoid duplicate API calls -->

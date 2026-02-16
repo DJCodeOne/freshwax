@@ -1053,7 +1053,7 @@ const merchItemList = {
     }
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', init);
 </script>
 

@@ -1140,6 +1140,8 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 </style>
 
 <script define:vars={{ id, mode }} nonce={nonce}>
+  function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
+
   // DailySchedule Controller
   (function() {
     const container = document.getElementById(id);
@@ -1417,7 +1419,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         } else if (isSelected) {
           const block = document.createElement('div');
           block.className = 'slot-block selected';
-          block.innerHTML = `<span class="dj-name">${userDisplayName || 'Your Selection'}</span>`;
+          block.innerHTML = `<span class="dj-name">${escapeHtml(userDisplayName) || 'Your Selection'}</span>`;
           cell.appendChild(block);
 
           if (scheduleMode === 'booking') {
@@ -1497,7 +1499,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       else if (isCurrentHour && isMyBooking) statusBadge = '<span class="status-badge go-live">GO LIVE</span>';
 
       // Simplified: just show DJ name + status badge (time shown in row header)
-      block.innerHTML = `<span class="dj-name">${booking.djName}${statusBadge}</span>`;
+      block.innerHTML = `<span class="dj-name">${escapeHtml(booking.djName)}${statusBadge}</span>`;
 
       // If it's user's current hour booking, clicking should go to go-live page
       if (isMyBooking && isCurrentHour && status === 'scheduled') {

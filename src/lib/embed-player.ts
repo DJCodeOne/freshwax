@@ -205,7 +205,7 @@ export class EmbedPlayerManager {
     if (!container) throw new Error('Container not found');
 
     // Clear container and create iframe - no controls
-    container.innerHTML = `<iframe id="vimeo-player" src="https://player.vimeo.com/video/${item.embedId}?autoplay=1&controls=0&keyboard=0" width="100%" height="100%" frameborder="0" allow="autoplay" style="pointer-events: none;"></iframe>`;
+    container.innerHTML = `<iframe id="vimeo-player" src="https://player.vimeo.com/video/${encodeURIComponent(item.embedId)}?autoplay=1&controls=0&keyboard=0" width="100%" height="100%" frameborder="0" allow="autoplay" style="pointer-events: none;"></iframe>`;
 
     const iframe = document.getElementById('vimeo-player') as HTMLIFrameElement;
 

@@ -1661,14 +1661,7 @@ try {
     loadListing();
   }
 
-  // Run on initial load
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initDetailPage);
-  } else {
-    initDetailPage();
-  }
-
-  // Re-run on Astro page transitions
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', initDetailPage);
 
   // Clean up audio when leaving page

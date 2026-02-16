@@ -6213,7 +6213,11 @@ const csrfToken = Astro.locals.csrfToken || '';
         if (!streamKeyDisplayed && streamKeyEl) {
           streamKeyEl.classList.remove('key-loading', 'key-unavailable');
           streamKeyEl.classList.add('key-reveal');
-          streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+          streamKeyEl.textContent = '';
+          const keySpan = document.createElement('span');
+          keySpan.className = 'key-text';
+          keySpan.textContent = mySlot.streamKey;
+          streamKeyEl.appendChild(keySpan);
           streamKeyDisplayed = true;
         }
         // Start checking for OBS preview stream
@@ -6288,7 +6292,11 @@ const csrfToken = Astro.locals.csrfToken || '';
         if (keyEl) {
           keyEl.classList.remove('key-loading');
           keyEl.classList.add('key-reveal');
-          keyEl.innerHTML = `<span class="key-text">${result.streamKey}</span>`;
+          keyEl.textContent = '';
+          const keySpan = document.createElement('span');
+          keySpan.className = 'key-text';
+          keySpan.textContent = result.streamKey;
+          keyEl.appendChild(keySpan);
         }
         mySlot.streamKey = result.streamKey;
         currentStreamKey = result.streamKey;
@@ -6673,7 +6681,11 @@ const csrfToken = Astro.locals.csrfToken || '';
         await new Promise(resolve => setTimeout(resolve, 5000));
         inlineKeyEl.classList.remove('key-loading');
         inlineKeyEl.classList.add('key-reveal');
-        inlineKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+        inlineKeyEl.textContent = '';
+        const keySpan = document.createElement('span');
+        keySpan.className = 'key-text';
+        keySpan.textContent = mySlot.streamKey;
+        inlineKeyEl.appendChild(keySpan);
         streamKeyDisplayed = true;
       }
       startObsPreviewCheck();
@@ -6753,7 +6765,11 @@ const csrfToken = Astro.locals.csrfToken || '';
         if (inlineKeyEl) {
           inlineKeyEl.classList.remove('key-loading');
           inlineKeyEl.classList.add('key-reveal');
-          inlineKeyEl.innerHTML = `<span class="key-text">${result.streamKey}</span>`;
+          inlineKeyEl.textContent = '';
+          const keySpan = document.createElement('span');
+          keySpan.className = 'key-text';
+          keySpan.textContent = result.streamKey;
+          inlineKeyEl.appendChild(keySpan);
           streamKeyDisplayed = true; // Mark as displayed to prevent re-animation
         }
         log('[GoLive] New stream key generated for slot:', mySlot.id, 'valid until:', result.validUntil);
@@ -8091,7 +8107,11 @@ const csrfToken = Astro.locals.csrfToken || '';
         // Update displays using currentStreamKey (always set correctly)
         streamKeyEl.classList.remove('key-loading', 'key-unavailable');
         streamKeyEl.classList.add('key-reveal');
-        streamKeyEl.innerHTML = `<span class="key-text">${currentStreamKey}</span>`;
+        streamKeyEl.textContent = '';
+        const keySpan = document.createElement('span');
+        keySpan.className = 'key-text';
+        keySpan.textContent = currentStreamKey;
+        streamKeyEl.appendChild(keySpan);
 
         if (icecastPasswordEl) {
           icecastPasswordEl.textContent = currentStreamKey;
@@ -8193,7 +8213,11 @@ const csrfToken = Astro.locals.csrfToken || '';
           if (streamKeyEl) {
             streamKeyEl.classList.remove('key-loading', 'key-unavailable');
             streamKeyEl.classList.add('key-reveal');
-            streamKeyEl.innerHTML = `<span class="key-text">${mySlot.streamKey}</span>`;
+            streamKeyEl.textContent = '';
+            const keySpan = document.createElement('span');
+            keySpan.className = 'key-text';
+            keySpan.textContent = mySlot.streamKey;
+            streamKeyEl.appendChild(keySpan);
           }
 
           // Update slot time display
