@@ -70,6 +70,7 @@ let playlistManager = null;
 let streamEndedAt = null;
 let wasLiveStreamActive = false;
 let liveStatusPollInterval = null;
+let slowPollInterval = null;
 
 // Flag to prevent race conditions with overlay visibility
 // Once a stream is detected, don't let playlist updates re-show overlays
@@ -465,7 +466,8 @@ async function init() {
   }, 60000); // Increased from 20s to 60s
 
   // Slow fallback poll every 2 minutes even when Pusher is connected (safety net)
-  setInterval(async () => {
+  if (slowPollInterval) clearInterval(slowPollInterval);
+  slowPollInterval = setInterval(async () => {
     await checkLiveStatus();
   }, 120000);
 
@@ -4109,6 +4111,15 @@ document.addEventListener('astro:before-swap', () => {
     } catch (e) {
       console.error('[LiveStream] Error destroying HLS player:', e);
     }
+  }
+  // Clear all intervals to prevent memory leaks
+  if (liveStatusPollInterval) {
+    clearInterval(liveStatusPollInterval);
+    liveStatusPollInterval = null;
+  }
+  if (slowPollInterval) {
+    clearInterval(slowPollInterval);
+    slowPollInterval = null;
   }
   // Reset initialization flags
   isInitialized = false;

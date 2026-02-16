@@ -2680,7 +2680,7 @@ const nonce = Astro.locals.nonce || '';
 
   // Initial LED meters toggle setup - wait for DOM
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupMetersToggle);
+    document.addEventListener('astro:page-load', setupMetersToggle);
   } else {
     setupMetersToggle();
   }

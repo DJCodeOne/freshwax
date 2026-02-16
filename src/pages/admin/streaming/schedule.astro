@@ -429,7 +429,7 @@ export const prerender = false;
   let currentWeekStart = getWeekStart(new Date());
   let allowances = [];
 
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('astro:page-load', async () => {
     if (window.getAdminToken) { try { await window.getAdminToken(); } catch(e) { return; } }
     loadSchedule();
     loadAllowances();

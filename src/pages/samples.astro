@@ -514,7 +514,7 @@ const faqs = [
 </style>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     const form = document.getElementById('samples-newsletter-form');
     const emailInput = document.getElementById('samples-newsletter-email') as HTMLInputElement;
     const btn = document.getElementById('samples-newsletter-btn') as HTMLButtonElement;

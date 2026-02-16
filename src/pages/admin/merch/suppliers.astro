@@ -266,7 +266,7 @@ export const prerender = false;
     let suppliers = [];
     let newSupplierCode = '';
 
-    document.addEventListener('DOMContentLoaded', async () => {
+    document.addEventListener('astro:page-load', async () => {
       if (window.getAdminToken) { try { await window.getAdminToken(); } catch(e) { return; } }
       loadSuppliers();
     });

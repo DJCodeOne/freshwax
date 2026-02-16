@@ -107,7 +107,7 @@ import Footer from '../components/Footer.astro';
 </Layout>
 
 <script>
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     // Show confirmation status from redirect
     const params = new URLSearchParams(window.location.search);
     const banner = document.getElementById('confirm-banner');

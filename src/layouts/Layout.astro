@@ -288,7 +288,7 @@ const nonce = Astro.locals.nonce || '';
           }
         }
       }, true);
-      document.addEventListener('DOMContentLoaded', function() {
+      document.addEventListener('astro:page-load', function() {
         document.querySelectorAll('img[loading="lazy"]').forEach(function(img) {
           if (img.complete) img.classList.add('loaded');
           else img.addEventListener('load', function() { this.classList.add('loaded'); });

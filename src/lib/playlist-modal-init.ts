@@ -708,7 +708,11 @@ export function initPlaylistModal() {
             printWindow.document.write(pdfHTML);
             printWindow.document.close();
             printWindow.focus();
-            setTimeout(() => printWindow.print(), 500);
+            setTimeout(() => {
+              if (printWindow && !printWindow.closed) {
+                printWindow.print();
+              }
+            }, 500);
           }
 
           // Close modal and show success
@@ -1099,9 +1103,9 @@ export function initPlaylistModal() {
             const response = await fetch(`/api/youtube/title/?videoId=${videoId}`);
             if (response.ok) {
               const data = await response.json();
-              if (data.success && data.title) {
+              if (data?.success && data.title) {
                 // Find and update the DOM element
-                const titleEl = container.querySelector(`.recently-played-title[data-track-index="${index}"]`) as HTMLElement;
+                const titleEl = container?.querySelector(`.recently-played-title[data-track-index="${index}"]`) as HTMLElement;
                 if (titleEl) {
                   const truncatedTitle = data.title.length > 40 ? data.title.slice(0, 40) + '...' : data.title;
                   titleEl.textContent = truncatedTitle;

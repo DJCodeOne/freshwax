@@ -321,7 +321,7 @@ export const prerender = false;
 <script>
 
   // Filter functionality
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     const table = document.getElementById('productsTable');
     const rows = table?.querySelectorAll('tbody tr');
     const statusButtons = document.querySelectorAll('[data-filter]');

@@ -910,7 +910,7 @@ const getStockBadgeClass = (stock) => {
   });
 
   // Initialize variant grid and images on page load
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     updatePresetButtons();
     renderVariantGrid();
     renderImages();

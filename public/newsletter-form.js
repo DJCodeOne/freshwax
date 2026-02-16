@@ -1,5 +1,5 @@
 // Newsletter form handler (Footer component)
-document.addEventListener('DOMContentLoaded', function() {
+function initNewsletterForm() {
   var form = document.getElementById('newsletter-form');
   var emailInput = document.getElementById('newsletter-email');
   var btn = document.getElementById('newsletter-btn');
@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function() {
   var consentInput = document.getElementById('newsletter-consent');
 
   if (!form) return;
+  if (form.hasAttribute('data-newsletter-init')) return; // Prevent double-init
+  form.setAttribute('data-newsletter-init', 'true');
 
   form.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -55,4 +57,8 @@ document.addEventListener('DOMContentLoaded', function() {
       btn.textContent = 'Subscribe';
     }
   });
-});
+}
+
+// Run on both DOMContentLoaded (fallback) and astro:page-load (View Transitions)
+document.addEventListener('DOMContentLoaded', initNewsletterForm);
+document.addEventListener('astro:page-load', initNewsletterForm);

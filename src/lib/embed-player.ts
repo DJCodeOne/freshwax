@@ -267,33 +267,35 @@ export class EmbedPlayerManager {
     // @ts-ignore - SoundCloud Widget API global
     this.soundcloudWidget = SC.Widget(iframe);
 
-    this.soundcloudWidget.bind(SC.Widget.Events.READY, () => {
-      this.callbacks.onReady?.();
-      this.soundcloudWidget.play();
-    });
+    if (this.soundcloudWidget) {
+      this.soundcloudWidget.bind(SC.Widget.Events.READY, () => {
+        this.callbacks.onReady?.();
+        this.soundcloudWidget?.play();
+      });
 
-    this.soundcloudWidget.bind(SC.Widget.Events.FINISH, () => {
-      this.callbacks.onEnded?.();
-    });
+      this.soundcloudWidget.bind(SC.Widget.Events.FINISH, () => {
+        this.callbacks.onEnded?.();
+      });
 
-    this.soundcloudWidget.bind(SC.Widget.Events.ERROR, () => {
-      this.callbacks.onError?.('SoundCloud player error');
-    });
+      this.soundcloudWidget.bind(SC.Widget.Events.ERROR, () => {
+        this.callbacks.onError?.('SoundCloud player error');
+      });
 
-    this.soundcloudWidget.bind(SC.Widget.Events.PLAY, () => {
-      // Execute pending seek when track first starts playing
-      if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
-        this.hasInitialSeekExecuted = true;
-        const seekPos = this.pendingSeekPosition;
-        this.pendingSeekPosition = null;
-        this.soundcloudWidget?.seekTo(seekPos * 1000); // SoundCloud uses ms
-      }
-      this.callbacks.onStateChange?.('playing');
-    });
+      this.soundcloudWidget.bind(SC.Widget.Events.PLAY, () => {
+        // Execute pending seek when track first starts playing
+        if (this.pendingSeekPosition && !this.hasInitialSeekExecuted) {
+          this.hasInitialSeekExecuted = true;
+          const seekPos = this.pendingSeekPosition;
+          this.pendingSeekPosition = null;
+          this.soundcloudWidget?.seekTo(seekPos * 1000); // SoundCloud uses ms
+        }
+        this.callbacks.onStateChange?.('playing');
+      });
 
-    this.soundcloudWidget.bind(SC.Widget.Events.PAUSE, () => {
-      this.callbacks.onStateChange?.('paused');
-    });
+      this.soundcloudWidget.bind(SC.Widget.Events.PAUSE, () => {
+        this.callbacks.onStateChange?.('paused');
+      });
+    }
   }
 
   /**
@@ -711,10 +713,13 @@ export class EmbedPlayerManager {
 
     if (this.soundcloudWidget) {
       try {
-        this.soundcloudWidget.unbind(SC.Widget.Events.READY);
-        this.soundcloudWidget.unbind(SC.Widget.Events.FINISH);
-        this.soundcloudWidget.unbind(SC.Widget.Events.ERROR);
-        this.soundcloudWidget.unbind(SC.Widget.Events.PLAY);
+        // @ts-ignore - SC global check
+        if (typeof SC !== 'undefined' && SC.Widget?.Events) {
+          this.soundcloudWidget.unbind(SC.Widget.Events.READY);
+          this.soundcloudWidget.unbind(SC.Widget.Events.FINISH);
+          this.soundcloudWidget.unbind(SC.Widget.Events.ERROR);
+          this.soundcloudWidget.unbind(SC.Widget.Events.PLAY);
+        }
       } catch (e) {
         console.warn('[SoundCloud] Cleanup error:', e);
       }

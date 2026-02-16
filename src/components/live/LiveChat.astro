@@ -104,6 +104,9 @@
   let documentClickListenerSet = false;
   let onlineUsersIntervalId = null;
 
+  // AbortController for cleaning up event listeners on View Transitions
+  const liveChatCleanupController = new AbortController();
+
   // Send GIF using existing globals from live-stream.js
   async function sendGifToChat(giphyUrl, giphyId) {
     // Use existing globals set by live-stream.js
@@ -310,7 +313,7 @@
       }
     }
 
-    // Click outside emoji panel to close (only add once to prevent duplicates on View Transitions)
+    // Click outside emoji panel to close (with cleanup on navigation)
     if (!documentClickListenerSet) {
       document.addEventListener('click', (e) => {
         const panel = document.getElementById('emojiPanel');
@@ -320,7 +323,7 @@
             e.target !== btn) {
           panel.style.display = 'none';
         }
-      });
+      }, { signal: liveChatCleanupController.signal });
       documentClickListenerSet = true;
     }
 
@@ -444,6 +447,16 @@
       }
     }, 5000);
   }
+
+  // Clean up intervals and event listeners before View Transitions swap
+  document.addEventListener('astro:before-swap', () => {
+    if (onlineUsersIntervalId) {
+      clearInterval(onlineUsersIntervalId);
+      onlineUsersIntervalId = null;
+    }
+    liveChatCleanupController.abort();
+    documentClickListenerSet = false;
+  }, { once: true });
 
   // Run on load and on Astro navigation
   if (document.readyState === 'loading') {

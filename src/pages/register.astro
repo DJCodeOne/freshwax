@@ -804,7 +804,7 @@ const nonce = Astro.locals.nonce || '';
 
   <script>
     // Password visibility toggle - runs immediately
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('astro:page-load', function() {
       document.querySelectorAll('.password-toggle').forEach(function(button) {
         button.addEventListener('click', function(e) {
           e.preventDefault();

@@ -1550,7 +1550,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   });
 
   // Feature toggle handling
-  document.addEventListener('DOMContentLoaded', async function() {
+  document.addEventListener('astro:page-load', async function() {
     // Wait for Firebase auth before making admin API calls
     if (window.getAdminToken) {
       try { await window.getAdminToken(); } catch(e) { return; }
@@ -1954,7 +1954,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   }
 
   // Initialize monitor
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('astro:page-load', async () => {
     // Wait for Firebase auth before making admin API calls
     if (window.getAdminToken) {
       try { await window.getAdminToken(); } catch(e) { return; }
@@ -1986,7 +1986,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
 <script>
   // Server Control Panel
-  document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('astro:page-load', async () => {
     // Wait for Firebase auth before making admin API calls
     if (window.getAdminToken) {
       try { await window.getAdminToken(); } catch(e) { return; }
@@ -2144,7 +2144,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 
 <script>
   // Start Playlist button handler
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('astro:page-load', () => {
     const startPlaylistBtn = document.getElementById('startPlaylistBtn');
     if (startPlaylistBtn) {
       startPlaylistBtn.addEventListener('click', async () => {
@@ -2192,7 +2192,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
   // Playlist Monitor functionality
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('astro:page-load', function() {
     const PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
 
     // Elements
