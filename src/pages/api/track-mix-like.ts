@@ -46,8 +46,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[track-mix-like] Mix', mixId, 'likes:', likes);
 
-    // Invalidate cache for this mix
+    // Invalidate caches for this mix and the listing
     clearCache(`doc:dj-mixes:${mixId}`);
+    clearCache('live-mixes:50');
+    clearCache('live-mixes:all');
 
     // Sync likes to D1 if available
     if (db) {

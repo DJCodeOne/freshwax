@@ -1203,24 +1203,22 @@ const mixesItemList = {
         });
         
         try {
-          // Use server-side proxy to fetch the file
-          var proxyUrl = '/api/download/?url=' + encodeURIComponent(audioUrl) + '&filename=' + encodeURIComponent(filename);
-          
-          var response = await fetch(proxyUrl);
+          // DJ mixes are free — fetch from CDN as blob to force download
+          var response = await fetch(audioUrl);
           if (!response.ok) {
             throw new Error('Download failed: ' + response.status);
           }
-          
+
           var blob = await response.blob();
           var blobUrl = window.URL.createObjectURL(blob);
-          
+
           var link = document.createElement('a');
           link.href = blobUrl;
           link.download = filename;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          
+
           window.URL.revokeObjectURL(blobUrl);
           
           // Show success state
