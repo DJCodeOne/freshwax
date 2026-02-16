@@ -1086,15 +1086,18 @@ Artist - Track Title
     }
     
     try {
-      // DJ mixes are free — download directly from CDN
+      // DJ mixes are free — fetch from CDN as blob to force download
+      const response = await fetch(audioUrl);
+      if (!response.ok) throw new Error('Download failed: ' + response.status);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = audioUrl;
+      link.href = blobUrl;
       link.download = filename;
-      link.target = '_blank';
-      link.rel = 'noopener';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
       
       // Show success state
       if (downloadIcon) downloadIcon.classList.add('hidden');
