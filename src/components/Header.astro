@@ -698,9 +698,13 @@ const firebaseConfig = {
 </script>
 
 <script type="module" define:vars={{ firebaseConfig }} nonce={nonce}>
-  import { escapeHtml } from '../lib/escape-html';
-  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-  import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+  // Inline escapeHtml — cannot use import with define:vars (forces inline script, breaks bundled imports)
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+  const { getAuth, onAuthStateChanged, signOut } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
 
   // Initialize Firebase only once
   let app;
