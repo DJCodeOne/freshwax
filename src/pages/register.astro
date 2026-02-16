@@ -1032,6 +1032,9 @@ const csrfToken = Astro.locals.csrfToken || '';
       });
     }
 
+    // ==================== DISPLAY NAME AVAILABILITY CHECK ====================
+    const displayNameInput = document.getElementById('displayName');
+
     // Display name validation
     displayNameInput.addEventListener('blur', () => {
       const name = displayNameInput.value.trim();
@@ -1041,9 +1044,6 @@ const csrfToken = Astro.locals.csrfToken || '';
         displayNameInput.removeAttribute('aria-invalid');
       }
     });
-
-    // ==================== DISPLAY NAME AVAILABILITY CHECK ====================
-    const displayNameInput = document.getElementById('displayName');
     const displayNameStatus = document.getElementById('displayNameStatus');
     const displayNameHint = document.getElementById('displayNameHint');
     let nameCheckTimeout = null;

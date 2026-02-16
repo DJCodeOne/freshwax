@@ -7,7 +7,14 @@ export default defineConfig({
     include: ['src/__tests__/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/lib/order-utils.ts', 'src/lib/api-utils.ts', 'src/lib/rate-limit.ts'],
+      include: [
+        'src/lib/order-utils.ts',
+        'src/lib/api-utils.ts',
+        'src/lib/rate-limit.ts',
+        'src/lib/email.ts',
+        'src/lib/csrf.ts',
+        'src/lib/email-wrapper.ts',
+      ],
     },
   },
   resolve: {
