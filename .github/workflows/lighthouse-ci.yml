@@ -29,26 +29,9 @@ jobs:
       - name: Build
         run: npm run build
 
-      # For scheduled/dispatch runs, test production directly
-      - name: Lighthouse CI (production)
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      # Test against production (Cloudflare adapter doesn't support local preview in CI)
+      - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
         with:
           configPath: .github/lighthouse-ci-production.json
-          uploadArtifacts: true
-
-      # For push/PR runs, test against local preview server
-      - name: Start preview server
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-        run: npm run preview &
-
-      - name: Wait for preview server
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-        run: npx wait-on http://localhost:4321 --timeout 30000
-
-      - name: Lighthouse CI (local)
-        if: github.event_name != 'schedule' && github.event_name != 'workflow_dispatch'
-        uses: treosh/lighthouse-ci-action@v12
-        with:
-          configPath: .github/lighthouse-ci.json
           uploadArtifacts: true
