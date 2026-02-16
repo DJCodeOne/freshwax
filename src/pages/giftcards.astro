@@ -307,7 +307,7 @@ const faqs = [
 
 
 <script type="module">
-  import { escapeHtml } from '../lib/escape-html';
+  function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
   // Uses window.authReady / window.authUser from Header (no Firebase SDK needed)
 
   let currentUser = null;

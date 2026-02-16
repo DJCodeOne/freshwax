@@ -2190,7 +2190,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
 </script>
 
 <script>
-  import { escapeHtml } from '../../lib/escape-html';
+  function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
   // Playlist Monitor functionality
   document.addEventListener('DOMContentLoaded', function() {
     const PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
