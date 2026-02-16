@@ -4,6 +4,7 @@
 // When offline: redirects to default live page image
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
+import { SITE_URL } from '../../../lib/constants';
 
 // Cache for stream status
 let cachedStatus: { isLive: boolean; imageUrl: string; timestamp: number } | null = null;
@@ -59,7 +60,7 @@ function redirectToImage(imageUrl: string): Response {
   // If it's a relative URL, make it absolute
   const fullUrl = imageUrl.startsWith('http')
     ? imageUrl
-    : `https://freshwax.co.uk${imageUrl}`;
+    : `${SITE_URL}${imageUrl}`;
 
   // Use 302 redirect so crawlers always get fresh content
   return new Response(null, {

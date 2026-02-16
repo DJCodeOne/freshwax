@@ -1,6 +1,8 @@
 // src/lib/paypal-payouts.ts
 // PayPal Payouts API integration
 
+import { fetchWithTimeout } from './api-utils';
+
 interface PayPalConfig {
   clientId: string;
   clientSecret: string;
@@ -32,14 +34,14 @@ async function getAccessToken(config: PayPalConfig): Promise<string> {
 
   const auth = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
 
-  const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
+  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: 'grant_type=client_credentials',
-  });
+  }, 10000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -83,14 +85,14 @@ export async function createPayout(
       ],
     };
 
-    const response = await fetch(`${baseUrl}/v1/payments/payouts`, {
+    const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-    });
+    }, 10000);
 
     const data = await response.json();
 
@@ -149,14 +151,14 @@ export async function createBatchPayout(
       })),
     };
 
-    const response = await fetch(`${baseUrl}/v1/payments/payouts`, {
+    const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-    });
+    }, 10000);
 
     const data = await response.json();
 
@@ -194,11 +196,11 @@ export async function getPayoutStatus(
       ? 'https://api-m.sandbox.paypal.com'
       : 'https://api-m.paypal.com';
 
-    const response = await fetch(`${baseUrl}/v1/payments/payouts/${batchId}`, {
+    const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts/${batchId}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
       },
-    });
+    }, 10000);
 
     if (!response.ok) {
       const error = await response.text();

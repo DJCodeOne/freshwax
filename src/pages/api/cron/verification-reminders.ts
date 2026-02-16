@@ -5,6 +5,8 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -84,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const emailHtml = buildReminderEmail(user.displayName || user.firstName || '');
 
-        const resendResponse = await fetch('https://api.resend.com/emails', {
+        const resendResponse = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -96,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             subject: 'Reminder: Verify Your Email - Fresh Wax',
             html: emailHtml
           })
-        });
+        }, 10000);
 
         if (resendResponse.ok) {
           // Update user doc with reminder timestamp
@@ -156,7 +158,7 @@ function buildReminderEmail(name: string): string {
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; border: 1px solid #262626;">
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #262626;">
-              <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="120" style="display: block; margin: 0 auto 20px;">
+              <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="120" style="display: block; margin: 0 auto 20px;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Verify Your Email</h1>
             </td>
           </tr>
@@ -174,7 +176,7 @@ function buildReminderEmail(name: string): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <a href="https://freshwax.co.uk/verify-email" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    <a href="${SITE_URL}/verify-email" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                       Verify My Email
                     </a>
                   </td>
@@ -189,7 +191,7 @@ function buildReminderEmail(name: string): string {
             <td style="padding: 20px 40px; background-color: #1a1a1a; border-top: 1px solid #262626; border-radius: 0 0 12px 12px;">
               <p style="color: #666666; font-size: 12px; margin: 0; text-align: center;">
                 Fresh Wax - Jungle &amp; Drum and Bass<br>
-                <a href="https://freshwax.co.uk" style="color: #888888;">freshwax.co.uk</a>
+                <a href="${SITE_URL}" style="color: #888888;">freshwax.co.uk</a>
               </p>
             </td>
           </tr>

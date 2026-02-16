@@ -1566,7 +1566,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
       }
 
       // Initialize JSZip - dynamically load if not available
-      if (typeof (window as any).JSZip === 'undefined') {
+      if (typeof window.JSZip === 'undefined') {
         progressText.textContent = 'Loading ZIP library...';
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
@@ -1576,7 +1576,7 @@ const physicalItems = enrichedItems.filter((item: any) =>
           document.head.appendChild(script);
         });
       }
-      const zip = new (window as any).JSZip();
+      const zip = new window.JSZip();
       const folder = zip.folder(releaseName);
 
       // Download each file and add to ZIP

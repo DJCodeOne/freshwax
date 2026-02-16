@@ -231,3 +231,52 @@ declare namespace App {
     nonce: string;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Window augmentation — eliminates `(window as any)` casts across the codebase
+// ---------------------------------------------------------------------------
+
+interface FreshwaxUserInfo {
+  loggedIn?: boolean;
+  id?: string | null;
+  name?: string;
+  displayName?: string;
+  email?: string;
+  avatar?: string | null;
+}
+
+declare global {
+  interface Window {
+    // ---- Streaming / playlist state ----
+    isLiveStreamActive?: boolean;
+    streamDetectedThisSession?: boolean;
+    currentStreamData?: Record<string, unknown>;
+    playlistManager?: import('./lib/playlist-manager').PlaylistManager | null;
+    playlistChatSetup?: boolean;
+    emojiAnimationsEnabled?: boolean;
+    userHasCloudSync?: boolean;
+    currentUserInfo?: FreshwaxUserInfo;
+
+    // ---- Pusher ----
+    PUSHER_CONFIG?: { key: string; cluster: string };
+    pusherInstance?: InstanceType<typeof window.Pusher> | null;
+    livestreamPusher?: InstanceType<typeof window.Pusher> | null;
+    Pusher: any;
+
+    // ---- Chat ----
+    setChatEnabled?: (enabled: boolean) => void;
+    setupChat?: (channel: string) => void;
+
+    // ---- Admin ----
+    showToast?: (message: string, type?: string) => void;
+    goPage?: (page: number) => void;
+
+    // ---- Third-party ----
+    JSZip?: new () => any;
+    requestIdleCallback?: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number;
+
+    // ---- Firebase auth (legacy) ----
+    firebaseAuth?: { currentUser?: { getIdToken: () => Promise<string> } };
+    firebase?: { auth?: () => { currentUser?: { getIdToken: () => Promise<string> } } };
+  }
+}

@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -55,7 +56,7 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     if (youtubeApiKey) {
       const apiUrl = `https://www.googleapis.com/youtube/v3/videos?id=${videoId}&part=contentDetails&key=${youtubeApiKey}`;
-      const apiResponse = await fetch(apiUrl);
+      const apiResponse = await fetchWithTimeout(apiUrl, {}, 10000);
 
       if (apiResponse.ok) {
         const data = await apiResponse.json();

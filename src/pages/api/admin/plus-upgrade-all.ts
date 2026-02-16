@@ -6,6 +6,8 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -119,7 +121,7 @@ function buildThankYouEmail(userName: string): string {
 
               <!-- CTA -->
               <div style="text-align: center; margin-top: 32px;">
-                <a href="https://freshwax.co.uk/account/dashboard" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                <a href="${SITE_URL}/account/dashboard" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
                   Visit Your Dashboard
                 </a>
               </div>
@@ -133,7 +135,7 @@ function buildThankYouEmail(userName: string): string {
                 Big love, Code One 🙏
               </p>
               <p style="color: #444; font-size: 12px; margin: 0;">
-                <a href="https://freshwax.co.uk" style="color: #dc2626; text-decoration: none;">freshwax.co.uk</a>
+                <a href="${SITE_URL}" style="color: #dc2626; text-decoration: none;">freshwax.co.uk</a>
               </p>
             </td>
           </tr>
@@ -172,7 +174,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (testEmail) {
       const emailHtml = buildThankYouEmail(testName || 'Early Supporter');
 
-      const response = await fetch('https://api.resend.com/emails', {
+      const response = await fetchWithTimeout('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -184,7 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           subject: '🎉 You\'re Now a Fresh Wax Plus Member!',
           html: emailHtml
         })
-      });
+      }, 10000);
 
       if (response.ok) {
         const result = await response.json();
@@ -290,7 +292,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const emailHtml = buildThankYouEmail(userName);
 
-        const response = await fetch('https://api.resend.com/emails', {
+        const response = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -302,7 +304,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             subject: '🎉 You\'re Now a Fresh Wax Plus Member!',
             html: emailHtml
           })
-        });
+        }, 10000);
 
         if (response.ok) {
           results.emailsSent.push(userEmail);

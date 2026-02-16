@@ -200,7 +200,7 @@ export class PlaylistManager {
     // If playlist is playing, start playback
     if (this.playlist.queue.length > 0 && this.playlist.isPlaying) {
       await this.playCurrent();
-    } else if (this.playlist.queue.length === 0 && !(window as any).isLiveStreamActive) {
+    } else if (this.playlist.queue.length === 0 && !window.isLiveStreamActive) {
       // Queue is empty and no live stream - try to auto-start playlist
       // Small delay to ensure page is ready
       setTimeout(() => this.startAutoPlay(), 500);
@@ -229,7 +229,7 @@ export class PlaylistManager {
     }
 
     // Get Pusher config from window
-    const pusherConfig = (window as any).PUSHER_CONFIG;
+    const pusherConfig = window.PUSHER_CONFIG;
     if (!pusherConfig?.key) {
       console.warn('[PlaylistManager] Pusher config not found');
       return;
@@ -237,13 +237,13 @@ export class PlaylistManager {
 
     try {
       // Use existing Pusher instance if available, or create new one
-      let pusher = (window as any).pusherInstance;
+      let pusher = window.pusherInstance;
       if (!pusher) {
         pusher = new window.Pusher(pusherConfig.key, {
           cluster: pusherConfig.cluster || 'eu',
           forceTLS: true
         });
-        (window as any).pusherInstance = pusher;
+        window.pusherInstance = pusher;
       }
 
       // Subscribe to playlist channel
@@ -264,7 +264,7 @@ export class PlaylistManager {
    */
   private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: any[] }): Promise<void> {
     // If live stream is active, ignore "isPlaying" from remote updates
-    const liveStreamActive = (window as any).isLiveStreamActive;
+    const liveStreamActive = window.isLiveStreamActive;
     if (liveStreamActive && newPlaylist.isPlaying) {
       newPlaylist.isPlaying = false; // Force playlist to not play
     }
@@ -510,7 +510,7 @@ export class PlaylistManager {
    */
   async play(): Promise<void> {
     // Don't play if live stream is active
-    if ((window as any).isLiveStreamActive) {
+    if (window.isLiveStreamActive) {
       return;
     }
 
@@ -596,7 +596,7 @@ export class PlaylistManager {
    */
   async startAutoPlay(): Promise<boolean> {
     // Don't start if live stream is active
-    if ((window as any).isLiveStreamActive) {
+    if (window.isLiveStreamActive) {
       return false;
     }
 
@@ -712,7 +712,7 @@ export class PlaylistManager {
    */
   private async playCurrent(): Promise<void> {
     // Don't play if live stream is active
-    if ((window as any).isLiveStreamActive) {
+    if (window.isLiveStreamActive) {
       return;
     }
 
@@ -872,7 +872,7 @@ export class PlaylistManager {
    * Enable emoji reactions, audio meters, and chat
    */
   private enableEmojis(): void {
-    (window as any).emojiAnimationsEnabled = true;
+    window.emojiAnimationsEnabled = true;
 
     const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
     reactionButtons.forEach(btn => {
@@ -887,14 +887,14 @@ export class PlaylistManager {
     }
 
     // Enable chat for playlist mode
-    if (typeof (window as any).setChatEnabled === 'function') {
-      (window as any).setChatEnabled(true);
+    if (typeof window.setChatEnabled === 'function') {
+      window.setChatEnabled(true);
     }
 
     // Setup chat channel for playlist mode if not already done
-    if (typeof (window as any).setupChat === 'function' && !(window as any).playlistChatSetup) {
-      (window as any).setupChat('playlist-global');
-      (window as any).playlistChatSetup = true;
+    if (typeof window.setupChat === 'function' && !window.playlistChatSetup) {
+      window.setupChat('playlist-global');
+      window.playlistChatSetup = true;
     }
 
     // Ensure stereo meters are visible for playlist (we use the same LED elements)
@@ -916,14 +916,14 @@ export class PlaylistManager {
    */
   private disableEmojis(): void {
     // Check if a live stream is active - don't disable anything if so
-    const isLiveStreamActive = (window as any).isLiveStreamActive;
-    const streamDetectedThisSession = (window as any).streamDetectedThisSession;
+    const isLiveStreamActive = window.isLiveStreamActive;
+    const streamDetectedThisSession = window.streamDetectedThisSession;
 
     if (isLiveStreamActive || streamDetectedThisSession) {
       return;
     }
 
-    (window as any).emojiAnimationsEnabled = false;
+    window.emojiAnimationsEnabled = false;
 
     const reactionButtons = document.querySelectorAll('.reaction-btn, .emoji-btn, [data-reaction], .anim-toggle-btn, .fs-reaction-btn');
     reactionButtons.forEach(btn => {
@@ -931,12 +931,12 @@ export class PlaylistManager {
       btn.classList.add('disabled', 'reactions-disabled');
     });
     if (!isLiveStreamActive) {
-      if (typeof (window as any).setChatEnabled === 'function') {
-        (window as any).setChatEnabled(false);
+      if (typeof window.setChatEnabled === 'function') {
+        window.setChatEnabled(false);
       }
 
       // Reset playlist chat setup flag
-      (window as any).playlistChatSetup = false;
+      window.playlistChatSetup = false;
     }
 
     this.stopPlaylistMeters();
@@ -1123,9 +1123,9 @@ export class PlaylistManager {
         djInfoBar.classList.remove('playlist-mode');
       }
       // Only reset DJ name if no live stream is active (preserve relay/DJ name)
-      const isLiveStreamActive = (window as any).isLiveStreamActive;
-      const streamDetectedThisSession = (window as any).streamDetectedThisSession;
-      const currentStreamData = (window as any).currentStreamData;
+      const isLiveStreamActive = window.isLiveStreamActive;
+      const streamDetectedThisSession = window.streamDetectedThisSession;
+      const currentStreamData = window.currentStreamData;
       if (djNameEl && !isLiveStreamActive && !streamDetectedThisSession && !currentStreamData) {
         djNameEl.textContent = '--';
       }
@@ -1451,7 +1451,7 @@ export class PlaylistManager {
   private async pickRandomFromLocalServer(): Promise<GlobalPlaylistItem | null> {
     try {
       // Use authenticated proxy to prevent unauthenticated inventory disclosure
-      const auth = (window as any).firebase?.auth?.();
+      const auth = window.firebase?.auth?.();
       const currentUser = auth?.currentUser;
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
@@ -1569,11 +1569,11 @@ export class PlaylistManager {
       // Check if user has Plus for cloud sync
       if (result.isPlus === false) {
         // Store Plus status for later use
-        (window as any).userHasCloudSync = false;
+        window.userHasCloudSync = false;
         return;
       }
 
-      (window as any).userHasCloudSync = true;
+      window.userHasCloudSync = true;
 
       if (result.success && Array.isArray(result.playlist)) {
         // Merge with localStorage (D1 takes priority for duplicates)
@@ -1621,13 +1621,13 @@ export class PlaylistManager {
     if (!this.userId) return;
 
     // Skip if user doesn't have cloud sync (not Plus)
-    if ((window as any).userHasCloudSync === false) {
+    if (window.userHasCloudSync === false) {
       return;
     }
 
     try {
       // Get Firebase auth token for authorization
-      const auth = (window as any).firebase?.auth?.();
+      const auth = window.firebase?.auth?.();
       const currentUser = auth?.currentUser;
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
@@ -1652,7 +1652,7 @@ export class PlaylistManager {
 
       if (result.isPlus === false) {
         // User is not Plus - mark it and skip future saves
-        (window as any).userHasCloudSync = false;
+        window.userHasCloudSync = false;
         return;
       }
 
@@ -1681,7 +1681,7 @@ export class PlaylistManager {
     }
 
     // Determine max size based on subscription
-    const hasCloudSync = (window as any).userHasCloudSync === true;
+    const hasCloudSync = window.userHasCloudSync === true;
     const maxSize = hasCloudSync ? 1000 : 100;
 
     // Check max size
@@ -2045,7 +2045,7 @@ export class PlaylistManager {
         this.playlist = result.playlist;
 
         // If live stream is active, force playlist to not play
-        if ((window as any).isLiveStreamActive && this.playlist.isPlaying) {
+        if (window.isLiveStreamActive && this.playlist.isPlaying) {
           this.playlist.isPlaying = false;
         }
 
@@ -2351,7 +2351,7 @@ export class PlaylistManager {
     this.stopCountdown();
     if (this.pusherChannel) {
       this.pusherChannel.unbind_all();
-      const pusher = (window as any).pusherInstance;
+      const pusher = window.pusherInstance;
       if (pusher) {
         pusher.unsubscribe('live-playlist');
       }
@@ -2361,9 +2361,3 @@ export class PlaylistManager {
   }
 }
 
-// Add Pusher type to window
-declare global {
-  interface Window {
-    Pusher: any;
-  }
-}

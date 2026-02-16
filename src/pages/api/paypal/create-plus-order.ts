@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -23,14 +24,14 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string, mode
   const baseUrl = getPayPalBaseUrl(mode);
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
+  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: 'grant_type=client_credentials',
-  });
+  }, 10000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -205,7 +206,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     };
 
-    const paypalResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+    const paypalResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -213,7 +214,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         'PayPal-Request-Id': `plus_${userId}_${Date.now()}`
       },
       body: JSON.stringify(orderPayload)
-    });
+    }, 10000);
 
     if (!paypalResponse.ok) {
       const errorData = await paypalResponse.json();

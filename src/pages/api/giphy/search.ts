@@ -2,6 +2,7 @@
 // Server-side GIPHY proxy to keep API key secure
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -88,7 +89,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       ? `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=${limit}&offset=${offset}&rating=pg-13`
       : `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}&rating=pg-13`;
 
-    const response = await fetch(giphyUrl);
+    const response = await fetchWithTimeout(giphyUrl, {}, 10000);
 
     if (!response.ok) {
       throw new Error(`GIPHY API error: ${response.status}`);

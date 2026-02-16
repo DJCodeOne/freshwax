@@ -6,6 +6,8 @@ import { getDocument, updateDocument, addDocument, clearCache, atomicIncrement, 
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
+import { SITE_URL } from '../../lib/constants';
+import { fetchWithTimeout } from '../../lib/api-utils';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -776,7 +778,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const emailHtml = buildOrderConfirmationEmail(orderRef.id, shortOrderNumber, order);
 
-        const emailResponse = await fetch('https://api.resend.com/emails', {
+        const emailResponse = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -789,7 +791,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             subject: 'Order Confirmed - ' + shortOrderNumber,
             html: emailHtml
           })
-        });
+        }, 10000);
 
         if (emailResponse.ok) {
           const emailResult = await emailResponse.json();
@@ -818,7 +820,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           const fulfillmentHtml = buildStockistFulfillmentEmail(orderRef.id, orderNumber, order, vinylItems);
 
-          const fulfillmentResponse = await fetch('https://api.resend.com/emails', {
+          const fulfillmentResponse = await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -831,7 +833,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
               html: fulfillmentHtml
             })
-          });
+          }, 10000);
 
           if (fulfillmentResponse.ok) {
             const result = await fulfillmentResponse.json();
@@ -892,7 +894,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
 
-            const digitalResponse = await fetch('https://api.resend.com/emails', {
+            const digitalResponse = await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -905,7 +907,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 subject: '🎵 Digital Sale! ' + orderNumber,
                 html: digitalHtml
               })
-            });
+            }, 10000);
 
             if (digitalResponse.ok) {
               log.info('[create-order] ✓ Digital sale email sent to:', artistEmail);
@@ -945,7 +947,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
 
-            const merchResponse = await fetch('https://api.resend.com/emails', {
+            const merchResponse = await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -958,7 +960,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 subject: '👕 Merch Order! ' + orderNumber,
                 html: merchHtml
               })
-            });
+            }, 10000);
 
             if (merchResponse.ok) {
               log.info('[create-order] ✓ Merch sale email sent to:', sellerEmail);
@@ -1010,7 +1012,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // Email template function - Light theme
 function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order: any): string {
-  const confirmationUrl = 'https://freshwax.co.uk/order-confirmation/' + orderId;
+  const confirmationUrl = `${SITE_URL}/order-confirmation/${orderId}`;
 
   // Build items HTML - only show image for merch items
   let itemsHtml = '';
@@ -1067,7 +1069,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
 
     // Header with logo and brand - BLACK background
     '<tr><td style="background: #000000; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center;">' +
-    '<img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 8px;">' +
+    `<img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="60" height="60" style="display: block; margin: 0 auto 12px; border-radius: 8px;">` +
     '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #ffffff;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
     '<div style="font-size: 12px; color: #9ca3af; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
     '</td></tr>' +
@@ -1121,7 +1123,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
 
     // Go back to store button
     '<tr><td align="center" style="padding: 24px 0 8px;">' +
-    '<a href="https://freshwax.co.uk" style="display: inline-block; padding: 14px 32px; background: #000000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Go Back to Store</a>' +
+    `<a href="${SITE_URL}" style="display: inline-block; padding: 14px 32px; background: #000000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Go Back to Store</a>` +
     '</td></tr>' +
 
     '</table></td></tr>' +
@@ -1129,7 +1131,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     // Footer
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px; line-height: 1.6;">Question? Email us at <a href="mailto:contact@freshwax.co.uk" style="color: #111; text-decoration: underline;">contact@freshwax.co.uk</a></div>' +
-    '<div style="margin-top: 12px;"><a href="https://freshwax.co.uk" style="color: #9ca3af; font-size: 12px; text-decoration: none;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 12px;"><a href="${SITE_URL}" style="color: #9ca3af; font-size: 12px; text-decoration: none;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
 
     '</table></td></tr></table></body></html>';
@@ -1276,7 +1278,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     // Footer
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">This is an automated fulfillment request from Fresh Wax</div>' +
-    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
 
     '</table></td></tr></table></body></html>';
@@ -1310,7 +1312,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
 
     // Header - Fresh Wax branding
     '<tr><td style="background: #fff; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #dc2626; border-bottom: none;">' +
-    '<img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="50" height="50" style="display: block; margin: 0 auto 12px; border-radius: 6px;">' +
+    `<img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="50" height="50" style="display: block; margin: 0 auto 12px; border-radius: 6px;">` +
     '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #000;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
     '<div style="font-size: 12px; color: #666; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
     '</td></tr>' +
@@ -1367,7 +1369,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
     // Footer
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
-    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
 
     '</table></td></tr></table></body></html>';
@@ -1405,7 +1407,7 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
 
     // Header - Fresh Wax branding
     '<tr><td style="background: #fff; padding: 32px 24px; border-radius: 12px 12px 0 0; text-align: center; border: 2px solid #dc2626; border-bottom: none;">' +
-    '<img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="50" height="50" style="display: block; margin: 0 auto 12px; border-radius: 6px;">' +
+    `<img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="50" height="50" style="display: block; margin: 0 auto 12px; border-radius: 6px;">` +
     '<div style="font-size: 28px; font-weight: 800; letter-spacing: 1px;"><span style="color: #000;">FRESH</span> <span style="color: #dc2626;">WAX</span></div>' +
     '<div style="font-size: 12px; color: #666; margin-top: 4px; letter-spacing: 2px;">JUNGLE • DRUM AND BASS</div>' +
     '</td></tr>' +
@@ -1461,7 +1463,7 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '<tr><td style="padding-top: 20px;">' +
     '<div style="padding: 16px; background: #1f2937; border-left: 4px solid #16a34a; border-radius: 0 8px 8px 0;">' +
     '<div style="font-weight: 700; color: #16a34a; margin-bottom: 4px;">✅ No Action Required</div>' +
-    '<div style="font-size: 14px; color: #9ca3af; line-height: 1.5;">Fresh Wax handles all shipping and fulfilment. View your sales and earnings in your <a href="https://freshwax.co.uk/artist/dashboard" style="color: #dc2626;">Artist Dashboard</a>.</div>' +
+    `<div style="font-size: 14px; color: #9ca3af; line-height: 1.5;">Fresh Wax handles all shipping and fulfilment. View your sales and earnings in your <a href="${SITE_URL}/artist/dashboard" style="color: #dc2626;">Artist Dashboard</a>.</div>` +
     '</div>' +
     '</td></tr>' +
 
@@ -1470,7 +1472,7 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     // Footer
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
-    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
 
     '</table></td></tr></table></body></html>';

@@ -9,6 +9,8 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-utils';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -225,7 +227,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const shortOrderNumber = getShortOrderNumber(orderNumber);
         const emailHtml = buildOrderEmail(orderId, shortOrderNumber, order);
 
-        const emailResponse = await fetch('https://api.resend.com/emails', {
+        const emailResponse = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -238,7 +240,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             subject: `Order Confirmed - ${shortOrderNumber}`,
             html: emailHtml
           })
-        });
+        }, 10000);
 
         if (emailResponse.ok) {
           console.log('[admin] Confirmation email sent');
@@ -261,7 +263,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           try {
             const artist = await saGetDocument(serviceAccountKey, projectId, 'artists', item.artistId);
             if (artist?.email) {
-              await fetch('https://api.resend.com/emails', {
+              await fetchWithTimeout('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -279,7 +281,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     <br><p>Payment will be processed to your configured payout method.</p>
                     <p>- Fresh Wax</p>`
                 })
-              });
+              }, 10000);
               console.log('[admin] Artist notification sent to:', artist.email);
             }
           } catch (artistErr) {
@@ -493,7 +495,7 @@ function buildOrderEmail(orderId: string, orderNumber: string, order: any): stri
         <p style="margin: 8px 0 0; color: #166534;">Visit your account dashboard to download your music.</p>
       </div>
       <div style="text-align: center; margin-top: 24px;">
-        <a href="https://freshwax.co.uk/account/dashboard" style="display: inline-block; padding: 12px 24px; background: #dc2626; color: white; text-decoration: none; border-radius: 8px;">Go to Dashboard</a>
+        <a href="${SITE_URL}/account/dashboard" style="display: inline-block; padding: 12px 24px; background: #dc2626; color: white; text-decoration: none; border-radius: 8px;">Go to Dashboard</a>
       </div>
     </div>
   </div>

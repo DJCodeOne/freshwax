@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -129,14 +130,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log('[GiftCard Stripe] Creating checkout session...');
 
     // Create Stripe checkout session
-    const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    const stripeResponse = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: bodyParams.toString()
-    });
+    }, 10000);
 
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();

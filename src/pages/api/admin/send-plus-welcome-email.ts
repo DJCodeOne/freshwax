@@ -3,6 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -72,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Calculate days until expiry
     const daysUntilExpiry = Math.ceil((expDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
-    const loginUrl = 'https://freshwax.co.uk/account/dashboard';
+    const loginUrl = `${SITE_URL}/account/dashboard`;
 
     // Subject line based on renewal or new subscription
     const subject = isRenewal
@@ -225,7 +227,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     </p>
                   </td>
                   <td align="right">
-                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
                   </td>
                 </tr>
               </table>
@@ -240,7 +242,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     `.trim();
 
     // Send via Resend
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -252,7 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         subject: subject,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     const result = await response.json();
 

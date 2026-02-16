@@ -1,7 +1,8 @@
 // src/lib/giftcard.ts
 // Gift Card System - Generate, validate, and redeem gift cards
 
-import { escapeHtml } from './api-utils';
+import { escapeHtml, fetchWithTimeout } from './api-utils';
+import { SITE_URL } from './constants';
 
 /**
  * Get cryptographically secure random bytes
@@ -332,7 +333,7 @@ export async function sendGiftCardEmail(
               <div style="background: #f9f9f9; border-radius: 12px; padding: 25px; margin: 30px 0;">
                 <h3 style="font-size: 18px; color: #111; margin: 0 0 15px 0;">How to Redeem</h3>
                 <ol style="color: #666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                  <li>Visit <a href="https://freshwax.co.uk/giftcards" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
+                  <li>Visit <a href="${SITE_URL}/giftcards" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
                   <li>Sign in or create an account</li>
                   <li>Enter your code above</li>
                   <li>Start shopping!</li>
@@ -341,7 +342,7 @@ export async function sendGiftCardEmail(
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://freshwax.co.uk/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
+                <a href="${SITE_URL}/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
                   Redeem Your Gift Card
                 </a>
               </div>
@@ -357,7 +358,7 @@ export async function sendGiftCardEmail(
             <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
               <p style="color: #888; font-size: 13px; margin: 0;">
                 <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> - Underground Jungle & Drum and Bass<br>
-                <a href="https://freshwax.co.uk" style="color: #dc2626;">freshwax.co.uk</a>
+                <a href="${SITE_URL}" style="color: #dc2626;">freshwax.co.uk</a>
               </p>
             </td>
           </tr>
@@ -369,7 +370,7 @@ export async function sendGiftCardEmail(
 </html>
     `;
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -381,7 +382,7 @@ export async function sendGiftCardEmail(
         subject,
         html
       }),
-    });
+    }, 10000);
 
     if (!response.ok) {
       const error = await response.text();
@@ -500,7 +501,7 @@ export async function createGiftCardAfterPayment(
     const purchaseRecordId = `purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     try {
-      await fetch(
+      await fetchWithTimeout(
         `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/users/${data.buyerUserId}/purchasedGiftCards?documentId=${purchaseRecordId}`,
         {
           method: 'POST',
@@ -517,7 +518,8 @@ export async function createGiftCardAfterPayment(
               status: { stringValue: 'sent' }
             }
           })
-        }
+        },
+        10000
       );
       console.log(`[giftcard] Added purchase record to customer ${data.buyerUserId}`);
     } catch (e) {

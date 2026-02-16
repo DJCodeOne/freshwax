@@ -4,6 +4,7 @@ import { getDocument, updateDocument, addDocument } from '../../../../lib/fireba
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { escapeHtml } from '../../../../lib/escape-html';
+import { fetchWithTimeout } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -319,7 +320,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
         if (RESEND_API_KEY && order.buyer?.email) {
           try {
-            await fetch('https://api.resend.com/emails', {
+            await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -392,7 +393,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 </body>
 </html>`
               })
-            });
+            }, 10000);
             console.log('[vinyl/order refund] Buyer refund email sent');
           } catch (emailErr) {
             console.error('[vinyl/order refund] Buyer email error:', emailErr);
@@ -417,7 +418,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
 
             if (sellerEmail) {
-              await fetch('https://api.resend.com/emails', {
+              await fetchWithTimeout('https://api.resend.com/emails', {
                 method: 'POST',
                 headers: {
                   'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -486,7 +487,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 </body>
 </html>`
                 })
-              });
+              }, 10000);
               console.log('[vinyl/order refund] Seller refund notification sent to:', sellerEmail);
             }
           } catch (sellerEmailErr) {

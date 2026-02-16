@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
+import { SITE_URL } from '../../../../lib/constants';
 
 export const prerender = false;
 
@@ -103,7 +104,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       business_profile: {
         name: artist.artistName || artist.name,
         product_description: 'Music sales and digital downloads on Fresh Wax',
-        url: `https://freshwax.co.uk/artist/${artistId}`,
+        url: `${SITE_URL}/artist/${artistId}`,
       },
       metadata: {
         artistId: artistId,
@@ -153,7 +154,7 @@ function getBaseUrl(request: Request): string {
   const url = new URL(request.url);
   // In production, always use https
   if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-    return 'https://freshwax.co.uk';
+    return SITE_URL;
   }
   return `${url.protocol}//${url.host}`;
 }

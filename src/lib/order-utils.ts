@@ -4,7 +4,8 @@
 import { getDocument, updateDocument, addDocument, clearCache, setDocument, atomicIncrement, updateDocumentConditional, queryCollection } from './firebase-rest';
 import { d1UpsertMerch } from './d1-catalog';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
-import { escapeHtml } from './api-utils';
+import { escapeHtml, fetchWithTimeout } from './api-utils';
+import { SITE_URL } from './constants';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -1552,7 +1553,7 @@ export async function sendOrderConfirmationEmail(
 
     console.log('[sendEmail] Email HTML length:', emailHtml.length);
 
-    const emailResponse = await fetch('https://api.resend.com/emails', {
+    const emailResponse = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -1565,7 +1566,7 @@ export async function sendOrderConfirmationEmail(
         subject: 'Order Confirmed - ' + shortOrderNumber,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     console.log('[sendEmail] Resend API response status:', emailResponse.status);
 
@@ -1598,7 +1599,7 @@ export async function sendVinylFulfillmentEmail(
     log.info('[order-utils] Sending vinyl fulfillment email to stockist:', STOCKIST_EMAIL);
     const fulfillmentHtml = buildStockistFulfillmentEmail(orderId, orderNumber, order, vinylItems);
 
-    const fulfillmentResponse = await fetch('https://api.resend.com/emails', {
+    const fulfillmentResponse = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -1611,7 +1612,7 @@ export async function sendVinylFulfillmentEmail(
         subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
         html: fulfillmentHtml
       })
-    });
+    }, 10000);
 
     if (fulfillmentResponse.ok) {
       log.info('[order-utils] ✓ Stockist email sent!');
@@ -1652,7 +1653,7 @@ export async function sendDigitalSaleEmails(
       log.info('[order-utils] Sending digital sale email to artist:', artistEmail);
       const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
 
-      await fetch('https://api.resend.com/emails', {
+      await fetchWithTimeout('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -1665,7 +1666,7 @@ export async function sendDigitalSaleEmails(
           subject: '🎵 Digital Sale! ' + orderNumber,
           html: digitalHtml
         })
-      });
+      }, 10000);
       log.info('[order-utils] ✓ Digital sale email sent to:', artistEmail);
     } catch (digitalError) {
       console.error('[order-utils] Digital sale email error:', digitalError);
@@ -1701,7 +1702,7 @@ export async function sendMerchSaleEmails(
       log.info('[order-utils] Sending merch sale email to seller:', sellerEmail);
       const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
 
-      await fetch('https://api.resend.com/emails', {
+      await fetchWithTimeout('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + RESEND_API_KEY,
@@ -1714,7 +1715,7 @@ export async function sendMerchSaleEmails(
           subject: '👕 Merch Order! ' + orderNumber,
           html: merchHtml
         })
-      });
+      }, 10000);
       log.info('[order-utils] ✓ Merch sale email sent to:', sellerEmail);
     } catch (merchError) {
       console.error('[order-utils] Merch sale email error:', merchError);
@@ -2010,12 +2011,12 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '<tr><td style="height: 24px;"></td></tr>' +
     shippingSection +
     '<tr><td align="center" style="padding: 24px 0 8px;">' +
-    '<a href="https://freshwax.co.uk" style="display: inline-block; padding: 14px 32px; background: #000000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Go Back to Store</a>' +
+    `<a href="${SITE_URL}" style="display: inline-block; padding: 14px 32px; background: #000000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px;">Go Back to Store</a>` +
     '</td></tr>' +
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px; line-height: 1.6;">Question? Email us at <a href="mailto:contact@freshwax.co.uk" style="color: #111; text-decoration: underline;">contact@freshwax.co.uk</a></div>' +
-    '<div style="margin-top: 12px;"><a href="https://freshwax.co.uk" style="color: #9ca3af; font-size: 12px; text-decoration: none;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 12px;"><a href="${SITE_URL}" style="color: #9ca3af; font-size: 12px; text-decoration: none;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';
 }
@@ -2124,7 +2125,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">This is an automated fulfillment request from Fresh Wax</div>' +
-    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';
 }
@@ -2194,7 +2195,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
-    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';
 }
@@ -2287,7 +2288,7 @@ function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[])
     '</table></td></tr>' +
     '<tr><td align="center" style="padding: 24px 0;">' +
     '<div style="color: #6b7280; font-size: 13px;">Automated notification from Fresh Wax</div>' +
-    '<div style="margin-top: 8px;"><a href="https://freshwax.co.uk" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>' +
+    `<div style="margin-top: 8px;"><a href="${SITE_URL}" style="color: #dc2626; font-size: 12px; text-decoration: none; font-weight: 600;">freshwax.co.uk</a></div>` +
     '</td></tr>' +
     '</table></td></tr></table></body></html>';
 }

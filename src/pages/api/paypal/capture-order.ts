@@ -7,6 +7,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -22,14 +23,14 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string, mode
   const baseUrl = getPayPalBaseUrl(mode);
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
+  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: 'grant_type=client_credentials',
-  });
+  }, 10000);
 
   if (!response.ok) {
     throw new Error('Failed to get PayPal access token');
@@ -199,14 +200,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const baseUrl = getPayPalBaseUrl(paypalMode);
 
     // Capture the PayPal order
-    const captureResponse = await fetch(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
+    const captureResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders/${paypalOrderId}/capture`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'PayPal-Request-Id': `capture_${paypalOrderId}_${Date.now()}`
       }
-    });
+    }, 10000);
 
     if (!captureResponse.ok) {
       const error = await captureResponse.text();

@@ -26,6 +26,8 @@ import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../li
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -99,7 +101,7 @@ async function sendPendingEarningsEmail(
       return { success: false, error: 'Email service not configured' };
     }
 
-    const connectUrl = 'https://freshwax.co.uk/artist/account?setup=stripe';
+    const connectUrl = `${SITE_URL}/artist/account?setup=stripe`;
     const formattedAmount = `£${amount.toFixed(2)}`;
 
     const emailHtml = `
@@ -171,7 +173,7 @@ async function sendPendingEarningsEmail(
                     </p>
                   </td>
                   <td align="right">
-                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
                   </td>
                 </tr>
               </table>
@@ -185,7 +187,7 @@ async function sendPendingEarningsEmail(
 </html>
     `.trim();
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -197,7 +199,7 @@ async function sendPendingEarningsEmail(
         subject: `💰 You've made a sale on Fresh Wax! Connect Stripe to get paid`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     if (!response.ok) {
       let errorBody: string | undefined;
@@ -237,7 +239,7 @@ async function sendPayoutCompletedEmail(
       return { success: false, error: 'Email service not configured' };
     }
 
-    const dashboardUrl = 'https://freshwax.co.uk/artist/payouts';
+    const dashboardUrl = `${SITE_URL}/artist/payouts`;
     const formattedAmount = `£${amount.toFixed(2)}`;
 
     const emailHtml = `
@@ -323,7 +325,7 @@ async function sendPayoutCompletedEmail(
                     </p>
                   </td>
                   <td align="right">
-                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
                   </td>
                 </tr>
               </table>
@@ -337,7 +339,7 @@ async function sendPayoutCompletedEmail(
 </html>
     `.trim();
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -349,7 +351,7 @@ async function sendPayoutCompletedEmail(
         subject: `✅ ${formattedAmount} payment sent to your account - Order #${orderNumber}`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     if (!response.ok) {
       let errorBody: string | undefined;
@@ -391,7 +393,7 @@ async function sendRefundNotificationEmail(
       return { success: false, error: 'Email service not configured' };
     }
 
-    const dashboardUrl = 'https://freshwax.co.uk/artist/payouts';
+    const dashboardUrl = `${SITE_URL}/artist/payouts`;
     const formattedRefund = `£${refundAmount.toFixed(2)}`;
     const formattedOriginal = `£${originalPayout.toFixed(2)}`;
 
@@ -485,7 +487,7 @@ async function sendRefundNotificationEmail(
                     </p>
                   </td>
                   <td align="right">
-                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
                   </td>
                 </tr>
               </table>
@@ -499,7 +501,7 @@ async function sendRefundNotificationEmail(
 </html>
     `.trim();
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -511,7 +513,7 @@ async function sendRefundNotificationEmail(
         subject: `↩️ Refund adjustment: -${formattedRefund} from order #${orderNumber}`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     if (!response.ok) {
       let errorBody: string | undefined;

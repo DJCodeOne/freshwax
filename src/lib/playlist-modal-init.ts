@@ -5,6 +5,7 @@
 
 import { PlaylistManager } from './playlist-manager';
 import { getPlatformName } from './url-parser';
+import { SITE_URL } from './constants';
 
 // Guard against multiple initializations
 let _initialized = false;
@@ -159,7 +160,7 @@ export function initPlaylistModal() {
     if (playlistManager) return;
 
     // Get user from window.currentUserInfo (set by live.astro auth)
-    const userInfo = (window as any).currentUserInfo;
+    const userInfo = window.currentUserInfo;
     currentUserId = userInfo?.id || null;
     isAuthenticated = userInfo?.loggedIn || false;
 
@@ -172,7 +173,7 @@ export function initPlaylistModal() {
     updateAuthUI();
 
     // Expose globally for live-stream.js
-    (window as any).playlistManager = playlistManager;
+    window.playlistManager = playlistManager;
     console.log('[PlaylistModal] Manager initialized, authenticated:', isAuthenticated);
   }
 
@@ -210,7 +211,7 @@ export function initPlaylistModal() {
   // Save auth state to sessionStorage
   function saveAuthState() {
     if (isAuthenticated && currentUserId) {
-      const userInfo = (window as any).currentUserInfo;
+      const userInfo = window.currentUserInfo;
       sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
         id: currentUserId,
         name: userInfo?.displayName || userInfo?.name || 'User',
@@ -222,7 +223,7 @@ export function initPlaylistModal() {
   // Check if auth is already ready (from window or sessionStorage)
   function checkExistingAuth() {
     // First check window.currentUserInfo
-    const userInfo = (window as any).currentUserInfo;
+    const userInfo = window.currentUserInfo;
     if (userInfo && userInfo.loggedIn === true && userInfo.id) {
       console.log('[PlaylistModal] Auth from window.currentUserInfo:', userInfo);
       currentUserId = userInfo.id;
@@ -241,7 +242,7 @@ export function initPlaylistModal() {
           currentUserId = parsed.id;
           isAuthenticated = true;
           // Also restore to window for other components
-          (window as any).currentUserInfo = {
+          window.currentUserInfo = {
             loggedIn: true,
             id: parsed.id,
             name: parsed.name,
@@ -302,7 +303,7 @@ export function initPlaylistModal() {
 
     function checkAuth() {
       attempts++;
-      const userInfo = (window as any).currentUserInfo;
+      const userInfo = window.currentUserInfo;
 
       // Check if user is logged in
       if (userInfo && userInfo.loggedIn === true && userInfo.id) {
@@ -327,7 +328,7 @@ export function initPlaylistModal() {
         let lateChecks = 0;
         const lateAuthCheck = setInterval(() => {
           lateChecks++;
-          const userInfo = (window as any).currentUserInfo;
+          const userInfo = window.currentUserInfo;
           if (userInfo && userInfo.loggedIn === true && userInfo.id && !isAuthenticated) {
             console.log('[PlaylistModal] Late auth detected after', (3000 + lateChecks * 500), 'ms:', userInfo);
             currentUserId = userInfo.id;
@@ -591,7 +592,7 @@ export function initPlaylistModal() {
             content += `    Added: ${item.addedAt ? new Date(item.addedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Unknown'}\n\n`;
           });
 
-          content += `\n---\nExported from FRESH WAX\nhttps://freshwax.co.uk\n`;
+          content += `\n---\nExported from FRESH WAX\n${SITE_URL}\n`;
           mimeType = 'text/plain;charset=utf-8';
           extension = 'txt';
 
@@ -1240,7 +1241,7 @@ export function initPlaylistModal() {
       }
     }
     playlistManager = null;
-    (window as any).playlistManager = null;
+    window.playlistManager = null;
     hasInitializedThisPage = false;
     listenersAttached = false;
   }

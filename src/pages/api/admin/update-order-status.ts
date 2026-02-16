@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                ${tracking.trackingUrl ? `<p><a href="${tracking.trackingUrl}" style="color: #dc2626;">Track Your Package</a></p>` : ''}`
             : '';
 
-          await fetch('https://api.resend.com/emails', {
+          await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -120,10 +120,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 </div>
               `
             })
-          });
+          }, 10000);
           console.log('[update-order-status] Shipping notification sent');
         } else if (status === 'cancelled') {
-          await fetch('https://api.resend.com/emails', {
+          await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -144,7 +144,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 </div>
               `
             })
-          });
+          }, 10000);
           console.log('[update-order-status] Cancellation notification sent');
         }
       } catch (emailErr) {

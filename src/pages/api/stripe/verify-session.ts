@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -61,13 +62,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Retrieve the session from Stripe
     console.log('[verify-session] Fetching session from Stripe...');
-    const sessionResponse = await fetch(
+    const sessionResponse = await fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
       {
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`
         }
-      }
+      },
+      10000
     );
 
     console.log('[verify-session] Stripe response status:', sessionResponse.status);
@@ -223,13 +225,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Get line items from Stripe session
     console.log('[verify-session] Fetching line items from Stripe...');
-    const lineItemsResponse = await fetch(
+    const lineItemsResponse = await fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=100`,
       {
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`
         }
-      }
+      },
+      10000
     );
     console.log('[verify-session] Line items response status:', lineItemsResponse.status);
 

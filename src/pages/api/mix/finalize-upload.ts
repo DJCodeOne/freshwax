@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 import { processImageToSquareWebP } from '../../../lib/image-processing';
 
@@ -114,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // This prevents orphaned mix entries when uploads fail or are cancelled
     try {
       console.log(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
-      const verifyResponse = await fetch(audioUrl, { method: 'HEAD' });
+      const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, 10000);
 
       if (!verifyResponse.ok) {
         console.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
@@ -179,7 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const R2_CONFIG = getR2Config(env);
         const s3Client = createS3Client(R2_CONFIG);
 
-        const artworkResp = await fetch(artworkUrl);
+        const artworkResp = await fetchWithTimeout(artworkUrl, {}, 15000);
         if (artworkResp.ok) {
           const artworkBuffer = await artworkResp.arrayBuffer();
           const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);

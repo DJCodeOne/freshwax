@@ -4,6 +4,8 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -43,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const loginUrl = 'https://freshwax.co.uk/login?redirect=/account/dashboard';
+    const loginUrl = `${SITE_URL}/login?redirect=/account/dashboard`;
 
     // Determine role labels and content based on type
     const isArtist = type === 'artist' || type === 'both';
@@ -173,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     </p>
                   </td>
                   <td align="right">
-                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
                   </td>
                 </tr>
               </table>
@@ -188,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     `.trim();
 
     // Send via Resend
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -200,7 +202,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         subject: `Welcome to Fresh Wax! Your ${subjectRole} account is approved 🎉`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     const result = await response.json();
 

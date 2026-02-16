@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
+import { SITE_URL } from '../../../../../lib/constants';
 
 export const prerender = false;
 
@@ -91,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       business_profile: {
         name: user.displayName || user.name || 'Vinyl Seller',
         product_description: 'Vinyl record sales on Fresh Wax Crates',
-        url: `https://freshwax.co.uk/crates`,
+        url: `${SITE_URL}/crates`,
       },
       metadata: {
         userId: userId,
@@ -141,7 +142,7 @@ function isAllowedReturnUrl(url: string | undefined, baseUrl: string): boolean {
   if (!url) return false;
   try {
     const parsed = new URL(url);
-    return parsed.origin === 'https://freshwax.co.uk' || parsed.origin === baseUrl;
+    return parsed.origin === SITE_URL || parsed.origin === baseUrl;
   } catch {
     return false;
   }
@@ -150,7 +151,7 @@ function isAllowedReturnUrl(url: string | undefined, baseUrl: string): boolean {
 function getBaseUrl(request: Request): string {
   const url = new URL(request.url);
   if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-    return 'https://freshwax.co.uk';
+    return SITE_URL;
   }
   return `${url.protocol}//${url.host}`;
 }

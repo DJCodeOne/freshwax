@@ -8,6 +8,8 @@ import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -101,7 +103,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, items: any[], ar
 
               <!-- CTA -->
               <div style="text-align: center; margin-top: 32px;">
-                <a href="https://freshwax.co.uk/artist/dashboard" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
+                <a href="${SITE_URL}/artist/dashboard" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
                   View Your Dashboard
                 </a>
               </div>
@@ -115,7 +117,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, items: any[], ar
                 Thank you for being part of Fresh Wax!
               </p>
               <p style="color: #444; font-size: 12px; margin: 12px 0 0;">
-                <a href="https://freshwax.co.uk" style="color: #ef4444; text-decoration: none;">freshwax.co.uk</a>
+                <a href="${SITE_URL}" style="color: #ef4444; text-decoration: none;">freshwax.co.uk</a>
               </p>
             </td>
           </tr>
@@ -285,7 +287,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           data.payout
         );
 
-        const response = await fetch('https://api.resend.com/emails', {
+        const response = await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -298,7 +300,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             subject: `🎵 Digital Sale! ${orderNumber}`,
             html: emailHtml
           })
-        });
+        }, 10000);
 
         if (response.ok) {
           const result = await response.json();

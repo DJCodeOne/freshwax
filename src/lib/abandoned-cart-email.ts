@@ -1,6 +1,9 @@
 // src/lib/abandoned-cart-email.ts
 // Sends abandoned cart recovery emails when Stripe checkout sessions expire
 
+import { SITE_URL } from './constants';
+import { fetchWithTimeout } from './api-utils';
+
 // SECURITY: Escape user-supplied data for safe HTML embedding
 function esc(s: string | null | undefined): string {
   if (!s) return '';
@@ -37,15 +40,15 @@ export async function sendAbandonedCartEmail(
 
     const formattedTotal = `£${total.toFixed(2)}`;
     const greeting = name ? esc(name.split(' ')[0]) : 'there';
-    const cartUrl = 'https://freshwax.co.uk/cart/';
-    const unsubUrl = 'https://freshwax.co.uk/account/settings/';
+    const cartUrl = `${SITE_URL}/cart/`;
+    const unsubUrl = `${SITE_URL}/account/settings/`;
 
     // Build items table rows
     const itemRows = items.map(item => {
       const itemName = esc(item.name || item.title || 'Item');
       const qty = item.quantity || 1;
       const price = (item.price || 0) * qty;
-      const imgSrc = item.image || item.artwork || 'https://freshwax.co.uk/logo.webp';
+      const imgSrc = item.image || item.artwork || `${SITE_URL}/logo.webp`;
 
       return `
                       <tr>
@@ -150,7 +153,7 @@ export async function sendAbandonedCartEmail(
                     </p>
                   </td>
                   <td align="right">
-                    <a href="https://freshwax.co.uk" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
+                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
                   </td>
                 </tr>
                 <tr>
@@ -171,7 +174,7 @@ export async function sendAbandonedCartEmail(
 </html>
     `.trim();
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -183,7 +186,7 @@ export async function sendAbandonedCartEmail(
         subject: `You left ${items.length === 1 ? 'an item' : 'items'} in your cart - Fresh Wax`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     const result = await response.json();
 

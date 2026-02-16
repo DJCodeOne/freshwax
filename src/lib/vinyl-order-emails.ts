@@ -1,6 +1,9 @@
 // src/lib/vinyl-order-emails.ts
 // Email notifications for vinyl crates orders - seller and admin notifications
 
+import { SITE_URL } from './constants';
+import { fetchWithTimeout } from './api-utils';
+
 // SECURITY: Escape user-supplied data for safe HTML embedding
 function esc(s: string | null | undefined): string {
   if (!s) return '';
@@ -35,7 +38,7 @@ export async function sendVinylOrderSellerEmail(
       return { success: false, error: 'Email service not configured' };
     }
 
-    const dashboardUrl = 'https://freshwax.co.uk/artist/vinyl/orders';
+    const dashboardUrl = `${SITE_URL}/artist/vinyl/orders`;
     const formattedPrice = `£${orderDetails.price.toFixed(2)}`;
     const shipping = orderDetails.shippingAddress;
 
@@ -154,7 +157,7 @@ export async function sendVinylOrderSellerEmail(
 </body>
 </html>`;
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -166,7 +169,7 @@ export async function sendVinylOrderSellerEmail(
         subject: `📦 New Order: ${orderDetails.itemTitle} - #${orderDetails.orderNumber}`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     if (!response.ok) {
       const error = await response.text();
@@ -240,7 +243,7 @@ export async function sendVinylOrderAdminEmail(
 </body>
 </html>`;
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -252,7 +255,7 @@ export async function sendVinylOrderAdminEmail(
         subject: `[Crates] Vinyl Sale: ${esc(orderDetails.itemTitle)} - #${esc(orderDetails.orderNumber)}`,
         html: emailHtml
       })
-    });
+    }, 10000);
 
     if (!response.ok) {
       return { success: false, error: 'Admin email failed' };

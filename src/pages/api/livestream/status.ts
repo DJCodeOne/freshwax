@@ -6,6 +6,7 @@ import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
 
 // Cache TTLs in seconds
 // Pusher handles real-time updates, so polling can be slower
@@ -16,7 +17,7 @@ const CACHE_TTL = {
 };
 
 // Cache API helpers (FREE and unlimited - replaces KV for reads)
-const CACHE_BASE_URL = 'https://freshwax.co.uk/__cache/status';
+const CACHE_BASE_URL = `${SITE_URL}/__cache/status`;
 
 async function getCached(key: string): Promise<any | null> {
   try {

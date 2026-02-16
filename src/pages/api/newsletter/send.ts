@@ -6,6 +6,7 @@ import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { escapeHtml } from '../../../lib/api-utils';
+import { SITE_URL } from '../../../lib/constants';
 
 export const prerender = false;
 
@@ -264,8 +265,8 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
     <body style="margin: 0; padding: 0; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
       <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <a href="https://freshwax.co.uk">
-            <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
+          <a href="${SITE_URL}">
+            <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
           </a>
         </div>
 
@@ -275,19 +276,19 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
           ${htmlContent}
 
           <div style="text-align: center; margin: 35px 0 20px;">
-            <a href="https://freshwax.co.uk" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Visit Fresh Wax</a>
+            <a href="${SITE_URL}" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Visit Fresh Wax</a>
           </div>
         </div>
 
         <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
           <p>© ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
           <p style="margin-top: 10px;">
-            <a href="https://freshwax.co.uk" style="color: #888; margin: 0 10px;">Website</a>
-            <a href="https://freshwax.co.uk/releases" style="color: #888; margin: 0 10px;">Releases</a>
-            <a href="https://freshwax.co.uk/dj-mixes" style="color: #888; margin: 0 10px;">DJ Mixes</a>
+            <a href="${SITE_URL}" style="color: #888; margin: 0 10px;">Website</a>
+            <a href="${SITE_URL}/releases" style="color: #888; margin: 0 10px;">Releases</a>
+            <a href="${SITE_URL}/dj-mixes" style="color: #888; margin: 0 10px;">DJ Mixes</a>
           </p>
           <p style="margin-top: 15px;">
-            <a href="https://freshwax.co.uk/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666;">Unsubscribe from newsletter</a>
+            <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666;">Unsubscribe from newsletter</a>
           </p>
         </div>
       </div>

@@ -7,6 +7,8 @@ import { getDocument, updateDocument, addDocument, queryCollection } from '../..
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 // Helper to initialize Firebase
 function initFirebase(locals: App.Locals) {
@@ -23,7 +25,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
   }
 
   try {
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -35,7 +37,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
         subject,
         html
       }),
-    });
+    }, 10000);
 
     if (!response.ok) {
       const error = await response.text();
@@ -172,7 +174,7 @@ async function sendGiftCardEmail(
               <div style="background: #f9f9f9; border-radius: 12px; padding: 25px; margin: 30px 0;">
                 <h3 style="font-size: 18px; color: #111; margin: 0 0 15px 0;">How to Redeem</h3>
                 <ol style="color: #666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                  <li>Visit <a href="https://freshwax.co.uk/giftcards" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
+                  <li>Visit <a href="${SITE_URL}/giftcards" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
                   <li>Sign in or create an account</li>
                   <li>Enter your code above</li>
                   <li>Start shopping!</li>
@@ -181,7 +183,7 @@ async function sendGiftCardEmail(
 
               <!-- CTA Button -->
               <div style="text-align: center; margin: 30px 0;">
-                <a href="https://freshwax.co.uk/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
+                <a href="${SITE_URL}/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
                   Redeem Your Gift Card →
                 </a>
               </div>
@@ -197,7 +199,7 @@ async function sendGiftCardEmail(
             <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
               <p style="color: #888; font-size: 13px; margin: 0;">
                 <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> - Underground Jungle & Drum and Bass<br>
-                <a href="https://freshwax.co.uk" style="color: #dc2626;">freshwax.co.uk</a>
+                <a href="${SITE_URL}" style="color: #dc2626;">freshwax.co.uk</a>
               </p>
             </td>
           </tr>

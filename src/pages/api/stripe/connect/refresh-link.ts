@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
+import { SITE_URL } from '../../../../lib/constants';
 
 export const prerender = false;
 
@@ -89,7 +90,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 function getBaseUrl(request: Request): string {
   const url = new URL(request.url);
   if (url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
-    return 'https://freshwax.co.uk';
+    return SITE_URL;
   }
   return `${url.protocol}//${url.host}`;
 }

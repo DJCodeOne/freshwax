@@ -3,8 +3,9 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
 
 export const prerender = false;
 
@@ -49,7 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // First, look up the user by email using Firebase REST API
-    const lookupResponse = await fetch(
+    const lookupResponse = await fetchWithTimeout(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${FIREBASE_API_KEY}`,
       {
         method: 'POST',
@@ -57,12 +58,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         body: JSON.stringify({
           email: [email]
         })
-      }
+      },
+      10000
     );
 
     // Try to get user by sending password reset (which tells us if user exists)
     // Actually, let's use the sendOobCode endpoint to send verification email
-    const sendVerificationResponse = await fetch(
+    const sendVerificationResponse = await fetchWithTimeout(
       `https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${FIREBASE_API_KEY}`,
       {
         method: 'POST',
@@ -73,7 +75,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // This requires the user to be signed in, which we can't do server-side
           // So we'll generate a custom email instead
         })
-      }
+      },
+      10000
     );
 
     // Since we can't use Firebase's built-in email verification without user being signed in,
@@ -93,7 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #262626;">
-              <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" width="120" style="display: block; margin: 0 auto 20px;">
+              <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="120" style="display: block; margin: 0 auto 20px;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Verify Your Email</h1>
             </td>
           </tr>
@@ -114,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <a href="https://freshwax.co.uk/verify-email" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                    <a href="${SITE_URL}/verify-email" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                       Verify My Email
                     </a>
                   </td>
@@ -132,7 +135,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             <td style="padding: 20px 40px; background-color: #1a1a1a; border-top: 1px solid #262626; border-radius: 0 0 12px 12px;">
               <p style="color: #666666; font-size: 12px; margin: 0; text-align: center;">
                 Fresh Wax - Jungle & Drum and Bass<br>
-                <a href="https://freshwax.co.uk" style="color: #888888;">freshwax.co.uk</a>
+                <a href="${SITE_URL}" style="color: #888888;">freshwax.co.uk</a>
               </p>
             </td>
           </tr>
@@ -145,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     `;
 
     // Send via Resend
-    const resendResponse = await fetch('https://api.resend.com/emails', {
+    const resendResponse = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -157,7 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         subject: 'Verify Your Email - Fresh Wax',
         html: emailHtml
       })
-    });
+    }, 10000);
 
     const resendResult = await resendResponse.json();
 

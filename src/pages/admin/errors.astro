@@ -162,7 +162,7 @@ export const prerender = false;
     }
   }
 
-  (window as any).goPage = function(page: number) {
+  window.goPage = function(page: number) {
     currentOffset = page * PAGE_SIZE;
     loadErrors();
     window.scrollTo(0, 0);

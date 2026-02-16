@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -57,7 +58,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Check MP3 size
       if (track.mp3Url) {
         try {
-          const mp3Response = await fetch(track.mp3Url, { method: 'HEAD' });
+          const mp3Response = await fetchWithTimeout(track.mp3Url, { method: 'HEAD' }, 10000);
           if (mp3Response.ok) {
             const size = mp3Response.headers.get('content-length');
             if (size) {
@@ -75,7 +76,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Check WAV size
       if (track.wavUrl) {
         try {
-          const wavResponse = await fetch(track.wavUrl, { method: 'HEAD' });
+          const wavResponse = await fetchWithTimeout(track.wavUrl, { method: 'HEAD' }, 10000);
           if (wavResponse.ok) {
             const size = wavResponse.headers.get('content-length');
             if (size) {

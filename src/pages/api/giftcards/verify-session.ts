@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -39,13 +40,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Retrieve the session from Stripe
     console.log('[giftcard-verify] Fetching session from Stripe:', sessionId);
-    const sessionResponse = await fetch(
+    const sessionResponse = await fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
       {
         headers: {
           'Authorization': `Bearer ${stripeSecretKey}`
         }
-      }
+      },
+      10000
     );
 
     if (!sessionResponse.ok) {

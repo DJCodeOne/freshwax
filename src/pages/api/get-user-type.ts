@@ -5,6 +5,7 @@ import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-
 import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { fetchWithTimeout } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -217,7 +218,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const potentialAvatarUrl = `${r2PublicUrl}/avatars/${uid}.webp`;
       console.log('[get-user-type] Checking R2 for avatar:', potentialAvatarUrl);
       try {
-        const avatarCheck = await fetch(potentialAvatarUrl, { method: 'HEAD' });
+        const avatarCheck = await fetchWithTimeout(potentialAvatarUrl, { method: 'HEAD' }, 10000);
         console.log('[get-user-type] R2 avatar check response:', avatarCheck.status);
         if (avatarCheck.ok) {
           avatarUrl = `${potentialAvatarUrl}?t=${Date.now()}`;

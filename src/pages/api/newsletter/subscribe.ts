@@ -8,6 +8,8 @@
 import type { APIRoute } from 'astro';
 import { getDocument, createDocumentIfNotExists, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 function emailToDocId(email: string): string {
   return email.toLowerCase().trim().replace(/[.@]/g, '_');
@@ -158,12 +160,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 async function sendConfirmationEmail(
   apiKey: string, email: string, subscriberId: string, token: string, name?: string
 ): Promise<void> {
-  const confirmUrl = `https://freshwax.co.uk/api/newsletter/confirm/?id=${encodeURIComponent(subscriberId)}&token=${encodeURIComponent(token)}`;
+  const confirmUrl = `${SITE_URL}/api/newsletter/confirm/?id=${encodeURIComponent(subscriberId)}&token=${encodeURIComponent(token)}`;
   const greeting = name ? `Hi ${name},` : 'Hi there,';
 
   let response: Response;
   try {
-    response = await fetch('https://api.resend.com/emails', {
+    response = await fetchWithTimeout('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -182,7 +184,7 @@ async function sendConfirmationEmail(
 <body style="margin: 0; padding: 0; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
     <div style="text-align: center; margin-bottom: 30px;">
-      <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
+      <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
     </div>
     <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
       <h1 style="margin: 0 0 20px; font-size: 24px; color: #fff;">Confirm Your Subscription</h1>
@@ -204,7 +206,7 @@ async function sendConfirmationEmail(
 </body>
 </html>`
       })
-    });
+    }, 10000);
   } catch (fetchError) {
     console.error('[Newsletter] Resend fetch failed:', fetchError);
     return; // Subscription was created, email failure is non-blocking

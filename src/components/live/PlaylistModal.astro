@@ -2150,7 +2150,7 @@
 
   // Load on idle (well before the 10-second playlist fallback timer in live.astro)
   if ('requestIdleCallback' in window) {
-    (window as any).requestIdleCallback(() => loadPlaylistModule(), { timeout: 3000 });
+    window.requestIdleCallback(() => loadPlaylistModule(), { timeout: 3000 });
   } else {
     // Fallback for Safari: load after a short delay
     setTimeout(loadPlaylistModule, 1000);
@@ -2167,7 +2167,7 @@
     // Reset on navigation so it re-initializes for the new page
     _playlistModuleLoaded = false;
     if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(() => loadPlaylistModule(), { timeout: 3000 });
+      window.requestIdleCallback(() => loadPlaylistModule(), { timeout: 3000 });
     } else {
       setTimeout(loadPlaylistModule, 1000);
     }

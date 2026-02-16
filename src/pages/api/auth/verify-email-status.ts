@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -35,13 +36,14 @@ export const POST: APIRoute = async ({ request }) => {
     const idToken = authHeader?.replace('Bearer ', '') || '';
     const apiKey = import.meta.env.FIREBASE_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY;
 
-    const lookupResponse = await fetch(
+    const lookupResponse = await fetchWithTimeout(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
-      }
+      },
+      10000
     );
 
     if (!lookupResponse.ok) {

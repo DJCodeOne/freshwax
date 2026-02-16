@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -174,7 +174,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
     if (RESEND_API_KEY && order.customer?.email) {
       try {
-        await fetch('https://api.resend.com/emails', {
+        await fetchWithTimeout('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -198,7 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               </div>
             `
           })
-        });
+        }, 10000);
         console.log('[process-refund] Refund email sent');
       } catch (emailErr) {
         console.error('[process-refund] Email error:', emailErr);

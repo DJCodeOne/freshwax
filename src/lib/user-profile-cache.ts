@@ -60,7 +60,7 @@ export async function getUserProfile(uid: string, forceRefresh = false): Promise
   try {
     const headers: Record<string, string> = {};
     try {
-      const token = await (window as any).firebaseAuth?.currentUser?.getIdToken();
+      const token = await window.firebaseAuth?.currentUser?.getIdToken();
       if (token) headers['Authorization'] = `Bearer ${token}`;
     } catch { /* no auth available */ }
     const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(uid)}`, { headers });

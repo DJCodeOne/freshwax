@@ -193,3 +193,25 @@ export function getEnv(locals: App.Locals): CloudflareEnv {
 // Re-export from standalone module (safe for both server and client imports)
 export { escapeHtml } from './escape-html';
 
+// ============================================
+// FETCH WITH TIMEOUT
+// ============================================
+
+/**
+ * Fetch with an automatic timeout via AbortController.
+ * Prevents external API calls from hanging indefinitely.
+ */
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs: number = 10000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+

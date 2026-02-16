@@ -259,7 +259,7 @@ export const prerender = false;
 
       if (!data.success) {
         addLog(`Scan failed: ${data.error}`, 'error');
-        (window as any).showToast?.(`Scan failed: ${data.error}`, 'error');
+        window.showToast?.(`Scan failed: ${data.error}`, 'error');
         scanStatus.style.display = 'none';
         return;
       }
@@ -288,7 +288,7 @@ export const prerender = false;
 
     } catch (err) {
       addLog(`Scan error: ${err}`, 'error');
-      (window as any).showToast?.('Scan failed', 'error');
+      window.showToast?.('Scan failed', 'error');
       scanStatus.style.display = 'none';
     }
   }
@@ -399,7 +399,7 @@ export const prerender = false;
     }
 
     addLog(`Reprocessing complete: ${totalProcessed} processed, ${totalFailed} failed`, totalFailed > 0 ? 'error' : 'success');
-    (window as any).showToast?.(`Done: ${totalProcessed} processed, ${totalFailed} failed`, totalFailed > 0 ? 'warning' : 'success');
+    window.showToast?.(`Done: ${totalProcessed} processed, ${totalFailed} failed`, totalFailed > 0 ? 'warning' : 'success');
     reprocessBtn.disabled = false;
     updateSelectedCount();
 
@@ -433,7 +433,7 @@ export const prerender = false;
 
       if (!res.ok || data.error) {
         addLog(`Firebase sync failed: ${data.error || res.statusText}`, 'error');
-        (window as any).showToast?.('Firebase sync failed', 'error');
+        window.showToast?.('Firebase sync failed', 'error');
         syncFirebaseBtn.disabled = false;
         syncFirebaseBtn.textContent = `Sync to Firebase (${successResults.length})`;
         return;
@@ -453,7 +453,7 @@ export const prerender = false;
       }
 
       addLog(`Firebase sync complete: ${synced} synced, ${failed} failed, ${skipped} skipped`, failed > 0 ? 'error' : 'success');
-      (window as any).showToast?.(`Firebase sync: ${synced} synced, ${failed} failed`, failed > 0 ? 'warning' : 'success');
+      window.showToast?.(`Firebase sync: ${synced} synced, ${failed} failed`, failed > 0 ? 'warning' : 'success');
 
       syncFirebaseBtn.textContent = 'Synced';
       syncFirebaseBtn.disabled = true;
@@ -463,7 +463,7 @@ export const prerender = false;
 
     } catch (err) {
       addLog(`Firebase sync error: ${err}`, 'error');
-      (window as any).showToast?.('Firebase sync failed', 'error');
+      window.showToast?.('Firebase sync failed', 'error');
       syncFirebaseBtn.disabled = false;
       syncFirebaseBtn.textContent = `Sync to Firebase (${successResults.length})`;
     }

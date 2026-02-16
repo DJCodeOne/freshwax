@@ -17,6 +17,7 @@ import {
 } from '../../lib/subscription';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { isAdmin, initAdminEnv } from '../../lib/admin';
+import { fetchWithTimeout } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -363,18 +364,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         }
         try {
-          const authResponse = await fetch(`${paypalBase}/v1/oauth2/token`, {
+          const authResponse = await fetchWithTimeout(`${paypalBase}/v1/oauth2/token`, {
             method: 'POST',
             headers: {
               'Authorization': 'Basic ' + btoa(`${paypalClientId}:${paypalSecret}`),
               'Content-Type': 'application/x-www-form-urlencoded'
             },
             body: 'grant_type=client_credentials'
-          });
+          }, 10000);
           const authData = await authResponse.json();
-          const orderResponse = await fetch(`${paypalBase}/v2/checkout/orders/${paymentId}`, {
+          const orderResponse = await fetchWithTimeout(`${paypalBase}/v2/checkout/orders/${paymentId}`, {
             headers: { 'Authorization': `Bearer ${authData.access_token}` }
-          });
+          }, 10000);
           const orderData = await orderResponse.json();
           if (orderData.status !== 'COMPLETED') {
             return new Response(JSON.stringify({ success: false, error: 'PayPal payment not completed' }), {

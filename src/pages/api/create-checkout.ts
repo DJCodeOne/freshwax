@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
+import { fetchWithTimeout } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -154,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Create Stripe checkout session
-    const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+    const stripeResponse = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${stripeSecretKey}`,
@@ -170,7 +171,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         'client_reference_id': userId,
         ...metadata,
       }).toString()
-    });
+    }, 10000);
 
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();

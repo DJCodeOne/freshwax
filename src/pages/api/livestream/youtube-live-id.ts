@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -28,7 +29,7 @@ async function resolveChannelId(apiKey: string, handle: string): Promise<string 
     channelUrl.searchParams.set('forHandle', handle);
     channelUrl.searchParams.set('key', apiKey);
 
-    const response = await fetch(channelUrl.toString());
+    const response = await fetchWithTimeout(channelUrl.toString(), {}, 10000);
 
     if (!response.ok) {
       console.error('[youtube-live-id] Failed to resolve handle:', handle);
@@ -74,7 +75,7 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
     searchUrl.searchParams.set('maxResults', '1');
     searchUrl.searchParams.set('key', apiKey);
 
-    const response = await fetch(searchUrl.toString());
+    const response = await fetchWithTimeout(searchUrl.toString(), {}, 10000);
 
     if (!response.ok) {
       const errorText = await response.text();

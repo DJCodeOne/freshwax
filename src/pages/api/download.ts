@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser, queryCollection } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, fetchWithTimeout } from '../../lib/api-utils';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   try {
     log.info('[download] Fetching:', fileUrl);
 
-    const response = await fetch(fileUrl);
+    const response = await fetchWithTimeout(fileUrl, {}, 30000);
 
     if (!response.ok) {
       log.error('[download] Fetch failed:', response.status);

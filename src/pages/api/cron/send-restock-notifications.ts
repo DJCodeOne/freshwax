@@ -3,6 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, deleteDocument } from '../../../lib/firebase-rest';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -82,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const product = await getDocument('merch', productId);
           if (product) {
             productName = product.name || product.productName || productName;
-            productUrl = `https://freshwax.co.uk/merch?product=${productId}`;
+            productUrl = `${SITE_URL}/merch?product=${productId}`;
 
             // Check if any variant is in stock
             if (product.variantStock) {
@@ -107,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const release = await getDocument('releases', productId);
           if (release) {
             productName = release.releaseName || release.name || productName;
-            productUrl = `https://freshwax.co.uk/item/${productId}`;
+            productUrl = `${SITE_URL}/item/${productId}`;
             isInStock = (release.vinylStock || 0) > 0;
           }
         }
@@ -122,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (results.notified >= MAX_NOTIFICATIONS_PER_RUN) break;
 
           try {
-            await fetch('https://api.resend.com/emails', {
+            await fetchWithTimeout('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -154,12 +156,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
                     <p style="color: #737373; font-size: 12px; margin-top: 20px; border-top: 1px solid #262626; padding-top: 20px;">
                       You received this email because you signed up for back-in-stock notifications.<br>
-                      <a href="https://freshwax.co.uk/api/notify-restock/?email=${encodeURIComponent(sub.email)}&productId=${productId}&action=unsubscribe" style="color: #737373;">Unsubscribe</a>
+                      <a href="${SITE_URL}/api/notify-restock/?email=${encodeURIComponent(sub.email)}&productId=${productId}&action=unsubscribe" style="color: #737373;">Unsubscribe</a>
                     </p>
                   </div>
                 `
               })
-            });
+            }, 10000);
 
             // Remove subscription after sending
             await deleteDocument('restockNotifications', sub.id);

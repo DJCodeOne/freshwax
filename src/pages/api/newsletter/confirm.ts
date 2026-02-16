@@ -4,6 +4,8 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -62,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 async function sendWelcomeEmail(apiKey: string, email: string, name?: string): Promise<void> {
   const greeting = name ? `Hi ${name},` : 'Hi there,';
 
-  await fetch('https://api.resend.com/emails', {
+  await fetchWithTimeout('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -81,7 +83,7 @@ async function sendWelcomeEmail(apiKey: string, email: string, name?: string): P
 <body style="margin: 0; padding: 0; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
     <div style="text-align: center; margin-bottom: 30px;">
-      <img src="https://freshwax.co.uk/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
+      <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
     </div>
     <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
       <h1 style="margin: 0 0 20px; font-size: 24px; color: #fff;">Welcome to the Fresh Wax family!</h1>
@@ -97,18 +99,18 @@ async function sendWelcomeEmail(apiKey: string, email: string, name?: string): P
         <li>Live stream announcements</li>
       </ul>
       <div style="text-align: center; margin: 30px 0;">
-        <a href="https://freshwax.co.uk/releases/" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Browse Latest Releases</a>
+        <a href="${SITE_URL}/releases/" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Browse Latest Releases</a>
       </div>
     </div>
     <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
       <p>&copy; ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
       <p style="margin-top: 10px;">
-        <a href="https://freshwax.co.uk/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666;">Unsubscribe</a>
+        <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666;">Unsubscribe</a>
       </p>
     </div>
   </div>
 </body>
 </html>`
     })
-  });
+  }, 10000);
 }

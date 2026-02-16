@@ -1,6 +1,8 @@
 // Shared Pusher utility for server-side broadcasts
 // Used by chat.ts, slots.ts, and other APIs
 
+import { fetchWithTimeout } from './api-utils';
+
 // Simple MD5 implementation (for Pusher body signing)
 function simpleMd5(str: string): string {
   // Convert string to UTF-8 bytes to handle unicode/emojis
@@ -200,11 +202,11 @@ export async function triggerPusher(channel: string, event: string, data: any, e
 
     const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?${params.toString()}&auth_signature=${signature}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body
-    });
+    }, 10000);
 
     if (!response.ok) {
       console.error('[Pusher] Failed:', response.status, await response.text());

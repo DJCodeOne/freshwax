@@ -5,6 +5,8 @@ import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
+import { SITE_URL } from '../../../lib/constants';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,14 +22,14 @@ async function getPayPalAccessToken(clientId: string, clientSecret: string, mode
   const baseUrl = getPayPalBaseUrl(mode);
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
+  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: 'grant_type=client_credentials',
-  });
+  }, 10000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -251,8 +253,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         brand_name: 'Fresh Wax',
         landing_page: 'NO_PREFERENCE',
         user_action: 'PAY_NOW',
-        return_url: 'https://freshwax.co.uk/api/paypal/capture-redirect/',
-        cancel_url: 'https://freshwax.co.uk/checkout'
+        return_url: `${SITE_URL}/api/paypal/capture-redirect/`,
+        cancel_url: `${SITE_URL}/checkout`
       }
     };
 
@@ -276,7 +278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.log('[PayPal] Order request created, items:', paypalItems.length);
 
     // Create PayPal order
-    const createResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+    const createResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -284,7 +286,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         'PayPal-Request-Id': `freshwax_${Date.now()}_${Math.random().toString(36).substring(7)}`
       },
       body: JSON.stringify(paypalOrder)
-    });
+    }, 10000);
 
     if (!createResponse.ok) {
       const error = await createResponse.text();

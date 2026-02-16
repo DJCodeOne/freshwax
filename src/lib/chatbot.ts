@@ -1,6 +1,8 @@
 // src/lib/chatbot.ts
 // FreshWax Chat Bot - Automated chat responses and announcements
 
+import { fetchWithTimeout } from './api-utils';
+
 // Bot identity
 export const BOT_USER = {
   id: 'freshwax-bot',
@@ -146,8 +148,10 @@ async function getCurrentStream(streamId: string, env: any): Promise<any> {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
     const projectId = 'freshwax-store';
 
-    const response = await fetch(
-      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/livestreamSlots/${streamId}?key=${apiKey}`
+    const response = await fetchWithTimeout(
+      `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/livestreamSlots/${streamId}?key=${apiKey}`,
+      {},
+      10000
     );
 
     if (!response.ok) return null;
@@ -202,13 +206,14 @@ async function getTodaySchedule(env: any): Promise<any[]> {
       }
     };
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(query)
-      }
+      },
+      10000
     );
 
     if (!response.ok) return [];
@@ -263,13 +268,14 @@ async function getNextSlot(env: any): Promise<any> {
       }
     };
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(query)
-      }
+      },
+      10000
     );
 
     if (!response.ok) return null;
