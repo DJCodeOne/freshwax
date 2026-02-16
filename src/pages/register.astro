@@ -846,6 +846,8 @@ const csrfToken = Astro.locals.csrfToken || '';
     // Password visibility toggle - runs immediately
     document.addEventListener('astro:page-load', function() {
       document.querySelectorAll('.password-toggle').forEach(function(button) {
+        if (button.dataset.bound) return;
+        button.dataset.bound = 'true';
         button.addEventListener('click', function(e) {
           e.preventDefault();
           var targetId = this.getAttribute('data-target');

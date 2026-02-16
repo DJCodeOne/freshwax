@@ -1244,12 +1244,9 @@ const mixesItemList = {
           if (btnText) btnText.textContent = 'Error - Retry';
           btn.classList.remove('downloading');
           
-          setTimeout(function() {
-            if (downloadIcon) downloadIcon.classList.remove('hidden');
-            if (checkIcon) checkIcon.classList.add('hidden');
-            if (btnText) btnText.textContent = 'Download';
-            btn.disabled = false;
-          }, 2000);
+          if (downloadIcon) downloadIcon.classList.remove('hidden');
+          if (checkIcon) checkIcon.classList.add('hidden');
+          btn.disabled = false;
         }
       };
     });

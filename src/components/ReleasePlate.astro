@@ -1923,7 +1923,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
                 // CLIP RESTRICTION: Stop playback at CLIP_END_TIME (150s)
                 if (currentTime >= CLIP_END_TIME) {
-                  console.debug('[Player] Clip limit reached (90s preview), stopping');
                   audio.pause();
                   audio.volume = currentVolume; // Reset volume after fade
                   audio.currentTime = CLIP_START_TIME;

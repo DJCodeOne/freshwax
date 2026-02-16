@@ -18,7 +18,6 @@ let chatChannel = null;
       const script = document.createElement('script');
       script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
       script.onload = () => {
-        console.log('[Pusher] Script loaded eagerly');
         resolve();
       };
       script.onerror = reject;
@@ -101,7 +100,6 @@ async function registerStreamView(streamId) {
     });
     if (!response.ok) return;
     const result = await response.json();
-    console.log('[View] Registered stream view:', result);
 
     // Update the view count display with the new totalViews from server
     const viewerCount = document.getElementById('viewerCount');
@@ -109,7 +107,7 @@ async function registerStreamView(streamId) {
       viewerCount.textContent = result.totalViews;
     }
   } catch (e) {
-    console.log('[View] Could not register view:', e);
+    // View registration failed
   }
 }
 
@@ -127,9 +125,6 @@ async function getChatAuthHeaders() {
 
 // Expose sendGifMessage globally for LiveChat component
 window.sendGifMessage = async function(giphyUrl, giphyId) {
-  console.log('[GIF] window.sendGifMessage called:', { giphyUrl, giphyId });
-  console.log('[GIF] currentUser:', !!currentUser, 'currentStream:', !!currentStream);
-
   if (!currentUser) {
     console.error('[GIF] No current user - not logged in');
     alert('Please log in to send GIFs');
@@ -155,7 +150,6 @@ window.sendGifMessage = async function(giphyUrl, giphyId) {
         giphyId
       })
     });
-    console.log('[GIF] Sent successfully:', response.ok);
   } catch (error) {
     console.error('[GIF] Error sending:', error);
   }
@@ -167,12 +161,6 @@ function getPusherConfig() {
     key: window.PUSHER_CONFIG?.key || '',
     cluster: window.PUSHER_CONFIG?.cluster || 'eu'
   };
-  console.log('[DEBUG] getPusherConfig called:', {
-    hasConfig: !!window.PUSHER_CONFIG,
-    keyLength: config.key.length,
-    keyPrefix: config.key.substring(0, 8),
-    cluster: config.cluster
-  });
   return config;
 }
 
@@ -336,17 +324,13 @@ async function init() {
     const initOverlay = document.getElementById('initializingOverlay');
     const offlineOverlay = document.getElementById('offlineOverlay');
 
-    console.log('[Init] Setting up overlay fallback timers');
-
     // Fallback: fade out overlays after 5 seconds
     setTimeout(() => {
       if (initOverlay && !initOverlay.classList.contains('hidden') && !initOverlay.classList.contains('fade-out')) {
-        console.log('[Init] Fallback: starting initOverlay fade');
         initOverlay.classList.add('fade-out');
       }
       // Also fade the offline overlay if it's still in loading state
       if (offlineOverlay && offlineOverlay.classList.contains('is-loading')) {
-        console.log('[Init] Fallback: starting offlineOverlay fade');
         offlineOverlay.style.opacity = '0';
         offlineOverlay.style.transition = 'opacity 0.5s ease-out';
       }
@@ -355,13 +339,11 @@ async function init() {
     // Fallback: force hide overlays after 10 seconds
     setTimeout(() => {
       if (initOverlay && !initOverlay.classList.contains('hidden')) {
-        console.log('[Init] Fallback: hiding initOverlay');
         initOverlay.classList.add('hidden');
         initOverlay.style.display = 'none';
       }
       // Force hide offline overlay if it's still in loading state
       if (offlineOverlay && offlineOverlay.classList.contains('is-loading')) {
-        console.log('[Init] Fallback: hiding offlineOverlay (still loading after 10s)');
         offlineOverlay.classList.add('hidden');
         offlineOverlay.style.display = 'none';
       }
@@ -476,12 +458,6 @@ async function init() {
   // This ensures all users can see reactions even without active playlist
   // Use a slight delay to ensure DOM and Pusher config are ready
   setTimeout(() => {
-    console.log('[Init] Checking reaction subscription...', {
-      isLiveStreamActive: window.isLiveStreamActive,
-      currentStreamId: window.currentStreamId,
-      emojiAnimationsEnabled: window.emojiAnimationsEnabled
-    });
-
     if (!window.isLiveStreamActive) {
       // Always enable emoji animations when on the live page
       window.emojiAnimationsEnabled = true;
@@ -491,15 +467,11 @@ async function init() {
         window.currentStreamId = 'playlist-global';
         setupChat('playlist-global');
         joinStream('playlist-global'); // Track playlist listeners
-        console.log('[Init] Subscribed to playlist-global for reactions');
-      } else {
-        console.log('[Init] Already subscribed to:', window.currentStreamId);
       }
     } else {
       // Live stream is active - ensure emojis are enabled
       window.emojiAnimationsEnabled = true;
       setReactionButtonsEnabled(true);
-      console.log('[Init] Live stream active, ensuring emojis enabled');
     }
   }, 500);
 
@@ -520,15 +492,14 @@ async function init() {
 
 // Diagnostic function - run window.debugReactions() in console
 window.debugReactions = function() {
-  console.log('=== REACTION DEBUG INFO ===');
-  console.log('emojiAnimationsEnabled:', window.emojiAnimationsEnabled);
-  console.log('currentStreamId:', window.currentStreamId);
-  console.log('isLiveStreamActive:', window.isLiveStreamActive);
-  console.log('pusher connected:', !!window.Pusher);
-  console.log('chatChannel:', window.pusherChannel?.name || 'not subscribed');
-  console.log('PUSHER_CONFIG:', window.PUSHER_CONFIG);
-  console.log('===========================');
-  return 'Check values above';
+  return {
+    emojiAnimationsEnabled: window.emojiAnimationsEnabled,
+    currentStreamId: window.currentStreamId,
+    isLiveStreamActive: window.isLiveStreamActive,
+    pusherConnected: !!window.Pusher,
+    chatChannel: window.pusherChannel?.name || 'not subscribed',
+    PUSHER_CONFIG: window.PUSHER_CONFIG
+  };
 };
 
 // Track when sync happened to prevent race conditions (used across multiple functions)
@@ -546,22 +517,19 @@ function handlePlaylistUpdate(event) {
   const playIcon = document.getElementById('playIcon');
   const pauseIcon = document.getElementById('pauseIcon');
 
-  console.log('[Playlist] Update received:', { queueLength: queue.length, isPlaying, isLiveStreamActive: window.isLiveStreamActive, hidden: document.hidden });
-
   // Store playlist state globally
   window.isPlaylistActive = queue.length > 0;
 
   // Don't set isPlaylistPlaying to false if tab is hidden or recent sync (prevents tab-switch issues)
   const timeSinceSync = Date.now() - lastSyncTime;
   if (!isPlaying && (document.hidden || timeSinceSync < 5000)) {
-    console.log('[Playlist] Not updating isPlaylistPlaying to false - tab hidden or recent sync');
+    // Don't update isPlaylistPlaying to false when tab is hidden or recent sync
   } else {
     window.isPlaylistPlaying = isPlaying;
   }
 
   // IMPORTANT: Don't override live stream view with playlist
   if (window.isLiveStreamActive) {
-    console.log('[Playlist] Live stream active, ignoring playlist UI update');
     return;
   }
 
@@ -591,7 +559,6 @@ function handlePlaylistUpdate(event) {
       const ignorePauseState = !isPlaying && (document.hidden || timeSinceSync < 5000);
 
       if (ignorePauseState) {
-        console.log('[Playlist] Ignoring pause state in update - tab hidden or recent sync');
         // Don't change button state, just keep it enabled
       } else if (isPlaying) {
         // Update play/pause icons based on playlist state
@@ -649,11 +616,8 @@ function handlePlaylistUpdate(event) {
         if (typeof joinStream === 'function') {
           joinStream('playlist-global');
         }
-        console.log('[Playlist] Set up global channel for reactions');
       }
     }
-
-    console.log('[Playlist] Showing video player for playlist, emojis enabled');
   } else {
     // No playlist items - hide playlist player
     if (playlistPlayer) playlistPlayer.classList.add('hidden');
@@ -726,7 +690,6 @@ function handlePlaylistUpdate(event) {
       }
     }
 
-    console.log('[Playlist] Queue empty, hiding playlist player');
   }
 }
 
@@ -743,12 +706,10 @@ function setupPlaylistListener() {
   // IMPORTANT: Sync with current playlist state after listeners are set up
   // This handles the race condition where PlaylistManager already dispatched events
   setTimeout(() => {
-    console.log('[Playlist] Triggering initial sync after listener setup');
     syncPlayButtonWithPlaylist();
 
     // Also request a render from PlaylistManager if it exists (to re-dispatch event)
     if (window.playlistManager && typeof window.playlistManager.renderUI === 'function') {
-      console.log('[Playlist] Requesting render from PlaylistManager');
       window.playlistManager.renderUI();
     }
   }, 100);
@@ -761,22 +722,18 @@ function handlePlaylistStateChange(event) {
   const playIcon = document.getElementById('playIcon');
   const pauseIcon = document.getElementById('pauseIcon');
 
-  console.log('[Playlist] State change from player:', state, 'isPlaying:', isPlaying, 'hidden:', document.hidden);
-
   // Don't override if live stream is active
   if (window.isLiveStreamActive) return;
 
   // IMPORTANT: Ignore pause events when tab is hidden (browser throttles video playback)
   // This prevents the button from changing state when user switches tabs
   if (!isPlaying && document.hidden) {
-    console.log('[Playlist] Ignoring pause event - tab is hidden');
     return;
   }
 
   // Also ignore pause events during recent visibility sync (extra protection)
   const timeSinceSync = Date.now() - lastSyncTime;
   if (!isPlaying && timeSinceSync < 5000) {
-    console.log('[Playlist] Ignoring pause event - recent visibility sync');
     return;
   }
 
@@ -795,7 +752,6 @@ function handlePlaylistStateChange(event) {
     window.emojiAnimationsEnabled = true;
     setReactionButtonsEnabled(true);
     showPlaylistWave();
-    console.log('[Playlist] Enabled emojis from player play');
   } else {
     // Video paused (from player controls)
     if (playBtn) {
@@ -806,7 +762,6 @@ function handlePlaylistStateChange(event) {
     // Keep emojis and reactions enabled when paused - only disable when no content
     // This prevents tab switching from disabling reactions
     pausePlaylistWave();
-    console.log('[Playlist] Paused - keeping emojis enabled');
   }
 }
 
@@ -822,12 +777,6 @@ function setupPlaylistPlayButton() {
     const videoElement = document.getElementById('hlsVideoElement');
     const audioElement = document.getElementById('audioElement');
     const playlistPlayer = document.getElementById('playlistPlayer');
-
-    console.log('[PlayBtn] Clicked, state:', {
-      isLiveStreamActive: window.isLiveStreamActive,
-      isPlaylistPlaying: window.isPlaylistPlaying,
-      hasPlaylistManager: !!window.playlistManager
-    });
 
     // Check if playlist is visible (playlist mode)
     const playlistVisible = playlistPlayer && !playlistPlayer.classList.contains('hidden');
@@ -846,7 +795,6 @@ function setupPlaylistPlayButton() {
           pauseIcon?.classList.add('hidden');
           playBtn.classList.remove('playing');
           pausePlaylistWave(); // Pause sound wave animation
-          console.log('[PlayBtn] Playlist paused');
         } else {
           await pm.resume();
           window.isPlaylistPlaying = true;
@@ -854,7 +802,6 @@ function setupPlaylistPlayButton() {
           pauseIcon?.classList.remove('hidden');
           playBtn.classList.add('playing');
           showPlaylistWave(); // Show and animate sound wave
-          console.log('[PlayBtn] Playlist resumed');
         }
       } catch (error) {
         console.error('[PlayBtn] Playlist error:', error);
@@ -905,7 +852,6 @@ function setupPlaylistPlayButton() {
           pauseIcon?.classList.remove('hidden');
           playBtn.classList.add('playing');
           startGlobalMeters();
-          console.log('[PlayBtn] Audio stream playing');
         } catch (err) {
           console.error('[PlayBtn] Audio play error:', err);
         }
@@ -916,7 +862,6 @@ function setupPlaylistPlayButton() {
         pauseIcon?.classList.add('hidden');
         playBtn.classList.remove('playing');
         stopGlobalMeters();
-        console.log('[PlayBtn] Audio stream paused');
       }
       return;
     }
@@ -927,8 +872,6 @@ function setupPlaylistPlayButton() {
       // Check ACTUAL player state, not just the flag (flag can be wrong if autoplay was blocked)
       const isCurrentlyPlaying = pm.isActuallyPlaying || false;
 
-      console.log('[PlayBtn] Fallback: trying playlist, isPlaying:', isCurrentlyPlaying);
-
       try {
         if (isCurrentlyPlaying) {
           await pm.pause();
@@ -937,7 +880,6 @@ function setupPlaylistPlayButton() {
           pauseIcon?.classList.add('hidden');
           playBtn.classList.remove('playing');
           pausePlaylistWave();
-          console.log('[PlayBtn] Playlist paused (fallback)');
         } else {
           // Try to resume or start autoplay
           if (pm.queue?.length > 0) {
@@ -952,7 +894,6 @@ function setupPlaylistPlayButton() {
           showPlaylistWave();
           // Make playlist player visible
           if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-          console.log('[PlayBtn] Playlist started (fallback)');
         }
       } catch (error) {
         console.error('[PlayBtn] Fallback playlist error:', error);
@@ -960,55 +901,42 @@ function setupPlaylistPlayButton() {
       return;
     }
 
-    console.log('[PlayBtn] No action taken - no matching mode');
   };
-
-  console.log('[PlayBtn] Unified handler set up');
 }
 
 // Set up volume slider for playlist mode (runs on init, before HLS might set its own handler)
 function setupVolumeSlider() {
   const volumeSlider = document.getElementById('volumeSlider');
   if (!volumeSlider) {
-    console.log('[Volume] Slider not found');
     return;
   }
 
   // Add input handler that works for both playlist and HLS
   volumeSlider.addEventListener('input', (e) => {
     const volume = parseInt(e.target.value);
-    console.log('[Volume] Slider changed to:', volume);
 
     // Update HLS video if exists
     const hlsVideo = document.getElementById('hlsVideoElement');
     if (hlsVideo) {
       hlsVideo.volume = volume / 100;
-      console.log('[Volume] HLS video volume set to:', volume / 100);
     }
 
     // Update audio element if exists
     const audio = document.getElementById('audioElement');
     if (audio) {
       audio.volume = volume / 100;
-      console.log('[Volume] Audio element volume set to:', volume / 100);
     }
 
     // Update playlist volume if active
     if (window.playlistManager) {
-      console.log('[Volume] Setting playlist manager volume to:', volume);
       window.playlistManager.setVolume(volume);
-    } else {
-      console.log('[Volume] No playlist manager available');
     }
 
     // Also try to set embed player volume directly
     if (window.embedPlayerManager) {
-      console.log('[Volume] Setting embed player volume to:', volume);
       window.embedPlayerManager.setVolume(volume);
     }
   });
-
-  console.log('[Volume] Slider control set up');
 }
 
 // Get playlist manager from window (initialized by PlaylistModal.astro)
@@ -1017,7 +945,6 @@ function getPlaylistManager() {
   playlistManager = window.playlistManager || null;
 
   if (playlistManager) {
-    console.log('[Playlist] Using manager from PlaylistModal');
     // Sync volume slider with playlist manager
     const volumeSlider = document.getElementById('volumeSlider');
     if (volumeSlider) {
@@ -1027,7 +954,6 @@ function getPlaylistManager() {
     // Sync play button state with current playlist state
     syncPlayButtonWithPlaylist();
   } else {
-    console.log('[Playlist] Manager not yet available, will retry later');
     // Retry after a short delay
     setTimeout(() => {
       if (!playlistManager && window.playlistManager) {
@@ -1054,7 +980,6 @@ function syncPlayButtonWithPlaylist(retryCount = 0) {
   // If no playlist manager yet, retry a few times
   if (!pm) {
     if (retryCount < 5) {
-      console.log('[Playlist] Manager not ready, retrying...', retryCount + 1);
       setTimeout(() => syncPlayButtonWithPlaylist(retryCount + 1), 500);
     }
     return;
@@ -1084,8 +1009,6 @@ function syncPlayButtonWithPlaylist(retryCount = 0) {
     hasQueue = true;
     isPlaying = window.isPlaylistPlaying || false;
   }
-
-  console.log('[Playlist] Syncing button state:', { hasQueue, isPlaying, isLiveStreamActive: window.isLiveStreamActive, retryCount });
 
   if (hasQueue) {
     // Mark sync time to prevent race conditions with polling
@@ -1126,7 +1049,6 @@ function syncPlayButtonWithPlaylist(retryCount = 0) {
     setReactionButtonsEnabled(true);
     setChatEnabled(true);
 
-    console.log('[Playlist] Button synced - playlist active, playing:', isPlaying);
   } else if (retryCount < 5) {
     // No queue found yet, retry in case playlist is still loading
     setTimeout(() => syncPlayButtonWithPlaylist(retryCount + 1), 500);
@@ -1260,12 +1182,10 @@ function handleOrientationChange() {
 function handleVisibilityChange() {
   if (document.hidden) {
     // Page hidden - audio continues in background on mobile
-    console.log('[Live] Page hidden, audio continues');
   } else {
     // Page visible - prevent race condition by marking sync time IMMEDIATELY
     // This prevents handlePlaylistUpdate from disabling the button before sync completes
     lastSyncTime = Date.now();
-    console.log('[Live] Page visible, syncing button state');
 
     // Refresh viewer count
     if (currentStream) {
@@ -1293,7 +1213,6 @@ async function setupLiveStatusPusher() {
     // Wait for Pusher to be available
     const config = window.PUSHER_CONFIG;
     if (!config?.key) {
-      console.log('[LiveStatus] Pusher config not ready, will rely on polling');
       return;
     }
 
@@ -1325,13 +1244,11 @@ async function setupLiveStatusPusher() {
     liveStatusChannel = window.statusPusher.subscribe('live-status');
 
     liveStatusChannel.bind('stream-started', (data) => {
-      console.log('[LiveStatus] DJ went live via Pusher:', data.djName);
       // Immediately check status to switch to live stream
       checkLiveStatus();
     });
 
     liveStatusChannel.bind('stream-ended', (data) => {
-      console.log('[LiveStatus] Stream ended via Pusher:', data.djName);
       // Clear live stream playing state since stream ended
       setLiveStreamPlaying(false);
       // Trigger the 30-second delay countdown
@@ -1340,7 +1257,6 @@ async function setupLiveStatusPusher() {
       checkLiveStatus();
     });
 
-    console.log('[LiveStatus] Subscribed to Pusher live-status channel');
   } catch (err) {
     console.warn('[LiveStatus] Pusher setup failed, falling back to polling:', err);
   }
@@ -1364,18 +1280,6 @@ async function checkLiveStatus(skipCache = false) {
     if (!response.ok) return;
     const result = await response.json();
 
-    console.log('[checkLiveStatus] API response:', {
-      success: result.success,
-      isLive: result.isLive,
-      primaryStream: result.primaryStream ? {
-        djName: result.primaryStream.djName,
-        broadcastMode: result.primaryStream.broadcastMode,
-        hlsUrl: result.primaryStream.hlsUrl,
-        audioStreamUrl: result.primaryStream.audioStreamUrl,
-        streamSource: result.primaryStream.streamSource
-      } : null
-    });
-
     if (result.success && result.isLive && result.primaryStream) {
       // LIVE STREAM ACTIVE - Track state and pause playlist
       wasLiveStreamActive = true;
@@ -1384,7 +1288,6 @@ async function checkLiveStatus(skipCache = false) {
       if (playlistManager?.isPlaying) {
         await playlistManager.pause();
         playlistManager.wasPausedForStream = true;
-        console.log('[Playlist] Paused for live stream');
       }
 
       // Switch to live stream view - hide playlist first
@@ -1392,10 +1295,8 @@ async function checkLiveStatus(skipCache = false) {
       if (playlistPlayer) playlistPlayer.classList.add('hidden');
 
       // Let showLiveStream handle showing the correct player (video or audio)
-      console.log('[checkLiveStatus] About to call showLiveStream with:', result.primaryStream?.djName);
       try {
         showLiveStream(result.primaryStream);
-        console.log('[checkLiveStatus] showLiveStream completed successfully');
       } catch (e) {
         console.error('[checkLiveStatus] Error calling showLiveStream:', e);
       }
@@ -1404,7 +1305,6 @@ async function checkLiveStatus(skipCache = false) {
       // Track when stream ended (for 10-second delay before resuming playlist)
       if (wasLiveStreamActive && !streamEndedAt) {
         streamEndedAt = Date.now();
-        console.log('[Stream] Stream ended, waiting 10 seconds before resuming playlist...');
       }
 
       // Only resume playlist after 10-second delay (gives time for DJ handoffs)
@@ -1420,10 +1320,9 @@ async function checkLiveStatus(skipCache = false) {
         if (playlistManager?.wasPausedForStream && playlistManager.queue.length > 0) {
           await playlistManager.resume();
           playlistManager.wasPausedForStream = false;
-          console.log('[Playlist] Resumed after 10-second delay');
         }
       } else if (streamEndedAt) {
-        console.log(`[Stream] Waiting... ${Math.ceil(10 - secondsSinceEnd)}s until playlist resumes`);
+        // Still waiting for delay before playlist resumes
       }
 
       // Show playlist in main player if queue has items (only after 10s delay)
@@ -1443,10 +1342,8 @@ async function checkLiveStatus(skipCache = false) {
         } else {
           // Queue is empty - try to auto-start playlist from history
           if (playlistManager && typeof playlistManager.startAutoPlay === 'function') {
-            console.log('[Playlist] No live stream and queue empty - attempting auto-play from history');
             const started = await playlistManager.startAutoPlay();
             if (started) {
-              console.log('[Playlist] Auto-play started successfully');
               // Show video player for auto-play content
               if (hlsVideo) hlsVideo.classList.add('hidden');
               if (playlistPlayer) playlistPlayer.classList.remove('hidden');
@@ -1499,7 +1396,6 @@ function setReactionButtonsEnabled(enabled) {
       btn.disabled = true;
     }
   });
-  console.log('[Reactions] Buttons ' + (enabled ? 'enabled' : 'disabled'));
 }
 
 // Enable/disable chat input
@@ -1518,7 +1414,6 @@ function setChatEnabled(enabled) {
   if (loginPrompt) {
     loginPrompt.style.display = enabled ? 'none' : '';
   }
-  console.log('[Chat] Input ' + (enabled ? 'enabled' : 'disabled'));
 }
 
 // Show offline state
@@ -1614,7 +1509,6 @@ function showOfflineState(scheduled) {
 // SHOW LIVE STREAM
 // ==========================================
 function showLiveStream(stream) {
-  console.log('[showLiveStream] Starting with stream:', stream?.djName, stream?.isRelay);
   try {
     currentStream = stream;
     window.isLiveStreamActive = true;
@@ -1639,7 +1533,6 @@ function showLiveStream(stream) {
 
   // Update TODAY'S LINEUP if relay stream (it may not be in slots API)
   if (stream.isRelay && typeof window.renderTodaySchedule === 'function') {
-    console.log('[Relay] Calling renderTodaySchedule for relay stream');
     window.renderTodaySchedule();
   }
 
@@ -1647,7 +1540,6 @@ function showLiveStream(stream) {
   const relayAttribution = document.getElementById('relayAttribution');
   if (relayAttribution) {
     relayAttribution.style.display = stream.isRelay ? 'block' : 'none';
-    console.log('[Relay] Attribution visibility:', stream.isRelay ? 'shown' : 'hidden');
   }
 
   // Register view (increments totalViews counter)
@@ -1657,7 +1549,6 @@ function showLiveStream(stream) {
   document.getElementById('offlineState')?.classList.add('hidden');
   const offlineOverlay = document.getElementById('offlineOverlay');
   if (offlineOverlay) {
-    console.log('[showLiveStream] REMOVING offline overlay from DOM');
     // Nuclear option: remove the element entirely to prevent any CSS from showing it
     offlineOverlay.remove();
   }
@@ -1667,7 +1558,6 @@ function showLiveStream(stream) {
   // IMMEDIATELY hide initializing overlay when live stream is detected
   const initOverlay = document.getElementById('initializingOverlay');
   if (initOverlay) {
-    console.log('[showLiveStream] Hiding initializing overlay immediately');
     initOverlay.classList.add('fade-out', 'hidden');
     // Use cssText to set !important which overrides CSS animations
     initOverlay.style.cssText = 'display: none !important; animation: none !important;';
@@ -1740,13 +1630,10 @@ function showLiveStream(stream) {
   // Update audio badge for relay streams
   const audioBadgeText = document.getElementById('audioBadgeText');
   const fsAudioBadgeText = document.getElementById('fsAudioBadgeText');
-  console.log('[Stream] Relay check:', { isRelay: stream.isRelay, audioBadgeText: !!audioBadgeText, fsAudioBadgeText: !!fsAudioBadgeText });
   if (stream.isRelay) {
-    console.log('[Stream] Setting badge to RELAY');
     if (audioBadgeText) audioBadgeText.textContent = 'RELAY';
     if (fsAudioBadgeText) fsAudioBadgeText.textContent = 'RELAY';
   } else {
-    console.log('[Stream] Setting badge to AUDIO ONLY');
     if (audioBadgeText) audioBadgeText.textContent = 'AUDIO ONLY';
     if (fsAudioBadgeText) fsAudioBadgeText.textContent = 'AUDIO ONLY';
   }
@@ -1779,28 +1666,15 @@ function showLiveStream(stream) {
   // Placeholder mode = audio only (BUTT/Icecast), skip HLS
   const isPlaceholder = stream.broadcastMode === 'placeholder' || stream.broadcastMode === 'audio';
 
-  console.log('[Stream] Player selection:', {
-    broadcastMode: stream.broadcastMode,
-    isPlaceholder,
-    streamSource: stream.streamSource,
-    hlsUrl: stream.hlsUrl,
-    audioStreamUrl: stream.audioStreamUrl,
-    twitchChannel: stream.twitchChannel
-  });
-
   if (stream.streamSource === 'twitch' && stream.twitchChannel) {
-    console.log('[Stream] Using Twitch player');
     setupTwitchPlayer(stream);
   } else if (!isPlaceholder && !stream.isRelay && (stream.streamSource === 'red5' || stream.hlsUrl)) {
     // Only use HLS video player for non-relay streams with actual video
-    console.log('[Stream] Using HLS player');
     setupHlsPlayer(stream);
   } else {
     // Audio mode - use Icecast or relay source
-    console.log('[Stream] Using Audio/Icecast player');
     if (stream.isRelay && stream.relaySource?.url) {
       // Relay from external station
-      console.log('[Stream] Using relay source:', stream.relaySource.stationName);
       const relayUrl = stream.relaySource.url;
 
       // Extract station ID from URL
@@ -1814,7 +1688,6 @@ function showLiveStream(stream) {
       if (stationId) {
         // Use cloudflared tunnel relay (has CORS headers from local Node server)
         stream.audioStreamUrl = `https://relay.freshwax.co.uk/${stationId}`;
-        console.log('[Stream] Using tunnel relay:', stream.audioStreamUrl);
       } else {
         // Fallback to direct URL
         stream.audioStreamUrl = relayUrl;
@@ -1872,11 +1745,8 @@ function setupHlsPlayer(stream) {
     return;
   }
 
-  console.log('[HLS] Setting up player with URL:', hlsUrl);
-
   // Video event handlers for LED meters
   function onVideoPlay() {
-    console.log('[HLS] Video playing event fired');
     initGlobalAudioAnalyzer(videoElement);
     if (globalAudioContext?.state === 'suspended') {
       globalAudioContext.resume();
@@ -1885,10 +1755,8 @@ function setupHlsPlayer(stream) {
     // Hide initializing overlay IMMEDIATELY when video starts playing
     const initOverlay = document.getElementById('initializingOverlay');
     if (initOverlay) {
-      console.log('[HLS] Hiding initializing overlay - classList before:', initOverlay.className);
       initOverlay.classList.add('fade-out', 'hidden');
       initOverlay.style.display = 'none'; // Force hide via inline style
-      console.log('[HLS] Overlay hidden');
     }
     // Update play button state
     document.getElementById('playIcon')?.classList.add('hidden');
@@ -1922,10 +1790,8 @@ function setupHlsPlayer(stream) {
     // Only use native if "probably" - "maybe" means browser might not actually support it
     // Chrome returns "maybe" but can't actually play HLS natively
     if (nativeHlsSupport === 'probably') {
-      console.log('[HLS] Using native HLS support (probably)');
       videoElement.src = hlsUrl;
       videoElement.addEventListener('loadedmetadata', () => {
-        console.log('[HLS] Native: loadedmetadata fired, attempting autoplay');
         const attemptNativeAutoplay = async () => {
           try {
             if (shouldAutoplay()) {
@@ -1934,7 +1800,6 @@ function setupHlsPlayer(stream) {
               document.getElementById('playIcon')?.classList.add('hidden');
               document.getElementById('pauseIcon')?.classList.remove('hidden');
               document.getElementById('playBtn')?.classList.add('playing');
-              console.log('[HLS] Native autoplay successful');
               return;
             }
             // Try muted autoplay
@@ -1946,7 +1811,7 @@ function setupHlsPlayer(stream) {
             document.getElementById('playBtn')?.classList.add('playing');
             setTimeout(() => { videoElement.muted = false; }, 100);
           } catch (err) {
-            console.log('[HLS] Native autoplay blocked:', err.name);
+            // Native autoplay blocked
           }
         };
         attemptNativeAutoplay();
@@ -1954,9 +1819,7 @@ function setupHlsPlayer(stream) {
     }
     // Use HLS.js for other browsers
     else if (window.Hls && Hls.isSupported()) {
-      console.log('[HLS] Using HLS.js library');
       if (hlsPlayer) {
-        console.log('[HLS] Destroying existing player');
         hlsPlayer.destroy();
       }
 
@@ -1999,29 +1862,16 @@ function setupHlsPlayer(stream) {
       hlsPlayer.loadSource(hlsUrl);
       hlsPlayer.attachMedia(videoElement);
 
-      // Log when fragments start loading for debugging
-      hlsPlayer.on(Hls.Events.FRAG_LOADING, () => {
-        console.log('[HLS] Fragment loading...');
-      });
-
-      hlsPlayer.on(Hls.Events.FRAG_LOADED, () => {
-        console.log('[HLS] Fragment loaded');
-      });
-
       hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[HLS] Manifest parsed, attempting autoplay');
         // Check if user was previously playing
         const attemptAutoplay = async () => {
           const wasPlaying = wasLiveStreamPlaying();
-          console.log('[HLS] Attempting autoplay... wasPlaying:', wasPlaying);
 
           try {
             // If user was previously playing, try unmuted first
             if (wasPlaying && shouldAutoplay()) {
-              console.log('[HLS] User was playing before, trying unmuted autoplay');
               videoElement.muted = false;
               await videoElement.play();
-              console.log('[HLS] Unmuted autoplay successful!');
               isPlaying = true;
               setLiveStreamPlaying(true);
             } else {
@@ -2029,15 +1879,13 @@ function setupHlsPlayer(stream) {
               videoElement.muted = true;
               await videoElement.play();
               isPlaying = true;
-              console.log('[HLS] Muted autoplay successful');
 
               // Now try to unmute (user may have interacted before)
               try {
                 videoElement.muted = false;
-                console.log('[HLS] Unmuted successfully');
                 setLiveStreamPlaying(true);
               } catch (unmuteErr) {
-                console.log('[HLS] Could not unmute, user interaction required');
+                // Could not unmute, user interaction required
               }
             }
 
@@ -2050,7 +1898,6 @@ function setupHlsPlayer(stream) {
             initGlobalAudioAnalyzer(videoElement);
             startGlobalMeters();
           } catch (err) {
-            console.log('[HLS] Autoplay blocked, showing play button:', err.name);
             // Autoplay blocked - show play button for user to click
             document.getElementById('playIcon')?.classList.remove('hidden');
             document.getElementById('pauseIcon')?.classList.add('hidden');
@@ -2071,7 +1918,6 @@ function setupHlsPlayer(stream) {
             case Hls.ErrorTypes.NETWORK_ERROR:
               networkRetryCount++;
               if (networkRetryCount <= MAX_NETWORK_RETRIES) {
-                console.log(`[HLS] Network error, recovering... (attempt ${networkRetryCount}/${MAX_NETWORK_RETRIES})`);
                 hlsPlayer.startLoad();
                 setTimeout(() => {
                   if (!isPlaying) {
@@ -2080,7 +1926,6 @@ function setupHlsPlayer(stream) {
                   }
                 }, 1000); // Faster retry - 1 second
               } else {
-                console.log('[HLS] Max retries reached, stream appears to be offline');
                 hlsPlayer.destroy();
                 showStreamError('Stream is offline or unavailable.');
                 // Show offline overlay
@@ -2088,7 +1933,6 @@ function setupHlsPlayer(stream) {
               }
               break;
             case Hls.ErrorTypes.MEDIA_ERROR:
-              console.log('[HLS] Media error, recovering...');
               hlsPlayer.recoverMediaError();
               break;
             default:
@@ -2307,13 +2151,11 @@ function showStreamError(message) {
 function initGlobalAudioAnalyzer(mediaElement) {
   // If same element already connected, just return
   if (globalAudioContext && globalMediaSource && globalMediaElement === mediaElement) {
-    console.log('[Audio] Analyzer already connected to this element');
     return;
   }
 
   // If different element, close old context first
   if (globalAudioContext && globalMediaElement !== mediaElement) {
-    console.log('[Audio] Switching analyzer to different media element');
     try {
       globalAudioContext.close();
     } catch (e) {
@@ -2344,7 +2186,6 @@ function initGlobalAudioAnalyzer(mediaElement) {
     splitter.connect(globalAnalyserRight, 1);
     globalMediaSource.connect(globalAudioContext.destination);
 
-    console.log('[Audio] Analyzer initialized for', mediaElement.tagName);
   } catch (err) {
     console.error('[Audio] Analyzer error:', err);
   }
@@ -2509,7 +2350,6 @@ async function loadLameEncoder() {
     script.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
     script.onload = () => {
       lameEncoder = window.lamejs;
-      console.log('[Recording] Lame encoder loaded');
       resolve(lameEncoder);
     };
     script.onerror = () => {
@@ -2597,7 +2437,6 @@ async function startRecording(mediaElement) {
       if (recordDuration) recordDuration.textContent = `${mins}:${secs}`;
     }, 1000);
 
-    console.log('[Recording] Started - capturing at ' + recordingSampleRate + 'Hz');
   } catch (err) {
     console.error('[Recording] Failed:', err);
     alert('Failed to start recording.');
@@ -2636,8 +2475,6 @@ function stopRecording() {
   recordDuration?.classList.add('hidden');
   if (recordDuration) recordDuration.textContent = '00:00';
 
-  console.log('[Recording] Stopped');
-
   // Encode and download if we were recording
   if (wasRecording && recordingLeftChannel.length > 0) {
     encodeAndDownloadMp3();
@@ -2646,13 +2483,10 @@ function stopRecording() {
 
 function encodeAndDownloadMp3() {
   if (!lameEncoder || recordingLeftChannel.length === 0) {
-    console.log('[Recording] No data to encode');
     recordingLeftChannel = [];
     recordingRightChannel = [];
     return;
   }
-
-  console.log('[Recording] Encoding to MP3...');
 
   try {
     // Flatten the recorded chunks into single arrays
@@ -2715,7 +2549,6 @@ function encodeAndDownloadMp3() {
       URL.revokeObjectURL(url);
     }, 100);
 
-    console.log(`[Recording] Downloaded: ${filename} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
   } catch (err) {
     console.error('[Recording] Encoding failed:', err);
     alert('Failed to encode recording. Please try again.');
@@ -2766,12 +2599,6 @@ function setupTwitchPlayer(stream) {
 // AUDIO PLAYER (Icecast)
 // ==========================================
 function setupAudioPlayer(stream) {
-  console.log('[Audio] setupAudioPlayer called with stream:', {
-    audioStreamUrl: stream.audioStreamUrl,
-    hlsUrl: stream.hlsUrl,
-    broadcastMode: stream.broadcastMode
-  });
-
   document.getElementById('audioPlayer')?.classList.remove('hidden');
   document.getElementById('videoPlayer')?.classList.add('hidden');
 
@@ -2779,16 +2606,12 @@ function setupAudioPlayer(stream) {
   const playBtn = document.getElementById('playBtn');
   const volumeSlider = document.getElementById('volumeSlider');
 
-  console.log('[Audio] Audio element found:', !!audio, 'playBtn:', !!playBtn);
-
   if (stream.audioStreamUrl && audio) {
     const audioUrl = stream.audioStreamUrl;
     const isHlsUrl = audioUrl.includes('.m3u8');
-    console.log('[Audio] Setting audio src to:', audioUrl, 'isHLS:', isHlsUrl);
 
     // Handle HLS URLs with HLS.js (for relay streams using HLS)
     if (isHlsUrl && typeof Hls !== 'undefined' && Hls.isSupported()) {
-      console.log('[Audio] Using HLS.js for audio stream');
       if (window.audioHlsPlayer) {
         window.audioHlsPlayer.destroy();
       }
@@ -2799,7 +2622,7 @@ function setupAudioPlayer(stream) {
       window.audioHlsPlayer.loadSource(audioUrl);
       window.audioHlsPlayer.attachMedia(audio);
       window.audioHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        console.log('[Audio] HLS manifest parsed, ready to play');
+        // HLS manifest parsed, ready to play
       });
       window.audioHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
         console.error('[Audio] HLS error:', data.type, data.details);
@@ -2810,7 +2633,6 @@ function setupAudioPlayer(stream) {
       });
     } else if (isHlsUrl && audio.canPlayType('application/vnd.apple.mpegurl') === 'probably') {
       // Safari native HLS support
-      console.log('[Audio] Using native HLS for audio (Safari)');
       audio.src = audioUrl;
       audio.load();
     } else {
@@ -2818,66 +2640,49 @@ function setupAudioPlayer(stream) {
       audio.src = audioUrl;
       audio.load();
     }
-    console.log('[Audio] Audio loaded, readyState:', audio.readyState);
-
-    // Add event listeners for debugging and overlay handling
-    audio.oncanplay = () => console.log('[Audio] canplay event - readyState:', audio.readyState);
+    // Add event listeners for overlay handling
     audio.onerror = (e) => console.error('[Audio] ERROR:', audio.error?.code, audio.error?.message);
     audio.onplaying = () => {
-      console.log('[Audio] playing event - audio is now playing');
       // Hide initializing overlay IMMEDIATELY when audio starts playing
       const initOverlay = document.getElementById('initializingOverlay');
       if (initOverlay) {
-        console.log('[Audio] Hiding initializing overlay - classList before:', initOverlay.className);
         // Force immediate hide by adding both classes at once
         initOverlay.classList.add('fade-out', 'hidden');
         initOverlay.style.display = 'none'; // Force hide via inline style
-        console.log('[Audio] Overlay hidden - classList after:', initOverlay.className);
       }
       // Update play button state
       document.getElementById('playIcon')?.classList.add('hidden');
       document.getElementById('pauseIcon')?.classList.remove('hidden');
       document.getElementById('playBtn')?.classList.add('playing');
     };
-    audio.onpause = () => console.log('[Audio] pause event');
-    audio.onstalled = () => console.log('[Audio] stalled event - download stalled');
-    audio.onwaiting = () => console.log('[Audio] waiting event - buffering');
-
     // Check if audio is already playing (handles race condition with page navigation)
     if (!audio.paused && audio.readyState >= 2) {
-      console.log('[Audio] Audio already playing, triggering overlay hide');
       audio.onplaying?.();
     }
 
     // Try autoplay - check if user was previously playing (resume with sound)
     const attemptAutoplay = async () => {
       const wasPlaying = wasLiveStreamPlaying();
-      console.log('[Audio] Attempting autoplay... wasPlaying:', wasPlaying);
 
       try {
         // If user was previously playing, try unmuted first
         if (wasPlaying && shouldAutoplay()) {
-          console.log('[Audio] User was playing before, trying unmuted autoplay');
           audio.muted = false;
           await audio.play();
-          console.log('[Audio] Unmuted autoplay successful!');
           isPlaying = true;
           setLiveStreamPlaying(true);
         } else {
           // Try muted first for browser policy
           audio.muted = true;
-          console.log('[Audio] Audio muted, calling play()...');
           await audio.play();
-          console.log('[Audio] Muted autoplay successful, readyState:', audio.readyState);
           isPlaying = true;
 
           // Try to unmute
           try {
             audio.muted = false;
-            console.log('[Audio] Unmuted successfully, volume:', audio.volume);
             setLiveStreamPlaying(true); // Track as playing
           } catch (e) {
-            console.log('[Audio] Could not unmute - user interaction required');
+            // Could not unmute - user interaction required
           }
         }
 
@@ -2905,8 +2710,6 @@ function setupAudioPlayer(stream) {
       }
     };
     attemptAutoplay();
-  } else {
-    console.log('[Audio] SKIPPING audio setup - audioStreamUrl:', stream.audioStreamUrl, 'audio element:', !!audio);
   }
 
   if (audio && volumeSlider) {
@@ -3015,19 +2818,15 @@ async function sendHeartbeat(streamId) {
 async function setupChat(streamId) {
   // Skip chat setup on fullscreen page - it has its own chat system
   if (window.location.pathname.includes('/live/fullpage')) {
-    console.log('[DEBUG] Skipping setupChat on fullscreen page');
     return;
   }
-  console.log('[DEBUG] setupChat called with streamId:', streamId);
 
   // Load Pusher script if not already loaded
   if (!window.Pusher) {
-    console.log('[DEBUG] Pusher not loaded, loading script...');
     await new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
       script.onload = () => {
-        console.log('[DEBUG] Pusher script loaded successfully');
         resolve();
       };
       script.onerror = (e) => {
@@ -3036,8 +2835,6 @@ async function setupChat(streamId) {
       };
       document.head.appendChild(script);
     });
-  } else {
-    console.log('[DEBUG] Pusher already loaded');
   }
 
   // Initialize Pusher with runtime config
@@ -3048,25 +2845,15 @@ async function setupChat(streamId) {
       console.error('[DEBUG] window.PUSHER_CONFIG:', window.PUSHER_CONFIG);
       return;
     }
-    console.log('[Chat] Initializing Pusher with key:', pusherConfig.key.substring(0, 8) + '...');
-
     pusher = new window.Pusher(pusherConfig.key, {
       cluster: pusherConfig.cluster,
       forceTLS: true
-    });
-
-    // Add connection state logging
-    pusher.connection.bind('state_change', (states) => {
-      console.log('[DEBUG] Pusher state change:', states.previous, '->', states.current);
     });
 
     pusher.connection.bind('error', (err) => {
       console.error('[DEBUG] Pusher connection error:', err);
     });
 
-    console.log('[DEBUG] Pusher instance created, connection state:', pusher.connection.state);
-  } else {
-    console.log('[DEBUG] Pusher already initialized, state:', pusher.connection.state);
   }
   
   // Load initial messages via API (15 messages max)
@@ -3086,19 +2873,16 @@ async function setupChat(streamId) {
   
   // Subscribe to Pusher channel for real-time updates (no Firebase reads!)
   if (chatChannel) {
-    console.log('[DEBUG] Unsubscribing from previous channel:', chatChannel.name);
     chatChannel.unbind_all();
     pusher.unsubscribe(chatChannel.name);
   }
 
   const channelName = `stream-${streamId}`;
-  console.log('[DEBUG] Subscribing to channel:', channelName);
   chatChannel = pusher.subscribe(channelName);
 
   // Add subscription state logging
   chatChannel.bind('pusher:subscription_succeeded', () => {
-    console.log('[DEBUG] Successfully subscribed to channel:', channelName);
-    console.log('[Reaction] Channel ready to receive reactions');
+    // Channel ready to receive reactions
   });
 
   chatChannel.bind('pusher:subscription_error', (error) => {
@@ -3107,7 +2891,6 @@ async function setupChat(streamId) {
 
   // Bind event listeners immediately (Pusher queues them until subscription succeeds)
   chatChannel.bind('new-message', (message) => {
-    console.log('[DEBUG] Received new-message event:', message);
     // Add new message to array
     chatMessages.push(message);
 
@@ -3132,28 +2915,21 @@ async function setupChat(streamId) {
   // Skip on fullpage - it has its own reaction handler
   if (!window.location.pathname.includes('/live/fullpage')) {
     chatChannel.bind('reaction', (data) => {
-      console.log('[Reaction] Received:', data);
-      console.log('[Reaction] Current user:', currentUser?.uid);
-      console.log('[Reaction] Data userId:', data.userId);
-
       // Skip if this is our own reaction (we already showed it locally)
       // Use a session-based check to allow same user on multiple devices
       const reactionSessionId = data.sessionId || data.userId;
       const mySessionId = window.reactionSessionId || currentUser?.uid;
 
       if (reactionSessionId && mySessionId && reactionSessionId === mySessionId) {
-        console.log('[Reaction] Skipping own reaction (same session)');
         return;
       }
 
       // Display the reaction animation - all reactions are emoji
       const emoji = data.emoji || '❤️';
       const emojiList = emoji.split(',');
-      console.log('[Reaction] Displaying emojis:', emojiList);
 
       // Create burst of emojis in random positions (max 5)
       const numEmojis = Math.min(5, 3 + Math.floor(Math.random() * 3));
-      console.log('[Reaction] Creating', numEmojis, 'floating emojis');
       for (let i = 0; i < numEmojis; i++) {
         setTimeout(() => {
           createFloatingEmojiFromBroadcast(emojiList);
@@ -3164,7 +2940,6 @@ async function setupChat(streamId) {
   
   // Listen for shoutouts from other viewers
   chatChannel.bind('shoutout', (data) => {
-    console.log('[Shoutout] Received:', data);
     if (typeof window.handleIncomingShoutout === 'function') {
       window.handleIncomingShoutout(data);
     }
@@ -3172,7 +2947,6 @@ async function setupChat(streamId) {
 
   // Listen for like count updates
   chatChannel.bind('like-update', (data) => {
-    console.log('[Like Update] Received:', data);
     const likeCount = document.getElementById('likeCount');
     if (likeCount && data.totalLikes !== undefined) {
       likeCount.textContent = data.totalLikes;
@@ -3181,7 +2955,6 @@ async function setupChat(streamId) {
 
   // Listen for viewer count updates
   chatChannel.bind('viewer-update', (data) => {
-    console.log('[Viewer Update] Received:', data);
     const viewerCount = document.getElementById('viewerCount');
     if (viewerCount && data.totalViews !== undefined || data.currentViewers !== undefined) {
       viewerCount.textContent = data.totalViews || data.currentViewers;
@@ -3191,26 +2964,20 @@ async function setupChat(streamId) {
   // Make channel available for shoutout sending
   window.pusherChannel = chatChannel;
 
-  console.log('[Chat] Pusher connected to stream-' + streamId);
-  console.log('[Chat] Now calling setup functions for emoji, giphy, and chat input...');
-
   try {
     setupEmojiPicker();
-    console.log('[Chat] setupEmojiPicker completed');
   } catch (e) {
     console.error('[Chat] setupEmojiPicker failed:', e);
   }
 
   try {
     setupGiphyPicker();
-    console.log('[Chat] setupGiphyPicker completed');
   } catch (e) {
     console.error('[Chat] setupGiphyPicker failed:', e);
   }
 
   try {
     setupChatInput(streamId);
-    console.log('[Chat] setupChatInput completed');
   } catch (e) {
     console.error('[Chat] setupChatInput failed:', e);
   }
@@ -3378,13 +3145,6 @@ function setupEmojiPicker() {
   const emojiGrid = document.getElementById('emojiGrid');
   const giphyModal = document.getElementById('giphyModal');
 
-  console.log('[EmojiPicker] Elements found:', {
-    emojiBtn: !!emojiBtn,
-    emojiPicker: !!emojiPicker,
-    emojiGrid: !!emojiGrid,
-    giphyModal: !!giphyModal
-  });
-
   let currentCategory = 'music';
   
   function renderEmojis(category) {
@@ -3418,7 +3178,6 @@ function setupEmojiPicker() {
   // Define the toggle function that will be used by both onclick attribute and programmatic handlers
   // Always get fresh DOM references to handle View Transitions
   window.toggleEmojiPicker = function() {
-    console.log('[EmojiPicker] Toggle called');
     const picker = document.getElementById('emojiPicker');
     const gifModal = document.getElementById('giphyModal');
     const btn = document.getElementById('emojiBtn');
@@ -3443,7 +3202,6 @@ function setupEmojiPicker() {
   };
 
   if (emojiBtn) {
-    console.log('[EmojiPicker] Attaching click handler to emoji button');
     emojiBtn.onclick = window.toggleEmojiPicker;
   } else {
     console.warn('[EmojiPicker] Emoji button NOT found!');
@@ -3461,13 +3219,6 @@ function setupGiphyPicker() {
   const giphySearch = document.getElementById('giphySearch');
   const giphyGrid = document.getElementById('giphyGrid');
   const emojiPicker = document.getElementById('emojiPicker');
-
-  console.log('[GiphyPicker] Elements found:', {
-    giphyBtn: !!giphyBtn,
-    giphyModal: !!giphyModal,
-    giphySearch: !!giphySearch,
-    giphyGrid: !!giphyGrid
-  });
 
   let searchTimeout;
   let currentCategory = 'trending';
@@ -3552,7 +3303,6 @@ function setupGiphyPicker() {
 
   // Toggle modal
   window.toggleGiphyPicker = function() {
-    console.log('[GiphyPicker] Toggle called');
     emojiPicker?.classList.add('hidden');
     document.getElementById('emojiBtn')?.classList.remove('active');
 
@@ -3575,9 +3325,7 @@ function setupGiphyPicker() {
   };
 
   if (giphyBtn) {
-    console.log('[GiphyPicker] Attaching click handler to giphy button');
     giphyBtn.onclick = () => {
-      console.log('[GiphyPicker] Giphy button clicked!');
       window.toggleGiphyPicker();
     };
   } else {
@@ -3593,9 +3341,6 @@ function setupGiphyPicker() {
 }
 
 async function sendGiphyMessage(giphyUrl, giphyId) {
-  console.log('[GIF] sendGiphyMessage called with:', { giphyUrl, giphyId });
-  console.log('[GIF] currentUser:', !!currentUser, 'currentStream:', !!currentStream);
-
   if (!currentUser) {
     console.error('[GIF] No current user - not logged in');
     return;
@@ -3630,7 +3375,6 @@ window.sendGifMessage = sendGiphyMessage;
 function setupChatInput(streamId) {
   // Skip on fullscreen page - it has its own chat input handlers
   if (window.location.pathname.includes('/live/fullpage')) {
-    console.log('[ChatInput] Skipping on fullscreen page');
     return;
   }
   const input = document.getElementById('chatInput');
@@ -3651,7 +3395,6 @@ function setupChatInput(streamId) {
     // Check for !skip command (Plus members get 3/day, admins unlimited)
     if (message.toLowerCase() === '!skip') {
       if (!window.playlistManager || !window.isPlaylistActive) {
-        console.log('[Chat] !skip: No playlist active');
         return;
       }
 
@@ -3682,13 +3425,11 @@ function setupChatInput(streamId) {
             // Auto-remove after 5 seconds
             setTimeout(() => errorNotice.remove(), 5000);
           }
-          console.log('[Chat] !skip denied:', skipResult.reason);
           return;
         }
 
         // Skip allowed - execute it
         window.playlistManager.skipTrack();
-        console.log('[Chat] !skip executed:', skipResult.isAdmin ? 'admin' : `Plus user (${skipResult.remaining} remaining)`);
 
         // Determine skip message based on who skipped
         const skipMessage = skipResult.isAdmin
@@ -3708,7 +3449,6 @@ function setupChatInput(streamId) {
             type: 'system'
           })
         });
-        console.log('[Chat] Skip notification broadcast to all users');
       } catch (err) {
         console.error('[Chat] !skip error:', err);
         // Show error to user
@@ -3795,7 +3535,6 @@ function setupChatInput(streamId) {
           })
         });
 
-        console.log('[Chat] Plus command executed:', command);
       } catch (err) {
         console.error('[Chat] Plus command error:', err);
         const chatMessages = document.getElementById('chatMessages');
@@ -3893,7 +3632,6 @@ function setupReactions(streamId) {
 function createFloatingEmojiFromBroadcast(emojiList) {
   // Skip if emoji animations are disabled (no active livestream)
   if (!window.emojiAnimationsEnabled) {
-    console.log('[Reaction] Emoji animations disabled, skipping');
     return;
   }
 
@@ -3903,7 +3641,6 @@ function createFloatingEmojiFromBroadcast(emojiList) {
     return;
   }
 
-  console.log('[Reaction] createFloatingEmojiFromBroadcast called with:', emojiList);
   // Find visible player area - prioritize player-column (main container), then specific players
   const playerArea = document.querySelector('.player-column') || document.querySelector('.player-wrapper') || document.querySelector('.video-player:not(.hidden)') || document.querySelector('.audio-player:not(.hidden)');
   let x, y;
@@ -3912,12 +3649,10 @@ function createFloatingEmojiFromBroadcast(emojiList) {
     const rect = playerArea.getBoundingClientRect();
     x = rect.left + Math.random() * rect.width;
     y = rect.top + rect.height * 0.5 + Math.random() * rect.height * 0.3;
-    console.log('[Reaction] Player area found, position:', { x, y, rect });
   } else {
     // Center of screen fallback
     x = window.innerWidth * 0.25 + Math.random() * window.innerWidth * 0.5;
     y = window.innerHeight * 0.3 + Math.random() * window.innerHeight * 0.4;
-    console.log('[Reaction] No player area, using centered window position:', { x, y });
   }
   
   // Create the floating emoji
@@ -4084,12 +3819,8 @@ let isInitialized = false;
 async function safeInit() {
   // Check if we're on the live page (includes /live and /live/fullpage)
   if (!window.location.pathname.startsWith('/live')) {
-    console.log('[LiveStream] Not on live page, skipping init');
     return;
   }
-
-  // Allow re-initialization (for View Transitions navigation)
-  console.log('[LiveStream] Initializing...');
   isInitialized = true;
   await init();
 }
@@ -4099,10 +3830,6 @@ safeInit();
 
 // Cleanup before navigating away (Astro View Transitions)
 document.addEventListener('astro:before-swap', () => {
-  console.log('[LiveStream] Cleaning up before navigation...', {
-    isLiveStreamActive: window.isLiveStreamActive,
-    hasStreamData: !!window.currentStreamData
-  });
   // Destroy HLS player to prevent memory leaks and conflicts
   if (hlsPlayer) {
     try {
@@ -4129,7 +3856,6 @@ document.addEventListener('astro:before-swap', () => {
 
 // Re-initialize on Astro View Transitions navigation
 document.addEventListener('astro:page-load', () => {
-  console.log('[LiveStream] astro:page-load event fired');
   isInitialized = false; // Reset flag to allow re-init
   chatMessages = []; // Clear old messages
   safeInit();
