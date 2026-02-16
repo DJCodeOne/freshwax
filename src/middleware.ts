@@ -174,10 +174,6 @@ const securityHeaders: Record<string, string> = {
 };
 
 export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
-  // Generate CSP nonce for this request
-  const nonce = crypto.randomUUID().replace(/-/g, '');
-  locals.nonce = nonce;
-
   // Get Cloudflare runtime env and initialize Firebase
   const runtime = locals.runtime;
   if (runtime?.env) {
@@ -220,6 +216,13 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
       status: isGetOrHead ? 301 : 308,
       headers: { 'Location': url.toString() }
     });
+  }
+
+  // Skip middleware for static assets (CSS, JS, images, fonts, etc.)
+  // Cloudflare CDN handles caching and headers for these
+  const lastSegment = pathname.split('/').pop() || '';
+  if (lastSegment.includes('.')) {
+    return next();
   }
 
   const isApiRoute = pathname.startsWith('/api/');

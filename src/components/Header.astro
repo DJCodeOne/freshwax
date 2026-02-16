@@ -881,6 +881,7 @@ const firebaseConfig = {
   async function checkLiveStatus() {
     try {
       const response = await fetch('/api/livestream/status/');
+      if (!response.ok) return;
       const data = await response.json();
       
       document.querySelectorAll('.live-button').forEach(btn => {
@@ -1261,6 +1262,7 @@ const firebaseConfig = {
           const response = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
             headers: { 'Authorization': `Bearer ${idToken}` }
           });
+          if (!response.ok) throw new Error('Failed to fetch user type');
           const data = await response.json();
           if (data.success) {
             setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null);

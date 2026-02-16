@@ -569,6 +569,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           const profileResponse = await fetch(`/api/get-user-type/?uid=${encodeURIComponent(user.uid)}`, {
             headers: { 'Authorization': `Bearer ${_idToken}` }
           });
+          if (!profileResponse.ok) throw new Error('Failed to fetch profile');
           const profile = await profileResponse.json();
 
           // If user doesn't exist in Firestore, create them via server API (handles orphaned Auth accounts)

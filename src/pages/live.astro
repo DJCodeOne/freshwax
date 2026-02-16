@@ -1356,6 +1356,7 @@ const nonce = Astro.locals.nonce || '';
             sessionId: reactionSessionId
           })
         });
+        if (!emojiResponse.ok) return;
         const emojiResult = await emojiResponse.json();
         // Also update the global reaction count
         const countResponse = await fetch('/api/playlist/global/', {
@@ -1363,6 +1364,7 @@ const nonce = Astro.locals.nonce || '';
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'react' })
         });
+        if (!countResponse.ok) return;
         const countResult = await countResponse.json();
         if (countResult.success && countResult.playlist?.reactionCount !== undefined && likeCountEl) {
           likeCountEl.textContent = countResult.playlist.reactionCount;
@@ -1383,6 +1385,7 @@ const nonce = Astro.locals.nonce || '';
             sessionId: reactionSessionId
           })
         });
+        if (!emojiResponse.ok) return;
         const emojiResult = await emojiResponse.json();
         // Update with actual count from server if available (only if > 0)
         if (emojiResult.success && emojiResult.totalLikes > 0 && likeCountEl) {
@@ -1469,6 +1472,7 @@ const nonce = Astro.locals.nonce || '';
             })
           });
 
+          if (!response.ok) throw new Error('Like request failed');
           const result = await response.json();
           // Update with actual count from server (only if > 0)
           if (result.success && result.totalLikes > 0 && likeCountEl) {
@@ -2817,6 +2821,7 @@ const nonce = Astro.locals.nonce || '';
       const response = await fetch(`/api/get-user-type/?uid=${userId}`, {
         headers: _token ? { 'Authorization': `Bearer ${_token}` } : {}
       });
+      if (!response.ok) return;
       const result = await response.json();
       
       if (result.success) {
@@ -2841,6 +2846,7 @@ const nonce = Astro.locals.nonce || '';
         if (userInfo.isPro) {
           try {
             const badgeRes = await fetch(`/api/get-user-badge/?userId=${userId}`);
+            if (!badgeRes.ok) throw new Error('Badge fetch failed');
             const badgeData = await badgeRes.json();
             if (badgeData.success && badgeData.badge) {
               window.userBadge = badgeData.badge;
@@ -2965,6 +2971,7 @@ const nonce = Astro.locals.nonce || '';
       setInterval(async () => {
         try {
           const response = await fetch(`/api/dj-lobby/takeover/?userId=${currentUser.uid}`);
+          if (!response.ok) return;
           const result = await response.json();
           if (result.success && result.incoming?.status === 'pending') {
             showTakeoverNotification(result.incoming);
@@ -3026,6 +3033,10 @@ const nonce = Astro.locals.nonce || '';
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ action: 'getStreamKey', djId: currentUser.uid })
         });
+        if (!keyResponse.ok) {
+          alert('Failed to retrieve stream key');
+          return;
+        }
         const keyResult = await keyResponse.json();
 
         // Approve takeover via API (handles Firestore + Pusher)
@@ -3039,6 +3050,10 @@ const nonce = Astro.locals.nonce || '';
             serverUrl: keyResult.serverUrl || 'rtmp://rtmp.freshwax.co.uk/live'
           })
         });
+        if (!approveResponse.ok) {
+          alert('Failed to approve takeover');
+          return;
+        }
         const approveResult = await approveResponse.json();
 
         if (approveResult.success) {
@@ -3070,6 +3085,7 @@ const nonce = Astro.locals.nonce || '';
             requesterId: currentUser.uid
           })
         });
+        if (!response.ok) return;
         const result = await response.json();
 
         if (result.success) {
@@ -3105,6 +3121,7 @@ const nonce = Astro.locals.nonce || '';
       
       // Single API call that returns both schedule and live status
       const response = await fetch(`/api/livestream/slots/?start=${currentWeekStart.toISOString()}&end=${weekEnd.toISOString()}${cacheBuster}`);
+      if (!response.ok) return;
       const result = await response.json();
       
       if (result.success) {
@@ -3292,6 +3309,7 @@ const nonce = Astro.locals.nonce || '';
           userName: userInfo?.name || 'Viewer'
         })
       });
+      if (!resp.ok) return;
       const data = await resp.json();
       // Update viewer count immediately from response
       if (data.activeViewers !== undefined) {
@@ -3412,8 +3430,9 @@ const nonce = Astro.locals.nonce || '';
     
     try {
       const response = await fetch('/api/livestream/slots/');
+      if (!response.ok) return;
       const result = await response.json();
-      
+
       if (!result.success) return;
       
       // Find currently live slot
@@ -3499,9 +3518,10 @@ const nonce = Astro.locals.nonce || '';
             djId: currentUser.uid
           })
         });
-        
+
+        if (!response.ok) return;
         const result = await response.json();
-        
+
         if (result.success && result.streamKey) {
           // Takeover was approved! Show the key
           showTakeoverApproved(result.streamKey);
@@ -3585,7 +3605,8 @@ const nonce = Astro.locals.nonce || '';
           requesterAvatar: userInfo?.avatarUrl || null
         })
       });
-      
+
+      if (!response.ok) throw new Error('Takeover request failed');
       const result = await response.json();
       
       if (result.success) {
@@ -3623,7 +3644,8 @@ const nonce = Astro.locals.nonce || '';
           requesterId: currentUser.uid
         })
       });
-      
+
+      if (!response.ok) throw new Error('Cancel request failed');
       const result = await response.json();
       
       if (result.success) {
@@ -4341,6 +4363,7 @@ const nonce = Astro.locals.nonce || '';
         const userTypeRes = await fetch(`/api/get-user-type/?uid=${currentUser.uid}`, {
           headers: { 'Authorization': `Bearer ${_tkn}` }
         });
+        if (!userTypeRes.ok) throw new Error('User type fetch failed');
         const userTypeData = await userTypeRes.json();
         if (userTypeData.success && userTypeData.avatarUrl) {
           freshAvatarUrl = userTypeData.avatarUrl;
@@ -4393,9 +4416,10 @@ const nonce = Astro.locals.nonce || '';
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-      
+
+      if (!response.ok) throw new Error('Booking request failed');
       const result = await response.json();
-      
+
       if (result.success) {
         document.getElementById('bookingForm')?.classList.add('hidden');
         document.getElementById('streamKeyDisplay').textContent = result.streamKey;
@@ -4467,6 +4491,7 @@ const nonce = Astro.locals.nonce || '';
         const userTypeRes = await fetch(`/api/get-user-type/?uid=${currentUser.uid}`, {
           headers: { 'Authorization': `Bearer ${_tkn2}` }
         });
+        if (!userTypeRes.ok) throw new Error('User type fetch failed');
         const userTypeData = await userTypeRes.json();
         if (userTypeData.success && userTypeData.avatarUrl) {
           freshAvatarUrl = userTypeData.avatarUrl;
@@ -4492,7 +4517,8 @@ const nonce = Astro.locals.nonce || '';
           token
         })
       });
-      
+
+      if (!response.ok) throw new Error('Go live request failed');
       const result = await response.json();
       
       if (result.success) {
@@ -4557,7 +4583,8 @@ const nonce = Astro.locals.nonce || '';
           djId: currentUser.uid
         })
       });
-      
+
+      if (!response.ok) throw new Error('Cancel slot failed');
       const result = await response.json();
       if (result.success) {
         scheduleCache = null;
@@ -4585,7 +4612,8 @@ const nonce = Astro.locals.nonce || '';
           token
         })
       });
-      
+
+      if (!response.ok) throw new Error('Go live failed');
       const result = await response.json();
       if (result.success) {
         scheduleCache = null;
@@ -4618,7 +4646,8 @@ const nonce = Astro.locals.nonce || '';
           token
         })
       });
-      
+
+      if (!response.ok) throw new Error('Claim slot failed');
       const result = await response.json();
       
       if (result.success) {
@@ -4662,6 +4691,7 @@ const nonce = Astro.locals.nonce || '';
       
       try {
         const response = await fetch('/api/livestream/slots/?checkAvailable=true');
+        if (!response.ok) return;
         const result = await response.json();
         
         if (result.availableSlot) {
@@ -4722,7 +4752,8 @@ const nonce = Astro.locals.nonce || '';
           djId: currentUser.uid
         })
       });
-      
+
+      if (!response.ok) throw new Error('End stream failed');
       const result = await response.json();
       
       if (result.success) {

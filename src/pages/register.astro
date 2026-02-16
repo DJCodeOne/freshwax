@@ -1067,6 +1067,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       try {
         // Check display name availability via server API (avoids Firestore SDK)
         const response = await fetch(`/api/auth/check-display-name/?name=${encodeURIComponent(name)}`);
+        if (!response.ok) return;
         const data = await response.json();
 
         if (!data.success) {

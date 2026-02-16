@@ -99,6 +99,7 @@ async function registerStreamView(streamId) {
         avatarUrl: user?.photoURL || null
       })
     });
+    if (!response.ok) return;
     const result = await response.json();
     console.log('[View] Registered stream view:', result);
 
@@ -1360,6 +1361,7 @@ async function checkLiveStatus(skipCache = false) {
     const cacheBuster = Date.now();
     const freshParam = skipCache ? '&fresh=1' : '';
     const response = await fetch(`/api/livestream/status/?_t=${cacheBuster}${freshParam}`);
+    if (!response.ok) return;
     const result = await response.json();
 
     console.log('[checkLiveStatus] API response:', {
@@ -3070,6 +3072,7 @@ async function setupChat(streamId) {
   // Load initial messages via API (15 messages max)
   try {
     const response = await fetch(`/api/livestream/chat/?streamId=${streamId}&limit=15`);
+    if (!response.ok) return;
     const result = await response.json();
     if (result.success) {
       chatMessages = result.messages || [];
@@ -3488,6 +3491,10 @@ function setupGiphyPicker() {
       }
 
       const response = await fetch(proxyUrl);
+      if (!response.ok) {
+        if (giphyGrid) giphyGrid.innerHTML = '<p class="gif-loading">Failed to load GIFs</p>';
+        return;
+      }
       const data = await response.json();
 
       if (!data.success) {
@@ -3959,6 +3966,7 @@ async function loadUserReactions(streamId) {
   
   try {
     const response = await fetch(`/api/livestream/react/?streamId=${streamId}&userId=${currentUser.uid}`);
+    if (!response.ok) return;
     const result = await response.json();
     
     if (result.success) {

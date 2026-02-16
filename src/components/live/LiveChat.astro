@@ -149,6 +149,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
           giphyId
         })
       });
+      if (!response.ok) { console.error('[GIF] Server error:', response.status); }
     } catch (error) {
       console.error('[GIF] Error sending:', error);
     }

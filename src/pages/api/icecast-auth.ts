@@ -7,15 +7,9 @@ import { queryCollection } from '../../lib/firebase-rest';
 
 export const prerender = false;
 
-function initEnv(locals: App.Locals) {
-  const env = locals.runtime.env;
-
-}
-
 // Icecast sends POST with form data for source authentication
 export async function POST({ request, locals }: APIContext) {
   try {
-    initEnv(locals);
 
     // Parse form data from Icecast
     const formData = await request.formData();
@@ -124,8 +118,6 @@ export async function POST({ request, locals }: APIContext) {
 
 // GET endpoint for testing/status
 export async function GET({ url, locals }: APIContext) {
-  initEnv(locals);
-
   const streamKey = url.searchParams.get('key');
 
   if (!streamKey) {

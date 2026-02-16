@@ -39,6 +39,7 @@ function initNewsletterForm() {
         body: JSON.stringify({ email: email, source: 'footer', consent: true })
       });
 
+      if (!response.ok) throw new Error('Something went wrong');
       var data = await response.json();
 
       if (data.success) {

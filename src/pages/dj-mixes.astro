@@ -631,8 +631,9 @@ const mixesItemList = {
     // Check if charts feature is enabled
     try {
       const response = await fetch('/api/admin/get-settings/');
+      if (!response.ok) return;
       const data = await response.json();
-      
+
       if (data.success && data.settings?.showMixCharts) {
         // Show the toggle button
         chartToggleBtn?.classList.remove('hidden');
@@ -659,6 +660,7 @@ const mixesItemList = {
     async function loadChartData() {
       try {
         const response = await fetch('/api/get-mix-chart/');
+        if (!response.ok) throw new Error('Chart fetch failed');
         const data = await response.json();
         
         if (data.success && data.chart && data.chart.length > 0) {

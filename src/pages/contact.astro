@@ -541,6 +541,7 @@ const faqs = [
           body: JSON.stringify(data)
         });
 
+        if (!response.ok) throw new Error('Something went wrong. Please try again.');
         const result = await response.json();
 
         if (result.success) {

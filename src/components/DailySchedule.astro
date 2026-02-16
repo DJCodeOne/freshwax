@@ -1338,7 +1338,8 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         const response = await fetch(
           `/api/livestream/slots/?start=${startDate.toISOString()}&end=${endDate.toISOString()}&fresh=1&_t=${Date.now()}`
         );
-        
+
+        if (!response.ok) { bookings = []; return; }
         const data = await response.json();
         bookings = data.success ? (data.slots || []) : [];
 
@@ -1453,6 +1454,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
                   })
                 });
 
+                if (!response.ok) { window.location.href = '/account/dj-lobby/'; return; }
                 const result = await response.json();
 
                 if (result.success) {
@@ -1647,6 +1649,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             body: JSON.stringify(requestBody)
           });
 
+          if (!response.ok) { throw new Error('Server error'); }
           const data = await response.json();
 
           if (!data.success) {
@@ -1712,6 +1715,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           })
         });
 
+        if (!response.ok) { alert('Server error. Please try again.'); return; }
         const data = await response.json();
 
         if (data.success) {
@@ -1782,6 +1786,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           })
         });
 
+        if (!response.ok) { alert('Server error'); return; }
         const data = await response.json();
         if (data.success) {
           closeModal(modal);
@@ -1855,6 +1860,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           })
         });
 
+        if (!response.ok) { alert('Server error'); return; }
         const data = await response.json();
         if (data.success) {
           closeModal(document.querySelector('[data-modal="editSlot"]'));
@@ -1895,6 +1901,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     async function loadAllowances() {
       try {
         const response = await fetch('/api/livestream/allowances/');
+        if (!response.ok) { currentAllowances = []; renderAllowancesList(); return; }
         const data = await response.json();
         currentAllowances = data.success ? (data.allowances || []) : [];
         renderAllowancesList();
@@ -1949,6 +1956,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           })
         });
 
+        if (!response.ok) { alert('Server error'); return; }
         const data = await response.json();
         if (data.success) {
           // Clear form
@@ -1979,6 +1987,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           body: JSON.stringify({ djId })
         });
 
+        if (!response.ok) { alert('Server error'); return; }
         const data = await response.json();
         if (data.success) {
           await loadAllowances();

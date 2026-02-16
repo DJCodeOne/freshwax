@@ -9,11 +9,14 @@ database_name = "freshwax-db"
 database_id = "909e1932-1e20-4081-a37e-32cf355dec8f"
 migrations_dir = "database/migrations"
 
+# CACHE and SESSION both alias the same KV namespace intentionally.
+# Astro's Cloudflare session driver requires a binding named SESSION,
+# while the app cache uses CACHE. They share one KV store but use
+# different key prefixes so there is no collision.
 [[kv_namespaces]]
 binding = "CACHE"
 id = "349d1fd00f3d4de9811529cc96fd4d8b"
 
-# Required by @astrojs/cloudflare session driver
 [[kv_namespaces]]
 binding = "SESSION"
 id = "349d1fd00f3d4de9811529cc96fd4d8b"

@@ -1496,10 +1496,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ releaseIds: needsFetch })
     })
-    .then(function(response) { return response.json(); })
+    .then(function(response) { return response.ok ? response.json() : null; })
     .then(function(data) {
       pendingRatingsRequest = null;
-      if (data.success && data.ratings) {
+      if (data && data.success && data.ratings) {
         FWCache.update('ratings', function(current) {
           return Object.assign({}, current, data.ratings);
         });
@@ -1591,9 +1591,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
           headers: headers,
           body: JSON.stringify({ releaseId: releaseId, rating: rating, userId: user.uid })
         })
-        .then(function(response) { return response.json(); })
+        .then(function(response) { return response.ok ? response.json() : null; })
         .then(function(data) {
-          if (data.success) {
+          if (data && data.success) {
             FWCache.update('ratings', function(current) {
               current[releaseId] = { average: data.newRating, count: data.ratingsCount };
               return current;
@@ -1653,6 +1653,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         body: JSON.stringify({ releaseIds: releaseIds })
       });
 
+      if (!response.ok) return;
       var data = await response.json();
 
       if (data.success && data.userRatings) {
@@ -2093,7 +2094,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             var _token = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
             var _headers = _token ? { 'Authorization': 'Bearer ' + _token } : {};
             var checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId, { headers: _headers });
-            cachedOwnership = await checkRes.json();
+            if (!checkRes.ok) { cachedOwnership = {}; } else { cachedOwnership = await checkRes.json(); }
             // Cache the result
             ownershipCache[releaseId] = cachedOwnership;
             FWCache.set('ownership_' + userId, ownershipCache, FWCache.TTL.OWNERSHIP);
@@ -2230,7 +2231,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             var _token2 = window.firebaseAuth?.currentUser ? await window.firebaseAuth.currentUser.getIdToken() : null;
             var _headers2 = _token2 ? { 'Authorization': 'Bearer ' + _token2 } : {};
             var checkRes = await fetch('/api/check-ownership/?userId=' + userId + '&releaseId=' + releaseId + '&trackId=' + trackId, { headers: _headers2 });
-            cachedOwnership = await checkRes.json();
+            if (!checkRes.ok) { cachedOwnership = {}; } else { cachedOwnership = await checkRes.json(); }
             // Cache the result
             ownershipCache[releaseId] = cachedOwnership;
             FWCache.set('ownership_' + userId, ownershipCache, FWCache.TTL.OWNERSHIP);
@@ -2307,9 +2308,9 @@ const totalDurationFormatted = totalDurationSeconds > 0
           fetch('/api/wishlist/?userId=' + user.uid, {
             headers: { 'Authorization': 'Bearer ' + token }
           })
-            .then(function(res) { return res.json(); })
+            .then(function(res) { return res.ok ? res.json() : null; })
             .then(function(data) {
-              if (data.success && data.wishlist) {
+              if (data && data.success && data.wishlist) {
                 var wishlistIds = data.wishlist.map(function(r) { return r.id; });
                 wishlistButtons.forEach(function(btn) {
                   var releaseId = btn.getAttribute('data-release-id');
@@ -2380,12 +2381,12 @@ const totalDurationFormatted = totalDurationSeconds > 0
             action: 'toggle'
           })
         })
-        .then(function(res) { return res.json(); })
+        .then(function(res) { return res.ok ? res.json() : null; })
         .then(function(data) {
           btn.style.opacity = '1';
           btn.style.pointerEvents = 'auto';
 
-          if (data.success) {
+          if (data && data.success) {
             setWishlistState(btn, data.inWishlist);
             showToast(data.inWishlist ? 'Added to wishlist!' : 'Removed from wishlist');
           } else {
