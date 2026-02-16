@@ -1,22 +1,16 @@
 // src/pages/api/admin/get-settings.ts
-// Get public settings (feature flags) - no auth required
+// Get public settings (feature flags) - no auth required for read
 import type { APIRoute } from 'astro';
 import { getSettings } from '../../../lib/firebase-rest';
-import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, locals }) => {
+export const GET: APIRoute = async ({ request }) => {
   const clientId = getClientId(request);
-  const rateCheck = checkRateLimit(`get-settings:${clientId}`, RateLimiters.admin);
+  const rateCheck = checkRateLimit(`get-settings:${clientId}`, RateLimiters.standard);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  const env = locals.runtime.env;
-  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-  const authError = await requireAdminAuth(request, locals);
-  if (authError) return authError;
 
   try {
     const settingsData = await getSettings();
