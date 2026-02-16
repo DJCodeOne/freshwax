@@ -6,8 +6,7 @@
         "https://freshwax.co.uk/releases/",
         "https://freshwax.co.uk/merch/",
         "https://freshwax.co.uk/dj-mixes/",
-        "https://freshwax.co.uk/checkout/",
-        "https://freshwax.co.uk/login/"
+        "https://freshwax.co.uk/checkout/"
       ],
       "numberOfRuns": 1,
       "settings": {

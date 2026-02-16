@@ -50,7 +50,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
         // Base configuration with privacy settings
         gtag('config', ga4Id, {
           'anonymize_ip': true,
-          'cookie_flags': 'SameSite=None;Secure',
+          'cookie_flags': 'SameSite=Lax;Secure',
           'send_page_view': true,
           'enhanced_measurement': true,
           'debug_mode': debug,

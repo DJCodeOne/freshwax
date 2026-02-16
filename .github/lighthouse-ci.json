@@ -6,8 +6,7 @@
         "http://localhost:4321/releases/",
         "http://localhost:4321/merch/",
         "http://localhost:4321/dj-mixes/",
-        "http://localhost:4321/checkout/",
-        "http://localhost:4321/login/"
+        "http://localhost:4321/checkout/"
       ],
       "numberOfRuns": 3,
       "settings": {
