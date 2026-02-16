@@ -1,162 +1,203 @@
 // Fresh Wax Service Worker
-// Provides offline support and caching for PWA
+// Provides offline support, caching, and PWA features
 
-const CACHE_NAME = 'freshwax-v28';
-const STATIC_CACHE = 'freshwax-static-v28';
-const DYNAMIC_CACHE = 'freshwax-dynamic-v28';
+const CACHE_VERSION = 29;
+const STATIC_CACHE = `freshwax-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `freshwax-dynamic-v${CACHE_VERSION}`;
+const KNOWN_CACHES = [STATIC_CACHE, DYNAMIC_CACHE];
 
-// Only cache actual static files that definitely exist
-const STATIC_ASSETS = [
-  '/android-chrome-192x192.png',
-  '/android-chrome-512x512.png',
+// Max entries in the dynamic cache to prevent unbounded growth
+const DYNAMIC_CACHE_LIMIT = 80;
+
+// Critical assets to pre-cache during install
+const PRECACHE_ASSETS = [
+  '/offline.html',
   '/favicon.ico',
   '/logo.webp',
-  '/offline.html'
+  '/android-chrome-192x192.png',
+  '/android-chrome-512x512.png',
+  '/apple-touch-icon.png',
+  '/site.webmanifest'
 ];
 
-// Install event - cache static assets
+// Domains that must never be cached
+const EXCLUDED_DOMAINS = [
+  'stripe.com',
+  'js.stripe.com',
+  'paypal.com',
+  'paypalobjects.com',
+  'firebase.googleapis.com',
+  'firebaseio.com',
+  'firestore.googleapis.com',
+  'googleapis.com',
+  'pusher.com',
+  'google-analytics.com',
+  'googletagmanager.com',
+  'cloudflareinsights.com'
+];
+
+// --- Install: pre-cache critical assets ---
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker...');
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then(async (cache) => {
-        console.log('[SW] Caching static assets');
-        // Cache each asset individually to avoid failing on missing files
-        for (const asset of STATIC_ASSETS) {
+        // Cache each asset individually so one failure doesn't block the rest
+        for (const asset of PRECACHE_ASSETS) {
           try {
             await cache.add(asset);
           } catch (err) {
-            console.log('[SW] Failed to cache:', asset);
+            console.warn('[SW] Failed to pre-cache:', asset);
           }
         }
       })
       .then(() => self.skipWaiting())
-      .catch((err) => console.log('[SW] Cache failed:', err))
   );
 });
 
-// Activate event - clean old caches
+// --- Activate: clean up old caches, claim clients ---
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker...');
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys
-          .filter((key) => key !== STATIC_CACHE && key !== DYNAMIC_CACHE)
-          .map((key) => {
-            console.log('[SW] Removing old cache:', key);
-            return caches.delete(key);
-          })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((key) => !KNOWN_CACHES.includes(key))
+            .map((key) => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch event - serve from cache, fallback to network
+// --- Fetch: routing strategies ---
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
+  // Only handle GET requests
   if (request.method !== 'GET') return;
 
-  // Skip API calls, streaming, and external requests
-  if (
-    url.pathname.startsWith('/api/') ||
-    url.pathname.includes('stream') ||
-    url.hostname.includes('firebase') ||
-    url.hostname.includes('pusher') ||
-    url.hostname.includes('cloudflare') ||
-    url.hostname !== self.location.hostname
-  ) {
+  // Skip Range requests (audio/video streaming)
+  if (request.headers.get('range')) return;
+
+  // Skip API routes -- never cache
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Skip cross-origin requests to excluded domains
+  if (url.origin !== self.location.origin) {
+    if (EXCLUDED_DOMAINS.some((d) => url.hostname.includes(d))) return;
+    // Also skip any other cross-origin request we don't control
     return;
   }
 
-  // For HTML pages - network first, cache fallback
+  // --- HTML pages: network-first, cache fallback, offline fallback ---
   if (request.headers.get('accept')?.includes('text/html')) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Only cache successful responses
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache, then offline page
-          return caches.match(request).then((cached) => {
-            return cached || caches.match('/offline.html');
-          });
-        })
-    );
+    event.respondWith(networkFirstHTML(request));
     return;
   }
 
-  // For static assets - cache first, network fallback
-  if (
-    url.pathname.match(/\.(js|css|png|jpg|jpeg|webp|gif|svg|ico|woff2?)$/i)
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return fetch(request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return response;
-        });
-      })
-    );
+  // --- Hashed Astro bundles (_astro/*): cache-first (immutable) ---
+  if (url.pathname.startsWith('/_astro/')) {
+    event.respondWith(cacheFirst(request));
     return;
   }
+
+  // --- Other static assets: cache-first ---
+  if (isStaticAsset(url.pathname)) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  // Everything else: let the browser handle normally
 });
 
-// Handle background sync for offline actions
+// --- Strategy: network-first for HTML with offline fallback ---
+async function networkFirstHTML(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    return caches.match('/offline.html');
+  }
+}
+
+// --- Strategy: cache-first with network fallback ---
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone());
+      trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
+    }
+    return response;
+  } catch {
+    // Static asset unavailable offline -- return nothing
+    return new Response('', { status: 503, statusText: 'Offline' });
+  }
+}
+
+// --- Helpers ---
+function isStaticAsset(pathname) {
+  return /\.(js|css|png|jpg|jpeg|webp|gif|svg|ico|woff2?|ttf|eot|avif)$/i.test(pathname);
+}
+
+// Trim oldest entries from a cache when it exceeds maxItems
+async function trimCache(cacheName, maxItems) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > maxItems) {
+    // Delete oldest entries (first in list)
+    for (let i = 0; i < keys.length - maxItems; i++) {
+      await cache.delete(keys[i]);
+    }
+  }
+}
+
+// --- Background sync (placeholder for future offline actions) ---
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-playlist') {
-    console.log('[SW] Syncing playlist data...');
+    // Future: sync playlist changes made while offline
   }
 });
 
-// Handle push notifications (for future use)
+// --- Push notifications ---
 self.addEventListener('push', (event) => {
-  if (event.data) {
-    const data = event.data.json();
-    const options = {
-      body: data.body || 'New notification from Fresh Wax',
-      icon: '/android-chrome-192x192.png',
-      badge: '/favicon-32x32.png',
-      vibrate: [100, 50, 100],
-      data: {
-        url: data.url || '/'
-      }
-    };
-    event.waitUntil(
-      self.registration.showNotification(data.title || 'Fresh Wax', options)
-    );
-  }
+  if (!event.data) return;
+  const data = event.data.json();
+  const options = {
+    body: data.body || 'New notification from Fresh Wax',
+    icon: '/android-chrome-192x192.png',
+    badge: '/favicon-32x32.png',
+    vibrate: [100, 50, 100],
+    data: { url: data.url || '/' }
+  };
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'Fresh Wax', options)
+  );
 });
 
-// Handle notification click
+// --- Notification click ---
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/';
+  const targetUrl = event.notification.data?.url || '/';
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((windowClients) => {
-      // Focus existing window or open new one
       for (const client of windowClients) {
-        if (client.url === url && 'focus' in client) {
+        if (client.url === targetUrl && 'focus' in client) {
           return client.focus();
         }
       }
-      return clients.openWindow(url);
+      return clients.openWindow(targetUrl);
     })
   );
 });

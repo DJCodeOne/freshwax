@@ -1,14 +1,14 @@
 {
-  "name": "Fresh Wax",
-  "short_name": "Fresh Wax",
-  "description": "Vinyl records, DJ mixes, and live streaming",
+  "name": "freshwax — Jungle & Drum and Bass",
+  "short_name": "freshwax",
+  "description": "Independent UK jungle and drum & bass record label. Vinyl records, digital downloads, DJ mixes, live streams, and official merchandise.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#8b5cf6",
-  "background_color": "#0a0a0a",
-  "categories": ["music", "entertainment", "shopping"],
+  "background_color": "#000000",
+  "categories": ["music", "shopping", "entertainment"],
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -35,30 +35,37 @@
       "sizes": "1200x630",
       "type": "image/webp",
       "form_factor": "wide",
-      "label": "Fresh Wax Live Streaming"
+      "label": "freshwax — Jungle & Drum and Bass"
     }
   ],
   "shortcuts": [
     {
-      "name": "Live Stream",
-      "short_name": "Live",
-      "url": "/live",
-      "description": "Watch the live stream",
-      "icons": [{"src": "/android-chrome-192x192.png", "sizes": "192x192"}]
+      "name": "Releases",
+      "short_name": "Releases",
+      "url": "/releases/",
+      "description": "Browse all releases",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Shop Vinyl",
-      "short_name": "Shop",
-      "url": "/crates",
-      "description": "Browse vinyl records",
-      "icons": [{"src": "/android-chrome-192x192.png", "sizes": "192x192"}]
+      "name": "Live Stream",
+      "short_name": "Live",
+      "url": "/live/",
+      "description": "Watch the live stream",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "DJ Mixes",
       "short_name": "Mixes",
-      "url": "/dj-mixes",
+      "url": "/dj-mixes/",
       "description": "Listen to DJ mixes",
-      "icons": [{"src": "/android-chrome-192x192.png", "sizes": "192x192"}]
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cart",
+      "short_name": "Cart",
+      "url": "/cart/",
+      "description": "View your shopping cart",
+      "icons": [{ "src": "/android-chrome-192x192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],
