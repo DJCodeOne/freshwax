@@ -15,8 +15,10 @@ import {
   setDocument,
   updateDocument,
   deleteDocument,
-  queryCollection
+  queryCollection,
+  batchWrite
 } from './services/firebase';
+import { sendEmail, staleRequestsReminderEmail } from './services/email';
 
 // CORS headers
 function corsHeaders(origin: string, env: Env): HeadersInit {
@@ -791,17 +793,123 @@ async function handleScheduled(event: ScheduledEvent, env: Env): Promise<void> {
   try {
     if (trigger === '0 */6 * * *') {
       // Every 6 hours: Cleanup old notifications
+      // Delete read notifications older than 30 days and unread ones older than 90 days
       console.log('[scheduled] Running notification cleanup...');
-      // TODO: Implement notification cleanup
+      await cleanupOldNotifications(env);
     }
 
     if (trigger === '0 9 * * *') {
       // Daily at 9am: Send pending request reminders
+      // Find role requests pending > 48 hours and email admin a reminder
       console.log('[scheduled] Checking for stale pending requests...');
-      // TODO: Implement stale request notifications
+      await notifyStaleRequests(env);
     }
   } catch (error) {
     console.error('[scheduled] Error:', error);
+  }
+}
+
+// ============================================
+// SCHEDULED TASK IMPLEMENTATIONS
+// ============================================
+
+// Clean up old notifications:
+// - Read notifications older than 30 days
+// - Unread notifications older than 90 days
+async function cleanupOldNotifications(env: Env): Promise<void> {
+  const now = Date.now();
+  const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Find old read notifications (> 30 days)
+  const oldRead = await queryCollection(env, 'notifications', {
+    filters: [
+      { field: 'read', op: 'EQUAL', value: true },
+      { field: 'createdAt', op: 'LESS_THAN', value: thirtyDaysAgo }
+    ]
+  });
+
+  // Find old unread notifications (> 90 days)
+  const oldUnread = await queryCollection(env, 'notifications', {
+    filters: [
+      { field: 'read', op: 'EQUAL', value: false },
+      { field: 'createdAt', op: 'LESS_THAN', value: ninetyDaysAgo }
+    ]
+  });
+
+  const toDelete = [...oldRead, ...oldUnread];
+
+  if (toDelete.length === 0) {
+    console.log('[scheduled] No old notifications to clean up');
+    return;
+  }
+
+  // Batch delete in groups of 20 (Firestore batch write limit is 500, but keep batches small)
+  const batchSize = 20;
+  for (let i = 0; i < toDelete.length; i += batchSize) {
+    const batch = toDelete.slice(i, i + batchSize);
+    await batchWrite(
+      env,
+      batch.map(doc => ({
+        type: 'delete' as const,
+        collection: 'notifications',
+        docId: doc.id
+      }))
+    );
+  }
+
+  console.log(`[scheduled] Cleaned up ${toDelete.length} old notifications (${oldRead.length} read, ${oldUnread.length} unread)`);
+}
+
+// Check for stale pending role requests (> 48 hours) and email admin a reminder
+async function notifyStaleRequests(env: Env): Promise<void> {
+  const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+
+  // Query all users - we need to check pendingRoles on each
+  const users = await queryCollection(env, 'users');
+
+  const staleRequests: Array<{
+    type: string;
+    applicantName: string;
+    applicantEmail: string;
+    requestedAt: string;
+    uid: string;
+  }> = [];
+
+  for (const user of users) {
+    const pending = user.pendingRoles || {};
+
+    for (const [roleType, request] of Object.entries(pending) as [string, any][]) {
+      if (request?.status === 'pending' && request.requestedAt && request.requestedAt < fortyEightHoursAgo) {
+        const typeName = roleType === 'artist' ? 'Artist'
+          : roleType === 'merchSeller' ? 'Merch Seller'
+          : roleType === 'djBypass' ? 'DJ Bypass'
+          : roleType;
+
+        staleRequests.push({
+          type: typeName,
+          applicantName: user.displayName || 'Unknown',
+          applicantEmail: user.email || '',
+          requestedAt: request.requestedAt,
+          uid: user.id
+        });
+      }
+    }
+  }
+
+  if (staleRequests.length === 0) {
+    console.log('[scheduled] No stale pending requests');
+    return;
+  }
+
+  // Send reminder email to admin
+  const emailTemplate = staleRequestsReminderEmail(staleRequests);
+  const sent = await sendEmail(env, emailTemplate);
+
+  if (sent) {
+    console.log(`[scheduled] Sent stale request reminder for ${staleRequests.length} request(s)`);
+  } else {
+    console.error('[scheduled] Failed to send stale request reminder email');
   }
 }
 

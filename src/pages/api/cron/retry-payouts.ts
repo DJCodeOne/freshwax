@@ -1,8 +1,11 @@
 // src/pages/api/cron/retry-payouts.ts
-// Scheduled job to retry failed payouts
-// Designed to be called by Cloudflare Cron Trigger or manually
-// Supports artists, suppliers, and users (crate sellers)
-// Supports both Stripe Connect and PayPal payouts
+// Cron: 0 */6 * * * (every 6 hours)
+// Dashboard: Cloudflare Pages > Settings > Cron Triggers
+//
+// Scheduled job to retry failed payouts.
+// Designed to be called by Cloudflare Cron Trigger or manually via admin panel.
+// Supports artists, suppliers, and users (crate sellers).
+// Supports both Stripe Connect and PayPal payouts.
 
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
@@ -344,7 +347,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           entityName,
           amount: pending.amount,
           status: 'failed',
-          error: transferError.message
+          error: transferErrMsg
         });
       }
     }

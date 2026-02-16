@@ -1,5 +1,10 @@
 // src/pages/api/cron/send-restock-notifications.ts
-// Process and send restock notifications
+// Cron: 0 */6 * * * (every 6 hours)
+// Dashboard: Cloudflare Pages > Settings > Cron Triggers
+//
+// Process and send restock notifications.
+// Checks restockNotifications collection for active subscriptions,
+// looks up current stock levels, and emails users when items are back in stock.
 
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, deleteDocument } from '../../../lib/firebase-rest';

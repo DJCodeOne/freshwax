@@ -1,9 +1,12 @@
 // src/pages/api/cron/cleanup-d1.ts
+// Cron: 0 3 * * * (daily at 03:00 UTC)
+// Dashboard: Cloudflare Pages > Settings > Cron Triggers
+//
 // Scheduled job to clean up old D1 data that grows unbounded.
 // Targets:
 //   - error_logs: delete rows older than 30 days
-//   - pending_orders: delete completed/expired rows older than 90 days
-// Designed to be called by the daily 3 AM cron trigger or manually.
+//   - pending_orders: delete completed rows older than 90 days
+//   - image_scan_results: delete rows older than 30 days
 
 import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';

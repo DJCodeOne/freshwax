@@ -1,7 +1,10 @@
 // src/pages/api/cron/image-scan.ts
-// Scheduled job to scan R2 for non-WebP images that need conversion
+// Cron: 0 4 * * * (daily at 04:00 UTC)
+// Dashboard: Cloudflare Pages > Settings > Cron Triggers
+//
+// Scheduled job to scan R2 for non-WebP images that need conversion.
 // Scans key prefixes: releases/, merch/, dj-mixes/, vinyl/
-// Logs findings to D1 — does NOT auto-convert (admin triggers reprocess manually)
+// Logs findings to D1 — does NOT auto-convert (admin triggers reprocess manually).
 
 import type { APIRoute } from 'astro';
 

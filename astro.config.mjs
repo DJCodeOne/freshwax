@@ -18,11 +18,7 @@ export default defineConfig({
   },
 
   adapter: cloudflare({
-    mode: 'directory',
-    runtime: {
-      mode: 'local',
-      type: 'pages'
-    }
+    imageService: 'compile',
   }),
 
   site: 'https://freshwax.co.uk',
@@ -33,8 +29,14 @@ export default defineConfig({
     plugins: [tailwindcss()],
     ssr: {
       // firebase-admin is dynamically imported by complete-upload.ts at runtime;
-      // externalize so Vite doesn't try to bundle it (not installed as a dependency)
-      external: [/^firebase-admin/]
+      // externalize so Vite doesn't try to bundle it (not installed as a dependency).
+      // Node built-ins (fs, path, zlib, crypto) are provided by Cloudflare's
+      // nodejs_compat flag at runtime — externalize to silence Vite warnings.
+      external: [
+        /^firebase-admin/,
+        'node:fs', 'node:path', 'node:zlib', 'node:crypto',
+        'fs', 'path', 'zlib', 'crypto',
+      ]
     },
     build: {
       rollupOptions: {

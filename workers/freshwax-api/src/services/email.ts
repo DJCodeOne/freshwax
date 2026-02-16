@@ -265,6 +265,58 @@ export function newRequestNotificationEmail(
   };
 }
 
+// Stale pending requests reminder email (to admin)
+export function staleRequestsReminderEmail(
+  requests: Array<{ type: string; applicantName: string; applicantEmail: string; requestedAt: string; uid: string }>
+): EmailOptions {
+  const requestRows = requests.map(r => {
+    const daysAgo = Math.floor((Date.now() - new Date(r.requestedAt).getTime()) / (1000 * 60 * 60 * 24));
+    return `<tr>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.type}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.applicantName}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${r.applicantEmail}</td>
+      <td style="padding: 10px; border-bottom: 1px solid #eee;">${daysAgo} day${daysAgo === 1 ? '' : 's'}</td>
+    </tr>`;
+  }).join('');
+
+  return {
+    to: 'freshwaxonline@gmail.com',
+    subject: `${requests.length} Pending Role Request${requests.length === 1 ? '' : 's'} Awaiting Review`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><style>${baseStyles}</style></head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>FRESH WAX ADMIN</h1>
+          </div>
+          <div class="content">
+            <h2>Pending Role Requests</h2>
+            <p>The following role requests have been waiting more than 48 hours for review:</p>
+            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+              <thead>
+                <tr style="background: #f5f5f5;">
+                  <th style="padding: 10px; text-align: left;">Type</th>
+                  <th style="padding: 10px; text-align: left;">Applicant</th>
+                  <th style="padding: 10px; text-align: left;">Email</th>
+                  <th style="padding: 10px; text-align: left;">Waiting</th>
+                </tr>
+              </thead>
+              <tbody>${requestRows}</tbody>
+            </table>
+            <a href="https://freshwax.co.uk/admin/role-approvals" class="button">Review Requests</a>
+          </div>
+          <div class="footer">
+            <p>Fresh Wax Admin Notification</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+}
+
 // Order confirmation email
 export function orderConfirmationEmail(
   customerName: string,

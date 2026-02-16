@@ -1,6 +1,9 @@
 // src/pages/api/cron/verification-reminders.ts
-// Scheduled job to send email verification reminders to unverified users
-// Queries users with emailVerified == false, created > 24h ago and < 30 days ago
+// Cron: 0 10 * * * (daily at 10:00 UTC)
+// Dashboard: Cloudflare Pages > Settings > Cron Triggers
+//
+// Scheduled job to send email verification reminders to unverified users.
+// Queries users with emailVerified == false, created > 24h ago and < 30 days ago.
 // Skips users reminded within the last 7 days. Max 50 emails per run.
 
 import type { APIRoute } from 'astro';
