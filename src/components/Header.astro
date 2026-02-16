@@ -276,18 +276,39 @@ const firebaseConfig = {
       </a>
 
       <!-- Language Selector -->
-      <button id="langBtn" class="fwx-lang-btn" aria-label="Change language">
-        <svg class="fwx-lang-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
-        </svg>
-      </button>
+      <div class="fwx-lang-wrap">
+        <button id="langBtn" class="fwx-lang-btn" aria-label="Change language" aria-expanded="false" aria-controls="langPanel">
+          <svg class="fwx-lang-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10A15.3 15.3 0 0112 2z" />
+          </svg>
+        </button>
+        <div id="langPanel" class="fwx-lang-panel" role="dialog" aria-label="Select language" hidden>
+          <div class="fwx-lang-grid">
+            <button class="fwx-lang-opt" data-lang="en" aria-pressed="true">English</button>
+            <button class="fwx-lang-opt" data-lang="fr">Français</button>
+            <button class="fwx-lang-opt" data-lang="de">Deutsch</button>
+            <button class="fwx-lang-opt" data-lang="es">Español</button>
+            <button class="fwx-lang-opt" data-lang="it">Italiano</button>
+            <button class="fwx-lang-opt" data-lang="pt">Português</button>
+            <button class="fwx-lang-opt" data-lang="nl">Nederlands</button>
+            <button class="fwx-lang-opt" data-lang="ja">日本語</button>
+            <button class="fwx-lang-opt" data-lang="zh-CN">中文</button>
+            <button class="fwx-lang-opt" data-lang="ko">한국어</button>
+            <button class="fwx-lang-opt" data-lang="ru">Русский</button>
+            <button class="fwx-lang-opt" data-lang="pl">Polski</button>
+            <button class="fwx-lang-opt" data-lang="sv">Svenska</button>
+            <button class="fwx-lang-opt" data-lang="da">Dansk</button>
+            <button class="fwx-lang-opt" data-lang="no">Norsk</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </header>
 
-<!-- Google Translate (offscreen until triggered by button) -->
-<div id="google_translate_element" style="position:fixed;top:-9999px;left:-9999px;opacity:0;"></div>
+<!-- Google Translate (offscreen, never shown to user) -->
+<div id="google_translate_element" style="position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;"></div>
 
 <!-- Mobile Bottom Navigation -->
 <nav id="fwx-mobile-nav" class="fwx-bottom-nav" aria-label="Mobile bottom navigation">
@@ -454,6 +475,65 @@ const firebaseConfig = {
     height: 1.25rem;
   }
 
+  .fwx-lang-wrap {
+    position: relative;
+  }
+
+  .fwx-lang-panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: 280px;
+    background: #1a1a1a;
+    border: 1px solid rgba(220, 38, 38, 0.4);
+    border-radius: 0.75rem;
+    padding: 0.75rem;
+    z-index: 10000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: fwx-lang-fade 0.15s ease-out;
+  }
+
+  .fwx-lang-panel[hidden] {
+    display: none;
+  }
+
+  @keyframes fwx-lang-fade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fwx-lang-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.375rem;
+  }
+
+  .fwx-lang-opt {
+    padding: 0.5rem 0.25rem;
+    background: rgba(255, 255, 255, 0.05);
+    color: #d4d4d4;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+    white-space: nowrap;
+    min-height: 38px;
+  }
+
+  .fwx-lang-opt:hover {
+    background: rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.4);
+    color: #fff;
+  }
+
+  .fwx-lang-opt[aria-pressed="true"] {
+    background: rgba(220, 38, 38, 0.25);
+    border-color: #dc2626;
+    color: #fff;
+    font-weight: 600;
+  }
 
 </style>
 
@@ -564,103 +644,133 @@ const firebaseConfig = {
     }, 150);
   }
 
-  function showTranslateDropdown() {
+  function applyLanguage(langCode) {
     var sel = document.querySelector('select.goog-te-combo');
-    if (!sel) return;
-    var el = document.getElementById('google_translate_element');
+    var domainCookie = location.hostname.indexOf('.') !== -1 ? ';domain=.' + location.hostname : '';
 
-    // Save language choice + set cookie for persistence on reload
-    if (!sel._fwHooked) {
-      sel._fwHooked = true;
-      sel.addEventListener('change', function() {
-        var val = sel.value;
-        var domainCookie = location.hostname.indexOf('.') !== -1 ? ';domain=.' + location.hostname : '';
-        try {
-          if (val && val !== 'en') {
-            localStorage.setItem('fw_translate_lang', val);
-            document.cookie = 'googtrans=/en/' + val + ';path=/';
-            if (domainCookie) document.cookie = 'googtrans=/en/' + val + ';path=/' + domainCookie;
-          } else {
-            localStorage.removeItem('fw_translate_lang');
-            document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-            if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
-          }
-        } catch (e) {}
-      });
+    if (langCode && langCode !== 'en') {
+      try { localStorage.setItem('fw_translate_lang', langCode); } catch (e) {}
+      document.cookie = 'googtrans=/en/' + langCode + ';path=/';
+      if (domainCookie) document.cookie = 'googtrans=/en/' + langCode + ';path=/' + domainCookie;
+    } else {
+      try { localStorage.removeItem('fw_translate_lang'); } catch (e) {}
+      document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
     }
 
-    // Position the container — use el if available, otherwise style the select directly
-    var container = el || sel.parentElement;
-    if (container) {
-      container.style.position = 'fixed';
-      container.style.top = '70px';
-      container.style.right = '1rem';
-      container.style.left = 'auto';
-      container.style.opacity = '1';
-      container.style.zIndex = '999999';
+    // Drive the hidden Google Translate select
+    if (sel) {
+      sel.value = langCode;
+      sel.dispatchEvent(new Event('change'));
+    } else {
+      // GT not loaded yet — reload to let GT read the cookie
+      window.location.reload();
     }
-
-    var p = sel.parentElement;
-    while (p && p !== container) {
-      p.style.display = '';
-      p.style.visibility = 'visible';
-      p = p.parentElement;
-    }
-
-    sel.style.fontSize = '1rem';
-    sel.style.padding = '0.5rem 1rem';
-    sel.style.background = '#1a1a1a';
-    sel.style.color = '#fff';
-    sel.style.border = '1px solid #dc2626';
-    sel.style.borderRadius = '8px';
-    sel.style.cursor = 'pointer';
-    sel.style.outline = 'none';
-
-    sel.focus();
-    if (typeof sel.showPicker === 'function') {
-      try { sel.showPicker(); } catch(e) {}
-    }
-
-    function hideTranslate() {
-      if (container) {
-        container.style.top = '-9999px';
-        container.style.left = '-9999px';
-        container.style.opacity = '0';
-      }
-      sel.removeEventListener('change', hideTranslate);
-      sel.removeEventListener('blur', hideOnBlur);
-    }
-    function hideOnBlur() { setTimeout(hideTranslate, 200); }
-    sel.addEventListener('change', hideTranslate);
-    sel.addEventListener('blur', hideOnBlur);
   }
 
-  // Globe button click handler
+  function updatePanelSelection(langCode) {
+    var panel = document.getElementById('langPanel');
+    if (!panel) return;
+    var opts = panel.querySelectorAll('.fwx-lang-opt');
+    for (var i = 0; i < opts.length; i++) {
+      opts[i].setAttribute('aria-pressed', opts[i].getAttribute('data-lang') === langCode ? 'true' : 'false');
+    }
+  }
+
+  function toggleLangPanel() {
+    var panel = document.getElementById('langPanel');
+    var btn = document.getElementById('langBtn');
+    if (!panel || !btn) return;
+
+    var isOpen = !panel.hidden;
+    if (isOpen) {
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      return;
+    }
+
+    // Highlight current language
+    var current = 'en';
+    try { current = localStorage.getItem('fw_translate_lang') || 'en'; } catch (e) {}
+    updatePanelSelection(current);
+
+    panel.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+
+    // Focus first option for keyboard users
+    var firstOpt = panel.querySelector('.fwx-lang-opt[aria-pressed="true"]') || panel.querySelector('.fwx-lang-opt');
+    if (firstOpt) firstOpt.focus();
+
+    // Close on outside click
+    function closeOnOutside(e) {
+      if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', closeOnOutside, true);
+        document.removeEventListener('keydown', closeOnEsc);
+      }
+    }
+    function closeOnEsc(e) {
+      if (e.key === 'Escape') {
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        btn.focus();
+        document.removeEventListener('click', closeOnOutside, true);
+        document.removeEventListener('keydown', closeOnEsc);
+      }
+    }
+    // Delay to avoid immediate close from the click that opened it
+    setTimeout(function() {
+      document.addEventListener('click', closeOnOutside, true);
+      document.addEventListener('keydown', closeOnEsc);
+    }, 0);
+  }
+
+  // Globe button + panel handlers
   (function() {
     var langBtn = document.getElementById('langBtn');
+    var panel = document.getElementById('langPanel');
     if (!langBtn || langBtn._langInit) return;
     langBtn._langInit = true;
-    langBtn.addEventListener('click', function() {
-      if (window._gtState.ready) {
-        // GT loaded but select may have been removed by View Transitions
-        var sel = document.querySelector('select.goog-te-combo');
-        if (sel) {
-          showTranslateDropdown();
-        } else {
-          // Widget was lost — reinitialize
-          window._gtState.ready = false;
-          window._gtState.loading = false;
-          loadGoogleTranslate();
-          waitForSelect(function() { showTranslateDropdown(); });
-        }
-      } else if (window._gtState.loading) {
-        // Already loading — just wait for the select to appear
-        waitForSelect(function() { showTranslateDropdown(); });
-      } else {
-        loadGoogleTranslate();
-        waitForSelect(function() { showTranslateDropdown(); });
-      }
+
+    // Ensure GT is loaded so language switching is instant
+    if (!window._gtState.ready && !window._gtState.loading) {
+      loadGoogleTranslate();
+    }
+
+    langBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleLangPanel();
     });
+
+    if (panel) {
+      panel.addEventListener('click', function(e) {
+        var opt = e.target.closest('.fwx-lang-opt');
+        if (!opt) return;
+        var lang = opt.getAttribute('data-lang');
+        updatePanelSelection(lang);
+        panel.hidden = true;
+        langBtn.setAttribute('aria-expanded', 'false');
+        applyLanguage(lang);
+      });
+
+      // Keyboard navigation within the grid
+      panel.addEventListener('keydown', function(e) {
+        var opts = Array.prototype.slice.call(panel.querySelectorAll('.fwx-lang-opt'));
+        var idx = opts.indexOf(document.activeElement);
+        if (idx === -1) return;
+        var cols = 3;
+        var next = -1;
+        if (e.key === 'ArrowRight') next = Math.min(idx + 1, opts.length - 1);
+        else if (e.key === 'ArrowLeft') next = Math.max(idx - 1, 0);
+        else if (e.key === 'ArrowDown') next = Math.min(idx + cols, opts.length - 1);
+        else if (e.key === 'ArrowUp') next = Math.max(idx - cols, 0);
+        if (next !== -1 && next !== idx) {
+          e.preventDefault();
+          opts[next].focus();
+        }
+      });
+    }
   })();
 
   // When translation is active, force full page reload on all internal
