@@ -538,8 +538,7 @@ Stay fresh! 🎵
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const auth = getAuth(app);
 
-  // Get admin key from define:vars script
-  const ADMIN_KEY = window.ADMIN_KEY || '';
+  // ADMIN_KEY is read lazily from window (set by AdminLayout auth listener)
 
   let allSubscribers = [];
   let selectedIds = new Set();
@@ -608,6 +607,8 @@ Stay fresh! 🎵
     if (!user) { window.location.href = '/login/?redirect=/admin/newsletter/'; return; }
     try {
       const _idToken = await user.getIdToken();
+      // Ensure ADMIN_KEY is set (AdminLayout may not have set it yet)
+      if (!window.ADMIN_KEY) window.ADMIN_KEY = _idToken;
       const res = await fetch(`/api/get-user-type/?uid=${user.uid}`, {
         headers: { 'Authorization': `Bearer ${_idToken}` }
       });
@@ -637,7 +638,7 @@ Stay fresh! 🎵
   
   async function loadSubscribers() {
     try {
-      const res = await fetch('/api/newsletter/subscribers/', { headers: { 'X-Admin-Key': ADMIN_KEY } });
+      const res = await fetch('/api/newsletter/subscribers/', { headers: { 'X-Admin-Key': window.ADMIN_KEY || '' } });
       const data = await res.json();
       if (data.success) {
         allSubscribers = data.subscribers || [];
@@ -805,7 +806,7 @@ Stay fresh! 🎵
     const btn = document.getElementById('testEmailBtn');
     btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
-      const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
+      const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
       const data = await res.json();
       alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed'));
     } catch (e) { alert('Error'); }
@@ -822,7 +823,7 @@ Stay fresh! 🎵
     const btn = document.getElementById('sendBtn');
     btn.disabled = true; btn.querySelector('.btn-text').classList.add('hidden'); btn.querySelector('.btn-loading').classList.remove('hidden');
     try {
-      const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subject: subj, content: cont, subscriberIds: ids }) });
+      const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subject: subj, content: cont, subscriberIds: ids }) });
       const data = await res.json();
       if (data.success) {
         alert(`Sent!\n\nSent: ${data.results?.sent || ids.length}\nFailed: ${data.results?.failed || 0}`);
@@ -840,7 +841,7 @@ Stay fresh! 🎵
     const source = document.getElementById('newSubscriberSource').value;
     if (!email) { alert('Enter email'); return; }
     try {
-      const res = await fetch('/api/newsletter/subscribers/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ email, name, source }) });
+      const res = await fetch('/api/newsletter/subscribers/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ email, name, source }) });
       const data = await res.json();
       if (data.success) { closeModal('addSubscriberModal'); loadSubscribers(); }
       else alert(data.error || 'Failed');
@@ -861,7 +862,7 @@ Stay fresh! 🎵
     const name = document.getElementById('editSubscriberName').value.trim();
     const status = document.getElementById('editSubscriberStatus').value;
     try {
-      const res = await fetch('/api/newsletter/subscribers/', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subscriberId: id, name, status }) });
+      const res = await fetch('/api/newsletter/subscribers/', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subscriberId: id, name, status }) });
       const data = await res.json();
       if (data.success) {
         const s = allSubscribers.find(x => x.id === id);
@@ -883,7 +884,7 @@ Stay fresh! 🎵
   async function confirmDelete() {
     const id = document.getElementById('deleteSubscriberId').value;
     try {
-      const res = await fetch('/api/newsletter/subscribers/', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': ADMIN_KEY }, body: JSON.stringify({ subscriberId: id }) });
+      const res = await fetch('/api/newsletter/subscribers/', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subscriberId: id }) });
       const data = await res.json();
       if (data.success) {
         allSubscribers = allSubscribers.filter(s => s.id !== id); selectedIds.delete(id);
