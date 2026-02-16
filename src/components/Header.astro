@@ -830,7 +830,7 @@ const firebaseConfig = {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee;">Releases</div>';
       releases.forEach(r => {
         html += `<a href="/item/${encodeURIComponent(r.id)}/" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
-          <img src="${escapeHtml(r.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
+          <img src="${escapeHtml(r.artwork_url) || '/place-holder.webp'}" alt="${escapeHtml(r.title)} by ${escapeHtml(r.artist_name)}" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
           <div>
             <div style="font-weight: 500; font-size: 0.875rem;">${escapeHtml(r.title)}</div>
             <div style="font-size: 0.75rem; color: #666;">${escapeHtml(r.artist_name)}</div>
@@ -844,7 +844,7 @@ const firebaseConfig = {
       html += '<div style="padding: 0.5rem 1rem; font-size: 0.75rem; font-weight: 600; color: #666; text-transform: uppercase; border-top: 1px solid #eee; border-bottom: 1px solid #eee;">DJ Mixes</div>';
       mixes.forEach(m => {
         html += `<a href="/dj-mix/${encodeURIComponent(m.id)}/" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
-          <img src="${escapeHtml(m.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
+          <img src="${escapeHtml(m.artwork_url) || '/place-holder.webp'}" alt="${escapeHtml(m.title)}" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
           <div>
             <div style="font-weight: 500; font-size: 0.875rem;">${escapeHtml(m.title)}</div>
             <div style="font-size: 0.75rem; color: #666;">${escapeHtml(m.artist_name)}</div>
@@ -861,7 +861,7 @@ const firebaseConfig = {
         const priceStr = item.price ? `£${item.price.toFixed(2)}` : '';
         const stockStr = item.stock === 0 ? '<span style="color: #dc2626;">Out of Stock</span>' : (item.stock <= 5 ? `<span style="color: #f59e0b;">Low Stock</span>` : '');
         html += `<a href="/merch/#quick-view-${encodeURIComponent(item.id)}" id="search-result-${resultIndex}" role="option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; color: black; text-decoration: none; transition: background 0.15s;" class="search-result-hover">
-          <img src="${escapeHtml(item.artwork_url) || '/place-holder.webp'}" alt="" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
+          <img src="${escapeHtml(item.artwork_url) || '/place-holder.webp'}" alt="${escapeHtml(item.title)}" loading="lazy" width="40" height="40" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" />
           <div style="flex: 1; min-width: 0;">
             <div style="font-weight: 500; font-size: 0.875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(item.title)}</div>
             <div style="font-size: 0.75rem; color: #666; display: flex; gap: 0.5rem; align-items: center;">

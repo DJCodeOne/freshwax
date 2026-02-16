@@ -1,7 +1,7 @@
 // src/lib/giftcard.ts
 // Gift Card System - Generate, validate, and redeem gift cards
 
-import { escapeHtml } from './api-utils';
+import { escapeHtml, fetchWithTimeout } from './api-utils';
 import { SITE_URL } from './constants';
 import { sendResendEmail } from './email';
 import { emailWrapper, ctaButton, esc } from './email-wrapper';

@@ -248,22 +248,6 @@ export function buildHlsUrl(streamKey: string): string {
   return `${baseUrl}/${streamKey}/index.m3u8`;
 }
 
-/**
- * Build alternative HLS URL formats (some players need different paths)
- */
-export function buildHlsUrls(streamKey: string): {
-  primary: string;
-  fallback: string;
-  lowLatency: string;
-} {
-  const base = RED5_CONFIG.server.hlsBaseUrl;
-  return {
-    primary: `${base}/${streamKey}/index.m3u8`,
-    fallback: `${base}/${streamKey}/playlist.m3u8`,
-    lowLatency: `${base}/${streamKey}/chunklist.m3u8`,
-  };
-}
-
 // =============================================================================
 // WEBHOOK SIGNATURE VERIFICATION
 // =============================================================================
@@ -296,18 +280,6 @@ export function verifyWebhookSignature(
 // STREAM INFO TYPES
 // =============================================================================
 
-export interface Red5StreamInfo {
-  streamKey: string;
-  isLive: boolean;
-  startedAt?: string;
-  viewerCount: number;
-  bitrate?: number;
-  resolution?: string;
-  codec?: string;
-  hlsUrl: string;
-  rtmpUrl: string;
-}
-
 export interface Red5WebhookEvent {
   event: 'publish' | 'unpublish' | 'record_start' | 'record_stop' | 'viewer_join' | 'viewer_leave';
   streamKey: string;
@@ -316,78 +288,3 @@ export interface Red5WebhookEvent {
   metadata?: Record<string, any>;
 }
 
-// =============================================================================
-// QUALITY RECOMMENDATIONS
-// =============================================================================
-
-/**
- * Get recommended streaming settings based on upload speed
- */
-export function getQualityRecommendation(uploadSpeedMbps: number): {
-  recommended: keyof typeof RED5_CONFIG.stream.qualityPresets;
-  settings: typeof RED5_CONFIG.stream.qualityPresets[keyof typeof RED5_CONFIG.stream.qualityPresets];
-  warning?: string;
-} {
-  const presets = RED5_CONFIG.stream.qualityPresets;
-  
-  if (uploadSpeedMbps < 1) {
-    return {
-      recommended: 'audioOnly',
-      settings: presets.audioOnly,
-      warning: 'Your upload speed is very low. Audio-only streaming recommended.',
-    };
-  }
-  
-  if (uploadSpeedMbps < 3) {
-    return {
-      recommended: 'low',
-      settings: presets.low,
-      warning: 'Your upload speed is limited. 480p recommended for stable streaming.',
-    };
-  }
-  
-  if (uploadSpeedMbps < 6) {
-    return {
-      recommended: 'medium',
-      settings: presets.medium,
-    };
-  }
-  
-  return {
-    recommended: 'high',
-    settings: presets.high,
-  };
-}
-
-// =============================================================================
-// STREAM STATUS HELPERS
-// =============================================================================
-
-export type StreamStatus = 
-  | 'scheduled'    // Booked but not yet time
-  | 'lobby'        // DJ is in lobby waiting
-  | 'connecting'   // Stream key used, waiting for video
-  | 'live'         // Active stream
-  | 'ending'       // Grace period after scheduled end
-  | 'completed'    // Successfully ended
-  | 'failed'       // Stream failed/disconnected
-  | 'cancelled';   // Cancelled by DJ
-
-export function getStreamStatusDisplay(status: StreamStatus): {
-  label: string;
-  color: string;
-  icon: string;
-} {
-  const statusMap: Record<StreamStatus, { label: string; color: string; icon: string }> = {
-    scheduled: { label: 'Scheduled', color: '#6b7280', icon: '📅' },
-    lobby: { label: 'In Lobby', color: '#f59e0b', icon: '🎧' },
-    connecting: { label: 'Connecting...', color: '#3b82f6', icon: '🔄' },
-    live: { label: 'LIVE', color: '#dc2626', icon: '🔴' },
-    ending: { label: 'Ending Soon', color: '#f97316', icon: '⏰' },
-    completed: { label: 'Completed', color: '#10b981', icon: '✅' },
-    failed: { label: 'Disconnected', color: '#ef4444', icon: '❌' },
-    cancelled: { label: 'Cancelled', color: '#6b7280', icon: '🚫' },
-  };
-  
-  return statusMap[status] || statusMap.scheduled;
-}

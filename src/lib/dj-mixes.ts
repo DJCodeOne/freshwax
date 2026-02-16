@@ -56,8 +56,8 @@ function setCache(key: string, data: any, ttl: number): void {
   }
 }
 
-// Export for manual cache invalidation
-export function invalidateMixesCache(pattern?: string): void {
+// Manual cache invalidation (used internally)
+function invalidateMixesCache(pattern?: string): void {
   if (pattern) {
     let cleared = 0;
     for (const key of mixesCache.keys()) {

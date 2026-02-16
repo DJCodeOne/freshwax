@@ -12,7 +12,7 @@ export const BOT_USER = {
 };
 
 // Random tune comments - subtle, music-focused reactions
-export const TUNE_COMMENTS = [
+const TUNE_COMMENTS = [
   'This one is a banger 🔥',
   'Love this tune!',
   'Absolute heater right here',
@@ -36,7 +36,7 @@ export const TUNE_COMMENTS = [
 ];
 
 // Welcome messages for new users
-export const WELCOME_MESSAGES = [
+const WELCOME_MESSAGES = [
   (name: string) => `Welcome ${name}! 👋`,
   (name: string) => `${name} just joined the party! 🎉`,
   (name: string) => `Big up ${name} for tuning in!`,

@@ -2252,7 +2252,7 @@ const nonce = Astro.locals.nonce || '';
     shoutoutModal?.classList.add('hidden');
     if (shoutoutInput) shoutoutInput.value = '';
     if (shoutoutCharCount) shoutoutCharCount.textContent = '0';
-    sendShoutoutBtn.disabled = true;
+    sendShoutoutBtn.disabled = false;
     sendShoutoutBtn.innerHTML = '<span>Send Shoutout</span><svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>';
   });
   
@@ -4600,7 +4600,10 @@ const nonce = Astro.locals.nonce || '';
   // Lobby buttons
   document.getElementById('goLiveBtn')?.addEventListener('click', async () => {
     if (!myUpcomingSlot) return;
-    
+
+    const goLiveBtn = document.getElementById('goLiveBtn');
+    if (goLiveBtn) goLiveBtn.disabled = true;
+
     try {
       const token = await currentUser.getIdToken();
       const response = await fetch('/api/livestream/manage/', {
@@ -4618,9 +4621,12 @@ const nonce = Astro.locals.nonce || '';
       if (result.success) {
         scheduleCache = null;
         await loadSchedule(true);
+      } else {
+        if (goLiveBtn) goLiveBtn.disabled = false;
       }
     } catch (err) {
       console.error('Failed to go live:', err);
+      if (goLiveBtn) goLiveBtn.disabled = false;
     }
   });
   

@@ -367,11 +367,9 @@ const { nonce = '' } = Astro.props;
       if (miniPlayer) miniPlayer.classList.remove('playing');
     }
 
-    var miniPlayerInitialized = false;
-
     function initMiniPlayer() {
-      // Prevent multiple initializations
-      if (miniPlayerInitialized && window.startShuffle) {
+      // Prevent multiple initializations (use window property to persist across is:inline re-executions)
+      if (window._miniPlayerInitialized && window.startShuffle) {
         return;
       }
 
@@ -389,7 +387,7 @@ const { nonce = '' } = Astro.props;
         return;
       }
 
-      miniPlayerInitialized = true;
+      window._miniPlayerInitialized = true;
 
       window.globalAudio = globalAudio;
 
