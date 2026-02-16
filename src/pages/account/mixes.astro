@@ -249,7 +249,7 @@ export const prerender = false;
                     <div class="mix-image">
                       ${artworkUrl ? `<img src="${artworkUrl}" alt="${title}" />` : '<img src="/place-holder.webp" alt="Placeholder" />'}
                       <div class="mix-overlay">
-                        <a href="/dj-mix/${mix.id}/" class="overlay-btn" target="_blank">View</a>
+                        <a href="/dj-mix/${mix.id}/" class="overlay-btn" target="_blank" rel="noopener noreferrer">View</a>
                       </div>
                     </div>
                     <div class="mix-info">
@@ -263,7 +263,7 @@ export const prerender = false;
                         <span>💬 ${formatNumber(mix.commentCount || (Array.isArray(mix.comments) ? mix.comments.length : 0))}</span>
                       </div>
                       <div class="mix-actions">
-                        <a href="/dj-mix/${mix.id}/" class="btn-view" target="_blank">👁️ View</a>
+                        <a href="/dj-mix/${mix.id}/" class="btn-view" target="_blank" rel="noopener noreferrer">👁️ View</a>
                         <button class="btn-edit" data-mix-id="${mix.id}" data-title="${title}" data-description="${description}" data-artwork="${artworkUrl}">✏️ Edit</button>
                         <button class="btn-delete" data-mix-id="${mix.id}" data-title="${title}">🗑️ Delete</button>
                       </div>

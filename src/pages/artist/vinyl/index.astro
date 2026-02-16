@@ -209,7 +209,7 @@ export const prerender = false;
                 <a href="/artist/vinyl/edit/${l.id}/" class="btn-sm">Edit</a>
                 <button class="btn-sm" data-action="unpublish" data-listing-id="${l.id}">Unpublish</button>
               ` : l.status === 'published' ? `
-                <a href="/crates/${l.id}/" class="btn-sm" target="_blank">View</a>
+                <a href="/crates/${l.id}/" class="btn-sm" target="_blank" rel="noopener noreferrer">View</a>
                 <button class="btn-sm" data-action="unpublish" data-listing-id="${l.id}">Unpublish</button>
               ` : l.status === 'sold' ? `
                 <span class="sold-label">Sold!</span>

@@ -2690,12 +2690,6 @@ const totalDurationFormatted = totalDurationSeconds > 0
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initAll);
-  } else {
-    initAll();
-  }
-
   document.addEventListener('astro:page-load', function() {
     // Reset initialization flags for page transitions
     shareInitialized = false;

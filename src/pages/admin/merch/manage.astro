@@ -126,7 +126,7 @@ export const prerender = false;
     <a href="/admin/merch/upload/" class="btn btn-primary">+ Add Product</a>
     <a href="/admin/merch/suppliers/" class="btn btn-secondary">Suppliers</a>
     <button id="syncBtn" class="btn btn-warning">⟳ Sync to Store</button>
-    <a href="/merch/" class="btn btn-ghost" target="_blank">View Store</a>
+    <a href="/merch/" class="btn btn-ghost" target="_blank" rel="noopener noreferrer">View Store</a>
   </Fragment>
 
   <!-- Filters -->
@@ -230,9 +230,10 @@ export const prerender = false;
                 </td>
                 <td class="text-right">
                   <div class="flex gap-1 justify-end">
-                    <a 
+                    <a
                       href={`/merch/${product.id}`}
                       target="_blank"
+                      rel="noopener noreferrer"
                       class="btn btn-ghost btn-sm"
                       title="View on Store"
                     >

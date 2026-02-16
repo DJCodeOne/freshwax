@@ -319,7 +319,7 @@ const nonce = Astro.locals.nonce || '';
             <p>Payments will be sent to your connected account automatically.</p>
           </div>
           <div class="status-actions-col">
-            <a href="https://dashboard.stripe.com" target="_blank" class="btn btn-secondary">
+            <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
               Stripe Dashboard &rarr;
             </a>
             ${userData.payoutMethod !== 'stripe' && userData.paypalLinked ?

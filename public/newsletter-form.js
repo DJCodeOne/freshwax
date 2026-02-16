@@ -63,6 +63,5 @@ function initNewsletterForm() {
   });
 }
 
-// Run on both DOMContentLoaded (fallback) and astro:page-load (View Transitions)
-document.addEventListener('DOMContentLoaded', initNewsletterForm);
+// astro:page-load fires on both initial load and View Transitions
 document.addEventListener('astro:page-load', initNewsletterForm);

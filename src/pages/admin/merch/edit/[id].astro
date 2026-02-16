@@ -142,7 +142,7 @@ const getStockBadgeClass = (stock) => {
 <AdminLayout title={product ? `Edit: ${product.name}` : 'Edit Product'} activeNav="merch">
   <Fragment slot="actions">
     <a href="/admin/merch/manage/" class="btn btn-secondary">← Back to Products</a>
-    <a href={`/merch/${id}`} class="btn btn-ghost" target="_blank">View on Store</a>
+    <a href={`/merch/${id}`} class="btn btn-ghost" target="_blank" rel="noopener noreferrer">View on Store</a>
   </Fragment>
 
   {errorMessage && (

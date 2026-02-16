@@ -740,23 +740,6 @@ const nonce = Astro.locals.nonce || '';
   <Footer />
 </Layout>
 
-<script is:inline nonce={nonce}>
-  // Go Plus button handler - separate script to avoid module loading issues
-  document.addEventListener('DOMContentLoaded', function() {
-    var btn = document.getElementById('goPlusHeaderBtn');
-    var modal = document.getElementById('goPlusModal');
-    if (btn) {
-      btn.onclick = function(e) {
-        e.preventDefault();
-        if (modal) {
-          modal.classList.remove('hidden');
-          document.body.style.overflow = 'hidden';
-        }
-      };
-    }
-  });
-</script>
-
 <script is:inline type="module" nonce={nonce}>
   // @ts-nocheck - is:inline bypasses TypeScript
   import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';

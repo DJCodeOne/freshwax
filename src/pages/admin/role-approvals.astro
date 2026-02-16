@@ -503,7 +503,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             </div>
             <div class="detail-row">
               <span class="detail-label">Discogs:</span>
-              <span class="detail-value">${r.request.discogsUrl ? `<a href="${escapeHtml(r.request.discogsUrl)}" target="_blank" style="color:#22c55e">${escapeHtml(r.request.discogsUrl)}</a>` : '-'}</span>
+              <span class="detail-value">${r.request.discogsUrl ? `<a href="${escapeHtml(r.request.discogsUrl)}" target="_blank" rel="noopener noreferrer" style="color:#22c55e">${escapeHtml(r.request.discogsUrl)}</a>` : '-'}</span>
             </div>
           </div>
           <div class="request-actions">

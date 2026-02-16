@@ -950,14 +950,8 @@ const validTracks = tracks.filter(t => t.previewUrl);
     function init() {
       ShufflePlayer.init();
     }
-    
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', init);
-    } else {
-      init();
-    }
-    
-    // Re-init after Astro navigation
+
+    // astro:page-load fires on both initial load and View Transitions
     document.addEventListener('astro:page-load', init);
     
     // Expose for external control

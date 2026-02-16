@@ -644,7 +644,7 @@ const nonce = Astro.locals.nonce || '';
                 <span class="card-arrow">→</span>
               </a>
 
-              <a href={isApproved ? "/crates" : "#"} class={`action-card vinyl-card ${!isApproved ? 'disabled' : ''}`} target="_blank">
+              <a href={isApproved ? "/crates" : "#"} class={`action-card vinyl-card ${!isApproved ? 'disabled' : ''}`} target="_blank" rel="noopener noreferrer">
                 <div class="card-icon-wrap">
                   <div class="card-icon">🛒</div>
                 </div>

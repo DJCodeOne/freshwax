@@ -621,8 +621,8 @@ const mixesItemList = {
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
-  // Floating chart functionality
-  document.addEventListener('DOMContentLoaded', async function() {
+  // Floating chart functionality — astro:page-load fires on both initial load and View Transitions
+  document.addEventListener('astro:page-load', async function() {
     const floatingChart = document.getElementById('floating-chart');
     const chartToggleBtn = document.getElementById('toggle-chart');
     const closeChart = document.getElementById('closeChart');

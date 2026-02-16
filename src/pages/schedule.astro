@@ -535,7 +535,7 @@ export const prerender = false;
     }
   }
 
-  document.addEventListener('DOMContentLoaded', initSchedule);
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', initSchedule);
   document.addEventListener('astro:before-swap', cleanupSchedule);
 

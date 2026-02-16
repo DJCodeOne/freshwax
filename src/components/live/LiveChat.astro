@@ -465,13 +465,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
     documentClickListenerSet = false;
   }, { once: true });
 
-  // Run on load and on Astro navigation
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { init(); initOnlineUsers(); });
-  } else {
-    init();
-    initOnlineUsers();
-  }
+  // astro:page-load fires on both initial load and View Transitions
   document.addEventListener('astro:page-load', () => { init(); initOnlineUsers(); });
 })();
 </script>

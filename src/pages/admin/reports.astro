@@ -587,7 +587,7 @@ export const prerender = false;
       </div>
       <div class="detail-row">
         <div class="detail-label">Target</div>
-        <div class="detail-value">${escapeHtml(report.targetName)}${report.targetUrl ? ` <a href="${report.targetUrl}" target="_blank">View →</a>` : ''}</div>
+        <div class="detail-value">${escapeHtml(report.targetName)}${report.targetUrl ? ` <a href="${report.targetUrl}" target="_blank" rel="noopener noreferrer">View →</a>` : ''}</div>
       </div>
       <div class="detail-row">
         <div class="detail-label">Description</div>

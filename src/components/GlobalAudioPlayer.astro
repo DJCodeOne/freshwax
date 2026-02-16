@@ -1077,13 +1077,7 @@ const { nonce = '' } = Astro.props;
 
     }
 
-    // Initialize
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initMiniPlayer);
-    } else {
-      initMiniPlayer();
-    }
-    
+    // Initialize — astro:page-load fires on both initial load and View Transitions
     document.addEventListener('astro:page-load', initMiniPlayer);
   })();
 </script>
