@@ -10,6 +10,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton, detailBox, esc as escWrap } from '../../../lib/email-wrapper';
 
 export const prerender = false;
 
@@ -39,94 +40,51 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, items: any[], ar
 
   const itemsHtml = items.map(item => `
     <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #333;">
-        <div style="font-weight: 600; color: #fff;">${item.name || item.title}</div>
-        <div style="font-size: 13px; color: #888;">Digital Download</div>
+      <td style="padding: 12px; border-bottom: 1px solid #333; border-color: #333;" class="border-subtle">
+        <div style="font-weight: 600; color: #ffffff;" class="text-primary">${escWrap(item.name || item.title)}</div>
+        <div style="font-size: 13px; color: #737373;" class="text-muted">Digital Download</div>
       </td>
-      <td style="padding: 12px; border-bottom: 1px solid #333; text-align: right; color: #10b981;">
-        £${(item.price || 0).toFixed(2)}
+      <td style="padding: 12px; border-bottom: 1px solid #333; text-align: right; color: #10b981; border-color: #333;" class="border-subtle">
+        \u00a3${(item.price || 0).toFixed(2)}
       </td>
     </tr>
   `).join('');
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #111; border-radius: 12px; overflow: hidden;">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 32px; text-align: center;">
-              <div style="font-size: 32px; margin-bottom: 8px;">🎵</div>
-              <h1 style="margin: 0; color: #fff; font-size: 24px; font-weight: 700;">You Made a Sale!</h1>
-              <p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Order ${shortOrderNumber}</p>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 32px;">
-              <p style="color: #ccc; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
+  const content = `
+              <p style="color: #a3a3a3; font-size: 15px; line-height: 1.6; margin: 0 0 24px;" class="text-secondary">
                 Great news! Someone just purchased your music on Fresh Wax.
               </p>
 
               <!-- Items -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="padding: 12px; background: #1a1a1a; border-radius: 8px 8px 0 0; font-weight: 600; color: #888; font-size: 12px; text-transform: uppercase;">Item</td>
-                  <td style="padding: 12px; background: #1a1a1a; border-radius: 8px 8px 0 0; font-weight: 600; color: #888; font-size: 12px; text-transform: uppercase; text-align: right;">Price</td>
+                  <td style="padding: 12px; background: #1f1f1f; border-radius: 8px 8px 0 0; font-weight: 600; color: #737373; font-size: 12px; text-transform: uppercase;" class="detail-box text-muted">Item</td>
+                  <td style="padding: 12px; background: #1f1f1f; border-radius: 8px 8px 0 0; font-weight: 600; color: #737373; font-size: 12px; text-transform: uppercase; text-align: right;" class="detail-box text-muted">Price</td>
                 </tr>
                 ${itemsHtml}
               </table>
 
-              <!-- Payout Info -->
-              <div style="background: #1a1a1a; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="color: #888; padding-bottom: 8px;">Pending Payout</td>
-                    <td style="color: #10b981; font-weight: 700; font-size: 20px; text-align: right; padding-bottom: 8px;">£${artistPayout.toFixed(2)}</td>
-                  </tr>
-                </table>
-                <p style="color: #666; font-size: 13px; margin: 12px 0 0; line-height: 1.5;">
-                  After Fresh Wax fee (1%) and customer payment processing fees.<br>
-                  <span style="color: #888;">Bank transfer: no additional fee</span><br>
-                  <span style="color: #888;">PayPal instant: 2% fee applies</span>
-                </p>
-              </div>
+              ${detailBox([
+                { label: 'Pending Payout', value: '\u00a3' + artistPayout.toFixed(2), valueColor: '#10b981' },
+              ])}
 
-              <!-- CTA -->
-              <div style="text-align: center; margin-top: 32px;">
-                <a href="${SITE_URL}/artist/dashboard" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600;">
-                  View Your Dashboard
-                </a>
-              </div>
-            </td>
-          </tr>
+              <p style="color: #737373; font-size: 13px; margin: 0 0 24px; line-height: 1.5;" class="text-muted">
+                After Fresh Wax fee (1%) and customer payment processing fees.<br>
+                <span style="color: #a3a3a3;" class="text-secondary">Bank transfer: no additional fee</span><br>
+                <span style="color: #a3a3a3;" class="text-secondary">PayPal instant: 2% fee applies</span>
+              </p>
 
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px; background: #0a0a0a; text-align: center; border-top: 1px solid #222;">
-              <p style="color: #666; font-size: 13px; margin: 0;">
+              ${ctaButton('View Your Dashboard', SITE_URL + '/artist/dashboard', { gradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' })}
+
+              <p style="color: #737373; font-size: 13px; margin: 0; line-height: 1.6;" class="text-muted">
                 Thank you for being part of Fresh Wax!
-              </p>
-              <p style="color: #444; font-size: 12px; margin: 12px 0 0;">
-                <a href="${SITE_URL}" style="color: #ef4444; text-decoration: none;">freshwax.co.uk</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+              </p>`;
+
+  return emailWrapper(content, {
+    title: 'You Made a Sale!',
+    headerText: `You Made a Sale! Order ${escWrap(shortOrderNumber)}`,
+    headerGradient: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  });
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {

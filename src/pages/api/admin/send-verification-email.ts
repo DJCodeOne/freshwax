@@ -7,6 +7,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
+import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const sendVerificationEmailSchema = z.object({
   email: z.string().email(),
@@ -87,71 +88,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Since we can't use Firebase's built-in email verification without user being signed in,
     // we'll send a custom email asking them to log in and verify
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; border: 1px solid #262626;">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #262626;">
-              <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="120" style="display: block; margin: 0 auto 20px;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Verify Your Email</h1>
-            </td>
-          </tr>
+    const verifyContent = `
+      <div style="text-align: center; margin-bottom: 24px;">
+        <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="120" style="display: inline-block; margin: 0 auto 20px;">
+      </div>
+      <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;" class="text-secondary">
+        Hi there,
+      </p>
+      <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;" class="text-secondary">
+        Please verify your email address to unlock all features on Fresh Wax, including purchasing, commenting, and chatting.
+      </p>
+      <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 30px;" class="text-secondary">
+        Click the button below to log in and verify your email:
+      </p>
+      ${ctaButton('Verify My Email', `${SITE_URL}/verify-email`)}
+      <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0; text-align: center;" class="text-muted">
+        If you didn't create an account on Fresh Wax, you can safely ignore this email.
+      </p>`;
 
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Hi there,
-              </p>
-              <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Please verify your email address to unlock all features on Fresh Wax, including purchasing, commenting, and chatting.
-              </p>
-              <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
-                Click the button below to log in and verify your email:
-              </p>
-
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${SITE_URL}/verify-email" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                      Verify My Email
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0; text-align: center;">
-                If you didn't create an account on Fresh Wax, you can safely ignore this email.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 20px 40px; background-color: #1a1a1a; border-top: 1px solid #262626; border-radius: 0 0 12px 12px;">
-              <p style="color: #666666; font-size: 12px; margin: 0; text-align: center;">
-                Fresh Wax - Jungle & Drum and Bass<br>
-                <a href="${SITE_URL}" style="color: #888888;">freshwax.co.uk</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `;
+    const emailHtml = emailWrapper(verifyContent, {
+      title: 'Verify Your Email',
+      headerText: 'Verify Your Email',
+    });
 
     // Send via Resend
     const resendResponse = await fetchWithTimeout('https://api.resend.com/emails', {

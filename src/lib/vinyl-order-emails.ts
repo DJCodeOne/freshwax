@@ -2,13 +2,8 @@
 // Email notifications for vinyl crates orders - seller and admin notifications
 
 import { SITE_URL } from './constants';
-import { fetchWithTimeout } from './api-utils';
-
-// SECURITY: Escape user-supplied data for safe HTML embedding
-function esc(s: string | null | undefined): string {
-  if (!s) return '';
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+import { emailWrapper, ctaButton, detailBox, esc } from './email-wrapper';
+import { sendResendEmail } from './email';
 
 // Send email to seller when their vinyl is purchased
 export async function sendVinylOrderSellerEmail(
@@ -39,15 +34,15 @@ export async function sendVinylOrderSellerEmail(
     }
 
     const dashboardUrl = `${SITE_URL}/artist/vinyl/orders`;
-    const formattedPrice = `£${orderDetails.price.toFixed(2)}`;
+    const formattedPrice = `\u00a3${orderDetails.price.toFixed(2)}`;
     const shipping = orderDetails.shippingAddress;
 
     const shippingHtml = shipping ? `
-      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1f1f1f; border-radius: 8px; margin-bottom: 25px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #1f1f1f; border-radius: 8px; margin-bottom: 25px;" class="detail-box">
         <tr>
           <td style="padding: 20px;">
             <p style="color: #f97316; font-size: 14px; font-weight: 600; margin: 0 0 10px;">SHIP TO:</p>
-            <p style="color: #ffffff; font-size: 14px; margin: 0; line-height: 1.6;">
+            <p style="color: #ffffff; font-size: 14px; margin: 0; line-height: 1.6;" class="text-primary">
               ${esc(shipping.firstName)} ${esc(shipping.lastName)}<br>
               ${esc(shipping.address1)}<br>
               ${shipping.address2 ? esc(shipping.address2) + '<br>' : ''}
@@ -59,127 +54,54 @@ export async function sendVinylOrderSellerEmail(
       </table>
     ` : '';
 
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Vinyl Order!</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; overflow: hidden;">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                📦 New Vinyl Order!
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
+    const content = `
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;" class="text-primary">
                 Hey ${esc(sellerName) || 'there'},
               </p>
 
-              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;" class="text-secondary">
                 Great news! Someone just purchased your vinyl listing. Please ship the item to the buyer.
               </p>
 
-              <!-- Order Details Box -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1f1f1f; border-radius: 8px; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 20px;">
-                    <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="color: #737373; font-size: 14px; padding-bottom: 10px;">Order #</td>
-                        <td align="right" style="color: #ffffff; font-size: 14px; padding-bottom: 10px;">${esc(orderDetails.orderNumber)}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #737373; font-size: 14px; padding-bottom: 10px;">Item</td>
-                        <td align="right" style="color: #f97316; font-size: 14px; font-weight: 600; padding-bottom: 10px;">${esc(orderDetails.itemTitle)}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #737373; font-size: 14px; padding-bottom: 10px;">Artist</td>
-                        <td align="right" style="color: #ffffff; font-size: 14px; padding-bottom: 10px;">${esc(orderDetails.itemArtist)}</td>
-                      </tr>
-                      <tr>
-                        <td style="color: #737373; font-size: 14px;">Sale Price</td>
-                        <td align="right" style="color: #22c55e; font-size: 18px; font-weight: 700;">${formattedPrice}</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
+              ${detailBox([
+                { label: 'Order #', value: esc(orderDetails.orderNumber) },
+                { label: 'Item', value: esc(orderDetails.itemTitle), valueColor: '#f97316' },
+                { label: 'Artist', value: esc(orderDetails.itemArtist) },
+                { label: 'Sale Price', value: formattedPrice, valueColor: '#22c55e' },
+              ])}
 
               ${shippingHtml}
 
-              <p style="color: #a3a3a3; font-size: 14px; margin: 0 0 25px; line-height: 1.6;">
-                <strong style="color: #ffffff;">Buyer:</strong> ${esc(orderDetails.buyerName)}<br>
-                <strong style="color: #ffffff;">Email:</strong> ${esc(orderDetails.buyerEmail)}
+              <p style="color: #a3a3a3; font-size: 14px; margin: 0 0 25px; line-height: 1.6;" class="text-secondary">
+                <strong style="color: #ffffff;" class="text-primary">Buyer:</strong> ${esc(orderDetails.buyerName)}<br>
+                <strong style="color: #ffffff;" class="text-primary">Email:</strong> ${esc(orderDetails.buyerEmail)}
               </p>
 
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 10px 0 30px;">
-                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 14px;">
-                      View Orders & Mark Shipped →
-                    </a>
-                  </td>
-                </tr>
-              </table>
+              ${ctaButton('View Orders & Mark Shipped', dashboardUrl, { gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' })}
 
-              <p style="color: #737373; font-size: 13px; margin: 0; line-height: 1.6;">
+              <p style="color: #737373; font-size: 13px; margin: 0; line-height: 1.6;" class="text-muted">
                 Please ship within your stated dispatch time. Add tracking info in your dashboard once shipped.
-              </p>
-            </td>
-          </tr>
+              </p>`;
 
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0f0f0f; padding: 25px 40px; text-align: center; border-top: 1px solid #262626;">
-              <p style="color: #525252; font-size: 12px; margin: 0;">
-                Fresh Wax Crates - Vinyl Marketplace
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+    const emailHtml = emailWrapper(content, {
+      title: 'New Vinyl Order!',
+      headerText: 'New Vinyl Order!',
+      headerGradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+      footerBrand: 'Fresh Wax Crates - Vinyl Marketplace',
+    });
 
-    const response = await fetchWithTimeout('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'Fresh Wax <orders@freshwax.co.uk>',
-        to: [sellerEmail],
-        subject: `📦 New Order: ${orderDetails.itemTitle} - #${orderDetails.orderNumber}`,
-        html: emailHtml
-      })
-    }, 10000);
+    const subject = `New Order: ${orderDetails.itemTitle} - #${orderDetails.orderNumber}`;
+    const result = await sendResendEmail({
+      apiKey: RESEND_API_KEY,
+      from: 'Fresh Wax <orders@freshwax.co.uk>',
+      to: [sellerEmail],
+      subject,
+      html: emailHtml,
+      template: 'vinyl-order-seller',
+      db: env?.DB,
+    });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('[Vinyl Email] Resend error:', error);
-      return { success: false, error: 'Email send failed' };
-    }
-
-    const result = await response.json();
-    console.log('[Vinyl Email] Seller notification sent:', result.id);
-    return { success: true, messageId: result.id };
+    return result;
 
   } catch (err) {
     console.error('[Vinyl Email] Error:', err);
@@ -210,59 +132,51 @@ export async function sendVinylOrderAdminEmail(
       return { success: false, error: 'Email service not configured' };
     }
 
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Vinyl Crates Sale</title>
-</head>
-<body style="margin: 0; padding: 20px; background-color: #0a0a0a; font-family: sans-serif; color: #ffffff;">
-  <div style="max-width: 600px; margin: 0 auto; background: #141414; padding: 30px; border-radius: 12px;">
-    <h1 style="color: #f97316; margin-top: 0;">Vinyl Crates Sale</h1>
+    const content = `
+              <h1 style="color: #f97316; margin-top: 0; font-size: 24px;" class="text-primary">Vinyl Crates Sale</h1>
 
-    <p><strong>Order:</strong> #${esc(orderDetails.orderNumber)}</p>
-    <p><strong>Item:</strong> ${esc(orderDetails.itemTitle)} - ${esc(orderDetails.itemArtist)}</p>
-    <p><strong>Price:</strong> £${orderDetails.price.toFixed(2)}</p>
+              <p style="color: #ffffff; font-size: 14px; line-height: 1.8;" class="text-primary">
+                <strong>Order:</strong> #${esc(orderDetails.orderNumber)}<br>
+                <strong>Item:</strong> ${esc(orderDetails.itemTitle)} - ${esc(orderDetails.itemArtist)}<br>
+                <strong>Price:</strong> \u00a3${orderDetails.price.toFixed(2)}
+              </p>
 
-    <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
+              <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
 
-    <p><strong>Seller:</strong> ${esc(orderDetails.sellerName)}</p>
-    <p><strong>Seller Email:</strong> ${esc(orderDetails.sellerEmail)}</p>
-    <p><strong>Seller ID:</strong> ${esc(orderDetails.sellerId)}</p>
+              <p style="color: #ffffff; font-size: 14px; line-height: 1.8;" class="text-primary">
+                <strong>Seller:</strong> ${esc(orderDetails.sellerName)}<br>
+                <strong>Seller Email:</strong> ${esc(orderDetails.sellerEmail)}<br>
+                <strong>Seller ID:</strong> ${esc(orderDetails.sellerId)}
+              </p>
 
-    <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
+              <hr style="border: none; border-top: 1px solid #333; margin: 20px 0;">
 
-    <p><strong>Buyer:</strong> ${esc(orderDetails.buyerName)}</p>
-    <p><strong>Buyer Email:</strong> ${esc(orderDetails.buyerEmail)}</p>
+              <p style="color: #ffffff; font-size: 14px; line-height: 1.8;" class="text-primary">
+                <strong>Buyer:</strong> ${esc(orderDetails.buyerName)}<br>
+                <strong>Buyer Email:</strong> ${esc(orderDetails.buyerEmail)}
+              </p>
 
-    <p style="color: #737373; font-size: 12px; margin-top: 30px;">
-      Seller has been notified to ship the item.
-    </p>
-  </div>
-</body>
-</html>`;
+              <p style="color: #737373; font-size: 12px; margin-top: 30px;" class="text-muted">
+                Seller has been notified to ship the item.
+              </p>`;
 
-    const response = await fetchWithTimeout('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'Fresh Wax <orders@freshwax.co.uk>',
-        to: [ADMIN_EMAIL],
-        subject: `[Crates] Vinyl Sale: ${esc(orderDetails.itemTitle)} - #${esc(orderDetails.orderNumber)}`,
-        html: emailHtml
-      })
-    }, 10000);
+    const emailHtml = emailWrapper(content, {
+      title: 'Vinyl Crates Sale',
+      hideHeader: true,
+    });
 
-    if (!response.ok) {
-      return { success: false, error: 'Admin email failed' };
-    }
+    const subject = `[Crates] Vinyl Sale: ${esc(orderDetails.itemTitle)} - #${esc(orderDetails.orderNumber)}`;
+    const result = await sendResendEmail({
+      apiKey: RESEND_API_KEY,
+      from: 'Fresh Wax <orders@freshwax.co.uk>',
+      to: [ADMIN_EMAIL],
+      subject,
+      html: emailHtml,
+      template: 'vinyl-order-admin',
+      db: env?.DB,
+    });
 
-    console.log('[Vinyl Email] Admin notification sent');
-    return { success: true };
+    return result;
 
   } catch (err) {
     console.error('[Vinyl Email] Admin email error:', err);

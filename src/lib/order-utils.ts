@@ -6,6 +6,7 @@ import { d1UpsertMerch } from './d1-catalog';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
 import { escapeHtml, fetchWithTimeout } from './api-utils';
 import { SITE_URL } from './constants';
+import { sendResendEmail } from './email';
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -1553,29 +1554,21 @@ export async function sendOrderConfirmationEmail(
 
     console.log('[sendEmail] Email HTML length:', emailHtml.length);
 
-    const emailResponse = await fetchWithTimeout('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + RESEND_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'Fresh Wax <orders@freshwax.co.uk>',
-        to: [order.customer.email],
-        bcc: ['freshwaxonline@gmail.com'],
-        subject: 'Order Confirmed - ' + shortOrderNumber,
-        html: emailHtml
-      })
-    }, 10000);
+    const result = await sendResendEmail({
+      apiKey: RESEND_API_KEY,
+      from: 'Fresh Wax <orders@freshwax.co.uk>',
+      to: [order.customer.email],
+      bcc: ['freshwaxonline@gmail.com'],
+      subject: 'Order Confirmed - ' + shortOrderNumber,
+      html: emailHtml,
+      template: 'order-confirmation',
+      db: env?.DB,
+    });
 
-    console.log('[sendEmail] Resend API response status:', emailResponse.status);
-
-    if (emailResponse.ok) {
-      const emailResult = await emailResponse.json();
-      console.log('[sendEmail] ✅ Email sent! ID:', emailResult.id);
+    if (result.success) {
+      console.log('[sendEmail] Email sent! ID:', result.messageId);
     } else {
-      const error = await emailResponse.text();
-      console.error('[sendEmail] ❌ Email failed:', emailResponse.status, error);
+      console.error('[sendEmail] Email failed:', result.error);
     }
   } catch (emailError) {
     console.error('[sendEmail] ❌ Exception:', emailError);
@@ -1599,26 +1592,21 @@ export async function sendVinylFulfillmentEmail(
     log.info('[order-utils] Sending vinyl fulfillment email to stockist:', STOCKIST_EMAIL);
     const fulfillmentHtml = buildStockistFulfillmentEmail(orderId, orderNumber, order, vinylItems);
 
-    const fulfillmentResponse = await fetchWithTimeout('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + RESEND_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
-        to: [STOCKIST_EMAIL],
-        bcc: ['freshwaxonline@gmail.com'],
-        subject: '📦 VINYL FULFILLMENT REQUIRED - ' + orderNumber,
-        html: fulfillmentHtml
-      })
-    }, 10000);
+    const result = await sendResendEmail({
+      apiKey: RESEND_API_KEY,
+      from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
+      to: [STOCKIST_EMAIL],
+      bcc: ['freshwaxonline@gmail.com'],
+      subject: 'VINYL FULFILLMENT REQUIRED - ' + orderNumber,
+      html: fulfillmentHtml,
+      template: 'vinyl-fulfillment',
+      db: env?.DB,
+    });
 
-    if (fulfillmentResponse.ok) {
-      log.info('[order-utils] ✓ Stockist email sent!');
+    if (result.success) {
+      log.info('[order-utils] Stockist email sent!');
     } else {
-      const error = await fulfillmentResponse.text();
-      console.error('[order-utils] ❌ Stockist email failed:', error);
+      console.error('[order-utils] Stockist email failed:', result.error);
     }
   } catch (stockistError) {
     console.error('[order-utils] Stockist email error:', stockistError);
@@ -1653,21 +1641,17 @@ export async function sendDigitalSaleEmails(
       log.info('[order-utils] Sending digital sale email to artist:', artistEmail);
       const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
 
-      await fetchWithTimeout('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + RESEND_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'Fresh Wax <orders@freshwax.co.uk>',
-          to: [artistEmail],
-          bcc: ['freshwaxonline@gmail.com'],
-          subject: '🎵 Digital Sale! ' + orderNumber,
-          html: digitalHtml
-        })
-      }, 10000);
-      log.info('[order-utils] ✓ Digital sale email sent to:', artistEmail);
+      await sendResendEmail({
+        apiKey: RESEND_API_KEY,
+        from: 'Fresh Wax <orders@freshwax.co.uk>',
+        to: [artistEmail],
+        bcc: ['freshwaxonline@gmail.com'],
+        subject: 'Digital Sale! ' + orderNumber,
+        html: digitalHtml,
+        template: 'digital-sale-artist',
+        db: env?.DB,
+      });
+      log.info('[order-utils] Digital sale email sent to:', artistEmail);
     } catch (digitalError) {
       console.error('[order-utils] Digital sale email error:', digitalError);
     }
@@ -1702,21 +1686,17 @@ export async function sendMerchSaleEmails(
       log.info('[order-utils] Sending merch sale email to seller:', sellerEmail);
       const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
 
-      await fetchWithTimeout('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + RESEND_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
-          to: [sellerEmail],
-          bcc: ['freshwaxonline@gmail.com'],
-          subject: '👕 Merch Order! ' + orderNumber,
-          html: merchHtml
-        })
-      }, 10000);
-      log.info('[order-utils] ✓ Merch sale email sent to:', sellerEmail);
+      await sendResendEmail({
+        apiKey: RESEND_API_KEY,
+        from: 'Fresh Wax Orders <orders@freshwax.co.uk>',
+        to: [sellerEmail],
+        bcc: ['freshwaxonline@gmail.com'],
+        subject: 'Merch Order! ' + orderNumber,
+        html: merchHtml,
+        template: 'merch-sale-seller',
+        db: env?.DB,
+      });
+      log.info('[order-utils] Merch sale email sent to:', sellerEmail);
     } catch (merchError) {
       console.error('[order-utils] Merch sale email error:', merchError);
     }

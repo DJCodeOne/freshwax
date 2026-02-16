@@ -7,6 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const sendApprovalEmailSchema = z.object({
   email: z.string().email(),
@@ -115,87 +116,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Build email HTML
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to the Fresh Wax community.</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; overflow: hidden;">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                🎉 You're Approved!
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
+    const approvalContent = `
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;" class="text-primary">
                 Hey ${name || 'there'},
               </p>
 
-              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;">
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;" class="text-secondary">
                 Great news! ${approvalText} Welcome to the Fresh Wax community.
               </p>
 
-              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 30px; line-height: 1.6;">
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 30px; line-height: 1.6;" class="text-secondary">
                 You now have access to the Pro Dashboard where you can:
               </p>
 
-              <ul style="color: #a3a3a3; font-size: 15px; margin: 0 0 30px; padding-left: 20px; line-height: 1.8;">${featuresList}
+              <ul style="color: #a3a3a3; font-size: 15px; margin: 0 0 30px; padding-left: 20px; line-height: 1.8;" class="text-secondary">${featuresList}
               </ul>
 
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding: 10px 0 30px;">
-                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                      Log In →
-                    </a>
-                  </td>
-                </tr>
-              </table>
+              ${ctaButton('Log In', loginUrl)}
 
-              <p style="color: #a3a3a3; font-size: 14px; margin: 0; line-height: 1.6;">
+              <p style="color: #a3a3a3; font-size: 14px; margin: 0; line-height: 1.6;" class="text-secondary">
                 If you have any questions, just reply to this email or reach out to us anytime.
-              </p>
-            </td>
-          </tr>
+              </p>`;
 
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0a0a0a; padding: 25px 40px; border-top: 1px solid #262626;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="font-size: 13px; margin: 0;">
-                      <span style="color: #ffffff;">Fresh</span><span style="color: #dc2626;">Wax</span><span style="color: #ffffff;"> - Underground Music Platform</span>
-                    </p>
-                  </td>
-                  <td align="right">
-                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `.trim();
+    const emailHtml = emailWrapper(approvalContent, {
+      title: 'Welcome to the Fresh Wax community.',
+      headerText: "You're Approved!",
+    });
 
     // Send via Resend
     const response = await fetchWithTimeout('https://api.resend.com/emails', {

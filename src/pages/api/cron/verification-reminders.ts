@@ -10,6 +10,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 export const prerender = false;
 
@@ -148,60 +149,26 @@ export const GET: APIRoute = async (context) => POST(context);
 
 function buildReminderEmail(name: string): string {
   const greeting = name ? `Hi ${name},` : 'Hi there,';
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; border: 1px solid #262626;">
-          <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #262626;">
-              <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="120" style="display: block; margin: 0 auto 20px;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">Verify Your Email</h1>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 40px;">
-              <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                ${greeting}
-              </p>
-              <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;">
-                Just a friendly reminder to verify your email address on Fresh Wax. Verifying unlocks all features including purchasing, commenting, and live chat.
-              </p>
-              <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 30px;">
-                Click below to log in and verify your email:
-              </p>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${SITE_URL}/verify-email" style="display: inline-block; background-color: #dc2626; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                      Verify My Email
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0; text-align: center;">
-                If you didn't create an account on Fresh Wax, you can safely ignore this email.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 20px 40px; background-color: #1a1a1a; border-top: 1px solid #262626; border-radius: 0 0 12px 12px;">
-              <p style="color: #666666; font-size: 12px; margin: 0; text-align: center;">
-                Fresh Wax - Jungle &amp; Drum and Bass<br>
-                <a href="${SITE_URL}" style="color: #888888;">freshwax.co.uk</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+  const content = `
+    <div style="text-align: center; margin-bottom: 24px;">
+      <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" width="120" style="display: inline-block; margin: 0 auto 20px;">
+    </div>
+    <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;" class="text-secondary">
+      ${greeting}
+    </p>
+    <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 20px;" class="text-secondary">
+      Just a friendly reminder to verify your email address on Fresh Wax. Verifying unlocks all features including purchasing, commenting, and live chat.
+    </p>
+    <p style="color: #a3a3a3; font-size: 16px; line-height: 1.6; margin: 0 0 30px;" class="text-secondary">
+      Click below to log in and verify your email:
+    </p>
+    ${ctaButton('Verify My Email', `${SITE_URL}/verify-email`)}
+    <p style="color: #666666; font-size: 14px; line-height: 1.6; margin: 30px 0 0; text-align: center;" class="text-muted">
+      If you didn't create an account on Fresh Wax, you can safely ignore this email.
+    </p>`;
+
+  return emailWrapper(content, {
+    title: 'Verify Your Email',
+    headerText: 'Verify Your Email',
+  });
 }

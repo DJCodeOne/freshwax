@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 export const prerender = false;
 
@@ -86,160 +87,88 @@ export const POST: APIRoute = async ({ request, locals }) => {
       ? `Great news! Your Plus subscription has been successfully renewed.`
       : `Thanks for upgrading to Plus! Your subscription is now active and you have access to all Plus features.`;
 
-    // Build email HTML
-    const emailHtml = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fresh Wax Plus</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #141414; border-radius: 12px; overflow: hidden;">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 40px 30px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 10px;">👑</div>
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                ${headerText}
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
-                Hey ${name || 'there'},
+    // Build email HTML using shared wrapper
+    const plusContent = `
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;" class="text-primary">
+                Hey ${esc(name) || 'there'},
               </p>
 
-              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 30px; line-height: 1.6;">
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 30px; line-height: 1.6;" class="text-secondary">
                 ${introText}
               </p>
 
               <!-- Subscription Details Card -->
-              <div style="background: linear-gradient(180deg, #1f2937 0%, #111827 100%); border: 1px solid #374151; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
-                <h3 style="color: #f59e0b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 20px;">
-                  Subscription Details
-                </h3>
-
-                <table width="100%" style="border-collapse: collapse;">
-                  ${plusId ? `
-                  <tr>
-                    <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;">Plus ID</td>
-                    <td style="color: #ffffff; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right; font-family: monospace;">${plusId}</td>
-                  </tr>
-                  ` : ''}
-                  <tr>
-                    <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;">Registered</td>
-                    <td style="color: #ffffff; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right;">${subscribedDateStr} at ${subscribedTimeStr}</td>
-                  </tr>
-                  <tr>
-                    <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;">Valid Until</td>
-                    <td style="color: #22c55e; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right; font-weight: 600;">${expiresDateStr}</td>
-                  </tr>
-                  <tr>
-                    <td style="color: #9ca3af; font-size: 14px; padding: 8px 0;">Subscription</td>
-                    <td style="color: #f59e0b; font-size: 14px; padding: 8px 0; text-align: right; font-weight: 600;">Plus Annual (£10/year)</td>
-                  </tr>
-                </table>
-              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #1f1f1f; border: 1px solid #374151; border-radius: 12px; margin-bottom: 30px;" class="detail-box border-subtle">
+                <tr>
+                  <td style="padding: 24px;">
+                    <h3 style="color: #f59e0b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 20px;">
+                      Subscription Details
+                    </h3>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      ${plusId ? `
+                      <tr>
+                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Plus ID</td>
+                        <td style="color: #ffffff; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right; font-family: monospace;" class="text-primary border-subtle">${esc(plusId)}</td>
+                      </tr>
+                      ` : ''}
+                      <tr>
+                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Registered</td>
+                        <td style="color: #ffffff; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right;" class="text-primary border-subtle">${subscribedDateStr} at ${subscribedTimeStr}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151;" class="text-muted border-subtle">Valid Until</td>
+                        <td style="color: #22c55e; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #374151; text-align: right; font-weight: 600;" class="border-subtle">${expiresDateStr}</td>
+                      </tr>
+                      <tr>
+                        <td style="color: #9ca3af; font-size: 14px; padding: 8px 0;" class="text-muted">Subscription</td>
+                        <td style="color: #f59e0b; font-size: 14px; padding: 8px 0; text-align: right; font-weight: 600;">Plus Annual (\u00a310/year)</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
               <!-- Benefits -->
-              <p style="color: #ffffff; font-size: 16px; margin: 0 0 15px; font-weight: 600;">
+              <p style="color: #ffffff; font-size: 16px; margin: 0 0 15px; font-weight: 600;" class="text-primary">
                 Your Plus Benefits:
               </p>
 
-              <ul style="color: #a3a3a3; font-size: 15px; margin: 0 0 30px; padding-left: 0; list-style: none; line-height: 2;">
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  5 DJ mix uploads per week (vs 2 standard)
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  Long duration events up to 24 hours
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  Book multiple slots for day-long events
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  1,000 tracks in cloud playlist (sync across devices)
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  !skip command (3 skips per day)
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  Record live stream button enabled
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  Gold crown on your chat avatar
-                </li>
-                <li style="padding-left: 24px; position: relative;">
-                  <span style="position: absolute; left: 0; color: #f59e0b;">✓</span>
-                  Priority in DJ Lobby queue
-                </li>
-              </ul>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 30px;">
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> 5 DJ mix uploads per week (vs 2 standard)</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> Long duration events up to 24 hours</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> Book multiple slots for day-long events</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> 1,000 tracks in cloud playlist (sync across devices)</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> !skip command (3 skips per day)</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> Record live stream button enabled</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> Gold crown on your chat avatar</td></tr>
+                <tr><td style="padding: 6px 0; color: #a3a3a3; font-size: 15px;" class="text-secondary"><span style="color: #f59e0b; margin-right: 8px;">&#10003;</span> Priority in DJ Lobby queue</td></tr>
+              </table>
 
               <!-- Renewal Notice -->
-              <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 16px; margin-bottom: 30px;">
-                <p style="color: #f59e0b; font-size: 14px; margin: 0; line-height: 1.5;">
-                  <strong>About Renewals:</strong> Your Plus benefits will remain active for ${daysUntilExpiry} days.
-                  If not renewed, your account will revert to Standard limits (no data is lost).
-                  Simply renew anytime to reactivate Plus features!
-                </p>
-              </div>
-
-              <!-- CTA Button -->
-              <table width="100%" cellpadding="0" cellspacing="0">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
                 <tr>
-                  <td align="center" style="padding: 10px 0 30px;">
-                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px;">
-                      Go to Dashboard →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="color: #6b7280; font-size: 14px; margin: 0; line-height: 1.6; text-align: center;">
-                Questions? Just reply to this email or reach out anytime.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #0a0a0a; padding: 25px 40px; border-top: 1px solid #262626;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="font-size: 13px; margin: 0;">
-                      <span style="color: #ffffff;">Fresh</span><span style="color: #dc2626;">Wax</span>
-                      <span style="color: #f59e0b; margin-left: 8px;">Plus</span>
+                  <td style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 16px;">
+                    <p style="color: #f59e0b; font-size: 14px; margin: 0; line-height: 1.5;">
+                      <strong>About Renewals:</strong> Your Plus benefits will remain active for ${daysUntilExpiry} days.
+                      If not renewed, your account will revert to Standard limits (no data is lost).
+                      Simply renew anytime to reactivate Plus features!
                     </p>
                   </td>
-                  <td align="right">
-                    <a href="${SITE_URL}" style="text-decoration: none; font-size: 13px; color: #ffffff;">freshwax.co.uk</a>
-                  </td>
                 </tr>
               </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `.trim();
+
+              ${ctaButton('Go to Dashboard', loginUrl, { gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', textColor: '#000000' })}
+
+              <p style="color: #737373; font-size: 14px; margin: 0; line-height: 1.6; text-align: center;" class="text-muted">
+                Questions? Just reply to this email or reach out anytime.
+              </p>`;
+
+    const emailHtml = emailWrapper(plusContent, {
+      title: 'Fresh Wax Plus',
+      headerText: headerText,
+      headerGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+      footerBrand: 'Fresh Wax Plus',
+    });
 
     // Send via Resend
     const response = await fetchWithTimeout('https://api.resend.com/emails', {

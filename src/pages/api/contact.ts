@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { escapeHtml } from '../../lib/escape-html';
+import { emailWrapper } from '../../lib/email-wrapper';
 
 const ContactSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
@@ -91,25 +92,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
     `;
 
     // Send email to admin
+    const contactContent = `
+              <div style="color: #ffffff;" class="text-primary">
+                ${messageBody}
+              </div>`;
+
+    const contactHtml = emailWrapper(contactContent, {
+      title: 'Contact Form Submission',
+      headerText: isReport ? 'Report Received' : 'Contact Form',
+      hideHeader: true,
+    });
+
     const result = await resend.emails.send({
       from: 'Fresh Wax Contact <noreply@freshwax.co.uk>',
       to: 'contact@freshwax.co.uk',
       replyTo: email,
       subject: subjectLine,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 20px; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #fff;">
-          <div style="max-width: 600px; margin: 0 auto; background: #1a1a1a; border-radius: 12px; padding: 30px;">
-            ${messageBody}
-          </div>
-        </body>
-        </html>
-      `
+      html: contactHtml
     });
 
     if (import.meta.env.DEV) console.log('[Contact] Email sent:', result);

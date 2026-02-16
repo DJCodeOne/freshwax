@@ -8,6 +8,7 @@ import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-servi
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 export const prerender = false;
 
@@ -31,120 +32,54 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 function buildThankYouEmail(userName: string): string {
-  const displayName = userName || 'there';
+  const displayName = esc(userName) || 'there';
 
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #111; border-radius: 12px; overflow: hidden;">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px; text-align: center;">
-              <div style="font-size: 48px; margin-bottom: 12px;">🎉</div>
-              <h1 style="margin: 0; color: #fff; font-size: 28px; font-weight: 700;">You're Now a Plus Member!</h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px;">
-              <p style="color: #fff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">
+  const content = `
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;" class="text-primary">
                 Hey ${displayName},
               </p>
 
-              <p style="color: #ccc; font-size: 16px; margin: 0 0 24px; line-height: 1.7;">
-                Thank you for being one of the first to register on Fresh Wax! As a thank you for your early support, I've upgraded your account to <strong style="color: #dc2626;">Plus membership</strong> — completely free.
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 24px; line-height: 1.7;" class="text-secondary">
+                Thank you for being one of the first to register on Fresh Wax! As a thank you for your early support, I've upgraded your account to <strong style="color: #dc2626;">Plus membership</strong> -- completely free.
               </p>
 
-              <p style="color: #ccc; font-size: 16px; margin: 0 0 24px; line-height: 1.7;">
-                Your support means everything to me as I build this platform for the jungle and drum & bass community.
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 24px; line-height: 1.7;" class="text-secondary">
+                Your support means everything to me as I build this platform for the jungle and drum &amp; bass community.
               </p>
 
               <!-- Benefits Box -->
-              <div style="background: #1a1a1a; border-radius: 8px; padding: 24px; margin-bottom: 28px; border-left: 4px solid #dc2626;">
-                <h3 style="color: #fff; margin: 0 0 16px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;">Your Plus Benefits</h3>
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> 5 mix uploads per week (vs 2)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> Book DJ slots 30 days in advance
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> Extended playlist (1000 tracks)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> 3 track skips per day in chat
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> Request extended streaming events
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> Custom chat avatar icon
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> Automatic access to new features
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #ccc; font-size: 14px;">
-                      <span style="color: #22c55e; margin-right: 8px;">✓</span> 50% off invite-a-friend (one-time offer)
-                    </td>
-                  </tr>
-                </table>
-              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #1f1f1f; border-radius: 8px; margin-bottom: 28px; border-left: 4px solid #dc2626;" class="detail-box">
+                <tr>
+                  <td style="padding: 24px;">
+                    <h3 style="color: #ffffff; margin: 0 0 16px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px;" class="text-primary">Your Plus Benefits</h3>
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> 5 mix uploads per week (vs 2)</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> Book DJ slots 30 days in advance</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> Extended playlist (1000 tracks)</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> 3 track skips per day in chat</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> Request extended streaming events</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> Custom chat avatar icon</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> Automatic access to new features</td></tr>
+                      <tr><td style="padding: 8px 0; color: #a3a3a3; font-size: 14px;" class="text-secondary"><span style="color: #22c55e; margin-right: 8px;">&#10003;</span> 50% off invite-a-friend (one-time offer)</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-              <p style="color: #888; font-size: 14px; margin: 0 0 28px; line-height: 1.6;">
-                Your Plus membership is valid for <strong style="color: #fff;">one year</strong> from today. Keep supporting underground music!
+              <p style="color: #737373; font-size: 14px; margin: 0 0 28px; line-height: 1.6;" class="text-muted">
+                Your Plus membership is valid for <strong style="color: #ffffff;" class="text-primary">one year</strong> from today. Keep supporting underground music!
               </p>
 
-              <!-- CTA -->
-              <div style="text-align: center; margin-top: 32px;">
-                <a href="${SITE_URL}/account/dashboard" style="display: inline-block; background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
-                  Visit Your Dashboard
-                </a>
-              </div>
-            </td>
-          </tr>
+              ${ctaButton('Visit Your Dashboard', SITE_URL + '/account/dashboard')}
 
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 40px; background: #0a0a0a; text-align: center; border-top: 1px solid #222;">
-              <p style="color: #666; font-size: 13px; margin: 0 0 8px;">
-                Big love, Code One 🙏
-              </p>
-              <p style="color: #444; font-size: 12px; margin: 0;">
-                <a href="${SITE_URL}" style="color: #dc2626; text-decoration: none;">freshwax.co.uk</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+              <p style="color: #737373; font-size: 13px; margin: 0; text-align: center;" class="text-muted">
+                Big love, Code One
+              </p>`;
+
+  return emailWrapper(content, {
+    title: "You're Now a Plus Member!",
+    headerText: "You're Now a Plus Member!",
+  });
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {

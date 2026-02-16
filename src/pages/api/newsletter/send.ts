@@ -7,6 +7,7 @@ import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rat
 import { requireAdminAuth } from '../../../lib/admin';
 import { escapeHtml } from '../../../lib/api-utils';
 import { SITE_URL } from '../../../lib/constants';
+import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 export const prerender = false;
 
@@ -239,60 +240,41 @@ function generateNewsletterHTML(subject: string, content: string, email: string)
   // This prevents HTML injection while allowing safe markdown formatting
   let htmlContent = escapeHtml(content)
     // Headers (on escaped content)
-    .replace(/^### (.*$)/gm, '<h3 style="color: #fff; margin: 25px 0 15px;">$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2 style="color: #fff; margin: 30px 0 15px; font-size: 20px;">$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1 style="color: #fff; margin: 30px 0 20px; font-size: 24px;">$1</h1>')
+    .replace(/^### (.*$)/gm, '<h3 style="color: #ffffff; margin: 25px 0 15px;" class="text-primary">$1</h3>')
+    .replace(/^## (.*$)/gm, '<h2 style="color: #ffffff; margin: 30px 0 15px; font-size: 20px;" class="text-primary">$1</h2>')
+    .replace(/^# (.*$)/gm, '<h1 style="color: #ffffff; margin: 30px 0 20px; font-size: 24px;" class="text-primary">$1</h1>')
     // Bold
-    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #fff;">$1</strong>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #ffffff;" class="text-primary">$1</strong>')
     // Italic
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     // Links - validate URLs to prevent javascript: injection
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" style="color: #dc2626; text-decoration: underline;">$1</a>')
     // Line breaks
-    .replace(/\n\n/g, '</p><p style="color: #ccc; line-height: 1.7; margin-bottom: 15px;">')
+    .replace(/\n\n/g, '</p><p style="color: #a3a3a3; line-height: 1.7; margin-bottom: 15px;" class="text-secondary">')
     .replace(/\n/g, '<br>');
 
   // Wrap in paragraph tags
-  htmlContent = `<p style="color: #ccc; line-height: 1.7; margin-bottom: 15px;">${htmlContent}</p>`;
+  htmlContent = `<p style="color: #a3a3a3; line-height: 1.7; margin-bottom: 15px;" class="text-secondary">${htmlContent}</p>`;
 
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    </head>
-    <body style="margin: 0; padding: 0; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-      <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <a href="${SITE_URL}">
-            <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
-          </a>
-        </div>
+  const newsletterContent = `
+              <h1 style="margin: 0 0 25px; font-size: 26px; color: #ffffff; border-bottom: 2px solid #dc2626; padding-bottom: 15px;" class="text-primary">${safeSubject}</h1>
 
-        <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
-          <h1 style="margin: 0 0 25px; font-size: 26px; color: #fff; border-bottom: 2px solid #dc2626; padding-bottom: 15px;">${safeSubject}</h1>
+              ${htmlContent}
 
-          ${htmlContent}
+              ${ctaButton('Visit Fresh Wax', SITE_URL)}`;
 
-          <div style="text-align: center; margin: 35px 0 20px;">
-            <a href="${SITE_URL}" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Visit Fresh Wax</a>
-          </div>
-        </div>
+  const footerLinks = `
+    <p style="color: #737373; font-size: 12px; margin: 0; text-align: center; line-height: 1.8;" class="text-muted">
+      <a href="${SITE_URL}" style="color: #a3a3a3; text-decoration: none; margin: 0 8px;" class="text-secondary">Website</a>
+      <a href="${SITE_URL}/releases/" style="color: #a3a3a3; text-decoration: none; margin: 0 8px;" class="text-secondary">Releases</a>
+      <a href="${SITE_URL}/dj-mixes/" style="color: #a3a3a3; text-decoration: none; margin: 0 8px;" class="text-secondary">DJ Mixes</a>
+      <br>
+      <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #737373; text-decoration: underline;">Unsubscribe from newsletter</a>
+    </p>`;
 
-        <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
-          <p>© ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
-          <p style="margin-top: 10px;">
-            <a href="${SITE_URL}" style="color: #888; margin: 0 10px;">Website</a>
-            <a href="${SITE_URL}/releases" style="color: #888; margin: 0 10px;">Releases</a>
-            <a href="${SITE_URL}/dj-mixes" style="color: #888; margin: 0 10px;">DJ Mixes</a>
-          </p>
-          <p style="margin-top: 15px;">
-            <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666;">Unsubscribe from newsletter</a>
-          </p>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
+  return emailWrapper(newsletterContent, {
+    title: safeSubject,
+    hideHeader: true,
+    footerExtra: footerLinks,
+  });
 }

@@ -11,6 +11,7 @@ import { getDocument, createDocumentIfNotExists, updateDocument } from '../../..
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const SubscribeSchema = z.object({
   email: z.string().email('Invalid email format').max(320),
@@ -155,6 +156,26 @@ async function sendConfirmationEmail(
   const confirmUrl = `${SITE_URL}/api/newsletter/confirm/?id=${encodeURIComponent(subscriberId)}&token=${encodeURIComponent(token)}`;
   const greeting = name ? `Hi ${name},` : 'Hi there,';
 
+  const confirmContent = `
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;" class="text-primary">
+                ${greeting}
+              </p>
+
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 25px; line-height: 1.6;" class="text-secondary">
+                Thanks for subscribing to the Fresh Wax newsletter! Please confirm your email address by clicking the button below.
+              </p>
+
+              ${ctaButton('Confirm Subscription', confirmUrl)}
+
+              <p style="color: #737373; font-size: 14px; margin: 0; text-align: center; line-height: 1.6;" class="text-muted">
+                If you didn't subscribe to Fresh Wax, you can safely ignore this email.
+              </p>`;
+
+  const confirmHtml = emailWrapper(confirmContent, {
+    title: 'Confirm Your Subscription',
+    headerText: 'Confirm Your Subscription',
+  });
+
   let response: Response;
   try {
     response = await fetchWithTimeout('https://api.resend.com/emails', {
@@ -167,36 +188,7 @@ async function sendConfirmationEmail(
         from: 'Fresh Wax <noreply@freshwax.co.uk>',
         to: email,
         subject: 'Confirm Your Subscription - Fresh Wax',
-        html: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <div style="text-align: center; margin-bottom: 30px;">
-      <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
-    </div>
-    <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
-      <h1 style="margin: 0 0 20px; font-size: 24px; color: #fff;">Confirm Your Subscription</h1>
-      <p style="color: #ccc; line-height: 1.6; margin-bottom: 20px;">${greeting}</p>
-      <p style="color: #ccc; line-height: 1.6; margin-bottom: 25px;">
-        Thanks for subscribing to the Fresh Wax newsletter! Please confirm your email address by clicking the button below.
-      </p>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${confirmUrl}" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Confirm Subscription</a>
-      </div>
-      <p style="color: #888; font-size: 14px; margin-top: 30px; text-align: center;">
-        If you didn't subscribe to Fresh Wax, you can safely ignore this email.
-      </p>
-    </div>
-    <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
-      <p>&copy; ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
-    </div>
-  </div>
-</body>
-</html>`
+        html: confirmHtml
       })
     }, 10000);
   } catch (fetchError) {

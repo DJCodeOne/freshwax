@@ -7,6 +7,7 @@ import { getDocument, updateDocument, setDocument, queryCollection, addDocument,
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 const giftcardsPostSchema = z.discriminatedUnion('action', [
   z.object({
@@ -517,134 +518,56 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Send email
       try {
-        const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background: #ffffff; padding: 30px; text-align: center; border-bottom: 3px solid #dc2626;">
-              <h1 style="margin: 0; font-size: 32px; color: #000; font-weight: 700;">
-                Fresh <span style="color: #dc2626;">Wax</span>
-              </h1>
-              <p style="margin: 10px 0 0 0; color: #888; font-size: 14px;">Underground Music Store</p>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 40px 30px;">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <!-- Gift Box Icon -->
-                <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 0 auto;">
-                  <!-- Bow loops -->
-                  <tr>
-                    <td align="center" style="padding-bottom: 0;">
-                      <table cellpadding="0" cellspacing="0" border="0">
-                        <tr>
-                          <td style="width: 18px; height: 14px; background: #dc2626; border-radius: 50%;"></td>
-                          <td style="width: 8px;"></td>
-                          <td style="width: 18px; height: 14px; background: #dc2626; border-radius: 50%;"></td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <!-- Bow center -->
-                  <tr>
-                    <td align="center" style="padding-bottom: 2px;">
-                      <div style="width: 12px; height: 12px; background: #b91c1c; border-radius: 50%; margin: 0 auto;"></div>
-                    </td>
-                  </tr>
-                  <!-- Lid with ribbon -->
-                  <tr>
-                    <td align="center">
-                      <table cellpadding="0" cellspacing="0" border="0" style="background: #ef4444; border-radius: 4px;">
-                        <tr>
-                          <td style="width: 25px; height: 14px;"></td>
-                          <td style="width: 14px; height: 14px; background: #fbbf24;"></td>
-                          <td style="width: 25px; height: 14px;"></td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <!-- Box body with ribbon -->
-                  <tr>
-                    <td align="center">
-                      <table cellpadding="0" cellspacing="0" border="0" style="background: #dc2626; border-radius: 0 0 4px 4px;">
-                        <tr>
-                          <td style="width: 23px; height: 40px;"></td>
-                          <td style="width: 14px; height: 40px; background: #fbbf24;"></td>
-                          <td style="width: 23px; height: 40px;"></td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-
-              <h2 style="font-size: 28px; color: #111; text-align: center; margin: 0 0 20px 0;">
+        const giftCardContent = `
+              <h2 style="font-size: 28px; color: #111111; text-align: center; margin: 0 0 20px 0;" class="light-text">
                 Your Gift Card Code
               </h2>
 
-              <p style="color: #666; text-align: center; margin-bottom: 30px;">
-                ${recipientName ? `Hi ${recipientName},` : ''} Here's your <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> gift card code.
+              <p style="color: #6b7280; text-align: center; margin-bottom: 30px;" class="light-text-secondary">
+                ${recipientName ? `Hi ${esc(recipientName)},` : ''} Here's your <span style="color: #111111;" class="light-text">Fresh</span> <span style="color: #dc2626;">Wax</span> gift card code.
               </p>
 
               <!-- Gift Card Box -->
-              <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 30px 0;">
-                <p style="color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px 0;">Gift Card Value</p>
-                <p style="font-size: 48px; color: #dc2626; font-weight: 700; margin: 0 0 20px 0;">£${amount}</p>
-
-                <p style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0;">Your Redemption Code</p>
-                <div style="background: #111; border: 2px solid #dc2626; border-radius: 10px; padding: 15px 25px; display: inline-block;">
-                  <code style="font-size: 24px; color: #fff; letter-spacing: 3px; font-family: 'Monaco', 'Consolas', monospace;">${cardCode}</code>
-                </div>
-              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); border-radius: 16px; padding: 30px; text-align: center;">
+                    <p style="color: #888; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px 0;">Gift Card Value</p>
+                    <p style="font-size: 48px; color: #dc2626; font-weight: 700; margin: 0 0 20px 0;">\u00a3${amount}</p>
+                    <p style="color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0;">Your Redemption Code</p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" align="center">
+                      <tr>
+                        <td style="background: #111; border: 2px solid #dc2626; border-radius: 10px; padding: 15px 25px;">
+                          <code style="font-size: 24px; color: #fff; letter-spacing: 3px; font-family: 'Monaco', 'Consolas', monospace;">${esc(cardCode)}</code>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
               <!-- How to Use -->
-              <div style="background: #f9f9f9; border-radius: 12px; padding: 25px; margin: 30px 0;">
-                <h3 style="font-size: 18px; color: #111; margin: 0 0 15px 0;">How to Redeem</h3>
-                <ol style="color: #666; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                  <li>Visit <a href="${SITE_URL}/giftcards" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
-                  <li>Sign in or create an account</li>
-                  <li>Enter your code above</li>
-                  <li>Start shopping!</li>
-                </ol>
-              </div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                <tr>
+                  <td style="background: #f9f9f9; border-radius: 12px; padding: 25px;" class="light-detail-box">
+                    <h3 style="font-size: 18px; color: #111111; margin: 0 0 15px 0;" class="light-text">How to Redeem</h3>
+                    <ol style="color: #6b7280; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;" class="light-text-secondary">
+                      <li>Visit <a href="${SITE_URL}/giftcards/" style="color: #dc2626;">freshwax.co.uk/giftcards</a></li>
+                      <li>Sign in or create an account</li>
+                      <li>Enter your code above</li>
+                      <li>Start shopping!</li>
+                    </ol>
+                  </td>
+                </tr>
+              </table>
 
-              <!-- CTA Button -->
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${SITE_URL}/giftcards" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-size: 16px; font-weight: 600;">
-                  Redeem Your Gift Card →
-                </a>
-              </div>
-            </td>
-          </tr>
+              ${ctaButton('Redeem Your Gift Card', SITE_URL + '/giftcards/')}`;
 
-          <!-- Footer -->
-          <tr>
-            <td style="background: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #eee;">
-              <p style="color: #888; font-size: 13px; margin: 0;">
-                <span style="color: #000;">Fresh</span> <span style="color: #dc2626;">Wax</span> - Underground Jungle & Drum and Bass<br>
-                <a href="${SITE_URL}" style="color: #dc2626;">freshwax.co.uk</a>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-        `;
+        const html = emailWrapper(giftCardContent, {
+          title: 'Your Gift Card Code',
+          hideHeader: true,
+          lightTheme: true,
+          footerBrand: 'Fresh Wax - Underground Jungle & Drum and Bass',
+        });
 
         await sendEmail(
           recipientEmail,

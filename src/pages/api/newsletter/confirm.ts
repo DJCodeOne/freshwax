@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const ConfirmSchema = z.object({
   id: z.string().min(1).max(500),
@@ -73,6 +74,31 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 async function sendWelcomeEmail(apiKey: string, email: string, name?: string): Promise<void> {
   const greeting = name ? `Hi ${name},` : 'Hi there,';
 
+  const welcomeContent = `
+              <p style="color: #ffffff; font-size: 18px; margin: 0 0 20px; line-height: 1.6;" class="text-primary">
+                ${greeting}
+              </p>
+
+              <p style="color: #a3a3a3; font-size: 16px; margin: 0 0 20px; line-height: 1.6;" class="text-secondary">
+                Your subscription is now confirmed. You'll be the first to know about:
+              </p>
+
+              <ul style="color: #a3a3a3; line-height: 1.8; margin: 0 0 25px; padding-left: 20px;" class="text-secondary">
+                <li>New jungle &amp; drum and bass releases</li>
+                <li>Exclusive DJ mixes</li>
+                <li>Limited vinyl pressings</li>
+                <li>Fresh merch drops</li>
+                <li>Live stream announcements</li>
+              </ul>
+
+              ${ctaButton('Browse Latest Releases', SITE_URL + '/releases/')}`;
+
+  const welcomeHtml = emailWrapper(welcomeContent, {
+    title: 'Welcome to Fresh Wax',
+    headerText: 'Welcome to the Fresh Wax Family!',
+    footerExtra: `<p style="color: #737373; font-size: 12px; margin: 0; text-align: center;" class="text-muted"><a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #737373; text-decoration: underline;">Unsubscribe</a></p>`,
+  });
+
   await fetchWithTimeout('https://api.resend.com/emails', {
     method: 'POST',
     headers: {
@@ -82,44 +108,8 @@ async function sendWelcomeEmail(apiKey: string, email: string, name?: string): P
     body: JSON.stringify({
       from: 'Fresh Wax <noreply@freshwax.co.uk>',
       to: email,
-      subject: 'Welcome to Fresh Wax! 🎵',
-      html: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: #111; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <div style="text-align: center; margin-bottom: 30px;">
-      <img src="${SITE_URL}/logo.webp" alt="Fresh Wax" style="height: 60px; background: white; padding: 10px; border-radius: 8px;">
-    </div>
-    <div style="background: #1a1a1a; border-radius: 12px; padding: 30px; color: #fff;">
-      <h1 style="margin: 0 0 20px; font-size: 24px; color: #fff;">Welcome to the Fresh Wax family!</h1>
-      <p style="color: #ccc; line-height: 1.6; margin-bottom: 20px;">${greeting}</p>
-      <p style="color: #ccc; line-height: 1.6; margin-bottom: 20px;">
-        Your subscription is now confirmed. You'll be the first to know about:
-      </p>
-      <ul style="color: #ccc; line-height: 1.8; margin-bottom: 25px; padding-left: 20px;">
-        <li>New jungle &amp; drum and bass releases</li>
-        <li>Exclusive DJ mixes</li>
-        <li>Limited vinyl pressings</li>
-        <li>Fresh merch drops</li>
-        <li>Live stream announcements</li>
-      </ul>
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${SITE_URL}/releases/" style="display: inline-block; background: #dc2626; color: #fff; text-decoration: none; padding: 14px 30px; border-radius: 8px; font-weight: bold;">Browse Latest Releases</a>
-      </div>
-    </div>
-    <div style="text-align: center; margin-top: 30px; color: #666; font-size: 12px;">
-      <p>&copy; ${new Date().getFullYear()} Fresh Wax. All rights reserved.</p>
-      <p style="margin-top: 10px;">
-        <a href="${SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}" style="color: #666;">Unsubscribe</a>
-      </p>
-    </div>
-  </div>
-</body>
-</html>`
+      subject: 'Welcome to Fresh Wax!',
+      html: welcomeHtml
     })
   }, 10000);
 }
