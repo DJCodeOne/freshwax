@@ -3368,12 +3368,8 @@ function renderChatMessages(messages, forceScrollToBottom = false) {
 }
 
 function setupEmojiPicker() {
-  // Skip on fullscreen page - it has its own emoji picker
-  if (window.location.pathname.includes('/live/fullpage')) {
-    console.log('[EmojiPicker] Skipping on fullscreen page');
-    return;
-  }
-  console.log('[EmojiPicker] Setting up emoji picker...');
+  // LiveChat.astro component handles emoji functionality with its own script
+  return;
   const emojiBtn = document.getElementById('emojiBtn');
   const emojiPicker = document.getElementById('emojiPicker');
   const emojiGrid = document.getElementById('emojiGrid');
@@ -3455,12 +3451,8 @@ function setupEmojiPicker() {
 }
 
 function setupGiphyPicker() {
-  // Skip on fullscreen page - it has its own giphy picker
-  if (window.location.pathname.includes('/live/fullpage')) {
-    console.log('[GiphyPicker] Skipping on fullscreen page');
-    return;
-  }
-  console.log('[GiphyPicker] Setting up giphy picker (using server-side proxy)...');
+  // LiveChat.astro component handles GIF functionality with its own script
+  return;
   const giphyBtn = document.getElementById('giphyBtn');
   const giphyModal = document.getElementById('giphyModal');
   const giphySearch = document.getElementById('giphySearch');

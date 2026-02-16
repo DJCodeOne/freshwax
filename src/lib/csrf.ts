@@ -40,8 +40,9 @@ const CSRF_SKIP = new Set([
   '/api/health/payments/',
   // Pusher channel auth — Pusher JS library uses its own XHR transport,
   // not the global fetch() interceptor, so it lacks the X-CSRF-Token header.
-  // The endpoint validates session auth independently.
+  // The endpoints validate session auth independently.
   '/api/dj-lobby/pusher-auth/',
+  '/api/pusher/auth/',
   // Error logging & consent logging are fire-and-forget from inline scripts
   // that run before the meta tag is available (e.g. Layout.astro error handler).
   '/api/log-error/',
