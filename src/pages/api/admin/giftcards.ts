@@ -9,6 +9,8 @@ import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
+export const prerender = false;
+
 const giftcardsPostSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('createCard'),
@@ -53,11 +55,7 @@ function getAdminKey(locals: App.Locals): string {
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
 
-}
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
@@ -101,7 +99,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`giftcards:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+
 
   // SECURITY: Require admin authentication for viewing gift cards data
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
@@ -280,7 +278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`giftcards-write:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+
   try {
     const data = await request.json();
 

@@ -7,14 +7,8 @@ import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // GET: List event requests (for admin) or user's own requests
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  initFirebase(locals);
-
   try {
     const userId = url.searchParams.get('userId');
     const status = url.searchParams.get('status'); // pending, approved, rejected, all
@@ -83,8 +77,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
 // POST: Create new event request or update existing (approve/reject)
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   try {
     const body = await request.json();
     const { action } = body;

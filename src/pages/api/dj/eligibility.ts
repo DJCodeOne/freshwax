@@ -3,11 +3,6 @@ import { getDocument, updateDocument, queryCollection, addDocument, verifyReques
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // Default requirements (can be overridden by admin settings)
 const DEFAULT_REQUIREMENTS = {
   requiredMixes: 1,
@@ -38,10 +33,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const rateLimit = checkRateLimit(`dj-eligibility:${clientId}`, RateLimiters.standard);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
-  }
-
-  initFirebase(locals);
-  const action = url.searchParams.get('action');
+  }  const action = url.searchParams.get('action');
   const uid = url.searchParams.get('uid');
 
   try {
@@ -179,10 +171,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rl = checkRateLimit(`dj-eligibility-write:${clientId2}`, RateLimiters.write);
   if (!rl.allowed) {
     return rateLimitResponse(rl.retryAfter!);
-  }
-
-  initFirebase(locals);
-  try {
+  }  try {
     // SECURITY: Verify Firebase token for all POST actions
     const { userId: verifiedUid, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUid) {

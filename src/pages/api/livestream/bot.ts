@@ -9,13 +9,6 @@ import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin
 import { triggerPusher } from '../../../lib/pusher';
 import { ApiErrors } from '../../../lib/api-utils';
 
-// Helper to initialize Firebase and return env
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-  return env;
-}
-
 // Send bot message to a stream
 async function sendBotMessage(streamId: string, message: string, env: any): Promise<{ success: boolean; messageId?: string }> {
   const now = new Date().toISOString();
@@ -46,7 +39,9 @@ async function sendBotMessage(streamId: string, message: string, env: any): Prom
 
 // POST: Send a bot message or announcement
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   try {
     const data = await request.json();
@@ -116,7 +111,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // GET: Check for streams that need announcements (for scheduled jobs)
 export const GET: APIRoute = async ({ request, locals }) => {
-  const env = initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   try {
     const url = new URL(request.url);

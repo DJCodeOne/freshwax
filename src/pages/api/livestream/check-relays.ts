@@ -8,11 +8,6 @@ import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 interface RelayStatus {
   id: string;
   name: string;
@@ -148,10 +143,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // SECURITY: Require admin auth - relay URLs are fetched server-side
   const authError = await requireAdminAuth(request, locals);
-  if (authError) return authError;
-
-  initFirebase(locals);
-  try {
+  if (authError) return authError;  try {
     const url = new URL(request.url);
     const sourceId = url.searchParams.get('id');
     const activeOnly = url.searchParams.get('activeOnly') !== 'false';

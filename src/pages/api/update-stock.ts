@@ -27,11 +27,6 @@ const log = {
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // Get service account credentials
 function getServiceAccountKey(env: any): { key: string; projectId: string } {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -82,8 +77,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   const env = locals.runtime.env;
-  initFirebase(locals);
-
   // Get service account credentials for writes
   const { key: serviceAccountKey, projectId } = getServiceAccountKey(env);
 
@@ -328,9 +321,6 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
   // Admin authentication required
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
-
-  initFirebase(locals);
-
   try {
     const params = url.searchParams;
     const productId = params.get('productId');

@@ -22,11 +22,6 @@ export const prerender = false;
 // Firebase API key fallback (same as in firebase-rest.ts)
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
   return {
@@ -63,8 +58,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   const env = locals.runtime.env;
-  initFirebase(locals);
-
   // Initialize R2/S3 client for Cloudflare runtime
   const R2_CONFIG = getR2Config(env);
   const s3Client = createS3Client(R2_CONFIG);

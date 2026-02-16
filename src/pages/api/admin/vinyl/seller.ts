@@ -6,18 +6,10 @@ import { ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`vinyl-seller:${clientId}`, RateLimiters.admin);
-  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  initFirebase(locals);
-  const env = locals?.runtime?.env;
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);  const env = locals?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   // Verify admin authentication for GET as well (sensitive seller data)
@@ -74,10 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`vinyl-seller-write:${clientId}`, RateLimiters.write);
-  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  initFirebase(locals);
-  const env = locals?.runtime?.env;
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);  const env = locals?.runtime?.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   try {

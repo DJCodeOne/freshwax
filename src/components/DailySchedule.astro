@@ -45,7 +45,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           </label>
         </div>
       )}
-      <button type="button" class="refresh-btn">↻</button>
+      <button type="button" class="refresh-btn" aria-label="Refresh schedule">↻</button>
     </div>
   </div>
 
@@ -105,7 +105,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     <div class="modal-content">
       <div class="modal-header">
         <h3>Add DJ to Schedule</h3>
-        <button type="button" class="modal-close">×</button>
+        <button type="button" class="modal-close" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
@@ -148,7 +148,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     <div class="modal-content">
       <div class="modal-header">
         <h3 class="edit-slot-title">Slot Details</h3>
-        <button type="button" class="modal-close">×</button>
+        <button type="button" class="modal-close" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <div class="slot-details">
@@ -170,7 +170,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     <div class="modal-content allowances-modal-content">
       <div class="modal-header">
         <h3>DJ Time Allowances</h3>
-        <button type="button" class="modal-close">×</button>
+        <button type="button" class="modal-close" aria-label="Close">×</button>
       </div>
       <div class="modal-body">
         <p class="modal-desc">Set custom time limits for DJs. Default is 2 hours/day. Use higher limits for special events.</p>

@@ -7,13 +7,7 @@ import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   try {
     // SECURITY: Verify the requesting user's identity
     const { userId, error: authError } = await verifyRequestUser(request);

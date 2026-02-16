@@ -2087,7 +2087,7 @@ const nonce = Astro.locals.nonce || '';
   document.getElementById('shareTwitter')?.addEventListener('click', () => {
     const text = encodeURIComponent(getShareText());
     const url = encodeURIComponent(getShareUrl());
-    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   });
 
   // Facebook share - use Feed Dialog for better video preview support
@@ -2101,21 +2101,21 @@ const nonce = Astro.locals.nonce || '';
     window.open(
       `https://www.facebook.com/dialog/feed?app_id=966242223397117&link=${url}&name=${title}&description=${description}&redirect_uri=${encodeURIComponent('https://freshwax.co.uk/live')}`,
       '_blank',
-      'width=626,height=436'
+      'noopener,noreferrer,width=626,height=436'
     );
   });
-  
+
   // WhatsApp share
   document.getElementById('shareWhatsApp')?.addEventListener('click', () => {
     const text = encodeURIComponent(getShareText() + ' ' + getShareUrl());
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
   });
-  
+
   // Telegram share
   document.getElementById('shareTelegram')?.addEventListener('click', () => {
     const text = encodeURIComponent(getShareText());
     const url = encodeURIComponent(getShareUrl());
-    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank', 'noopener,noreferrer');
   });
   
   // Native share (mobile) - closes modal and opens OS share sheet

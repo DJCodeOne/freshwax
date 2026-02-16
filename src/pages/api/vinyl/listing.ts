@@ -71,14 +71,8 @@ function validateListing(data: any): { valid: boolean; error?: string } {
   return { valid: true };
 }
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
-}
-
 // GET - Fetch seller's listings (efficient: single query)
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   const url = new URL(request.url);
   const sellerId = url.searchParams.get('sellerId');
   const listingId = url.searchParams.get('id');
@@ -184,8 +178,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Create or update listing
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   // Rate limit writes: 20 per hour
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`vinyl-write:${clientId}`, {

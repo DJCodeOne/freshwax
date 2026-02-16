@@ -17,10 +17,7 @@ const ValidatePromoSchema = z.object({
 
 export const prerender = false;
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
 
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // SECURITY: Rate limit to prevent brute-force of promo/referral codes
@@ -41,7 +38,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { code, userId } = parseResult.data;
 
     const normalizedCode = code.toUpperCase().trim();
-    initFirebase(locals);
 
     // Check if user is already a Plus member
     const userDoc = await getDocument('users', userId);

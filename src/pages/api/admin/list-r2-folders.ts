@@ -6,6 +6,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
+export const prerender = false;
+
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`list-r2-folders:${clientId}`, RateLimiters.admin);

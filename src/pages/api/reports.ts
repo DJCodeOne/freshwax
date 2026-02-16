@@ -5,17 +5,10 @@ import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 const REPORT_CATEGORIES = ['inappropriate_content', 'harassment', 'spam', 'copyright', 'hate_speech', 'impersonation', 'other'];
 const REPORT_TYPES = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'];
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   // SECURITY: Require admin authentication for viewing reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
   const env = locals.runtime.env;
@@ -88,8 +81,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   try {
     const data = await request.json();
     const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = data;
@@ -154,8 +145,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const PUT: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   // SECURITY: Require admin authentication for updating reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
   const env = locals.runtime.env;
@@ -193,8 +182,6 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   // SECURITY: Require admin authentication for deleting reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
   const env = locals.runtime.env;

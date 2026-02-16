@@ -11,6 +11,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
+export const prerender = false;
+
 const cleanupStreamsPostSchema = z.object({
   maxAgeHours: z.number().positive().optional(),
   ids: z.array(z.string().min(1)).optional(),

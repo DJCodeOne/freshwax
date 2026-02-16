@@ -8,6 +8,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
+export const prerender = false;
+
 const rejectPartnerSchema = z.object({
   partnerId: z.string().min(1),
   adminKey: z.string().optional(),

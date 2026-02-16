@@ -12,6 +12,8 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
+export const prerender = false;
+
 const djModerationPostSchema = z.object({
   action: z.enum(['ban', 'unban', 'hold', 'release', 'kick']),
   email: z.string().email().optional(),
@@ -28,11 +30,7 @@ function getAdminKey(locals: App.Locals): string {
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
 
-}
 
 // GET: List banned and on-hold DJs
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -40,7 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`dj-moderation:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+
 
   // SECURITY: Require admin authentication for listing moderation data
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
@@ -108,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`dj-moderation-write:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+
   const saQuery = getSaQuery(locals);
   try {
     const data = await request.json();

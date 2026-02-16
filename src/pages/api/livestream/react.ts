@@ -9,12 +9,6 @@ import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rat
 import { triggerPusher } from '../../../lib/pusher';
 import { ApiErrors } from '../../../lib/api-utils';
 
-// Helper to initialize Firebase and return env for Pusher
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-  return env;
-}
-
 // Helper to get stream document from either collection (livestreamSlots or livestreams)
 async function getStreamDocument(streamId: string) {
   // Try livestreamSlots first (new system)
@@ -29,7 +23,7 @@ async function getStreamDocument(streamId: string) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
-  const env = initFirebase(locals);
+  const env = locals?.runtime?.env;
   const clientId = getClientId(request);
 
   try {
@@ -404,9 +398,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Get user's reactions for a stream
-export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-  try {
+export const GET: APIRoute = async ({ request, locals }) => {  try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
     const userId = url.searchParams.get('userId');

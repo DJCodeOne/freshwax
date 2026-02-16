@@ -11,11 +11,6 @@ import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase for Cloudflare runtime
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
-}
-
 // Build service account query function for blocked collections
 function getSaQuery(locals: App.Locals) {
   const env = locals?.runtime?.env || {};
@@ -61,9 +56,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
-
-  initFirebase(locals);
-
   try {
     // SECURITY: Require admin authentication via admin key (not spoofable UID)
     // For GET requests, check X-Admin-Key header

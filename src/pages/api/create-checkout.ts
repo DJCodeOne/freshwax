@@ -20,15 +20,9 @@ const CreateCheckoutSchema = z.object({
 
 export const prerender = false;
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = locals.runtime.env;
-    initFirebase(locals);
-
     // Verify user authentication
     const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
     if (authError || !verifiedUserId) {
@@ -82,8 +76,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Fall back to Firebase giftCards if not found in KV
       if (!validatedPromoCode) {
-        initFirebase(locals);
-
         const giftCards = await queryCollection('giftCards', {
           filters: [
             { field: 'code', op: 'EQUAL', value: normalizedCode },

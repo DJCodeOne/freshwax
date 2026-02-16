@@ -9,17 +9,15 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
+export const prerender = false;
+
 // Helper to get admin key from environment
 function getAdminKey(locals: App.Locals): string {
   const env = locals?.runtime?.env;
   return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
 }
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
 
-}
 
 // GET: List all bypass approvals
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -27,7 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`lobby-bypass:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+
 
   // SECURITY: Require admin authentication for listing bypasses
   const { requireAdminAuth, initAdminEnv } = await import('../../../lib/admin');
@@ -78,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`lobby-bypass-write:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+
   const saQuery = getSaQuery(locals);
   try {
     const data = await request.json();

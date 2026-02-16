@@ -10,6 +10,8 @@ import { d1AddComment } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import { ApiErrors } from '../../lib/api-utils';
 
+export const prerender = false;
+
 const AddCommentSchema = z.object({
   releaseId: z.string().min(1, 'Release ID is required').max(200),
   comment: z.string().max(2000).optional(),

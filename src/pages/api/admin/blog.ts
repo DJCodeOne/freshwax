@@ -31,10 +31,6 @@ const blogUpdateSchema = z.object({
 
 export const prerender = false;
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // GET - List all blog posts or get single post
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -44,10 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Admin authentication
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
-  if (authError) return authError;
-
-  initFirebase(locals);
-  const saQuery = getSaQuery(locals);
+  if (authError) return authError;  const saQuery = getSaQuery(locals);
 
   try {
     const url = new URL(request.url);
@@ -102,9 +95,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
-
-  initFirebase(locals);
-
   try {
     const parsed = blogCreateSchema.safeParse(body);
     if (!parsed.success) {
@@ -164,9 +154,6 @@ export const PUT: APIRoute = async ({ request, locals }) => {
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
-
-  initFirebase(locals);
-
   try {
     const parsed = blogUpdateSchema.safeParse(body);
     if (!parsed.success) {
@@ -212,9 +199,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const body = await parseJsonBody(request);
   const authError = await requireAdminAuth(request, locals, body);
   if (authError) return authError;
-
-  initFirebase(locals);
-
   try {
     const url = new URL(request.url);
     const postId = url.searchParams.get('id');

@@ -130,7 +130,7 @@ const csrfToken = Astro.locals.csrfToken || '';
                 </div>
               </div>
               <div class="bypass-form-inner">
-                <textarea id="bypassReason" placeholder="Why do you need immediate access? (optional)" rows="2" maxlength="200"></textarea>
+                <textarea id="bypassReason" placeholder="Why do you need immediate access? (optional)" rows="2" maxlength="200" aria-label="Reason for bypass request"></textarea>
                 <button id="submitBypassRequest" class="bypass-request-btn">
                   🎫 Request Bypass Access
                 </button>
@@ -185,7 +185,7 @@ const csrfToken = Astro.locals.csrfToken || '';
                 </div>
               </div>
               <div class="quick-access-form">
-                <input type="text" id="quickAccessCodeInput" placeholder="Enter access code" maxlength="10" autocomplete="off" />
+                <input type="text" id="quickAccessCodeInput" placeholder="Enter access code" maxlength="10" autocomplete="off" aria-label="Quick access code" />
                 <button id="redeemAccessCodeBtn" class="redeem-code-btn">
                   <span class="btn-text">Redeem Code</span>
                   <span class="btn-spinner hidden">⏳</span>
@@ -4150,13 +4150,13 @@ const csrfToken = Astro.locals.csrfToken || '';
     const postText = document.getElementById('socialPostText')?.value || '';
     const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
     const url = encodeURIComponent('https://freshwax.co.uk/live');
-    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   // Share to Facebook
   function shareToFacebook() {
     const url = encodeURIComponent('https://freshwax.co.uk/live');
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=550,height=420');
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   // ========== SHARE MODAL FUNCTIONS ==========
@@ -4290,12 +4290,12 @@ const csrfToken = Astro.locals.csrfToken || '';
     const postText = document.getElementById('sharePostText')?.value || '';
     const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
     const url = encodeURIComponent('https://freshwax.co.uk/live');
-    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'width=550,height=420');
+    window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   function shareToFacebookFromModal() {
     const url = encodeURIComponent('https://freshwax.co.uk/live');
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=550,height=420');
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   function copyStreamLink() {

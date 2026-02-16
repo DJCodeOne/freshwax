@@ -27,11 +27,6 @@ const log = {
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // Get service account credentials
 function getServiceAccountKey(env: any): { key: string; projectId: string } {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -133,8 +128,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const env = locals.runtime.env;
-  initFirebase(locals);
-
   const r2Config = getR2Config(env);
   const s3Client = createS3Client(r2Config);
 

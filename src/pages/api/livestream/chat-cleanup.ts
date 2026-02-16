@@ -12,11 +12,6 @@ export const prerender = false;
 const MAX_MESSAGES_PER_BATCH = 500; // Max messages to delete in one operation
 const MAX_PENDING_JOBS = 50; // Max pending cleanup jobs to process at once
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // POST - Schedule chat cleanup for a stream
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
@@ -28,10 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateLimit = checkRateLimit(`chat-cleanup:${clientId}`, RateLimiters.adminDelete);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
-  }
-
-  initFirebase(locals);
-  try {
+  }  try {
     const data = await request.json();
     const { streamId, action } = data;
     
@@ -109,10 +101,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateLimit = checkRateLimit(`chat-cleanup-check:${clientId}`, RateLimiters.read);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
-  }
-
-  initFirebase(locals);
-  try {
+  }  try {
     const url = new URL(request.url);
     const executeNow = url.searchParams.get('execute') === 'true';
 

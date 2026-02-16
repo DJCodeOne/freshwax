@@ -26,11 +26,7 @@ const AdminGiftCardSchema = z.object({
   message: z.string().max(500).optional(),
 }).passthrough();
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
 
-}
 
 // Send email via Resend API (using fetch for Cloudflare compatibility)
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
@@ -175,9 +171,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
-
-  // Initialize Firebase for Cloudflare runtime
-  initFirebase(locals);
 
   try {
     const rawBody = await request.json();

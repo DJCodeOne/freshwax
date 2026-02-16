@@ -11,6 +11,8 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { kvDelete } from '../../lib/kv-cache';
 import { ApiErrors } from '../../lib/api-utils';
 
+export const prerender = false;
+
 const AddMixCommentSchema = z.object({
   mixId: z.string().min(1, 'Mix ID is required').max(200),
   comment: z.string().max(300).optional(),
@@ -24,10 +26,6 @@ const log = {
   info: (...args: any[]) => isDev && console.log(...args),
   error: (...args: any[]) => console.error(...args),
 };
-
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
 
 function containsLinks(text: string): boolean {
   const urlPatterns = [
@@ -105,9 +103,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const env = locals.runtime.env;
   const db = env?.DB;
-
-  initFirebase(locals);
-
   try {
     // SECURITY: Get userId from verified token, not request body
     const { verifyRequestUser } = await import('../../lib/firebase-rest');

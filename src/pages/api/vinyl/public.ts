@@ -38,14 +38,8 @@ function getServiceAccountKey(env: any): string | null {
   return serviceAccountKey || null;
 }
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
-}
-
 // GET - Fetch published vinyl listings, collections, and deals
-export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-  const env = locals.runtime.env || {};
+export const GET: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env || {};
   const db = env.DB;
 
   const url = new URL(request.url);

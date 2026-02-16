@@ -7,17 +7,10 @@ import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 // Max subscribers returned per request to prevent memory issues
 const MAX_SUBSCRIBERS_PER_PAGE = 500;
 
-export const GET: APIRoute = async ({ request, cookies, locals }) => {
-  initFirebase(locals);
-  try {
+export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
     // Check admin auth via X-Admin-Key header
     const authError = await requireAdminAuth(request, locals);
     if (authError) return authError;
@@ -68,9 +61,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 };
 
 // Add subscriber manually
-export const POST: APIRoute = async ({ request, cookies, locals }) => {
-  initFirebase(locals);
-  try {
+export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
     const body = await request.json();
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
@@ -118,9 +109,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 };
 
 // Delete subscriber
-export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
-  initFirebase(locals);
-  try {
+export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
     const body = await request.json();
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
@@ -148,9 +137,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {
 };
 
 // Update subscriber status (unsubscribe/resubscribe)
-export const PATCH: APIRoute = async ({ request, cookies, locals }) => {
-  initFirebase(locals);
-  try {
+export const PATCH: APIRoute = async ({ request, cookies, locals }) => {  try {
     const body = await request.json();
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;

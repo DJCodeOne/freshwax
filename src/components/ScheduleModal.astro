@@ -13,7 +13,7 @@ import DailySchedule from './DailySchedule.astro';
     <div class="schedule-modal-header">
       <h2>📅 Full Schedule</h2>
       <p class="modal-subtitle">Fresh Wax Live - DJ Streaming Schedule</p>
-      <button type="button" class="schedule-modal-close" id="closePublicSchedule">×</button>
+      <button type="button" class="schedule-modal-close" id="closePublicSchedule" aria-label="Close">×</button>
     </div>
     <div class="schedule-modal-body">
       <DailySchedule mode="public" id="publicSchedule" />
@@ -28,7 +28,7 @@ import DailySchedule from './DailySchedule.astro';
     <div class="schedule-modal-header">
       <h2>Book Your Live Stream Slot</h2>
       <p class="modal-subtitle">Click on available slots to select your time. You can book up to 2 hours per day.</p>
-      <button type="button" class="schedule-modal-close" id="closeBookingSchedule">×</button>
+      <button type="button" class="schedule-modal-close" id="closeBookingSchedule" aria-label="Close">×</button>
     </div>
     <div class="schedule-modal-body">
       <DailySchedule mode="booking" id="bookingSchedule" />

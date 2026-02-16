@@ -9,6 +9,8 @@ import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-uti
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
+export const prerender = false;
+
 // Valid status transitions
 const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
 

@@ -16,11 +16,7 @@ const deleteUserSchema = z.object({
 
 export const prerender = false;
 
-// Helper to initialize Firebase for Cloudflare runtime
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
 
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: admin delete operations - 20 per hour
@@ -29,9 +25,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
-
-  // Initialize Firebase for Cloudflare runtime
-  initFirebase(locals);
 
   try {
     // Parse request body

@@ -7,6 +7,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
+export const prerender = false;
+
 const deleteR2FolderSchema = z.object({
   folder: z.string().min(1),
 }).passthrough();

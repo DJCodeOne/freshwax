@@ -147,12 +147,6 @@ function moderateMessage(message: string): { allowed: boolean; reason?: string }
   return { allowed: true };
 }
 
-// Helper to initialize Firebase and return env
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-  return env;
-}
-
 // Simple MD5 implementation for Cloudflare Workers
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
 function simpleMd5(str: string): string {
@@ -373,8 +367,6 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 
 // Get recent chat messages (initial load only - no real-time)
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   try {
     const url = new URL(request.url);
     const streamId = url.searchParams.get('streamId');
@@ -442,7 +434,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = initFirebase(locals);
+  const env = locals?.runtime?.env;
 
   // Verify authenticated user
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
@@ -682,8 +674,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // Delete a message (for moderation)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   // Verify authenticated user
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {

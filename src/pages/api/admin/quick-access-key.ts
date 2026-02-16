@@ -9,10 +9,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
+export const prerender = false;
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -48,10 +45,7 @@ function generateCode(): string {
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`quick-access-key:${clientId}`, RateLimiters.admin);
-  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  initFirebase(locals);
-  const env = locals.runtime.env;
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -96,10 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`quick-access-key-write:${clientId}`, RateLimiters.write);
-  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  initFirebase(locals);
-  const env = locals.runtime.env;
+  if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);  const env = locals.runtime.env;
   const serviceAccountKey = getServiceAccountKey(env);
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 

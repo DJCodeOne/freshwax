@@ -647,7 +647,7 @@ export const prerender = false;
     if (!source) return;
     
     // Open stream URL in new tab for testing
-    window.open(source.streamUrl, '_blank');
+    window.open(source.streamUrl, '_blank', 'noopener,noreferrer');
     
     // Also check status
     try {

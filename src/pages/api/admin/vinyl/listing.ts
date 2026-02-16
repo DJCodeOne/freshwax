@@ -6,18 +6,10 @@ import { ApiErrors } from '../../../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 export const GET: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`vinyl-listing:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  initFirebase(locals);
-
   // SECURITY: Require admin authentication for viewing listing admin data
   const env = locals.runtime.env;
   initAdminEnv({
@@ -58,9 +50,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateCheck = checkRateLimit(`vinyl-listing-write:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
-
-  initFirebase(locals);
-
   // SECURITY: Require admin authentication for listing management
   const env = locals.runtime.env;
   initAdminEnv({

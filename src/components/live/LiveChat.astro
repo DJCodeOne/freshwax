@@ -24,19 +24,19 @@
       <div id="emojiPanel" class="emoji-panel" style="display: none;">
         <div class="emoji-panel-header">
           <span>Emojis</span>
-          <button type="button" class="emoji-panel-close" id="closeEmojiPanel">×</button>
+          <button type="button" class="emoji-panel-close" id="closeEmojiPanel" aria-label="Close">×</button>
         </div>
         <div class="emoji-panel-cats">
-          <button class="emoji-panel-cat active" data-category="music">🎵</button>
-          <button class="emoji-panel-cat" data-category="fire">🔥</button>
-          <button class="emoji-panel-cat" data-category="faces">😎</button>
-          <button class="emoji-panel-cat" data-category="vibes">🌴</button>
+          <button class="emoji-panel-cat active" data-category="music" aria-label="Music emojis">🎵</button>
+          <button class="emoji-panel-cat" data-category="fire" aria-label="Fire emojis">🔥</button>
+          <button class="emoji-panel-cat" data-category="faces" aria-label="Face emojis">😎</button>
+          <button class="emoji-panel-cat" data-category="vibes" aria-label="Vibe emojis">🌴</button>
         </div>
         <div class="emoji-panel-grid" id="emojiPanelGrid"></div>
       </div>
 
       <div class="chat-input-wrapper">
-        <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" />
+        <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" aria-label="Chat message" />
         <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis">😀</button>
         <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs">GIF</button>
         <button type="submit" id="sendBtn">
@@ -52,10 +52,10 @@
   <div class="dm-modal-box">
     <div class="dm-modal-header">
       <span>Message <strong id="dmRecipientName"></strong></span>
-      <button type="button" id="closeDmModal" class="dm-modal-close">×</button>
+      <button type="button" id="closeDmModal" class="dm-modal-close" aria-label="Close">×</button>
     </div>
     <div class="dm-modal-body">
-      <textarea id="dmMessageInput" placeholder="Type your message..." maxlength="500"></textarea>
+      <textarea id="dmMessageInput" placeholder="Type your message..." maxlength="500" aria-label="Direct message"></textarea>
     </div>
     <div class="dm-modal-footer">
       <button type="button" id="sendDmBtn" class="dm-send-btn">Send Message</button>
@@ -68,10 +68,10 @@
   <div class="gif-modal-box">
     <div class="gif-modal-top">
       <h2>Choose a GIF</h2>
-      <button type="button" id="closeGifModal" class="gif-modal-x">×</button>
+      <button type="button" id="closeGifModal" class="gif-modal-x" aria-label="Close">×</button>
     </div>
     <div class="gif-modal-search-box">
-      <input type="text" id="gifSearchInput" placeholder="Search GIFs..." />
+      <input type="text" id="gifSearchInput" placeholder="Search GIFs..." aria-label="Search GIFs" />
     </div>
     <div class="gif-modal-cats">
       <button class="gif-modal-cat active" data-category="trending">Trending</button>

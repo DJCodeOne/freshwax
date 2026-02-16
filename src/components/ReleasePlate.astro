@@ -1761,18 +1761,18 @@ const totalDurationFormatted = totalDurationSeconds > 0
     document.getElementById('share-twitter')?.addEventListener('click', function() {
       var d = window.currentReleaseShareData || {};
       var text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax';
-      window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'width=550,height=420');
+      window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
     });
 
     document.getElementById('share-facebook')?.addEventListener('click', function() {
       var d = window.currentReleaseShareData || {};
-      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(d.url), '_blank', 'width=550,height=420');
+      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
     });
 
     document.getElementById('share-whatsapp')?.addEventListener('click', function() {
       var d = window.currentReleaseShareData || {};
       var text = 'Check out "' + d.title + '" by ' + d.artist + ' on Fresh Wax ' + d.url;
-      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
     });
 
     document.getElementById('share-instagram')?.addEventListener('click', function() {
@@ -1786,7 +1786,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
     document.getElementById('share-reddit')?.addEventListener('click', function() {
       var d = window.currentReleaseShareData || {};
       var title = d.title + ' by ' + d.artist + ' - Fresh Wax';
-      window.open('https://www.reddit.com/submit?url=' + encodeURIComponent(d.url) + '&title=' + encodeURIComponent(title), '_blank', 'width=550,height=420');
+      window.open('https://www.reddit.com/submit?url=' + encodeURIComponent(d.url) + '&title=' + encodeURIComponent(title), '_blank', 'noopener,noreferrer,width=550,height=420');
     });
 
     // Native share (mobile)

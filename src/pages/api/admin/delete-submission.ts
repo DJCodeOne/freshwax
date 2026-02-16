@@ -7,6 +7,8 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
+export const prerender = false;
+
 const deleteSubmissionSchema = z.object({
   submissionId: z.string().min(1),
   location: z.string().optional(),

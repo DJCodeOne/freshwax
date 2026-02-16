@@ -35,11 +35,7 @@ const updateUserSchema = z.object({
 
 export const prerender = false;
 
-// Helper to initialize Firebase for Cloudflare runtime
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
 
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit
@@ -48,9 +44,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateCheck.allowed) {
     return rateLimitResponse(rateCheck.retryAfter!);
   }
-
-  // Initialize Firebase for Cloudflare runtime
-  initFirebase(locals);
 
   try {
     // Parse request body

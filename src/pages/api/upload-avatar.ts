@@ -18,11 +18,7 @@ const DeleteAvatarSchema = z.object({
 // Avatar size - small for icon use
 const AVATAR_SIZE = 128;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
 
-}
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -65,7 +61,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const env = locals.runtime.env;
-  initFirebase(locals);
 
   const r2Config = getR2Config(env);
   const r2 = createR2Client(r2Config);
@@ -200,7 +195,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 // DELETE: Remove avatar
 export const DELETE: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
-  initFirebase(locals);
 
   const r2Config = getR2Config(env);
   const r2 = createR2Client(r2Config);

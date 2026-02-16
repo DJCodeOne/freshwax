@@ -1390,30 +1390,30 @@ const mixesItemList = {
     document.getElementById('shareTwitter')?.addEventListener('click', function() {
       var d = window.currentShareData || {};
       var text = 'Check out "' + d.title + '" by ' + d.dj + ' on Fresh Wax';
-      window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'width=550,height=420');
+      window.open('https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
     });
 
     document.getElementById('shareFacebook')?.addEventListener('click', function() {
       var d = window.currentShareData || {};
-      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(d.url), '_blank', 'width=550,height=420');
+      window.open('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(d.url), '_blank', 'noopener,noreferrer,width=550,height=420');
     });
 
     document.getElementById('shareWhatsApp')?.addEventListener('click', function() {
       var d = window.currentShareData || {};
       var text = 'Check out "' + d.title + '" by ' + d.dj + ' on Fresh Wax ' + d.url;
-      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
     });
 
     document.getElementById('shareTelegram')?.addEventListener('click', function() {
       var d = window.currentShareData || {};
       var text = 'Check out "' + d.title + '" by ' + d.dj + ' on Fresh Wax';
-      window.open('https://t.me/share/url?url=' + encodeURIComponent(d.url) + '&text=' + encodeURIComponent(text), '_blank');
+      window.open('https://t.me/share/url?url=' + encodeURIComponent(d.url) + '&text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
     });
 
     document.getElementById('shareReddit')?.addEventListener('click', function() {
       var d = window.currentShareData || {};
       var title = d.title + ' by ' + d.dj + ' - Fresh Wax';
-      window.open('https://www.reddit.com/submit?url=' + encodeURIComponent(d.url) + '&title=' + encodeURIComponent(title), '_blank', 'width=550,height=420');
+      window.open('https://www.reddit.com/submit?url=' + encodeURIComponent(d.url) + '&title=' + encodeURIComponent(title), '_blank', 'noopener,noreferrer,width=550,height=420');
     });
 
     // Native share (mobile)

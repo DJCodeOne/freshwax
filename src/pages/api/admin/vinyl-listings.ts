@@ -37,14 +37,8 @@ function getServiceAccountKey(env: any): string | null {
   return serviceAccountKey || null;
 }
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
-}
-
 // GET - Fetch pending vinyl listings for admin review
-export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-  const env = locals.runtime.env || {};
+export const GET: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env || {};
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
@@ -96,9 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 // POST - Approve or reject vinyl listing
-export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-  const env = locals.runtime.env || {};
+export const POST: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env || {};
 
   // Rate limit writes
   const clientId = getClientId(request);

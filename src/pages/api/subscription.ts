@@ -28,12 +28,6 @@ const log = {
   error: (...args: any[]) => console.error('[subscription]', ...args),
 };
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-  // Initialize admin config from runtime env
-  initAdminEnv(env);
-}
-
 // Zod schemas for subscription endpoints
 const SubscriptionGetSchema = z.object({
   userId: z.string().min(1, 'userId required'),
@@ -51,7 +45,9 @@ const SubscriptionPostSchema = z.object({
 
 // GET: Check subscription status and limits
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv(env);
 
   const url = new URL(request.url);
   const rawParams = {
@@ -206,7 +202,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Record usage or upgrade subscription
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv(env);
 
   const authHeader = request.headers.get('Authorization');
   const idToken = authHeader?.replace('Bearer ', '') || undefined;

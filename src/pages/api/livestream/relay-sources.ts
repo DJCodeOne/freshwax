@@ -7,15 +7,11 @@ import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-}
-
 // GET - List all relay sources or check specific one
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   try {
     const url = new URL(request.url);
     const sourceId = url.searchParams.get('id');
@@ -47,7 +43,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Create new relay source (admin only)
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
   try {
@@ -94,7 +92,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // PUT - Update relay source (admin only)
 export const PUT: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
   try {
@@ -122,7 +122,9 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Remove relay source (admin only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
   try {

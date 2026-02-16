@@ -26,13 +26,6 @@ const bypassRequestPostSchema = z.object({
 
 export const prerender = false;
 
-// Helper to initialize Firebase and admin env
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
-  return env;
-}
-
 // Helper to generate a unique ID
 function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
@@ -44,7 +37,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`bypass-requests:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const saQuery = getSaQuery(locals);
   try {
     const url = new URL(request.url);
@@ -218,7 +213,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`bypass-requests-write:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const saQuery = getSaQuery(locals);
   try {
     const body = await request.json();
@@ -434,7 +431,9 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`bypass-requests-delete:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  initFirebase(locals);
+  const env = locals?.runtime?.env;
+
+  initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

@@ -14,11 +14,6 @@ const RedeemAccessKeySchema = z.object({
   userName: z.string().max(200).optional().nullable(),
 });
 
-// Helper to initialize Firebase
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: strict - 5 per minute (prevent brute force of access codes)
   const clientId = getClientId(request);
@@ -26,9 +21,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
-
-  initFirebase(locals);
-
   try {
     const data = await request.json();
     const parsed = RedeemAccessKeySchema.safeParse(data);

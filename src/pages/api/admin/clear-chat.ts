@@ -21,13 +21,7 @@ const MAX_MESSAGES_PER_REQUEST = 500;
 const MAX_MESSAGES_PER_HOUR = 2000;
 const DELAY_BETWEEN_DELETES_MS = 10; // Small delay to prevent overwhelming Firestore
 
-function initFirebase(locals: App.Locals) {
-  const env = locals?.runtime?.env;
-}
-
 export const POST: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   const clientId = getClientId(request);
 
   // Rate limit: max 5 clear operations per minute
@@ -132,8 +126,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  initFirebase(locals);
-
   const clientId = getClientId(request);
 
   // Rate limit GET requests too (prevent enumeration abuse)
