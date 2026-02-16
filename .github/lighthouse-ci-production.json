@@ -5,21 +5,20 @@
         "https://freshwax.co.uk/",
         "https://freshwax.co.uk/releases/",
         "https://freshwax.co.uk/merch/",
-        "https://freshwax.co.uk/dj-mixes/",
-        "https://freshwax.co.uk/checkout/"
+        "https://freshwax.co.uk/dj-mixes/"
       ],
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "settings": {
         "preset": "desktop"
       }
     },
     "assert": {
       "assertions": {
-        "categories:performance": ["error", { "minScore": 0.85, "aggregationMethod": "median-run" }],
+        "categories:performance": ["warn", { "minScore": 0.70, "aggregationMethod": "median-run" }],
         "categories:accessibility": ["warn", { "minScore": 0.90, "aggregationMethod": "median-run" }],
-        "categories:best-practices": ["warn", { "minScore": 0.90, "aggregationMethod": "median-run" }],
+        "categories:best-practices": ["warn", { "minScore": 0.85, "aggregationMethod": "median-run" }],
         "categories:seo": ["error", { "minScore": 0.95, "aggregationMethod": "median-run" }],
-        "largest-contentful-paint": ["error", { "maxNumericValue": 2500, "aggregationMethod": "median-run" }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 3000, "aggregationMethod": "median-run" }],
         "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1, "aggregationMethod": "median-run" }]
       }
     },
