@@ -111,6 +111,17 @@ const csrfToken = Astro.locals.csrfToken || '';
 
     document.getElementById('uploadAnotherBtn')?.addEventListener('click', () => location.reload());
 
+    // Get auth token from __session cookie for API calls
+    function getSessionToken() {
+      const match = document.cookie.match(/(?:^|;\s*)__session=([^;]*)/);
+      return match ? match[1] : null;
+    }
+
+    function authHeaders() {
+      const token = getSessionToken();
+      return token ? { 'Authorization': `Bearer ${token}` } : {};
+    }
+
     browseBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -385,7 +396,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           formData.append('fileType', 'metadata');
 
           try {
-            const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
+            const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
             const result = await response.json();
             if (!result.success) throw new Error(result.error);
             log(`✓ Metadata: ${result.url}`, 'success');
@@ -449,7 +460,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               formData.append('fileType', 'track');
 
               try {
-                const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
+                const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
                 const result = await response.json();
                 if (!result.success) throw new Error(result.error);
 
@@ -515,7 +526,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             formData.append('fileType', 'preview');
 
             try {
-              const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
+              const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
               const result = await response.json();
               if (!result.success) throw new Error(result.error);
 
@@ -588,7 +599,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             formData.append('fileType', 'artwork');
 
             try {
-              const response = await fetch('/api/upload-r2-batch/', { method: 'POST', body: formData });
+              const response = await fetch('/api/upload-r2-batch/', { method: 'POST', headers: authHeaders(), body: formData });
               const result = await response.json();
               if (!result.success) throw new Error(result.error);
 
