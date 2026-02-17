@@ -1005,26 +1005,32 @@ const totalDurationFormatted = totalDurationSeconds > 0
   }
 
   .rating-star {
-    color: #6b7280;
+    color: #4b5563;
+    opacity: 0.5;
     transition: all 0.2s;
     cursor: pointer;
   }
 
   .rating-star:hover {
     color: #fbbf24;
+    opacity: 1;
     transform: scale(1.15);
   }
 
   /* Fill stars on hover - all stars up to and including hovered one */
   .star-rating-group:hover .rating-star {
     color: #fbbf24;
+    opacity: 1;
   }
   .star-rating-group:hover .rating-star:hover ~ .rating-star {
-    color: #6b7280;
+    color: #4b5563;
+    opacity: 0.5;
   }
 
+  /* Rated stars (fill set to currentColor by JS) */
   .rating-star svg[fill="currentColor"] {
     color: #fbbf24;
+    opacity: 1;
   }
 
   .rating-star:active {
@@ -1035,6 +1041,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
   .rating-star.user-rated svg {
     fill: currentColor;
     color: #fbbf24;
+    opacity: 1;
   }
 
   .shared-volume-slider {
