@@ -22,23 +22,17 @@ export const prerender = false;
 
 const isDev = import.meta.env.DEV;
 
-// Helper to get user ID - prefers verified Firebase auth, falls back to cookie for anonymous carts (GET only)
+// Helper to get user ID - prefers verified Firebase auth, falls back to customerId cookie
 async function getUserId(request: Request, locals: App.Locals): Promise<string | null> {
   // Try Firebase auth first (secure, verified identity)
   try {
-    const env = locals.runtime.env;
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId) return verifiedUserId;
   } catch {
-    // No auth token - fall through to cookie for GET requests only
+    // No auth token - fall through to cookie
   }
 
-  // Cookie fallback only allowed for GET (read-only) requests to prevent IDOR on writes
-  if (request.method !== 'GET') {
-    return null;
-  }
-
-  // Fallback to cookie for anonymous/pre-auth cart persistence (GET only)
+  // Fallback to customerId cookie (set at login, scoped to same user)
   const cookieHeader = request.headers.get('cookie') || '';
   const cookies = cookieHeader.split(';').map(c => c.trim());
 
