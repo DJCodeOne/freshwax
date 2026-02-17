@@ -2979,11 +2979,20 @@ const nonce = Astro.locals.nonce || '';
     // Subscribe to private channel for takeover notifications
     const PUSHER_KEY = window.PUSHER_CONFIG?.key || '';
     const PUSHER_CLUSTER = window.PUSHER_CONFIG?.cluster || 'eu';
-    
+
+    const djAuthToken = await currentUser.getIdToken().catch(() => null);
+    if (!djAuthToken) {
+      console.warn('[Takeover] No auth token, skipping Pusher subscription');
+      return;
+    }
+
     const pusher = new window.Pusher(PUSHER_KEY, {
       cluster: PUSHER_CLUSTER,
       authEndpoint: '/api/dj-lobby/pusher-auth/',
-      auth: { params: { user_id: currentUser.uid } }
+      auth: {
+        headers: { 'Authorization': `Bearer ${djAuthToken}` },
+        params: { user_id: currentUser.uid }
+      }
     });
     
     const privateChannel = pusher.subscribe(`private-dj-${currentUser.uid}`);
