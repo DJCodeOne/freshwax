@@ -59,8 +59,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const data = JSON.parse(d1Row.data);
           data.likes = likes;
           data.last_liked_date = new Date().toISOString();
-          await db.prepare('UPDATE dj_mixes SET data = ? WHERE id = ?')
-            .bind(JSON.stringify(data), mixId)
+          await db.prepare('UPDATE dj_mixes SET data = ?, likes = ?, updated_at = ? WHERE id = ?')
+            .bind(JSON.stringify(data), likes, new Date().toISOString(), mixId)
             .run();
           log.info('[track-mix-like] D1 synced for mix', mixId);
         }

@@ -128,6 +128,10 @@ export function d1RowToMix(row: D1DjMix): any {
   try {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
+    // Prefer D1 column values for stats (updated atomically, no race conditions)
+    if (row.plays != null) doc.plays = row.plays;
+    if (row.downloads != null) doc.downloads = row.downloads;
+    if (row.likes != null) doc.likes = row.likes;
     return doc;
   } catch (e) {
     console.error('[D1] Error parsing mix data:', e);
@@ -342,7 +346,7 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
 export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
+      `SELECT id, data, plays, downloads, likes FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
     ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
@@ -355,7 +359,7 @@ export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500
 export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promise<any[]> {
   try {
     const { results } = await db.prepare(
-      `SELECT id, data FROM dj_mixes ORDER BY upload_date DESC LIMIT ?`
+      `SELECT id, data, plays, downloads, likes FROM dj_mixes ORDER BY upload_date DESC LIMIT ?`
     ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
@@ -368,7 +372,7 @@ export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promis
 export async function d1GetMixById(db: D1Database, id: string): Promise<any | null> {
   try {
     const row = await db.prepare(
-      `SELECT id, data FROM dj_mixes WHERE id = ?`
+      `SELECT id, data, plays, downloads, likes FROM dj_mixes WHERE id = ?`
     ).bind(id).first();
 
     return row ? d1RowToMix(row) : null;
