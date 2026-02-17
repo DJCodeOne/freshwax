@@ -575,6 +575,86 @@ const firebaseConfig = {
 </style>
 
 <script is:inline nonce={nonce}>
+  // Immediate UI initialization — runs before Firebase module loads
+  // Ensures header interactions (dropdown, burger menu) work even if Firebase CDN is slow/blocked
+  (function() {
+    // Account dropdown toggle (desktop)
+    document.querySelectorAll('.account-dropdown').forEach(function(dropdown) {
+      var button = dropdown.querySelector('.account-button');
+      var menu = dropdown.querySelector('.account-menu');
+      if (button && menu) {
+        button.addEventListener('click', function(e) {
+          e.stopPropagation();
+          var isHidden = menu.style.display === 'none' || menu.classList.contains('fwx-hidden');
+          if (isHidden) {
+            menu.classList.remove('fwx-hidden');
+            menu.style.display = 'block';
+            button.setAttribute('aria-expanded', 'true');
+          } else {
+            menu.classList.add('fwx-hidden');
+            menu.style.display = 'none';
+            button.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+    });
+
+    // Close dropdowns on click outside
+    document.addEventListener('click', function() {
+      document.querySelectorAll('.account-menu').forEach(function(menu) {
+        menu.classList.add('fwx-hidden');
+        menu.style.display = 'none';
+      });
+      document.querySelectorAll('.account-button').forEach(function(btn) {
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    // Burger menu (mobile)
+    var burgerBtn = document.getElementById('burgerMenuBtn');
+    var mobileMenu = document.getElementById('mobileMenu');
+    var menuOverlay = document.getElementById('menuOverlay');
+    var closeMenuBtn = document.getElementById('closeMenuBtn');
+
+    function openMobileMenu() {
+      if (mobileMenu) { mobileMenu.classList.add('open'); mobileMenu.classList.remove('fwx-hidden'); }
+      if (menuOverlay) { menuOverlay.classList.add('open'); menuOverlay.classList.remove('fwx-hidden'); }
+      document.body.style.overflow = 'hidden';
+      if (burgerBtn) burgerBtn.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeMobileMenu() {
+      if (mobileMenu) mobileMenu.classList.remove('open');
+      if (menuOverlay) menuOverlay.classList.remove('open');
+      document.body.style.overflow = '';
+      if (burgerBtn) { burgerBtn.setAttribute('aria-expanded', 'false'); burgerBtn.focus(); }
+      setTimeout(function() {
+        if (mobileMenu && !mobileMenu.classList.contains('open')) mobileMenu.classList.add('fwx-hidden');
+        if (menuOverlay && !menuOverlay.classList.contains('open')) menuOverlay.classList.add('fwx-hidden');
+      }, 300);
+    }
+
+    if (burgerBtn) burgerBtn.addEventListener('click', function(e) { e.stopPropagation(); openMobileMenu(); });
+    if (closeMenuBtn) closeMenuBtn.addEventListener('click', closeMobileMenu);
+    if (menuOverlay) menuOverlay.addEventListener('click', closeMobileMenu);
+
+    // Close mobile menu on nav link click
+    if (mobileMenu) {
+      mobileMenu.querySelectorAll('.fwx-menu-link').forEach(function(link) {
+        link.addEventListener('click', closeMobileMenu);
+      });
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('open')) {
+        closeMobileMenu();
+      }
+    });
+  })();
+</script>
+
+<script is:inline nonce={nonce}>
   // Google Translate — lazy-loaded on first button click
   // When translation is active, navigations use full page reload so GT
   // can read the googtrans cookie and translate automatically.
