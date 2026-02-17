@@ -12,44 +12,44 @@ export const prerender = false;
 
 // Zod schema for Stripe checkout session creation
 const CheckoutItemSchema = z.object({
-  id: z.string().optional(),
-  productId: z.string().optional(),
-  releaseId: z.string().optional(),
-  trackId: z.string().optional(),
+  id: z.string().nullish(),
+  productId: z.string().nullish(),
+  releaseId: z.string().nullish(),
+  trackId: z.string().nullish(),
   name: z.string().min(1, 'Item name required').max(500),
-  type: z.enum(['digital', 'track', 'release', 'vinyl', 'merch']).optional(),
+  type: z.string().nullish(),
   price: z.number().positive('Price must be positive'),
   quantity: z.number().int().min(1).max(99).default(1),
-  size: z.string().optional(),
-  color: z.string().optional(),
-  image: z.string().optional(),
-  artwork: z.string().optional(),
-  artist: z.string().optional(),
-  artistId: z.string().optional(),
-  artistName: z.string().optional(),
-  title: z.string().optional(),
-  isPreOrder: z.boolean().optional(),
-  releaseDate: z.string().optional(),
-  sellerId: z.string().optional(),
+  size: z.string().nullish(),
+  color: z.string().nullish(),
+  image: z.string().nullish(),
+  artwork: z.string().nullish(),
+  artist: z.string().nullish(),
+  artistId: z.string().nullish(),
+  artistName: z.string().nullish(),
+  title: z.string().nullish(),
+  isPreOrder: z.boolean().nullish(),
+  releaseDate: z.string().nullish(),
+  sellerId: z.string().nullish(),
 }).passthrough();
 
 const CheckoutCustomerSchema = z.object({
   email: z.string().email('Valid email required'),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  displayName: z.string().optional(),
-  phone: z.string().optional(),
-  userId: z.string().optional(),
+  firstName: z.string().nullish(),
+  lastName: z.string().nullish(),
+  displayName: z.string().nullish(),
+  phone: z.string().nullish(),
+  userId: z.string().nullish(),
 }).passthrough();
 
 const CheckoutShippingSchema = z.object({
-  address1: z.string().optional(),
-  address2: z.string().optional(),
-  city: z.string().optional(),
-  county: z.string().optional(),
-  postcode: z.string().optional(),
-  country: z.string().optional(),
-}).passthrough().optional();
+  address1: z.string().nullish(),
+  address2: z.string().nullish(),
+  city: z.string().nullish(),
+  county: z.string().nullish(),
+  postcode: z.string().nullish(),
+  country: z.string().nullish(),
+}).passthrough().nullish();
 
 const StripeCheckoutSchema = z.object({
   items: z.array(CheckoutItemSchema).min(1, 'At least one item required').max(50),
@@ -85,6 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate input with Zod
     const parseResult = StripeCheckoutSchema.safeParse(rawBody);
     if (!parseResult.success) {
+      console.error('[Stripe] Validation errors:', JSON.stringify(parseResult.error.issues));
       return ApiErrors.badRequest('Invalid request');
     }
 

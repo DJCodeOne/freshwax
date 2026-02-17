@@ -12,44 +12,44 @@ import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils'
 
 // Zod schemas for order creation
 const OrderItemSchema = z.object({
-  id: z.string().optional(),
-  productId: z.string().optional(),
-  releaseId: z.string().optional(),
-  trackId: z.string().optional(),
+  id: z.string().nullish(),
+  productId: z.string().nullish(),
+  releaseId: z.string().nullish(),
+  trackId: z.string().nullish(),
   name: z.string().min(1, 'Item name required').max(500),
-  type: z.enum(['digital', 'track', 'release', 'vinyl', 'merch']).optional(),
+  type: z.string().nullish(),
   price: z.number().positive('Price must be positive'),
   quantity: z.number().int().min(1).max(99).default(1),
-  size: z.string().optional(),
-  color: z.string().optional(),
-  image: z.string().optional(),
-  artwork: z.string().optional(),
-  artist: z.string().optional(),
-  artistId: z.string().optional(),
-  artistName: z.string().optional(),
-  artistEmail: z.string().optional(),
-  title: z.string().optional(),
-  isPreOrder: z.boolean().optional(),
-  releaseDate: z.string().optional(),
-  sellerId: z.string().optional(),
+  size: z.string().nullish(),
+  color: z.string().nullish(),
+  image: z.string().nullish(),
+  artwork: z.string().nullish(),
+  artist: z.string().nullish(),
+  artistId: z.string().nullish(),
+  artistName: z.string().nullish(),
+  artistEmail: z.string().nullish(),
+  title: z.string().nullish(),
+  isPreOrder: z.boolean().nullish(),
+  releaseDate: z.string().nullish(),
+  sellerId: z.string().nullish(),
 }).passthrough();
 
 const OrderCustomerSchema = z.object({
   email: z.string().email('Valid email required'),
   firstName: z.string().min(1, 'First name required'),
   lastName: z.string().min(1, 'Last name required'),
-  phone: z.string().optional(),
-  userId: z.string().optional(),
+  phone: z.string().nullish(),
+  userId: z.string().nullish(),
 }).passthrough();
 
 const OrderShippingSchema = z.object({
-  address1: z.string().optional(),
-  address2: z.string().optional(),
-  city: z.string().optional(),
-  county: z.string().optional(),
-  postcode: z.string().optional(),
-  country: z.string().optional(),
-}).passthrough().optional().nullable();
+  address1: z.string().nullish(),
+  address2: z.string().nullish(),
+  city: z.string().nullish(),
+  county: z.string().nullish(),
+  postcode: z.string().nullish(),
+  country: z.string().nullish(),
+}).passthrough().nullish();
 
 const CreateOrderSchema = z.object({
   customer: OrderCustomerSchema,
