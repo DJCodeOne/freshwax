@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Failed to generate presigned URLs:', error);
     return ApiErrors.serverError('Failed to generate upload URLs');
   }

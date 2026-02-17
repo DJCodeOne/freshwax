@@ -193,7 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       await setDocument('pendingRoleRequests', `${uid}_${roleType}`, pendingRequestDoc);
-      console.log(`[roles/manage] Created pendingRoleRequests/${uid}_${roleType}`);
+      // Created pendingRoleRequests entry
 
       return new Response(JSON.stringify({
         success: true,
@@ -248,7 +248,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             createdAt: new Date().toISOString(),
             ...customerData
           });
-          console.log(`[roles/manage] Created customers/${uid} during approval`);
+          // Created customers entry during approval
         }
       } catch (e) {
         console.error(`[roles/manage] Failed to update customers/${uid}:`, e);
@@ -257,10 +257,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Delete from pendingRoleRequests collection
       try {
         await deleteDocument('pendingRoleRequests', `${uid}_${roleType}`);
-        console.log(`[roles/manage] Deleted pendingRoleRequests/${uid}_${roleType}`);
+        // Deleted pendingRoleRequests entry
       } catch (e) {
         // May not exist if created before this system
-        console.log(`[roles/manage] pendingRoleRequests/${uid}_${roleType} not found (may be legacy)`);
+        // pendingRoleRequests not found (may be legacy)
       }
 
       // For artist or merchSeller roles, create/update artists collection entry
@@ -298,7 +298,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               isMerchSupplier: roleType === 'merchSeller' ? true : existingArtist.isMerchSupplier || false,
               createdAt: existingArtist.createdAt || new Date().toISOString()
             });
-            console.log(`[roles/manage] Updated artists/${uid} for ${roleType} role`);
+            // Updated artists entry
           } else {
             // Create new artist record
             await setDocument('artists', uid, {
@@ -306,7 +306,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               registeredAt: new Date().toISOString(),
               createdAt: new Date().toISOString()
             });
-            console.log(`[roles/manage] Created artists/${uid} for ${roleType} role`);
+            // Created artists entry
           }
         } catch (artistError) {
           console.error(`[roles/manage] Failed to create/update artists collection for ${uid}:`, artistError);
@@ -352,13 +352,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
               ...vinylSellerData,
               createdAt: existingVinylSeller.createdAt || new Date().toISOString()
             });
-            console.log(`[roles/manage] Updated vinylSellers/${uid}`);
+            // Updated vinylSellers entry
           } else {
             await setDocument('vinylSellers', uid, {
               ...vinylSellerData,
               createdAt: new Date().toISOString()
             });
-            console.log(`[roles/manage] Created vinylSellers/${uid}`);
+            // Created vinylSellers entry
           }
         } catch (vinylError) {
           console.error(`[roles/manage] Failed to create/update vinylSellers collection for ${uid}:`, vinylError);
@@ -406,7 +406,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Delete from pendingRoleRequests collection
       try {
         await deleteDocument('pendingRoleRequests', `${uid}_${roleType}`);
-        console.log(`[roles/manage] Deleted pendingRoleRequests/${uid}_${roleType} (denied)`);
+        // Deleted pendingRoleRequests entry (denied)
       } catch (e) {
         // May not exist if created before this system
       }
@@ -479,7 +479,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             if (roleType === 'artist') artistUpdate.isArtist = false;
             if (roleType === 'merchSeller') artistUpdate.isMerchSupplier = false;
             await updateDocument('artists', uid, artistUpdate);
-            console.log(`[roles/manage] Revoked ${roleType} from artists/${uid}`);
+            // Revoked role from artists
           }
         } catch (e) {
           console.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
@@ -498,7 +498,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               revokedAt: new Date().toISOString(),
               revokedBy: adminUid
             });
-            console.log(`[roles/manage] Revoked vinylSeller from vinylSellers/${uid}`);
+            // Revoked vinylSeller role
           }
         } catch (e) {
           console.error(`[roles/manage] Failed to update vinylSellers/${uid} during revoke:`, e);

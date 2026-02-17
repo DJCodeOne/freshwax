@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[rate-release] Error:', error);
     return ApiErrors.serverError('Failed to save rating');
   }

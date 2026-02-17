@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/purchased] Error:', error);
     return ApiErrors.serverError('Failed to fetch purchased gift cards');
   }

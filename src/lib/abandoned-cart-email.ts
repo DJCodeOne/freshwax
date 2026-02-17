@@ -121,7 +121,7 @@ export async function sendAbandonedCartEmail(
 
     return result;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Abandoned Cart] Error sending recovery email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }

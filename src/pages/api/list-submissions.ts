@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[list-submissions] Error:', error);
     return ApiErrors.serverError('Failed to list submissions');
   }

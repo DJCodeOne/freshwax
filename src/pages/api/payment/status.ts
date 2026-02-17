@@ -8,6 +8,7 @@ import Stripe from 'stripe';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
 import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Zod schema for payment status query params
 const PaymentStatusSchema = z.object({
@@ -21,6 +22,12 @@ const CACHE_TTL = 120; // 2 minutes cache for payment status
 const CACHE_PREFIX = 'payment';
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`payment-status:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const rawParams = {
     userId: url.searchParams.get('userId') || '',

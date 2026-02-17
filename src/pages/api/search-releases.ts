@@ -99,7 +99,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[search] Error:', error);
     return ApiErrors.serverError('Search failed');
   }

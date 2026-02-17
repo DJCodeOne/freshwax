@@ -211,7 +211,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[assign-seller] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

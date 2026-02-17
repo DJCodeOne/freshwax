@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, atomicIncrement, clearCache } from '../../lib/firebase-rest';
 import { ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
@@ -17,6 +18,12 @@ const log = {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`track-mix-play:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
   const db = env?.DB; // D1 database binding
 
@@ -79,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[track-mix-play] Error:', error);
     return ApiErrors.serverError('Failed to track play');
   }

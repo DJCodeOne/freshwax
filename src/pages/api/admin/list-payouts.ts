@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[list-payouts] Error:', error);
     return ApiErrors.serverError('Failed to list payouts');
   }
@@ -100,7 +100,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[list-payouts] Delete error:', error);
     return ApiErrors.serverError('Failed to delete payout');
   }

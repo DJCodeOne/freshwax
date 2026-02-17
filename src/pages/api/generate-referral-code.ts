@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
 import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const GenerateReferralSchema = z.object({
   userId: z.string().min(1, 'Missing userId').max(200),
@@ -13,6 +14,12 @@ const GenerateReferralSchema = z.object({
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`generate-referral:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const env = locals.runtime.env;
     const kv = env?.CACHE as KVNamespace | undefined;
@@ -112,7 +119,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[generate-referral-code] Error:', error);
     return ApiErrors.serverError('Failed to generate code');
   }

@@ -120,7 +120,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch suggestions');
   }

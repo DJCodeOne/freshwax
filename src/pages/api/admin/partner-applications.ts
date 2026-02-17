@@ -139,7 +139,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching partner applications:', error);
     return new Response(JSON.stringify({
       success: false,
@@ -316,7 +316,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing application:', error);
     return ApiErrors.serverError('Failed to process application');
   }

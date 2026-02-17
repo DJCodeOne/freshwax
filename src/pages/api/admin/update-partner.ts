@@ -251,7 +251,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       results
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[update-partner] Error:', error);
     return ApiErrors.serverError('Failed to update partner');
   }

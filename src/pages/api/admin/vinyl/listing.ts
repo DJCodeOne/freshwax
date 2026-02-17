@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[API vinyl/listing] Error:', error);
     return ApiErrors.serverError('Failed to fetch listing');
   }
@@ -145,7 +145,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       default:
         return ApiErrors.badRequest('Invalid action');
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[API vinyl/listing] Error:', error);
     return ApiErrors.serverError('Server error');
   }

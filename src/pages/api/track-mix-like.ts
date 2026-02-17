@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[track-mix-like] Error:', error);
     return ApiErrors.serverError('Failed to track like');
   }

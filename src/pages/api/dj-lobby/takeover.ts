@@ -1,8 +1,21 @@
 // src/pages/api/dj-lobby/takeover.ts
 // DJ Takeover request system - uses Firebase REST API
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const TakeoverSchema = z.object({
+  action: z.string().min(1).max(50),
+  requesterId: z.string().min(1).max(500),
+  requesterName: z.string().max(200).nullish(),
+  requesterAvatar: z.string().max(2000).nullish(),
+  targetDjId: z.string().max(500).nullish(),
+  targetDjName: z.string().max(200).nullish(),
+  streamKey: z.string().max(500).nullish(),
+  serverUrl: z.string().max(2000).nullish(),
+}).passthrough();
 
 // Pusher configuration
 const PUSHER_APP_ID = import.meta.env.PUSHER_APP_ID;
@@ -29,7 +42,7 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
     // For now, log and skip if crypto unavailable
     console.log('[Pusher] Would trigger:', channel, event);
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Pusher] Error:', error);
     return false;
   }
@@ -37,6 +50,12 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
 
 // GET: Get takeover request status
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`takeover-get:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   try {
@@ -113,7 +132,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       outgoing: outgoingDoc || null
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/takeover] GET Error:', error);
     return ApiErrors.serverError('Failed to get takeover status');
   }
@@ -121,15 +140,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Create/respond to takeover request
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitPost = checkRateLimit(`takeover-post:${clientId}`, RateLimiters.standard);
+  if (!rateLimitPost.allowed) {
+    return rateLimitResponse(rateLimitPost.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   try {
-    const data = await request.json();
-    const { action, requesterId, requesterName, requesterAvatar, targetDjId, targetDjName } = data;
-
-    if (!requesterId) {
-      return ApiErrors.badRequest('Requester ID required');
+    const rawBody = await request.json();
+    const parseResult = TakeoverSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const data = parseResult.data;
+    const { action, requesterId, requesterName, requesterAvatar, targetDjId, targetDjName } = data;
 
     // SECURITY: Verify the requesting user owns this requesterId
     const authHeader = request.headers.get('Authorization');
@@ -274,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('Invalid action');
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/takeover] POST Error:', error);
     return ApiErrors.serverError('Failed to process takeover request');
   }
@@ -307,7 +333,7 @@ export const DELETE: APIRoute = async ({ locals }) => {
       expired: expiredRequests.length
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/takeover] DELETE Error:', error);
     return ApiErrors.serverError('Cleanup failed');
   }

@@ -173,7 +173,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     // Only log errors in development
     if (isDev) console.error('[get-dj-mixes] Error:', error);
     return ApiErrors.serverError('Failed to fetch DJ mixes');

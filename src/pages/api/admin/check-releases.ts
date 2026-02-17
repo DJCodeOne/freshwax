@@ -84,7 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     return ApiErrors.serverError('Failed to check releases');
   }
 };

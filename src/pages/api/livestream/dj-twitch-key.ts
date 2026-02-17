@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-twitch-key] Error:', error);
     return new Response(JSON.stringify({
       success: false,

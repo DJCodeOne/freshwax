@@ -289,7 +289,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[backfill-ledger] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

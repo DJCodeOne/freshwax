@@ -106,7 +106,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[ServerLogs] Error:', error);
     return ApiErrors.serverError(true);
   }

@@ -201,7 +201,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching bypass requests:', error);
     return ApiErrors.serverError('Failed to fetch requests');
   }
@@ -419,7 +419,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error processing bypass request:', error);
     return ApiErrors.serverError('Failed to process request');
   }
@@ -456,7 +456,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error deleting bypass request:', error);
     return ApiErrors.serverError('Failed to delete request');
   }

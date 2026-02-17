@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[fix-release-owner] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

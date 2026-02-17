@@ -3,10 +3,19 @@
 // Uses service account for writes to ensure Firebase security rules don't block
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+
+const UpdateShippingSchema = z.object({
+  artistId: z.string().min(1).max(500),
+  vinylShippingUK: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
+  vinylShippingEU: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
+  vinylShippingIntl: z.union([z.string().max(20), z.number().min(0).max(1000)]).nullish(),
+  vinylShipsFrom: z.string().max(200).nullish(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -48,12 +57,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    const body = await request.json();
-    const { artistId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShipsFrom } = body;
-
-    if (!artistId) {
-      return ApiErrors.badRequest('Artist ID required');
+    const rawBody = await request.json();
+    const parseResult = UpdateShippingSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { artistId, vinylShippingUK, vinylShippingEU, vinylShippingIntl, vinylShipsFrom } = parseResult.data;
 
     // Verify the authenticated user matches the artistId
     if (verifiedUserId !== artistId) {

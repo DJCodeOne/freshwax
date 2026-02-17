@@ -7,6 +7,7 @@ import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/fireb
 import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -99,6 +100,12 @@ function getRandomItem<T>(array: T[]): T {
 }
 
 export async function POST({ request, locals }: APIContext) {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`plus-command:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     initEnv(locals);
 

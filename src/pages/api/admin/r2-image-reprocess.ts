@@ -256,7 +256,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       results,
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Reprocess batch failed:', error);
     return errorResponse('Failed to reprocess images', 500);
   }

@@ -1,12 +1,22 @@
 // src/pages/api/update-mix.ts
 // API endpoint to update mix description and backfill userId - uses Firebase REST API
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
 import { ApiErrors } from '../../lib/api-utils';
+
+const UpdateMixSchema = z.object({
+  mixId: z.string().min(1).max(500),
+  title: z.string().max(500).nullish(),
+  description: z.string().max(5000).nullish(),
+  tracklist: z.string().max(10000).nullish(),
+  artworkUrl: z.string().max(2000).nullish(),
+  partnerId: z.string().max(500).nullish(),
+}).passthrough();
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: write operations - 30 per minute
@@ -25,11 +35,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    const { mixId, title, description, tracklist, artworkUrl, partnerId } = await request.json();
-
-    if (!mixId) {
-      return ApiErrors.badRequest('Missing mixId');
+    const rawBody = await request.json();
+    const parseResult = UpdateMixSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { mixId, title, description, tracklist, artworkUrl, partnerId } = parseResult.data;
 
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);

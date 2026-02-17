@@ -259,7 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' } 
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[red5-webhook] Error processing webhook:', error);
     
     // Still return 200 to prevent Red5 from retrying

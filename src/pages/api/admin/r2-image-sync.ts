@@ -6,6 +6,7 @@ import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { initFirebaseEnv, getDocument, updateDocument } from '../../../lib/firebase-rest';
+import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
 import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -28,6 +29,7 @@ interface SyncDetail {
   docId: string;
   status: 'synced' | 'skipped' | 'failed';
   updatedFields?: string[];
+  d1Synced?: boolean;
   error?: string;
 }
 
@@ -266,6 +268,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const updatedFields = Object.keys(updates);
       log.info(`Synced ${result.key} -> ${collection}/${parsed.docId}: ${updatedFields.join(', ')}`);
+
+      // Also sync to D1 so quick-access columns and JSON data blob reflect new URLs
+      let d1Synced = false;
+      const db = env?.DB;
+      if (db) {
+        try {
+          const updatedDoc = await getDocument(collection, parsed.docId);
+          if (updatedDoc) {
+            if (collection === 'releases') {
+              d1Synced = await d1UpsertRelease(db, parsed.docId, updatedDoc);
+            } else if (collection === 'dj-mixes') {
+              d1Synced = await d1UpsertMix(db, parsed.docId, updatedDoc);
+            } else if (collection === 'merch') {
+              d1Synced = await d1UpsertMerch(db, parsed.docId, updatedDoc);
+            }
+            if (d1Synced) {
+              log.info(`D1 synced: ${collection}/${parsed.docId}`);
+            }
+          }
+        } catch (d1Err: unknown) {
+          log.error(`D1 sync failed for ${collection}/${parsed.docId}:`, d1Err);
+        }
+      }
+
       synced++;
       details.push({
         key: result.key,
@@ -273,6 +299,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         docId: parsed.docId,
         status: 'synced',
         updatedFields,
+        d1Synced,
       });
 
     } catch (err) {

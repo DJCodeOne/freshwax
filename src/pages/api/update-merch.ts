@@ -447,7 +447,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     // Always log errors in production too
     console.error('[update-merch] Error:', error);
 

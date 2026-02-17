@@ -131,6 +131,79 @@ export const prerender = false;
     </div>
   </div>
 
+  <!-- Migrate Legacy Images -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>Migrate Legacy Images</h2>
+    </div>
+    <div class="card-body">
+      <p style="margin-bottom: 1rem; color: var(--text-secondary); font-size: 0.9rem;">
+        Scan Firebase for documents with non-WebP image URLs and convert them to optimized WebP. Updates both Firebase and D1.
+      </p>
+      <div class="flex flex-wrap gap-2" style="margin-bottom: 1rem;">
+        <button class="btn btn-primary migrate-collection-btn" data-collection="releases">releases</button>
+        <button class="btn btn-outline migrate-collection-btn" data-collection="dj-mixes">dj-mixes</button>
+        <button class="btn btn-outline migrate-collection-btn" data-collection="merch">merch</button>
+      </div>
+      <div class="flex gap-2" style="margin-bottom: 1rem;">
+        <button id="migrateDryRunBtn" class="btn btn-outline">Dry Run</button>
+        <button id="migrateRunBtn" class="btn btn-danger">Migrate</button>
+      </div>
+      <div id="migrateStatus" style="display: none;" class="flex items-center gap-2">
+        <div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
+        <span id="migrateStatusText" style="font-size: 0.875rem; color: var(--text-secondary);">Processing...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Migrate Summary -->
+  <div id="migrateSummarySection" class="mb-4" style="display: none;">
+    <div class="stats-grid cols-5">
+      <div class="stat-card">
+        <div class="stat-label">Total Docs</div>
+        <div class="stat-value" id="migrateStatTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Scanned</div>
+        <div class="stat-value" id="migrateStatScanned">0</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-label">Migrated</div>
+        <div class="stat-value" id="migrateStatMigrated">0</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Already WebP</div>
+        <div class="stat-value" id="migrateStatAlready">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value" id="migrateStatFailed">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Migrate Results Table -->
+  <div id="migrateResultsSection" class="card mb-4" style="display: none;">
+    <div class="card-header">
+      <h2>Migration Results</h2>
+    </div>
+    <div class="card-body" style="padding: 0;">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Doc ID</th>
+              <th>Fields</th>
+              <th>Status</th>
+              <th>Savings</th>
+            </tr>
+          </thead>
+          <tbody id="migrateResultsBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- Processing Log -->
   <div id="logSection" class="card mb-4" style="display: none;">
     <div class="card-header">
@@ -514,5 +587,116 @@ export const prerender = false;
     logEntries.innerHTML = '';
     logSection.style.display = 'none';
   });
+
+  // ========================================
+  // MIGRATE LEGACY IMAGES
+  // ========================================
+
+  let selectedMigrateCollection = 'releases';
+
+  const migrateDryRunBtn = document.getElementById('migrateDryRunBtn') as HTMLButtonElement;
+  const migrateRunBtn = document.getElementById('migrateRunBtn') as HTMLButtonElement;
+  const migrateStatus = document.getElementById('migrateStatus')!;
+  const migrateStatusText = document.getElementById('migrateStatusText')!;
+  const migrateSummarySection = document.getElementById('migrateSummarySection')!;
+  const migrateResultsSection = document.getElementById('migrateResultsSection')!;
+  const migrateResultsBody = document.getElementById('migrateResultsBody')!;
+
+  function getMigrateStatusBadge(status: string): string {
+    const badges: Record<string, string> = {
+      'migrated': '<span class="badge badge-completed">MIGRATED</span>',
+      'already_webp': '<span class="badge badge-info">ALREADY WEBP</span>',
+      'failed': '<span class="badge badge-danger">FAILED</span>',
+      'skipped': '<span class="badge badge-pending">SKIPPED</span>',
+    };
+    return badges[status] || `<span class="badge">${escapeHtml(status)}</span>`;
+  }
+
+  async function runMigration(dryRun: boolean) {
+    migrateDryRunBtn.disabled = true;
+    migrateRunBtn.disabled = true;
+    migrateStatus.style.display = 'flex';
+    migrateStatusText.textContent = dryRun ? 'Running dry run...' : 'Migrating images...';
+    migrateResultsBody.innerHTML = '';
+    migrateResultsSection.style.display = 'none';
+    migrateSummarySection.style.display = 'none';
+
+    addLog(`${dryRun ? 'Dry run' : 'Migration'} started for ${selectedMigrateCollection}...`);
+
+    try {
+      const res = await fetch('/api/admin/migrate-legacy-images/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          collection: selectedMigrateCollection,
+          dryRun,
+          limit: 50,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!data.success) {
+        addLog(`Migration failed: ${data.error}`, 'error');
+        window.showToast?.(`Migration failed: ${data.error}`, 'error');
+        migrateStatus.style.display = 'none';
+        migrateDryRunBtn.disabled = false;
+        migrateRunBtn.disabled = false;
+        return;
+      }
+
+      // Show summary stats
+      migrateSummarySection.style.display = '';
+      document.getElementById('migrateStatTotal')!.textContent = String(data.total);
+      document.getElementById('migrateStatScanned')!.textContent = String(data.scanned);
+      document.getElementById('migrateStatMigrated')!.textContent = String(data.migrated);
+      document.getElementById('migrateStatAlready')!.textContent = String(data.alreadyWebp);
+      document.getElementById('migrateStatFailed')!.textContent = String(data.failed);
+
+      // Show results table if there are details
+      if (data.details && data.details.length > 0) {
+        migrateResultsSection.style.display = '';
+        migrateResultsBody.innerHTML = data.details.map((d: any) => `
+          <tr>
+            <td class="cell-mono" style="font-size: 0.8rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(d.docId)}">${escapeHtml(d.docId)}</td>
+            <td style="font-size: 0.8rem;">${d.fields.map((f: string) => escapeHtml(f)).join(', ')}</td>
+            <td>${getMigrateStatusBadge(d.status)}</td>
+            <td class="cell-secondary" style="font-size: 0.8rem;">${d.savings ? escapeHtml(d.savings) : d.error ? `<span style="color: var(--accent-red);">${escapeHtml(d.error)}</span>` : '-'}</td>
+          </tr>
+        `).join('');
+      }
+
+      const mode = dryRun ? 'Dry run' : 'Migration';
+      addLog(`${mode} complete: ${data.migrated} migrated, ${data.alreadyWebp} already WebP, ${data.failed} failed`, data.failed > 0 ? 'error' : 'success');
+      window.showToast?.(`${mode}: ${data.migrated} migrated, ${data.failed} failed`, data.failed > 0 ? 'warning' : 'success');
+
+      migrateStatusText.textContent = `${mode} complete`;
+      setTimeout(() => { migrateStatus.style.display = 'none'; }, 1500);
+
+    } catch (err) {
+      addLog(`Migration error: ${err}`, 'error');
+      window.showToast?.('Migration failed', 'error');
+      migrateStatus.style.display = 'none';
+    }
+
+    migrateDryRunBtn.disabled = false;
+    migrateRunBtn.disabled = false;
+  }
+
+  // Collection selector buttons
+  document.querySelectorAll('.migrate-collection-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedMigrateCollection = (btn as HTMLElement).dataset.collection || 'releases';
+      document.querySelectorAll('.migrate-collection-btn').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline');
+      });
+      btn.classList.remove('btn-outline');
+      btn.classList.add('btn-primary');
+    });
+  });
+
+  migrateDryRunBtn.addEventListener('click', () => runMigration(true));
+  migrateRunBtn.addEventListener('click', () => runMigration(false));
 </script>
 </AdminLayout>

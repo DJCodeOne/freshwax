@@ -87,7 +87,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     }
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[admin/giftcards] Email send error:', error);
     return false;
   }
@@ -266,7 +266,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[admin/giftcards] GET Error:', error);
     return ApiErrors.serverError('Failed to fetch gift card data');
   }
@@ -571,7 +571,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[admin/giftcards] POST Error:', error);
     return ApiErrors.serverError('Failed to process request');
   }

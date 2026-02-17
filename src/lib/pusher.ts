@@ -215,7 +215,7 @@ export async function triggerPusher(channel: string, event: string, data: any, e
 
     console.log(`[Pusher] Broadcast ${event} to ${channel}`);
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Pusher] Error:', error);
     return false;
   }

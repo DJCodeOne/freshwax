@@ -69,7 +69,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[event-requests] GET error:', error);
     return ApiErrors.serverError('Failed to fetch event requests');
   }
@@ -238,7 +238,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[event-requests] POST error:', error);
     return ApiErrors.serverError('Failed to process request');
   }

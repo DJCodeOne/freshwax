@@ -49,7 +49,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     return redirectToImage(imageUrl);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/thumbnail] Error:', error);
     // Return default image on error
     return redirectToImage('/og-image.webp');

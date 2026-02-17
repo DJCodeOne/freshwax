@@ -391,7 +391,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('Invalid action');
     }
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/react] Error:', error);
     return ApiErrors.serverError('Failed to process reaction');
   }
@@ -434,7 +434,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  try {
       userRating
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/react] GET Error:', error);
     return ApiErrors.serverError('Failed to get reactions');
   }

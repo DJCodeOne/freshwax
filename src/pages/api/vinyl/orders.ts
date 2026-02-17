@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[vinyl/orders GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch orders');
   }
@@ -207,7 +207,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
         return ApiErrors.badRequest('Invalid action');
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[vinyl/orders POST] Error:', error);
     return ApiErrors.serverError('Server error');
   }

@@ -562,7 +562,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       coverUrl: artworkUrl
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Inner error:', error);
     return errorResponse('Processing failed');
   }

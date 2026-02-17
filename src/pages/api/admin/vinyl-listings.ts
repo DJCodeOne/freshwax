@@ -83,7 +83,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[admin/vinyl-listings GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch listings');
   }
@@ -162,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[admin/vinyl-listings POST] Error:', error);
     return ApiErrors.serverError('Server error');
   }

@@ -52,7 +52,7 @@ export function initPlaylistModal() {
             return data.duration;
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn('[PlaylistModal] Could not fetch duration:', error);
       }
     }
@@ -1001,7 +1001,7 @@ export function initPlaylistModal() {
       } else {
         listContainer.innerHTML = '<div class="recently-played-empty">No tracks played yet</div>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('[PlaylistModal] Could not fetch recently played:', error);
       // Fallback to local history if server fails
       const localHistory = playlistManager?.getPlayHistory() || [];

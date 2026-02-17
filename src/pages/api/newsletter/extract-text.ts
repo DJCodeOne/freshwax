@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[extract-text] Error:', error);
     return ApiErrors.serverError('Failed to process file. Try copy-pasting content manually.');
   }
@@ -175,7 +175,7 @@ async function extractTextFromDOCX(data: Uint8Array): Promise<string> {
     
     return result;
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[extractTextFromDOCX] Error:', error);
     return '';
   }

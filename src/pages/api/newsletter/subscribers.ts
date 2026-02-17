@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Get subscribers error:', error);
     return ApiErrors.serverError('Failed to fetch subscribers');
   }
@@ -102,7 +102,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Add subscriber error:', error);
     return ApiErrors.serverError('Failed to add subscriber');
   }
@@ -130,7 +130,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Delete subscriber error:', error);
     return ApiErrors.serverError('Failed to delete subscriber');
   }
@@ -165,7 +165,7 @@ export const PATCH: APIRoute = async ({ request, cookies, locals }) => {  try {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Update subscriber error:', error);
     return ApiErrors.serverError('Failed to update subscriber');
   }

@@ -21,7 +21,7 @@ async function getSettings() {
         allowBypassRequests: settings?.livestream?.allowBypassRequests ?? DEFAULT_REQUIREMENTS.allowBypassRequests
       };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error loading settings:', error);
   }
   return DEFAULT_REQUIREMENTS;

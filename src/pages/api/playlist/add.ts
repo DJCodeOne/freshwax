@@ -1,10 +1,16 @@
 // src/pages/api/playlist/add.ts
 // Add URL to user's playlist - requires authentication
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
 import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const PlaylistAddSchema = z.object({
+  url: z.string().min(1).max(2000),
+}).passthrough();
 
 export const prerender = false;
 
@@ -49,13 +55,19 @@ async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbn
       title: data.title || undefined,
       thumbnail: data.thumbnail_url || undefined
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('[playlist/add] Failed to fetch metadata:', error);
     return {};
   }
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`playlist-add:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   try {
@@ -65,15 +77,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
-    const body = await parseJsonBody<{ url: string }>(request);
-
-    if (!body?.url) {
-      return ApiErrors.badRequest('URL required');
+    const rawBody = await request.json();
+    const parseResult = PlaylistAddSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
 
     // Use authenticated user's ID - ignore any userId in body
     const userId = authenticatedUserId;
-    const { url } = body;
+    const { url } = parseResult.data;
 
     // Sanitize and parse URL
     const sanitizedUrl = sanitizeUrl(url);

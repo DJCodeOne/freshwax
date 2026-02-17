@@ -176,7 +176,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[sync-vinyl-to-d1] Error:', error);
     return ApiErrors.serverError('Migration failed');
   }

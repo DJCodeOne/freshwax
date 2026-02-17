@@ -57,7 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/balance] Error:', error);
     return ApiErrors.serverError('Failed to get balance');
   }
@@ -157,7 +157,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.conflict('Could not apply credit due to concurrent access. Please try again.');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/balance] Error applying credit:', error);
     return ApiErrors.serverError('Failed to apply credit');
   }

@@ -129,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: `Subscription extended by ${days} days`
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[extend-subscription] Error:', error);
     return ApiErrors.serverError('Failed to extend subscription');
   }

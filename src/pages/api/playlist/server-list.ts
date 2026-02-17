@@ -48,7 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         'Cache-Control': 'private, max-age=300'
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     return errorResponse('Playlist server error', 502);
   }
 };

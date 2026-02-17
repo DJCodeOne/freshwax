@@ -10,6 +10,7 @@ import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
 import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -145,6 +146,12 @@ async function processReleaseArtwork(
 const MAX_COMPLETE_UPLOAD_BODY_SIZE = 1 * 1024 * 1024;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`complete-upload:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Reject oversized JSON bodies before reading into memory
   const contentLength = parseInt(request.headers.get('Content-Length') || '0');
   if (contentLength > MAX_COMPLETE_UPLOAD_BODY_SIZE) {
@@ -292,7 +299,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Failed to complete upload:', error);
     return ApiErrors.serverError('Failed to complete upload');
   }

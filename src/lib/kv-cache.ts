@@ -42,7 +42,7 @@ export async function kvGet<T>(key: string, options: CacheOptions = {}): Promise
     }
 
     return null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[KVCache] Get error:', error);
     return null;
   }
@@ -64,7 +64,7 @@ export async function kvSet(key: string, value: any, options: CacheOptions = {})
     await kvNamespace.put(fullKey, JSON.stringify(value), {
       expirationTtl: ttl
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[KVCache] Set error:', error);
   }
 }
@@ -80,7 +80,7 @@ export async function kvDelete(key: string, options: CacheOptions = {}): Promise
   try {
     const fullKey = options.prefix ? `${options.prefix}:${key}` : key;
     await kvNamespace.delete(fullKey);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[KVCache] Delete error:', error);
   }
 }

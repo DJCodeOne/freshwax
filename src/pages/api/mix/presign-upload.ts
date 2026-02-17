@@ -2,11 +2,23 @@
 // Generate presigned URLs for DJ mix uploads (for large files that exceed Worker limits)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+
+const ALLOWED_AUDIO_CONTENT_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'] as const;
+
+const PresignUploadSchema = z.object({
+  fileName: z.string().min(1).max(500),
+  contentType: z.string().min(1).max(100),
+  fileSize: z.number().positive().nullish(),
+  mixId: z.string().max(500).nullish(),
+  artworkFileName: z.string().max(500).nullish(),
+  artworkContentType: z.string().max(100).nullish(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -43,11 +55,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const { fileName, contentType, fileSize, mixId, artworkFileName, artworkContentType } = await request.json();
-
-    if (!fileName || !contentType) {
-      return ApiErrors.badRequest('fileName and contentType are required');
+    const rawBody = await request.json();
+    const parseResult = PresignUploadSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { fileName, contentType, fileSize, mixId, artworkFileName, artworkContentType } = parseResult.data;
 
     // Validate file size (500MB max for large file upload path)
     const MAX_LARGE_FILE_SIZE = 500 * 1024 * 1024; // 500MB
@@ -139,7 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Mix Presign] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

@@ -391,7 +391,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       return ApiErrors.serverError(result.error || 'Failed to create order');
     }
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[complete-free-order] Error:', errorMessage);
 

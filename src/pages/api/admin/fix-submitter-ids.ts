@@ -266,7 +266,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[FixSubmitterIds] Error:', error);
     return ApiErrors.serverError('Migration failed');
   }

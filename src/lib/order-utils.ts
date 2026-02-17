@@ -1538,21 +1538,19 @@ export async function sendOrderConfirmationEmail(
 ): Promise<void> {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
-  console.log('[sendEmail] Attempting to send confirmation email');
-  console.log('[sendEmail]   - RESEND_API_KEY exists:', !!RESEND_API_KEY);
-  console.log('[sendEmail]   - Customer email:', order.customer?.email || 'MISSING');
+  // Attempting to send confirmation email
 
   if (!RESEND_API_KEY || !order.customer?.email) {
-    console.log('[sendEmail] ⚠️ Skipping email - no API key or no customer email');
+    console.warn('[sendEmail] Skipping email - no API key or no customer email');
     return;
   }
 
   try {
-    console.log('[sendEmail] Sending email to:', order.customer.email);
+    // Sending confirmation email
     const shortOrderNumber = getShortOrderNumber(orderNumber);
     const emailHtml = buildOrderConfirmationEmail(orderId, shortOrderNumber, order);
 
-    console.log('[sendEmail] Email HTML length:', emailHtml.length);
+    // Email HTML generated
 
     const result = await sendResendEmail({
       apiKey: RESEND_API_KEY,
@@ -1566,7 +1564,7 @@ export async function sendOrderConfirmationEmail(
     });
 
     if (result.success) {
-      console.log('[sendEmail] Email sent! ID:', result.messageId);
+      // Email sent successfully
     } else {
       console.error('[sendEmail] Email failed:', result.error);
     }
@@ -1761,23 +1759,13 @@ export interface CreateOrderResult {
 }
 
 export async function createOrder(params: CreateOrderParams): Promise<CreateOrderResult> {
-  console.log('[createOrder] ========== CREATE ORDER CALLED ==========');
   const { orderData, env, idToken } = params;
   const now = new Date().toISOString();
   const orderNumber = generateOrderNumber();
 
-  console.log('[createOrder] Order number:', orderNumber);
-  console.log('[createOrder] Customer:', orderData.customer?.email);
-  console.log('[createOrder] Items count:', orderData.items?.length || 0);
-  console.log('[createOrder] Total:', orderData.totals?.total);
-  console.log('[createOrder] env available:', !!env);
-  console.log('[createOrder] idToken available:', !!idToken);
-
   try {
     // Process items with download URLs
-    console.log('[createOrder] Processing items with downloads...');
     const itemsWithDownloads = await processItemsWithDownloads(orderData.items);
-    console.log('[createOrder] Items processed:', itemsWithDownloads.length);
 
     // Check for pre-orders
     const hasPreOrderItems = itemsWithDownloads.some((item: any) => item.isPreOrder === true);
@@ -1826,14 +1814,8 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     };
 
     // Save to Firebase
-    console.log('[createOrder] Saving order to Firebase...');
-    console.log('[createOrder] Order data keys:', Object.keys(order).join(', '));
-
     const orderRef = await addDocument('orders', order, idToken);
-
-    console.log('[createOrder] ✅ Order saved to Firebase');
-    console.log('[createOrder] Order ID:', orderRef.id);
-    console.log('[createOrder] Order Number:', orderNumber);
+    console.log('[createOrder] Order created:', orderNumber, orderRef.id);
 
     // Update stock for merch items (includes D1 sync)
     await updateMerchStock(order.items, orderNumber, orderRef.id, idToken, env);
@@ -1853,15 +1835,11 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     );
 
     // Send confirmation email
-    console.log('[createOrder] Sending confirmation email...');
-    console.log('[createOrder]   - RESEND_API_KEY exists:', !!(env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY));
     await sendOrderConfirmationEmail(order, orderRef.id, orderNumber, env);
-    console.log('[createOrder] ✓ Confirmation email sent');
 
     // Send vinyl fulfillment email if applicable
     const vinylItems = order.items.filter((item: any) => item.type === 'vinyl');
     if (vinylItems.length > 0) {
-      console.log('[createOrder] Sending vinyl fulfillment email...');
       await sendVinylFulfillmentEmail(order, orderRef.id, orderNumber, vinylItems, env);
     }
 
@@ -1870,30 +1848,26 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
       item.type === 'track' || item.type === 'digital' || item.type === 'release'
     );
     if (digitalItems.length > 0) {
-      console.log('[createOrder] Sending digital sale emails for', digitalItems.length, 'items');
       await sendDigitalSaleEmails(order, orderNumber, digitalItems, env);
     }
 
     // Send merch sale emails
     const merchItems = order.items.filter((item: any) => item.type === 'merch');
     if (merchItems.length > 0) {
-      console.log('[createOrder] Sending merch sale emails for', merchItems.length, 'items');
       await sendMerchSaleEmails(order, orderNumber, merchItems, env);
     }
 
     // Update customer order count
     if (orderData.customer.userId) {
-      console.log('[createOrder] Updating customer order count...');
       await updateCustomerOrderCount(orderData.customer.userId);
     }
 
-    console.log('[createOrder] ========== ORDER CREATION COMPLETE ==========');
     return {
       success: true,
       orderId: orderRef.id,
       orderNumber
     };
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[createOrder] ❌ ERROR:', errorMessage);
     console.error('[createOrder] Stack:', error instanceof Error ? error.stack : 'no stack');

@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');
   }
 };

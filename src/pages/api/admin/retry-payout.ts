@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Transfer failed');
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[retry-payout] Error:', error);
     return ApiErrors.serverError('Failed to retry payout');
   }

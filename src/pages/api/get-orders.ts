@@ -199,7 +199,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[get-orders] Error:', error);
     return ApiErrors.serverError('Failed to fetch orders');
   }

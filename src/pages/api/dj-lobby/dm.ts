@@ -3,8 +3,19 @@
 // Private messages between DJs in the lobby
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const DmSchema = z.object({
+  senderId: z.string().min(1).max(500),
+  senderName: z.string().max(200).nullish(),
+  receiverId: z.string().min(1).max(500),
+  receiverName: z.string().max(200).nullish(),
+  text: z.string().min(1).max(2000),
+  senderAvatar: z.string().max(2000).nullish(),
+}).passthrough();
 
 // Simple MD5 implementation for Cloudflare Workers
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -218,7 +229,7 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
     }
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Pusher] Error:', error);
     return false;
   }
@@ -231,6 +242,12 @@ function getDmChannelId(uid1: string, uid2: string): string {
 
 // GET: Get DM conversation
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`dm-get:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
   initFirebaseEnv({
@@ -306,7 +323,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       channelId
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/dm] GET Error:', error);
     return ApiErrors.serverError('Failed to get messages');
   }
@@ -314,6 +331,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Send a DM
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitPost = checkRateLimit(`dm-post:${clientId}`, RateLimiters.standard);
+  if (!rateLimitPost.allowed) {
+    return rateLimitResponse(rateLimitPost.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
   initFirebaseEnv({
@@ -322,12 +345,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const data = await request.json();
-    const { senderId, senderName, receiverId, receiverName, text, senderAvatar } = data;
-
-    if (!senderId || !receiverId || !text?.trim()) {
-      return ApiErrors.badRequest('Sender ID, receiver ID, and message text required');
+    const rawBody = await request.json();
+    const parseResult = DmSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { senderId, senderName, receiverId, receiverName, text, senderAvatar } = parseResult.data;
 
     // SECURITY: Verify the requesting user owns this senderId
     const authHeader = request.headers.get('Authorization');
@@ -399,7 +422,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/dm] POST Error:', error);
     return ApiErrors.serverError('Failed to send message');
   }
@@ -407,6 +430,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Delete conversation or clear messages
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitDelete = checkRateLimit(`dm-delete:${clientId}`, RateLimiters.standard);
+  if (!rateLimitDelete.allowed) {
+    return rateLimitResponse(rateLimitDelete.retryAfter!);
+  }
+
   // Initialize Firebase for Cloudflare runtime
   const env = locals.runtime.env;
   initFirebaseEnv({
@@ -461,7 +490,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       message: 'Conversation deleted'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/dm] DELETE Error:', error);
     return ApiErrors.serverError('Failed to delete conversation');
   }

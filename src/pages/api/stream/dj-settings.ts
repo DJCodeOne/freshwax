@@ -1,9 +1,19 @@
 // src/pages/api/stream/dj-settings.ts
 // Admin endpoint to add/update DJ settings and grant streaming access
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/firebase-service-account';
 import { ApiErrors } from '../../../lib/api-utils';
+
+const DjSettingsSchema = z.object({
+  userId: z.string().max(500).nullish(),
+  email: z.string().max(500).nullish(),
+  djName: z.string().max(200).nullish(),
+  twitchChannel: z.string().max(200).nullish(),
+  isApproved: z.boolean().nullish(),
+  adminKey: z.string().min(1).max(500),
+}).passthrough();
 
 export const prerender = false;
 
@@ -79,8 +89,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const data = await request.json();
-    const { userId: providedUserId, email: providedEmail, djName, twitchChannel, isApproved, adminKey } = data;
+    const rawBody = await request.json();
+    const parseResult = DjSettingsSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { userId: providedUserId, email: providedEmail, djName, twitchChannel, isApproved, adminKey } = parseResult.data;
 
     // Simple admin key check
     if (adminKey !== getAdminKey(locals)) {

@@ -72,7 +72,7 @@ export async function sendPayoutCompletedEmail(
 
     return result;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Payout Email] Error sending payout completed email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
@@ -152,7 +152,7 @@ export async function sendRefundNotificationEmail(
 
     return result;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Payout Email] Error sending refund notification email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }

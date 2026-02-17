@@ -312,7 +312,7 @@ export async function sendGiftCardEmail(
     });
 
     return result.success;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcard] Email send error:', error);
     return false;
   }
@@ -477,7 +477,7 @@ export async function createGiftCardAfterPayment(
       emailSent
     };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcard] Error creating gift card:', error);
     return {
       success: false,

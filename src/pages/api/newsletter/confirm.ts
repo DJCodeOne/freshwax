@@ -65,7 +65,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
     return redirect('/newsletter/?confirmed=success');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Confirm error:', error);
     return redirect('/newsletter/?error=server-error');
   }

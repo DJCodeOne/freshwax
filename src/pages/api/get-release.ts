@@ -103,7 +103,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[get-release] Error:', error);
     return ApiErrors.serverError('Failed to fetch release');
   }

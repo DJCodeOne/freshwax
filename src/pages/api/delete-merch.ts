@@ -206,7 +206,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[delete-merch] Error:', error);
 
     return ApiErrors.serverError('Failed to delete product');

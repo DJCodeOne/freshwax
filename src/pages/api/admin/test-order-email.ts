@@ -169,7 +169,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[test-order-email] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

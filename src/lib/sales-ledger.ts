@@ -191,7 +191,7 @@ export async function recordSale(params: {
     console.log(`[sales-ledger] Recorded sale: ${params.orderNumber} - £${params.grossTotal.toFixed(2)}`);
 
     return { success: true, ledgerId };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[sales-ledger] Error recording sale:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
@@ -269,7 +269,7 @@ export async function getLedgerEntries(options: {
 
     console.log(`[sales-ledger] Firebase fallback read: ${filtered.length} entries`);
     return filtered as LedgerEntry[];
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[sales-ledger] Error fetching entries:', error);
     return [];
   }
@@ -467,7 +467,7 @@ export async function recordMultiSellerSale(params: {
     }
 
     return { success: true, ledgerIds };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[sales-ledger] Error recording multi-seller sale:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }

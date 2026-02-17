@@ -374,7 +374,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       checkoutUrl: session.url
     }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Stripe] Error:', errorMessage);
     // Release any reservation made before the error

@@ -490,7 +490,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[upload-merch] Error:', error);
 
     return ApiErrors.serverError('Failed to upload product');

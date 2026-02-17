@@ -196,7 +196,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[vinyl/public GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch data');
   }

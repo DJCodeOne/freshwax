@@ -196,7 +196,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Send error:', error);
     return ApiErrors.serverError('Failed to send newsletter');
   }

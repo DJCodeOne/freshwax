@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       deletedIds: toDelete
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[sync-merch-to-d1] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

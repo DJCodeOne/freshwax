@@ -499,7 +499,7 @@ export class EmbedPlayerManager {
       } else {
         console.warn('[EmbedPlayerManager] No player available to pause');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] Pause error:', error);
     }
   }
@@ -520,7 +520,7 @@ export class EmbedPlayerManager {
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
         this.directVideo.volume = normalizedVolume / 100;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] Volume error:', error);
     }
   }
@@ -545,7 +545,7 @@ export class EmbedPlayerManager {
         // HTML5 video: currentTime in seconds
         this.directVideo.currentTime = position;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] Seek error:', error);
     }
   }
@@ -568,7 +568,7 @@ export class EmbedPlayerManager {
       } else if (this.currentPlatform === 'direct' && this.directVideo) {
         return this.directVideo.currentTime || 0;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] GetCurrentTime error:', error);
     }
     return 0;
@@ -597,7 +597,7 @@ export class EmbedPlayerManager {
         }
         return duration;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] GetDuration error:', error);
     }
     return 0;
@@ -678,7 +678,7 @@ export class EmbedPlayerManager {
       }
       // For Vimeo and SoundCloud, we'd need async calls - return false as fallback
       return false;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[EmbedPlayerManager] isActuallyPlaying error:', error);
       return false;
     }

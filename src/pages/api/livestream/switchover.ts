@@ -163,7 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       headers: { 'Content-Type': 'application/json' } 
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/switchover] Error:', error);
     return ApiErrors.serverError('Switchover check failed');
   }
@@ -207,7 +207,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       headers: { 'Content-Type': 'application/json' } 
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/switchover] GET Error:', error);
     return ApiErrors.serverError('Failed to get queue status');
   }

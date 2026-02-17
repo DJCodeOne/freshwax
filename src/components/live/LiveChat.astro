@@ -109,9 +109,8 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
   // AbortController for cleaning up event listeners on View Transitions
   const liveChatCleanupController = new AbortController();
 
-  // Send GIF using existing globals from live-stream.js
+  // Send GIF using existing globals from live-stream.js or dj-lobby
   async function sendGifToChat(giphyUrl, giphyId) {
-    // Use existing globals set by live-stream.js
     const streamId = window.currentStreamId;
     const auth = window.firebaseAuth;
     const user = auth?.currentUser;
@@ -133,23 +132,45 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
       return;
     }
 
-    try {
+    const userName = window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'User';
+    const userAvatar = window.currentUserInfo?.avatar || user.photoURL || null;
+
+    async function doSendGif(targetStreamId) {
       const chatHeaders = { 'Content-Type': 'application/json' };
       try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
-      const response = await fetch('/api/livestream/chat/', {
+      return fetch('/api/livestream/chat/', {
         method: 'POST',
         headers: chatHeaders,
         body: JSON.stringify({
-          streamId: streamId,
+          streamId: targetStreamId,
           userId: user.uid,
-          userName: window.currentUserInfo?.name || user.displayName || user.email?.split('@')[0] || 'User',
+          userName,
+          userAvatar,
+          isPro: window.currentUserInfo?.isPro || false,
+          badge: window.currentUserInfo?.badge || 'crown',
           message: '[GIF]',
           type: 'giphy',
           giphyUrl,
           giphyId
         })
       });
-      if (!response.ok) { console.error('[GIF] Server error:', response.status); }
+    }
+
+    try {
+      const response = await doSendGif(streamId);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        console.error('[GIF] Server error:', response.status, err);
+        // Auto-fallback to playlist-global if stream is not live
+        if (err.error === 'Stream is not live' && streamId !== 'playlist-global') {
+          console.log('[GIF] Stream ended, retrying with playlist-global');
+          window.currentStreamId = 'playlist-global';
+          const retryResponse = await doSendGif('playlist-global');
+          if (!retryResponse.ok) {
+            console.error('[GIF] Retry also failed:', retryResponse.status);
+          }
+        }
+      }
     } catch (error) {
       console.error('[GIF] Error sending:', error);
     }
@@ -465,8 +486,16 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
     documentClickListenerSet = false;
   }, { once: true });
 
-  // astro:page-load fires on both initial load and View Transitions
+  // astro:page-load fires on pages with ViewTransitions (Layout-based pages)
   document.addEventListener('astro:page-load', () => { init(); initOnlineUsers(); });
+  // DOMContentLoaded fires on standalone pages without ViewTransitions (e.g. dj-lobby)
+  // The double-init guard (emojiBtn.dataset.bound) prevents duplicate binding
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => { init(); initOnlineUsers(); });
+  } else {
+    init();
+    initOnlineUsers();
+  }
 })();
 </script>
 

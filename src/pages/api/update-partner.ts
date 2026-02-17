@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 import { ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -28,6 +29,12 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-partner:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     // Get runtime env
     const env = locals.runtime.env || {};
@@ -98,7 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating partner:', error);
     return ApiErrors.serverError('Failed to update profile');
   }

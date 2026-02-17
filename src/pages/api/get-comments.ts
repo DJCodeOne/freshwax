@@ -95,7 +95,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[get-comments] Error:', error);
     return ApiErrors.serverError('Failed to fetch comments');
   }

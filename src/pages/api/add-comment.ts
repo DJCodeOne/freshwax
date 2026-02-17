@@ -157,7 +157,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } 
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[add-comment] Error:', error);
     return ApiErrors.serverError('Failed to add comment');
   }

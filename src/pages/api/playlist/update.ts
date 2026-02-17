@@ -1,9 +1,15 @@
 // src/pages/api/playlist/update.ts
 // Update playlist state (currentIndex, isPlaying, etc.)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
+
+const PlaylistUpdateSchema = z.object({
+  currentIndex: z.number().int().min(0).nullish(),
+  isPlaying: z.boolean().nullish(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -19,12 +25,12 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     }
 
     // Get update params from body (safe since userId comes from token)
-    const body = await parseJsonBody<{
-      currentIndex?: number;
-      isPlaying?: boolean;
-    }>(request);
-
-    const { currentIndex, isPlaying } = body || {};
+    const rawBody = await request.json();
+    const parseResult = PlaylistUpdateSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { currentIndex, isPlaying } = parseResult.data;
 
     // Get current playlist to validate
     const existingPlaylist = await getDocument('userPlaylists', userId) as UserPlaylist | null;

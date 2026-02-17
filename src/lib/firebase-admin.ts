@@ -28,7 +28,6 @@ async function ensureInitializedAsync(): Promise<void> {
 
   // Skip during build time to prevent credential errors
   if (isBuildTime()) {
-    console.log('[firebase-admin] Skipping initialization during build');
     return;
   }
 
@@ -50,15 +49,11 @@ async function ensureInitializedAsync(): Promise<void> {
   privateKey = privateKey.replace(/\\n/g, '\n');
 
   try {
-    console.log('[firebase-admin] Dynamically importing firebase-admin...');
-
     // Dynamic imports to catch any import-time errors
     const [appModule, firestoreModule] = await Promise.all([
       import('firebase-admin/app'),
       import('firebase-admin/firestore')
     ]);
-
-    console.log('[firebase-admin] Imports successful, checking existing apps...');
 
     const { initializeApp, getApps, cert } = appModule;
     const { getFirestore, FieldValue, Timestamp } = firestoreModule;
@@ -67,26 +62,20 @@ async function ensureInitializedAsync(): Promise<void> {
     _Timestamp = Timestamp;
 
     if (getApps().length) {
-      console.log('[firebase-admin] Using existing app');
       _app = getApps()[0];
       _db = getFirestore();
       return;
     }
 
-    console.log('[firebase-admin] Creating credential...');
     const credential = cert({
       projectId,
       clientEmail,
       privateKey,
     });
 
-    console.log('[firebase-admin] Initializing app...');
     _app = initializeApp({ credential });
 
-    console.log('[firebase-admin] Getting Firestore...');
     _db = getFirestore();
-
-    console.log('[firebase-admin] Successfully initialized');
   } catch (error: unknown) {
     _initError = error instanceof Error ? error.message : 'Unknown error';
     console.error('[firebase-admin] Failed to initialize:', {

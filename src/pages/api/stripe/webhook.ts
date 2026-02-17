@@ -75,7 +75,7 @@ async function verifyStripeSignature(
       .join('');
 
     return expectedSignature === v1Signature;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Stripe Webhook] Signature verification error:', error);
     return false;
   }
@@ -212,7 +212,7 @@ async function sendPendingEarningsEmail(
     console.debug('[Stripe Webhook] Pending earnings email sent');
     return { success: true, messageId: result.id };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Stripe Webhook] Error sending pending earnings email:', error);
     return { success: false, error: 'Unknown error' };
   }
@@ -364,7 +364,7 @@ async function sendPayoutCompletedEmail(
     console.debug('[Stripe Webhook] Payout completed email sent');
     return { success: true, messageId: result.id };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Stripe Webhook] Error sending payout completed email:', error);
     return { success: false, error: 'Unknown error' };
   }
@@ -526,7 +526,7 @@ async function sendRefundNotificationEmail(
     console.debug('[Stripe Webhook] Refund notification email sent');
     return { success: true, messageId: result.id };
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Stripe Webhook] Error sending refund notification email:', error);
     return { success: false, error: 'Unknown error' };
   }
@@ -534,7 +534,6 @@ async function sendRefundNotificationEmail(
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  console.log('[Stripe Webhook] Webhook request received');
 
   try {
     const env = locals.runtime.env;
@@ -616,12 +615,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle checkout.session.completed event
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
-      console.log('[Stripe Webhook] Checkout session completed:', session.id);
-      console.debug('[Stripe Webhook] Session details - payment_status:', session.payment_status, 'mode:', session.mode, 'amount:', session.amount_total, session.currency);
+      // Session details available in event data for debugging if needed
 
       // Handle Plus subscription
       if (session.mode === 'subscription') {
-        console.log('[Stripe Webhook] Processing Plus subscription...');
+        // Process Plus subscription
 
         // IDEMPOTENCY CHECK: Prevent duplicate processing of the same subscription session
         const metadata = session.metadata || {};
@@ -807,7 +805,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // Check if this is a Plus subscription payment (promo)
         if (metadata.type === 'plus_subscription') {
-          console.log('[Stripe Webhook] Processing Plus one-off payment (promo)...');
+          // Process Plus one-off payment (promo)
 
           const userId = metadata.userId;
           const email = session.customer_email || metadata.email;
@@ -968,7 +966,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Handle gift card purchases
       if (metadata.type === 'giftcard') {
-        console.log('[Stripe Webhook] Processing gift card purchase...');
+        // Processing gift card purchase
 
         const paymentIntentId = session.payment_intent;
 
@@ -1039,7 +1037,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Uses throwOnError=true so Firebase outages return 500 (Stripe retries) instead of creating duplicates
       const paymentIntentId = session.payment_intent;
       if (paymentIntentId) {
-        console.log('[Stripe Webhook] Checking for existing order with paymentIntentId:', paymentIntentId);
+        // Check for existing order (idempotency)
         try {
           const existingOrders = await queryCollection('orders', {
             filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
@@ -1047,9 +1045,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, true);
 
           if (existingOrders && existingOrders.length > 0) {
-            console.log('[Stripe Webhook] Order already exists for this payment intent:', existingOrders[0].id);
-            console.log('[Stripe Webhook] Order number:', existingOrders[0].orderNumber);
-            console.log('[Stripe Webhook] Skipping duplicate order creation');
+            // Order already processed - skip duplicate
             return new Response(JSON.stringify({
               received: true,
               message: 'Order already exists',
@@ -1059,7 +1055,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               headers: { 'Content-Type': 'application/json' }
             });
           }
-          console.log('[Stripe Webhook] No existing order found - proceeding with creation');
+          // No existing order - proceed with creation
         } catch (idempotencyErr) {
           console.error('[Stripe Webhook] Idempotency check failed (Firebase unreachable):', idempotencyErr);
           // Return 500 so Stripe retries later when Firebase is back up
@@ -1073,8 +1069,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      console.log('[Stripe Webhook] 📦 Creating order...');
-
       // Parse items from metadata or retrieve from pending checkout
       let items: any[] = [];
 
@@ -1085,7 +1079,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (metadata.items_json) {
         try {
           items = JSON.parse(metadata.items_json);
-          console.log('[Stripe Webhook] ✓ Parsed', items.length, 'items from metadata');
         } catch (e) {
           console.error('[Stripe Webhook] ❌ Error parsing items_json:', e);
           console.error('[Stripe Webhook] items_json value:', metadata.items_json?.substring(0, 200));
@@ -1094,28 +1087,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // If no items in metadata, try pending checkout
       if (items.length === 0 && metadata.pending_checkout_id) {
-        console.log('[Stripe Webhook] Retrieving items from pending checkout:', metadata.pending_checkout_id);
         try {
           const pendingCheckout = await getDocument('pendingCheckouts', metadata.pending_checkout_id);
           if (pendingCheckout && pendingCheckout.items) {
             items = pendingCheckout.items;
-            console.log('[Stripe Webhook] ✓ Retrieved', items.length, 'items from pending checkout');
 
             // Get artist shipping breakdown for payouts (artist receives their shipping fee)
             if (pendingCheckout.artistShippingBreakdown) {
               artistShippingBreakdown = pendingCheckout.artistShippingBreakdown;
-              console.log('[Stripe Webhook] ✓ Retrieved artist shipping breakdown:', Object.keys(artistShippingBreakdown).length, 'artists');
             }
 
             // Clean up pending checkout
             try {
               await deleteDocument('pendingCheckouts', metadata.pending_checkout_id);
-              console.log('[Stripe Webhook] ✓ Cleaned up pending checkout');
             } catch (cleanupErr) {
-              console.log('[Stripe Webhook] ⚠️ Could not clean up pending checkout:', cleanupErr);
+              // Non-fatal: cleanup can be retried
             }
-          } else {
-            console.log('[Stripe Webhook] ⚠️ Pending checkout not found or has no items');
           }
         } catch (pendingErr) {
           console.error('[Stripe Webhook] ❌ Error retrieving pending checkout:', pendingErr);
@@ -1123,13 +1110,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // If still no items, log warning
-      if (items.length === 0) {
-        console.log('[Stripe Webhook] ⚠️ No items found in metadata or pending checkout');
-      }
-
       // If no items in metadata, try to retrieve from session line items
       if (items.length === 0 && stripeSecretKey) {
-        console.log('[Stripe Webhook] Fetching line items from Stripe API...');
         try {
           const lineItemsResponse = await fetch(
             `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items`,
@@ -1140,11 +1122,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           );
 
-          console.log('[Stripe Webhook] Line items response status:', lineItemsResponse.status);
-
           if (lineItemsResponse.ok) {
             const lineItemsData = await lineItemsResponse.json();
-            console.log('[Stripe Webhook] Line items count:', lineItemsData.data?.length || 0);
             items = lineItemsData.data
               .filter((item: any) => item.description !== 'Processing and platform fees')
               .map((item: any, index: number) => ({
@@ -1157,7 +1136,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 quantity: item.quantity,
                 type: 'digital' // Default type
               }));
-            console.log('[Stripe Webhook] ✓ Mapped', items.length, 'items from Stripe');
           } else {
             const errorText = await lineItemsResponse.text();
             console.error('[Stripe Webhook] ❌ Line items fetch failed:', errorText);
@@ -1165,11 +1143,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } catch (e) {
           console.error('[Stripe Webhook] ❌ Error fetching line items:', e);
         }
-      }
-
-      console.log('[Stripe Webhook] Final items count:', items.length);
-      if (items.length > 0) {
-        console.log('[Stripe Webhook] First item:', JSON.stringify(items[0]));
       }
 
       // Build shipping info from Stripe shipping details
@@ -1184,9 +1157,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           postcode: addr.postal_code || '',
           country: getCountryName(addr.country)
         };
-        console.log('[Stripe Webhook] ✓ Shipping address:', shipping.city, shipping.postcode);
-      } else {
-        console.log('[Stripe Webhook] No shipping details (digital order)');
       }
 
       // P0 FIX: Validate stock BEFORE creating order to prevent overselling
@@ -1221,20 +1191,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             session.currency || 'gbp',
             metadata.items_json || JSON.stringify(items)
           ).run();
-          console.log('[Stripe Webhook] D1 pending_orders row inserted for session:', session.id);
+          // D1 pending record created
         } catch (d1Err) {
           // D1 write failure must not block order creation — log and continue
           console.error('[Stripe Webhook] D1 pending_orders insert failed (non-blocking):', d1Err);
         }
-      }
-
-      console.log('[Stripe Webhook] Calling createOrder with:');
-      console.log('[Stripe Webhook]   - Customer: [REDACTED]');
-      console.log('[Stripe Webhook]   - Items:', items.length);
-      console.log('[Stripe Webhook]   - Total:', session.amount_total / 100);
-      console.log('[Stripe Webhook]   - PaymentIntent:', session.payment_intent);
-      if (stockIssue) {
-        console.log('[Stripe Webhook]   - STOCK ISSUE: Order will be flagged for admin review');
       }
 
       // Create order using shared utility
@@ -1265,7 +1226,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         env
       });
 
-      console.log('[Stripe Webhook] createOrder returned:', result.success ? 'SUCCESS' : 'FAILED', result.orderId || '');
+      // createOrder returned
 
       if (!result.success) {
         console.error('[Stripe Webhook] ❌ ORDER CREATION FAILED');
@@ -1285,9 +1246,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      console.log('[Stripe Webhook] ✅ ORDER CREATED SUCCESSFULLY');
-      console.log('[Stripe Webhook] Order Number:', result.orderNumber);
-      console.log('[Stripe Webhook] Order ID:', result.orderId);
+      console.log('[Stripe Webhook] Order created:', result.orderNumber, result.orderId);
 
       // D1: Mark pending order as completed with Firebase order ID
       if (db) {
@@ -1297,7 +1256,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             SET status = 'completed', firebase_order_id = ?, updated_at = datetime('now')
             WHERE stripe_session_id = ?
           `).bind(result.orderId || '', session.id).run();
-          console.log('[Stripe Webhook] D1 pending_orders updated to completed for session:', session.id);
+          // D1 pending record updated
         } catch (d1Err) {
           console.error('[Stripe Webhook] D1 pending_orders update failed (non-blocking):', d1Err);
         }
@@ -1309,7 +1268,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           const { convertReservation } = await import('../../../lib/order-utils');
           await convertReservation(reservationId);
-          console.log('[Stripe Webhook] Reservation converted:', reservationId);
+          // Reservation converted
         } catch (err) {
           console.error('[Stripe Webhook] Failed to convert reservation:', err);
         }
@@ -1341,7 +1300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
 
-                console.log(`[Stripe Webhook] Item ${item.name}: seller=${submitterId}`);
+                // seller lookup done
               }
             } catch (lookupErr) {
               console.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
@@ -1375,7 +1334,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   }
                 }
 
-                console.log(`[Stripe Webhook] Merch ${item.name}: seller=${submitterId}`);
+                // merch seller lookup done
               }
             } catch (lookupErr) {
               console.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
@@ -1409,7 +1368,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           items: enrichedItems,
           db: env?.DB  // D1 database for dual-write
         });
-        console.log('[Stripe Webhook] ✅ Sale recorded to ledger (D1 + Firebase)');
+        // Sale recorded to ledger
       } catch (ledgerErr) {
         console.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
         // Don't fail the order, ledger is supplementary
@@ -1425,7 +1384,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return sum + ((item.price || 0) * (item.quantity || 1));
         }, 0);
 
-        console.log('[Stripe Webhook] 💰 Processing artist payments...');
+        // Process artist payments
         await processArtistPayments({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
@@ -1438,7 +1397,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         // Process supplier payments for merch items
-        console.log('[Stripe Webhook] 🏭 Processing supplier payments...');
+        // Process supplier payments
         await processSupplierPayments({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
@@ -1450,7 +1409,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         // Process vinyl crate seller payments
-        console.log('[Stripe Webhook] 📦 Processing vinyl crate seller payments...');
+        // Process vinyl crate seller payments
         await processVinylCrateSellerPayments({
           orderId: result.orderId,
           orderNumber: result.orderNumber || '',
@@ -1467,7 +1426,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const appliedCredit = parseFloat(metadata.appliedCredit) || 0;
       const userId = metadata.customer_userId;
       if (appliedCredit > 0 && userId) {
-        console.log('[Stripe Webhook] Deducting applied credit:', appliedCredit, 'from user:', userId);
+        // Deduct applied credit
         try {
           const creditData = await getDocument('userCredits', userId);
           if (creditData && creditData.balance >= appliedCredit) {
@@ -1499,7 +1458,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             await atomicIncrement('users', userId, { creditBalance: -appliedCredit });
             await updateDocument('users', userId, { creditUpdatedAt: now });
 
-            console.log('[Stripe Webhook] Credit deducted atomically, new balance:', newBalance);
+            // Credit deducted
           } else {
             console.warn('[Stripe Webhook] Insufficient credit balance for deduction');
           }
@@ -1508,8 +1467,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Don't fail the order, just log the error
         }
       }
-
-      console.log('[Stripe Webhook] ========== WEBHOOK COMPLETE ==========');
 
       // Log successful order
       logStripeEvent(event.type, event.id, true, {
@@ -1521,21 +1478,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Handle payment_intent.succeeded (backup for session complete)
     if (event.type === 'payment_intent.succeeded') {
-      console.log('[Stripe Webhook] Payment intent succeeded:', event.data.object.id);
       // Order should already be created by checkout.session.completed
     }
 
     // Handle subscription renewal (invoice.payment_succeeded for recurring payments)
     if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object;
-      console.log('[Stripe Webhook] ========== INVOICE PAYMENT SUCCEEDED ==========');
-      console.log('[Stripe Webhook] Invoice ID:', invoice.id);
-      console.log('[Stripe Webhook] Billing reason:', invoice.billing_reason);
-      console.log('[Stripe Webhook] Subscription:', invoice.subscription);
+      // Invoice payment for subscription
 
       // Only process subscription renewals, not initial payments
       if (invoice.billing_reason === 'subscription_cycle' && invoice.subscription) {
-        console.log('[Stripe Webhook] 👑 Processing Plus subscription RENEWAL...');
+        // Process Plus subscription renewal
 
         // IDEMPOTENCY CHECK: Skip if this invoice renewal was already processed
         // Use the invoice ID as a deduplication key by checking lastRenewalInvoiceId on the user
@@ -1570,7 +1523,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               // IDEMPOTENCY CHECK: Skip if this exact invoice renewal was already applied
               const lastRenewalInvoice = userData.fields?.subscription?.mapValue?.fields?.lastRenewalInvoiceId?.stringValue;
               if (lastRenewalInvoice === invoice.id) {
-                console.log('[Stripe Webhook] Renewal already processed for invoice:', invoice.id, 'user:', userId);
+                // Renewal already processed for this invoice
                 return new Response(JSON.stringify({ received: true, message: 'Renewal already processed' }), {
                   status: 200, headers: { 'Content-Type': 'application/json' }
                 });
@@ -1625,8 +1578,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               );
 
               if (updateResponse.ok) {
-                console.log('[Stripe Webhook] ✓ Subscription renewed for:', userId);
-                console.log('[Stripe Webhook] New expiry:', newExpiry.toISOString());
+                console.log('[Stripe Webhook] Subscription renewed:', userId, 'expires:', newExpiry.toISOString());
 
                 // Send renewal confirmation email
                 try {
@@ -1643,7 +1595,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       isRenewal: true
                     })
                   });
-                  console.log('[Stripe Webhook] ✓ Renewal email sent');
+                  // Renewal email sent
                 } catch (emailError) {
                   console.error('[Stripe Webhook] Failed to send renewal email:', emailError);
                 }
@@ -1651,7 +1603,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 console.error('[Stripe Webhook] Failed to update subscription on renewal');
               }
             } else {
-              console.log('[Stripe Webhook] No userId in subscription metadata');
+              // No userId in subscription metadata
             }
           } catch (subError) {
             console.error('[Stripe Webhook] Error processing renewal:', subError);
@@ -1663,8 +1615,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle subscription cancelled/expired
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object;
-      console.log('[Stripe Webhook] ========== SUBSCRIPTION CANCELLED ==========');
-      console.log('[Stripe Webhook] Subscription ID:', subscription.id);
+      // Subscription cancelled
 
       // User's subscription has been cancelled - they'll naturally lose Plus when expiresAt passes
       // The getEffectiveTier() function handles this automatically
@@ -1674,11 +1625,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle dispute created - reverse transfers to recover funds from artists
     if (event.type === 'charge.dispute.created') {
       const dispute = event.data.object;
-      console.log('[Stripe Webhook] ========== DISPUTE CREATED ==========');
-      console.log('[Stripe Webhook] Dispute ID:', dispute.id);
-      console.log('[Stripe Webhook] Charge ID:', dispute.charge);
-      console.log('[Stripe Webhook] Amount:', dispute.amount / 100, dispute.currency?.toUpperCase());
-      console.log('[Stripe Webhook] Reason:', dispute.reason);
+      console.log('[Stripe Webhook] Dispute created:', dispute.id, dispute.reason, dispute.amount / 100);
 
       // IDEMPOTENCY CHECK: Skip if dispute already recorded
       try {
@@ -1687,7 +1634,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           limit: 1
         });
         if (existingDisputes && existingDisputes.length > 0) {
-          console.log('[Stripe Webhook] Dispute already recorded, skipping:', dispute.id);
+          // Dispute already recorded
           return new Response(JSON.stringify({ received: true, message: 'Dispute already processed' }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
           });
@@ -1712,9 +1659,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle dispute closed - track outcome
     if (event.type === 'charge.dispute.closed') {
       const dispute = event.data.object;
-      console.log('[Stripe Webhook] ========== DISPUTE CLOSED ==========');
-      console.log('[Stripe Webhook] Dispute ID:', dispute.id);
-      console.log('[Stripe Webhook] Status:', dispute.status);
+      console.log('[Stripe Webhook] Dispute closed:', dispute.id, dispute.status);
 
       await handleDisputeClosed(dispute, stripeSecretKey);
 
@@ -1735,7 +1680,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           const { releaseReservation } = await import('../../../lib/order-utils');
           await releaseReservation(reservationId);
-          console.log('[Stripe Webhook] Released reservation:', reservationId);
+          // Reservation released
         } catch (err) {
           console.error('[Stripe Webhook] Failed to release reservation:', err);
         }
@@ -1806,10 +1751,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle refund - reverse artist transfers proportionally
     if (event.type === 'charge.refunded') {
       const charge = event.data.object as any;
-      console.log('[Stripe Webhook] ========== REFUND PROCESSED ==========');
-      console.log('[Stripe Webhook] Charge ID:', charge.id);
-      console.log('[Stripe Webhook] Amount refunded:', charge.amount_refunded / 100, charge.currency?.toUpperCase());
-      console.log('[Stripe Webhook] Total amount:', charge.amount / 100, charge.currency?.toUpperCase());
+      console.log('[Stripe Webhook] Refund processed:', charge.id, charge.amount_refunded / 100);
 
       await handleRefund(charge, stripeSecretKey, env);
 
@@ -1825,7 +1767,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[Stripe Webhook] Error:', errorMessage);
 
@@ -1906,7 +1848,7 @@ async function processArtistPayments(params: {
       try {
         artist = await getDocument('artists', artistId);
       } catch (e) {
-        console.log('[Stripe Webhook] Could not find artist:', artistId);
+        // Artist not found
       }
 
       const itemTotal = (item.price || 0) * (item.quantity || 1);
@@ -1939,18 +1881,14 @@ async function processArtistPayments(params: {
         if (artistPayments[artistId] && shippingInfo.amount > 0) {
           artistPayments[artistId].amount += shippingInfo.amount;
           artistPayments[artistId].shippingAmount = shippingInfo.amount;
-          console.log('[Stripe Webhook] Added shipping fee for', shippingInfo.artistName, ':', shippingInfo.amount, 'GBP');
+          // Shipping fee added to artist payment
         }
       }
     }
 
-    console.log('[Stripe Webhook] Artist pending payouts to create:', Object.keys(artistPayments).length);
-
     for (const artistId of Object.keys(artistPayments)) {
       const payment = artistPayments[artistId];
       if (payment.amount <= 0) continue;
-
-      console.log('[Stripe Webhook] Creating pending payout for', payment.artistName, ':', payment.amount.toFixed(2), 'GBP');
 
       const itemAmount = payment.amount - (payment.shippingAmount || 0);
 
@@ -1980,10 +1918,8 @@ async function processArtistPayments(params: {
           updatedAt: new Date().toISOString()
         });
       } catch (e) {
-        console.log('[Stripe Webhook] Could not update artist pending balance');
+        // Non-fatal: artist pending balance update failed
       }
-
-      console.log('[Stripe Webhook] ✓ Pending payout created for', payment.artistName);
     }
 
   } catch (error: unknown) {
@@ -2011,11 +1947,8 @@ async function processSupplierPayments(params: {
     const merchItems = items.filter(item => item.type === 'merch');
 
     if (merchItems.length === 0) {
-      console.log('[Stripe Webhook] No merch items in order - skipping supplier payments');
       return;
     }
-
-    console.log('[Stripe Webhook] Processing', merchItems.length, 'merch items for supplier payments');
 
     // Group items by supplier
     const supplierPayments: Record<string, {
@@ -2044,14 +1977,14 @@ async function processSupplierPayments(params: {
       }
 
       if (!product) {
-        console.log('[Stripe Webhook] Merch product not found:', productId);
+        // Merch product not found
         continue;
       }
 
       // Get supplier ID from product
       const supplierId = product.supplierId;
       if (!supplierId) {
-        console.log('[Stripe Webhook] No supplier ID on merch product:', productId);
+        // No supplier ID on merch product
         continue;
       }
 
@@ -2060,7 +1993,7 @@ async function processSupplierPayments(params: {
       try {
         supplier = await getDocument('merch-suppliers', supplierId);
       } catch (e) {
-        console.log('[Stripe Webhook] Could not find supplier:', supplierId);
+        // Supplier not found
       }
 
       if (!supplier) continue;
@@ -2092,8 +2025,6 @@ async function processSupplierPayments(params: {
       supplierPayments[supplierId].items.push(item.name || item.title || 'Item');
     }
 
-    console.log('[Stripe Webhook] Supplier payments to process:', Object.keys(supplierPayments).length);
-
     // Process each supplier payment
     const supplierPaypalConfig = getPayPalConfig(env);
 
@@ -2102,11 +2033,11 @@ async function processSupplierPayments(params: {
 
       if (payment.amount <= 0) continue;
 
-      console.log('[Stripe Webhook] Processing payment for supplier', payment.supplierName, ':', payment.amount.toFixed(2), 'GBP');
+      // Process supplier payment
 
       // NOTE: Automatic payouts disabled - all supplier payouts are manual for now
       // Always create pending payout for manual processing
-      console.log('[Stripe Webhook] Creating pending payout for supplier', payment.supplierName);
+      // Create pending payout for supplier
 
       await addDocument('pendingSupplierPayouts', {
         supplierId: payment.supplierId,
@@ -2130,7 +2061,7 @@ async function processSupplierPayments(params: {
         pendingBalance: payment.amount,
       });
 
-      console.log('[Stripe Webhook] ✓ Pending supplier payout created for', payment.supplierName);
+      // Pending supplier payout created
     }
 
   } catch (error: unknown) {
@@ -2163,11 +2094,8 @@ async function processVinylCrateSellerPayments(params: {
     );
 
     if (crateItems.length === 0) {
-      console.log('[Stripe Webhook] No vinyl crate items in order - skipping seller payments');
       return;
     }
-
-    console.log('[Stripe Webhook] Processing', crateItems.length, 'vinyl crate items for seller payments');
 
     // Group items by seller
     const sellerPayments: Record<string, {
@@ -2202,7 +2130,7 @@ async function processVinylCrateSellerPayments(params: {
       }
 
       if (!sellerId) {
-        console.log('[Stripe Webhook] No seller ID for crate item:', item.name);
+        // No seller ID for crate item
         continue;
       }
 
@@ -2211,7 +2139,7 @@ async function processVinylCrateSellerPayments(params: {
       try {
         seller = await getDocument('users', sellerId);
       } catch (e) {
-        console.log('[Stripe Webhook] Could not find seller user:', sellerId);
+        // Seller user not found
       }
 
       if (!seller) continue;
@@ -2244,7 +2172,7 @@ async function processVinylCrateSellerPayments(params: {
       sellerPayments[sellerId].items.push(item.name || item.title || 'Vinyl');
     }
 
-    console.log('[Stripe Webhook] Vinyl crate seller payments to process:', Object.keys(sellerPayments).length);
+    // Process vinyl crate seller payments
 
     // Process each seller payment
     const sellerPaypalConfig = getPayPalConfig(env);
@@ -2254,11 +2182,11 @@ async function processVinylCrateSellerPayments(params: {
 
       if (payment.amount <= 0) continue;
 
-      console.log('[Stripe Webhook] Processing payment for seller', payment.sellerName, ':', payment.amount.toFixed(2), 'GBP');
+      // Process seller payment
 
       // NOTE: Automatic payouts disabled - all crate seller payouts are manual for now
       // Always create pending payout for manual processing
-      console.log('[Stripe Webhook] Creating pending payout for crate seller', payment.sellerName);
+      // Create pending payout for crate seller
 
       await addDocument('pendingCrateSellerPayouts', {
         sellerId: payment.sellerId,
@@ -2285,7 +2213,7 @@ async function processVinylCrateSellerPayments(params: {
         });
       }
 
-      console.log('[Stripe Webhook] ✓ Pending crate seller payout created for', payment.sellerName);
+      // Pending crate seller payout created
     }
 
   } catch (error: unknown) {
@@ -2303,7 +2231,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
     const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id;
     const disputeAmount = dispute.amount / 100; // Convert from cents to GBP
 
-    console.log('[Stripe Webhook] Processing dispute for charge:', chargeId);
+    // Process dispute for charge
 
     // Get the charge to find the payment intent and transfer group
     const charge = await stripe.charges.retrieve(chargeId, {
@@ -2336,13 +2264,13 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
         limit: 100
       });
 
-      console.log('[Stripe Webhook] Found', transfers.data.length, 'transfers to potentially reverse');
+      // Found transfers to potentially reverse
 
       // Reverse each transfer to recover funds
       for (const transfer of transfers.data) {
         // Skip if already fully reversed
         if (transfer.reversed) {
-          console.log('[Stripe Webhook] Transfer already reversed:', transfer.id);
+          // Transfer already reversed
           continue;
         }
 
@@ -2368,7 +2296,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
             artistName: transfer.metadata?.artistName
           });
 
-          console.log('[Stripe Webhook] ✓ Reversed transfer:', transfer.id, 'Amount:', reversedAmount);
+          // Transfer reversed
 
           // Update the payout record
           const payouts = await queryCollection('payouts', {
@@ -2426,7 +2354,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
       updatedAt: new Date().toISOString()
     });
 
-    console.log('[Stripe Webhook] ✓ Dispute recorded. Recovered:', totalRecovered, 'GBP from', transfersReversed.length, 'transfers');
+    // Dispute recorded and transfers reversed
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -2456,7 +2384,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
     });
 
     if (disputes.length === 0) {
-      console.log('[Stripe Webhook] Dispute record not found:', dispute.id);
+      console.error('[Stripe Webhook] Dispute record not found:', dispute.id);
       return;
     }
 
@@ -2472,7 +2400,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
       netImpact = disputeRecord.amount - (disputeRecord.amountRecovered || 0);
     } else if (outcome === 'won' && disputeRecord.transfersReversed?.length > 0) {
       // We won - re-transfer to artists since they shouldn't lose money
-      console.log('[Stripe Webhook] Dispute won - re-transferring to artists');
+      // Dispute won - re-transferring to artists
 
       const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
@@ -2482,7 +2410,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
           const artist = await getDocument('artists', reversedTransfer.artistId);
 
           if (!artist?.stripeConnectId || artist.stripeConnectStatus !== 'active') {
-            console.log('[Stripe Webhook] Artist', reversedTransfer.artistId, 'no longer has active Connect - storing as pending');
+            // Artist no longer has active Connect - storing as pending
 
             // Store as pending payout
             await addDocument('pendingPayouts', {
@@ -2558,7 +2486,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
             updatedAt: new Date().toISOString()
           });
 
-          console.log('[Stripe Webhook] ✓ Re-transferred', reversedTransfer.amount, 'GBP to', reversedTransfer.artistName);
+          // Re-transferred to artist
 
         } catch (retransferError: unknown) {
           const retransferMessage = retransferError instanceof Error ? retransferError.message : String(retransferError);
@@ -2596,13 +2524,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
       updatedAt: new Date().toISOString()
     });
 
-    console.log('[Stripe Webhook] ✓ Dispute', dispute.id, 'closed with outcome:', outcome);
-    if (retransfersCreated.length > 0) {
-      console.log('[Stripe Webhook]   Re-transfers created:', retransfersCreated.length);
-    }
-    if (netImpact > 0) {
-      console.log('[Stripe Webhook]   Net platform loss:', netImpact, 'GBP');
-    }
+    // Dispute closed
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -2620,7 +2542,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
       : charge.payment_intent?.id;
 
     if (!paymentIntentId) {
-      console.log('[Stripe Webhook] No payment intent on charge, skipping refund handling');
+      // No payment intent on charge
       return;
     }
 
@@ -2631,7 +2553,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     });
 
     if (orders.length === 0) {
-      console.log('[Stripe Webhook] No order found for payment intent:', paymentIntentId);
+      console.error('[Stripe Webhook] No order found for payment intent:', paymentIntentId);
       return;
     }
 
@@ -2644,9 +2566,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     const refundPercentage = refundedAmount / totalAmount;
     const isFullRefund = refundPercentage >= 0.99; // Allow for rounding
 
-    console.log('[Stripe Webhook] Order:', orderId);
-    console.log('[Stripe Webhook] Refund percentage:', (refundPercentage * 100).toFixed(1) + '%');
-    console.log('[Stripe Webhook] Full refund:', isFullRefund);
+    // Process refund for order
 
     // Check if we've already processed refunds for this charge
     const existingRefunds = await queryCollection('refunds', {
@@ -2664,13 +2584,13 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     const newRefundAmount = refundedAmount - previouslyRefunded;
 
     if (newRefundAmount <= 0) {
-      console.log('[Stripe Webhook] No new refund amount to process');
+      // No new refund amount to process
       return;
     }
 
     const newRefundPercentage = newRefundAmount / totalAmount;
 
-    console.log('[Stripe Webhook] New refund amount:', newRefundAmount, 'GBP');
+    // Refund amount calculated: newRefundAmount GBP
 
     // Find all completed payouts for this order
     const payouts = await queryCollection('payouts', {
@@ -2682,7 +2602,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     });
 
     if (payouts.length === 0) {
-      console.log('[Stripe Webhook] No completed payouts found for order:', orderId);
+      // No completed payouts found - check pending
 
       // Check for pending payouts and cancel them
       const pendingPayouts = await queryCollection('pendingPayouts', {
@@ -2700,7 +2620,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
           refundPercentage: refundPercentage,
           updatedAt: new Date().toISOString()
         });
-        console.log('[Stripe Webhook] Cancelled pending payout:', pending.id);
+        // Cancelled pending payout
       }
 
       // Record the refund even without transfers to reverse
@@ -2721,7 +2641,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
       return;
     }
 
-    console.log('[Stripe Webhook] Found', payouts.length, 'payouts to process');
+    // Processing payouts for transfer reversal
 
     // Reverse transfers proportionally
     let transfersReversed: any[] = [];
@@ -2745,7 +2665,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
         const remainingReversible = transferAmount - alreadyReversed;
 
         if (remainingReversible <= 0) {
-          console.log('[Stripe Webhook] Transfer already fully reversed:', payout.stripeTransferId);
+          // Transfer already fully reversed
           continue;
         }
 
@@ -2776,7 +2696,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
 
         totalReversed += actualReversalAmount;
 
-        console.log('[Stripe Webhook] ✓ Reversed', actualReversalAmount, 'GBP from', payout.artistName);
+        // Transfer reversed successfully
 
         // Update payout record
         const currentReversed = payout.reversedAmount || 0;

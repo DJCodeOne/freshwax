@@ -263,7 +263,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     return jsonResponse(result, 200, 10);
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/status] Error:', error);
     return jsonResponse({
       success: false,

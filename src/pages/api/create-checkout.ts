@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
 import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Zod schema for Plus subscription checkout
 const CreateCheckoutSchema = z.object({
@@ -21,6 +22,12 @@ const CreateCheckoutSchema = z.object({
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`create-checkout:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const env = locals.runtime.env;
     // Verify user authentication
@@ -166,7 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       sessionId: session.id
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[create-checkout] Error:', error);
     return ApiErrors.serverError('Failed to process checkout request');
   }

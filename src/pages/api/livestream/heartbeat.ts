@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request }) => {
         'Cache-Control': 'no-store'
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Heartbeat error:', error);
     return ApiErrors.serverError('Server error');
   }

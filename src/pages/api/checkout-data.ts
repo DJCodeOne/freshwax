@@ -80,7 +80,7 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[checkout-data] GET error:', error);
     return ApiErrors.serverError('Failed to load customer data');
   }
@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[checkout-data] POST error:', error);
     return ApiErrors.serverError('Failed to save customer data');
   }

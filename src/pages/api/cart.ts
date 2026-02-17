@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../lib/firebase-rest';
 import { ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const CartItemSchema = z.object({
   id: z.string().min(1).max(200),
@@ -48,6 +49,12 @@ async function getUserId(request: Request, locals: App.Locals): Promise<string |
 
 // GET /api/cart/ - Retrieve cart from KV
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`cart-get:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const userId = await getUserId(request, locals);
 
   if (!userId) {
@@ -82,7 +89,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Cart API] GET error:', error);
     return ApiErrors.serverError('Failed to retrieve cart');
   }
@@ -90,6 +97,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST /api/cart/ - Save cart to KV
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitPost = checkRateLimit(`cart-post:${clientId}`, RateLimiters.standard);
+  if (!rateLimitPost.allowed) {
+    return rateLimitResponse(rateLimitPost.retryAfter!);
+  }
+
   const userId = await getUserId(request, locals);
 
   if (!userId) {
@@ -139,7 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Cart API] POST error:', error);
     return ApiErrors.serverError('Failed to save cart');
   }
@@ -147,6 +160,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE /api/cart/ - Clear cart from KV
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitDelete = checkRateLimit(`cart-delete:${clientId}`, RateLimiters.standard);
+  if (!rateLimitDelete.allowed) {
+    return rateLimitResponse(rateLimitDelete.retryAfter!);
+  }
+
   const userId = await getUserId(request, locals);
 
   if (!userId) {
@@ -177,7 +196,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Cart API] DELETE error:', error);
     return ApiErrors.serverError('Failed to clear cart');
   }

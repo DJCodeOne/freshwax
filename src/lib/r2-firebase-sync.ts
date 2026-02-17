@@ -309,7 +309,7 @@ export class R2FirebaseSync {
     try {
       fs.rmSync(extractDir, { recursive: true, force: true });
       log.info(`🧹 Cleaned up: ${extractDir}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn(`⚠️ Could not cleanup ${extractDir}:`, error);
     }
   }

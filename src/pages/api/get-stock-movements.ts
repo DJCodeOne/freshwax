@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[get-stock-movements] Error:', error);
 
     return ApiErrors.serverError('Failed to fetch movements');

@@ -158,7 +158,7 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[check-duplicates] Error:', error);
     return ApiErrors.serverError('Failed to check duplicates');
   }

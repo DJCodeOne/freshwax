@@ -169,7 +169,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       messageId: result.id
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[send-approval-email] Error:', error);
     return ApiErrors.serverError('Failed to send approval email');
   }

@@ -137,7 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Please check your email to confirm your subscription.'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Newsletter] Subscribe error:', error);
     return ApiErrors.serverError('Failed to subscribe. Please try again.');
   }

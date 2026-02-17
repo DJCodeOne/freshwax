@@ -64,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error rejecting partner:', error);
     return ApiErrors.serverError('Failed to reject partner');
   }

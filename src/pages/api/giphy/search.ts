@@ -114,7 +114,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[GIPHY Proxy] Error:', error);
     return ApiErrors.serverError('Failed to fetch from GIPHY');
   }

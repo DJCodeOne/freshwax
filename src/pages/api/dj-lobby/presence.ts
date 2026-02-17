@@ -239,7 +239,7 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
     }
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Pusher] Error:', error);
     return false;
   }
@@ -517,7 +517,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       cleaned: staleIds.length
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/presence] DELETE Error:', error);
     return ApiErrors.serverError('Cleanup failed');
   }

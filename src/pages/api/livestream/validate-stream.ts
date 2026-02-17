@@ -11,6 +11,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to initialize services
 function initServices(locals: App.Locals) {
@@ -21,6 +22,12 @@ function initServices(locals: App.Locals) {
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`validate-stream-get:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initServices(locals);
   const url = new URL(request.url);
   const streamKey = url.searchParams.get('key') || url.searchParams.get('name') || '';
@@ -177,7 +184,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' } 
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[validate-stream] Error:', error);
     
     // On error, deny the stream to be safe
@@ -195,6 +202,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 // MediaMTX sends: { user, password, ip, action, path, protocol, id, query }
 // Returns 200 for allowed, non-200 for denied
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitPost = checkRateLimit(`validate-stream-post:${clientId}`, RateLimiters.standard);
+  if (!rateLimitPost.allowed) {
+    return rateLimitResponse(rateLimitPost.retryAfter!);
+  }
+
   initServices(locals);
 
   try {
@@ -343,7 +356,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[validate-stream] Error:', error);
     return new Response(JSON.stringify({
       valid: false,

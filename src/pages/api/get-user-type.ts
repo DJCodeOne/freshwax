@@ -259,7 +259,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         'Cache-Control': 'public, max-age=300, stale-while-revalidate=1800'
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[get-user-type] Error:', error);
     return ApiErrors.serverError('Failed to fetch user type');
   }

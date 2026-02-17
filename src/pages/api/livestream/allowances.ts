@@ -65,7 +65,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[allowances] GET Error:', error);
     return ApiErrors.serverError('Failed to fetch allowances');
   }
@@ -135,7 +135,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const postEnv = 
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[allowances] POST Error:', error);
     return ApiErrors.serverError('Failed to save allowance');
   }
@@ -165,7 +165,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {  const delEnv =
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[allowances] DELETE Error:', error);
     return ApiErrors.serverError('Failed to remove allowance');
   }

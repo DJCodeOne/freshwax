@@ -152,7 +152,7 @@ export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
 
     return mixes;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getDJMixesForPage] Error:', error);
     return [];
   }
@@ -195,7 +195,7 @@ export async function getDJMixById(mixId: string): Promise<any | null> {
 
     return normalized;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getDJMixById] Error:', error);
     return null;
   }
@@ -258,7 +258,7 @@ export async function getDJMixesByDJ(djName: string, limit: number = 20): Promis
 
     return mixes;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getDJMixesByDJ] Error:', error);
     return [];
   }

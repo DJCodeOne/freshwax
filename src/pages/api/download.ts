@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser, queryCollection } from '../../lib/firebase-rest';
 import { errorResponse, ApiErrors, fetchWithTimeout } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -14,6 +15,12 @@ const log = {
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`download:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   // Initialize Firebase for auth verification
@@ -123,7 +130,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[download] Error:', error);
     return errorResponse('Download failed');
   }

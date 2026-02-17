@@ -103,7 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/generate] Error:', error);
     return ApiErrors.serverError('Failed to generate gift card');
   }

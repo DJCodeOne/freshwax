@@ -504,7 +504,7 @@ export async function queryCollection(
       
       return results;
         
-    } catch (error) {
+    } catch (error: unknown) {
       log.error('Query error:', error);
       if (throwOnError) throw error;
       return [];
@@ -576,7 +576,7 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       
       return parsed;
       
-    } catch (error) {
+    } catch (error: unknown) {
       log.error(`Get document error (${collection}/${docId}):`, error);
       if (throwOnError) throw error;
       return null;
@@ -667,7 +667,7 @@ export async function getDocumentsBatch(
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       log.error('Batch get error:', error);
     }
   }
@@ -1571,7 +1571,7 @@ export async function verifyUserToken(idToken: string): Promise<string | null> {
     }
 
     return user.localId;
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('verifyUserToken error:', error);
     return null;
   }
@@ -1620,7 +1620,7 @@ export async function verifyRequestUser(request: Request): Promise<{ userId: str
     }
 
     return { userId: user.localId, email: user.email || undefined };
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('verifyRequestUser error:', error);
     return { userId: null, error: 'Token verification failed' };
   }

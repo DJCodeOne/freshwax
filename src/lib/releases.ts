@@ -169,7 +169,7 @@ export async function getAllReleases(): Promise<any[]> {
     setCache(cacheKey, releases, CACHE_TTL.ALL_RELEASES);
 
     return releases;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getAllReleases] Error:', error);
     return [];
   }
@@ -204,7 +204,7 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
 
     return releases;
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('[getReleasesForPage] Indexed query failed, falling back to getAllReleases:', error);
     const all = await getAllReleases();
     const sorted = all
@@ -266,7 +266,7 @@ export async function getReleaseById(id: string): Promise<any | null> {
     setCache(cacheKey, result, CACHE_TTL.SINGLE_RELEASE);
 
     return result;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`[getReleaseById] Error:`, error);
     return null;
   }
@@ -310,7 +310,7 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
     setCache(cacheKey, releasesByLabel, CACHE_TTL.GROUPED);
 
     return releasesByLabel;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getReleasesGroupedByLabel] Error:', error);
     return {};
   }
@@ -360,7 +360,7 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
     setCache(cacheKey, releases, CACHE_TTL.BY_ARTIST);
 
     return releases;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getReleasesByArtist] Error:', error);
     return [];
   }
@@ -439,7 +439,7 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
     setCache(cacheKey, releases, CACHE_TTL.BY_LABEL);
 
     return releases;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[getReleasesByLabel] Error:', error);
     return [];
   }

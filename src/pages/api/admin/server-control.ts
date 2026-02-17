@@ -101,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[ServerControl] Error:', error);
     return ApiErrors.serverError('Server control action failed');
   }
@@ -122,7 +122,7 @@ async function startServer(): Promise<{ success: boolean; message?: string; erro
       success: true,
       message: 'Start command sent. Please ensure MediaMTX is configured to auto-start or start it manually on the server.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to start server' };
   }
 }
@@ -134,7 +134,7 @@ async function stopServer(): Promise<{ success: boolean; message?: string; error
       success: true,
       message: 'Stop command sent. Note: Server processes must be stopped on the host machine.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to stop server' };
   }
 }
@@ -146,7 +146,7 @@ async function restartServer(): Promise<{ success: boolean; message?: string; er
       success: true,
       message: 'Restart command sent. Note: Server must be restarted on the host machine.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to restart server' };
   }
 }
@@ -206,7 +206,7 @@ async function forceEndStreams(env?: any): Promise<{ success: boolean; message?:
       success: true,
       message: `Force ended ${activeStreams.length} stream(s) and ${activeSlots.length} slot(s)`
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to force end streams' };
   }
 }
@@ -229,7 +229,7 @@ async function clearChat(): Promise<{ success: boolean; message?: string; error?
       success: true,
       message: `Chat cleared. ${deleted} messages removed.`
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to clear chat' };
   }
 }
@@ -252,7 +252,7 @@ async function kickViewers(): Promise<{ success: boolean; message?: string; erro
       success: true,
       message: `All viewers disconnected. ${deleted} listeners cleared.`
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to kick viewers' };
   }
 }
@@ -266,7 +266,7 @@ async function clearCache(locals: App.Locals): Promise<{ success: boolean; messa
       success: true,
       message: 'In-memory cache cleared successfully. Note: Each worker isolate has its own cache.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to clear cache' };
   }
 }
@@ -279,7 +279,7 @@ async function syncData(): Promise<{ success: boolean; message?: string; error?:
       success: true,
       message: 'Data sync initiated. This may take a few moments.'
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to sync data' };
   }
 }
@@ -313,7 +313,7 @@ async function cleanupDatabase(locals: App.Locals): Promise<{ success: boolean; 
       success: true,
       message: `Database cleanup complete. ${cleaned} stale records identified.`
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Failed to cleanup database' };
   }
 }
@@ -334,7 +334,7 @@ async function testStream(): Promise<{ success: boolean; message?: string; error
     } else {
       return { success: true, message: 'Stream server reachable but no active test stream' };
     }
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Stream server connectivity test failed' };
   }
 }
@@ -383,7 +383,7 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
       success: true,
       message: `Health check complete: ${passed}/${total} services healthy (${details})`
     };
-  } catch (error) {
+  } catch (error: unknown) {
     return { success: false, error: 'Health check failed' };
   }
 }

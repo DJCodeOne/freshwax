@@ -196,7 +196,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       messageId: result.id
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[send-plus-welcome-email] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

@@ -111,7 +111,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[check-ownership] Error:', error);
     return errorResponse('Failed to check ownership');
   }

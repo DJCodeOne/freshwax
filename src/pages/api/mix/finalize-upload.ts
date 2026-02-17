@@ -3,12 +3,27 @@
 // Saves metadata to Firebase
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 import { processImageToSquareWebP } from '../../../lib/image-processing';
+
+const FinalizeUploadSchema = z.object({
+  mixId: z.string().min(1).max(500),
+  audioUrl: z.string().min(1).max(2000),
+  artworkUrl: z.string().max(2000).nullish(),
+  folderPath: z.string().max(1000).nullish(),
+  djName: z.string().max(200).nullish(),
+  mixTitle: z.string().max(500).nullish(),
+  mixDescription: z.string().max(5000).nullish(),
+  genre: z.string().max(100).nullish(),
+  tracklist: z.string().max(10000).nullish(),
+  durationSeconds: z.number().min(0).nullish(),
+  userId: z.string().max(500).nullish(),
+}).passthrough();
 
 function getR2Config(env: any) {
   return {
@@ -72,7 +87,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parseResult = FinalizeUploadSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
     const {
       mixId,
       audioUrl,
@@ -85,15 +104,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       tracklist,
       durationSeconds,
       userId,
-    } = body;
+    } = parseResult.data;
 
     // Verify the authenticated user matches the claimed userId
     if (userId && userId !== verifiedUserId) {
       return ApiErrors.forbidden('User ID mismatch - you can only finalize uploads for your own account');
-    }
-
-    if (!mixId || !audioUrl) {
-      return ApiErrors.badRequest('mixId and audioUrl are required');
     }
 
     // CRITICAL: Verify the audio file actually exists in R2 before saving metadata
@@ -260,7 +275,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[finalize-upload] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

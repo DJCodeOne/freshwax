@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[get-user-badge] Error:', error);
     return new Response(JSON.stringify({
       success: true,

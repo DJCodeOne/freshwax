@@ -146,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[admin/delete-mix] Error:', error);
     console.error('[admin/delete-mix] Stack:', error instanceof Error ? error.stack : 'No stack');
 

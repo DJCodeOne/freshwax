@@ -1,9 +1,14 @@
 // src/pages/api/playlist/remove.ts
 // Remove item from user's playlist
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
 import type { UserPlaylist } from '../../../lib/types';
+
+const PlaylistRemoveSchema = z.object({
+  itemId: z.string().min(1).max(500),
+}).passthrough();
 
 export const prerender = false;
 
@@ -19,12 +24,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
     // Get itemId from body (safe since we verify userId from token)
-    const body = await parseJsonBody<{ itemId: string }>(request);
-    const itemId = body?.itemId;
-
-    if (!itemId) {
-      return ApiErrors.badRequest('Item ID required');
+    const rawBody = await request.json();
+    const parseResult = PlaylistRemoveSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { itemId } = parseResult.data;
 
     // Get current playlist
     const existingPlaylist = await getDocument('userPlaylists', userId) as UserPlaylist | null;

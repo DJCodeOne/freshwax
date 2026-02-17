@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Fix URLs error:', error);
     return ApiErrors.serverError('Failed');
   }

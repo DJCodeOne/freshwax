@@ -190,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       emailSent: result.emailSent
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[GiftCard PayPal] Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');

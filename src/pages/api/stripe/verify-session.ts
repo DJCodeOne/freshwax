@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
 import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Zod schema for verify-session query params
 const VerifySessionParamsSchema = z.object({
@@ -16,41 +17,34 @@ const VerifySessionParamsSchema = z.object({
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, url, locals }) => {
-  console.log('[verify-session] ========== VERIFY SESSION REQUEST ==========');
-  console.log('[verify-session] Timestamp:', new Date().toISOString());
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`verify-session:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
 
   // SECURITY: Verify user authentication via Firebase token
   const { userId: authUserId, error: authError } = await verifyRequestUser(request);
   if (!authUserId || authError) {
-    console.log('[verify-session] Authentication failed:', authError || 'No user');
     return ApiErrors.unauthorized('Authentication required');
   }
-  console.log('[verify-session] Authenticated user:', authUserId);
 
   try {
     const rawParams = { session_id: url.searchParams.get('session_id') || '' };
     const paramResult = VerifySessionParamsSchema.safeParse(rawParams);
     if (!paramResult.success) {
-      console.log('[verify-session] Invalid params');
       return ApiErrors.badRequest('Invalid request');
     }
     const sessionId = paramResult.data.session_id;
-    console.log('[verify-session] Session ID:', sessionId);
 
     const env = locals.runtime.env;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
-    console.log('[verify-session] Environment check:');
-    console.log('[verify-session]   - env from locals:', !!env);
-    console.log('[verify-session]   - stripeSecretKey exists:', !!stripeSecretKey);
-
     if (!stripeSecretKey) {
-      console.log('[verify-session] ❌ Stripe not configured');
       return ApiErrors.serverError('Stripe not configured');
     }
 
     // Retrieve the session from Stripe
-    console.log('[verify-session] Fetching session from Stripe...');
     const sessionResponse = await fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
       {
@@ -61,45 +55,29 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       10000
     );
 
-    console.log('[verify-session] Stripe response status:', sessionResponse.status);
-
     if (!sessionResponse.ok) {
       const errorText = await sessionResponse.text();
-      console.log('[verify-session] ❌ Invalid session response:', errorText);
+      console.error('[verify-session] Invalid session response:', sessionResponse.status, errorText);
       return ApiErrors.badRequest('Invalid session');
     }
 
     const session = await sessionResponse.json();
-    console.log('[verify-session] Session retrieved:');
-    console.log('[verify-session]   - payment_status:', session.payment_status);
-    console.log('[verify-session]   - status:', session.status);
-    console.log('[verify-session]   - payment_intent:', session.payment_intent);
-    console.log('[verify-session]   - amount_total:', session.amount_total);
 
     // Check if payment was successful
     if (session.payment_status !== 'paid') {
-      console.log('[verify-session] ❌ Payment not completed, status:', session.payment_status);
       return ApiErrors.badRequest('Payment not completed');
     }
-
-    console.log('[verify-session] ✓ Payment status is PAID');
 
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-    console.log('[verify-session] Firebase config:');
-    console.log('[verify-session]   - projectId:', projectId);
-    console.log('[verify-session]   - apiKey exists:', !!apiKey);
-
     // Try to find order by payment intent ID
     const paymentIntentId = session.payment_intent;
-    console.log('[verify-session] Looking for existing order with paymentIntentId:', paymentIntentId);
 
     if (paymentIntentId) {
       // Query Firestore for order with this payment intent
       const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
 
-      console.log('[verify-session] Querying orders collection...');
       const queryResponse = await fetch(queryUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,19 +96,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         })
       });
 
-      console.log('[verify-session] Order query response status:', queryResponse.status);
-
       if (queryResponse.ok) {
         const results = await queryResponse.json();
-        console.log('[verify-session] Query results count:', results?.length || 0);
 
         if (results && results[0]?.document) {
           const docPath = results[0].document.name;
           const orderId = docPath.split('/').pop();
-
-          console.log('[verify-session] ✅ EXISTING ORDER FOUND');
-          console.log('[verify-session] Order ID:', orderId);
-          console.log('[verify-session] ========== VERIFY SESSION COMPLETE ==========');
 
           return new Response(JSON.stringify({
             success: true,
@@ -139,24 +110,16 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           }), {
             headers: { 'Content-Type': 'application/json' }
           });
-        } else {
-          console.log('[verify-session] No existing order found, will create as fallback');
         }
-      } else {
-        const errorText = await queryResponse.text();
-        console.log('[verify-session] ⚠️ Order query failed:', errorText);
       }
-    } else {
-      console.log('[verify-session] ⚠️ No paymentIntentId in session');
     }
 
     // Order not found - wait a bit more and check again (webhook might be processing)
-    console.log('[verify-session] No order found yet, waiting for webhook to complete...');
     await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 more seconds
 
     // Check again after waiting
     if (paymentIntentId) {
-      console.log('[verify-session] Re-checking for order after wait...');
+      const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
       const retryResponse = await fetch(queryUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -180,8 +143,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         if (retryResults && retryResults[0]?.document) {
           const docPath = retryResults[0].document.name;
           const orderId = docPath.split('/').pop();
-          console.log('[verify-session] ✅ ORDER FOUND ON RETRY');
-          console.log('[verify-session] Order ID:', orderId);
           return new Response(JSON.stringify({
             success: true,
             orderId,
@@ -194,13 +155,9 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Order still not found - create it now as fallback (webhook may have failed)
-    console.log('[verify-session] ========== FALLBACK ORDER CREATION ==========');
-    console.log('[verify-session] Order not found for paymentIntentId:', paymentIntentId);
-    console.log('[verify-session] Creating order as fallback...');
-    console.log('[verify-session] Session metadata:', JSON.stringify(session.metadata, null, 2));
+    console.log('[verify-session] Fallback order creation for paymentIntentId:', paymentIntentId);
 
     // Get line items from Stripe session
-    console.log('[verify-session] Fetching line items from Stripe...');
     const lineItemsResponse = await fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}/line_items?limit=100`,
       {
@@ -210,28 +167,21 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       },
       10000
     );
-    console.log('[verify-session] Line items response status:', lineItemsResponse.status);
 
     let items: any[] = [];
 
     // First try to get items from session metadata
     if (session.metadata?.items_json) {
-      console.log('[verify-session] Parsing items from metadata...');
       try {
         items = JSON.parse(session.metadata.items_json);
-        console.log('[verify-session] ✓ Parsed', items.length, 'items from metadata');
       } catch (e) {
-        console.error('[verify-session] ❌ Error parsing items_json:', e);
+        console.error('[verify-session] Error parsing items_json:', e);
       }
-    } else {
-      console.log('[verify-session] ⚠️ No items_json in metadata');
     }
 
     // Fallback to line items from Stripe
     if (items.length === 0 && lineItemsResponse.ok) {
-      console.log('[verify-session] Using Stripe line items as fallback...');
       const lineItemsData = await lineItemsResponse.json();
-      console.log('[verify-session] Raw line items count:', lineItemsData.data?.length || 0);
       items = (lineItemsData.data || [])
         .filter((item: any) => item.description !== 'Processing and platform fees' && item.description !== 'Service Fee')
         .map((item: any, index: number) => ({
@@ -241,14 +191,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           quantity: item.quantity || 1,
           type: 'digital'
         }));
-      console.log('[verify-session] ✓ Mapped', items.length, 'items from Stripe');
     }
 
-    console.log('[verify-session] Final items count:', items.length);
-    if (items.length > 0) {
-      console.log('[verify-session] First item:', JSON.stringify(items[0]));
-    } else {
-      console.log('[verify-session] ⚠️ WARNING: No items for order!');
+    if (items.length === 0) {
+      console.warn('[verify-session] No items found for fallback order');
     }
 
     // Build shipping info if present
@@ -266,14 +212,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Create the order
-    const customerEmail = session.metadata?.customer_email || session.customer_email || session.customer_details?.email || 'unknown@email.com';
-    console.log('[verify-session] Calling createOrder with:');
-    console.log('[verify-session]   - Customer email:', customerEmail);
-    console.log('[verify-session]   - Items count:', items.length);
-    console.log('[verify-session]   - Total:', session.amount_total / 100);
-    console.log('[verify-session]   - PaymentIntent:', session.payment_intent);
-    console.log('[verify-session]   - env available:', !!env);
-
     const result = await createOrder({
       orderData: {
         customer: {
@@ -298,13 +236,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       env
     });
 
-    console.log('[verify-session] createOrder returned:', JSON.stringify(result));
-
     if (result.success) {
-      console.log('[verify-session] ✅ FALLBACK ORDER CREATED SUCCESSFULLY');
-      console.log('[verify-session] Order Number:', result.orderNumber);
-      console.log('[verify-session] Order ID:', result.orderId);
-      console.log('[verify-session] ========== VERIFY SESSION COMPLETE ==========');
+      console.log('[verify-session] Fallback order created:', result.orderNumber, result.orderId);
       return new Response(JSON.stringify({
         success: true,
         orderId: result.orderId,
@@ -316,9 +249,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Order creation failed
-    console.error('[verify-session] ❌ FALLBACK ORDER CREATION FAILED');
-    console.error('[verify-session] Error:', result.error);
-    console.log('[verify-session] ========== VERIFY SESSION COMPLETE (WITH ERROR) ==========');
+    console.error('[verify-session] Fallback order creation failed:', result.error);
     return new Response(JSON.stringify({
       success: true,
       orderId: null,
@@ -328,10 +259,9 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[verify-session] EXCEPTION:', errorMessage);
-    console.error('[verify-session] Stack:', error instanceof Error ? error.stack : 'no stack');
     return ApiErrors.serverError('Session verification failed');
   }
 };

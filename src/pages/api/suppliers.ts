@@ -234,7 +234,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[suppliers] GET Error:', error);
 
     return ApiErrors.serverError('Failed to fetch suppliers');
@@ -308,7 +308,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[suppliers] POST Error:', error);
 
     return ApiErrors.serverError('Failed to create supplier');
@@ -355,7 +355,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[suppliers] PUT Error:', error);
 
     return ApiErrors.serverError('Failed to update supplier');
@@ -408,7 +408,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[suppliers] DELETE Error:', error);
 
     return ApiErrors.serverError('Failed to delete supplier');

@@ -114,10 +114,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Invalid request');
     }
     const orderData = parseResult.data;
-    console.log('[PayPal] Creating order');
+    // Creating PayPal order
 
     // SECURITY: Validate stock availability before allowing checkout
-    console.log('[PayPal] Validating stock availability...');
+    // Validating stock availability
     const stockCheck = await validateStock(orderData.items);
     if (!stockCheck.available) {
       console.warn('[PayPal] Stock validation failed:', stockCheck.unavailableItems);
@@ -131,7 +131,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Validate prices server-side to prevent manipulation
-    console.log('[PayPal] Validating prices server-side...');
+    // Validating prices server-side
     const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[PayPal]' });
 
     if (validationError) {
@@ -214,7 +214,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paymentProcessingFee = (validatedTotal * 0.014) + 0.20; // PayPal processing fee
     const serviceFees = freshWaxFee + paymentProcessingFee;
 
-    console.log('[PayPal] Validated totals - Subtotal:', itemTotal, 'Total:', validatedTotal, '(fees deducted from payout:', serviceFees.toFixed(2), ')');
+    // Totals validated
 
     // Get access token
     const accessToken = await getPayPalAccessToken(paypalClientId, paypalSecret, paypalMode);
@@ -296,7 +296,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
     }
 
-    console.log('[PayPal] Order request created, items:', paypalItems.length);
+    // Order request built
 
     // Create PayPal order
     const createResponse = await fetchWithTimeout(`${baseUrl}/v2/checkout/orders`, {
@@ -317,7 +317,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const paypalResult = await createResponse.json();
-    console.log('[PayPal] Order created:', paypalResult.id);
+    console.log('[PayPal] Order created:', paypalResult.id, 'items:', paypalItems.length);
 
     // Extract approval URL from PayPal response links
     const approvalLink = paypalResult.links?.find((link: any) => link.rel === 'approve');
@@ -366,7 +366,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       await setDocument('pendingPayPalOrders', paypalResult.id, pendingOrder);
-      console.log('[PayPal] Stored pending order data:', paypalResult.id);
+      // Stored pending order data
     } catch (storeErr) {
       console.error('[PayPal] Failed to store pending order:', storeErr);
       // Continue anyway - capture endpoint will fall back to client data with amount validation
@@ -382,7 +382,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[PayPal] Error:', errorMessage);
     if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});

@@ -5,10 +5,17 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`pro-dashboard:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const { userId, error: authError } = await verifyRequestUser(request);
 

@@ -165,7 +165,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       summary,
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Scan failed:', error);
     return errorResponse('Failed to scan R2 bucket', 500);
   }

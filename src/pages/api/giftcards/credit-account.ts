@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         creditBalance: newBalance,
         creditUpdatedAt: now
       });
-    } catch (error) {
+    } catch (error: unknown) {
       // Customer doc might not exist yet, that's ok
     }
 
@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[credit-account] Error:', error);
     return ApiErrors.serverError('Failed to credit account');
   }

@@ -45,7 +45,7 @@ async function resolveChannelId(apiKey: string, handle: string): Promise<string 
     }
 
     return null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[youtube-live-id] Error resolving channel handle:', error);
     return null;
   }
@@ -93,7 +93,7 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
 
     console.log('[youtube-live-id] No live videos found for channel');
     return null;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[youtube-live-id] Error fetching YouTube live ID:', error);
     return null;
   }
@@ -202,7 +202,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       watchUrl: `https://www.youtube.com/watch?v=${youtubeLiveId}`
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[youtube-live-id] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

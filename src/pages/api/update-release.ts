@@ -218,7 +218,7 @@ export async function POST({ request, locals }: any) {
           log.info('[update-release] Updated master list');
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       log.error('[update-release] Warning: Could not update master list:', error);
       // Don't fail the whole operation if master list update fails
     }

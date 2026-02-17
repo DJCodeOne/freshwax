@@ -23,8 +23,6 @@ const MAX_RETRY_AGE_DAYS = 30; // Don't retry payouts older than 30 days
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  console.log('[Retry Payouts] ========== CRON JOB STARTED ==========');
-  console.log('[Retry Payouts] Timestamp:', new Date().toISOString());
 
   const env = locals.runtime.env;
 
@@ -40,7 +38,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     (xAdminKey ? verifyAdminKey(xAdminKey, locals) : false);
 
   if (!isAuthorized) {
-    console.log('[Retry Payouts] Unauthorized - missing or invalid credentials');
     return ApiErrors.unauthorized('Unauthorized');
   }
 
@@ -73,8 +70,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       limit: MAX_RETRIES_PER_RUN * 2 // Fetch more to filter
     });
 
-    console.log('[Retry Payouts] Found', pendingPayouts.length, 'pending payouts to check');
-
     const results = {
       checked: 0,
       retried: 0,
@@ -98,7 +93,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Skip if too old
       const createdAt = new Date(pending.createdAt);
       if (createdAt < cutoffDate) {
-        console.log('[Retry Payouts] Skipping old payout:', pending.id, '- created:', createdAt.toISOString());
         results.skipped++;
         continue;
       }
@@ -136,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (!entity) {
-        console.log('[Retry Payouts] Entity not found for payout:', pending.id, 'type:', entityType);
+        console.warn('[Retry Payouts] Entity not found for payout:', pending.id, 'type:', entityType);
         results.skipped++;
         continue;
       }
@@ -174,8 +168,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         continue;
       }
 
-      // Ready to process
-      console.log('[Retry Payouts] Retrying payout:', pending.id, 'for', entityType, ':', entityName, 'via', usePayPal ? 'PayPal' : 'Stripe');
       results.retried++;
 
       try {
@@ -197,7 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         } catch (lockErr: unknown) {
           if (lockErr instanceof Error && lockErr.message.includes('CONFLICT')) {
-            console.log('[Retry Payouts] Skipping payout (already being processed by another run):', pending.id);
+            // Already being processed by another run
             results.skipped++;
             continue;
           }
@@ -348,9 +340,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const duration = Date.now() - startTime;
-    console.log('[Retry Payouts] ========== CRON JOB COMPLETED ==========');
-    console.log('[Retry Payouts] Duration:', duration, 'ms');
-    console.log('[Retry Payouts] Results:', JSON.stringify(results, null, 2));
 
     return new Response(JSON.stringify({
       success: true,
@@ -361,7 +350,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Retry Payouts] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }

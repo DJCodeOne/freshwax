@@ -3,11 +3,27 @@
 // Uses Pusher for real-time delivery (reduces Firebase reads)
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin } from '../../../lib/admin';
 import { ApiErrors } from '../../../lib/api-utils';
+
+const LivestreamChatSchema = z.object({
+  streamId: z.string().min(1).max(500),
+  userName: z.string().max(200).nullish(),
+  userAvatar: z.string().max(2000).nullish(),
+  isPro: z.boolean().nullish(),
+  badge: z.string().max(50).nullish(),
+  message: z.string().min(1).max(2000),
+  type: z.string().max(50).nullish(),
+  giphyUrl: z.string().max(2000).nullish(),
+  giphyId: z.string().max(500).nullish(),
+  replyTo: z.string().max(500).nullish(),
+  replyToUserName: z.string().max(200).nullish(),
+  replyToPreview: z.string().max(500).nullish(),
+}).passthrough();
 
 // ============================================
 // CONTENT MODERATION
@@ -359,7 +375,7 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
     }
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Pusher] Error:', error);
     return false;
   }
@@ -419,7 +435,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       } 
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/chat] GET Error:', error);
     return ApiErrors.serverError('Failed to get messages');
   }
@@ -443,14 +459,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const data = await request.json();
-    const { streamId, userName, userAvatar, isPro, badge, message, type, giphyUrl, giphyId, replyTo, replyToUserName, replyToPreview } = data;
+    const rawBody = await request.json();
+    const parseResult = LivestreamChatSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { streamId, userName, userAvatar, isPro, badge, message, type, giphyUrl, giphyId, replyTo, replyToUserName, replyToPreview } = parseResult.data;
     // Use verified userId from token, not from body
     const userId = authUserId;
-
-    if (!streamId || !userId || !message) {
-      return ApiErrors.badRequest('Missing required fields');
-    }
     
     // Special case: playlist-global is always allowed for DJ waitlist chat
     const isPlaylistMode = streamId === 'playlist-global';
@@ -711,7 +727,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/chat] DELETE Error:', error);
     return ApiErrors.serverError('Failed to delete message');
   }

@@ -356,7 +356,7 @@ export async function PUT({ request, locals }: APIContext) {
             playlist.isPlaying = true;
             playlist.trackStartedAt = now;
             playlist.currentIndex = 0;
-            console.log('[GlobalPlaylist] Next: playing user track', playlist.queue[0]?.title);
+            // Playing next user track
           } else {
             // Queue empty - pick random track for autoplay
             const nextRandomTrack = await pickRandomFromServerHistory(env);
@@ -365,7 +365,7 @@ export async function PUT({ request, locals }: APIContext) {
               playlist.isPlaying = true;
               playlist.trackStartedAt = now;
               playlist.currentIndex = 0;
-              console.log('[GlobalPlaylist] Next: autoplay picked', nextRandomTrack.title || nextRandomTrack.url);
+              // Autoplay picked next track
             } else {
               playlist.isPlaying = false;
               playlist.trackStartedAt = null;
@@ -395,7 +395,7 @@ export async function PUT({ request, locals }: APIContext) {
 
           // RACE PROTECTION 1: If trackId provided and doesn't match current track, already handled
           if (trackId && currentTrack && currentTrack.id !== trackId) {
-            console.log('[GlobalPlaylist] trackEnded ignored - track already changed');
+            // trackEnded ignored - track already changed
             return new Response(JSON.stringify({
               success: true,
               alreadyHandled: true,
@@ -410,7 +410,7 @@ export async function PUT({ request, locals }: APIContext) {
           const trackJustStarted = playlist.trackStartedAt &&
             (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 5000;
           if (trackJustStarted && playlist.queue.length > 0) {
-            console.log('[GlobalPlaylist] trackEnded ignored - new track just started (race protection)');
+            // trackEnded ignored - race protection
             return new Response(JSON.stringify({
               success: true,
               alreadyHandled: true,
@@ -442,7 +442,7 @@ export async function PUT({ request, locals }: APIContext) {
           if (playlist.queue.length > 0) {
             playlist.isPlaying = true;
             playlist.trackStartedAt = now;
-            console.log('[GlobalPlaylist] Playing next user track:', playlist.queue[0]?.title || playlist.queue[0]?.url);
+            // Playing next user track
           } else {
             // Queue is empty - pick a random track for autoplay
             const randomTrack = await pickRandomFromServerHistory(env);
@@ -450,12 +450,12 @@ export async function PUT({ request, locals }: APIContext) {
               playlist.queue.push(randomTrack);
               playlist.isPlaying = true;
               playlist.trackStartedAt = now;
-              console.log('[GlobalPlaylist] Auto-play: picked', randomTrack.title || randomTrack.url);
+              // Auto-play: picked random track
             } else {
               // No tracks available - stop playback
               playlist.isPlaying = false;
               playlist.trackStartedAt = null;
-              console.log('[GlobalPlaylist] No tracks for auto-play, stopping');
+              // No tracks for auto-play, stopping
             }
           }
           playlist.currentIndex = 0; // Always play from front of queue
@@ -489,9 +489,9 @@ export async function PUT({ request, locals }: APIContext) {
               playlist.trackStartedAt = now;
               playlist.currentIndex = 0;
               playlist.reactionCount = 0;
-              console.log('[GlobalPlaylist] startAutoPlay: picked', autoTrack.title || autoTrack.url);
+              // startAutoPlay: picked track
             } else {
-              console.log('[GlobalPlaylist] startAutoPlay: no tracks available');
+              // startAutoPlay: no tracks available
             }
           } else if (playlist.queue.length > 0) {
             // Queue already has items - just ensure it's playing
@@ -499,10 +499,10 @@ export async function PUT({ request, locals }: APIContext) {
             if (!playlist.trackStartedAt) {
               playlist.trackStartedAt = now;
             }
-            console.log('[GlobalPlaylist] startAutoPlay: queue has items, resuming');
+            // startAutoPlay: queue has items, resuming
           } else {
             // Recently started - just return current state, don't change anything
-            console.log('[GlobalPlaylist] startAutoPlay: race protection - track just started, returning current state');
+            // startAutoPlay: race protection
           }
           break;
       }
@@ -550,7 +550,7 @@ async function getRecentlyPlayed(): Promise<any[]> {
     if (data && data.items) {
       return data.items.slice(0, 10);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.warn('[GlobalPlaylist] Could not fetch recently played:', error);
   }
   return [];
@@ -560,13 +560,13 @@ async function getRecentlyPlayed(): Promise<any[]> {
 async function addToRecentlyPlayed(track: any): Promise<void> {
   try {
     if (!kvCache) {
-      console.log('[GlobalPlaylist] KV not available for history');
+      // KV not available for history
       return;
     }
 
     // Always save tracks - UI will fetch real titles async if needed
     if (!track.url) {
-      console.log('[GlobalPlaylist] Skipping recently played - no URL');
+      // Skipping recently played - no URL
       return;
     }
 
@@ -595,8 +595,8 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
       items,
       lastUpdated: new Date().toISOString()
     }));
-    console.log('[GlobalPlaylist] Added to recently played:', track.title);
-  } catch (error) {
+    // Added to recently played
+  } catch (error: unknown) {
     console.error('[GlobalPlaylist] Error adding to recently played:', error);
   }
 }
@@ -611,25 +611,25 @@ const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
 async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null> {
   try {
     const playlistToken = env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
-    console.log('[GlobalPlaylist] Trying local playlist server /random endpoint...');
+    // Trying local playlist server
     const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/random`, {
       headers: { 'Authorization': `Bearer ${playlistToken}` },
       signal: AbortSignal.timeout(5000) // Fast endpoint, 5s is plenty
     });
 
     if (!response.ok) {
-      console.log('[GlobalPlaylist] Local server returned', response.status);
+      // Local server returned non-OK
       return null;
     }
 
     const data = await response.json();
     if (!data.success || !data.track) {
-      console.log('[GlobalPlaylist] Local server has no tracks');
+      // Local server has no tracks
       return null;
     }
 
     const selected = data.track;
-    console.log('[GlobalPlaylist] Random track from', data.totalCount, 'files:', selected.name);
+    // Random track selected from local server
 
     const url = `${LOCAL_PLAYLIST_SERVER}${selected.url}`;
     const thumbnail = selected.thumbnail
@@ -647,8 +647,8 @@ async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null
       addedByName: 'Auto-Play',
       addedAt: new Date().toISOString()
     };
-  } catch (error) {
-    console.log('[GlobalPlaylist] Local server error:', error);
+  } catch (error: unknown) {
+    console.warn('[GlobalPlaylist] Local server error:', error);
     return null;
   }
 }
@@ -668,7 +668,7 @@ async function pickRandomFromServerHistory(env?: any): Promise<PlaylistItem | nu
       if (items && items.length > 0) {
         const pick = items[Math.floor(Math.random() * items.length)];
         if (pick.url) {
-          console.log('[GlobalPlaylist] Autoplay fallback from KV history:', pick.title || pick.url);
+          // Autoplay fallback from KV history
           return {
             id: `auto_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`,
             url: pick.url,
@@ -683,11 +683,11 @@ async function pickRandomFromServerHistory(env?: any): Promise<PlaylistItem | nu
         }
       }
     }
-  } catch (error) {
-    console.log('[GlobalPlaylist] KV history fallback error:', error);
+  } catch (error: unknown) {
+    console.warn('[GlobalPlaylist] KV history fallback error:', error);
   }
 
-  console.log('[GlobalPlaylist] No tracks available for autoplay');
+  // No tracks available for autoplay
   return null;
 }
 
@@ -730,8 +730,8 @@ async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: an
       body
     });
 
-    console.log('[GlobalPlaylist] Emoji broadcast response:', pusherResponse.status);
-  } catch (error) {
+    // Emoji broadcast sent
+  } catch (error: unknown) {
     console.error('[GlobalPlaylist] Emoji broadcast error:', error);
   }
 }
@@ -787,8 +787,8 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
     });
 
     const pusherResult = await pusherResponse.text();
-    console.log('[GlobalPlaylist] Broadcast response:', pusherResponse.status, pusherResult);
-  } catch (error) {
+    // Playlist broadcast sent
+  } catch (error: unknown) {
     console.error('[GlobalPlaylist] Broadcast error:', error);
   }
 }

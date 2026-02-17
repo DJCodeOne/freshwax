@@ -366,7 +366,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[upload-mix] Error:', error);
 
     // Clean up any R2 objects that were uploaded before the failure

@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[user-profile] GET error:', error);
     return ApiErrors.serverError('Failed to load user profile');
   }
@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[user-profile] POST error:', error);
     return ApiErrors.serverError('Failed to save profile data');
   }

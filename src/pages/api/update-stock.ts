@@ -310,7 +310,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[update-stock] Error:', error);
 
     return ApiErrors.serverError('Failed to update stock');
@@ -449,7 +449,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[get-stock] Error:', error);
 
     return ApiErrors.serverError('Failed to fetch stock');

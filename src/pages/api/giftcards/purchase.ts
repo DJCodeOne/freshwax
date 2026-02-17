@@ -58,7 +58,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     }
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/purchase] Email send error:', error);
     return false;
   }
@@ -158,7 +158,7 @@ async function sendGiftCardEmail(
       console.log(`[giftcards/purchase] Email sent to ${toEmail}`);
     }
     return sent;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/purchase] Email error:', error);
     return false;
   }
@@ -342,7 +342,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[giftcards/purchase] Error:', error);
     return ApiErrors.serverError('Failed to create gift card');
   }

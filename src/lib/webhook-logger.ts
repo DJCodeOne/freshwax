@@ -32,7 +32,7 @@ export async function logWebhookEvent(event: Omit<WebhookEvent, 'timestamp'>): P
     };
 
     await addDocument('webhookLogs', eventWithTimestamp);
-  } catch (error) {
+  } catch (error: unknown) {
     // Don't let logging failures crash the webhook
     console.error('[Webhook Logger] Failed to log event:', error);
   }
@@ -124,7 +124,7 @@ export async function getRecentWebhookEvents(
     });
 
     return events;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Webhook Logger] Failed to get events:', error);
     return [];
   }
@@ -140,7 +140,7 @@ export async function getFailedWebhookEvents(limit: number = 50): Promise<Webhoo
     });
 
     return events;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Webhook Logger] Failed to get failed events:', error);
     return [];
   }
@@ -188,7 +188,7 @@ export async function getWebhookStats(hours: number = 24): Promise<{
     }
 
     return stats;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Webhook Logger] Failed to get stats:', error);
     return { total: 0, successful: 0, failed: 0, byEventType: {} };
   }

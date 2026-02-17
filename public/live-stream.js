@@ -2610,57 +2610,7 @@ function setupAudioPlayer(stream) {
     const audioUrl = stream.audioStreamUrl;
     const isHlsUrl = audioUrl.includes('.m3u8');
 
-    // Handle HLS URLs with HLS.js (for relay streams using HLS)
-    if (isHlsUrl && typeof Hls !== 'undefined' && Hls.isSupported()) {
-      if (window.audioHlsPlayer) {
-        window.audioHlsPlayer.destroy();
-      }
-      window.audioHlsPlayer = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true
-      });
-      window.audioHlsPlayer.loadSource(audioUrl);
-      window.audioHlsPlayer.attachMedia(audio);
-      window.audioHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
-        // HLS manifest parsed, ready to play
-      });
-      window.audioHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
-        console.error('[Audio] HLS error:', data.type, data.details);
-        if (data.fatal) {
-          console.error('[Audio] Fatal HLS error, trying recovery');
-          window.audioHlsPlayer.recoverMediaError();
-        }
-      });
-    } else if (isHlsUrl && audio.canPlayType('application/vnd.apple.mpegurl') === 'probably') {
-      // Safari native HLS support
-      audio.src = audioUrl;
-      audio.load();
-    } else {
-      // Direct audio URL (Icecast, etc.)
-      audio.src = audioUrl;
-      audio.load();
-    }
-    // Add event listeners for overlay handling
-    audio.onerror = (e) => console.error('[Audio] ERROR:', audio.error?.code, audio.error?.message);
-    audio.onplaying = () => {
-      // Hide initializing overlay IMMEDIATELY when audio starts playing
-      const initOverlay = document.getElementById('initializingOverlay');
-      if (initOverlay) {
-        // Force immediate hide by adding both classes at once
-        initOverlay.classList.add('fade-out', 'hidden');
-        initOverlay.style.display = 'none'; // Force hide via inline style
-      }
-      // Update play button state
-      document.getElementById('playIcon')?.classList.add('hidden');
-      document.getElementById('pauseIcon')?.classList.remove('hidden');
-      document.getElementById('playBtn')?.classList.add('playing');
-    };
-    // Check if audio is already playing (handles race condition with page navigation)
-    if (!audio.paused && audio.readyState >= 2) {
-      audio.onplaying?.();
-    }
-
-    // Try autoplay - check if user was previously playing (resume with sound)
+    // Autoplay helper - waits for audio to be ready, then plays
     const attemptAutoplay = async () => {
       const wasPlaying = wasLiveStreamPlaying();
 
@@ -2702,14 +2652,74 @@ function setupAudioPlayer(stream) {
         initGlobalAudioAnalyzer(audio);
         startGlobalMeters();
       } catch (err) {
-        console.error('[Audio] Autoplay FAILED:', err.name, err.message);
+        // AbortError means a new load interrupted play - not a real failure, will retry on canplay
+        if (err.name !== 'AbortError') {
+          console.warn('[Audio] Autoplay blocked:', err.name);
+        }
         // Show play button for user to click
         document.getElementById('playIcon')?.classList.remove('hidden');
         document.getElementById('pauseIcon')?.classList.add('hidden');
         playBtn?.classList.remove('playing');
       }
     };
-    attemptAutoplay();
+
+    // Handle HLS URLs with HLS.js (for relay streams using HLS)
+    if (isHlsUrl && typeof Hls !== 'undefined' && Hls.isSupported()) {
+      if (window.audioHlsPlayer) {
+        window.audioHlsPlayer.destroy();
+      }
+      window.audioHlsPlayer = new Hls({
+        enableWorker: true,
+        lowLatencyMode: true
+      });
+      window.audioHlsPlayer.loadSource(audioUrl);
+      window.audioHlsPlayer.attachMedia(audio);
+      window.audioHlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => {
+        attemptAutoplay();
+      });
+      window.audioHlsPlayer.on(Hls.Events.ERROR, (event, data) => {
+        console.error('[Audio] HLS error:', data.type, data.details);
+        if (data.fatal) {
+          console.error('[Audio] Fatal HLS error, trying recovery');
+          window.audioHlsPlayer.recoverMediaError();
+        }
+      });
+    } else if (isHlsUrl && audio.canPlayType('application/vnd.apple.mpegurl') === 'probably') {
+      // Safari native HLS support
+      audio.src = audioUrl;
+      audio.load();
+    } else {
+      // Direct audio URL (Icecast, etc.)
+      audio.src = audioUrl;
+      audio.load();
+    }
+    // Add event listeners for overlay handling
+    audio.onerror = (e) => console.error('[Audio] ERROR:', audio.error?.code, audio.error?.message);
+    audio.onplaying = () => {
+      // Hide initializing overlay IMMEDIATELY when audio starts playing
+      const initOverlay = document.getElementById('initializingOverlay');
+      if (initOverlay) {
+        // Force immediate hide by adding both classes at once
+        initOverlay.classList.add('fade-out', 'hidden');
+        initOverlay.style.display = 'none'; // Force hide via inline style
+      }
+      // Update play button state
+      document.getElementById('playIcon')?.classList.add('hidden');
+      document.getElementById('pauseIcon')?.classList.remove('hidden');
+      document.getElementById('playBtn')?.classList.add('playing');
+    };
+    // Check if audio is already playing (handles race condition with page navigation)
+    if (!audio.paused && audio.readyState >= 2) {
+      audio.onplaying?.();
+    }
+
+    // Wait for audio to be ready before attempting autoplay (avoids AbortError)
+    if (audio.readyState >= 3) {
+      // Already have enough data
+      attemptAutoplay();
+    } else {
+      audio.addEventListener('canplay', () => attemptAutoplay(), { once: true });
+    }
   }
 
   if (audio && volumeSlider) {
@@ -3698,9 +3708,12 @@ function createFloatingEmojiFromBroadcast(emojiList) {
 
 async function loadUserReactions(streamId) {
   if (!currentUser) return;
-  
+
   try {
-    const response = await fetch(`/api/livestream/react/?streamId=${streamId}&userId=${currentUser.uid}`);
+    const token = await currentUser.getIdToken();
+    const response = await fetch(`/api/livestream/react/?streamId=${streamId}&userId=${currentUser.uid}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     if (!response.ok) return;
     const result = await response.json();
     

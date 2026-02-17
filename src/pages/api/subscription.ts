@@ -19,6 +19,7 @@ import {
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { isAdmin, initAdminEnv } from '../../lib/admin';
 import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
 
@@ -45,6 +46,12 @@ const SubscriptionPostSchema = z.object({
 
 // GET: Check subscription status and limits
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`subscription-get:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv(env);
@@ -194,7 +201,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       } : null
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Error:', error);
     return ApiErrors.serverError('Failed to check subscription');
   }
@@ -202,6 +209,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Record usage or upgrade subscription
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`subscription-post:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv(env);
@@ -447,7 +460,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Unknown action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('Error:', error);
     return ApiErrors.serverError('Failed to process request');
   }

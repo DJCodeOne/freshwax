@@ -1,13 +1,27 @@
 // src/pages/api/dj-lobby/broadcast-mode.ts
 // Update livestream slot broadcast mode (placeholder vs video)
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { updateDocument, verifyUserToken, getDocument } from '../../../lib/firebase-rest';
 import { ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+
+const BroadcastModeSchema = z.object({
+  slotId: z.string().min(1).max(500),
+  mode: z.enum(['placeholder', 'video']),
+  hlsUrl: z.string().max(2000).nullish(),
+}).passthrough();
 
 export const prerender = false;
 
 // POST: Update broadcast mode for a livestream slot
 export const POST: APIRoute = async ({ request }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`broadcast-mode:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization');
@@ -20,16 +34,12 @@ export const POST: APIRoute = async ({ request }) => {
       return ApiErrors.forbidden('Invalid token');
     }
 
-    const data = await request.json();
-    const { slotId, mode, hlsUrl } = data;
-
-    if (!slotId) {
-      return ApiErrors.badRequest('Slot ID required');
+    const rawBody = await request.json();
+    const parseResult = BroadcastModeSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request. Slot ID required and mode must be placeholder or video');
     }
-
-    if (!mode || !['placeholder', 'video'].includes(mode)) {
-      return ApiErrors.badRequest('Invalid mode. Use placeholder or video');
-    }
+    const { slotId, mode, hlsUrl } = parseResult.data;
 
     // Verify the user owns this slot
     const slot = await getDocument('livestreamSlots', slotId);

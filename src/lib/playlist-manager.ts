@@ -107,7 +107,7 @@ export class PlaylistManager {
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error loading recently played:', error);
     }
   }
@@ -126,7 +126,7 @@ export class PlaylistManager {
         }
       }
       localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(data));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error saving recently played:', error);
     }
   }
@@ -254,7 +254,7 @@ export class PlaylistManager {
       });
 
       this.isSubscribed = true;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Pusher subscription error:', error);
     }
   }
@@ -500,7 +500,7 @@ export class PlaylistManager {
       }
 
       this.renderUI();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error removing item:', error);
     }
   }
@@ -550,7 +550,7 @@ export class PlaylistManager {
       if (result.success && result.playlist) {
         this.playlist = result.playlist;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('[PlaylistManager] Could not fetch latest state:', error);
     }
 
@@ -635,7 +635,7 @@ export class PlaylistManager {
       }
 
       return false;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error requesting auto-play from server:', error);
       return false;
     }
@@ -669,7 +669,7 @@ export class PlaylistManager {
 
         this.renderUI();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Control action error:', error);
     }
   }
@@ -785,7 +785,7 @@ export class PlaylistManager {
 
       this.renderUI();
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error playing current:', error);
       // Remove failed track and pick a new one (maintains single-track queue for autoplay)
       await this.handleTrackEnded();
@@ -863,7 +863,7 @@ export class PlaylistManager {
           }
         })
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error logging to server history:', error);
     }
   }
@@ -1185,7 +1185,7 @@ export class PlaylistManager {
       if (duration <= 0 && currentTrack?.duration) {
         duration = currentTrack.duration;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('[PlaylistManager] Error getting duration:', error);
     }
 
@@ -1302,7 +1302,7 @@ export class PlaylistManager {
       if (stored) {
         this.playHistory = JSON.parse(stored);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error loading play history:', error);
       this.playHistory = [];
     }
@@ -1314,7 +1314,7 @@ export class PlaylistManager {
   private savePlayHistory(): void {
     try {
       localStorage.setItem(PLAYLIST_HISTORY_KEY, JSON.stringify(this.playHistory));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error saving play history:', error);
     }
   }
@@ -1412,7 +1412,7 @@ export class PlaylistManager {
           addedByName: 'Auto-Play'
         };
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error fetching server history:', error);
     }
 
@@ -1520,7 +1520,7 @@ export class PlaylistManager {
         addedBy: 'system',
         addedByName: 'Auto-Play'
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('[PlaylistManager] Local playlist server error:', error);
       return null;
     }
@@ -1547,7 +1547,7 @@ export class PlaylistManager {
       if (stored) {
         this.personalPlaylist = JSON.parse(stored);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error loading personal playlist:', error);
       this.personalPlaylist = [];
     }
@@ -1596,7 +1596,7 @@ export class PlaylistManager {
         this.savePersonalPlaylist();
         this.savePersonalPlaylistToServer();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error loading personal playlist from D1:', error);
       // Keep using localStorage data
     }
@@ -1608,7 +1608,7 @@ export class PlaylistManager {
   private savePersonalPlaylist(): void {
     try {
       localStorage.setItem(PERSONAL_PLAYLIST_KEY, JSON.stringify(this.personalPlaylist));
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error saving personal playlist to localStorage:', error);
     }
   }
@@ -1656,7 +1656,7 @@ export class PlaylistManager {
         return;
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error saving personal playlist to D1:', error);
     }
   }
@@ -1892,7 +1892,7 @@ export class PlaylistManager {
           this.showOfflineOverlay();
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error calling trackEnded:', error);
       // Fallback: just stop playback on error
       this.playlist.isPlaying = false;
@@ -1982,7 +1982,7 @@ export class PlaylistManager {
       } else {
         console.warn('[PlaylistManager] Failed to remove blocked video from history:', result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error marking video as blocked:', error);
     }
   }
@@ -2079,7 +2079,7 @@ export class PlaylistManager {
           await this.clearStalePlaylist();
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error loading from server:', error);
     }
   }
@@ -2108,7 +2108,7 @@ export class PlaylistManager {
         })
       });
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[PlaylistManager] Error clearing stale playlist:', error);
     }
   }
@@ -2167,7 +2167,7 @@ export class PlaylistManager {
           };
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('[PlaylistManager] noembed failed:', error);
     }
 
@@ -2183,7 +2183,7 @@ export class PlaylistManager {
             duration: undefined
           };
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn('[PlaylistManager] YouTube oEmbed failed:', error);
       }
     }
@@ -2200,7 +2200,7 @@ export class PlaylistManager {
             duration: undefined
           };
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn('[PlaylistManager] SoundCloud oEmbed failed:', error);
       }
     }
@@ -2225,7 +2225,7 @@ export class PlaylistManager {
             return data.duration;
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.warn('[PlaylistManager] Could not fetch YouTube duration:', error);
       }
     }
@@ -2252,7 +2252,7 @@ export class PlaylistManager {
         const data = await response.json();
         return data.title || null;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.warn('[PlaylistManager] Could not fetch YouTube title:', error);
     }
     return null;

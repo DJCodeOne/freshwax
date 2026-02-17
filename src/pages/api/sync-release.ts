@@ -129,7 +129,7 @@ export const POST = async ({ request, locals }: any) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[sync-release] Sync failed:', error);
     
     return ApiErrors.serverError('Sync failed');

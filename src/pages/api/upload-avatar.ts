@@ -186,7 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[upload-avatar] Error:', error);
     return ApiErrors.serverError('Failed to upload avatar');
   }
@@ -249,7 +249,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[upload-avatar] DELETE Error:', error);
     return ApiErrors.serverError('Failed to remove avatar');
   }

@@ -91,7 +91,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[get-ratings] Error:', error);
     return ApiErrors.serverError('Failed to fetch ratings');
   }

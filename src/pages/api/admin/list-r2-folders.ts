@@ -52,7 +52,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[list-r2-folders] Error:', error);
     return ApiErrors.serverError('Failed to list folders');
   }

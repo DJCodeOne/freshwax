@@ -2,6 +2,7 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../lib/firebase-rest';
 import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -20,6 +21,12 @@ const ALLOWED_DOMAINS = [
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`download-mix:${clientId}`, RateLimiters.strict);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
 
@@ -87,7 +94,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[download-mix] Error:', error);
     return ApiErrors.serverError('Failed to download file');
   }

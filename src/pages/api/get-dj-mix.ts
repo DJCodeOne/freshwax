@@ -79,7 +79,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[get-dj-mix] Error:', error);
     return ApiErrors.serverError('Failed to fetch mix');
   }

@@ -100,7 +100,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       error: 'Gift card not created yet'
     }), { headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('[giftcard-verify] Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');

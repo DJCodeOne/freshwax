@@ -23,7 +23,7 @@ async function getUserTierInfo(userId: string): Promise<{ tier: string; isPlus: 
     const isPlus = tier === SUBSCRIPTION_TIERS.PRO;
     const trackLimit = TIER_LIMITS[tier].playlistTrackLimit;
     return { tier, isPlus, trackLimit };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[PersonalPlaylist] Error checking subscription:', error);
     return { tier: 'free', isPlus: false, trackLimit: TIER_LIMITS[SUBSCRIPTION_TIERS.FREE].playlistTrackLimit };
   }

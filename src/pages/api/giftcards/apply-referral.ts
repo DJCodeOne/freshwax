@@ -92,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       message: `Referral code valid! You'll pay ${formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance)} instead of ${formatGBP(PRO_ANNUAL_PRICE)}`
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[apply-referral] Error:', error);
     return ApiErrors.serverError('Failed to validate referral code');
   }
@@ -241,7 +241,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       referralMessage: 'You now have your own referral code! Share it with a friend for 50% off their Pro upgrade.'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[apply-referral] Error:', error);
     return ApiErrors.serverError('Failed to apply referral code');
   }

@@ -3,10 +3,18 @@
 // Messages stored in Firebase, delivered via Pusher
 
 import type { APIRoute } from 'astro';
+import { z } from 'zod';
 import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit as checkGlobalRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors } from '../../../lib/api-utils';
+
+const LobbyChatSchema = z.object({
+  userId: z.string().min(1).max(500),
+  name: z.string().max(200).nullish(),
+  text: z.string().min(1).max(2000),
+  avatar: z.string().max(2000).nullish(),
+}).passthrough();
 
 // Simple MD5 implementation for Cloudflare Workers (same as presence.ts)
 // Converts string to UTF-8 bytes first to handle unicode/emojis properly
@@ -220,7 +228,7 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
     }
 
     return true;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[Pusher] Error:', error);
     return false;
   }
@@ -286,7 +294,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/chat] GET Error:', error);
     return ApiErrors.serverError('Failed to get messages');
   }
@@ -309,12 +317,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
   });
 
   try {
-    const data = await request.json();
-    const { userId, name, text, avatar } = data;
-
-    if (!userId || !text?.trim()) {
-      return ApiErrors.badRequest('User ID and message text required');
+    const rawBody = await request.json();
+    const parseResult = LobbyChatSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { userId, name, text, avatar } = parseResult.data;
 
     // SECURITY: Verify the requesting user owns this userId
     const authHeader = request.headers.get('Authorization');
@@ -373,7 +381,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/chat] POST Error:', error);
     return ApiErrors.serverError('Failed to send message');
   }
@@ -436,7 +444,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       message: 'Message deleted'
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[dj-lobby/chat] DELETE Error:', error);
     return ApiErrors.serverError('Failed to delete message');
   }

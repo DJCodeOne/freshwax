@@ -127,7 +127,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[update-settings] GET Error:', error);
     return ApiErrors.serverError('Failed to load settings');
   }
@@ -214,7 +214,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[update-settings] POST Error:', error);
     return ApiErrors.serverError('Failed to save settings');
   }

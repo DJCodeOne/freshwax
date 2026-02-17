@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
         log.info(`[delete-release] Deleted ${tracks.length} associated tracks`);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('[delete-release] Could not delete tracks:', error);
     }
 
@@ -133,7 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           lastUpdated: new Date().toISOString()
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       log.warn('[delete-release] Could not update master list:', error);
     }
 
@@ -154,7 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     log.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
 
     return ApiErrors.serverError('Internal server error');

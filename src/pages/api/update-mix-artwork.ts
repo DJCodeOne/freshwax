@@ -7,6 +7,7 @@ import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } 
 import { processImageToSquareWebP } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
 import { ApiErrors } from '../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Get R2 configuration from Cloudflare runtime env
 function getR2Config(env: any) {
@@ -32,6 +33,12 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-mix-artwork:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // Initialize for Cloudflare runtime
   const env = locals.runtime.env;
 
@@ -178,7 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
     
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[update-mix-artwork] Error:', error);
     return ApiErrors.serverError('Failed to update artwork');
   }

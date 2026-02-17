@@ -77,7 +77,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[get-referral-code] Error:', error);
     return ApiErrors.serverError('Failed to get code');
   }

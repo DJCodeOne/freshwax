@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[export-data] Error:', error);
     return ApiErrors.serverError('Failed to export data');
   }

@@ -155,7 +155,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching listeners:', error);
     return ApiErrors.serverError('Failed to fetch listeners');
   }
@@ -252,7 +252,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating listener:', error);
     return ApiErrors.serverError('Failed to update listener status');
   }

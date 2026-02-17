@@ -5,6 +5,9 @@ import '../../styles/dj-lobby.css';
 import LiveChat from '../../components/live/LiveChat.astro';
 export const prerender = false;
 
+// Giphy API key for GIF picker in LiveChat
+const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
+
 // Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
 const pusherConfig = {
   key: import.meta.env.PUBLIC_PUSHER_KEY || '',
@@ -45,10 +48,11 @@ const csrfToken = Astro.locals.csrfToken || '';
   <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Configuration - must be set before scripts load -->
-  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }} nonce={nonce}>
+  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig, giphyApiKey }} nonce={nonce}>
     window.PUSHER_CONFIG = pusherConfig;
     window.HLS_BASE_URL = hlsBaseUrl;
     window.FIREBASE_CONFIG = firebaseConfig;
+    window.GIPHY_API_KEY = giphyApiKey;
   </script>
   <!-- Email verification check (loaded early so FreshWax object exists) -->
   <script is:inline src="/email-verify-check.js" nonce={nonce}></script>
@@ -1482,6 +1486,7 @@ const csrfToken = Astro.locals.csrfToken || '';
   let allDjSlots = []; // Cache of all scheduled slots for consecutive slot calculation
   let userSubscription = { tier: 'free', isPro: false }; // User subscription status
   let currentEventSession = null; // Track if current stream is part of an event (no mid-session breaks)
+  const staleStreamIds = new Set(); // Track stream IDs confirmed as not-live to avoid re-switching
 
   // HLS Player state
   let hlsPlayer = null;
@@ -1760,8 +1765,10 @@ const csrfToken = Astro.locals.csrfToken || '';
         email: currentUser.email,
         isAdmin: isAdmin
       };
-      
-      log('[DJ Lobby] User info set:', { displayName, firebaseDisplayName: currentUser.displayName, apiPartnerDisplayName: result.partnerDisplayName, avatarUrl: result.avatarUrl, photoURL: currentUser.photoURL, finalAvatar: userInfo.avatar });
+      // Expose globally for LiveChat component (GIF sender uses window.currentUserInfo)
+      window.currentUserInfo = userInfo;
+
+      log('[DJ Lobby] User info set:', { displayName, avatarUrl: result.avatarUrl, photoURL: currentUser.photoURL, finalAvatar: userInfo.avatar });
       
       // Check eligibility (must have mix with 10+ likes OR have bypass approval)
       log('[DJ Lobby] Checking eligibility...');
@@ -1804,6 +1811,8 @@ const csrfToken = Astro.locals.csrfToken || '';
         tier: eligibility.subscriptionTier || 'free',
         isPro: eligibility.subscriptionTier === 'pro' || eligibility.subscriptionTier === 'premium' || userInfo.isAdmin
       };
+      // Update global user info with subscription data for LiveChat GIF sender
+      window.currentUserInfo = { ...userInfo, isPro: userSubscription.isPro, badge: 'crown' };
 
       showLobby();
       initLobby();
@@ -2799,8 +2808,17 @@ const csrfToken = Astro.locals.csrfToken || '';
       console.debug('[Stream DEBUG] MutationObserver attached to audioPreview');
     }
 
-    // Initialize livestream chat with default welcome message
-    renderLivestreamMessages([]);
+    // Initialize livestream chat immediately with playlist-global
+    // This ensures chat is always active (live stream or playlist mode)
+    // loadStreamStatus will upgrade to a live stream channel if one exists
+    window.currentStreamId = 'playlist-global';
+    await initLivestreamChat('playlist-global');
+
+    // Show chat form for logged-in users immediately
+    if (currentUser) {
+      document.getElementById('loginPrompt')?.classList.add('hidden');
+      document.getElementById('chatForm')?.classList.remove('hidden');
+    }
 
     // Load initial data from API
     await loadAllSlots(); // Load all slots for consecutive slot detection
@@ -5109,7 +5127,8 @@ const csrfToken = Astro.locals.csrfToken || '';
         window.currentStreamId = streamId;
 
         // Initialize livestream chat if not done, or switch from playlist-global to actual stream
-        if (streamId && (!window.livestreamChatInitialized || previousStreamId !== streamId)) {
+        // Skip stream IDs that were previously rejected as not-live (stale D1/cache data)
+        if (streamId && !staleStreamIds.has(streamId) && (!window.livestreamChatInitialized || previousStreamId !== streamId)) {
           // Cleanup previous channel first (e.g., playlist-global)
           if (livestreamChatChannel) {
             livestreamChatChannel.unbind_all();
@@ -5118,6 +5137,10 @@ const csrfToken = Astro.locals.csrfToken || '';
           }
           window.livestreamChatInitialized = false;
           initLivestreamChat(streamId);
+        } else if (staleStreamIds.has(streamId)) {
+          console.debug('[LivestreamChat] Skipping stale stream ID:', streamId);
+          // Keep using current channel (playlist-global)
+          window.currentStreamId = previousStreamId;
         }
 
         statusDot?.classList.remove('offline');
@@ -8563,6 +8586,14 @@ const csrfToken = Astro.locals.csrfToken || '';
       document.getElementById('loginPrompt')?.classList.add('hidden');
       document.getElementById('chatForm')?.classList.remove('hidden');
     }
+
+    // Ensure LiveChat emoji/GIF pickers are initialized
+    // (LiveChat component script may have run before chatForm was visible)
+    const emojiBtn = document.getElementById('openEmojiPanel');
+    if (emojiBtn && !emojiBtn.dataset.bound && typeof window.toggleEmojiPanel === 'undefined') {
+      // LiveChat script hasn't initialized yet - dispatch page-load to trigger it
+      document.dispatchEvent(new Event('astro:page-load'));
+    }
   }
 
   function renderLivestreamMessages(messages, forceScrollToBottom = true) {
@@ -8695,18 +8726,32 @@ const csrfToken = Astro.locals.csrfToken || '';
     `;
   }
 
+  // Track current chat send handler so we can remove old listeners
+  let currentChatSendHandler = null;
+  let currentChatKeyHandler = null;
+
   function setupLivestreamChatSend(streamId) {
     const chatInput = document.getElementById('chatInput');
     const sendBtn = document.getElementById('sendBtn');
 
     if (!chatInput || !sendBtn) return;
 
+    // Remove old listeners to prevent stacking
+    if (currentChatSendHandler) {
+      sendBtn.removeEventListener('click', currentChatSendHandler);
+    }
+    if (currentChatKeyHandler) {
+      chatInput.removeEventListener('keypress', currentChatKeyHandler);
+    }
+
     const sendMessage = async () => {
       const message = chatInput.value.trim();
       if (!message || !currentUser) return;
 
-      const userName = userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
+      const userName = userInfo?.name || userInfo?.displayName || userInfo?.firstName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
       const userAvatar = userInfo?.avatar || currentUser.photoURL || null;
+      const isPro = userSubscription?.isPro || false;
+
 
       // Optimistic UI - show message immediately
       const tempMsg = {
@@ -8714,6 +8759,8 @@ const csrfToken = Astro.locals.csrfToken || '';
         userId: currentUser.uid,
         userName: userName,
         userAvatar: userAvatar,
+        isPro: isPro,
+        badge: 'crown',
         message: message,
         type: 'text',
         createdAt: new Date().toISOString()
@@ -8725,14 +8772,21 @@ const csrfToken = Astro.locals.csrfToken || '';
       sendBtn.disabled = true;
 
       try {
+        const token = await currentUser.getIdToken();
+        const activeStreamId = window.currentStreamId || streamId;
         const response = await fetch('/api/livestream/chat/', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify({
-            streamId: streamId,
+            streamId: activeStreamId,
             userId: currentUser.uid,
             userName: userName,
             userAvatar: userAvatar,
+            isPro: isPro,
+            badge: 'crown',
             message: message,
             type: 'text'
           })
@@ -8741,6 +8795,35 @@ const csrfToken = Astro.locals.csrfToken || '';
         if (!response.ok) {
           const err = await response.json();
           console.error('[LivestreamChat] Send failed:', err);
+          // If stream is no longer live, auto-fallback to playlist-global and retry
+          if (err.error === 'Stream is not live' && activeStreamId !== 'playlist-global') {
+            console.debug('[LivestreamChat] Stream ended, switching to playlist-global');
+            staleStreamIds.add(activeStreamId);
+            window.currentStreamId = 'playlist-global';
+            cleanupLivestreamChat();
+            // Retry with playlist-global
+            const retryResponse = await fetch('/api/livestream/chat/', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                streamId: 'playlist-global',
+                userId: currentUser.uid,
+                userName: userName,
+                userAvatar: userAvatar,
+                isPro: isPro,
+                badge: 'crown',
+                message: message,
+                type: 'text'
+              })
+            });
+            if (!retryResponse.ok) {
+              const retryErr = await retryResponse.json();
+              console.error('[LivestreamChat] Retry also failed:', retryErr);
+            }
+          }
         }
       } catch (err) {
         console.error('[LivestreamChat] Send error:', err);
@@ -8751,13 +8834,19 @@ const csrfToken = Astro.locals.csrfToken || '';
       }
     };
 
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
+    const keyHandler = (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendMessage();
       }
-    });
+    };
+
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', keyHandler);
+
+    // Store refs for cleanup
+    currentChatSendHandler = sendMessage;
+    currentChatKeyHandler = keyHandler;
   }
 
   // Cleanup chat and switch to playlist-global when stream ends

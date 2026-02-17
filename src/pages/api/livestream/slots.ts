@@ -10,6 +10,7 @@ import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetSc
 import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
 import { ApiErrors } from '../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Helper to initialize services
 function initServices(locals: App.Locals) {
@@ -120,6 +121,12 @@ function generateId(): string {
 
 // GET: Fetch schedule
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`livestream-slots-get:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
   const db = env?.DB; // D1 database binding
 
@@ -384,7 +391,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/slots] GET Error:', error);
     return ApiErrors.serverError('Failed to fetch schedule');
   }
@@ -392,6 +399,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST: Book, cancel, go live, etc.
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitPost = checkRateLimit(`livestream-slots-post:${clientId}`, RateLimiters.standard);
+  if (!rateLimitPost.allowed) {
+    return rateLimitResponse(rateLimitPost.retryAfter!);
+  }
+
   initServices(locals);
   const env = locals?.runtime?.env;
   const db = env?.DB; // D1 database binding for sync
@@ -1014,7 +1027,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (liveSlots.length > 0) {
         const isOwnSlot = liveSlots[0].djId === djId;
-        return ApiErrors.badRequest(isOwnSlot);
+        return ApiErrors.badRequest(isOwnSlot
+          ? 'You already have an active stream. End it before starting a new one.'
+          : 'Another DJ is currently live. Please wait until their session ends.');
       }
 
       // Generate stream key valid until top of next hour (temporary key for auto-book)
@@ -1058,7 +1073,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (liveSlots.length > 0) {
         const isOwnSlot = liveSlots[0].djId === djId;
-        return ApiErrors.badRequest(isOwnSlot);
+        return ApiErrors.badRequest(isOwnSlot
+          ? 'You already have an active stream. End it before starting a new one.'
+          : 'Another DJ is currently live. Please wait until their session ends.');
       }
 
       // Validate that the stream is actually active before going live
@@ -1259,7 +1276,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (liveSlots.length > 0) {
         const isOwnSlot = liveSlots[0].djId === djId;
-        return ApiErrors.badRequest(isOwnSlot);
+        return ApiErrors.badRequest(isOwnSlot
+          ? 'You already have an active stream. End it before starting a new one.'
+          : 'Another DJ is currently live. Please wait until their session ends.');
       }
 
       // Verify the relay URL is from an approved station (check both streamUrl and httpsStreamUrl)
@@ -1271,21 +1290,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.forbidden('Relay URL is not from an approved station');
       }
 
-      // Verify the DJ has a booked slot covering the current time
-      const djSlots = await queryCollection('livestreamSlots', {
-        filters: [{ field: 'djId', op: 'EQUAL', value: djId }],
-        skipCache: true
-      });
+      // Verify the DJ has a booked slot covering the current time (admins bypass)
+      const relayIsAdmin = await isAdmin(authUserId);
+      let bookedSlot: any = null;
 
-      const bookedSlot = djSlots.find((slot: any) => {
-        if (slot.status !== 'scheduled' && slot.status !== 'in_lobby') return false;
-        const slotStart = new Date(slot.startTime).getTime();
-        const slotEnd = new Date(slot.endTime).getTime();
-        return slotStart <= now.getTime() && now.getTime() < slotEnd;
-      });
+      if (!relayIsAdmin) {
+        const djSlots = await queryCollection('livestreamSlots', {
+          filters: [{ field: 'djId', op: 'EQUAL', value: djId }],
+          skipCache: true
+        });
 
-      if (!bookedSlot) {
-        return ApiErrors.forbidden('You must have a booked slot to start a relay stream');
+        bookedSlot = djSlots.find((slot: any) => {
+          if (slot.status !== 'scheduled' && slot.status !== 'in_lobby') return false;
+          const slotStart = new Date(slot.startTime).getTime();
+          const slotEnd = new Date(slot.endTime).getTime();
+          return slotStart <= now.getTime() && now.getTime() < slotEnd;
+        });
+
+        if (!bookedSlot) {
+          return ApiErrors.forbidden('You must have a booked slot to start a relay stream');
+        }
       }
 
       // Calculate end time (top of next hour)
@@ -1357,7 +1381,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ApiErrors.badRequest('Invalid action');
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('[livestream/slots] POST Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return ApiErrors.serverError('Failed to process request');
@@ -1366,6 +1390,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Cancel slot
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimitDelete = checkRateLimit(`livestream-slots-delete:${clientId}`, RateLimiters.standard);
+  if (!rateLimitDelete.allowed) {
+    return rateLimitResponse(rateLimitDelete.retryAfter!);
+  }
+
   initServices(locals);
 
   // Verify authenticated user
