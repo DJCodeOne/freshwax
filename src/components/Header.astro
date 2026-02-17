@@ -807,36 +807,43 @@ const firebaseConfig = {
   }
 
   // Globe button + panel handlers
-  (function() {
+  function setupLangButton() {
     var langBtn = document.getElementById('langBtn');
     var panel = document.getElementById('langPanel');
-    if (!langBtn || langBtn._langInit) return;
-    langBtn._langInit = true;
+    if (!langBtn) return;
+
+    // Clone to remove old listeners on re-init (View Transitions)
+    var newBtn = langBtn.cloneNode(true);
+    langBtn.parentNode.replaceChild(newBtn, langBtn);
 
     // Ensure GT is loaded so language switching is instant
     if (!window._gtState.ready && !window._gtState.loading) {
       loadGoogleTranslate();
     }
 
-    langBtn.addEventListener('click', function(e) {
+    newBtn.addEventListener('click', function(e) {
       e.stopPropagation();
       toggleLangPanel();
     });
 
     if (panel) {
-      panel.addEventListener('click', function(e) {
+      // Clone panel too to avoid duplicate listeners
+      var newPanel = panel.cloneNode(true);
+      panel.parentNode.replaceChild(newPanel, panel);
+
+      newPanel.addEventListener('click', function(e) {
         var opt = e.target.closest('.fwx-lang-opt');
         if (!opt) return;
         var lang = opt.getAttribute('data-lang');
         updatePanelSelection(lang);
-        panel.hidden = true;
-        langBtn.setAttribute('aria-expanded', 'false');
+        newPanel.hidden = true;
+        newBtn.setAttribute('aria-expanded', 'false');
         applyLanguage(lang);
       });
 
       // Keyboard navigation within the grid
-      panel.addEventListener('keydown', function(e) {
-        var opts = Array.prototype.slice.call(panel.querySelectorAll('.fwx-lang-opt'));
+      newPanel.addEventListener('keydown', function(e) {
+        var opts = Array.prototype.slice.call(newPanel.querySelectorAll('.fwx-lang-opt'));
         var idx = opts.indexOf(document.activeElement);
         if (idx === -1) return;
         var cols = 3;
@@ -851,7 +858,8 @@ const firebaseConfig = {
         }
       });
     }
-  })();
+  }
+  setupLangButton();
 
   // When translation is active, force full page reload on all internal
   // navigation so Google Translate reads the googtrans cookie and translates.
@@ -1221,6 +1229,9 @@ const firebaseConfig = {
         if (!liveStatusInterval) liveStatusInterval = setInterval(checkLiveStatus, 60000);
       }
     }, { signal: headerCleanupController.signal });
+
+    // Language globe button
+    setupLangButton();
 
     // Mobile burger menu functionality
     setupBurgerMenu();
