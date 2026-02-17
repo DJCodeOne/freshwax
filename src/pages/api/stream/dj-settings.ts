@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/firebase-service-account';
 import { ApiErrors } from '../../../lib/api-utils';
+import { verifyAdminKey } from '../../../lib/admin';
 
 const DjSettingsSchema = z.object({
   userId: z.string().max(500).nullish(),
@@ -16,12 +17,6 @@ const DjSettingsSchema = z.object({
 }).passthrough();
 
 export const prerender = false;
-
-// Helper to get admin key from environment
-function getAdminKey(locals: App.Locals): string {
-  const env = locals?.runtime?.env;
-  return env?.ADMIN_KEY || import.meta.env.ADMIN_KEY || '';
-}
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -96,8 +91,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { userId: providedUserId, email: providedEmail, djName, twitchChannel, isApproved, adminKey } = parseResult.data;
 
-    // Simple admin key check
-    if (adminKey !== getAdminKey(locals)) {
+    // Timing-safe admin key check
+    if (!verifyAdminKey(adminKey, locals)) {
       return ApiErrors.unauthorized('Unauthorized');
     }
 

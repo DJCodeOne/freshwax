@@ -3,7 +3,8 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
+import { atomicIncrement, updateDocument, clearCache, verifyRequestUser } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
 
 const MixIdSchema = z.object({
@@ -17,6 +18,29 @@ const log = {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute (prevent unlike spam)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`track-mix-unlike:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  // Auth check - require logged-in user
+  let userId: string | null = null;
+  try {
+    const result = await verifyRequestUser(request);
+    if (result.userId) userId = result.userId;
+  } catch { }
+  // Also try cookie fallback
+  if (!userId) {
+    const cookieHeader = request.headers.get('cookie') || '';
+    const match = cookieHeader.match(/(?:^|;\s*)customerId=([^;]+)/);
+    if (match?.[1]) userId = match[1];
+  }
+  if (!userId) {
+    return ApiErrors.unauthorized('Authentication required');
+  }
+
   const env = locals.runtime.env;
   const db = env?.DB; // D1 database binding
 

@@ -5,10 +5,17 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, queryCollection, updateDocument } from '../../../../../lib/firebase-rest';
 import { ApiErrors } from '../../../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`connect-supplier-status:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const supplierId = url.searchParams.get('supplierId');
   const accessCode = url.searchParams.get('code');

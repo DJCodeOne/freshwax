@@ -6,10 +6,17 @@ import Stripe from 'stripe';
 import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
 import { ApiErrors } from '../../../../../lib/api-utils';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`connect-supplier-refresh:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
 
