@@ -1553,6 +1553,7 @@ Artist - Track Title
 
         quickDropStatus.textContent = 'Uploading...';
 
+        const qdUploadToken = await user.getIdToken();
         result = await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           activeQuickDropXhr = xhr;
@@ -1607,6 +1608,7 @@ Artist - Track Title
           });
 
           xhr.open('POST', '/api/upload-mix/');
+          if (qdUploadToken) xhr.setRequestHeader('Authorization', `Bearer ${qdUploadToken}`);
           const csrfMeta = document.querySelector('meta[name="csrf-token"]');
           if (csrfMeta) xhr.setRequestHeader('X-CSRF-Token', csrfMeta.getAttribute('content') || '');
           xhr.send(formData);
@@ -1891,6 +1893,9 @@ Artist - Track Title
 
         statusText.textContent = 'Uploading audio file...';
 
+        // Get auth token before the XHR promise
+        const formUploadToken = await user.getIdToken();
+
         // Use XMLHttpRequest for real upload progress tracking
         result = await new Promise((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -1944,6 +1949,7 @@ Artist - Track Title
           });
 
           xhr.open('POST', '/api/upload-mix/');
+          if (formUploadToken) xhr.setRequestHeader('Authorization', `Bearer ${formUploadToken}`);
           const csrfMeta2 = document.querySelector('meta[name="csrf-token"]');
           if (csrfMeta2) xhr.setRequestHeader('X-CSRF-Token', csrfMeta2.getAttribute('content') || '');
           xhr.send(formData);
