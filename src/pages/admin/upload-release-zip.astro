@@ -181,7 +181,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         
         log(`✓ Loaded ${extractedFiles.length} files from ZIP`, 'success');
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error reading ZIP:', error);
         alert('Error reading ZIP file: ' + (error instanceof Error ? error.message : String(error)));
       }
@@ -391,7 +391,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             log(`✓ Metadata: ${result.url}`, 'success');
             standardRelease.metadataUrl = result.url;
             uploadedCount++;
-          } catch (error: unknown) {
+          } catch (error) {
             log(`✗ Metadata failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
           }
         }
@@ -471,7 +471,7 @@ const csrfToken = Astro.locals.csrfToken || '';
                 standardRelease.tracks[trackIndex].storage = 'r2';
                 
                 uploadedCount++;
-              } catch (error: unknown) {
+              } catch (error) {
                 log(`  ✗ ${ext.toUpperCase()}: ${error instanceof Error ? error.message : String(error)}`, 'error');
               }
             }
@@ -567,7 +567,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               }
 
               uploadedCount++;
-            } catch (error: unknown) {
+            } catch (error) {
               log(`✗ ${file.name}: ${error instanceof Error ? error.message : String(error)}`, 'error');
             }
           }
@@ -598,7 +598,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               standardRelease.artworkUrl = result.url;
 
               uploadedCount++;
-            } catch (error: unknown) {
+            } catch (error) {
               log(`✗ ${file.name}: ${error instanceof Error ? error.message : String(error)}`, 'error');
             }
           }
@@ -639,7 +639,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           successContainer.classList.add('show');
         }, 1500);
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Upload error:', error);
         log('═══════════════════════════════', 'error');
         const zipErrMsg = error instanceof Error ? error.message : String(error);
@@ -681,7 +681,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
         log('✓ Firebase updated with ALL URLs', 'success');
         log(`  Total releases: ${result.totalReleases}`, 'info');
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Firebase error:', error);
         log(`✗ Firebase failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
         throw error;

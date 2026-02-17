@@ -1216,7 +1216,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = '/admin/inventory/';
         }, 1500);
         
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Upload error:', error);
         showToast(error instanceof Error ? error.message : String(error), 'error');
         submitBtn.disabled = false;

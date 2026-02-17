@@ -89,7 +89,7 @@ const nonce = Astro.locals.nonce || '';
           errorMessage.textContent = result.error || 'Failed to create gift card';
           return;
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[giftcard-success] PayPal error:', error);
         loadingState.style.display = 'none';
         errorState.style.display = 'block';
@@ -149,7 +149,7 @@ const nonce = Astro.locals.nonce || '';
         errorMessage.textContent = result.error || 'Payment verification failed';
         return;
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error(`[giftcard-success] Error (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
           loadingState.style.display = 'none';

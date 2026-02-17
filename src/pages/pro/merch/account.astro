@@ -298,7 +298,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         document.getElementById('commissionRate').textContent =
           (data.commissionRate || 15) + '%';
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error loading account info:', error);
       }
     }

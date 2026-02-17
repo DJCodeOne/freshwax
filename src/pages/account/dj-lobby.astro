@@ -1935,7 +1935,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         currentBypassStatus = { ...result, ...eligibility };
         updateBypassUI(result);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Error checking status:', error);
     }
   }
@@ -2022,7 +2022,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         btn.disabled = false;
         btn.textContent = '🎫 Request Bypass Access';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Submit error:', error);
       alert('Failed to submit request. Please try again.');
       btn.disabled = false;
@@ -2051,7 +2051,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       } else {
         alert(result.error || 'Failed to cancel request');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Cancel error:', error);
     }
   });
@@ -2074,7 +2074,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         })
       });
       await checkBypassStatus(currentBypassStatus || {});
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Resubmit error:', error);
     }
   });
@@ -2136,7 +2136,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         btnText?.classList.remove('hidden');
         btnSpinner?.classList.add('hidden');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[QuickAccess] Redeem error:', error);
       errorEl.textContent = 'Failed to redeem code. Please try again.';
       errorEl.classList.remove('hidden');
@@ -3156,7 +3156,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         const result = await response.json();
         if (!result.success) throw new Error(result.error);
         console.debug('[Broadcast] Updated via API:', { mode, hlsUrl });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[Broadcast] Failed to update broadcast mode:', error);
       }
     }
@@ -6802,7 +6802,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         }
         console.error('[GoLive] Failed to generate key:', result.error);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[GoLive] Error loading stream key:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
       const errName = error instanceof Error ? error.name : '';
@@ -8157,7 +8157,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
         console.debug('[DJ Lobby] Spawned key:', mySlot.id);
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[DJ Lobby] Spawn key error:', error);
         streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
         btn.textContent = 'Spawn';

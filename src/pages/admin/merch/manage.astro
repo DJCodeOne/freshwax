@@ -50,7 +50,7 @@ try {
   // Sort by name
   products.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   
-} catch (error: unknown) {
+} catch (error) {
   console.error('[MERCH MANAGE] Error loading products:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }

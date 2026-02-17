@@ -279,7 +279,7 @@ export const prerender = false;
         } else {
           mixesContainer.innerHTML = '<div class="empty-state"><p>Could not load mixes</p></div>';
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[mixes.astro] Error loading mixes:', error);
         loadingState?.classList.add('hidden');
         mainContent?.classList.remove('hidden');
@@ -381,7 +381,7 @@ export const prerender = false;
           } else {
             alert('Failed to delete mix: ' + (data.error || 'Unknown error'));
           }
-        } catch (error: unknown) {
+        } catch (error) {
           alert('Error deleting mix');
         }
       });
@@ -505,7 +505,7 @@ export const prerender = false;
       // Update button text
       const sizeKB = Math.round(processedArtworkBlob.size / 1024);
       changeArtworkBtn.textContent = `✓ New cover (${sizeKB}KB)`;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error processing artwork:', error);
       alert('Failed to process image. Please try another.');
       processedArtworkBlob = null;
@@ -613,7 +613,7 @@ export const prerender = false;
         const result = await response.json();
         throw new Error(result.error || 'Failed to update mix');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       alert('Failed to update mix: ' + (error instanceof Error ? error.message : String(error)));
       saveBtn.disabled = false;
@@ -692,7 +692,7 @@ export const prerender = false;
       } else {
         alert('Failed to delete mix: ' + (data.error || 'Unknown error'));
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       alert('Failed to delete mix');
     }

@@ -26,7 +26,7 @@ try {
   } else {
     errorMessage = 'Mix not found';
   }
-} catch (error: unknown) {
+} catch (error) {
   console.error('[EDIT MIX] Error loading mix:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }
@@ -773,7 +773,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         throw new Error(result.error || 'Failed to update');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       showToast('Failed to update mix: ' + (error instanceof Error ? error.message : String(error)), 'error');
       saveBtn.textContent = '💾 Save Changes';

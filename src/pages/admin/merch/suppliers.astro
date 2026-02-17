@@ -285,7 +285,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           suppliers = data.suppliers || [];
           renderSuppliers();
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error loading suppliers:', error);
         document.getElementById('suppliersList').innerHTML = 
           '<div style="padding: 40px; text-align: center; color: #666;">Error loading suppliers</div>';
@@ -436,7 +436,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         showToast('Supplier added successfully!', 'success');
         loadSuppliers();
         
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     });
@@ -497,7 +497,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         showToast('Supplier updated', 'success');
         closeEditModal();
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     });
@@ -516,7 +516,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         
         showToast('Supplier deactivated', 'success');
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     }
@@ -533,7 +533,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         
         showToast('Supplier activated', 'success');
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     }
@@ -555,7 +555,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         
         showToast('Supplier permanently deleted', 'success');
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     }

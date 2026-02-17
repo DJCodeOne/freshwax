@@ -400,7 +400,7 @@ const nonce = Astro.locals.nonce || '';
       });
       const data = await response.json();
       return data.success && data.isAdmin;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error checking admin status:', error);
       return false;
     }
@@ -434,7 +434,7 @@ const nonce = Astro.locals.nonce || '';
       document.getElementById('customersTable').style.display = 'block';
 
       renderUsers();
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading partners:', error);
       document.getElementById('loadingState').innerHTML = `
         <div style="color: red; text-align: center; padding: 2rem;">
@@ -864,7 +864,7 @@ const nonce = Astro.locals.nonce || '';
       // Update stats
       document.getElementById('totalArtists').textContent = allUsers.filter(u => u.isArtist).length;
       document.getElementById('totalMerch').textContent = allUsers.filter(u => u.isMerchSupplier).length;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error saving permissions:', error);
       alert('Error saving: ' + (error instanceof Error ? error.message : String(error)));
     }

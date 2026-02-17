@@ -550,7 +550,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         loadingState.style.display = 'none';
         dashboardContent.style.display = 'grid';
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[VinylDashboard] Error loading user data:', error);
         loadingState.style.display = 'none';
         accessDenied.style.display = 'flex';
@@ -561,7 +561,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       try {
         await signOut(auth);
         window.location.href = '/';
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Logout error:', error);
       }
     });

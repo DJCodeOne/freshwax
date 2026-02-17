@@ -328,7 +328,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
           `;
         }).join('');
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error loading stock:', error);
         stockTableBody.innerHTML = '<tr><td colspan="6" class="loading">Error loading stock data</td></tr>';
       }

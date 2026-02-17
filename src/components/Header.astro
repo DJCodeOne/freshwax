@@ -990,7 +990,7 @@ const firebaseConfig = {
       resultsContainer.style.display = 'block';
       if (searchInputEl) searchInputEl.setAttribute('aria-expanded', 'true');
       window.trackSearch?.(query, (data.results || []).length);
-    } catch (error: unknown) {
+    } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return; // Cancelled by newer search
       console.error('Search error:', error);
       contentContainer.innerHTML = '<p style="padding: 1rem; color: #666; text-align: center;">Search unavailable</p>';

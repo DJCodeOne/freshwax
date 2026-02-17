@@ -1349,7 +1349,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           const checkbox = container.querySelector('.disable-checkbox');
           if (checkbox) checkbox.checked = bookingsDisabled;
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Failed to load bookings:', error);
         bookings = [];
       }
@@ -1665,7 +1665,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         // Trigger refresh on other instances
         window.dispatchEvent(new CustomEvent('schedule-updated'));
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[DailySchedule] Booking error:', error);
         alert('Booking failed: ' + (error instanceof Error ? error.message : 'Unknown error. Please try again.'));
       } finally {
@@ -1729,7 +1729,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         } else {
           alert(data.error || 'Failed to cancel booking');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Cancel booking error:', error);
         alert('Failed to cancel booking. Please try again.');
       }
@@ -1795,7 +1795,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         } else {
           alert(data.error || 'Failed to add DJ');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         alert('Failed to add DJ');
       }
     }
@@ -1869,7 +1869,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         } else {
           alert(data.error || 'Failed to remove slot');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         alert('Failed to remove slot');
       }
     }
@@ -1884,7 +1884,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             updates: { bookingsDisabled: disabled }
           })
         });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Failed to update settings:', error);
       }
     }
@@ -1905,7 +1905,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         const data = await response.json();
         currentAllowances = data.success ? (data.allowances || []) : [];
         renderAllowancesList();
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Failed to load allowances:', error);
         currentAllowances = [];
         renderAllowancesList();
@@ -1971,7 +1971,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         } else {
           alert(data.error || 'Failed to save allowance');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         alert('Failed to save allowance');
       }
     }
@@ -1994,7 +1994,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         } else {
           alert(data.error || 'Failed to remove allowance');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         alert('Failed to remove allowance');
       }
     }

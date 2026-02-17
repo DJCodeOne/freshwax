@@ -147,7 +147,7 @@ export const prerender = false;
         document.getElementById('ordersList').style.display = 'block';
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading orders:', error);
       document.getElementById('ordersLoadingState').innerHTML = `
         <div class="empty-icon">❌</div>
@@ -328,7 +328,7 @@ export const prerender = false;
       closeShipModal();
       loadOrders();
 
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }

@@ -1115,7 +1115,7 @@ Artist - Track Title
         downloadBtn.classList.remove('downloaded');
       }, 3000);
       
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Download error:', error);
       if (downloadText) downloadText.textContent = 'Error - Retry';
       downloadBtn.classList.remove('downloading');
@@ -1828,7 +1828,7 @@ Artist - Track Title
       } else {
         alert(data.error || 'Failed to update tracklist');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Tracklist] Save error:', error);
       alert('Failed to save tracklist. Please try again.');
     } finally {

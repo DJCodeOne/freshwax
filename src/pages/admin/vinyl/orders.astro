@@ -297,7 +297,7 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('ordersTable').style.display = 'block';
 
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('Error loading orders:', error);
           document.getElementById('loadingState').innerHTML = `
             <div class="empty-state">
@@ -561,7 +561,7 @@ export const prerender = false;
           closeModal('viewModal');
           loadOrders();
 
-        } catch (error: unknown) {
+        } catch (error) {
           showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       };

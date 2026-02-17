@@ -171,7 +171,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
           }
         }
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[GIF] Error sending:', error);
     }
   }

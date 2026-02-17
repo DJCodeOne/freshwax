@@ -1387,7 +1387,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         if (likeCountEl) likeCountEl.textContent = currentCount;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Reaction] API error:', error);
       // Revert optimistic update on error
       if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -1471,7 +1471,7 @@ const nonce = Astro.locals.nonce || '';
           if (result.success && result.totalLikes > 0 && likeCountEl) {
             likeCountEl.textContent = result.totalLikes;
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('[Like] Error:', error);
           // Revert optimistic update on error
           if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -3453,7 +3453,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         takeoverSection.classList.add('hidden');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error checking for takeover option:', error);
     }
   }
@@ -3519,7 +3519,7 @@ const nonce = Astro.locals.nonce || '';
           // Takeover was approved! Show the key
           showTakeoverApproved(result.streamKey);
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error polling takeover status:', error);
       }
     }, 3000); // Poll every 3 seconds
@@ -3609,7 +3609,7 @@ const nonce = Astro.locals.nonce || '';
         btn.disabled = false;
         btn.innerHTML = '<span>🎧 Request Takeover</span>';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error requesting takeover:', error);
       alert('Failed to send takeover request');
       btn.disabled = false;
@@ -3648,7 +3648,7 @@ const nonce = Astro.locals.nonce || '';
         // Restart polling if cancel failed
         startTakeoverPolling();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error cancelling takeover:', error);
       startTakeoverPolling();
     }

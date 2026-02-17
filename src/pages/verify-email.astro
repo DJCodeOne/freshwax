@@ -379,7 +379,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         lastResendTime = Date.now();
         successMessage.textContent = 'Verification email sent! Check your inbox.';
         successMessage.style.display = 'block';
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Resend error:', error);
         if (error.code === 'auth/too-many-requests') {
           errorMessage.textContent = 'Too many requests. Please try again later.';
@@ -419,7 +419,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           errorMessage.textContent = 'Email not yet verified. Please click the link in your email.';
           errorMessage.style.display = 'block';
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Check error:', error);
         errorMessage.textContent = 'Failed to check status. Please try again.';
         errorMessage.style.display = 'block';

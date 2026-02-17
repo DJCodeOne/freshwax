@@ -267,7 +267,7 @@ export const prerender = false;
 
         updateExamples();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading settings:', error);
     }
   }
@@ -333,7 +333,7 @@ export const prerender = false;
         successMessage.style.display = 'none';
       }, 3000);
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error saving settings:', error);
       alert('Error saving settings: ' + (error instanceof Error ? error.message : String(error)));
     } finally {

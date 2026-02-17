@@ -420,7 +420,7 @@ const nonce = Astro.locals.nonce || '';
         document.getElementById('address1')?.focus();
       }, 100);
       
-    } catch (error: unknown) {
+    } catch (error) {
       lookupError.textContent = (error instanceof Error ? error.message : null) || 'Failed to lookup postcode';
       lookupError.style.color = '#ff6b6b';
       lookupError.style.display = 'block';
@@ -978,7 +978,7 @@ const nonce = Astro.locals.nonce || '';
         throw new Error('No PayPal approval URL returned');
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('PayPal error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'PayPal error. Please try again.';
       errorMsg.style.display = 'block';
@@ -1120,7 +1120,7 @@ const nonce = Astro.locals.nonce || '';
           } else {
             throw new Error(result.error || 'Payment failed');
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('PayPal capture error:', error);
           errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Payment failed. Please try again.';
           errorMsg.style.display = 'block';
@@ -1379,7 +1379,7 @@ const nonce = Astro.locals.nonce || '';
           throw new Error(result.error || 'Failed to create checkout session');
         }
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Checkout error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Something went wrong. Please try again.';
       errorMsg.style.display = 'block';

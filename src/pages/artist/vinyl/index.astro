@@ -119,7 +119,7 @@ export const prerender = false;
         document.getElementById('listingsGrid').style.display = 'grid';
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading listings:', error);
       document.getElementById('listingsLoadingState').innerHTML = `
         <div class="empty-icon">❌</div>
@@ -276,7 +276,7 @@ export const prerender = false;
 
       alert('Listing submitted for review!');
       loadListings();
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -302,7 +302,7 @@ export const prerender = false;
       }
 
       loadListings();
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
@@ -328,7 +328,7 @@ export const prerender = false;
       }
 
       loadListings();
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }

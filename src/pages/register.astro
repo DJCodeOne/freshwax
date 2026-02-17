@@ -1197,7 +1197,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = '/account/dashboard/';
         }, 2000);
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[Register] Google sign-in error:', error);
 
         if (error.code === 'auth/popup-closed-by-user') {
@@ -1422,7 +1422,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = '/verify-email/';
         }, 3000);
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Registration error:', error);
         
         let errorMessage = 'Registration failed. Please try again.';
