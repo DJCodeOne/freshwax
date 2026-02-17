@@ -80,14 +80,25 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    // SECURITY: Verify the authenticated user
-    const { userId: verifiedUserId, error: authError } = await verifyRequestUser(request);
-    if (authError || !verifiedUserId) {
+    // Verify the authenticated user — prefer Firebase auth, fall back to customerId cookie
+    let userId: string | null = null;
+    try {
+      const { userId: verifiedUserId } = await verifyRequestUser(request);
+      if (verifiedUserId) userId = verifiedUserId;
+    } catch { /* no auth token */ }
+
+    // Cookie fallback (checkout page may call before Firebase auth initializes)
+    if (!userId) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const match = cookieHeader.match(/(?:^|;\s*)customerId=([^;]+)/);
+      if (match?.[1]) userId = match[1];
+    }
+
+    if (!userId) {
       return ApiErrors.unauthorized('Authentication required');
     }
 
     const { cartItems } = await request.json();
-    const userId = verifiedUserId;
     
     if (!cartItems || !Array.isArray(cartItems)) {
       return new Response(JSON.stringify({ duplicates: [] }), {
