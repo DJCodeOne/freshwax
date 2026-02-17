@@ -182,10 +182,10 @@ orders.forEach(order => {
     const isFreeRelease = actualReleasePrice === 0 || item.isFree === true;
 
     if (isRelease && !isFreeRelease) {
-      const key = item.releaseId || item.title || 'Unknown';
+      const key = item.releaseId || item.name || item.title || 'Unknown';
       if (!releaseSales[key]) {
         releaseSales[key] = {
-          title: item.title || 'Unknown',
+          title: item.name || item.title || 'Unknown',
           artist: item.artist || '',
           artwork: item.artwork || item.image || '',
           sales: 0,
@@ -220,10 +220,10 @@ orders.forEach(order => {
     const isMerch = item.type === 'merch' || item.isPhysical || item.isMerch ||
                     (item.productId && item.type !== 'release' && item.type !== 'digital' && !item.releaseId);
     if (isMerch) {
-      const key = item.productId || item.title || 'Unknown';
+      const key = item.productId || item.name || item.title || 'Unknown';
       if (!merchSales[key]) {
         merchSales[key] = {
-          title: item.title || 'Unknown',
+          title: item.name || item.title || 'Unknown',
           image: item.image || '',
           sales: 0,
           revenue: 0
