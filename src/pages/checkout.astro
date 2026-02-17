@@ -1482,6 +1482,34 @@ const nonce = Astro.locals.nonce || '';
     renderCheckout();
   }
 
+  // Reset buttons when page is restored from bfcache (browser back/forward)
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+      const submitBtn = document.getElementById('submitBtn');
+      const customPaypalBtn = document.getElementById('customPaypalBtn');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.background = '#dc2626';
+        submitBtn.style.color = '#fff';
+        const { total } = typeof calculateTotals === 'function' ? calculateTotals() : { total: 0 };
+        const finalTotal = Math.max(0, total - (appliedCredit || 0));
+        if (finalTotal === 0) {
+          submitBtn.textContent = 'COMPLETE FREE ORDER';
+          submitBtn.style.background = '#16a34a';
+        } else {
+          submitBtn.textContent = 'PAY WITH CARD — £' + finalTotal.toFixed(2);
+        }
+      }
+      if (customPaypalBtn) {
+        customPaypalBtn.disabled = false;
+        customPaypalBtn.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.217a.774.774 0 0 1 .763-.645h6.333c2.097 0 3.768.514 4.967 1.53 1.178 1.001 1.763 2.442 1.737 4.28-.023 1.596-.492 2.95-1.392 4.02-.888 1.054-2.118 1.808-3.654 2.24a15.42 15.42 0 0 1-4.108.52H7.7l-.625 6.175z" fill="#003087"/><path d="M23.048 7.667c-.03 1.651-.523 3.033-1.463 4.108-.953 1.088-2.256 1.86-3.87 2.293-1.157.31-2.47.466-3.896.466h-1.76a.774.774 0 0 0-.764.645l-1.14 7.218a.641.641 0 0 1-.633.54H6.5l-.09.528a.641.641 0 0 0 .634.74h4.022a.774.774 0 0 0 .763-.645l.704-4.46.045-.232a.774.774 0 0 1 .764-.645h.481c3.114 0 5.553-1.265 6.266-4.925.298-1.53.143-2.807-.658-3.704a3.198 3.198 0 0 0-.383-.327z" fill="#0070E0"/><path d="M21.754 7.151a7.12 7.12 0 0 0-.877-.19 11.24 11.24 0 0 0-1.79-.133h-5.276a.752.752 0 0 0-.741.632l-1.12 7.1-.032.207a.774.774 0 0 1 .764-.645h1.59c3.127 0 5.574-1.27 6.29-4.944.021-.109.04-.215.055-.318.213-1.143.001-1.921-.863-2.71z" fill="#003087"/></svg> PAY WITH PAYPAL';
+      }
+      // Hide any stale error messages
+      const errorMsg = document.getElementById('error-message');
+      if (errorMsg) errorMsg.style.display = 'none';
+    }
+  });
+
   // Use window.authReady from Header.astro instead of importing Firebase Auth SDK
   // Header already loads Firebase Auth and resolves this promise with the user
   if (window.authReady) {
