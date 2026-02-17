@@ -337,19 +337,18 @@ const nonce = Astro.locals.nonce || '';
   async function loadCustomerData(uid) {
     try {
       // Load via lightweight API instead of Firestore SDK (~80KB saved)
-      let idToken = null;
+      const headers = {};
       try {
-        idToken = await currentUser?.getIdToken();
-      } catch (e) { /* token fetch failed, try without */ }
-
-      if (!idToken) return null;
+        const idToken = await currentUser?.getIdToken();
+        if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
+      } catch (e) { /* token fetch failed, API will use cookie fallback */ }
 
       // Add timeout protection
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const response = await fetch('/api/checkout-data/', {
-        headers: { 'Authorization': `Bearer ${idToken}` },
+        headers,
         signal: controller.signal
       });
 
