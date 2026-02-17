@@ -412,9 +412,13 @@ export class PlaylistManager {
       };
 
       // Send to global API
+      const idToken = await this.getAuthToken();
+      const postHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (idToken) postHeaders['Authorization'] = `Bearer ${idToken}`;
+
       const response = await fetch('/api/playlist/global/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: postHeaders,
         body: JSON.stringify({
           item,
           userId: this.userId,
@@ -470,9 +474,13 @@ export class PlaylistManager {
     }
 
     try {
+      const idToken = await this.getAuthToken();
+      const deleteHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (idToken) deleteHeaders['Authorization'] = `Bearer ${idToken}`;
+
       const response = await fetch('/api/playlist/global/', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: deleteHeaders,
         body: JSON.stringify({
           itemId,
           userId: this.userId
@@ -2263,6 +2271,16 @@ export class PlaylistManager {
    */
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
+  }
+
+  private async getAuthToken(): Promise<string | null> {
+    try {
+      const auth = (window as any).firebase?.auth?.();
+      const currentUser = auth?.currentUser;
+      return currentUser ? await currentUser.getIdToken() : null;
+    } catch {
+      return null;
+    }
   }
 
   /**
