@@ -54,7 +54,7 @@ const CheckoutShippingSchema = z.object({
 const StripeCheckoutSchema = z.object({
   items: z.array(CheckoutItemSchema).min(1, 'At least one item required').max(50),
   customer: CheckoutCustomerSchema,
-  shipping: CheckoutShippingSchema,
+  shipping: CheckoutShippingSchema.nullish(),
   hasPhysicalItems: z.boolean().optional(),
   totals: z.object({
     subtotal: z.number().optional(),

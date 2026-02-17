@@ -235,9 +235,15 @@ const nonce = Astro.locals.nonce || '';
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
+      const headers = { 'Content-Type': 'application/json' };
+      try {
+        const token = await currentUser?.getIdToken();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      } catch (e) { /* token fetch failed */ }
+
       const response = await fetch('/api/check-duplicates/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ userId, cartItems: cart }),
         signal: controller.signal
       });
@@ -1332,9 +1338,13 @@ const nonce = Astro.locals.nonce || '';
 
         let response;
         try {
+          const stripeHeaders = { 'Content-Type': 'application/json' };
+          if (orderData.idToken) {
+            stripeHeaders['Authorization'] = `Bearer ${orderData.idToken}`;
+          }
           response = await fetch('/api/stripe/create-checkout-session/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: stripeHeaders,
             body: JSON.stringify(orderData),
             signal: controller.signal
           });
