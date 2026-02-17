@@ -5,9 +5,6 @@ import '../../styles/dj-lobby.css';
 import LiveChat from '../../components/live/LiveChat.astro';
 export const prerender = false;
 
-// Giphy API key for GIF picker in LiveChat
-const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
-
 // Pusher config for client-side (PUBLIC_ prefixed vars are safe to expose)
 const pusherConfig = {
   key: import.meta.env.PUBLIC_PUSHER_KEY || '',
@@ -48,11 +45,10 @@ const csrfToken = Astro.locals.csrfToken || '';
   <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Configuration - must be set before scripts load -->
-  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig, giphyApiKey }} nonce={nonce}>
+  <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }} nonce={nonce}>
     window.PUSHER_CONFIG = pusherConfig;
     window.HLS_BASE_URL = hlsBaseUrl;
     window.FIREBASE_CONFIG = firebaseConfig;
-    window.GIPHY_API_KEY = giphyApiKey;
   </script>
   <!-- Email verification check (loaded early so FreshWax object exists) -->
   <script is:inline src="/email-verify-check.js" nonce={nonce}></script>
@@ -1939,7 +1935,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         currentBypassStatus = { ...result, ...eligibility };
         updateBypassUI(result);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Error checking status:', error);
     }
   }
@@ -2026,7 +2022,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         btn.disabled = false;
         btn.textContent = '🎫 Request Bypass Access';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Submit error:', error);
       alert('Failed to submit request. Please try again.');
       btn.disabled = false;
@@ -2055,7 +2051,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       } else {
         alert(result.error || 'Failed to cancel request');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Cancel error:', error);
     }
   });
@@ -2078,7 +2074,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         })
       });
       await checkBypassStatus(currentBypassStatus || {});
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Resubmit error:', error);
     }
   });
@@ -2140,7 +2136,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         btnText?.classList.remove('hidden');
         btnSpinner?.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QuickAccess] Redeem error:', error);
       errorEl.textContent = 'Failed to redeem code. Please try again.';
       errorEl.classList.remove('hidden');
@@ -3160,7 +3156,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         const result = await response.json();
         if (!result.success) throw new Error(result.error);
         console.debug('[Broadcast] Updated via API:', { mode, hlsUrl });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[Broadcast] Failed to update broadcast mode:', error);
       }
     }
@@ -6806,19 +6802,21 @@ const csrfToken = Astro.locals.csrfToken || '';
         }
         console.error('[GoLive] Failed to generate key:', result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[GoLive] Error loading stream key:', error);
-      log('[GoLive] ERROR at stream key generation:', error.message || error.name);
+      const errMsg = error instanceof Error ? error.message : String(error);
+      const errName = error instanceof Error ? error.name : '';
+      log('[GoLive] ERROR at stream key generation:', errMsg || errName);
       if (inlineKeyEl) {
         inlineKeyEl.classList.remove('key-loading');
         inlineKeyEl.classList.remove('key-reveal');
         // Show more helpful error message
         let errorMsg = 'Error - click to retry';
-        if (error.name === 'AbortError') {
+        if (errName === 'AbortError') {
           errorMsg = 'Timeout - click to retry';
-        } else if (error.message?.includes('User info')) {
+        } else if (errMsg?.includes('User info')) {
           errorMsg = 'Please wait...';
-        } else if (error.message?.includes('authenticated')) {
+        } else if (errMsg?.includes('authenticated')) {
           errorMsg = 'Please log in again';
         }
         inlineKeyEl.innerHTML = `<span style="color: #ff6b6b; cursor: pointer;" id="streamKeyRetryBtn">${errorMsg}</span>`;
@@ -8159,7 +8157,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
         console.debug('[DJ Lobby] Spawned key:', mySlot.id);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[DJ Lobby] Spawn key error:', error);
         streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
         btn.textContent = 'Spawn';

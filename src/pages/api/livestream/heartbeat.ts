@@ -1,6 +1,15 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { z } from 'zod';
+
+const HeartbeatSchema = z.object({
+  streamId: z.string().min(1).max(200),
+  sessionId: z.string().min(1).max(200),
+  action: z.string().max(50).nullish(),
+  userName: z.string().max(200).nullish(),
+  userAvatar: z.string().max(2000).nullish(),
+}).passthrough();
 
 // Viewer info structure
 interface ViewerInfo {
@@ -109,12 +118,19 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const body = await request.json();
-    const { streamId, sessionId, action } = body;
-
-    if (!streamId || !sessionId) {
-      return ApiErrors.badRequest('Missing streamId or sessionId');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const parseResult = HeartbeatSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const body = parseResult.data;
+    const { streamId, sessionId, action } = body;
 
     // SECURITY: Only use user info from verified auth, not from body
     // This prevents spoofing usernames/avatars in the online users list

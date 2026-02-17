@@ -738,9 +738,9 @@ export const prerender = false;
       audioLoading.style.display = 'none';
       waveformEditor.style.display = 'block';
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load audio:', error);
-      alert('Failed to load audio: ' + (error.message || 'Unknown error. Please try a different file format.'));
+      alert('Failed to load audio: ' + (error instanceof Error ? error.message : 'Unknown error. Please try a different file format.'));
       audioLoading.style.display = 'none';
       audioLabel.style.display = 'flex';
     }
@@ -925,7 +925,7 @@ export const prerender = false;
 
         const blob = new Blob(mp3Data, { type: 'audio/mpeg' });
         resolve(blob);
-      } catch (error) {
+      } catch (error: unknown) {
         reject(error);
       }
     });
@@ -1177,10 +1177,10 @@ export const prerender = false;
         window.location.href = '/artist/vinyl/';
       }, 1500);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Submission error:', error);
       modal.style.display = 'none';
-      alert('Error: ' + error.message);
+      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 </script>

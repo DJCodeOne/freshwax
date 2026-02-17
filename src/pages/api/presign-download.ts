@@ -8,6 +8,14 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
+import { z } from 'zod';
+
+const PresignDownloadSchema = z.object({
+  orderId: z.string().min(1).max(200),
+  releaseId: z.string().max(200),
+  trackIndex: z.number().int().min(0).max(999),
+  fileType: z.enum(['mp3', 'wav', 'artwork']),
+}).passthrough();
 
 export const prerender = false;
 
@@ -70,17 +78,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (authError || !userId) {
       return ApiErrors.unauthorized(authError || 'Authentication required');
     }
-    const body = await request.json();
-    const { orderId, releaseId, trackIndex, fileType } = body;
-
-    // Validate required fields
-    if (!orderId || releaseId === undefined || trackIndex === undefined || !fileType) {
-      return ApiErrors.badRequest('Missing required fields: orderId, releaseId, trackIndex, fileType');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
 
-    if (!['mp3', 'wav', 'artwork'].includes(fileType)) {
-      return ApiErrors.badRequest('Invalid fileType. Must be mp3, wav, or artwork');
+    const parseResult = PresignDownloadSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
     }
+    const { orderId, releaseId, trackIndex, fileType } = parseResult.data;
 
     log.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
 

@@ -544,12 +544,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Trigger Pusher for real-time delivery to all connected clients
     // This replaces Firebase onSnapshot - no more reads per client!
     const chatChannel = `stream-${streamId}`;
-    console.log('[chat.ts] Broadcasting message to channel:', chatChannel);
     const pusherSuccess = await triggerPusher(chatChannel, 'new-message', {
       id: messageId,
       ...chatMessage
     }, env);
-    console.log('[chat.ts] Pusher broadcast result:', pusherSuccess);
 
     // Check if this is a bot command and send bot response
     let botResponse = null;
@@ -628,7 +626,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
               id: welcomeId,
               ...welcomeMessage
             }, env);
-            console.log('[chat] Bot welcomed new user:', userName);
           }
           // Random chance to comment on a tune (only for non-new users to avoid spam)
           else if (!isNewUser && shouldCommentOnTune()) {
@@ -654,7 +651,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
               id: tuneId,
               ...tuneMessage
             }, env);
-            console.log('[chat] Bot tune comment:', tuneComment);
           }
         } catch (interactiveError) {
           // Silent fail - don't break the chat for interactive features

@@ -8,6 +8,21 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { getAdminKey, ApiErrors } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
+import { z } from 'zod';
+
+const FileItemSchema = z.object({
+  filename: z.string().min(1).max(500),
+  contentType: z.string().min(1).max(200),
+  size: z.number().int().min(0).nullish(),
+}).passthrough();
+
+const PresignedUploadSchema = z.object({
+  files: z.array(FileItemSchema).min(1).max(100),
+  artistName: z.string().max(200).nullish(),
+  releaseName: z.string().max(500).nullish(),
+  uploadType: z.string().max(50).default('release'),
+  releaseId: z.string().max(200).nullish(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -87,18 +102,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Storage not configured');
     }
 
-    const body = await request.json();
-    const {
-      files,           // Array of { filename, contentType, size }
-      artistName,      // Required for release uploads
-      releaseName,     // Required for release uploads
-      uploadType = 'release', // 'release', 'mix', 'avatar', 'merch'
-      releaseId,       // Optional - reuse existing releaseId
-    } = body;
-
-    if (!files || !Array.isArray(files) || files.length === 0) {
-      return ApiErrors.badRequest('No files specified');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const parseResult = PresignedUploadSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const {
+      files,
+      artistName,
+      releaseName,
+      uploadType = 'release',
+      releaseId,
+    } = parseResult.data;
 
     // Validate all file types
     for (const file of files) {

@@ -3,12 +3,37 @@
 import type { APIRoute } from 'astro';
 import { getDocument, addDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import type { EventRequest } from '../../../lib/subscription';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { z } from 'zod';
+
+const EventRequestSchema = z.object({
+  action: z.enum(['create', 'approve', 'reject']),
+  // create fields
+  userId: z.string().max(200).nullish(),
+  userEmail: z.string().max(500).nullish(),
+  userName: z.string().max(200).nullish(),
+  eventName: z.string().max(500).nullish(),
+  eventDescription: z.string().max(5000).nullish(),
+  eventDate: z.string().max(50).nullish(),
+  hoursRequested: z.number().int().min(1).max(12).nullish(),
+  // approve/reject fields
+  requestId: z.string().max(200).nullish(),
+  adminId: z.string().max(200).nullish(),
+  reason: z.string().max(2000).nullish(),
+}).passthrough();
 
 export const prerender = false;
 
 // GET: List event requests (for admin) or user's own requests
 export const GET: APIRoute = async ({ request, url, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`event-requests:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     const userId = url.searchParams.get('userId');
     const status = url.searchParams.get('status'); // pending, approved, rejected, all
@@ -77,8 +102,26 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
 // POST: Create new event request or update existing (approve/reject)
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`event-requests-write:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   try {
-    const body = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = EventRequestSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const body = parseResult.data;
     const { action } = body;
 
     // Create new request

@@ -12,9 +12,6 @@ import PlaylistModal from '../components/live/PlaylistModal.astro';
 
 export const prerender = false;
 
-// GIPHY API key - use env var if set, otherwise fallback to public key
-const giphyApiKey = import.meta.env.PUBLIC_GIPHY_API_KEY || import.meta.env.GIPHY_API_KEY || '';
-
 // Firebase config for client-side scripts (with fallback)
 const firebaseConfig = {
   apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
@@ -1049,10 +1046,6 @@ const nonce = Astro.locals.nonce || '';
   <PlaylistModal />
 </Layout>
 
-<script define:vars={{ giphyApiKey }} nonce={nonce}>
-  window.GIPHY_API_KEY = giphyApiKey;
-</script>
-
 <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
 <script>
@@ -1394,7 +1387,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         if (likeCountEl) likeCountEl.textContent = currentCount;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Reaction] API error:', error);
       // Revert optimistic update on error
       if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -1478,7 +1471,7 @@ const nonce = Astro.locals.nonce || '';
           if (result.success && result.totalLikes > 0 && likeCountEl) {
             likeCountEl.textContent = result.totalLikes;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[Like] Error:', error);
           // Revert optimistic update on error
           if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -3460,7 +3453,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         takeoverSection.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error checking for takeover option:', error);
     }
   }
@@ -3526,7 +3519,7 @@ const nonce = Astro.locals.nonce || '';
           // Takeover was approved! Show the key
           showTakeoverApproved(result.streamKey);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error polling takeover status:', error);
       }
     }, 3000); // Poll every 3 seconds
@@ -3616,7 +3609,7 @@ const nonce = Astro.locals.nonce || '';
         btn.disabled = false;
         btn.innerHTML = '<span>🎧 Request Takeover</span>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error requesting takeover:', error);
       alert('Failed to send takeover request');
       btn.disabled = false;
@@ -3655,7 +3648,7 @@ const nonce = Astro.locals.nonce || '';
         // Restart polling if cancel failed
         startTakeoverPolling();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error cancelling takeover:', error);
       startTakeoverPolling();
     }

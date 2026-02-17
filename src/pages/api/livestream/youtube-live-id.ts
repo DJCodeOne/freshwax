@@ -4,6 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
@@ -111,6 +112,13 @@ function timingSafeEqual(a: string, b: string): boolean {
 // POST - Called when a stream starts to fetch and store YouTube live ID
 // SECURITY: Requires server key (called by MediaMTX/Red5, not by clients)
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`youtube-live-id:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   initServices(locals);
   const env = locals.runtime.env;
 
@@ -209,7 +217,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // GET - Check current YouTube live status
-export const GET: APIRoute = async ({ locals }) => {
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`youtube-live-id-check:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   initServices(locals);
   const env = locals.runtime.env;
 

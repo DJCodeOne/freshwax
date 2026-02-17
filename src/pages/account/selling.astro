@@ -287,7 +287,7 @@ const nonce = Astro.locals.nonce || '';
           updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to load selling settings:', error);
         if (loadingState) loadingState.style.display = 'none';
         if (mainContent) mainContent.style.display = 'block';
@@ -425,8 +425,8 @@ const nonce = Astro.locals.nonce || '';
       } else {
         throw new Error(data.error || 'Failed to start Stripe setup');
       }
-    } catch (error) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : String(error));
       if (btn) {
         btn.disabled = false;
         btn.textContent = 'Try Again';

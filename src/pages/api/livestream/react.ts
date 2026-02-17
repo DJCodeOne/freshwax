@@ -8,6 +8,19 @@ import { getDocument, updateDocument, setDocument, deleteDocument, queryCollecti
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { triggerPusher } from '../../../lib/pusher';
 import { ApiErrors } from '../../../lib/api-utils';
+import { z } from 'zod';
+
+const ReactSchema = z.object({
+  action: z.enum(['emoji', 'star', 'like', 'rate', 'join', 'leave', 'heartbeat', 'shoutout']),
+  streamId: z.string().min(1).max(200),
+  userId: z.string().max(200).nullish(),
+  userName: z.string().max(200).nullish(),
+  rating: z.number().int().min(1).max(5).nullish(),
+  sessionId: z.string().max(200).nullish(),
+  emoji: z.string().max(50).nullish(),
+  emojiType: z.string().max(50).nullish(),
+  message: z.string().max(30).nullish(),
+}).passthrough();
 
 // Helper to get stream document from either collection (livestreamSlots or livestreams)
 async function getStreamDocument(streamId: string) {
@@ -27,7 +40,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
 
   try {
-    const data = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = ReactSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const data = parseResult.data;
     const { action, streamId, userId: bodyUserId, userName, rating, sessionId, emoji, emojiType } = data;
 
     // SECURITY: Use verified userId when auth header is present
@@ -36,10 +60,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { userId: verifiedUserId } = await verifyRequestUser(request).catch(() => ({ userId: null }));
     const isWriteAction = ['like', 'rate', 'join', 'leave', 'heartbeat', 'shoutout'].includes(action);
     const userId = verifiedUserId || (isWriteAction ? null : bodyUserId);
-
-    if (!streamId) {
-      return ApiErrors.badRequest('Stream ID is required');
-    }
 
     // Rate limit emoji/star reactions (30 per minute per client)
     if (action === 'emoji' || action === 'star') {

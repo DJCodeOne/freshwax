@@ -6,6 +6,11 @@ import type { APIRoute } from 'astro';
 import { getDocumentsBatch, CACHE_TTL } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
+import { z } from 'zod';
+
+const GetRatingsBatchSchema = z.object({
+  releaseIds: z.array(z.string().max(200)).min(1).max(50),
+}).passthrough();
 
 export const prerender = false;
 
@@ -52,13 +57,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   try {
-    const body = await request.json();
-    const { releaseIds } = body;
-    
-    if (!releaseIds || !Array.isArray(releaseIds)) {
-      return ApiErrors.badRequest('releaseIds array required');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
-    
+
+    const parseResult = GetRatingsBatchSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { releaseIds } = parseResult.data;
+
     // Limit batch size to prevent abuse
     const limitedIds = releaseIds.slice(0, 50);
     
@@ -123,6 +134,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // Also support GET with query params for simpler usage
 export const GET: APIRoute = async ({ request }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`get-ratings-batch-get:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const idsParam = url.searchParams.get('ids');
   

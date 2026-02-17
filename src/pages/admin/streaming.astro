@@ -1943,7 +1943,7 @@ export const prerender = false;
       startBtn.disabled = true;
       stopBtn.disabled = false;
       restartBtn.disabled = false;
-    } catch (error) {
+    } catch (error: unknown) {
       dot.className = 'status-dot offline';
       statusText.textContent = 'Offline';
       card.className = 'service-card offline';
@@ -2005,7 +2005,7 @@ export const prerender = false;
       } else {
         throw new Error('All endpoints offline');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       dot.className = 'status-dot offline';
       statusText.textContent = 'Offline';
       card.className = 'service-card offline';
@@ -2036,7 +2036,7 @@ export const prerender = false;
       } else {
         throw new Error('Icecast offline');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       dot.className = 'status-dot warning';
       statusText.textContent = 'Unknown';
       card.className = 'service-card warning';
@@ -2067,7 +2067,7 @@ export const prerender = false;
       } else {
         throw new Error('Playlist offline');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       dot.className = 'status-dot offline';
       statusText.textContent = 'Offline';
       card.className = 'service-card offline';
@@ -2098,7 +2098,7 @@ export const prerender = false;
       } else {
         throw new Error('Firebase error');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       dot.className = 'status-dot offline';
       statusText.textContent = 'Error';
       card.className = 'service-card offline';
@@ -2129,7 +2129,7 @@ export const prerender = false;
       } else {
         throw new Error('CDN error');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       dot.className = 'status-dot offline';
       statusText.textContent = 'Error';
       card.className = 'service-card offline';
@@ -2184,7 +2184,7 @@ export const prerender = false;
         const msg = streamSvc.message || 'Online';
         container.innerHTML = `<div class="empty-state">${msg}</div>`;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       container.innerHTML = '<div class="empty-state">Server offline</div>';
     }
   }
@@ -2206,9 +2206,9 @@ export const prerender = false;
         alert('Stream kick requested. It may take a moment to disconnect.');
         await loadActiveStreams();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to kick stream:', error);
-      alert('Failed to kick stream: ' + error.message);
+      alert('Failed to kick stream: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -2260,8 +2260,8 @@ export const prerender = false;
         });
         const data = await response.json();
         logsEl.textContent = data.logs || 'No logs available';
-      } catch (error) {
-        logsEl.textContent = 'Failed to load logs: ' + error.message;
+      } catch (error: unknown) {
+        logsEl.textContent = 'Failed to load logs: ' + (error instanceof Error ? error.message : String(error));
       }
     });
 
@@ -2293,8 +2293,8 @@ export const prerender = false;
         body: JSON.stringify({ action, adminKey: window.ADMIN_KEY })
       });
       return await response.json();
-    } catch (error) {
-      return { success: false, error: error.message };
+    } catch (error: unknown) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
@@ -2310,7 +2310,7 @@ export const prerender = false;
       } else {
         countEl.textContent = '?';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading chat count:', error);
       countEl.textContent = '?';
     }
@@ -2349,7 +2349,7 @@ export const prerender = false;
         } else {
           alert('Error: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error clearing chat:', error);
         alert('Failed to clear chat');
       } finally {
@@ -2391,7 +2391,7 @@ export const prerender = false;
       } else {
         container.innerHTML = '<p class="empty-state">No live streams at the moment</p>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading live streams:', error);
       container.innerHTML = '<p class="empty-state">Failed to load live streams</p>';
     }
@@ -2423,7 +2423,7 @@ export const prerender = false;
       } else {
         container.innerHTML = '<p class="empty-state">No approved DJs yet</p>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading DJs:', error);
       container.innerHTML = '<p class="empty-state">Failed to load DJs</p>';
     }
@@ -2460,7 +2460,7 @@ export const prerender = false;
       } else {
         container.innerHTML = '<p class="empty-state">No streams yet</p>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading streams:', error);
       container.innerHTML = '<p class="empty-state">Failed to load streams</p>';
     }
@@ -2528,7 +2528,7 @@ export const prerender = false;
         } else {
           alert('Error: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error granting bypass:', error);
         alert('Failed to grant access');
       }
@@ -2564,7 +2564,7 @@ export const prerender = false;
         } else {
           alert('Error: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error adding DJ:', error);
         alert('Failed to add DJ');
       } finally {
@@ -2626,7 +2626,7 @@ export const prerender = false;
         } else {
           alert('Error: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error banning DJ:', error);
         alert('Failed to ban DJ');
       }
@@ -2673,7 +2673,7 @@ export const prerender = false;
         } else {
           alert('Error: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error putting DJ on hold:', error);
         alert('Failed to put DJ on hold');
       }
@@ -2712,7 +2712,7 @@ export const prerender = false;
           alert('Error ending stream: ' + result.error);
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error ending stream:', error);
       alert('Failed to end stream. Try using "End All Streams" button instead.');
     }
@@ -2741,7 +2741,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error revoking DJ:', error);
     }
   };
@@ -2779,7 +2779,7 @@ export const prerender = false;
       } else {
         container.innerHTML = '<p class="empty-state">No bypass approvals yet</p>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading bypass list:', error);
       container.innerHTML = '<p class="empty-state">Failed to load bypass list</p>';
     }
@@ -2848,7 +2848,7 @@ export const prerender = false;
         `;
         usersList.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading quick access key:', error);
       container.innerHTML = '<p class="empty-state">Failed to load quick access key</p>';
     }
@@ -2884,7 +2884,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error revoking key:', error);
       alert('Failed to revoke key');
     }
@@ -2916,7 +2916,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error setting expiry:', error);
       alert('Failed to set expiry');
     }
@@ -2944,7 +2944,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating key:', error);
       alert('Failed to generate key');
     }
@@ -2975,7 +2975,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error revoking bypass:', error);
     }
   };
@@ -3037,7 +3037,7 @@ export const prerender = false;
           onholdContainer.innerHTML = '<p class="empty-state">No DJs on hold</p>';
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading moderation list:', error);
       bannedContainer.innerHTML = '<p class="empty-state">Failed to load</p>';
       onholdContainer.innerHTML = '<p class="empty-state">Failed to load</p>';
@@ -3065,7 +3065,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error unbanning DJ:', error);
     }
   };
@@ -3091,7 +3091,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error releasing DJ:', error);
     }
   };
@@ -3118,7 +3118,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error kicking DJ:', error);
     }
   };
@@ -3193,7 +3193,7 @@ export const prerender = false;
           </div>
         `;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading bypass requests:', error);
       container.innerHTML = '<p class="empty-state">Failed to load bypass requests</p>';
     }
@@ -3241,7 +3241,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error approving bypass:', error);
       alert('Failed to approve request');
     }
@@ -3288,7 +3288,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error denying bypass:', error);
       alert('Failed to deny request');
     }
@@ -3353,7 +3353,7 @@ export const prerender = false;
           </div>
         `;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading event requests:', error);
       container.innerHTML = '<p class="empty-state">Failed to load event requests</p>';
     }
@@ -3389,7 +3389,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error approving event request:', error);
       alert('Failed to approve request');
     }
@@ -3418,7 +3418,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error rejecting event request:', error);
       alert('Failed to reject request');
     }

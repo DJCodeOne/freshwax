@@ -393,7 +393,7 @@ const faqs = [
           errorEl.textContent = result.error || 'Failed to redeem gift card';
           errorEl.style.display = 'block';
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Redeem error:', error);
         errorEl.textContent = 'Something went wrong. Please try again.';
         errorEl.style.display = 'block';
@@ -427,7 +427,7 @@ const faqs = [
           balanceDisplay.classList.remove('hidden');
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading balance:', error);
     }
   }
@@ -497,7 +497,7 @@ const faqs = [
       } else {
         section.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading purchased cards:', error);
       section.classList.add('hidden');
     }
@@ -809,7 +809,7 @@ const faqs = [
           btnLoading.classList.add('hidden');
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Purchase error:', error);
       errorEl.textContent = 'Something went wrong. Please try again.';
       errorEl.style.display = 'block';

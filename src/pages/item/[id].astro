@@ -1739,7 +1739,6 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
   // ============================================
   // GIPHY PICKER FUNCTIONALITY
   // ============================================
-  const GIPHY_API_KEY = window.GIPHY_API_KEY || document.documentElement.dataset.giphyKey || '';
   const giphyModal = document.getElementById('giphy-modal');
   const giphyModalClose = document.getElementById('giphy-modal-close');
   const giphyModalBackdrop = document.getElementById('giphy-modal-backdrop');
@@ -1773,61 +1772,60 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
   giphyModalClose?.addEventListener('click', closeGiphyModal);
   giphyModalBackdrop?.addEventListener('click', closeGiphyModal);
   
-  // Load trending GIFs
+  // Load trending GIFs via server-side proxy
   async function loadTrendingGifs() {
     if (!giphyResults) return;
     giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">Loading...</p>';
-    
+
     try {
-      const response = await fetch('https://api.giphy.com/v1/gifs/trending?api_key=' + GIPHY_API_KEY + '&limit=18&rating=pg-13');
+      const response = await fetch('/api/giphy/search/?endpoint=trending&limit=18');
       const data = await response.json();
-      renderGiphyResults(data.data);
+      if (data.gifs) renderGiphyResults(data.gifs);
+      else giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Failed to load GIFs</p>';
     } catch (err) {
       giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Failed to load GIFs</p>';
     }
   }
-  
-  // Search GIFs
+
+  // Search GIFs via server-side proxy
   giphySearchInput?.addEventListener('input', function() {
     clearTimeout(giphySearchTimeout);
     const query = giphySearchInput.value.trim();
-    
+
     if (!query) {
       loadTrendingGifs();
       return;
     }
-    
+
     giphySearchTimeout = setTimeout(async function() {
       if (!giphyResults) return;
       giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">Searching...</p>';
-      
+
       try {
-        const response = await fetch('https://api.giphy.com/v1/gifs/search?api_key=' + GIPHY_API_KEY + '&q=' + encodeURIComponent(query) + '&limit=18&rating=pg-13');
+        const response = await fetch('/api/giphy/search/?q=' + encodeURIComponent(query) + '&limit=18');
         const data = await response.json();
-        
-        if (data.data.length === 0) {
+
+        if (!data.gifs || data.gifs.length === 0) {
           giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">No GIFs found for "' + query + '"</p>';
         } else {
-          renderGiphyResults(data.data);
+          renderGiphyResults(data.gifs);
         }
       } catch (err) {
         giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Search failed</p>';
       }
     }, 300);
   });
-  
-  // Render GIF results
+
+  // Render GIF results (uses proxy response format: { url, preview, title, id })
   function renderGiphyResults(gifs) {
     if (!giphyResults) return;
-    
+
     giphyResults.innerHTML = gifs.map(function(gif) {
-      const previewUrl = gif.images.fixed_height_small.url;
-      const fullUrl = gif.images.fixed_height.url;
-      return '<div class="gif-item cursor-pointer rounded overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all" data-gif-url="' + fullUrl + '">' +
-        '<img src="' + previewUrl + '" alt="' + (gif.title || 'GIF') + '" class="w-full h-24 object-cover" loading="lazy" />' +
+      return '<div class="gif-item cursor-pointer rounded overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all" data-gif-url="' + gif.url + '">' +
+        '<img src="' + gif.preview + '" alt="' + (gif.title || 'GIF') + '" class="w-full h-24 object-cover" loading="lazy" />' +
         '</div>';
     }).join('');
-    
+
     // Add click handlers
     giphyResults.querySelectorAll('.gif-item').forEach(function(item) {
       item.addEventListener('click', function() {

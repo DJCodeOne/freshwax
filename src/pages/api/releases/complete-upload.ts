@@ -11,6 +11,33 @@ import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
 import { errorResponse, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
+
+const TrackSchema = z.object({
+  title: z.string().max(500).nullish(),
+  trackNumber: z.number().int().min(0).max(999).nullish(),
+  url: z.string().max(2000).nullish(),
+  format: z.string().max(20).nullish(),
+  fileSize: z.number().min(0).nullish(),
+  duration: z.number().min(0).nullish(),
+  bpm: z.union([z.string().max(20), z.number()]).nullish(),
+  key: z.string().max(20).nullish(),
+  genre: z.string().max(200).nullish(),
+  mp3Url: z.string().max(2000).nullish(),
+  wavUrl: z.string().max(2000).nullish(),
+  previewUrl: z.string().max(2000).nullish(),
+}).passthrough();
+
+const CompleteUploadSchema = z.object({
+  releaseId: z.string().min(1).max(200),
+  baseFolder: z.string().max(500).nullish(),
+  artistName: z.string().min(1).max(200),
+  releaseName: z.string().min(1).max(500),
+  tracks: z.array(TrackSchema).min(1).max(200),
+  coverArtUrl: z.string().max(2000).nullish(),
+  uploadedBy: z.string().max(200).nullish(),
+  metadata: z.record(z.unknown()).default({}),
+}).passthrough();
 
 export const prerender = false;
 
@@ -161,29 +188,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const env = locals.runtime.env;
 
-    const body = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = CompleteUploadSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const body = parseResult.data;
     const {
       releaseId,
-      baseFolder,       // The folder where files were uploaded in R2
+      baseFolder,
       artistName,
       releaseName,
-      tracks,           // Array of { title, trackNumber, url, format, fileSize, duration? }
+      tracks,
       coverArtUrl,
-      uploadedBy,       // User ID who uploaded
-      metadata = {},    // Additional metadata (genre, bpm, key, etc.)
+      uploadedBy,
+      metadata = {},
     } = body;
-
-    if (!releaseId) {
-      return ApiErrors.badRequest('releaseId is required');
-    }
-
-    if (!artistName || !releaseName) {
-      return ApiErrors.badRequest('artistName and releaseName are required');
-    }
-
-    if (!tracks || !Array.isArray(tracks) || tracks.length === 0) {
-      return ApiErrors.badRequest('At least one track is required');
-    }
 
     // Check if release already exists (for updates)
     const existingRelease = await getDocument('releases', releaseId);

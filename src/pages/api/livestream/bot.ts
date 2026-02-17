@@ -7,6 +7,7 @@ import { addDocument, getDocument, queryCollection } from '../../../lib/firebase
 import { BOT_USER, BOT_ANNOUNCEMENTS } from '../../../lib/chatbot';
 import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin';
 import { triggerPusher } from '../../../lib/pusher';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 // Send bot message to a stream
@@ -39,6 +40,13 @@ async function sendBotMessage(streamId: string, message: string, env: any): Prom
 
 // POST: Send a bot message or announcement
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`livestream-bot:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
@@ -111,6 +119,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // GET: Check for streams that need announcements (for scheduled jobs)
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`livestream-bot-check:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });

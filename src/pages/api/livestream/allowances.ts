@@ -4,6 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 // Default limits
@@ -12,7 +13,15 @@ export const DEFAULT_MAX_HOURS_PER_DAY = 4;
 export const MAX_BOOKING_DAYS_AHEAD = 30; // 1 month
 
 // GET: Fetch all allowances or check specific DJ's allowance
-export const GET: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env;
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`allowances:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -72,7 +81,15 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 };
 
 // POST: Create/update DJ allowance
-export const POST: APIRoute = async ({ request, locals }) => {  const postEnv = locals.runtime.env;
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`allowances-write:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
+  const postEnv = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: postEnv?.ADMIN_UIDS, ADMIN_EMAILS: postEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();
@@ -142,7 +159,15 @@ export const POST: APIRoute = async ({ request, locals }) => {  const postEnv = 
 };
 
 // DELETE: Remove DJ allowance (revert to defaults)
-export const DELETE: APIRoute = async ({ request, locals }) => {  const delEnv = locals.runtime.env;
+export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId3 = getClientId(request);
+  const rateLimit3 = checkRateLimit(`allowances-delete:${clientId3}`, RateLimiters.standard);
+  if (!rateLimit3.allowed) {
+    return rateLimitResponse(rateLimit3.retryAfter!);
+  }
+
+  const delEnv = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: delEnv?.ADMIN_UIDS, ADMIN_EMAILS: delEnv?.ADMIN_EMAILS });
   try {
     const body = await request.json();

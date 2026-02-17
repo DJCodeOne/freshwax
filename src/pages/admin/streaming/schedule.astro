@@ -509,7 +509,7 @@ export const prerender = false;
         renderCalendar();
         renderBookingsTable();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load schedule:', error);
     }
   }
@@ -756,7 +756,7 @@ export const prerender = false;
       } else {
         alert(data.error || 'Failed to cancel');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error cancelling slot');
     }
   }
@@ -770,7 +770,7 @@ export const prerender = false;
         allowances = data.allowances || [];
         renderAllowances();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load allowances:', error);
     }
   }
@@ -830,7 +830,7 @@ export const prerender = false;
       } else {
         alert(data.error || 'Failed to save');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error saving allowance');
     }
   }
@@ -849,7 +849,7 @@ export const prerender = false;
       if (data.success) {
         loadAllowances();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error removing allowance');
     }
   }

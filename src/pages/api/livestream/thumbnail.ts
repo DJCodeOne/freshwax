@@ -4,6 +4,7 @@
 // When offline: redirects to default live page image
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 
 // Cache for stream status
@@ -11,6 +12,13 @@ let cachedStatus: { isLive: boolean; imageUrl: string; timestamp: number } | nul
 const CACHE_TTL = 30 * 1000; // 30 seconds
 
 export const GET: APIRoute = async ({ request }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`livestream-thumbnail:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const url = new URL(request.url);
   const skipCache = url.searchParams.get('fresh') === '1';
 

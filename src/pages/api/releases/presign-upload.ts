@@ -10,6 +10,14 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { getAdminKey, errorResponse, ApiErrors } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
+import { z } from 'zod';
+
+const PresignUploadSchema = z.object({
+  key: z.string().min(1).max(1000),
+  contentType: z.string().min(1).max(200),
+  contentLength: z.number().int().min(0).nullish(),
+  bucket: z.string().max(200).nullish(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -51,11 +59,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const { key, contentType, contentLength, bucket } = await request.json();
-
-    if (!key || !contentType) {
-      return ApiErrors.badRequest('key and contentType are required');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const parseResult = PresignUploadSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { key, contentType, contentLength, bucket } = parseResult.data;
 
     // Validate declared file size if provided (500MB max for releases)
     const MAX_RELEASE_FILE_SIZE = 500 * 1024 * 1024;

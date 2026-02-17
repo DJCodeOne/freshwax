@@ -39,8 +39,7 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
     });
 
     // Note: Full Pusher implementation requires crypto for signing
-    // For now, log and skip if crypto unavailable
-    console.log('[Pusher] Would trigger:', channel, event);
+    // Stub — no-op until Pusher signing is wired up
     return true;
   } catch (error: unknown) {
     console.error('[Pusher] Error:', error);

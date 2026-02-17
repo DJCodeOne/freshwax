@@ -33,7 +33,7 @@ try {
 
   console.log('[MANAGE] Loaded releases:', releases.length, 'Pending:', releases.filter(r => r.status === 'pending').length);
 
-} catch (error) {
+} catch (error: unknown) {
   console.error('[MANAGE] Error loading releases:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }
@@ -628,9 +628,9 @@ const nonce = Astro.locals.nonce || '';
               btn.textContent = alreadyProcessed ? '✓' : '🎵';
             }
 
-          } catch (error) {
+          } catch (error: unknown) {
             console.error(error);
-            finishAudioModal(false, `Processing failed: ${error.message}`);
+            finishAudioModal(false, `Processing failed: ${error instanceof Error ? error.message : String(error)}`);
             btn.disabled = false;
             btn.textContent = alreadyProcessed ? '✓' : '🎵';
           }
@@ -659,7 +659,7 @@ const nonce = Astro.locals.nonce || '';
             showToast('Release published successfully!');
             setTimeout(() => location.reload(), 1000);
             
-          } catch (error) {
+          } catch (error: unknown) {
             console.error(error);
             showToast('Failed to publish release', 'error');
             btn.disabled = false;
@@ -735,7 +735,7 @@ const nonce = Astro.locals.nonce || '';
 
           showToast('Release deleted');
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to delete release', 'error');
           btn.disabled = false;

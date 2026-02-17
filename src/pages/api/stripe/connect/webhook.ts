@@ -50,7 +50,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (webhookSecret) {
       try {
         event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-        console.log('[Connect Webhook] ✓ Signature verified');
       } catch (err: unknown) {
         const errMessage = err instanceof Error ? err.message : String(err);
         console.error('[Connect Webhook] Signature verification failed:', errMessage);
@@ -97,7 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         break;
 
       default:
-        console.log('[Connect Webhook] Unhandled event type:', event.type);
+        break;
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -177,7 +176,6 @@ async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: st
     return;
   }
 
-  console.log('[Connect Webhook] No entity found for account:', account.id);
 }
 
 async function updateArtistConnectStatus(artistId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
@@ -197,11 +195,8 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
     ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
   });
 
-  console.log('[Connect Webhook] Updated artist', artistId, 'status:', status);
-
   // If account became active, process any pending payouts
   if (status === 'active') {
-    console.log('[Connect Webhook] Artist', artistId, 'is now active - processing pending payouts');
     await processPendingPayouts('artist', artistId, account.id, stripeSecretKey, env);
   }
 }
@@ -209,7 +204,6 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
 // Handle supplier account update
 async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
   if (!supplierId) {
-    console.log('[Connect Webhook] No supplierId provided');
     return;
   }
 
@@ -229,11 +223,8 @@ async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.
     ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
   });
 
-  console.log('[Connect Webhook] Updated supplier', supplierId, 'status:', status);
-
   // If account became active, process any pending payouts
   if (status === 'active') {
-    console.log('[Connect Webhook] Supplier', supplierId, 'is now active - processing pending payouts');
     await processPendingPayouts('supplier', supplierId, account.id, stripeSecretKey, env);
   }
 }
@@ -241,7 +232,6 @@ async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.
 // Handle user (crate seller) account update
 async function handleUserAccountUpdated(userId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
   if (!userId) {
-    console.log('[Connect Webhook] No userId provided');
     return;
   }
 
@@ -261,11 +251,8 @@ async function handleUserAccountUpdated(userId: string, account: Stripe.Account,
     ...(status === 'active' ? { stripeConnectedAt: new Date().toISOString() } : {})
   });
 
-  console.log('[Connect Webhook] Updated user', userId, 'status:', status);
-
   // If account became active, process any pending payouts
   if (status === 'active') {
-    console.log('[Connect Webhook] User', userId, 'is now active - processing pending payouts');
     await processPendingPayouts('user', userId, account.id, stripeSecretKey, env);
   }
 }
@@ -306,8 +293,6 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
   }
 
   if (allPending.length === 0) return;
-
-  console.log('[Connect Webhook] Processing', allPending.length, 'pending payouts for', entityType, ':', entityId);
 
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
@@ -406,8 +391,6 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
         updatedAt: new Date().toISOString()
       });
 
-      console.log('[Connect Webhook] ✓ Pending payout processed:', pending.id, 'Transfer:', transfer.id);
-
       // Send payout completed email notification
       if (entityEmail) {
         sendPayoutCompletedEmail(
@@ -445,7 +428,6 @@ async function handleTransferCreated(transfer: Stripe.Transfer) {
     updatedAt: new Date().toISOString()
   });
 
-  console.log('[Connect Webhook] Transfer created:', transfer.id, 'for payout:', payoutId);
 }
 
 // Handle transfer reversed (e.g., from refund)
@@ -460,5 +442,4 @@ async function handleTransferReversed(transfer: Stripe.Transfer) {
     updatedAt: new Date().toISOString()
   });
 
-  console.log('[Connect Webhook] Transfer reversed:', transfer.id, 'amount:', transfer.amount_reversed / 100);
 }

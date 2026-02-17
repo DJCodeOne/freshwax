@@ -4,10 +4,19 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 // POST: Check and perform auto-switchover (admin/system only)
-export const POST: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env;
+export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`switchover:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -170,7 +179,15 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
 };
 
 // GET: Get current queue and live status (admin only)
-export const GET: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env;
+export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`switchover-status:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
+  const env = locals.runtime.env;
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;

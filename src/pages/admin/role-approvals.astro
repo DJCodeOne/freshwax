@@ -585,9 +585,9 @@ const csrfToken = Astro.locals.csrfToken || '';
         await loadRequests();
 
         alert('Request approved!');
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error approving request:', error);
-        alert('Error approving request: ' + error.message);
+        alert('Error approving request: ' + (error instanceof Error ? error.message : String(error)));
       }
     };
 
@@ -620,9 +620,9 @@ const csrfToken = Astro.locals.csrfToken || '';
         await loadRequests();
 
         alert('Request denied');
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error denying request:', error);
-        alert('Error denying request: ' + error.message);
+        alert('Error denying request: ' + (error instanceof Error ? error.message : String(error)));
       }
     };
   </script>

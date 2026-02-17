@@ -5,6 +5,7 @@ import type { APIContext } from 'astro';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, canSkipTrack, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
@@ -17,6 +18,13 @@ function initEnv(locals: App.Locals) {
 
 // POST - Request to skip a track
 export async function POST({ request, locals }: APIContext) {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`playlist-skip:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     initEnv(locals);
 
@@ -110,6 +118,13 @@ export async function POST({ request, locals }: APIContext) {
 
 // GET - Check skip status without using a skip
 export async function GET({ request, locals }: APIContext) {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`playlist-skip-status:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   try {
     initEnv(locals);
 

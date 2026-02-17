@@ -171,7 +171,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[GIF] Error sending:', error);
     }
   }
@@ -286,9 +286,8 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
       }, 400);
     });
 
-    // Load GIFs from Giphy
+    // Load GIFs via server-side proxy (API key stays on server)
     async function loadGifs(category, searchQuery = null) {
-      const apiKey = window.GIPHY_API_KEY || document.documentElement.dataset.giphyKey || '';
       if (!gifResults) {
         console.error('[GIF] gifResults element not found!');
         return;
@@ -297,30 +296,29 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
       gifResults.innerHTML = '<p class="gif-modal-loading">Loading GIFs...</p>';
 
       try {
-        let url;
+        let proxyUrl;
         if (searchQuery) {
-          url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(searchQuery)}&limit=24&rating=pg-13`;
+          proxyUrl = `/api/giphy/search/?q=${encodeURIComponent(searchQuery)}&limit=24`;
         } else if (category === 'trending') {
-          url = `https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=24&rating=pg-13`;
+          proxyUrl = `/api/giphy/search/?endpoint=trending&limit=24`;
         } else {
-          url = `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(category)}&limit=24&rating=pg-13`;
+          proxyUrl = `/api/giphy/search/?q=${encodeURIComponent(category)}&limit=24`;
         }
 
-        const res = await fetch(url);
+        const res = await fetch(proxyUrl);
 
         if (!res.ok) {
-          const errText = await res.text();
-          console.error('[GIF] API error:', res.status, errText);
-          gifResults.innerHTML = `<p class="gif-modal-loading">API error: ${res.status}</p>`;
+          console.error('[GIF] Proxy error:', res.status);
+          gifResults.innerHTML = `<p class="gif-modal-loading">Error loading GIFs (${res.status})</p>`;
           return;
         }
 
         const data = await res.json();
 
-        if (data.data?.length > 0) {
-          gifResults.innerHTML = data.data.map(gif => `
-            <div class="gif-result-item" data-url="${gif.images.fixed_height.url}" data-id="${gif.id}">
-              <img src="${gif.images.fixed_height_small.url}" alt="${gif.title}" loading="lazy" />
+        if (data.gifs?.length > 0) {
+          gifResults.innerHTML = data.gifs.map(gif => `
+            <div class="gif-result-item" data-url="${gif.url}" data-id="${gif.id}">
+              <img src="${gif.preview}" alt="${gif.title}" loading="lazy" />
             </div>
           `).join('');
 

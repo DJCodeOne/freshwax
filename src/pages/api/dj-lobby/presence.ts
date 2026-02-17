@@ -4,8 +4,18 @@
 
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
-import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { z } from 'zod';
+
+const PresenceSchema = z.object({
+  action: z.enum(['join', 'leave', 'heartbeat', 'update']),
+  userId: z.string().min(1).max(200),
+  name: z.string().max(200).nullish(),
+  avatar: z.string().max(2000).nullish(),
+  avatarLetter: z.string().max(5).nullish(),
+  isReady: z.boolean().nullish(),
+}).passthrough();
 
 // Pusher configuration is loaded from env at runtime (not module level)
 // This is required for Cloudflare Workers compatibility
@@ -362,12 +372,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const idToken = authHeader?.replace('Bearer ', '') || undefined;
 
   try {
-    const data = await request.json();
-    const { action, userId, name, avatar, avatarLetter, isReady } = data;
-
-    if (!userId) {
-      return ApiErrors.badRequest('User ID required');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const parseResult = PresenceSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const data = parseResult.data;
+    const { action, userId, name, avatar, avatarLetter, isReady } = data;
 
     const now = new Date();
 
@@ -483,6 +500,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // DELETE: Cleanup stale presence entries (cron job endpoint)
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const deleteClientId = getClientId(request);
+  const deleteRateLimit = checkRateLimit(`presence-delete:${deleteClientId}`, RateLimiters.standard);
+  if (!deleteRateLimit.allowed) {
+    return rateLimitResponse(deleteRateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   try {

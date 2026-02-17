@@ -22,7 +22,7 @@ try {
 
   vinylListings = results[0].status === 'fulfilled' ? results[0].value : [];
   vinylSellers = results[1].status === 'fulfilled' ? results[1].value : [];
-} catch (error) {
+} catch (error: unknown) {
   console.error('[Admin Vinyl Listings] Error fetching data:', error);
 }
 
@@ -650,7 +650,7 @@ export const prerender = false;
         } else {
           alert('Failed to load listing');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error loading listing');
       }
     });
@@ -696,7 +696,7 @@ export const prerender = false;
       } else {
         alert('Failed to save: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error saving listing');
     }
   });
@@ -722,7 +722,7 @@ export const prerender = false;
         } else {
           alert('Failed: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error approving listing');
       }
     });
@@ -750,7 +750,7 @@ export const prerender = false;
         } else {
           alert('Failed: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error removing listing');
       }
     });

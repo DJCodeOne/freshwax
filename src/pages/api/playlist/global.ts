@@ -7,6 +7,40 @@ import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { z } from 'zod';
+
+const PlaylistItemSchema = z.object({
+  id: z.string().max(200).nullish(),
+  url: z.string().max(2000).nullish(),
+  platform: z.string().max(50).nullish(),
+  embedId: z.string().max(500).nullish(),
+  title: z.string().max(500).nullish(),
+  thumbnail: z.string().max(2000).nullish(),
+}).passthrough();
+
+const PlaylistPostSchema = z.object({
+  item: PlaylistItemSchema,
+  userName: z.string().max(200).nullish(),
+}).passthrough();
+
+const PlaylistDeleteSchema = z.object({
+  itemId: z.string().min(1).max(200),
+}).passthrough();
+
+const PlaylistPutSchema = z.object({
+  action: z.string().min(1).max(50),
+  userId: z.string().max(200).nullish(),
+  playlist: z.object({
+    queue: z.array(z.unknown()).nullish(),
+    currentIndex: z.number().int().min(0).nullish(),
+    isPlaying: z.boolean().nullish(),
+    trackStartedAt: z.string().max(100).nullish(),
+  }).passthrough().nullish(),
+  trackId: z.string().max(200).nullish(),
+  finishedTrackTitle: z.string().max(500).nullish(),
+  emoji: z.string().max(50).nullish(),
+  sessionId: z.string().max(200).nullish(),
+}).passthrough();
 
 // KV keys for playlist data
 const KV_PLAYLIST_KEY = 'global-playlist';
@@ -94,14 +128,20 @@ export async function POST({ request, locals }: APIContext) {
       return ApiErrors.serverError('KV storage not available');
     }
 
-    const body = await request.json();
-    const { item, userName } = body;
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = PlaylistPostSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { item, userName } = parseResult.data;
     // SECURITY: Use verified userId, ignore client-provided userId
     const userId = verifiedUserId;
-
-    if (!item || !userId) {
-      return ApiErrors.badRequest('Missing item or userId');
-    }
 
     // Get current playlist from KV
     let playlist: GlobalPlaylist = {
@@ -198,16 +238,22 @@ export async function DELETE({ request, locals }: APIContext) {
       return ApiErrors.serverError('KV storage not available');
     }
 
-    const body = await request.json();
-    const { itemId } = body;
+    let rawDeleteBody: unknown;
+    try {
+      rawDeleteBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const deleteParseResult = PlaylistDeleteSchema.safeParse(rawDeleteBody);
+    if (!deleteParseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { itemId } = deleteParseResult.data;
     // SECURITY: Use verified userId, verify admin status server-side
     const userId = verifiedUserId;
     initAdminEnv(env);
     const userIsAdmin = await checkIsAdmin(userId);
-
-    if (!itemId) {
-      return ApiErrors.badRequest('Missing itemId');
-    }
 
     const data = await kv.get(KV_PLAYLIST_KEY, 'json');
 
@@ -299,12 +345,19 @@ export async function PUT({ request, locals }: APIContext) {
     setKVCache(kv);
 
     const env = locals.runtime.env;
-    const body = await request.json();
-    const { action, userId, playlist: syncPlaylist } = body;
-
-    if (!action) {
-      return ApiErrors.badRequest('Missing action');
+    let rawPutBody: unknown;
+    try {
+      rawPutBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const putParseResult = PlaylistPutSchema.safeParse(rawPutBody);
+    if (!putParseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const body = putParseResult.data;
+    const { action, userId, playlist: syncPlaylist } = body;
 
     let playlist: GlobalPlaylist;
 

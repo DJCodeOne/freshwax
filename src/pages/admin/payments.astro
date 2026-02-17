@@ -1228,7 +1228,7 @@ const nonce = Astro.locals.nonce || '';
           } else {
             showToast(result.error || 'Failed to retry payout', 'error');
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to retry payout', 'error');
         }
@@ -1306,7 +1306,7 @@ const nonce = Astro.locals.nonce || '';
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to trigger payout', 'error');
           btn.disabled = false;
@@ -1376,7 +1376,7 @@ const nonce = Astro.locals.nonce || '';
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to trigger payout', 'error');
           btn.disabled = false;
@@ -1424,7 +1424,7 @@ const nonce = Astro.locals.nonce || '';
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to record payout', 'error');
           btn.disabled = false;

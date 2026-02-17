@@ -400,7 +400,7 @@ const nonce = Astro.locals.nonce || '';
       });
       const data = await response.json();
       return data.success && data.isAdmin;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error checking admin status:', error);
       return false;
     }
@@ -434,12 +434,12 @@ const nonce = Astro.locals.nonce || '';
       document.getElementById('customersTable').style.display = 'block';
 
       renderUsers();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading partners:', error);
       document.getElementById('loadingState').innerHTML = `
         <div style="color: red; text-align: center; padding: 2rem;">
           <h3>Error loading partners</h3>
-          <p>${escapeHtml(error.message)}</p>
+          <p>${escapeHtml(error instanceof Error ? error.message : String(error))}</p>
           <button data-action="reload" class="btn btn-primary" style="margin-top: 1rem;">Retry</button>
         </div>
       `;
@@ -864,9 +864,9 @@ const nonce = Astro.locals.nonce || '';
       // Update stats
       document.getElementById('totalArtists').textContent = allUsers.filter(u => u.isArtist).length;
       document.getElementById('totalMerch').textContent = allUsers.filter(u => u.isMerchSupplier).length;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error saving permissions:', error);
-      alert('Error saving: ' + error.message);
+      alert('Error saving: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
 

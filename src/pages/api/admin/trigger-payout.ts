@@ -57,15 +57,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Order not found');
     }
 
-    console.log('[admin] Triggering payout for order:', order.orderNumber);
-
     // Get PayPal config
     const paypalConfig = getPayPalConfig(env);
 
     // Handle individual payee payment (new method)
     if (payeeType && payeeEmail && amount) {
-      console.log('[admin] Individual payee payment:', payeeType, payeeName, '£' + amount.toFixed(2));
-
       // Deduct 2% PayPal payout fee
       const paypalPayoutFee = amount * 0.02;
       const paypalAmount = amount - paypalPayoutFee;
@@ -141,13 +137,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 paidAt: new Date().toISOString(),
                 paypalBatchId: payoutResult.batchId
               });
-              console.log('[admin] Updated pending payout record:', pendingRecords[0].id);
             }
           } catch (updateErr) {
-            console.log('[admin] Could not update pending payout record:', updateErr);
+            console.warn('[admin] Could not update pending payout record:', updateErr);
           }
-
-          console.log('[admin] ✓ PayPal payout successful:', payoutResult.batchId);
 
           return new Response(JSON.stringify({
             success: true,
@@ -271,8 +264,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const paypalPayoutFee = payment.amount * 0.02;
         const paypalAmount = payment.amount - paypalPayoutFee;
 
-        console.log('[admin] Paying', payment.artistName, '£' + paypalAmount.toFixed(2), 'via PayPal to', payment.paypalEmail, '(2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
-
         try {
           const payoutResult = await createPayout(paypalConfig!, {
             email: payment.paypalEmail!,
@@ -322,7 +313,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
               batchId: payoutResult.batchId
             });
 
-            console.log('[admin] ✓ PayPal payout successful:', payoutResult.batchId);
           } else {
             results.push({
               artistId: payment.artistId,
@@ -346,8 +336,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       // Use Stripe
       else if (useStripe || defaultToStripe) {
-        console.log('[admin] Paying', payment.artistName, '£' + payment.amount.toFixed(2), 'via Stripe to', payment.stripeConnectId);
-
         try {
           const transfer = await stripe!.transfers.create({
             amount: Math.round(payment.amount * 100), // Convert to pence
@@ -400,7 +388,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
             transferId: transfer.id
           });
 
-          console.log('[admin] ✓ Stripe transfer successful:', transfer.id);
         } catch (err: unknown) {
           results.push({
             artistId: payment.artistId,

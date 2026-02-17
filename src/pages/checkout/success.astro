@@ -173,7 +173,7 @@ const nonce = Astro.locals.nonce || '';
           if (errorMessage) errorMessage.textContent = result.error || 'Payment verification failed';
           return;
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[success] Verification error (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
           if (loadingState) loadingState.style.display = 'none';

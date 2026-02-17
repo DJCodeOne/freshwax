@@ -213,8 +213,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Save order using service account
     await saSetDocument(serviceAccountKey, projectId, 'orders', orderId, order);
 
-    console.log('[admin] Order created:', orderId, orderNumber);
-
     // Record to sales ledger (dual-write D1 + Firebase)
     try {
 
@@ -236,7 +234,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         hasDigital: processedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
         db: env?.DB,
       });
-      console.log('[admin] Sales ledger entry created for:', orderNumber);
     } catch (ledgerErr) {
       console.error('[admin] Failed to record to sales ledger:', ledgerErr);
       // Don't fail the order if ledger write fails
@@ -264,9 +261,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })
         }, 10000);
 
-        if (emailResponse.ok) {
-          console.log('[admin] Confirmation email sent');
-        } else {
+        if (!emailResponse.ok) {
           console.error('[admin] Email failed:', await emailResponse.text());
         }
       } catch (emailErr) {
@@ -304,7 +299,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     <p>- Fresh Wax</p>`
                 })
               }, 10000);
-              console.log('[admin] Artist notification sent to:', artist.email);
+              // Artist notification sent
             }
           } catch (artistErr) {
             console.error('[admin] Artist notification error:', artistErr);
@@ -318,7 +313,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const payoutResults: any[] = [];
 
     if (paypalConfig && digitalItems.length > 0) {
-      console.log('[admin] Processing auto-payouts for digital items');
+      // Process auto-payouts for digital items
 
       // Calculate artist payments
       const artistPayments: Record<string, {
@@ -380,7 +375,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const paypalPayoutFee = payment.amount * 0.02;
         const paypalAmount = payment.amount - paypalPayoutFee;
 
-        console.log('[admin] Auto-paying', payment.artistName, '£' + paypalAmount.toFixed(2), 'via PayPal to', payment.paypalEmail, '(2% fee: £' + paypalPayoutFee.toFixed(2) + ')');
+        // Auto-paying artist via PayPal
 
         try {
           const payoutResult = await createPayout(paypalConfig, {
@@ -431,7 +426,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               batchId: payoutResult.batchId
             });
 
-            console.log('[admin] ✓ Auto-payout successful:', payoutResult.batchId);
+            // Auto-payout successful
           } else {
             payoutResults.push({
               artistId: payment.artistId,

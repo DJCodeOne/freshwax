@@ -1,6 +1,7 @@
 // src/pages/api/reports.ts
 import type { APIRoute } from 'astro';
 import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
 
 export const prerender = false;
@@ -9,6 +10,13 @@ const REPORT_CATEGORIES = ['inappropriate_content', 'harassment', 'spam', 'copyr
 const REPORT_TYPES = ['stream', 'artist', 'dj', 'user', 'release', 'mix', 'comment', 'chat', 'other'];
 
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`reports:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   // SECURITY: Require admin authentication for viewing reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
   const env = locals.runtime.env;
@@ -81,6 +89,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 };
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`reports-submit:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   try {
     const data = await request.json();
     const { type, targetId, targetName, targetUrl, category, description, reporterId, reporterName, reporterEmail } = data;
@@ -145,6 +160,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 export const PUT: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId3 = getClientId(request);
+  const rateLimit3 = checkRateLimit(`reports-update:${clientId3}`, RateLimiters.standard);
+  if (!rateLimit3.allowed) {
+    return rateLimitResponse(rateLimit3.retryAfter!);
+  }
+
   // SECURITY: Require admin authentication for updating reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
   const env = locals.runtime.env;
@@ -182,6 +204,13 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId4 = getClientId(request);
+  const rateLimit4 = checkRateLimit(`reports-delete:${clientId4}`, RateLimiters.standard);
+  if (!rateLimit4.allowed) {
+    return rateLimitResponse(rateLimit4.retryAfter!);
+  }
+
   // SECURITY: Require admin authentication for deleting reports
   const { requireAdminAuth, initAdminEnv } = await import('../../lib/admin');
   const env = locals.runtime.env;

@@ -98,7 +98,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // Rate limit: chat cleanup check - 60 per hour
   const clientId = getClientId(request);
-  const rateLimit = checkRateLimit(`chat-cleanup-check:${clientId}`, RateLimiters.read);
+  const rateLimit = checkRateLimit(`chat-cleanup-check:${clientId}`, RateLimiters.standard);
   if (!rateLimit.allowed) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }  try {

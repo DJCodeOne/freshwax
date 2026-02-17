@@ -131,8 +131,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         
         await setDocument('livestreams', streamId, newStream);
 
-        console.log('[livestream/manage] Stream started:', streamId, 'by DJ:', djId);
-
         return new Response(JSON.stringify({
           success: true,
           streamId: streamId,
@@ -183,8 +181,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await Promise.all(sessions.map(session =>
           updateDocument('livestream-viewers', session.id, { isActive: false, leftAt: nowISO })
         ));
-        
-        console.log('[livestream/manage] Stream stopped:', streamId);
         
         return new Response(JSON.stringify({
           success: true,
@@ -293,8 +289,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: nowISO
         });
         
-        console.log(`[manage] DJ ${djId} marked ready for slot ${slotId}`);
-        
         return new Response(JSON.stringify({
           success: true,
           message: 'DJ marked as ready'
@@ -334,8 +328,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           djReady: false,
           updatedAt: nowISO
         });
-        
-        console.log(`[manage] Slot ${slotId} marked as available for takeover`);
         
         return new Response(JSON.stringify({
           success: true,
@@ -390,8 +382,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           claimedFromExpiry: true,
           updatedAt: nowISO
         });
-
-        console.log(`[manage] DJ ${djId} claimed slot ${slotId}`);
 
         return new Response(JSON.stringify({
           success: true,

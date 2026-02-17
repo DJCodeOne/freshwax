@@ -839,7 +839,7 @@ export const prerender = false;
       }
 
       applySettingsToUI();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load settings:', error);
       applySettingsToUI();
     }
@@ -993,7 +993,7 @@ export const prerender = false;
         status.textContent = result.error || 'Failed to save';
         status.style.color = '#dc2626';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       status.textContent = 'Error saving settings';
       status.style.color = '#dc2626';
       console.error('Save error:', error);

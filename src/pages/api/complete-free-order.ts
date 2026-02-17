@@ -202,7 +202,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return orderItemKeys === currentItemKeys;
       });
       if (duplicate) {
-        console.log('[FreeOrder] Duplicate order detected, returning existing:', duplicate.id);
         return new Response(JSON.stringify({
           success: true,
           orderId: duplicate.id,
@@ -225,7 +224,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await atomicIncrement('userCredits', verifiedUserId, { balance: -appliedCredit });
         await atomicIncrement('users', verifiedUserId, { creditBalance: -appliedCredit });
         creditDeducted = true;
-        console.log('[FreeOrder] Credit deducted before order creation:', appliedCredit);
       } catch (creditErr) {
         console.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
         return ApiErrors.serverError('Failed to apply credit. Please try again.');
@@ -273,7 +271,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
           await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
-          console.log('[FreeOrder] Refunded credit after order creation failure:', appliedCredit);
         } catch (refundErr) {
           console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }
@@ -302,7 +299,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 submitterId = release.submitterId || release.uploadedBy || release.userId || release.submittedBy || null;
                 submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
-                console.log(`[FreeOrder] Item ${item.name}: seller=${submitterId ? 'SET' : 'NONE'}`);
               }
             } catch (lookupErr) {
               console.error(`[FreeOrder] Failed to lookup release ${releaseId}:`, lookupErr);
@@ -332,7 +328,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           items: enrichedItems,
           db: env?.DB
         });
-        console.log('[FreeOrder] Sale recorded to ledger (D1 + Firebase)');
       } catch (ledgerErr) {
         console.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
       }
@@ -363,7 +358,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           await updateDocument('users', verifiedUserId, { creditUpdatedAt: now });
 
-          console.log('[FreeOrder] Credit transaction recorded:', appliedCredit, 'balance:', currentBalance);
         } catch (txnErr) {
           console.error('[FreeOrder] Failed to record credit transaction:', txnErr);
           // Credit already deducted, transaction record is non-critical
@@ -384,7 +378,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
           await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
-          console.log('[FreeOrder] Refunded credit after order failure:', appliedCredit);
         } catch (refundErr) {
           console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }

@@ -140,13 +140,13 @@ const nonce = Astro.locals.nonce || '';
             btn.addEventListener('click', () => processSubmission(btn.dataset.id, btn));
           });
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Failed to load submissions:', error);
           submissionsContainer.innerHTML = `
             <div class="empty-state" style="color: var(--accent-red);">
               <div class="empty-state-icon">⚠️</div>
               <div class="empty-state-title">Failed to load</div>
-              <p class="empty-state-text">${error.message}</p>
+              <p class="empty-state-text">${error instanceof Error ? error.message : String(error)}</p>
             </div>
           `;
         }
@@ -192,10 +192,11 @@ const nonce = Astro.locals.nonce || '';
             throw new Error(data.error || 'Processing failed');
           }
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Processing failed:', error);
-          log(`ERROR: ${error.message}`);
-          showToast('Processing failed: ' + error.message, 'error');
+          const procErrMsg = error instanceof Error ? error.message : String(error);
+          log(`ERROR: ${procErrMsg}`);
+          showToast('Processing failed: ' + procErrMsg, 'error');
 
           btn.disabled = false;
           btn.textContent = 'Retry';

@@ -1692,7 +1692,7 @@ export const prerender = false;
         } else {
           alert(result.error || 'Failed to save changes');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error saving:', error);
         alert('Failed to save changes. Please try again.');
       }
@@ -1773,7 +1773,7 @@ export const prerender = false;
         } else {
           errorCount++;
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error applying sale:', error);
         errorCount++;
       }
@@ -1859,7 +1859,7 @@ export const prerender = false;
       } else {
         alert(result.error || 'Failed to delete release');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Delete error:', error);
       alert('Failed to delete release. Please try again.');
     }

@@ -7,6 +7,17 @@ import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
 import { ApiErrors } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { z } from 'zod';
+
+const UpdatePartnerSchema = z.object({
+  id: z.string().min(1).max(200),
+  artistName: z.string().max(50).nullish(),
+  bio: z.string().max(200).nullish(),
+  avatarUrl: z.string().max(2000).nullish(),
+  bannerUrl: z.string().max(2000).nullish(),
+  location: z.string().max(200).nullish(),
+  genres: z.array(z.string().max(100)).max(20).nullish(),
+}).passthrough();
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -45,7 +56,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    const data = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = UpdatePartnerSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const data = parseResult.data;
     const { id, ...updateFields } = data;
     const partnerId = verifiedUserId;
 

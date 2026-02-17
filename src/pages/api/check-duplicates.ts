@@ -6,6 +6,20 @@ import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
+import { z } from 'zod';
+
+const CartItemSchema = z.object({
+  type: z.string().max(50).nullish(),
+  productType: z.string().max(50).nullish(),
+  releaseId: z.string().max(200).nullish(),
+  productId: z.string().max(200).nullish(),
+  id: z.string().max(200).nullish(),
+  trackId: z.string().max(200).nullish(),
+}).passthrough();
+
+const CheckDuplicatesSchema = z.object({
+  cartItems: z.array(CartItemSchema).max(100),
+}).passthrough();
 
 // Conditional logging - only logs in development
 const isDev = import.meta.env.DEV;
@@ -98,14 +112,21 @@ export const POST: APIRoute = async ({ request }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    const { cartItems } = await request.json();
-    
-    if (!cartItems || !Array.isArray(cartItems)) {
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = CheckDuplicatesSchema.safeParse(rawBody);
+    if (!parseResult.success) {
       return new Response(JSON.stringify({ duplicates: [] }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
     }
+    const { cartItems } = parseResult.data;
     
     // Get cached ownership data
     const { ownedReleases, ownedTracks } = await getOwnershipData(userId);

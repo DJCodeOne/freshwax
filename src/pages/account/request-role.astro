@@ -496,7 +496,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         // Load DJ eligibility
         await loadDJEligibility(uid, roles, pendingRoles);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading user data:', error);
         loadingState.textContent = 'Error loading data';
       }
@@ -608,7 +608,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             }
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading DJ eligibility:', error);
       }
     }
@@ -642,7 +642,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 
@@ -678,7 +678,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 
@@ -715,7 +715,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 
@@ -748,7 +748,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 

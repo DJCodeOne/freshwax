@@ -11,6 +11,31 @@ import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
 import { ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
+
+const SlotsPostSchema = z.object({
+  action: z.string().min(1).max(50),
+  idToken: z.string().max(5000).nullish(),
+  djId: z.string().max(200).nullish(),
+  djName: z.string().max(200).nullish(),
+  djAvatar: z.string().max(2000).nullish(),
+  startTime: z.string().max(100).nullish(),
+  duration: z.number().int().min(1).max(1440).nullish(),
+  title: z.string().max(500).nullish(),
+  genre: z.string().max(200).nullish(),
+  description: z.string().max(5000).nullish(),
+  slotId: z.string().max(200).nullish(),
+  streamKey: z.string().max(500).nullish(),
+  twitchUsername: z.string().max(200).nullish(),
+  twitchStreamKey: z.string().max(500).nullish(),
+  broadcastMode: z.string().max(50).nullish(),
+  relayUrl: z.string().max(2000).nullish(),
+  stationName: z.string().max(200).nullish(),
+}).passthrough();
+
+const SlotsDeleteSchema = z.object({
+  slotId: z.string().min(1).max(200),
+}).passthrough();
 
 // Helper to initialize services
 function initServices(locals: App.Locals) {
@@ -409,7 +434,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals?.runtime?.env;
   const db = env?.DB; // D1 database binding for sync
   try {
-    const data = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = SlotsPostSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const data = parseResult.data;
     const { action } = data;
     const now = new Date();
     const nowISO = now.toISOString();
@@ -426,8 +462,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    console.log('[livestream/slots] POST action:', action, 'hasToken:', !!idToken);
-
     const settings = await getSettings();
 
     // BOOK A SLOT
@@ -439,15 +473,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.forbidden('Not authorized to book for this DJ');
       }
 
-      console.log('[livestream/slots] Booking request:', { djId, djName, startTime, duration, title, hasIdToken: !!idToken });
-
       if (!djId || !startTime || !duration || !djName) {
         const missing = [];
         if (!djId) missing.push('djId');
         if (!startTime) missing.push('startTime');
         if (!duration) missing.push('duration');
         if (!djName) missing.push('djName');
-        console.log('[livestream/slots] Missing required fields:', missing);
         return ApiErrors.badRequest(`Missing required fields: ${missing.join(', ')}`);
       }
 
@@ -579,8 +610,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Sync to D1 (non-blocking)
       syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
-
-      console.log('[livestream/slots] Booking saved successfully:', slotId);
 
       return new Response(JSON.stringify({
         success: true,
@@ -890,7 +919,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
               lastStreamAt: nowISO
             });
 
-            console.log(`[livestream/slots] Recorded ${streamMinutes} minutes streaming for ${slot.djId}`);
           }
         }
       } catch (usageError) {
@@ -901,11 +929,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Clear firebase-rest in-memory cache for livestream queries
       clearCache('livestreamSlots');
-      console.log('[livestream/slots] Cleared firebase-rest cache for livestreamSlots');
 
       // Also invalidate KV cache so /api/livestream/status/ returns fresh data
       await kvDelete('general', { prefix: 'status' });
-      console.log('[livestream/slots] Invalidated KV status cache');
 
       // Invalidate Cloudflare Cache API cache (used by status.ts)
       await invalidateStatusCache();
@@ -1151,7 +1177,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       try {
-        console.log('[go_live] Creating slot with idToken:', !!idToken, 'slotId:', slotId);
         await setDocument('livestreamSlots', slotId, newSlot, idToken);
         invalidateCache();
 
@@ -1286,7 +1311,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         s.streamUrl === relayUrl || s.httpsStreamUrl === relayUrl
       );
       if (!approvedStation) {
-        console.log('[livestream/slots] Relay URL not approved:', relayUrl, 'Approved:', APPROVED_RELAY_STATIONS.map(s => ({ stream: s.streamUrl, https: s.httpsStreamUrl })));
         return ApiErrors.forbidden('Relay URL is not from an approved station');
       }
 
@@ -1405,12 +1429,18 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const data = await request.json();
-    const { slotId } = data;
-
-    if (!slotId) {
-      return ApiErrors.badRequest('Slot ID required');
+    let rawDeleteBody: unknown;
+    try {
+      rawDeleteBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const deleteParseResult = SlotsDeleteSchema.safeParse(rawDeleteBody);
+    if (!deleteParseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { slotId } = deleteParseResult.data;
 
     const slot = await getDocument('livestreamSlots', slotId);
 

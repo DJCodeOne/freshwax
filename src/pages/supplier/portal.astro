@@ -175,10 +175,10 @@ const nonce = Astro.locals.nonce || '';
         updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       loadingState.style.display = 'none';
       errorState.style.display = 'block';
-      errorMessage.textContent = error.message;
+      errorMessage.textContent = error instanceof Error ? error.message : String(error);
     }
   }
 
@@ -380,8 +380,8 @@ const nonce = Astro.locals.nonce || '';
       } else {
         throw new Error(data.error || 'Failed to start Connect setup');
       }
-    } catch (error) {
-      alert(error.message);
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : String(error));
       btn.disabled = false;
       btn.textContent = 'Try Again';
     }

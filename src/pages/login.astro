@@ -334,7 +334,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = redirectTo;
         }, 1000);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[Login] Google sign-in error:', error);
 
         if (error.code === 'auth/popup-closed-by-user') {
@@ -625,7 +625,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = finalRedirect;
         }, 1000);
         
-      } catch (error) {
+      } catch (error: unknown) {
         let message = 'Login failed. Please try again.';
         if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
           message = 'Invalid email or password.';

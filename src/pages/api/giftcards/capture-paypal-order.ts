@@ -72,8 +72,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { paypalOrderId } = parseResult.data;
 
-    console.log('[GiftCard PayPal] Capturing order:', paypalOrderId);
-
     // Check for idempotency - has this order already been processed?
     const existingCards = await queryCollection('giftCards', {
       filters: [{ field: 'paypalOrderId', op: 'EQUAL', value: paypalOrderId }],
@@ -81,7 +79,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (existingCards.length > 0) {
-      console.log('[GiftCard PayPal] Order already processed:', paypalOrderId);
       return new Response(JSON.stringify({
         success: true,
         alreadyProcessed: true,
@@ -97,9 +94,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let pendingOrder = null;
     try {
       pendingOrder = await getDocument('pendingGiftCardOrders', paypalOrderId);
-      if (pendingOrder) {
-        console.log('[GiftCard PayPal] Retrieved pending order data');
-      }
     } catch (fetchErr) {
       console.error('[GiftCard PayPal] Error fetching pending order:', fetchErr);
     }
@@ -135,8 +129,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const captureResult = await captureResponse.json();
-    console.log('[GiftCard PayPal] Capture result:', captureResult.status);
-
     if (captureResult.status !== 'COMPLETED') {
       return ApiErrors.badRequest('Payment not completed');
     }
@@ -177,12 +169,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clean up pending order
     try {
       await deleteDocument('pendingGiftCardOrders', paypalOrderId);
-      console.log('[GiftCard PayPal] Cleaned up pending order');
     } catch (delErr) {
-      console.log('[GiftCard PayPal] Could not delete pending order:', delErr);
+      console.warn('[GiftCard PayPal] Could not delete pending order:', delErr);
     }
-
-    console.log('[GiftCard PayPal] Gift card created successfully:', result.giftCard?.code);
 
     return new Response(JSON.stringify({
       success: true,

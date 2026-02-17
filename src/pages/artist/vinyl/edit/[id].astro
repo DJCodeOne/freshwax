@@ -236,12 +236,12 @@ export const prerender = false;
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('listingForm').style.display = 'block';
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading listing:', error);
       document.getElementById('loadingState').innerHTML = `
         <div class="empty-icon">❌</div>
         <h3>Error loading listing</h3>
-        <p>${error.message}</p>
+        <p>${error instanceof Error ? error.message : String(error)}</p>
         <a href="/artist/vinyl/" class="btn">Back to Listings</a>
       `;
     }
@@ -292,8 +292,8 @@ export const prerender = false;
       alert('Listing updated successfully!');
       window.location.href = '/artist/vinyl/';
 
-    } catch (error) {
-      alert('Error: ' + error.message);
+    } catch (error: unknown) {
+      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       saveBtn.textContent = 'Save Changes';
       saveBtn.disabled = false;
@@ -325,8 +325,8 @@ export const prerender = false;
 
       window.location.href = '/artist/vinyl/';
 
-    } catch (error) {
-      alert('Error: ' + error.message);
+    } catch (error: unknown) {
+      alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   });
 </script>

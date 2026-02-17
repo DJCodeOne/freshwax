@@ -2,6 +2,7 @@
 // Clean up DJ direct messages when a DM conversation is closed
 import type { APIRoute } from 'astro';
 import { deleteDocument, verifyUserToken } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
@@ -60,6 +61,13 @@ async function deleteSubcollectionDoc(parentPath: string, docId: string, idToken
 
 // POST: Clean up DM messages for a channel
 export const POST: APIRoute = async ({ request }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`dj-lobby-dm-cleanup:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization');

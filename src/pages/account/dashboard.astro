@@ -824,7 +824,7 @@ const nonce = Astro.locals.nonce || '';
         console.error('[Dashboard] API error:', data.error);
         return [];
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Dashboard] Fetch error:', error);
       return [];
     }
@@ -985,7 +985,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         container.innerHTML = '<div class="empty-state"><p style="color: #fff;">Could not load mixes</p></div>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Dashboard] Mixes fetch error:', error);
       container.innerHTML = '<div class="empty-state"><p style="color: #fff;">Error loading mixes</p></div>';
     }
@@ -1199,7 +1199,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Could not load wishlist</p></div>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Dashboard] Wishlist fetch error:', error);
       container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Error loading wishlist</p></div>';
     }
@@ -1344,7 +1344,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Could not load artists</p></div>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Dashboard] Following fetch error:', error);
       container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Error loading artists</p></div>';
     }
@@ -1403,7 +1403,7 @@ const nonce = Astro.locals.nonce || '';
           proDashboardBtn.title = 'Available for artists & merch sellers only';
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Dashboard] Error checking partner status:', error);
     }
   }
@@ -1741,7 +1741,7 @@ const nonce = Astro.locals.nonce || '';
         button.classList.remove('downloading');
       }, 2000);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Download error:', error);
       button.innerHTML = '✗ Error';
       setTimeout(() => {
@@ -2012,17 +2012,17 @@ const nonce = Astro.locals.nonce || '';
         document.body.style.overflow = '';
       }, 2000);
 
-    } catch (error) {
+    } catch (error: unknown) {
       // Clean up animation state
       progressFill.classList.remove('creating');
 
       // If cancelled, just clean up silently (already handled by cancelHandler)
-      if (isCancelled || (error && error.message === 'Download cancelled')) {
+      if (isCancelled || (error instanceof Error && error.message === 'Download cancelled')) {
         return;
       }
 
       console.error('ZIP download error:', error);
-      progressText.textContent = `Error: ${error && error.message ? error.message : 'Unknown error'}`;
+      progressText.textContent = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
       progressFill.style.background = '#ef4444';
 
       button.innerHTML = '✗ Error';
@@ -2242,7 +2242,7 @@ const nonce = Astro.locals.nonce || '';
       try {
         await signOut(auth);
         window.location.href = '/';
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Logout error:', error);
       }
     });
@@ -2283,7 +2283,7 @@ const nonce = Astro.locals.nonce || '';
           } else {
             lookupError.textContent = data.error || 'Could not verify postcode';
           }
-        } catch (error) {
+        } catch (error: unknown) {
           lookupError.textContent = 'Failed to lookup postcode';
         }
         
@@ -2353,7 +2353,7 @@ const nonce = Astro.locals.nonce || '';
           btn.textContent = 'Save Changes';
           btn.disabled = false;
         }, 2000);
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Save error:', error);
         btn.textContent = 'Error - Try Again';
         btn.disabled = false;
@@ -2472,7 +2472,7 @@ const nonce = Astro.locals.nonce || '';
             avatarStatus.textContent = result.error || 'Upload failed';
             avatarStatus.className = 'avatar-status error';
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Avatar upload error:', error);
           avatarStatus.textContent = 'Upload failed. Please try again.';
           avatarStatus.className = 'avatar-status error';
@@ -2580,7 +2580,7 @@ const nonce = Astro.locals.nonce || '';
             avatarStatus.textContent = result.error || 'Failed to remove';
             avatarStatus.className = 'avatar-status error';
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Remove avatar error:', error);
           avatarStatus.textContent = 'Failed to remove. Please try again.';
           avatarStatus.className = 'avatar-status error';
@@ -2924,7 +2924,7 @@ const nonce = Astro.locals.nonce || '';
           confirmBtn.disabled = false;
         }, 1500);
         
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Download error:', error);
         confirmBtn.textContent = 'Error - Try Again';
         setTimeout(() => {
@@ -3091,7 +3091,7 @@ const nonce = Astro.locals.nonce || '';
         } else {
           throw new Error(result.error || 'Failed to delete account');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Delete account error:', error);
         confirmBtn.textContent = 'Error - Try Again';
         confirmBtn.classList.remove('deleting');
@@ -3153,7 +3153,7 @@ const nonce = Astro.locals.nonce || '';
         // Render transactions
         renderTransactions(creditTransactions);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading credit balance:', error);
     }
   }
@@ -3302,7 +3302,7 @@ const nonce = Astro.locals.nonce || '';
       if (streamTimeUsed) streamTimeUsed.textContent = Math.floor(result.usage.streamMinutesToday / 60);
       if (streamTimeLimit) streamTimeLimit.textContent = result.limits.streamHoursPerDay;
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading subscription:', error);
     }
   }
@@ -3440,7 +3440,7 @@ const nonce = Astro.locals.nonce || '';
           }
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading referral code:', error);
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       if (referralCodeDisplay) referralCodeDisplay.textContent = 'Error loading';
@@ -3478,7 +3478,7 @@ const nonce = Astro.locals.nonce || '';
         if (skipsUsedEl) skipsUsedEl.textContent = skipData.used || 0;
         if (skipsLimitEl) skipsLimitEl.textContent = skipData.limit || 3;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Dashboard] Error loading Plus stats:', error);
     }
   }
@@ -3661,7 +3661,7 @@ const nonce = Astro.locals.nonce || '';
         promoMessage.className = 'promo-message error';
         discountedPriceEl?.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Promo validation error:', error);
       promoMessage.textContent = 'Failed to validate code. Please try again.';
       promoMessage.className = 'promo-message error';
@@ -3755,7 +3755,7 @@ const nonce = Astro.locals.nonce || '';
       } else {
         throw new Error(result.error || 'Failed to create checkout session');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Stripe upgrade error:', error);
       alert('Failed to start upgrade process. Please try again.');
       resetPaymentButtons();
@@ -3836,9 +3836,9 @@ const nonce = Astro.locals.nonce || '';
         }
       }, 500);
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('PayPal upgrade error:', error);
-      alert(error.message || 'Failed to start PayPal payment. Please try again.');
+      alert(error instanceof Error ? error.message : 'Failed to start PayPal payment. Please try again.');
       resetPaymentButtons();
     }
   }
@@ -4056,7 +4056,7 @@ const nonce = Astro.locals.nonce || '';
             errorEl.textContent = result.error || 'Failed to redeem gift card';
             errorEl.style.display = 'block';
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Redeem error:', error);
           errorEl.textContent = 'Something went wrong. Please try again.';
           errorEl.style.display = 'block';
@@ -4176,7 +4176,7 @@ const nonce = Astro.locals.nonce || '';
           initGoPlusModal();
           initZipModal();
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[Dashboard] Error loading dashboard:', error);
           // Still show dashboard even on error
           const loadingScreen = document.getElementById('loadingScreen');

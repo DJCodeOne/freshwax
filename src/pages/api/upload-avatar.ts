@@ -105,7 +105,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
-    console.log(`[upload-avatar] Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
     // Process image: resize to 128x128 square, convert to WebP
     let processed;
@@ -118,7 +117,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const originalSize = file.size;
     const compressedSize = processed.buffer.length;
-    console.log(`[upload-avatar] Compressed ${originalSize} -> ${compressedSize} bytes (${Math.round(compressedSize/originalSize*100)}%)`);
 
     // Always save as WebP now
     const filename = `avatars/${userId}.webp`;
@@ -137,7 +135,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Upload compressed WebP to R2
-    console.log(`[upload-avatar] Uploading to R2: bucket=${r2Config.bucketName}, key=${filename}`);
     try {
       await r2.send(new PutObjectCommand({
         Bucket: r2Config.bucketName,
@@ -146,7 +143,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ContentType: 'image/webp',
         CacheControl: 'public, max-age=3600', // 1 hour cache (mutable - avatar can be re-uploaded)
       }));
-      console.log(`[upload-avatar] R2 upload successful`);
     } catch (r2Error) {
       console.error('[upload-avatar] R2 upload failed:', r2Error);
       return ApiErrors.serverError('Failed to upload to storage');
@@ -155,13 +151,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const avatarUrl = `${r2Config.publicUrl}/${filename}?t=${Date.now()}`;
 
     // Update customer document with idToken for authentication
-    console.log(`[upload-avatar] Updating Firestore for user ${userId}, hasToken: ${!!finalIdToken}`);
     try {
       await setDocument('users', userId, {
         avatarUrl,
         avatarUpdatedAt: new Date().toISOString()
       }, finalIdToken);
-      console.log(`[upload-avatar] Firestore update successful`);
     } catch (firestoreError) {
       console.error('[upload-avatar] Firestore update failed:', firestoreError);
       // Avatar was uploaded to R2, so return partial success
@@ -173,8 +167,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         compressedSize: processed.buffer.length
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
-
-    console.log(`[upload-avatar] Avatar uploaded for user ${userId}: ${avatarUrl}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -239,8 +231,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       avatarUrl: null,
       avatarUpdatedAt: new Date().toISOString()
     }, idToken);
-
-    console.log(`[upload-avatar] Avatar removed for user ${userId}`);
 
     return new Response(JSON.stringify({
       success: true

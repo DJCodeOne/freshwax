@@ -1314,9 +1314,9 @@ const csrfToken = Astro.locals.csrfToken || '';
         await loadDayBookings();
         await loadMyBookings();
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Booking error:', error);
-        showMsg('Error: ' + error.message, 'error');
+        showMsg('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
       }
 
       submitBtn.disabled = false;
@@ -1436,7 +1436,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           });
         });
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Load bookings error:', error);
         container.innerHTML = '<p class="empty">Error loading bookings</p>';
       }

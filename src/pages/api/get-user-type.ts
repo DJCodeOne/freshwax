@@ -177,7 +177,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Auto-generate referral code for Plus users who don't have one (legacy users)
     if (isPro && !referralCode) {
       try {
-        console.log('[get-user-type] Generating referral code for legacy Plus user:', uid);
         const referralGiftCard = createReferralGiftCard(uid, name || 'Plus Member');
         const referralCardId = `ref_${uid}_${Date.now()}`;
 
@@ -195,27 +194,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
         });
 
         referralCode = referralGiftCard.code;
-        console.log('[get-user-type] Generated referral code:', referralCode);
       } catch (err) {
         console.error('[get-user-type] Failed to generate referral code:', err);
       }
     }
 
     // If no avatarUrl found in Firestore, check if one exists in R2
-    console.log('[get-user-type] avatarUrl from Firestore:', avatarUrl || 'none');
     if (!avatarUrl) {
       const r2PublicUrl = env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev';
       const potentialAvatarUrl = `${r2PublicUrl}/avatars/${uid}.webp`;
-      console.log('[get-user-type] Checking R2 for avatar:', potentialAvatarUrl);
       try {
         const avatarCheck = await fetchWithTimeout(potentialAvatarUrl, { method: 'HEAD' }, 10000);
-        console.log('[get-user-type] R2 avatar check response:', avatarCheck.status);
         if (avatarCheck.ok) {
           avatarUrl = `${potentialAvatarUrl}?t=${Date.now()}`;
-          console.log('[get-user-type] Found avatar in R2:', avatarUrl);
         }
       } catch (e) {
-        console.log('[get-user-type] R2 avatar check failed:', e);
+        // R2 avatar check failed - continue without avatar
       }
     }
 

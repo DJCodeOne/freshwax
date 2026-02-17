@@ -43,8 +43,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    console.log('[FixSubmitterIds] Starting migration...');
-    console.log('[FixSubmitterIds] Dry run:', dryRun);
 
     // Get service account for Firebase writes
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -87,7 +85,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     };
 
     // STEP 1: Fix releases - copy userId to submitterId where missing
-    console.log('[FixSubmitterIds] Step 1: Fixing releases...');
 
     let releases: any[] = [];
     try {
@@ -95,11 +92,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5000
       });
     } catch (e) {
-      console.log('[FixSubmitterIds] Error fetching releases:', e);
+      console.error('[FixSubmitterIds] Error fetching releases:', e);
     }
 
     results.releases.total = releases.length;
-    console.log(`[FixSubmitterIds] Found ${releases.length} releases`);
 
     // Build a map of release IDs to submitter IDs for ledger updates
     const releaseSubmitterMap: Map<string, { submitterId: string; submitterEmail?: string; artistName?: string }> = new Map();
@@ -156,7 +152,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
 
         results.releases.fixed++;
-        console.log(`[FixSubmitterIds] Fixed release ${release.id}: submitterId=${newSubmitterId}`);
 
       } catch (err) {
         results.releases.errors++;
@@ -165,7 +160,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // STEP 2: Fix ledger entries - add submitterId by looking up release
-    console.log('[FixSubmitterIds] Step 2: Fixing ledger entries...');
 
     let ledgerEntries: any[] = [];
     try {
@@ -173,11 +167,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5000
       });
     } catch (e) {
-      console.log('[FixSubmitterIds] Error fetching ledger entries:', e);
+      console.error('[FixSubmitterIds] Error fetching ledger entries:', e);
     }
 
     results.ledger.total = ledgerEntries.length;
-    console.log(`[FixSubmitterIds] Found ${ledgerEntries.length} ledger entries`);
 
     for (const entry of ledgerEntries) {
       try {
@@ -240,15 +233,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
 
         results.ledger.fixed++;
-        console.log(`[FixSubmitterIds] Fixed ledger ${entry.orderNumber}: submitterId=${foundSubmitterId}`);
 
       } catch (err) {
         results.ledger.errors++;
         console.error(`[FixSubmitterIds] Error fixing ledger ${entry.id}:`, err);
       }
     }
-
-    console.log('[FixSubmitterIds] Migration complete:', results);
 
     return new Response(JSON.stringify({
       success: true,

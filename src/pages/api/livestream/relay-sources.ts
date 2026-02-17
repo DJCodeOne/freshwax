@@ -3,12 +3,20 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
 // GET - List all relay sources or check specific one
 export const GET: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`relay-sources:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
@@ -43,6 +51,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 // POST - Create new relay source (admin only)
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId2 = getClientId(request);
+  const rateLimit2 = checkRateLimit(`relay-sources-create:${clientId2}`, RateLimiters.standard);
+  if (!rateLimit2.allowed) {
+    return rateLimitResponse(rateLimit2.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
@@ -92,6 +107,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // PUT - Update relay source (admin only)
 export const PUT: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId3 = getClientId(request);
+  const rateLimit3 = checkRateLimit(`relay-sources-update:${clientId3}`, RateLimiters.standard);
+  if (!rateLimit3.allowed) {
+    return rateLimitResponse(rateLimit3.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
@@ -122,6 +144,13 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
 // DELETE - Remove relay source (admin only)
 export const DELETE: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId4 = getClientId(request);
+  const rateLimit4 = checkRateLimit(`relay-sources-delete:${clientId4}`, RateLimiters.standard);
+  if (!rateLimit4.allowed) {
+    return rateLimitResponse(rateLimit4.retryAfter!);
+  }
+
   const env = locals?.runtime?.env;
 
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });

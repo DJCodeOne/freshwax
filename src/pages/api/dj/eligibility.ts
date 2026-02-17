@@ -2,6 +2,13 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { z } from 'zod';
+
+const EligibilitySchema = z.object({
+  action: z.enum(['checkAndUpdate', 'requestBypass']),
+  uid: z.string().min(1).max(200),
+  reason: z.string().max(2000).nullish(),
+}).passthrough();
 
 // Default requirements (can be overridden by admin settings)
 const DEFAULT_REQUIREMENTS = {
@@ -178,7 +185,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized('Authentication required');
     }
 
-    const body = await request.json();
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
+    }
+
+    const parseResult = EligibilitySchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const body = parseResult.data;
     const { action, uid, reason } = body;
 
     // Check and update eligibility (called after a mix gets likes)

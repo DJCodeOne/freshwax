@@ -3,6 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { saUpdateDocument, getServiceAccountToken } from '../../../lib/firebase-service-account';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 function timingSafeEqual(a: string, b: string): boolean {
@@ -15,6 +16,13 @@ function timingSafeEqual(a: string, b: string): boolean {
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`update-slot-title:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   try {

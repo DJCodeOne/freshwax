@@ -10,6 +10,12 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { d1DeleteMix } from '../../lib/d1-catalog';
 import { kvDelete } from '../../lib/kv-cache';
 import { ApiErrors } from '../../lib/api-utils';
+import { z } from 'zod';
+
+const DeleteMixSchema = z.object({
+  mixId: z.string().min(1).max(200),
+  folderPath: z.string().max(500).nullish(),
+}).passthrough();
 
 const isDev = import.meta.env.DEV;
 const log = {
@@ -68,11 +74,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.unauthorized(authError || 'Authentication required');
     }
 
-    const { mixId, folderPath } = await request.json();
-
-    if (!mixId) {
-      return ApiErrors.badRequest('Mix ID is required');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const parseResult = DeleteMixSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const { mixId, folderPath } = parseResult.data;
 
     log.info('[delete-mix] Deleting mix:', mixId, 'for user:', userId);
 

@@ -2,6 +2,7 @@
 // DJ Lobby chat cleanup - check and clean up old chat messages, record stream end times
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, deleteDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
@@ -25,6 +26,13 @@ async function isDjOrAdmin(userId: string): Promise<boolean> {
 
 // POST: Check and cleanup chat, or record stream end
 export const POST: APIRoute = async ({ request }) => {
+  // Rate limit: standard API - 60 per minute
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`dj-lobby-chat-cleanup:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   try {
     // Verify authentication
     const authHeader = request.headers.get('Authorization');

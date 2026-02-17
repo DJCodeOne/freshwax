@@ -348,13 +348,13 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('partnersTable').style.display = 'block';
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Error loading partners:', error);
           document.getElementById('loadingState').innerHTML = `
             <div class="empty-state">
               <div class="empty-icon">❌</div>
               <h3>Error loading partners</h3>
-              <p>${error.message}</p>
+              <p>${error instanceof Error ? error.message : String(error)}</p>
             </div>
           `;
         }
@@ -605,9 +605,9 @@ export const prerender = false;
             await loadPartners();
           }
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[manage] Save error:', error);
-          showToast('Error: ' + error.message, 'error');
+          showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         } finally {
           saveBtn.textContent = originalText;
           saveBtn.disabled = false;
@@ -658,8 +658,8 @@ export const prerender = false;
 
           closeModal('approveModal');
           loadPartners();
-        } catch (error) {
-          showToast('Error approving partner: ' + error.message, 'error');
+        } catch (error: unknown) {
+          showToast('Error approving partner: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       };
       
@@ -686,8 +686,8 @@ export const prerender = false;
           closeModal('deleteModal');
           showToast('Partner deleted');
           loadPartners();
-        } catch (error) {
-          showToast('Error deleting partner: ' + error.message, 'error');
+        } catch (error: unknown) {
+          showToast('Error deleting partner: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       };
     </script>

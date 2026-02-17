@@ -56,22 +56,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const mixId = formData.get('mixId') as string;
     const artworkFile = formData.get('artwork') as File;
 
-    console.log('[update-mix-artwork] Received:', {
-      mixId,
-      hasArtwork: !!artworkFile,
-      artworkName: artworkFile?.name,
-      artworkSize: artworkFile?.size,
-      artworkType: artworkFile?.type,
-      currentUserId
-    });
-
     if (!mixId || !artworkFile) {
-      console.log('[update-mix-artwork] Missing required fields:', { mixId: !!mixId, artworkFile: !!artworkFile });
       return ApiErrors.badRequest(`Missing ${!mixId ? 'mixId' : 'artwork file'}`);
     }
 
-    console.log('[update-mix-artwork] Auth check:', { currentUserId });
-    
     // Get the mix
     const mixData = await getDocument('dj-mixes', mixId);
 
@@ -85,20 +73,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const isOwner = mixData?.userId === currentUserId;
     const canBackfillOwnership = !mixData?.userId && currentUserId;
 
-    console.log('[update-mix-artwork] Ownership check:', {
-      mixUserId: mixData?.userId,
-      currentUserId,
-      isOwner,
-      canBackfillOwnership
-    });
-
     if (!isOwner && !canBackfillOwnership) {
       return ApiErrors.forbidden('Not authorized to edit this mix');
     }
     
     // Validate file size (max 500KB for safety, should be under 200KB from client)
     if (artworkFile.size > 500 * 1024) {
-      console.log('[update-mix-artwork] File too large:', artworkFile.size);
       return ApiErrors.badRequest('Artwork file too large (${Math.round(artworkFile.size / 1024)}KB, max 500KB)');
     }
     
@@ -114,7 +94,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
       artworkBody = Buffer.from(processed.buffer);
       artworkContentType = 'image/webp';
-      console.log(`[update-mix-artwork] Processed to ${processed.width}x${processed.height} WebP`);
     } catch (imgErr) {
       console.error('[update-mix-artwork] WebP processing failed, using original:', imgErr);
       artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
@@ -145,7 +124,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         CacheControl: 'public, max-age=31536000',
       }));
       thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-      console.log(`[update-mix-artwork] Thumbnail generated: ${thumb.width}x${thumb.height} WebP`);
     } catch (thumbErr) {
       console.error('[update-mix-artwork] Thumbnail generation failed (non-critical):', thumbErr);
     }
@@ -162,7 +140,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Backfill userId if mix doesn't have one
     if (!mixData?.userId && currentUserId) {
       updateData.userId = currentUserId;
-      console.log('[update-mix-artwork] Backfilling userId:', currentUserId);
     }
 
     await updateDocument('dj-mixes', mixId, updateData);
@@ -173,8 +150,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:50', MIXES_CACHE).catch(() => {});
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
-
-    console.log(`[update-mix-artwork] Updated artwork for mix ${mixId}: ${artworkUrl}`);
 
     return new Response(JSON.stringify({
       success: true,

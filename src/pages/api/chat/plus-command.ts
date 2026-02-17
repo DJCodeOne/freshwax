@@ -8,6 +8,20 @@ import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 import { ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { z } from 'zod';
+
+const PlusCommandSchema = z.object({
+  userId: z.string().min(1).max(200),
+  userName: z.string().max(200).nullish(),
+  command: z.string().min(1).max(50),
+  args: z.string().max(500).nullish(),
+  streamId: z.string().max(200).nullish(),
+  streamStartTime: z.string().max(100).nullish(),
+  currentTrack: z.object({
+    title: z.string().max(500).nullish(),
+    artist: z.string().max(200).nullish(),
+  }).passthrough().nullish(),
+}).passthrough();
 
 export const prerender = false;
 
@@ -109,12 +123,19 @@ export async function POST({ request, locals }: APIContext) {
   try {
     initEnv(locals);
 
-    const body = await request.json();
-    const { userId, userName, command, args, streamId, streamStartTime, currentTrack } = body;
-
-    if (!userId || !command) {
-      return ApiErrors.badRequest('Missing userId or command');
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return ApiErrors.badRequest('Invalid JSON body');
     }
+
+    const parseResult = PlusCommandSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return ApiErrors.badRequest('Invalid request');
+    }
+    const body = parseResult.data;
+    const { userId, userName, command, args, streamId, streamStartTime, currentTrack } = body;
 
     // SECURITY: Verify the requesting user owns this userId
     const authHeader = request.headers.get('Authorization');

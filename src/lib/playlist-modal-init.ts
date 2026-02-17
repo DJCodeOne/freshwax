@@ -164,8 +164,6 @@ export function initPlaylistModal() {
     currentUserId = userInfo?.id || null;
     isAuthenticated = userInfo?.loggedIn || false;
 
-    console.log('[PlaylistModal] Init with userInfo:', userInfo);
-
     playlistManager = new PlaylistManager('playlistPlayer');
     await playlistManager.initialize(currentUserId || undefined, userInfo?.displayName || userInfo?.name);
 
@@ -174,15 +172,12 @@ export function initPlaylistModal() {
 
     // Expose globally for live-stream.js
     window.playlistManager = playlistManager;
-    console.log('[PlaylistModal] Manager initialized, authenticated:', isAuthenticated);
   }
 
   // Update UI based on authentication state
   function updateAuthUI() {
     const authNotice = document.getElementById('playlistAuthNotice');
     const inputGroup = document.getElementById('playlistInputGroup');
-
-    console.log('[PlaylistModal] updateAuthUI, isAuthenticated:', isAuthenticated, 'authNotice:', !!authNotice, 'inputGroup:', !!inputGroup);
 
     if (isAuthenticated) {
       if (authNotice) {
@@ -225,7 +220,6 @@ export function initPlaylistModal() {
     // First check window.currentUserInfo
     const userInfo = window.currentUserInfo;
     if (userInfo && userInfo.loggedIn === true && userInfo.id) {
-      console.log('[PlaylistModal] Auth from window.currentUserInfo:', userInfo);
       currentUserId = userInfo.id;
       isAuthenticated = true;
       saveAuthState();
@@ -238,7 +232,6 @@ export function initPlaylistModal() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.loggedIn && parsed.id) {
-          console.log('[PlaylistModal] Auth from sessionStorage:', parsed);
           currentUserId = parsed.id;
           isAuthenticated = true;
           // Also restore to window for other components
@@ -261,8 +254,6 @@ export function initPlaylistModal() {
   // Listen for userAuthReady event from live.astro
   document.addEventListener('userAuthReady', (e: any) => {
     const { userInfo } = e.detail;
-    console.log('[PlaylistModal] userAuthReady event received:', userInfo);
-
     if (userInfo && userInfo.loggedIn) {
       currentUserId = userInfo.id;
       isAuthenticated = true;
@@ -283,15 +274,12 @@ export function initPlaylistModal() {
   function startInitialization() {
     // Prevent duplicate initialization on same page
     if (hasInitializedThisPage) {
-      console.log('[PlaylistModal] Already initialized, skipping');
       return;
     }
     hasInitializedThisPage = true;
-    console.log('[PlaylistModal] startInitialization called');
 
     // First check if auth is already available (from sessionStorage or window)
     if (checkExistingAuth()) {
-      console.log('[PlaylistModal] Using existing auth from storage/window');
       updateAuthUI(); // Update UI immediately with cached auth
       initPlaylist();
       return;
@@ -307,7 +295,6 @@ export function initPlaylistModal() {
 
       // Check if user is logged in
       if (userInfo && userInfo.loggedIn === true && userInfo.id) {
-        console.log('[PlaylistModal] Auth ready after', attempts * 100, 'ms:', userInfo);
         currentUserId = userInfo.id;
         isAuthenticated = true;
         saveAuthState(); // Persist for View Transitions
@@ -318,7 +305,6 @@ export function initPlaylistModal() {
 
       // If we've waited long enough, initialize as anonymous but keep checking
       if (attempts >= maxAttempts) {
-        console.log('[PlaylistModal] Auth timeout after 3s, initializing as anonymous');
         currentUserId = null;
         isAuthenticated = false;
         updateAuthUI();
@@ -330,7 +316,6 @@ export function initPlaylistModal() {
           lateChecks++;
           const userInfo = window.currentUserInfo;
           if (userInfo && userInfo.loggedIn === true && userInfo.id && !isAuthenticated) {
-            console.log('[PlaylistModal] Late auth detected after', (3000 + lateChecks * 500), 'ms:', userInfo);
             currentUserId = userInfo.id;
             isAuthenticated = true;
             updateAuthUI();
@@ -353,8 +338,6 @@ export function initPlaylistModal() {
 
   // Setup all DOM event listeners - called on every page load including View Transitions
   function setupEventListeners() {
-    console.log('[PlaylistModal] Setting up event listeners');
-
     // Open modal
     const playlistBtn = document.getElementById('playlistBtn');
     const modal = document.getElementById('playlistModal');
@@ -371,7 +354,6 @@ export function initPlaylistModal() {
     if (playlistBtn && !playlistBtn.dataset.listenerAttached) {
       playlistBtn.dataset.listenerAttached = 'true';
       playlistBtn.addEventListener('click', () => {
-        console.log('[PlaylistModal] Playlist button clicked');
         modal?.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         // Update recently played when modal opens
@@ -424,7 +406,6 @@ export function initPlaylistModal() {
     async function addToPlaylist() {
       if (!playlistManager || !urlInput) return;
       if (isAddingToPlaylist) {
-        console.log('[PlaylistModal] Already adding, ignoring duplicate request');
         return;
       }
 
@@ -892,7 +873,6 @@ export function initPlaylistModal() {
     isStopped = !isPlaying;
 
     // Update personal playlist (pass count of user's tracks in queue)
-    console.log('[PlaylistModal] Received personalPlaylist:', personalPlaylist ? personalPlaylist.length : 'undefined');
     renderPersonalPlaylist(personalPlaylist || [], userTracksInQueue || 0);
 
     // Update recently played tracks (use Pusher data if available)
@@ -1237,7 +1217,6 @@ export function initPlaylistModal() {
   // Cleanup function to properly destroy the playlist manager
   function cleanupPlaylistManager() {
     if (playlistManager) {
-      console.log('[PlaylistModal] Destroying old playlist manager');
       try {
         playlistManager.destroy();
       } catch (e) {
@@ -1252,7 +1231,6 @@ export function initPlaylistModal() {
 
   // Cleanup when navigating away from page (View Transitions)
   function handleBeforeSwap() {
-    console.log('[PlaylistModal] astro:before-swap - cleaning up');
     cleanupPlaylistManager();
     // Reset the module-level guard so re-init works after navigation
     _initialized = false;
@@ -1262,12 +1240,9 @@ export function initPlaylistModal() {
   // This fires on initial load AND after every View Transition navigation
   // Use a named function to prevent duplicate listeners
   function handlePageLoad() {
-    console.log('[PlaylistModal] astro:page-load event fired');
-
     // Check if we're on the live page (playlist modal exists)
     const playlistContainer = document.getElementById('playlistPlayer');
     if (!playlistContainer) {
-      console.log('[PlaylistModal] Not on live page, skipping initialization');
       return;
     }
 

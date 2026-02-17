@@ -297,13 +297,13 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('ordersTable').style.display = 'block';
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Error loading orders:', error);
           document.getElementById('loadingState').innerHTML = `
             <div class="empty-state">
               <div class="empty-icon">❌</div>
               <h3>Error loading orders</h3>
-              <p>${error.message}</p>
+              <p>${error instanceof Error ? error.message : String(error)}</p>
             </div>
           `;
         }
@@ -561,8 +561,8 @@ export const prerender = false;
           closeModal('viewModal');
           loadOrders();
 
-        } catch (error) {
-          showToast('Error: ' + error.message, 'error');
+        } catch (error: unknown) {
+          showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       };
     </script>
