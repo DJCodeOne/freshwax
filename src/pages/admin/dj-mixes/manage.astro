@@ -35,9 +35,9 @@ const mixes = allMixes.map((data: any) => ({
 const totalMixes = mixes.length;
 const publishedMixes = mixes.filter(m => m.published).length;
 const unpublishedMixes = mixes.filter(m => !m.published).length;
-const totalPlays = mixes.reduce((sum, m) => sum + (m.plays || 0), 0);
-const totalDownloads = mixes.reduce((sum, m) => sum + (m.downloads || 0), 0);
-const totalLikes = mixes.reduce((sum, m) => sum + (m.likes || 0), 0);
+const totalPlays = mixes.reduce((sum, m) => sum + (m.plays || m.playCount || 0), 0);
+const totalDownloads = mixes.reduce((sum, m) => sum + (m.downloads || m.downloadCount || 0), 0);
+const totalLikes = mixes.reduce((sum, m) => sum + (m.likes || m.likeCount || 0), 0);
 
 const stats = [
   { label: 'Total Mixes', value: totalMixes },
@@ -199,9 +199,9 @@ export const prerender = false;
                 <td class="cell-secondary" style="font-size: 0.9rem;">{formatDuration(mix)}</td>
                 <td>
                   <div class="mix-stats">
-                    <span title="Plays">▶️ {(mix.plays || 0).toLocaleString()}</span>
-                    <span title="Downloads">⬇️ {(mix.downloads || 0).toLocaleString()}</span>
-                    <span title="Likes">❤️ {(mix.likes || 0).toLocaleString()}</span>
+                    <span title="Plays">▶️ {(mix.plays || mix.playCount || 0).toLocaleString()}</span>
+                    <span title="Downloads">⬇️ {(mix.downloads || mix.downloadCount || 0).toLocaleString()}</span>
+                    <span title="Likes">❤️ {(mix.likes || mix.likeCount || 0).toLocaleString()}</span>
                   </div>
                 </td>
                 <td>
