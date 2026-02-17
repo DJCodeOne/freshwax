@@ -545,7 +545,7 @@ describe('getServiceAccountToken', () => {
   beforeEach(() => {
     originalFetch = globalThis.fetch;
     mockFetch = vi.fn();
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = mockFetch as typeof globalThis.fetch;
   });
 
   afterEach(() => {

@@ -293,20 +293,20 @@ describe('parseJsonBody', () => {
 // =============================================
 describe('getEnv', () => {
   it('extracts env from locals.runtime.env', () => {
-    const locals = { runtime: { env: { API_KEY: 'abc' } } };
+    const locals = { runtime: { env: { API_KEY: 'abc' } } } as unknown as App.Locals;
     expect(getEnv(locals)).toEqual({ API_KEY: 'abc' });
   });
 
   it('returns empty object when runtime is missing', () => {
-    expect(getEnv({})).toEqual({});
+    expect(getEnv({} as unknown as App.Locals)).toEqual({});
   });
 
   it('returns empty object for null', () => {
-    expect(getEnv(null)).toEqual({});
+    expect(getEnv(null as unknown as App.Locals)).toEqual({});
   });
 
   it('returns empty object for undefined', () => {
-    expect(getEnv(undefined)).toEqual({});
+    expect(getEnv(undefined as unknown as App.Locals)).toEqual({});
   });
 });
 

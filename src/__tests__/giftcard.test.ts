@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   generateGiftCardCode,
   isValidCodeFormat,
@@ -313,12 +313,8 @@ describe('createReferralGiftCard', () => {
 // createGiftCardAfterPayment
 // =============================================
 describe('createGiftCardAfterPayment', () => {
-  let mockFirebaseOps: {
-    queryCollection: ReturnType<typeof vi.fn>;
-    addDocument: ReturnType<typeof vi.fn>;
-    updateDocument: ReturnType<typeof vi.fn>;
-    getDocument: ReturnType<typeof vi.fn>;
-  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockFirebaseOps: any;
 
   let originalFetch: typeof globalThis.fetch;
   let mockFetch: ReturnType<typeof vi.fn>;
@@ -333,7 +329,7 @@ describe('createGiftCardAfterPayment', () => {
 
     originalFetch = globalThis.fetch;
     mockFetch = vi.fn();
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = mockFetch as typeof globalThis.fetch;
 
     // Mock the purchase record subcollection write
     mockFetch.mockResolvedValue({

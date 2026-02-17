@@ -1927,7 +1927,7 @@ export const prerender = false;
             totalReadersIn += p.source ? 1 : 0;
           });
         }
-      } catch {}
+      } catch (e: unknown) { console.warn('[Streaming] Icecast JSON parse error:', e); }
 
       dot.className = 'status-dot online';
       statusText.textContent = 'Online';

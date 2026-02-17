@@ -1607,7 +1607,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             }
           }
         })
-        .catch(function(error) {});
+        .catch(function(error) { console.error('[ReleasePlate] Rating submission error:', error); });
       };
     });
   }

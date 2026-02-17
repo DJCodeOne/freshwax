@@ -370,7 +370,7 @@ describe('BatchLimiters', () => {
 
   it('export has maxItems without hourly limit', () => {
     expect(BatchLimiters.export.maxItems).toBe(1000);
-    expect(BatchLimiters.export.maxTotalPerHour).toBeUndefined();
+    expect((BatchLimiters.export as any).maxTotalPerHour).toBeUndefined();
   });
 });
 

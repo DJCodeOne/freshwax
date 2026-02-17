@@ -34,10 +34,10 @@ const nonce = Astro.locals.nonce || '';
           </div>
         </div>
         <div class="dashboard-header-right">
-          <a href="#" id="goPlusHeaderBtn" class="pro-dashboard-btn" style="background: #374151;" title="Upgrade to Plus">
+          <button type="button" id="goPlusHeaderBtn" class="pro-dashboard-btn" style="background: #374151; cursor: pointer;" title="Upgrade to Plus">
             <span class="pro-icon">👑</span>
             <span class="pro-text">Go Plus</span>
-          </a>
+          </button>
           <a href="/artist/dashboard/" id="proDashboardBtn" class="pro-dashboard-btn disabled" title="Available for approved partners">
             <span class="pro-icon">⚡</span>
             <span class="pro-text">Pro Dashboard</span>
@@ -3279,7 +3279,7 @@ const nonce = Astro.locals.nonce || '';
         expiryWarning.className = 'expiry-warning';
         expiryWarning.innerHTML = `
           <span class="warning-icon">⚠️</span>
-          <span>Your Plus membership expires soon! <a href="#" id="renewPlusLink">Renew now</a></span>
+          <span>Your Plus membership expires soon! <button type="button" id="renewPlusLink" style="background:none;border:none;padding:0;color:inherit;font:inherit;cursor:pointer;text-decoration:underline;">Renew now</button></span>
         `;
         if (proExpires && proExpires.parentNode) {
           proExpires.parentNode.insertBefore(expiryWarning, proExpires.nextSibling);

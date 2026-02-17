@@ -854,9 +854,9 @@ const mixesItemList = {
           ts: Date.now(),
           ttl: ttl || this.TTL.STATS
         }));
-      } catch (e) {}
+      } catch (e) { console.warn('[DJ Mixes] localStorage set failed:', e); }
     },
-    
+
     update: function(key, updateFn) {
       var current = this.get(key) || {};
       var updated = updateFn(current);

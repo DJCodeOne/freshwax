@@ -358,8 +358,8 @@ describe('reserveStock', () => {
       },
       _updateTime: '2024-01-01T00:00:00Z',
     });
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockSetDocument.mockResolvedValue(undefined);
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockSetDocument.mockResolvedValue({ success: true, id: 'mock-id' });
 
     const items = [
       { type: 'merch', productId: 'shirt1', size: 'L', color: 'Black', quantity: 2 },
@@ -451,9 +451,9 @@ describe('reserveStock', () => {
 
     mockUpdateDocumentConditional
       .mockRejectedValueOnce(new Error('CONFLICT: document modified'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce({ success: true });
 
-    mockSetDocument.mockResolvedValue(undefined);
+    mockSetDocument.mockResolvedValue({ success: true, id: 'mock-id' });
 
     const items = [
       { type: 'merch', productId: 'shirt1', size: 'L', color: 'Black', quantity: 1 },
@@ -471,8 +471,8 @@ describe('reserveStock', () => {
       },
       _updateTime: 'time1',
     });
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockSetDocument.mockResolvedValue(undefined);
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockSetDocument.mockResolvedValue({ success: true, id: 'mock-id' });
 
     const items = [
       { type: 'merch', productId: 'shirt1', size: 'X Large', color: 'Dark Blue', quantity: 1 },
@@ -489,8 +489,8 @@ describe('reserveStock', () => {
       },
       _updateTime: 'time1',
     });
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockSetDocument.mockResolvedValue(undefined);
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockSetDocument.mockResolvedValue({ success: true, id: 'mock-id' });
 
     const items = [
       { type: 'merch', productId: 'sticker1', quantity: 1 },
@@ -542,8 +542,8 @@ describe('releaseReservation', () => {
         _updateTime: 'time1',
       });
 
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockUpdateDocument.mockResolvedValue(undefined);
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockUpdateDocument.mockResolvedValue({ success: true });
 
     await releaseReservation('res1');
 
@@ -576,7 +576,7 @@ describe('releaseReservation', () => {
         items: [],
       },
     ]);
-    mockUpdateDocument.mockResolvedValue(undefined);
+    mockUpdateDocument.mockResolvedValue({ success: true });
 
     await releaseReservation('session123');
 
@@ -611,8 +611,8 @@ describe('releaseReservation', () => {
         _updateTime: 'time1',
       });
 
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockUpdateDocument.mockResolvedValue(undefined);
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockUpdateDocument.mockResolvedValue({ success: true });
 
     await releaseReservation('res1');
 
@@ -638,7 +638,7 @@ describe('convertReservation', () => {
       id: 'res1',
       status: 'active',
     });
-    mockUpdateDocument.mockResolvedValue(undefined);
+    mockUpdateDocument.mockResolvedValue({ success: true });
 
     await convertReservation('res1');
 
@@ -672,7 +672,7 @@ describe('convertReservation', () => {
     mockQueryCollection.mockResolvedValueOnce([
       { id: 'res_found', status: 'active' },
     ]);
-    mockUpdateDocument.mockResolvedValue(undefined);
+    mockUpdateDocument.mockResolvedValue({ success: true });
 
     await convertReservation('session123');
 
@@ -700,8 +700,8 @@ describe('updateMerchStock', () => {
     };
 
     mockGetDocument.mockResolvedValue(productData);
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockAddDocument.mockResolvedValue('movement1');
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockAddDocument.mockResolvedValue({ success: true, id: 'movement1' });
 
     const items = [
       { type: 'merch', productId: 'shirt1', name: 'T-Shirt', size: 'L', color: 'Black', quantity: 2 },
@@ -763,8 +763,8 @@ describe('updateMerchStock', () => {
       _updateTime: 'time1',
       lowStockThreshold: 5,
     });
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockAddDocument.mockResolvedValue('movement1');
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockAddDocument.mockResolvedValue({ success: true, id: 'movement1' });
 
     const items = [
       { type: 'merch', productId: 'p1', name: 'Sticker', quantity: 1 },
@@ -791,8 +791,8 @@ describe('updateMerchStock', () => {
       _updateTime: 'time1',
       lowStockThreshold: 5,
     });
-    mockUpdateDocumentConditional.mockResolvedValue(undefined);
-    mockAddDocument.mockResolvedValue('movement1');
+    mockUpdateDocumentConditional.mockResolvedValue({ success: true });
+    mockAddDocument.mockResolvedValue({ success: true, id: 'movement1' });
 
     const items = [
       { type: 'merch', productId: 'p1', name: 'Hoodie', size: 'M', color: 'Black', quantity: 2 },
@@ -829,9 +829,9 @@ describe('updateMerchStock', () => {
 
     mockUpdateDocumentConditional
       .mockRejectedValueOnce(new Error('CONFLICT'))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce({ success: true });
 
-    mockAddDocument.mockResolvedValue('movement1');
+    mockAddDocument.mockResolvedValue({ success: true, id: 'movement1' });
 
     const items = [
       { type: 'merch', productId: 'shirt1', name: 'T-Shirt', size: 'L', color: 'Black', quantity: 1 },

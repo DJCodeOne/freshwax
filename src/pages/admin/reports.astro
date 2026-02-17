@@ -525,7 +525,7 @@ export const prerender = false;
         document.querySelector('#reviewing-count .count').textContent = data.counts.reviewing;
         renderReports();
       } else {
-        listEl.innerHTML = `<div class="empty-state">Error: ${data.error}</div>`;
+        listEl.textContent = 'Error: ' + (data.error || 'Unknown error');
       }
     } catch (error: unknown) {
       console.error('Error loading reports:', error);

@@ -64,7 +64,11 @@ export const prerender = false;
       const data = await res.json();
 
       if (!data.success) {
-        errorList.innerHTML = `<p style="color: #dc2626; text-align: center; padding: 2rem;">Error: ${data.error}</p>`;
+        const errP = document.createElement('p');
+        errP.style.cssText = 'color: #dc2626; text-align: center; padding: 2rem;';
+        errP.textContent = 'Error: ' + (data.error || 'Unknown error');
+        errorList.innerHTML = '';
+        errorList.appendChild(errP);
         return;
       }
 
