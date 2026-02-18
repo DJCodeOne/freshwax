@@ -16,15 +16,15 @@ const log = createLogger('r2-image-scan');
 const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|bmp|tiff)$/i;
 const NON_WEBP = /\.(jpg|jpeg|png|gif|bmp|tiff)$/i;
 
-// Size thresholds by image type (in bytes)
+// Size thresholds by image type (in bytes) — matches 100KB pipeline limit
 const SIZE_THRESHOLDS: Record<string, number> = {
-  'release-cover': 500 * 1024,   // 500KB
-  'release-thumb': 200 * 1024,   // 200KB
-  'merch': 500 * 1024,           // 500KB
-  'vinyl': 800 * 1024,           // 800KB
+  'release-cover': 100 * 1024,   // 100KB
+  'release-thumb': 100 * 1024,   // 100KB
+  'merch': 100 * 1024,           // 100KB
+  'vinyl': 100 * 1024,           // 100KB
   'avatar': 100 * 1024,          // 100KB
-  'mix-artwork': 500 * 1024,     // 500KB
-  'default': 500 * 1024,         // 500KB
+  'mix-artwork': 100 * 1024,     // 100KB
+  'default': 100 * 1024,         // 100KB
 };
 
 function getR2Config(env: any) {
@@ -84,6 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const prefix = url.searchParams.get('prefix') || '';
     const cursor = url.searchParams.get('cursor') || undefined;
     const maxKeys = Math.min(parseInt(url.searchParams.get('maxKeys') || '1000'), 1000);
+    const showAll = url.searchParams.get('showAll') === 'true';
 
     const command = new ListObjectsV2Command({
       Bucket: r2Config.bucketName,
@@ -116,9 +117,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         summary.notWebp++;
       }
 
-      // Check for oversized files
+      // Check for oversized files (>100KB)
       const threshold = getSizeThreshold(key);
-      if (size > threshold) {
+      const isOversize = size > threshold;
+      if (isOversize) {
         // Avoid duplicate if already flagged as not-webp
         if (!NON_WEBP.test(key)) {
           issues.push({ key, size, issue: 'oversized', type });
@@ -128,6 +130,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
           if (existing) existing.issue = 'not-webp,oversized';
         }
         summary.oversized++;
+      }
+
+      // In showAll mode, include files with no issues too
+      if (showAll && !NON_WEBP.test(key) && !isOversize) {
+        issues.push({ key, size, issue: 'ok', type });
       }
 
       // Track release folder contents for missing-thumb detection

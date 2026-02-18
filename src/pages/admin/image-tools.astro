@@ -29,6 +29,10 @@ export const prerender = false;
         <button class="btn btn-outline scan-btn" data-prefix="avatars/">avatars/</button>
         <button class="btn btn-outline scan-btn" data-prefix="dj-mixes/">dj-mixes/</button>
       </div>
+      <label class="flex items-center gap-1" style="font-size: 0.85rem; color: var(--text-secondary);">
+        <input type="checkbox" id="showAllCheckbox" />
+        Show all images (including WebP under 100KB)
+      </label>
       <div id="scanStatus" style="display: none;" class="flex items-center gap-2">
         <div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div>
         <span id="scanStatusText" style="font-size: 0.875rem; color: var(--text-secondary);">Scanning...</span>
@@ -65,7 +69,7 @@ export const prerender = false;
   <!-- Issues Table -->
   <div id="issuesSection" class="card mb-4" style="display: none;">
     <div class="card-header">
-      <h2>Issues Found</h2>
+      <h2 id="issuesTitle">Issues Found</h2>
       <div class="flex gap-1">
         <button id="selectAllBtn" class="btn btn-sm btn-ghost">Select All</button>
         <button id="reprocessBtn" class="btn btn-sm btn-danger" disabled>Reprocess Selected (0)</button>
@@ -238,6 +242,7 @@ export const prerender = false;
   const selectAllBtn = document.getElementById('selectAllBtn')!;
   const headerCheckbox = document.getElementById('headerCheckbox') as HTMLInputElement;
   const deleteOriginalsCheckbox = document.getElementById('deleteOriginalsCheckbox') as HTMLInputElement;
+  const showAllCheckbox = document.getElementById('showAllCheckbox') as HTMLInputElement;
   const resultsSection = document.getElementById('resultsSection')!;
   const resultsBody = document.getElementById('resultsBody')!;
   const logSection = document.getElementById('logSection')!;
@@ -266,6 +271,7 @@ export const prerender = false;
       'oversized': '<span class="badge badge-pending">OVERSIZED</span>',
       'not-webp,oversized': '<span class="badge badge-danger">NOT WEBP</span> <span class="badge badge-pending">OVERSIZED</span>',
       'missing-thumb': '<span class="badge badge-info">NO THUMB</span>',
+      'ok': '<span class="badge badge-completed">OK</span>',
     };
     return badges[issue] || `<span class="badge">${escapeHtml(issue)}</span>`;
   }
@@ -278,6 +284,9 @@ export const prerender = false;
   }
 
   function renderIssues() {
+    const issuesTitle = document.getElementById('issuesTitle');
+    if (issuesTitle) issuesTitle.textContent = showAllCheckbox.checked ? 'All Images' : 'Issues Found';
+
     issuesBody.innerHTML = allIssues.map((issue, i) => `
       <tr data-index="${i}">
         <td class="text-center">
@@ -293,7 +302,10 @@ export const prerender = false;
       </tr>
     `).join('');
 
-    issueCount.textContent = `${allIssues.length} issue${allIssues.length !== 1 ? 's' : ''} found`;
+    const issueOnlyCount = allIssues.filter(i => i.issue !== 'ok').length;
+    issueCount.textContent = showAllCheckbox.checked
+      ? `${allIssues.length} images (${issueOnlyCount} with issues)`
+      : `${allIssues.length} issue${allIssues.length !== 1 ? 's' : ''} found`;
     updateSelectedCount();
   }
 
@@ -326,6 +338,7 @@ export const prerender = false;
       const params = new URLSearchParams();
       if (prefix) params.set('prefix', prefix);
       if (cursor) params.set('cursor', cursor);
+      if (showAllCheckbox.checked) params.set('showAll', 'true');
 
       const res = await fetch(`/api/admin/r2-image-scan/?${params}`);
       const data = await res.json();
