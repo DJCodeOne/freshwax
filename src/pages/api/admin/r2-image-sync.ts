@@ -5,7 +5,7 @@
 import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { initFirebaseEnv, getDocument, updateDocument } from '../../../lib/firebase-rest';
+import { initFirebaseEnv, getDocument, updateDocument, invalidateReleasesCache, invalidateMixesCache, clearAllMerchCache } from '../../../lib/firebase-rest';
 import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
 import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -102,9 +102,22 @@ function buildFieldUpdates(
     }
 
   } else if (parsed.prefix === 'dj-mixes') {
-    if ('artworkUrl' in existingDoc) updates.artworkUrl = newUrl;
-    if ('imageUrl' in existingDoc) updates.imageUrl = newUrl;
-    if ('coverArtUrl' in existingDoc) updates.coverArtUrl = newUrl;
+    if (lowerFilename.startsWith('cover') || lowerFilename.startsWith('artwork')) {
+      if ('artworkUrl' in existingDoc) updates.artworkUrl = newUrl;
+      if ('artwork_url' in existingDoc) updates.artwork_url = newUrl;
+      if ('imageUrl' in existingDoc) updates.imageUrl = newUrl;
+      if ('coverUrl' in existingDoc) updates.coverUrl = newUrl;
+      if ('coverArtUrl' in existingDoc) updates.coverArtUrl = newUrl;
+    }
+
+    if (lowerFilename.startsWith('thumb')) {
+      if ('thumbUrl' in existingDoc) updates.thumbUrl = newUrl;
+    }
+
+    // If a thumb was also generated during reprocess, update thumbUrl
+    if (thumbKey) {
+      updates.thumbUrl = buildUrl(publicDomain, thumbKey);
+    }
 
   } else if (parsed.prefix === 'merch') {
     // Single main image
@@ -268,6 +281,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const updatedFields = Object.keys(updates);
       log.info(`Synced ${result.key} -> ${collection}/${parsed.docId}: ${updatedFields.join(', ')}`);
+
+      // Invalidate in-memory caches so pages serve fresh data
+      if (collection === 'releases') invalidateReleasesCache();
+      else if (collection === 'dj-mixes') invalidateMixesCache();
+      else if (collection === 'merch') clearAllMerchCache();
 
       // Also sync to D1 so quick-access columns and JSON data blob reflect new URLs
       let d1Synced = false;
