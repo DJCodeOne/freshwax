@@ -2515,7 +2515,21 @@ const nonce = Astro.locals.nonce || '';
 
   // Playlist fallback: auto-play when no DJ is streaming
   async function startPlaylistFallback() {
-    const playlistManager = window.playlistManager;
+    let playlistManager = window.playlistManager;
+
+    // If playlist manager hasn't been loaded yet, trigger the lazy load
+    if (!playlistManager) {
+      try {
+        const { initPlaylistModal } = await import('../lib/playlist-modal-init');
+        initPlaylistModal();
+        // Wait briefly for initialization to complete
+        await new Promise(resolve => setTimeout(resolve, 500));
+        playlistManager = window.playlistManager;
+      } catch (err) {
+        return;
+      }
+    }
+
     if (!playlistManager) {
       return;
     }
@@ -2531,7 +2545,6 @@ const nonce = Astro.locals.nonce || '';
     if (started) {
       const offlineOverlay = document.getElementById('offlineOverlay');
       if (offlineOverlay) offlineOverlay.classList.add('hidden');
-    } else {
     }
   }
 
