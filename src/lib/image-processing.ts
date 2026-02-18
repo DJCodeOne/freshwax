@@ -9,6 +9,7 @@ export interface ProcessedImage {
   width: number;
   height: number;
   format: string;
+  debug?: { attempt: number; size: number; dimensions: string }[];
 }
 
 const MAX_BYTES = 100 * 1024; // 100KB hard limit for all cover images
@@ -38,16 +39,18 @@ export async function processImageToSquareWebP(
   const cropX = Math.floor((originalWidth - minDimension) / 2);
   const cropY = Math.floor((originalHeight - minDimension) / 2);
 
-  const cropped = crop(img, cropX, cropY, minDimension, minDimension);
+  // crop() takes (x1, y1, x2, y2) corner coordinates, NOT (x, y, width, height)
+  const cropped = crop(img, cropX, cropY, cropX + minDimension, cropY + minDimension);
   img.free();
 
   // Save cropped image as PNG bytes so we can reload fresh each iteration
   // (WASM resize() can invalidate the input pointer, breaking subsequent calls)
-  const croppedBytes = cropped.get_bytes(); // PNG format
+  const croppedBytes = cropped.get_bytes();
   cropped.free();
 
   let currentSize = targetSize;
   let webpBuffer: Uint8Array = new Uint8Array(0);
+  const debugLog: { attempt: number; size: number; dimensions: string }[] = [];
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const fresh = PhotonImage.new_from_byteslice(croppedBytes);
@@ -55,6 +58,8 @@ export async function processImageToSquareWebP(
     fresh.free();
     webpBuffer = resized.get_bytes_webp();
     resized.free();
+
+    debugLog.push({ attempt, size: webpBuffer.length, dimensions: `${currentSize}x${currentSize}` });
 
     if (webpBuffer.length <= MAX_BYTES || currentSize <= MIN_SIZE) {
       break;
@@ -65,7 +70,7 @@ export async function processImageToSquareWebP(
     currentSize = Math.max(MIN_SIZE, Math.floor(currentSize * ratio));
   }
 
-  return { buffer: webpBuffer, width: currentSize, height: currentSize, format: 'webp' };
+  return { buffer: webpBuffer, width: currentSize, height: currentSize, format: 'webp', debug: debugLog };
 }
 
 /**
@@ -104,20 +109,18 @@ export async function processImageToWebP(
   img.free();
 
   let webpBuffer: Uint8Array = new Uint8Array(0);
+  const debugLog: { attempt: number; size: number; dimensions: string }[] = [];
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const fresh = PhotonImage.new_from_byteslice(sourceBytes);
-    let processed: PhotonImage;
-
-    if (newWidth !== originalWidth || newHeight !== originalHeight) {
-      processed = resize(fresh, newWidth, newHeight, SamplingFilter.Lanczos3);
-      fresh.free();
-    } else {
-      processed = fresh;
-    }
+    // Always resize — even if dimensions match, this ensures a clean re-encode
+    const processed = resize(fresh, newWidth, newHeight, SamplingFilter.Lanczos3);
+    fresh.free();
 
     webpBuffer = processed.get_bytes_webp();
     processed.free();
+
+    debugLog.push({ attempt, size: webpBuffer.length, dimensions: `${newWidth}x${newHeight}` });
 
     if (webpBuffer.length <= MAX_BYTES || (newWidth <= MIN_SIZE && newHeight <= MIN_SIZE)) {
       break;
@@ -129,7 +132,7 @@ export async function processImageToWebP(
     newHeight = Math.max(MIN_SIZE, Math.floor(newWidth / aspectRatio));
   }
 
-  return { buffer: webpBuffer, width: newWidth, height: newHeight, format: 'webp' };
+  return { buffer: webpBuffer, width: newWidth, height: newHeight, format: 'webp', debug: debugLog };
 }
 
 /** Get file extension for a processed image format */

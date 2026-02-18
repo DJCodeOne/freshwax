@@ -27,11 +27,13 @@ interface ReprocessResult {
   oldSize?: number;
   newSize?: number;
   newKey?: string;
+  dimensions?: string;
   thumbCreated?: boolean;
   thumbKey?: string;
   thumbSize?: number;
   error?: string;
   urlChanges?: Array<{ oldKey: string; newKey: string }>;
+  debug?: { attempt: number; size: number; dimensions: string }[];
 }
 
 // Image processing config by key type
@@ -120,13 +122,13 @@ function getWebPKey(originalKey: string, suffix?: string, format: string = 'webp
 async function processImage(
   inputBuffer: ArrayBuffer,
   config: ProcessingConfig,
-): Promise<{ buffer: Uint8Array; format: string }> {
+): Promise<{ buffer: Uint8Array; format: string; width: number; height: number; debug?: { attempt: number; size: number; dimensions: string }[] }> {
   if (config.mode === 'square') {
     const result = await processImageToSquareWebP(inputBuffer, config.width, config.quality);
-    return { buffer: result.buffer, format: result.format };
+    return { buffer: result.buffer, format: result.format, width: result.width, height: result.height, debug: result.debug };
   } else {
     const result = await processImageToWebP(inputBuffer, config.width, config.height, config.quality);
-    return { buffer: result.buffer, format: result.format };
+    return { buffer: result.buffer, format: result.format, width: result.width, height: result.height, debug: result.debug };
   }
 }
 
@@ -196,6 +198,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const coverKey = getWebPKey(key, undefined, coverResult.format);
         result.newSize = coverResult.buffer.length;
         result.newKey = coverKey;
+        result.dimensions = `${coverResult.width}x${coverResult.height}`;
+        result.debug = coverResult.debug;
 
         // Upload processed cover
         await s3Client.send(new PutObjectCommand({

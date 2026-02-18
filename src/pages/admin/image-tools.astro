@@ -451,7 +451,7 @@ export const prerender = false;
               <td class="text-right" style="font-weight: 600; color: ${result.newSize < result.oldSize ? 'var(--accent-green)' : 'var(--text-primary)'};">${formatBytes(result.newSize || 0)} <span style="font-size: 0.75rem; color: var(--text-muted);">${savings !== '-' ? `(${savings})` : ''}</span></td>
               <td class="cell-mono" style="font-size: 0.8rem;">${escapeHtml(result.newKey || '')}</td>
               <td>${result.thumbCreated ? `<span class="badge badge-completed">YES</span> <span style="font-size: 0.75rem;">${formatBytes(result.thumbSize || 0)}</span>` : '-'}</td>
-              <td class="cell-secondary" style="font-size: 0.8rem;">${result.error ? `<span style="color: var(--accent-red);">${escapeHtml(result.error)}</span>` : result.urlChanges?.length ? result.urlChanges.map((c: any) => `${escapeHtml(c.oldKey)} &rarr; ${escapeHtml(c.newKey)}`).join('<br>') : ''}</td>
+              <td class="cell-secondary" style="font-size: 0.8rem;">${result.error ? `<span style="color: var(--accent-red);">${escapeHtml(result.error)}</span>` : ''}${result.dimensions ? `<span style="color: var(--text-muted);">${result.dimensions}</span>` : ''}${result.debug?.length ? `<br><span style="font-size: 0.7rem; color: var(--text-muted);">${result.debug.map((d: any) => `#${d.attempt}: ${d.dimensions} → ${formatBytes(d.size)}`).join(' | ')}</span>` : ''}</td>
             </tr>
           `;
 
