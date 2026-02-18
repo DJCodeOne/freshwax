@@ -2481,9 +2481,9 @@ const nonce = Astro.locals.nonce || '';
   let chatClearTimer = null;
   const CHAT_CLEAR_DELAY = 20 * 60 * 1000; // 20 minutes in milliseconds
 
-  // Playlist fallback timer - starts auto-play 10 seconds after stream ends
+  // Playlist fallback timer - starts auto-play shortly after confirming no stream
   let playlistFallbackTimer = null;
-  const PLAYLIST_FALLBACK_DELAY = 10 * 1000; // 10 seconds
+  const PLAYLIST_FALLBACK_DELAY = 3 * 1000; // 3 seconds
   
   function clearChatMessages() {
     const chatMessages = document.getElementById('chatMessages');
@@ -2521,8 +2521,8 @@ const nonce = Astro.locals.nonce || '';
     // Uses the global function exposed by PlaylistModal.astro's Vite-processed script
     if (!playlistManager && typeof window.loadPlaylistModule === 'function') {
       await window.loadPlaylistModule({ silent: true });
-      // Wait for initialization to complete
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Brief wait for initialization to set window.playlistManager
+      await new Promise(resolve => setTimeout(resolve, 300));
       playlistManager = window.playlistManager;
     }
 
