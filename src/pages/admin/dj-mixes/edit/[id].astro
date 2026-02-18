@@ -531,6 +531,12 @@ const nonce = Astro.locals.nonce || '';
     border-color: #000;
   }
 
+  .form-input:focus-visible,
+  .form-textarea:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .form-input[readonly] {
     background: #f5f5f5;
     color: #666;

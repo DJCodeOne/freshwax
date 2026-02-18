@@ -57,7 +57,14 @@
     outline: none;
     box-shadow: 3px 3px 0 #000;
   }
-  
+
+  .form-input:focus-visible,
+  .form-select:focus-visible,
+  .form-textarea:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .form-hint {
     font-size: 0.7rem;
     color: #666;
@@ -594,6 +601,11 @@
     outline: none;
   }
 
+  .variant-stock-input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   /* Apply All Row */
   .apply-all-row {
     display: flex;
@@ -671,6 +683,11 @@
   .image-color-dropdown:focus {
     outline: none;
     border-color: #dc2626;
+  }
+
+  .image-color-dropdown:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   .image-color-dropdown option {

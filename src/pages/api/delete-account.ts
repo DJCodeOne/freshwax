@@ -289,7 +289,7 @@ async function cleanupKV(cache: any, userId: string): Promise<DeletionResult> {
       `user:orders:${userId}`,
     ];
     for (const key of keys) {
-      try { await cache.delete(key); } catch (_) {}
+      try { await cache.delete(key); } catch (e) { log.error('[delete-account] Failed to delete KV cache key:', key, e instanceof Error ? e.message : e); }
     }
     return { success: true, count: keys.length };
   } catch (e: unknown) {

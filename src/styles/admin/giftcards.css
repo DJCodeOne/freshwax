@@ -148,7 +148,12 @@
     outline: none;
     border-color: #3b82f6;
   }
-  
+
+  .search-input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .status-filter {
     padding: 0.5rem 1rem;
     border: 1px solid #d1d5db;
@@ -157,12 +162,17 @@
     background: #fff;
     cursor: pointer;
   }
-  
+
   .status-filter:focus {
     outline: none;
     border-color: #3b82f6;
   }
-  
+
+  .status-filter:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .code-display {
     font-family: 'Monaco', 'Consolas', monospace;
     background: #f3f4f6;
@@ -380,7 +390,13 @@
     outline: none;
     border-color: #111;
   }
-  
+
+  .form-group input:focus-visible,
+  .form-group select:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;

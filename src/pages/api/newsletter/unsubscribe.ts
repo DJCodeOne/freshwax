@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
 
 const UnsubscribeSchema = z.object({
@@ -12,6 +13,13 @@ const UnsubscribeSchema = z.object({
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  // Rate limit: 60 per minute to prevent abuse
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`newsletter-unsubscribe:${clientId}`, RateLimiters.standard);
+  if (!rateLimit.allowed) {
+    return rateLimitResponse(rateLimit.retryAfter!);
+  }
+
   const env = locals.runtime.env;
 
   try {

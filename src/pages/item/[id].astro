@@ -465,7 +465,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
               {vinylRelease && vinylAvailable && (
                 <div class="mt-3 p-3 bg-gray-800/50 border border-gray-700 rounded text-xs text-gray-300">
                   <div class="flex items-center gap-1.5 mb-1.5">
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                     </svg>
                     <span class="font-semibold text-white uppercase tracking-wide">Vinyl Shipping</span>
@@ -584,7 +584,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
                   </div>
                   <span class="text-sm md:text-base font-black text-white">
                     <span class="rating-value" data-release-id={id}>{(overallRating?.average || 0).toFixed(1)}</span>
-                    <span class="text-gray-400"> ({overallRating?.count || 0})</span>
+                    <span class="text-gray-300"> ({overallRating?.count || 0})</span>
                   </span>
                 </div>
 
@@ -673,9 +673,9 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
                     <p class="text-base md:text-xl font-black text-white truncate uppercase drop-shadow-md">
                       {track.title}
                       {track.remixer && (
-                        <span class="text-sm md:text-lg font-bold text-gray-400"> ({track.remixer} Remix)</span>
+                        <span class="text-sm md:text-lg font-bold text-gray-300"> ({track.remixer} Remix)</span>
                       )}
-                      {track.artist && <span class="text-gray-400 font-bold"> - {track.artist}</span>}
+                      {track.artist && <span class="text-gray-300 font-bold"> - {track.artist}</span>}
                       {track.featured && (
                         <span class="text-xs md:text-base font-bold text-gray-300"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>
                       )}
@@ -692,7 +692,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
                     ></canvas>
                   </div>
 
-                  <div class="hidden lg:flex items-center gap-8 text-sm text-gray-400 font-bold ml-8">
+                  <div class="hidden lg:flex items-center gap-8 text-sm text-gray-300 font-bold ml-8">
                     <div class="text-center">
                       <p class="text-gray-500 uppercase mb-1">Duration</p>
                       <span class="text-white font-black">{track.duration && track.duration !== '0' && track.duration !== '0:00' ? track.duration : '--'}</span>
@@ -845,7 +845,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
                 ></textarea>
                 
                 <div class="flex items-center justify-between mt-3 flex-shrink-0">
-                  <span class="text-xs md:text-sm text-gray-400 font-medium">
+                  <span class="text-xs md:text-sm text-gray-300 font-medium">
                     <span id="char-count">0</span>/150
                   </span>
                   <button 
@@ -865,7 +865,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
                 {sortedComments && sortedComments.length > 0 ? (
                   sortedComments.map((comment) => (
                     <div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative">
-                      <span class="absolute top-2 right-3 text-xs text-gray-400">{new Date(comment.timestamp || comment.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                      <span class="absolute top-2 right-3 text-xs text-gray-300">{new Date(comment.timestamp || comment.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                       <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">
                           {comment.avatarUrl ? (
@@ -888,7 +888,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
                     </div>
                   ))
                 ) : (
-                  <p class="text-center text-gray-400 py-8 text-sm md:text-base">No comments yet. Be the first!</p>
+                  <p class="text-center text-gray-300 py-8 text-sm md:text-base">No comments yet. Be the first!</p>
                 )}
               </div>
             </div>
@@ -943,7 +943,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
           />
         </div>
         <div id="giphy-results" class="flex-1 overflow-y-auto p-4 pt-0 grid grid-cols-2 sm:grid-cols-3 gap-2" style="min-height: 200px; max-height: 400px;">
-          <p class="col-span-full text-center text-gray-400 py-8">Search for GIFs above</p>
+          <p class="col-span-full text-center text-gray-300 py-8">Search for GIFs above</p>
         </div>
       </div>
     </div>
@@ -974,7 +974,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
           <img id="share-modal-artwork" src="/place-holder.webp" alt="Release artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" width="96" height="96" loading="lazy" decoding="async" />
           <div class="flex-1 min-w-0">
             <div class="text-base sm:text-lg font-bold text-white break-words line-clamp-2" id="share-modal-title"></div>
-            <div class="text-sm text-gray-400 mt-1">by <span class="font-semibold text-red-500" id="share-modal-artist"></span></div>
+            <div class="text-sm text-gray-300 mt-1">by <span class="font-semibold text-red-500" id="share-modal-artist"></span></div>
             <div class="flex items-center gap-2 mt-2">
               <span class="px-2 py-0.5 bg-red-600/20 text-red-500 text-xs font-bold rounded-full border border-red-600/30">RELEASE</span>
               <span class="text-xs text-gray-500">freshwax.co.uk</span>
@@ -984,7 +984,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
         <!-- Social Share Buttons -->
         <div class="mb-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-bold">Share on Social</p>
+          <p class="text-xs text-gray-300 uppercase tracking-wider mb-3 font-bold">Share on Social</p>
           <div class="grid grid-cols-5 gap-2">
             <!-- X/Twitter -->
             <button id="share-twitter" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-[#000000] rounded-xl border border-white/10 hover:border-white/30 transition-all">
@@ -1026,7 +1026,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
         <!-- Copy Link Section -->
         <div class="mb-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-bold">Copy Link</p>
+          <p class="text-xs text-gray-300 uppercase tracking-wider mb-3 font-bold">Copy Link</p>
           <div class="flex gap-2">
             <input
               type="text"
@@ -1697,11 +1697,11 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
           avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
         }
 
-        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-400">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span>' + commentContent + '</div></div></div>';
-        
+        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-300">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span>' + commentContent + '</div></div></div>';
+
         // Get fresh reference to comments container
         const commentsContainer = document.getElementById('comments-list');
-        
+
         if (commentsContainer) {
           // Remove "no comments" message if present
           const noCommentsMsg = commentsContainer.querySelector('.text-center');
@@ -1782,7 +1782,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
   // Load trending GIFs via server-side proxy
   async function loadTrendingGifs() {
     if (!giphyResults) return;
-    giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">Loading...</p>';
+    giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-300 py-4">Loading...</p>';
 
     try {
       const response = await fetch('/api/giphy/search/?endpoint=trending&limit=18');
@@ -1806,14 +1806,14 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
 
     giphySearchTimeout = setTimeout(async function() {
       if (!giphyResults) return;
-      giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">Searching...</p>';
+      giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-300 py-4">Searching...</p>';
 
       try {
         const response = await fetch('/api/giphy/search/?q=' + encodeURIComponent(query) + '&limit=18');
         const data = await response.json();
 
         if (!data.gifs || data.gifs.length === 0) {
-          giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-400 py-4">No GIFs found for "' + query + '"</p>';
+          giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-300 py-4">No GIFs found for "' + query + '"</p>';
         } else {
           renderGiphyResults(data.gifs);
         }
@@ -1898,8 +1898,8 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
           avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
         }
 
-        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-400">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span><img src="' + url + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" /></div></div></div>';
-        
+        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-300">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span><img src="' + url + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" /></div></div></div>';
+
         const commentsContainer = document.getElementById('comments-list');
         if (commentsContainer) {
           const noCommentsMsg = commentsContainer.querySelector('.text-center');
@@ -2266,7 +2266,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
     <div class="text-center mb-6">
       <img id="nyop-modal-artwork-item" src="/place-holder.webp" alt="Release artwork" class="w-24 h-24 mx-auto rounded-lg mb-3 object-cover" width="96" height="96" loading="lazy" decoding="async" />
       <h3 id="nyop-modal-title-item" class="text-lg font-bold text-white"></h3>
-      <p id="nyop-modal-artist-item" class="text-sm text-gray-400"></p>
+      <p id="nyop-modal-artist-item" class="text-sm text-gray-300"></p>
     </div>
 
     <div class="mb-6">
@@ -2293,7 +2293,7 @@ const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTra
         />
       </div>
 
-      <p id="nyop-modal-min-text-item" class="text-xs text-gray-400 text-center mt-2">Pay what you want (including £0)</p>
+      <p id="nyop-modal-min-text-item" class="text-xs text-gray-300 text-center mt-2">Pay what you want (including £0)</p>
       <p id="nyop-modal-error-item" class="text-sm text-red-400 text-center mt-2 hidden"></p>
     </div>
 

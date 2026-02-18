@@ -395,6 +395,11 @@ export const prerender = false;
     border-color: #f97316;
   }
 
+  .filter-select:focus-visible, .filter-input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .listing-info {
     display: flex;
     align-items: center;
@@ -534,6 +539,13 @@ export const prerender = false;
   .form-group textarea:focus {
     outline: none;
     border-color: #f97316;
+  }
+
+  .form-group input:focus-visible,
+  .form-group select:focus-visible,
+  .form-group textarea:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   .checkbox-group label {

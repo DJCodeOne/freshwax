@@ -524,7 +524,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             </div>
             <span class="text-sm font-semibold text-gray-300">
               <span class="rating-value" data-release-id={id}>{finalRating.average.toFixed(1)}</span>
-              <span class="rating-count text-gray-400" data-release-id={id}> ({finalRating.count})</span>
+              <span class="rating-count text-gray-300" data-release-id={id}> ({finalRating.count})</span>
             </span>
           </div>
 
@@ -629,14 +629,14 @@ const totalDurationFormatted = totalDurationSeconds > 0
                     <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
                   </svg>
                 </button>
-                <span class="text-sm text-gray-400 w-6 text-center flex-shrink-0 font-body">
+                <span class="text-sm text-gray-300 w-6 text-center flex-shrink-0 font-body">
                   {track.track_number}
                 </span>
                 <p class="text-sm text-white truncate flex-1 min-w-0 font-body" title={track.artist ? `${track.title} - ${track.artist}` : track.title} data-track-title={track.title}>
                   {track.title}
-                  {track.remixer && <span class="text-gray-400 font-normal"> ({track.remixer} Remix)</span>}
-                  {track.artist && <span class="text-gray-400 font-normal"> - {track.artist}</span>}
-                  {track.featured && <span class="text-gray-400 font-normal text-xs"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>}
+                  {track.remixer && <span class="text-gray-300 font-normal"> ({track.remixer} Remix)</span>}
+                  {track.artist && <span class="text-gray-300 font-normal"> - {track.artist}</span>}
+                  {track.featured && <span class="text-gray-300 font-normal text-xs"> ft. {track.featured.replace(/^(ft\.?|feat\.?)\s*/i, '')}</span>}
                 </p>
                 {finalTrackPrice > 0 && !nyopEnabled && (
                   <button
@@ -673,7 +673,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                 </p>
               </div>
               <div class="flex items-center gap-2 flex-shrink-0 min-w-fit">
-                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0 3 3 0 010 4.242 1 1 0 11-1.414-1.414 1 1 0 000-1.414 1 1 0 010-1.414z" clip-rule="evenodd"/>
                 </svg>
                 <input 
@@ -686,7 +686,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
                   data-release-id={id}
                   title="Volume"
                 />
-                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-4 h-4 text-gray-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clip-rule="evenodd"/>
                 </svg>
               </div>
@@ -734,7 +734,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <img id="share-modal-artwork" src="/place-holder.webp" alt="Release artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" width="96" height="96" loading="lazy" decoding="async" />
           <div class="flex-1 min-w-0">
             <div class="text-base sm:text-lg font-bold text-white break-words line-clamp-2" id="share-modal-title"></div>
-            <div class="text-sm text-gray-400 mt-1">by <span class="font-semibold text-red-500" id="share-modal-artist"></span></div>
+            <div class="text-sm text-gray-300 mt-1">by <span class="font-semibold text-red-500" id="share-modal-artist"></span></div>
             <div class="flex items-center gap-2 mt-2">
               <span class="px-2 py-0.5 bg-red-600/20 text-red-500 text-xs font-bold rounded-full border border-red-600/30">RELEASE</span>
               <span class="text-xs text-gray-500">freshwax.co.uk</span>
@@ -744,7 +744,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
         <!-- Social Share Buttons -->
         <div class="mb-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-bold">Share on Social</p>
+          <p class="text-xs text-gray-300 uppercase tracking-wider mb-3 font-bold">Share on Social</p>
           <div class="grid grid-cols-5 gap-2">
             <!-- X/Twitter -->
             <button id="share-twitter" aria-label="Share on X" class="group flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-[#000000] rounded-xl border border-white/10 hover:border-white/30 transition-all">
@@ -786,7 +786,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
         <!-- Copy Link Section -->
         <div class="mb-5">
-          <p class="text-xs text-gray-400 uppercase tracking-wider mb-3 font-bold">Copy Link</p>
+          <p class="text-xs text-gray-300 uppercase tracking-wider mb-3 font-bold">Copy Link</p>
           <div class="flex gap-2">
             <input
               type="text"
@@ -842,7 +842,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
     <div class="text-center mb-6">
       <img id="nyop-modal-artwork" src="/place-holder.webp" alt="Release artwork" class="w-24 h-24 mx-auto rounded-lg mb-3 object-cover" width="96" height="96" loading="lazy" decoding="async" />
       <h3 id="nyop-modal-title" class="text-lg font-bold text-white"></h3>
-      <p id="nyop-modal-artist" class="text-sm text-gray-400"></p>
+      <p id="nyop-modal-artist" class="text-sm text-gray-300"></p>
     </div>
 
     <div class="mb-6">
@@ -869,7 +869,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         />
       </div>
 
-      <p id="nyop-modal-min-text" class="text-xs text-gray-400 text-center mt-2">Pay what you want (including £0)</p>
+      <p id="nyop-modal-min-text" class="text-xs text-gray-300 text-center mt-2">Pay what you want (including £0)</p>
       <p id="nyop-modal-error" class="text-sm text-red-400 text-center mt-2 hidden"></p>
     </div>
 
@@ -1054,6 +1054,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
     cursor: pointer;
   }
 
+  .shared-volume-slider:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .shared-volume-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
@@ -1121,6 +1126,19 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
   .play-button {
     transition: all 0.2s ease;
+    position: relative;
+  }
+
+  /* Extend touch target to 44px minimum without changing visual size */
+  .play-button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
   }
 
   .play-button:hover {
@@ -1300,9 +1318,10 @@ const totalDurationFormatted = totalDurationSeconds > 0
     .comments-button,
     .share-button,
     .rating-star {
+      min-width: 44px !important;
       min-height: 44px !important;
     }
-    
+
     .track-row {
       min-height: 52px !important;
     }

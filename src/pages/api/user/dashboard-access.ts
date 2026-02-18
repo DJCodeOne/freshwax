@@ -29,7 +29,9 @@ export const GET: APIRoute = async ({ request }) => {
     try {
       const adminDoc = await getDocument('admins', userId);
       if (adminDoc) isAdmin = true;
-    } catch (e) {}
+    } catch (e) {
+      console.error('[dashboard-access] Failed to check admin status:', e instanceof Error ? e.message : e);
+    }
 
     // Get user document
     const userData = await getDocument('users', userId);
@@ -52,7 +54,9 @@ export const GET: APIRoute = async ({ request }) => {
           if (artistData.isMerchSupplier) roles.merchSeller = true;
           if (artistData.isVinylSeller) roles.vinylSeller = true;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('[dashboard-access] Failed to fetch artist data:', e instanceof Error ? e.message : e);
+      }
     }
 
     // Check vinyl seller data
@@ -68,13 +72,17 @@ export const GET: APIRoute = async ({ request }) => {
       if (sellerData && !isVinylSeller) {
         isVinylSeller = sellerData.approved !== false;
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('[dashboard-access] Failed to fetch vinyl seller data:', e instanceof Error ? e.message : e);
+    }
 
     // Check merch seller data
     let merchSellerData: any = null;
     try {
       merchSellerData = await getDocument('merch-sellers', userId);
-    } catch (e) {}
+    } catch (e) {
+      console.error('[dashboard-access] Failed to fetch merch seller data:', e instanceof Error ? e.message : e);
+    }
 
     // Admin override for roles
     if (isAdmin && !roles.artist && !roles.merchSeller && !roles.vinylSeller) {

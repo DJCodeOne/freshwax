@@ -213,6 +213,7 @@ export const prerender = false;
     :global(.focus\:ring-2:focus) { box-shadow: 0 0 0 2px; }
     :global(.focus\:ring-red-600:focus) { box-shadow: 0 0 0 2px #dc2626; }
     :global(.focus\:border-transparent:focus) { border-color: transparent; }
+    :global(.focus\:outline-none:focus-visible) { outline: 2px solid #60a5fa; outline-offset: 2px; }
 
     :global(.hover\:bg-gray-200:hover) { background-color: #e5e7eb; }
     :global(.hover\:bg-red-50:hover) { background-color: #fef2f2; }
@@ -249,6 +250,13 @@ export const prerender = false;
     :global(#form-container textarea:focus) {
       outline: none;
       box-shadow: 0 0 0 2px #dc2626;
+    }
+
+    :global(#form-container input:focus-visible),
+    :global(#form-container select:focus-visible),
+    :global(#form-container textarea:focus-visible) {
+      outline: 2px solid #60a5fa;
+      outline-offset: 2px;
     }
 
     :global(#form-container button[type="submit"]) {

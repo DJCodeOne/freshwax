@@ -554,6 +554,10 @@ const csrfToken = Astro.locals.csrfToken || '';
     <!-- Add to Home Screen install prompt (mobile PWA) -->
     <script is:inline nonce={nonce}>
       (function() {
+        // Guard: only attach global listeners once (is:inline re-runs on View Transitions)
+        if (window.__pwaInstallInit) return;
+        window.__pwaInstallInit = true;
+
         // Bail out immediately if already running as installed PWA
         if (window.matchMedia('(display-mode: standalone)').matches) return;
         if (navigator.standalone) return; // iOS Safari

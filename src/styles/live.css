@@ -484,13 +484,11 @@
   
   .fs-reaction-btn:focus,
   .fs-reaction-btn:active {
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
   }
 
   .fs-reaction-btn:focus-visible {
-    outline: 2px solid #666;
+    outline: 2px solid #60a5fa;
     outline-offset: 2px;
   }
   
@@ -646,14 +644,14 @@
     gap: 0.75rem;
     padding: 0.625rem 1rem;
     background: #111827;
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.8rem;
     height: 40px;
     flex-shrink: 0;
   }
   
   .live-footer a {
-    color: #9ca3af;
+    color: #d1d5db;
     text-decoration: none;
     transition: color 0.2s;
   }
@@ -712,8 +710,8 @@
     }
 
     .play-btn {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
     }
 
     .play-btn svg {
@@ -818,8 +816,8 @@
     }
 
     .play-btn {
-      width: 36px !important;
-      height: 36px !important;
+      width: 44px !important;
+      height: 44px !important;
     }
 
     .player-container,
@@ -1001,7 +999,7 @@
   .schedule-header h2 .red { color: #dc2626; }
 
   .schedule-header p {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.9rem;
     margin: 0.375rem 0 1rem 0;
   }
@@ -1290,7 +1288,7 @@
   }
   
   .empty-message {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 1rem;
     font-style: italic;
   }
@@ -1495,7 +1493,7 @@
   }
 
   .schedule-card .empty-message {
-    color: #9ca3af !important;
+    color: #d1d5db !important;
   }
 
   .view-full-btn {
@@ -1692,7 +1690,7 @@
   .schedule-time-range {
     font-size: 0.8rem;
     font-weight: 600;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   .schedule-duration-pill {
@@ -2076,18 +2074,21 @@
     border-radius: 10px;
     color: #fff;
     font-size: 1.125rem;
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
     transition: border-color 0.2s;
   }
-  
+
   .shoutout-input-wrapper input::placeholder {
     color: #666;
   }
   
   .shoutout-input-wrapper input:focus {
+    outline: none;
     border-color: #dc2626;
+  }
+
+  .shoutout-input-wrapper input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
   
   .shoutout-char-count {
@@ -4009,11 +4010,14 @@
     -webkit-appearance: none;
     background: #333;
     border-radius: 2px;
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
   }
-  
+
+  #volumeSlider:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   #volumeSlider::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 12px;
@@ -4062,16 +4066,16 @@
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
   }
 
   .reaction-btn:focus {
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
     border-color: #333;
+  }
+
+  .reaction-btn:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   .reaction-btn:hover {
@@ -4254,7 +4258,7 @@
   }
   
   .chat-welcome p {
-    color: #9ca3af;
+    color: #d1d5db;
     margin: 0;
     font-size: 0.9375rem;
   }
@@ -4262,9 +4266,9 @@
   .chat-hint {
     font-size: 0.8125rem !important;
     margin-top: 0.5rem !important;
-    color: #9ca3af !important;
+    color: #d1d5db !important;
   }
-  
+
   /* Fresh Wax Branding */
   .brand-fresh { color: #fff; font-weight: 700; }
   .brand-wax { color: #dc2626; font-weight: 700; }
@@ -4348,10 +4352,13 @@
   }
 
   .chat-input-wrapper input:focus {
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
     border-color: #6366f1;
+  }
+
+  .chat-input-wrapper input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   .chat-input-wrapper #sendBtn {
@@ -4437,10 +4444,13 @@
   }
   
   .giphy-search input:focus {
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
     border-color: #6366f1;
+  }
+
+  .giphy-search input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
   
   .giphy-grid {
@@ -4688,10 +4698,13 @@
   }
   
   .time-dropdown:focus {
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
     border-color: #dc2626;
+  }
+
+  .time-dropdown:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
   
   .time-dropdown:hover {
@@ -5134,12 +5147,17 @@
   .form-group input:focus,
   .form-group select:focus,
   .form-group textarea:focus {
-    outline: none !important;
-    border-color: #444 !important;
-    box-shadow: none !important;
+    outline: none;
     border-color: #dc2626;
   }
-  
+
+  .form-group input:focus-visible,
+  .form-group select:focus-visible,
+  .form-group textarea:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .char-count {
     display: block;
     text-align: right;
@@ -6914,13 +6932,13 @@
       width: 36px;
       height: 36px;
     }
-    
+
     .mini-play-btn {
-      width: 42px;
-      height: 42px;
+      width: 44px;
+      height: 44px;
     }
   }
-  
+
   /* Print styles - for sharing schedules */
   @media print {
     .player-container,
@@ -7042,8 +7060,10 @@
   }
   
   .mini-expand-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
     border-radius: 8px;
     background: #333;
     border: none;
@@ -7273,7 +7293,7 @@
   }
 
   .eligibility-desc {
-    color: #9ca3af;
+    color: #d1d5db;
     margin-bottom: 1.5rem;
   }
 
@@ -7318,7 +7338,7 @@
   .req-status {
     display: block;
     font-size: 0.85rem;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   .likes-progress {
@@ -7372,7 +7392,7 @@
   }
 
   .quick-access-section p {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.85rem;
     margin: 0 0 1rem;
   }
@@ -7397,6 +7417,11 @@
   .access-code-input input:focus {
     outline: none;
     border-color: #10b981;
+  }
+
+  .access-code-input input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   .redeem-btn {
@@ -7543,7 +7568,7 @@
 .close-btn {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: #d1d5db;
   cursor: pointer;
   padding: 0.5rem;
   display: flex;
@@ -7591,6 +7616,11 @@
   outline: none;
   background: rgba(255, 255, 255, 0.08);
   border-color: #dc2626;
+}
+
+.playlist-url-input:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
 }
 
 .playlist-url-input::placeholder {
@@ -7653,7 +7683,7 @@
 
 .queue-count {
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #d1d5db;
   font-weight: 400;
 }
 
@@ -7737,7 +7767,7 @@
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: #d1d5db;
   flex-shrink: 0;
 }
 
@@ -7788,7 +7818,7 @@
 .playlist-item-platform {
   font-size: 0.65rem;
   font-weight: 600;
-  color: #9ca3af;
+  color: #d1d5db;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -7796,7 +7826,7 @@
 .playlist-item-remove {
   background: none;
   border: none;
-  color: #9ca3af;
+  color: #d1d5db;
   cursor: pointer;
   padding: 0.5rem;
   display: flex;
@@ -7881,7 +7911,7 @@
 .playlist-status {
   text-align: center;
   font-size: 0.875rem;
-  color: #9ca3af;
+  color: #d1d5db;
 }
 
 /* Video Player container - needs position relative for playlist player */

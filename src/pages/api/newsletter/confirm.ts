@@ -5,6 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
+import { checkRateLimit, getClientId, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
@@ -17,6 +18,13 @@ const ConfirmSchema = z.object({
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals, redirect }) => {
+  // Rate limit: 10 per 15 minutes to prevent abuse (sends welcome email)
+  const clientId = getClientId(request);
+  const rateLimit = checkRateLimit(`newsletter-confirm:${clientId}`, RateLimiters.auth);
+  if (!rateLimit.allowed) {
+    return redirect('/newsletter/?error=rate-limited');
+  }
+
   const url = new URL(request.url);
   const parsed = ConfirmSchema.safeParse({
     id: url.searchParams.get('id') ?? '',

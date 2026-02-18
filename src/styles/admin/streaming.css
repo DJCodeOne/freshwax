@@ -372,7 +372,12 @@
     outline: none;
     border-color: #000;
   }
-  
+
+  .form-group input[type="text"]:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .form-group input[type="checkbox"] {
     margin-right: 0.5rem;
   }
@@ -485,7 +490,12 @@
     outline: none;
     border-color: #000;
   }
-  
+
+  .form-group input[type="email"]:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   /* Moderation Section */
   .header-actions {
     display: flex;

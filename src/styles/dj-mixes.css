@@ -346,7 +346,7 @@
 
   .sidebar-subtitle {
     font-size: 0.875rem;
-    color: #9ca3af;
+    color: #d1d5db;
     margin: 0;
   }
 
@@ -403,7 +403,7 @@
 
   .genre-count {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   .genre-nav-btn.active .genre-count {
@@ -503,7 +503,7 @@
   .no-results-message {
     text-align: center;
     padding: 3rem 1rem;
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 1.125rem;
   }
 
@@ -673,14 +673,14 @@
     align-items: center;
     gap: 0.4rem;
     font-size: 0.9rem;
-    color: #9ca3af;
+    color: #d1d5db;
     font-weight: 600;
   }
 
   .stat-icon {
     width: 16px;
     height: 16px;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   /* Mix Card - Tablet (640px+) */
@@ -1175,7 +1175,7 @@
 
   .chart-dj {
     font-size: 0.7rem;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   .chart-score {
@@ -1191,7 +1191,7 @@
   .chart-empty {
     padding: 2rem;
     text-align: center;
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.9rem;
   }
 
@@ -1373,7 +1373,7 @@
   
   .chart-subtitle {
     font-size: 0.65rem;
-    color: #9ca3af;
+    color: #d1d5db;
     margin: 0.25rem 0 0;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1404,7 +1404,7 @@
   .chart-position {
     font-weight: 700;
     font-size: 0.875rem;
-    color: #9ca3af;
+    color: #d1d5db;
     min-width: 28px;
     text-align: center;
   }
@@ -1439,7 +1439,7 @@
 
   .chart-mix-dj {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: #d1d5db;
   }
   
   .chart-stats {

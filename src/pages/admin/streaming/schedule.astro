@@ -429,41 +429,47 @@ export const prerender = false;
   let currentWeekStart = getWeekStart(new Date());
   let allowances = [];
 
+  // Abort previous listeners to prevent leak on View Transition re-runs
+  if (window._adminScheduleAC) window._adminScheduleAC.abort();
+  const _ac = new AbortController();
+  const _sig = { signal: _ac.signal };
+  window._adminScheduleAC = _ac;
+
   document.addEventListener('astro:page-load', async () => {
     if (window.getAdminToken) { try { await window.getAdminToken(); } catch(e) { return; } }
     loadSchedule();
     loadAllowances();
     setupEventListeners();
-  });
+  }, _sig);
 
   function setupEventListeners() {
-    document.getElementById('prevWeek').addEventListener('click', () => {
+    document.getElementById('prevWeek')?.addEventListener('click', () => {
       currentWeekStart = new Date(currentWeekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
       renderCalendar();
-    });
+    }, _sig);
 
-    document.getElementById('nextWeek').addEventListener('click', () => {
+    document.getElementById('nextWeek')?.addEventListener('click', () => {
       currentWeekStart = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
       renderCalendar();
-    });
+    }, _sig);
 
-    document.getElementById('todayBtn').addEventListener('click', () => {
+    document.getElementById('todayBtn')?.addEventListener('click', () => {
       currentWeekStart = getWeekStart(new Date());
       renderCalendar();
-    });
+    }, _sig);
 
-    document.getElementById('refreshBtn').addEventListener('click', loadSchedule);
-    document.getElementById('statusFilter').addEventListener('change', renderBookingsTable);
-    document.getElementById('closeModal').addEventListener('click', closeModal);
-    document.getElementById('addAllowanceBtn').addEventListener('click', openAllowanceModal);
+    document.getElementById('refreshBtn')?.addEventListener('click', loadSchedule, _sig);
+    document.getElementById('statusFilter')?.addEventListener('change', renderBookingsTable, _sig);
+    document.getElementById('closeModal')?.addEventListener('click', closeModal, _sig);
+    document.getElementById('addAllowanceBtn')?.addEventListener('click', openAllowanceModal, _sig);
 
     // Allowance modal buttons
-    document.getElementById('closeAllowanceModalBtn').addEventListener('click', closeAllowanceModal);
-    document.getElementById('cancelAllowanceBtn').addEventListener('click', closeAllowanceModal);
-    document.getElementById('saveAllowanceBtn').addEventListener('click', saveAllowance);
+    document.getElementById('closeAllowanceModalBtn')?.addEventListener('click', closeAllowanceModal, _sig);
+    document.getElementById('cancelAllowanceBtn')?.addEventListener('click', closeAllowanceModal, _sig);
+    document.getElementById('saveAllowanceBtn')?.addEventListener('click', saveAllowance, _sig);
 
     // Event delegation for bookings table
-    document.getElementById('bookingsTable').addEventListener('click', (e) => {
+    document.getElementById('bookingsTable')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
       const action = btn.dataset.action;
@@ -474,14 +480,14 @@ export const prerender = false;
       } else if (action === 'cancelSlot') {
         cancelSlot(slotId);
       }
-    });
+    }, _sig);
 
     // Event delegation for allowances list
-    document.getElementById('allowancesList').addEventListener('click', (e) => {
+    document.getElementById('allowancesList')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="removeAllowance"]');
       if (!btn) return;
       removeAllowance(btn.dataset.djId);
-    });
+    }, _sig);
   }
 
   function getWeekStart(date) {

@@ -1147,12 +1147,18 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     const container = document.getElementById(id);
     if (!container) return;
 
+    // Abort previous listeners to prevent leak on View Transition re-runs
+    if (container._scheduleAC) container._scheduleAC.abort();
+    const ac = new AbortController();
+    const sig = { signal: ac.signal };
+    container._scheduleAC = ac;
+
     const scheduleMode = mode;
     const gridCol1 = container.querySelector('.schedule-grid-col1');
     const gridCol2 = container.querySelector('.schedule-grid-col2');
     const gridCol3 = container.querySelector('.schedule-grid-col3');
     const dateLabel = container.querySelector('.date-label');
-    
+
     // State
     let currentDate = new Date();
     currentDate.setHours(0, 0, 0, 0);
@@ -1176,10 +1182,10 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     }
 
     function setupNavigation() {
-      container.querySelector('.prev-day')?.addEventListener('click', () => navigate(-1));
-      container.querySelector('.next-day')?.addEventListener('click', () => navigate(1));
-      container.querySelector('.today-btn')?.addEventListener('click', goToToday);
-      container.querySelector('.refresh-btn')?.addEventListener('click', loadAndRender);
+      container.querySelector('.prev-day')?.addEventListener('click', () => navigate(-1), sig);
+      container.querySelector('.next-day')?.addEventListener('click', () => navigate(1), sig);
+      container.querySelector('.today-btn')?.addEventListener('click', goToToday, sig);
+      container.querySelector('.refresh-btn')?.addEventListener('click', loadAndRender, sig);
     }
 
     function setupModeSpecificHandlers() {
@@ -1187,9 +1193,9 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         container.querySelector('.cancel-btn')?.addEventListener('click', () => {
           clearSelection(); // Clear selection when cancelling
           window.closeScheduleModal?.();
-        });
-        container.querySelector('.clear-btn')?.addEventListener('click', clearSelection);
-        container.querySelector('.save-btn')?.addEventListener('click', saveBooking);
+        }, sig);
+        container.querySelector('.clear-btn')?.addEventListener('click', clearSelection, sig);
+        container.querySelector('.save-btn')?.addEventListener('click', saveBooking, sig);
       }
 
       if (scheduleMode === 'admin') {
@@ -1205,37 +1211,37 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
 
     function setupAdminHandlers() {
       // Add DJ button
-      container.querySelector('.add-dj-btn')?.addEventListener('click', openAddDjModal);
-      
+      container.querySelector('.add-dj-btn')?.addEventListener('click', openAddDjModal, sig);
+
       // Allowances button
-      container.querySelector('.allowances-btn')?.addEventListener('click', openAllowancesModal);
-      
+      container.querySelector('.allowances-btn')?.addEventListener('click', openAllowancesModal, sig);
+
       // Disable toggle
       const disableCheckbox = container.querySelector('.disable-checkbox');
       disableCheckbox?.addEventListener('change', async (e) => {
         bookingsDisabled = e.target.checked;
         await updateBookingsDisabled(bookingsDisabled);
-      });
+      }, sig);
 
       // Modal handlers
       const addDjModal = document.querySelector('[data-modal="addDj"]');
       const editSlotModal = document.querySelector('[data-modal="editSlot"]');
       const allowancesModal = document.querySelector('[data-modal="allowances"]');
 
-      addDjModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(addDjModal));
-      addDjModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(addDjModal));
-      addDjModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(addDjModal));
-      addDjModal?.querySelector('.add-dj-confirm')?.addEventListener('click', confirmAddDj);
+      addDjModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(addDjModal), sig);
+      addDjModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(addDjModal), sig);
+      addDjModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(addDjModal), sig);
+      addDjModal?.querySelector('.add-dj-confirm')?.addEventListener('click', confirmAddDj, sig);
 
-      editSlotModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(editSlotModal));
-      editSlotModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(editSlotModal));
-      editSlotModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(editSlotModal));
-      editSlotModal?.querySelector('.delete-slot-btn')?.addEventListener('click', deleteSelectedSlot);
+      editSlotModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(editSlotModal), sig);
+      editSlotModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(editSlotModal), sig);
+      editSlotModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(editSlotModal), sig);
+      editSlotModal?.querySelector('.delete-slot-btn')?.addEventListener('click', deleteSelectedSlot, sig);
 
-      allowancesModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(allowancesModal));
-      allowancesModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(allowancesModal));
-      allowancesModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(allowancesModal));
-      allowancesModal?.querySelector('.save-allowance-btn')?.addEventListener('click', saveAllowance);
+      allowancesModal?.querySelector('.modal-overlay')?.addEventListener('click', () => closeModal(allowancesModal), sig);
+      allowancesModal?.querySelector('.modal-close')?.addEventListener('click', () => closeModal(allowancesModal), sig);
+      allowancesModal?.querySelector('.modal-cancel')?.addEventListener('click', () => closeModal(allowancesModal), sig);
+      allowancesModal?.querySelector('.save-allowance-btn')?.addEventListener('click', saveAllowance, sig);
     }
 
     function navigate(delta) {
@@ -2005,7 +2011,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       const btn = e.target.closest('[data-action="removeAllowance"]');
       if (!btn) return;
       removeAllowance(btn.dataset.djId);
-    });
+    }, sig);
 
     function closeModal(modal) {
       modal?.classList.add('hidden');
@@ -2034,7 +2040,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     // Listen for updates from other instances
     window.addEventListener('schedule-updated', () => {
       loadAndRender();
-    });
+    }, sig);
 
     // Initialize
     init();

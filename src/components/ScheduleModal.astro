@@ -162,6 +162,14 @@ import DailySchedule from './DailySchedule.astro';
   (function() {
     const publicModal = document.getElementById('publicScheduleModal');
     const bookingModal = document.getElementById('bookingScheduleModal');
+    if (!publicModal && !bookingModal) return;
+
+    // Abort previous listeners to prevent leak on View Transition re-runs
+    const key = '_scheduleModalAC';
+    if (window[key]) window[key].abort();
+    const ac = new AbortController();
+    const sig = { signal: ac.signal };
+    window[key] = ac;
 
     // Open Public Schedule
     window.openPublicSchedule = function() {
@@ -197,19 +205,19 @@ import DailySchedule from './DailySchedule.astro';
     // Close handlers
     document.getElementById('closePublicSchedule')?.addEventListener('click', () => {
       publicModal?.classList.add('hidden');
-    });
+    }, sig);
 
     document.getElementById('closeBookingSchedule')?.addEventListener('click', () => {
       bookingModal?.classList.add('hidden');
-    });
+    }, sig);
 
     publicModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', () => {
       publicModal?.classList.add('hidden');
-    });
+    }, sig);
 
     bookingModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', () => {
       bookingModal?.classList.add('hidden');
-    });
+    }, sig);
 
     // Keyboard close
     document.addEventListener('keydown', (e) => {
@@ -217,6 +225,6 @@ import DailySchedule from './DailySchedule.astro';
         publicModal?.classList.add('hidden');
         bookingModal?.classList.add('hidden');
       }
-    });
+    }, sig);
   })();
 </script>

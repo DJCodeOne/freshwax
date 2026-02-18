@@ -36,7 +36,7 @@ const faqs = [
         <h1 class="text-4xl md:text-6xl font-bold tracking-wide mb-2" style="font-family: 'Inter', sans-serif; font-weight: 700;">
           CONTACT <span class="text-red-600">US</span>
         </h1>
-        <p class="text-gray-400">We'd love to hear from you</p>
+        <p class="text-gray-300">We'd love to hear from you</p>
       </div>
     </section>
 
@@ -52,7 +52,7 @@ const faqs = [
           
           <form id="contact-form" class="space-y-5">
             <div>
-              <label for="name" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Your Name *</label>
+              <label for="name" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">Your Name *</label>
               <input
                 type="text"
                 id="name"
@@ -67,7 +67,7 @@ const faqs = [
             </div>
 
             <div>
-              <label for="email" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Email Address *</label>
+              <label for="email" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">Email Address *</label>
               <input
                 type="email"
                 id="email"
@@ -82,7 +82,7 @@ const faqs = [
             </div>
             
             <div>
-              <label for="subject" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Subject *</label>
+              <label for="subject" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">Subject *</label>
               <select 
                 id="subject" 
                 name="subject" 
@@ -103,7 +103,7 @@ const faqs = [
             
             <!-- Report Type Dropdown (shown when Report is selected) -->
             <div id="reportTypeSection" class="hidden">
-              <label for="reportType" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">What are you reporting? *</label>
+              <label for="reportType" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">What are you reporting? *</label>
               <select 
                 id="reportType" 
                 name="reportType"
@@ -125,7 +125,7 @@ const faqs = [
             
             <!-- Reported User/URL (shown when Report is selected) -->
             <div id="reportedUserSection" class="hidden">
-              <label for="reportedUser" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Username or URL (if applicable)</label>
+              <label for="reportedUser" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">Username or URL (if applicable)</label>
               <input 
                 type="text" 
                 id="reportedUser" 
@@ -137,7 +137,7 @@ const faqs = [
             </div>
             
             <div id="orderNumberSection">
-              <label for="order-number" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Order Number (if applicable)</label>
+              <label for="order-number" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">Order Number (if applicable)</label>
               <input 
                 type="text" 
                 id="order-number" 
@@ -149,7 +149,7 @@ const faqs = [
             </div>
             
             <div>
-              <label for="message" id="messageLabel" class="block text-sm font-semibold text-gray-400 mb-1 uppercase tracking-wide">Message *</label>
+              <label for="message" id="messageLabel" class="block text-sm font-semibold text-gray-300 mb-1 uppercase tracking-wide">Message *</label>
               <textarea
                 id="message"
                 name="message"
@@ -192,7 +192,7 @@ const faqs = [
               </svg>
               contact@freshwax.co.uk
             </a>
-            <p class="text-gray-400 mt-3 text-sm">
+            <p class="text-gray-300 mt-3 text-sm">
               We typically respond within 24-48 hours during business days.
             </p>
           </div>
@@ -244,7 +244,7 @@ const faqs = [
                 </svg>
               </a>
             </div>
-            <p class="text-gray-400 mt-4 text-sm">
+            <p class="text-gray-300 mt-4 text-sm">
               DM us on social media for quick questions!
             </p>
           </div>
@@ -278,7 +278,7 @@ const faqs = [
           {faqs.map((faq) => (
             <div class="border-l-4 border-red-600 pl-4">
               <h3 class="font-bold text-lg mb-2 text-white" style="font-family: 'Inter', sans-serif; text-transform: none; letter-spacing: normal;">{faq.question}</h3>
-              <p class="text-gray-400">{faq.answer}</p>
+              <p class="text-gray-300">{faq.answer}</p>
             </div>
           ))}
         </div>
@@ -294,7 +294,12 @@ const faqs = [
     outline: none;
     border-color: #dc2626 !important;
   }
-  
+
+  input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   input::placeholder, textarea::placeholder {
     color: #6b7280;
   }
@@ -568,7 +573,7 @@ const faqs = [
         window.location.href = `mailto:contact@freshwax.co.uk?subject=${subject}&body=${body}`;
 
         formMessage.textContent = 'Opening your email client...';
-        formMessage.className = 'text-center text-sm text-gray-400';
+        formMessage.className = 'text-center text-sm text-gray-300';
         formMessage.classList.remove('hidden');
       } finally {
         submitBtn.disabled = false;

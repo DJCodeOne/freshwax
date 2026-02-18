@@ -131,6 +131,11 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
       border-color: var(--accent, #22c55e);
     }
 
+    .search-box input:focus-visible {
+      outline: 2px solid #60a5fa;
+      outline-offset: 2px;
+    }
+
     .releases-list {
       display: flex;
       flex-direction: column;
@@ -212,7 +217,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
     .status-draft {
       background: rgba(156, 163, 175, 0.2);
-      color: #9ca3af;
+      color: #d1d5db;
     }
 
     .status-rejected {

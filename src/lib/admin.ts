@@ -108,8 +108,9 @@ export async function requireAdminAuth(request: Request, locals: App.Locals, bod
       if (userId && await isAdmin(userId)) {
         return null; // Auth successful via Firebase admin token
       }
-    } catch {
+    } catch (e) {
       // Token verification failed, try next candidate
+      console.error('[requireAdminAuth] Token verification failed:', e instanceof Error ? e.message : e);
     }
   }
 
@@ -133,7 +134,7 @@ export async function isAdmin(uid: string): Promise<boolean> {
     const userDoc = await getDocument('users', uid);
     if (userDoc?.isAdmin || userDoc?.roles?.admin) return true;
   } catch (e) {
-    // Ignore errors, return false
+    console.error('[isAdmin] Failed to check admin status:', e instanceof Error ? e.message : e);
   }
 
   return false;

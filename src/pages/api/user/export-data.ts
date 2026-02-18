@@ -48,13 +48,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const { __collections__, ...userData } = profile;
         exportData.profile = userData;
       }
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch user profile:', e instanceof Error ? e.message : e);
+    }
 
     // 2. Artist profile
     try {
       const artist = await getDocument('artists', userId);
       if (artist) exportData.artistProfile = artist;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch artist profile:', e instanceof Error ? e.message : e);
+    }
 
     // 3. Orders
     try {
@@ -64,7 +68,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
       if (orders.length) exportData.orders = orders;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch orders:', e instanceof Error ? e.message : e);
+    }
 
     // 4. Comments
     try {
@@ -74,7 +80,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
       if (comments.length) exportData.comments = comments;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch comments:', e instanceof Error ? e.message : e);
+    }
 
     // 5. DJ Mixes
     try {
@@ -84,7 +92,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
       if (mixes.length) exportData.djMixes = mixes;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch DJ mixes:', e instanceof Error ? e.message : e);
+    }
 
     // 6. Vinyl listings
     try {
@@ -94,13 +104,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
       if (listings.length) exportData.vinylListings = listings;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch vinyl listings:', e instanceof Error ? e.message : e);
+    }
 
     // 7. Vinyl seller profile
     try {
       const seller = await getDocument('vinylSellers', userId);
       if (seller) exportData.vinylSellerProfile = seller;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch vinyl seller profile:', e instanceof Error ? e.message : e);
+    }
 
     // 8. Livestream bookings
     try {
@@ -110,7 +124,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
       if (bookings.length) exportData.livestreamBookings = bookings;
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch livestream bookings:', e instanceof Error ? e.message : e);
+    }
 
     // 9. Newsletter subscription
     try {
@@ -120,7 +136,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const sub = await getDocument('subscribers', subscriberId);
         if (sub) exportData.newsletterSubscription = sub;
       }
-    } catch (_) {}
+    } catch (e) {
+      console.error('[export-data] Failed to fetch newsletter subscription:', e instanceof Error ? e.message : e);
+    }
 
     return new Response(JSON.stringify(exportData, null, 2), {
       status: 200,

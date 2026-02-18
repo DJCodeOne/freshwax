@@ -28,6 +28,7 @@
     .form-label .required { color: #dc2626; }
     .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border: 2px solid #000; font-size: 1rem; font-family: inherit; }
     .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #dc2626; }
+    .form-input:focus-visible, .form-select:focus-visible, .form-textarea:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
     .form-textarea { min-height: 100px; resize: vertical; }
     .form-hint { font-size: 0.75rem; color: #666; margin-top: 0.25rem; }
     
@@ -55,6 +56,7 @@
     .image-color-select label { display: block; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; color: #666; }
     .image-color-select select { width: 100%; padding: 0.5rem; border: 2px solid #ddd; font-size: 0.8rem; font-weight: 600; cursor: pointer; background: #fff; }
     .image-color-select select:focus { outline: none; border-color: #000; }
+    .image-color-select select:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
     .image-color-badge { display: flex; align-items: center; gap: 0.375rem; padding: 0.375rem 0.5rem; background: #000; color: #fff; font-size: 0.7rem; font-weight: 700; }
     .image-color-badge .color-dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.3); }
     

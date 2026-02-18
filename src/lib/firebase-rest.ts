@@ -710,6 +710,7 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
                 doc.id = doc.id || row.id;
                 return doc;
               } catch (e) {
+                log.error('[firebase-rest] Failed to parse D1 release row:', e instanceof Error ? e.message : e);
                 return null;
               }
             }).filter(Boolean);
@@ -794,6 +795,7 @@ export async function getLiveDJMixes(limit?: number, db?: any): Promise<any[]> {
             doc.id = doc.id || row.id;
             return doc;
           } catch (e) {
+            log.error('[firebase-rest] Failed to parse D1 mix row:', e instanceof Error ? e.message : e);
             return null;
           }
         }).filter(Boolean);
@@ -854,6 +856,7 @@ export async function getLiveMerch(limit?: number, db?: any, skipCache?: boolean
             doc.id = doc.id || row.id;
             return doc;
           } catch (e) {
+            log.error('[firebase-rest] Failed to parse D1 merch row:', e instanceof Error ? e.message : e);
             return null;
           }
         }).filter(Boolean);

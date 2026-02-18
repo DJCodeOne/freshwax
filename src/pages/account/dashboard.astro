@@ -216,7 +216,7 @@ const nonce = Astro.locals.nonce || '';
             <h3>Transaction History</h3>
             <div id="transactionsList" class="transactions-list">
               <div class="empty-state">
-                <p style="color: #9ca3af;">No transactions yet</p>
+                <p style="color: #d1d5db;">No transactions yet</p>
               </div>
             </div>
           </div>
@@ -236,7 +236,7 @@ const nonce = Astro.locals.nonce || '';
             <h2>My Wishlist</h2>
             <a href="/releases/" class="btn-secondary-sm">Browse Releases →</a>
           </div>
-          <p class="wishlist-intro" style="color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.875rem;">
+          <p class="wishlist-intro" style="color: #d1d5db; margin-bottom: 1.5rem; font-size: 0.875rem;">
             Releases you've saved for later. Click the bookmark icon on any release to add it here.
           </p>
           <div id="wishlistContainer" class="wishlist-grid">
@@ -253,7 +253,7 @@ const nonce = Astro.locals.nonce || '';
             <h2>Artists I Follow</h2>
             <a href="/releases/" class="btn-secondary-sm">Discover Artists →</a>
           </div>
-          <p class="following-intro" style="color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.9375rem;">
+          <p class="following-intro" style="color: #d1d5db; margin-bottom: 1.5rem; font-size: 0.9375rem;">
             Stay updated with new releases from your favourite artists. Click the Follow button on any release to add artists here.
           </p>
           <div id="followingContainer" class="following-grid">
@@ -562,9 +562,9 @@ const nonce = Astro.locals.nonce || '';
                 </svg>
                 <span>Personal Data (GDPR)</span>
               </div>
-              <p style="color:#9ca3af;font-size:0.8125rem;margin:0.5rem 0;">Download all your personal data in machine-readable JSON format — profile, orders, comments, mixes, and more.</p>
+              <p style="color:#d1d5db;font-size:0.8125rem;margin:0.5rem 0;">Download all your personal data in machine-readable JSON format — profile, orders, comments, mixes, and more.</p>
               <button type="button" id="gdprExportBtn" style="background:#2563eb;color:#fff;border:none;padding:0.5rem 1rem;border-radius:6px;font-size:0.8125rem;cursor:pointer;margin-top:0.25rem;">Export Personal Data (JSON)</button>
-              <span id="gdprExportStatus" style="font-size:0.75rem;color:#9ca3af;margin-left:0.5rem;"></span>
+              <span id="gdprExportStatus" style="font-size:0.75rem;color:#d1d5db;margin-left:0.5rem;"></span>
             </div>
 
             <!-- Order History Section -->
@@ -941,30 +941,30 @@ const nonce = Astro.locals.nonce || '';
                     <h4 style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 2.5rem; color: #dc2626; margin: 0; line-height: 1.1; letter-spacing: 0.02em;">${escapeHtml(mixTitle)}</h4>
                     ${chartPosition !== '-' ? `<span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.3rem 0.6rem; border-radius: 4px; font-size: 0.9rem; font-weight: 600;">#${chartPosition}</span>` : ''}
                   </div>
-                  <p style="font-size: 1.25rem; color: #9ca3af; margin: 0; font-weight: 500;">by ${escapeHtml(djName)}</p>
+                  <p style="font-size: 1.25rem; color: #d1d5db; margin: 0; font-weight: 500;">by ${escapeHtml(djName)}</p>
                   <p style="font-size: 1.125rem; color: #6b7280; margin: 0.5rem 0 0 0;">${escapeHtml(genre)}${durationDisplay ? ' • ' + durationDisplay : ''}</p>
                 </div>
                 
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; background: linear-gradient(to bottom, #374151, #1f2937); padding: 0.625rem 1rem; border-radius: 8px; align-items: center; border: 1px solid #4b5563;">
                   <div style="text-align: center; min-width: 40px;">
                     <div style="font-size: 1.125rem; font-weight: 700; color: #fff;">${plays.toLocaleString()}</div>
-                    <div style="font-size: 0.625rem; color: #9ca3af; text-transform: uppercase;">Plays</div>
+                    <div style="font-size: 0.625rem; color: #d1d5db; text-transform: uppercase;">Plays</div>
                   </div>
                   <div style="text-align: center; min-width: 40px;">
                     <div style="font-size: 1.125rem; font-weight: 700; color: #dc2626;">${likes.toLocaleString()}</div>
-                    <div style="font-size: 0.625rem; color: #9ca3af; text-transform: uppercase;">Likes</div>
+                    <div style="font-size: 0.625rem; color: #d1d5db; text-transform: uppercase;">Likes</div>
                   </div>
                   <div style="text-align: center; min-width: 40px;">
                     <div style="font-size: 1.125rem; font-weight: 700; color: #fff;">${downloads.toLocaleString()}</div>
-                    <div style="font-size: 0.625rem; color: #9ca3af; text-transform: uppercase;">DLs</div>
+                    <div style="font-size: 0.625rem; color: #d1d5db; text-transform: uppercase;">DLs</div>
                   </div>
                   <div style="text-align: center; min-width: 40px;">
                     <div style="font-size: 1.125rem; font-weight: 700; color: #fff;">${commentsCount.toLocaleString()}</div>
-                    <div style="font-size: 0.625rem; color: #9ca3af; text-transform: uppercase;">Cmts</div>
+                    <div style="font-size: 0.625rem; color: #d1d5db; text-transform: uppercase;">Cmts</div>
                   </div>
                   <div style="text-align: center; min-width: 40px;">
                     <div style="font-size: 1.125rem; font-weight: 700; color: #f59e0b;">★${rating}</div>
-                    <div style="font-size: 0.625rem; color: #9ca3af; text-transform: uppercase;">Score</div>
+                    <div style="font-size: 0.625rem; color: #d1d5db; text-transform: uppercase;">Score</div>
                   </div>
                   <div style="display: flex; gap: 0.5rem; margin-left: auto; flex-shrink: 0;">
                     <a href="/dj-mix/${mix.id}/" style="display: inline-block; padding: 0.4rem 0.875rem; background: #000; color: #fff; font-size: 0.8rem; font-weight: 600; border-radius: 5px; text-decoration: none; white-space: nowrap;">View Mix →</a>
@@ -975,7 +975,7 @@ const nonce = Astro.locals.nonce || '';
                 ${commentPreview ? `
                 <div style="background: linear-gradient(to bottom, #374151, #1f2937); padding: 1rem 1.5rem; border-radius: 8px; border-left: 3px solid #dc2626;">
                   <p style="font-size: 1.125rem; color: #e5e7eb; margin: 0; font-style: italic;">"${escapeHtml(commentPreview)}${commentPreview.length >= 80 ? '...' : ''}"</p>
-                  <p style="font-size: 0.9rem; color: #9ca3af; margin: 0.5rem 0 0 0;">— ${escapeHtml(commentAuthor)}</p>
+                  <p style="font-size: 0.9rem; color: #d1d5db; margin: 0.5rem 0 0 0;">— ${escapeHtml(commentAuthor)}</p>
                 </div>
                 ` : ''}
               </div>
@@ -2990,7 +2990,7 @@ const nonce = Astro.locals.nonce || '';
             .logo .fresh { color: #fff; }
             .logo .wax { color: #dc2626; }
             .order-history-title { font-size: 28px; color: #333; margin: 20px 0 10px 0; }
-            .customer-info { color: #9ca3af; font-size: 14px; margin-bottom: 5px; }
+            .customer-info { color: #d1d5db; font-size: 14px; margin-bottom: 5px; }
             .generated { color: #999; font-size: 12px; margin-bottom: 30px; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
@@ -3961,7 +3961,7 @@ const nonce = Astro.locals.nonce || '';
     if (!transactions || transactions.length === 0) {
       container.innerHTML = `
         <div class="empty-state">
-          <p style="color: #9ca3af;">No transactions yet</p>
+          <p style="color: #d1d5db;">No transactions yet</p>
         </div>
       `;
       return;
@@ -4374,7 +4374,7 @@ const nonce = Astro.locals.nonce || '';
   }
 
   .plus-modal .pro-expires {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.85rem;
     margin-bottom: 1rem;
   }
@@ -4398,7 +4398,7 @@ const nonce = Astro.locals.nonce || '';
   }
 
   .plus-modal .referral-desc {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.85rem;
     margin-bottom: 0.75rem;
   }
@@ -4502,7 +4502,7 @@ const nonce = Astro.locals.nonce || '';
   .goplus-price span {
     font-size: 1rem;
     font-weight: 400;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   .goplus-modal-body {
@@ -4626,7 +4626,7 @@ const nonce = Astro.locals.nonce || '';
   .promo-label {
     display: block;
     font-size: 0.85rem;
-    color: #9ca3af;
+    color: #d1d5db;
     margin-bottom: 0.5rem;
   }
 
@@ -4649,6 +4649,11 @@ const nonce = Astro.locals.nonce || '';
   .promo-input-wrapper input:focus {
     outline: none;
     border-color: #f59e0b;
+  }
+
+  .promo-input-wrapper input:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   .promo-apply-btn {
@@ -4752,7 +4757,7 @@ const nonce = Astro.locals.nonce || '';
 
   .tier-badge.free {
     background: #374151;
-    color: #9ca3af;
+    color: #d1d5db;
   }
 
   .tier-badge.plus {
@@ -4769,7 +4774,7 @@ const nonce = Astro.locals.nonce || '';
   .tier-toggle-btn {
     background: none;
     border: none;
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 1rem;
     cursor: pointer;
     padding: 0.25rem 0.5rem;
@@ -5369,7 +5374,7 @@ const nonce = Astro.locals.nonce || '';
   }
 
   .zip-progress-text {
-    color: #9ca3af;
+    color: #d1d5db;
     font-size: 0.875rem;
     text-align: center;
     margin: 0 0 1rem 0;

@@ -1525,6 +1525,10 @@ export const prerender = false;
     outline: none;
     border-color: #f97316;
   }
+  .form-group input:focus-visible, .form-group select:focus-visible, .form-group textarea:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
   .form-group select option {
     background: #252525;
     color: #fff;
@@ -1741,6 +1745,11 @@ export const prerender = false;
     border-color: #f97316;
   }
 
+  :global(.track-side-select:focus-visible) {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   :global(.track-side-select option) {
     background: #333;
     color: #fff;
@@ -1768,6 +1777,11 @@ export const prerender = false;
   :global(.track-name-input:focus) {
     outline: none;
     border-color: #f97316;
+  }
+
+  :global(.track-name-input:focus-visible) {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
   }
 
   :global(.track-field.track-sample) {

@@ -40,7 +40,8 @@
     .form-label { font-weight: 700; font-size: 0.75rem; text-transform: uppercase; }
     .form-input, .form-select { padding: 0.75rem; border: 2px solid #000; font-size: 1rem; font-family: inherit; }
     .form-input:focus, .form-select:focus { outline: none; border-color: #dc2626; }
-    
+    .form-input:focus-visible, .form-select:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+
     .product-search { position: relative; }
     .product-search-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 2px solid #000; border-top: none; max-height: 300px; overflow-y: auto; z-index: 100; display: none; }
     .product-search-results.show { display: block; }
@@ -179,6 +180,7 @@
     .stocktake-table .size-name { font-weight: 600; padding-left: 2rem; }
     .stocktake-table .stock-input { width: 60px; padding: 0.25rem; border: 2px solid #ddd; text-align: center; font-weight: 700; }
     .stocktake-table .stock-input:focus { border-color: #dc2626; outline: none; }
+    .stocktake-table .stock-input:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
     .stocktake-table .variance { font-weight: 700; }
     .stocktake-table .variance.positive { color: #22c55e; }
     .stocktake-table .variance.negative { color: #dc2626; }

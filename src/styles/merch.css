@@ -132,6 +132,12 @@
     outline: none;
   }
 
+  .category-dropdown-btn:focus-visible,
+  .dropdown-btn:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+  }
+
   .category-dropdown-btn svg,
   .dropdown-btn svg {
     flex-shrink: 0;
