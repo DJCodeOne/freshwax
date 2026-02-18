@@ -41,12 +41,18 @@ export async function processImageToSquareWebP(
   const cropped = crop(img, cropX, cropY, minDimension, minDimension);
   img.free();
 
-  // Iteratively resize + encode until WebP is under 100KB
+  // Save cropped image as PNG bytes so we can reload fresh each iteration
+  // (WASM resize() can invalidate the input pointer, breaking subsequent calls)
+  const croppedBytes = cropped.get_bytes(); // PNG format
+  cropped.free();
+
   let currentSize = targetSize;
   let webpBuffer: Uint8Array = new Uint8Array(0);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const resized = resize(cropped, currentSize, currentSize, SamplingFilter.Lanczos3);
+    const fresh = PhotonImage.new_from_byteslice(croppedBytes);
+    const resized = resize(fresh, currentSize, currentSize, SamplingFilter.Lanczos3);
+    fresh.free();
     webpBuffer = resized.get_bytes_webp();
     resized.free();
 
@@ -59,7 +65,6 @@ export async function processImageToSquareWebP(
     currentSize = Math.max(MIN_SIZE, Math.floor(currentSize * ratio));
   }
 
-  cropped.free();
   return { buffer: webpBuffer, width: currentSize, height: currentSize, format: 'webp' };
 }
 
@@ -94,16 +99,25 @@ export async function processImageToWebP(
     newHeight = Math.floor(originalHeight * ratio);
   }
 
-  // Iteratively resize + encode until WebP is under 100KB
+  // Save source as PNG bytes for safe reuse across iterations
+  const sourceBytes = img.get_bytes();
+  img.free();
+
   let webpBuffer: Uint8Array = new Uint8Array(0);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const processed = (newWidth !== originalWidth || newHeight !== originalHeight)
-      ? resize(img, newWidth, newHeight, SamplingFilter.Lanczos3)
-      : img;
+    const fresh = PhotonImage.new_from_byteslice(sourceBytes);
+    let processed: PhotonImage;
+
+    if (newWidth !== originalWidth || newHeight !== originalHeight) {
+      processed = resize(fresh, newWidth, newHeight, SamplingFilter.Lanczos3);
+      fresh.free();
+    } else {
+      processed = fresh;
+    }
 
     webpBuffer = processed.get_bytes_webp();
-    if (processed !== img) processed.free();
+    processed.free();
 
     if (webpBuffer.length <= MAX_BYTES || (newWidth <= MIN_SIZE && newHeight <= MIN_SIZE)) {
       break;
@@ -115,7 +129,6 @@ export async function processImageToWebP(
     newHeight = Math.max(MIN_SIZE, Math.floor(newWidth / aspectRatio));
   }
 
-  img.free();
   return { buffer: webpBuffer, width: newWidth, height: newHeight, format: 'webp' };
 }
 

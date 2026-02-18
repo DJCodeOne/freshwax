@@ -50,13 +50,17 @@ export async function processImageToSquareWebP(
 
   const cropped = crop(img, cropX, cropY, minDimension, minDimension);
   img.free();
+  const croppedBytes = cropped.get_bytes(); // Save as PNG — resize() invalidates the input pointer
+  cropped.free();
 
   // Iteratively resize + encode until WebP is under 100KB
   let currentSize = targetSize;
   let webpBuffer: Uint8Array = new Uint8Array(0);
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const resized = resize(cropped, currentSize, currentSize, SamplingFilter.Lanczos3);
+    const fresh = PhotonImage.new_from_byteslice(croppedBytes);
+    const resized = resize(fresh, currentSize, currentSize, SamplingFilter.Lanczos3);
+    fresh.free();
     webpBuffer = resized.get_bytes_webp();
     resized.free();
 
@@ -69,7 +73,6 @@ export async function processImageToSquareWebP(
     currentSize = Math.max(MIN_SIZE, Math.floor(currentSize * ratio));
   }
 
-  cropped.free();
   return { buffer: webpBuffer, width: currentSize, height: currentSize, format: 'webp' };
 }
 
