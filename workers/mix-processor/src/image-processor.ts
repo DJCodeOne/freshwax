@@ -1,5 +1,5 @@
 // image-processor.ts - Image conversion using @cf-wasm/photon
-// Generates both WebP and JPEG, returns whichever is smaller
+// Always outputs WebP with 100KB size limit
 
 import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
 import type { Env } from './types';
@@ -10,6 +10,10 @@ export interface ProcessedImage {
   height: number;
   format: string;
 }
+
+const MAX_BYTES = 100 * 1024; // 100KB hard limit for all cover images
+const MIN_SIZE = 300; // Never go below 300px
+const MAX_ATTEMPTS = 5;
 
 /** Get file extension for a processed image format */
 export function imageExtension(format: string): string {
@@ -22,12 +26,13 @@ export function imageContentType(format: string): string {
 }
 
 /**
- * Resize and crop image to a square, then convert to the smallest format
+ * Resize and crop image to a square WebP, guaranteed under 100KB.
+ * If the first encode exceeds 100KB, progressively reduces dimensions.
  */
 export async function processImageToSquareWebP(
   inputBuffer: ArrayBuffer | Uint8Array,
   targetSize: number,
-  quality: number = 80
+  _quality: number = 80
 ): Promise<ProcessedImage> {
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
@@ -38,29 +43,34 @@ export async function processImageToSquareWebP(
   const originalWidth = img.get_width();
   const originalHeight = img.get_height();
 
-  // Calculate center crop to make it square
+  // Center crop to square
   const minDimension = Math.min(originalWidth, originalHeight);
   const cropX = Math.floor((originalWidth - minDimension) / 2);
   const cropY = Math.floor((originalHeight - minDimension) / 2);
 
-  // Crop to square from center
   const cropped = crop(img, cropX, cropY, minDimension, minDimension);
   img.free();
 
-  // Resize to target size
-  const resized = resize(cropped, targetSize, targetSize, SamplingFilter.Lanczos3);
-  cropped.free();
+  // Iteratively resize + encode until WebP is under 100KB
+  let currentSize = targetSize;
+  let webpBuffer: Uint8Array = new Uint8Array(0);
 
-  // Generate both WebP and JPEG, keep the smaller one
-  // (Photon's get_bytes_webp() has no quality param — can produce larger files than JPEG)
-  const webpBuffer = resized.get_bytes_webp();
-  const jpegBuffer = resized.get_bytes_jpeg(quality);
-  resized.free();
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const resized = resize(cropped, currentSize, currentSize, SamplingFilter.Lanczos3);
+    webpBuffer = resized.get_bytes_webp();
+    resized.free();
 
-  if (jpegBuffer.length < webpBuffer.length) {
-    return { buffer: jpegBuffer, width: targetSize, height: targetSize, format: 'jpeg' };
+    if (webpBuffer.length <= MAX_BYTES || currentSize <= MIN_SIZE) {
+      break;
+    }
+
+    // Scale down proportionally to hit 100KB target (with 10% safety margin)
+    const ratio = Math.sqrt(MAX_BYTES / webpBuffer.length) * 0.9;
+    currentSize = Math.max(MIN_SIZE, Math.floor(currentSize * ratio));
   }
-  return { buffer: webpBuffer, width: targetSize, height: targetSize, format: 'webp' };
+
+  cropped.free();
+  return { buffer: webpBuffer, width: currentSize, height: currentSize, format: 'webp' };
 }
 
 /**

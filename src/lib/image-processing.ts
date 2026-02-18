@@ -11,59 +11,66 @@ export interface ProcessedImage {
   format: string;
 }
 
+const MAX_BYTES = 100 * 1024; // 100KB hard limit for all cover images
+const MIN_SIZE = 300; // Never go below 300px
+const MAX_ATTEMPTS = 5;
+
 /**
- * Resize and crop image to a square, then convert to WebP
- * Works in Cloudflare Workers environment
+ * Resize and crop image to a square WebP, guaranteed under 100KB.
+ * If the first encode exceeds 100KB, progressively reduces dimensions.
  */
 export async function processImageToSquareWebP(
   inputBuffer: ArrayBuffer | Uint8Array,
   targetSize: number,
-  quality: number = 80
+  _quality: number = 80
 ): Promise<ProcessedImage> {
-  // Convert input to Uint8Array if needed
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
     : new Uint8Array(inputBuffer);
 
-  // Load image with photon
   const img = PhotonImage.new_from_byteslice(input);
 
   const originalWidth = img.get_width();
   const originalHeight = img.get_height();
 
-  // Calculate center crop to make it square
+  // Center crop to square
   const minDimension = Math.min(originalWidth, originalHeight);
   const cropX = Math.floor((originalWidth - minDimension) / 2);
   const cropY = Math.floor((originalHeight - minDimension) / 2);
 
-  // Crop to square from center
   const cropped = crop(img, cropX, cropY, minDimension, minDimension);
-  img.free(); // Free original image memory
+  img.free();
 
-  // Resize to target size
-  const resized = resize(cropped, targetSize, targetSize, SamplingFilter.Lanczos3);
-  cropped.free(); // Free cropped image memory
+  // Iteratively resize + encode until WebP is under 100KB
+  let currentSize = targetSize;
+  let webpBuffer: Uint8Array = new Uint8Array(0);
 
-  // Generate both WebP and JPEG, keep the smaller one
-  // (Photon's get_bytes_webp() has no quality param — can produce larger files than JPEG)
-  const webpBuffer = resized.get_bytes_webp();
-  const jpegBuffer = resized.get_bytes_jpeg(quality);
-  resized.free(); // Free resized image memory
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const resized = resize(cropped, currentSize, currentSize, SamplingFilter.Lanczos3);
+    webpBuffer = resized.get_bytes_webp();
+    resized.free();
 
-  if (jpegBuffer.length < webpBuffer.length) {
-    return { buffer: jpegBuffer, width: targetSize, height: targetSize, format: 'jpeg' };
+    if (webpBuffer.length <= MAX_BYTES || currentSize <= MIN_SIZE) {
+      break;
+    }
+
+    // Scale down proportionally to hit 100KB target (with 10% safety margin)
+    const ratio = Math.sqrt(MAX_BYTES / webpBuffer.length) * 0.9;
+    currentSize = Math.max(MIN_SIZE, Math.floor(currentSize * ratio));
   }
-  return { buffer: webpBuffer, width: targetSize, height: targetSize, format: 'webp' };
+
+  cropped.free();
+  return { buffer: webpBuffer, width: currentSize, height: currentSize, format: 'webp' };
 }
 
 /**
- * Resize image maintaining aspect ratio, then convert to WebP
+ * Resize image maintaining aspect ratio to WebP, guaranteed under 100KB.
  */
 export async function processImageToWebP(
   inputBuffer: ArrayBuffer | Uint8Array,
   maxWidth: number,
   maxHeight: number,
-  quality: number = 80
+  _quality: number = 80
 ): Promise<ProcessedImage> {
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
@@ -73,8 +80,9 @@ export async function processImageToWebP(
 
   const originalWidth = img.get_width();
   const originalHeight = img.get_height();
+  const aspectRatio = originalWidth / originalHeight;
 
-  // Calculate new dimensions maintaining aspect ratio
+  // Calculate initial dimensions maintaining aspect ratio
   let newWidth = originalWidth;
   let newHeight = originalHeight;
 
@@ -82,28 +90,32 @@ export async function processImageToWebP(
     const widthRatio = maxWidth / originalWidth;
     const heightRatio = maxHeight / originalHeight;
     const ratio = Math.min(widthRatio, heightRatio);
-
     newWidth = Math.floor(originalWidth * ratio);
     newHeight = Math.floor(originalHeight * ratio);
   }
 
-  // Resize if needed
-  let processed: typeof img;
-  if (newWidth !== originalWidth || newHeight !== originalHeight) {
-    processed = resize(img, newWidth, newHeight, SamplingFilter.Lanczos3);
-    img.free();
-  } else {
-    processed = img;
+  // Iteratively resize + encode until WebP is under 100KB
+  let webpBuffer: Uint8Array = new Uint8Array(0);
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const processed = (newWidth !== originalWidth || newHeight !== originalHeight)
+      ? resize(img, newWidth, newHeight, SamplingFilter.Lanczos3)
+      : img;
+
+    webpBuffer = processed.get_bytes_webp();
+    if (processed !== img) processed.free();
+
+    if (webpBuffer.length <= MAX_BYTES || (newWidth <= MIN_SIZE && newHeight <= MIN_SIZE)) {
+      break;
+    }
+
+    // Scale down proportionally to hit 100KB target
+    const ratio = Math.sqrt(MAX_BYTES / webpBuffer.length) * 0.9;
+    newWidth = Math.max(MIN_SIZE, Math.floor(newWidth * ratio));
+    newHeight = Math.max(MIN_SIZE, Math.floor(newWidth / aspectRatio));
   }
 
-  // Generate both WebP and JPEG, keep the smaller one
-  const webpBuffer = processed.get_bytes_webp();
-  const jpegBuffer = processed.get_bytes_jpeg(quality);
-  processed.free();
-
-  if (jpegBuffer.length < webpBuffer.length) {
-    return { buffer: jpegBuffer, width: newWidth, height: newHeight, format: 'jpeg' };
-  }
+  img.free();
   return { buffer: webpBuffer, width: newWidth, height: newHeight, format: 'webp' };
 }
 
