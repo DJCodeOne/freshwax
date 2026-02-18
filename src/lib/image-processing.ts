@@ -44,16 +44,16 @@ export async function processImageToSquareWebP(
   const resized = resize(cropped, targetSize, targetSize, SamplingFilter.Lanczos3);
   cropped.free(); // Free cropped image memory
 
-  // Convert to WebP
+  // Generate both WebP and JPEG, keep the smaller one
+  // (Photon's get_bytes_webp() has no quality param — can produce larger files than JPEG)
   const webpBuffer = resized.get_bytes_webp();
+  const jpegBuffer = resized.get_bytes_jpeg(quality);
   resized.free(); // Free resized image memory
 
-  return {
-    buffer: webpBuffer,
-    width: targetSize,
-    height: targetSize,
-    format: 'webp'
-  };
+  if (jpegBuffer.length < webpBuffer.length) {
+    return { buffer: jpegBuffer, width: targetSize, height: targetSize, format: 'jpeg' };
+  }
+  return { buffer: webpBuffer, width: targetSize, height: targetSize, format: 'webp' };
 }
 
 /**
@@ -96,16 +96,25 @@ export async function processImageToWebP(
     processed = img;
   }
 
-  // Convert to WebP
+  // Generate both WebP and JPEG, keep the smaller one
   const webpBuffer = processed.get_bytes_webp();
+  const jpegBuffer = processed.get_bytes_jpeg(quality);
   processed.free();
 
-  return {
-    buffer: webpBuffer,
-    width: newWidth,
-    height: newHeight,
-    format: 'webp'
-  };
+  if (jpegBuffer.length < webpBuffer.length) {
+    return { buffer: jpegBuffer, width: newWidth, height: newHeight, format: 'jpeg' };
+  }
+  return { buffer: webpBuffer, width: newWidth, height: newHeight, format: 'webp' };
+}
+
+/** Get file extension for a processed image format */
+export function imageExtension(format: string): string {
+  return format === 'jpeg' ? '.jpg' : '.webp';
+}
+
+/** Get MIME content type for a processed image format */
+export function imageContentType(format: string): string {
+  return format === 'jpeg' ? 'image/jpeg' : 'image/webp';
 }
 
 /**

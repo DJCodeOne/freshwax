@@ -5,7 +5,7 @@
 import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { processImageToSquareWebP, processImageToWebP } from '../../../lib/image-processing';
+import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { requireAdminAuth } from '../../../lib/admin';
 import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -99,33 +99,34 @@ function getProcessingConfig(key: string): { cover: ProcessingConfig; thumb?: Pr
   return { cover: { mode: 'square', width: 800, height: 800, quality: 80 } };
 }
 
-function getWebPKey(originalKey: string, suffix?: string): string {
+function getWebPKey(originalKey: string, suffix?: string, format: string = 'webp'): string {
+  const ext = imageExtension(format);
   const dir = originalKey.substring(0, originalKey.lastIndexOf('/') + 1);
   const filename = originalKey.substring(originalKey.lastIndexOf('/') + 1);
   const baseName = filename.replace(/\.[^.]+$/, '');
 
   if (suffix) {
-    return `${dir}${suffix}.webp`;
+    return `${dir}${suffix}${ext}`;
   }
 
-  // For artwork files, output as cover.webp
+  // For artwork files, output as cover.webp / cover.jpg
   if (baseName.toLowerCase().startsWith('artwork')) {
-    return `${dir}cover.webp`;
+    return `${dir}cover${ext}`;
   }
 
-  return `${dir}${baseName}.webp`;
+  return `${dir}${baseName}${ext}`;
 }
 
 async function processImage(
   inputBuffer: ArrayBuffer,
   config: ProcessingConfig,
-): Promise<Uint8Array> {
+): Promise<{ buffer: Uint8Array; format: string }> {
   if (config.mode === 'square') {
     const result = await processImageToSquareWebP(inputBuffer, config.width, config.quality);
-    return result.buffer;
+    return { buffer: result.buffer, format: result.format };
   } else {
     const result = await processImageToWebP(inputBuffer, config.width, config.height, config.quality);
-    return result.buffer;
+    return { buffer: result.buffer, format: result.format };
   }
 }
 
@@ -191,17 +192,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const result: ReprocessResult = { key, status: 'success', oldSize, urlChanges: [] };
 
         // 3. Process cover/main image
-        const coverBuffer = await processImage(bodyBytes.buffer as ArrayBuffer, config.cover);
-        const coverKey = getWebPKey(key);
-        result.newSize = coverBuffer.length;
+        const coverResult = await processImage(bodyBytes.buffer as ArrayBuffer, config.cover);
+        const coverKey = getWebPKey(key, undefined, coverResult.format);
+        result.newSize = coverResult.buffer.length;
         result.newKey = coverKey;
 
         // Upload processed cover
         await s3Client.send(new PutObjectCommand({
           Bucket: r2Config.bucketName,
           Key: coverKey,
-          Body: coverBuffer,
-          ContentType: 'image/webp',
+          Body: coverResult.buffer,
+          ContentType: imageContentType(coverResult.format),
           CacheControl: 'public, max-age=31536000, immutable',
         }));
 
@@ -209,26 +210,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
           result.urlChanges!.push({ oldKey: key, newKey: coverKey });
         }
 
-        log.info(`Processed ${key} → ${coverKey}: ${(oldSize / 1024).toFixed(1)}KB → ${(coverBuffer.length / 1024).toFixed(1)}KB`);
+        log.info(`Processed ${key} → ${coverKey}: ${(oldSize / 1024).toFixed(1)}KB → ${(coverResult.buffer.length / 1024).toFixed(1)}KB`);
 
         // 4. Generate thumb if configured (releases)
         if (config.thumb) {
-          const thumbBuffer = await processImage(bodyBytes.buffer as ArrayBuffer, config.thumb);
-          const dir = key.substring(0, key.lastIndexOf('/') + 1);
-          const thumbKey = `${dir}thumb.webp`;
+          const thumbResult = await processImage(bodyBytes.buffer as ArrayBuffer, config.thumb);
+          const thumbKey = getWebPKey(key, 'thumb', thumbResult.format);
 
           await s3Client.send(new PutObjectCommand({
             Bucket: r2Config.bucketName,
             Key: thumbKey,
-            Body: thumbBuffer,
-            ContentType: 'image/webp',
+            Body: thumbResult.buffer,
+            ContentType: imageContentType(thumbResult.format),
             CacheControl: 'public, max-age=31536000, immutable',
           }));
 
           result.thumbCreated = true;
           result.thumbKey = thumbKey;
-          result.thumbSize = thumbBuffer.length;
-          log.info(`Generated thumb ${thumbKey}: ${(thumbBuffer.length / 1024).toFixed(1)}KB`);
+          result.thumbSize = thumbResult.buffer.length;
+          log.info(`Generated thumb ${thumbKey}: ${(thumbResult.buffer.length / 1024).toFixed(1)}KB`);
         }
 
         // 5. Delete original if it was non-WebP and we created a new file at a different key

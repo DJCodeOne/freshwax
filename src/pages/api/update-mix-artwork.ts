@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
 import { ApiErrors } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -91,9 +91,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     try {
       const processed = await processImageToSquareWebP(rawBuffer, 800, 80);
-      artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
+      artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}${imageExtension(processed.format)}`;
       artworkBody = Buffer.from(processed.buffer);
-      artworkContentType = 'image/webp';
+      artworkContentType = imageContentType(processed.format);
     } catch (imgErr) {
       console.error('[update-mix-artwork] WebP processing failed, using original:', imgErr);
       artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
@@ -115,12 +115,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let thumbUrl: string | undefined;
     try {
       const thumb = await processImageToSquareWebP(rawBuffer, 400, 75);
-      const thumbKey = `dj-mixes/${mixId}/thumb.webp`;
+      const thumbKey = `dj-mixes/${mixId}/thumb${imageExtension(thumb.format)}`;
       await s3Client.send(new PutObjectCommand({
         Bucket: R2_CONFIG.bucketName,
         Key: thumbKey,
         Body: Buffer.from(thumb.buffer),
-        ContentType: 'image/webp',
+        ContentType: imageContentType(thumb.format),
         CacheControl: 'public, max-age=31536000',
       }));
       thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;

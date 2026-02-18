@@ -6,7 +6,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
 import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
@@ -237,10 +237,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       try {
         const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);
-        artworkKey = `${folderPath}/artwork.webp`;
-        artworkContentType = 'image/webp';
+        artworkKey = `${folderPath}/artwork${imageExtension(processed.format)}`;
+        artworkContentType = imageContentType(processed.format);
         artworkBody = Buffer.from(processed.buffer);
-        log.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} WebP`);
+        log.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
       } catch (imgErr) {
         log.error('[upload-mix] WebP processing failed, using original:', imgErr);
         const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
@@ -265,19 +265,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Generate 400x400 thumbnail for listing pages
       try {
         const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
-        const thumbKey = `${folderPath}/thumb.webp`;
+        const thumbKey = `${folderPath}/thumb${imageExtension(thumb.format)}`;
         await s3Client.send(
           new PutObjectCommand({
             Bucket: R2_CONFIG.bucketName,
             Key: thumbKey,
             Body: Buffer.from(thumb.buffer),
-            ContentType: 'image/webp',
+            ContentType: imageContentType(thumb.format),
             CacheControl: 'public, max-age=31536000',
           })
         );
         uploadedR2Keys.push(thumbKey);
         thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-        log.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} WebP`);
+        log.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
       } catch (thumbErr) {
         log.error('[upload-mix] Thumbnail generation failed (non-critical):', thumbErr);
       }

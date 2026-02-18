@@ -1,4 +1,5 @@
-// image-processor.ts - WebP conversion using @cf-wasm/photon
+// image-processor.ts - Image conversion using @cf-wasm/photon
+// Generates both WebP and JPEG, returns whichever is smaller
 
 import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
 import type { Env } from './types';
@@ -10,8 +11,18 @@ export interface ProcessedImage {
   format: string;
 }
 
+/** Get file extension for a processed image format */
+export function imageExtension(format: string): string {
+  return format === 'jpeg' ? '.jpg' : '.webp';
+}
+
+/** Get MIME content type for a processed image format */
+export function imageContentType(format: string): string {
+  return format === 'jpeg' ? 'image/jpeg' : 'image/webp';
+}
+
 /**
- * Resize and crop image to a square, then convert to WebP
+ * Resize and crop image to a square, then convert to the smallest format
  */
 export async function processImageToSquareWebP(
   inputBuffer: ArrayBuffer | Uint8Array,
@@ -40,16 +51,16 @@ export async function processImageToSquareWebP(
   const resized = resize(cropped, targetSize, targetSize, SamplingFilter.Lanczos3);
   cropped.free();
 
-  // Convert to WebP
+  // Generate both WebP and JPEG, keep the smaller one
+  // (Photon's get_bytes_webp() has no quality param — can produce larger files than JPEG)
   const webpBuffer = resized.get_bytes_webp();
+  const jpegBuffer = resized.get_bytes_jpeg(quality);
   resized.free();
 
-  return {
-    buffer: webpBuffer,
-    width: targetSize,
-    height: targetSize,
-    format: 'webp'
-  };
+  if (jpegBuffer.length < webpBuffer.length) {
+    return { buffer: jpegBuffer, width: targetSize, height: targetSize, format: 'jpeg' };
+  }
+  return { buffer: webpBuffer, width: targetSize, height: targetSize, format: 'webp' };
 }
 
 /**
@@ -74,14 +85,15 @@ export async function processArtwork(
 
   // Process artwork (1200x1200)
   const artwork = await processImageToSquareWebP(artworkBuffer, 1200, 85);
-  console.log(`[Image] Created artwork: ${artwork.buffer.byteLength} bytes`);
+  console.log(`[Image] Created artwork: ${artwork.buffer.byteLength} bytes (${artwork.format})`);
 
-  // Upload to mixes bucket
-  const artworkOutputKey = `dj-mixes/${mixId}/artwork.webp`;
+  // Upload to mixes bucket with dynamic extension based on chosen format
+  const ext = imageExtension(artwork.format);
+  const artworkOutputKey = `dj-mixes/${mixId}/artwork${ext}`;
 
   await env.MIXES_BUCKET.put(artworkOutputKey, artwork.buffer, {
     httpMetadata: {
-      contentType: 'image/webp',
+      contentType: imageContentType(artwork.format),
       cacheControl: 'public, max-age=31536000, immutable'
     }
   });

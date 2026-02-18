@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { errorResponse, ApiErrors } from '../../lib/api-utils';
 
@@ -118,11 +118,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const originalSize = file.size;
     const compressedSize = processed.buffer.length;
 
-    // Always save as WebP now
-    const filename = `avatars/${userId}.webp`;
+    // Save with format-appropriate extension
+    const filename = `avatars/${userId}${imageExtension(processed.format)}`;
 
     // Delete any old avatar files with different extensions
-    const oldExtensions = ['jpg', 'png', 'gif'];
+    const oldExtensions = ['webp', 'jpg', 'png', 'gif'];
     for (const ext of oldExtensions) {
       try {
         await r2.send(new DeleteObjectCommand({
@@ -134,13 +134,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    // Upload compressed WebP to R2
+    // Upload compressed image to R2
     try {
       await r2.send(new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: filename,
         Body: processed.buffer,
-        ContentType: 'image/webp',
+        ContentType: imageContentType(processed.format),
         CacheControl: 'public, max-age=3600', // 1 hour cache (mutable - avatar can be re-uploaded)
       }));
     } catch (r2Error) {

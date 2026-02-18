@@ -5,7 +5,7 @@
 import '../../../lib/dom-polyfill'; // Required for AWS SDK XML parsing in Workers
 import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { processImageToSquareWebP } from '../../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
@@ -131,23 +131,23 @@ async function processReleaseArtwork(
 
     // 4. Determine output keys
     const dir = r2Key.substring(0, r2Key.lastIndexOf('/') + 1);
-    const coverKey = `${dir}cover.webp`;
-    const thumbKey = `${dir}thumb.webp`;
+    const coverKey = `${dir}cover${imageExtension(coverResult.format)}`;
+    const thumbKey = `${dir}thumb${imageExtension(thumbResult.format)}`;
 
-    // 5. Upload both WebP files
+    // 5. Upload both image files
     await Promise.all([
       s3Client.send(new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: coverKey,
         Body: coverResult.buffer,
-        ContentType: 'image/webp',
+        ContentType: imageContentType(coverResult.format),
         CacheControl: 'public, max-age=31536000',
       })),
       s3Client.send(new PutObjectCommand({
         Bucket: r2Config.bucketName,
         Key: thumbKey,
         Body: thumbResult.buffer,
-        ContentType: 'image/webp',
+        ContentType: imageContentType(thumbResult.format),
         CacheControl: 'public, max-age=31536000',
       })),
     ]);

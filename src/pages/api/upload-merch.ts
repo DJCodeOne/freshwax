@@ -9,7 +9,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument } from '../../lib/firebase-service-account';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
-import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
 import { errorResponse, ApiErrors } from '../../lib/api-utils';
@@ -255,15 +255,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
       }
 
-      // Always save as .webp
-      const imageKey = folderPath + '/image_' + i + '.webp';
+      // Save with correct extension based on output format
+      const imageKey = folderPath + '/image_' + i + imageExtension(processed.format);
 
       await s3Client.send(
         new PutObjectCommand({
           Bucket: r2Config.bucketName,
           Key: imageKey,
           Body: processed.buffer,
-          ContentType: 'image/webp',
+          ContentType: imageContentType(processed.format),
           CacheControl: 'public, max-age=31536000, immutable',
         })
       );

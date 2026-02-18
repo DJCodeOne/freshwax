@@ -9,7 +9,7 @@ import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } fro
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
-import { processImageToSquareWebP } from '../../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 
 const FinalizeUploadSchema = z.object({
   mixId: z.string().min(1).max(500),
@@ -166,34 +166,34 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (artworkResp.ok) {
           const artworkBuffer = await artworkResp.arrayBuffer();
           const processed = await processImageToSquareWebP(artworkBuffer, 800, 80);
-          const webpKey = `dj-mixes/${mixId}/artwork.webp`;
+          const artworkKey = `dj-mixes/${mixId}/artwork${imageExtension(processed.format)}`;
 
           await s3Client.send(new PutObjectCommand({
             Bucket: R2_CONFIG.bucketName,
-            Key: webpKey,
+            Key: artworkKey,
             Body: Buffer.from(processed.buffer),
-            ContentType: 'image/webp',
+            ContentType: imageContentType(processed.format),
             CacheControl: 'public, max-age=31536000',
           }));
 
-          finalArtworkUrl = `${R2_CONFIG.publicDomain}/${webpKey}`;
-          console.log(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} WebP`);
+          finalArtworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
+          console.log(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
 
           // Generate 400x400 thumbnail for listing pages
           try {
             const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
-            const thumbKey = `dj-mixes/${mixId}/thumb.webp`;
+            const thumbKey = `dj-mixes/${mixId}/thumb${imageExtension(thumb.format)}`;
 
             await s3Client.send(new PutObjectCommand({
               Bucket: R2_CONFIG.bucketName,
               Key: thumbKey,
               Body: Buffer.from(thumb.buffer),
-              ContentType: 'image/webp',
+              ContentType: imageContentType(thumb.format),
               CacheControl: 'public, max-age=31536000',
             }));
 
             finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-            console.log(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} WebP`);
+            console.log(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
           } catch (thumbErr) {
             console.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
           }

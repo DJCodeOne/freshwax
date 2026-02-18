@@ -1,7 +1,7 @@
 import { R2FirebaseSync } from '../../lib/r2-firebase-sync';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument } from '../../lib/firebase-rest';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
 import AdmZip from 'adm-zip';
 import * as fs from 'fs';
@@ -256,22 +256,22 @@ async function processRawZip(
       const coverResult = await processImageToSquareWebP(coverBuffer.buffer as ArrayBuffer, 800, 80);
       const thumbResult = await processImageToSquareWebP(coverBuffer.buffer as ArrayBuffer, 400, 75);
 
-      const coverKey = `releases/${releaseId}/artwork/cover.webp`;
-      const thumbKey = `releases/${releaseId}/artwork/thumb.webp`;
+      const coverKey = `releases/${releaseId}/artwork/cover${imageExtension(coverResult.format)}`;
+      const thumbKey = `releases/${releaseId}/artwork/thumb${imageExtension(thumbResult.format)}`;
 
       await Promise.all([
         s3Client.send(new PutObjectCommand({
           Bucket: config.r2.bucketName,
           Key: coverKey,
           Body: coverResult.buffer,
-          ContentType: 'image/webp',
+          ContentType: imageContentType(coverResult.format),
           CacheControl: 'public, max-age=31536000',
         })),
         s3Client.send(new PutObjectCommand({
           Bucket: config.r2.bucketName,
           Key: thumbKey,
           Body: thumbResult.buffer,
-          ContentType: 'image/webp',
+          ContentType: imageContentType(thumbResult.format),
           CacheControl: 'public, max-age=31536000',
         })),
       ]);

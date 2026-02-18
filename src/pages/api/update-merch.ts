@@ -7,7 +7,7 @@ import { getDocument, clearCache, clearAllMerchCache } from '../../lib/firebase-
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
-import { processImageToSquareWebP, processImageToWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors } from '../../lib/api-utils';
 
@@ -334,10 +334,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         try {
           const processed = await processImageToSquareWebP(imageBuffer, 800, 85);
-          imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.webp';
+          imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + imageExtension(processed.format);
           uploadBody = processed.buffer;
-          uploadContentType = 'image/webp';
-          log.info('[update-merch] Converted to WebP:', processed.width, 'x', processed.height);
+          uploadContentType = imageContentType(processed.format);
+          log.info('[update-merch] Converted to', processed.format + ':', processed.width, 'x', processed.height);
         } catch (imgErr) {
           log.warn('[update-merch] WebP conversion failed, uploading original:', imgErr);
           const imageExt = imageFile.name.split('.').pop() || 'jpg';

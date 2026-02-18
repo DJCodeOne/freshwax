@@ -1,4 +1,5 @@
-// image-processor.ts - WebP conversion for merch products
+// image-processor.ts - Image conversion for merch products
+// Generates both WebP and JPEG, returns whichever is smaller
 
 import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
 import type { Env } from './types';
@@ -10,8 +11,18 @@ export interface ProcessedImage {
   format: string;
 }
 
+/** Get file extension for a processed image format */
+export function imageExtension(format: string): string {
+  return format === 'jpeg' ? '.jpg' : '.webp';
+}
+
+/** Get MIME content type for a processed image format */
+export function imageContentType(format: string): string {
+  return format === 'jpeg' ? 'image/jpeg' : 'image/webp';
+}
+
 /**
- * Resize and crop image to a square, then convert to WebP
+ * Resize and crop image to a square, then convert to the smallest format
  */
 export async function processImageToSquareWebP(
   inputBuffer: ArrayBuffer | Uint8Array,
@@ -40,16 +51,16 @@ export async function processImageToSquareWebP(
   const resized = resize(cropped, targetSize, targetSize, SamplingFilter.Lanczos3);
   cropped.free();
 
-  // Convert to WebP
+  // Generate both WebP and JPEG, keep the smaller one
+  // (Photon's get_bytes_webp() has no quality param — can produce larger files than JPEG)
   const webpBuffer = resized.get_bytes_webp();
+  const jpegBuffer = resized.get_bytes_jpeg(quality);
   resized.free();
 
-  return {
-    buffer: webpBuffer,
-    width: targetSize,
-    height: targetSize,
-    format: 'webp'
-  };
+  if (jpegBuffer.length < webpBuffer.length) {
+    return { buffer: jpegBuffer, width: targetSize, height: targetSize, format: 'jpeg' };
+  }
+  return { buffer: webpBuffer, width: targetSize, height: targetSize, format: 'webp' };
 }
 
 /**
@@ -81,15 +92,16 @@ export async function processProductImages(
     const imageBuffer = await imageObj.arrayBuffer();
     console.log(`[Image] Downloaded: ${imageBuffer.byteLength} bytes`);
 
-    // Process to 800x800 WebP
+    // Process to 800x800 (WebP or JPEG, whichever is smaller)
     const processed = await processImageToSquareWebP(imageBuffer, 800);
-    console.log(`[Image] Processed: ${processed.buffer.byteLength} bytes`);
+    console.log(`[Image] Processed: ${processed.buffer.byteLength} bytes (${processed.format})`);
 
-    // Upload to merch bucket
-    const outputKey = `merch/${productId}/image-${i + 1}.webp`;
+    // Upload to merch bucket with dynamic extension
+    const ext = imageExtension(processed.format);
+    const outputKey = `merch/${productId}/image-${i + 1}${ext}`;
     await env.MERCH_BUCKET.put(outputKey, processed.buffer, {
       httpMetadata: {
-        contentType: 'image/webp',
+        contentType: imageContentType(processed.format),
         cacheControl: 'public, max-age=31536000, immutable'
       }
     });
@@ -104,15 +116,16 @@ export async function processProductImages(
 
       // Also create thumbnail for first image
       const thumb = await processImageToSquareWebP(imageBuffer, 400);
-      const thumbKey = `merch/${productId}/thumbnail.webp`;
+      const thumbExt = imageExtension(thumb.format);
+      const thumbKey = `merch/${productId}/thumbnail${thumbExt}`;
       await env.MERCH_BUCKET.put(thumbKey, thumb.buffer, {
         httpMetadata: {
-          contentType: 'image/webp',
+          contentType: imageContentType(thumb.format),
           cacheControl: 'public, max-age=31536000, immutable'
         }
       });
       thumbnail = `${env.R2_PUBLIC_DOMAIN}/${thumbKey}`;
-      console.log(`[Image] Thumbnail: ${thumbnail}`);
+      console.log(`[Image] Thumbnail: ${thumbnail} (${thumb.format})`);
     }
   }
 

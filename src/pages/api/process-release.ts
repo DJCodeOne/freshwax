@@ -8,7 +8,7 @@ import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { processImageToSquareWebP } from '../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
 
@@ -246,23 +246,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const cover = await processImageToSquareWebP(artworkBuffer, 800, 80);
           const thumb = await processImageToSquareWebP(artworkBuffer, 400, 75);
 
-          // Upload cover.webp
-          const coverKey = `${releaseFolder}/cover.webp`;
+          // Upload cover image
+          const coverKey = `${releaseFolder}/cover${imageExtension(cover.format)}`;
           await r2.put(coverKey, cover.buffer, {
-            httpMetadata: { contentType: 'image/webp', cacheControl: 'public, max-age=31536000, immutable' },
+            httpMetadata: { contentType: imageContentType(cover.format), cacheControl: 'public, max-age=31536000, immutable' },
           });
           artworkUrl = `${publicDomain}/${coverKey}`;
           copiedFiles.push({ oldKey: artworkKey, newKey: coverKey });
-          log.info(`Created cover.webp (${(cover.buffer.length / 1024).toFixed(0)}KB)`);
+          log.info(`Created cover${imageExtension(cover.format)} (${(cover.buffer.length / 1024).toFixed(0)}KB)`);
 
-          // Upload thumb.webp
-          const thumbKey = `${releaseFolder}/thumb.webp`;
+          // Upload thumb image
+          const thumbKey = `${releaseFolder}/thumb${imageExtension(thumb.format)}`;
           await r2.put(thumbKey, thumb.buffer, {
-            httpMetadata: { contentType: 'image/webp', cacheControl: 'public, max-age=31536000, immutable' },
+            httpMetadata: { contentType: imageContentType(thumb.format), cacheControl: 'public, max-age=31536000, immutable' },
           });
           thumbUrl = `${publicDomain}/${thumbKey}`;
           copiedFiles.push({ oldKey: artworkKey, newKey: thumbKey });
-          log.info(`Created thumb.webp (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
+          log.info(`Created thumb${imageExtension(thumb.format)} (${(thumb.buffer.length / 1024).toFixed(0)}KB)`);
 
           // Copy original full-res artwork for buyer downloads
           const origExt = artworkKey.split('.').pop() || 'jpg';

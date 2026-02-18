@@ -8,7 +8,7 @@
 import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { processImageToSquareWebP } from '../../../lib/image-processing';
+import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { requireAdminAuth } from '../../../lib/admin';
 import { initFirebaseEnv, queryCollection, getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
@@ -87,19 +87,22 @@ function extractR2Key(url: string, publicDomain: string): string | null {
   return key;
 }
 
-/** Build WebP key from original R2 key. Normalizes artwork -> cover. */
-function getWebPKey(originalKey: string): string {
+/** Build output key from original R2 key. Normalizes artwork -> cover. Uses format-aware extension. */
+function getOutputKey(originalKey: string, format: string = 'webp'): string {
+  const ext = imageExtension(format);
   const dir = originalKey.substring(0, originalKey.lastIndexOf('/') + 1);
   const filename = originalKey.substring(originalKey.lastIndexOf('/') + 1);
   const baseName = filename.replace(/\.[^.]+$/, '');
   if (baseName.toLowerCase().startsWith('artwork')) {
-    return `${dir}cover.webp`;
+    return `${dir}cover${ext}`;
   }
-  return `${dir}${baseName}.webp`;
+  return `${dir}${baseName}${ext}`;
 }
 
-function isWebP(url: string): boolean {
-  return url.toLowerCase().endsWith('.webp');
+/** Check if URL points to an already-optimized image (WebP or JPEG from our pipeline). */
+function isOptimizedImage(url: string): boolean {
+  const lower = url.toLowerCase();
+  return lower.endsWith('.webp') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
 }
 
 async function r2ObjectExists(s3: S3Client, bucket: string, key: string): Promise<boolean> {
@@ -112,21 +115,21 @@ async function r2ObjectExists(s3: S3Client, bucket: string, key: string): Promis
 }
 
 /**
- * Convert image to WebP, reducing quality iteratively until output is under MAX_FILE_SIZE.
- * Returns the buffer and final size.
+ * Convert image to the smallest format (WebP or JPEG), reducing quality iteratively until output is under MAX_FILE_SIZE.
+ * Returns the buffer, final size, quality, and chosen format.
  */
-async function convertToWebPUnder100KB(
+async function convertImageUnder100KB(
   inputBuffer: ArrayBuffer,
   width: number,
   startQuality: number,
-): Promise<{ buffer: Uint8Array; size: number; quality: number }> {
+): Promise<{ buffer: Uint8Array; size: number; quality: number; format: string }> {
   let quality = startQuality;
   const MIN_QUALITY = 40;
 
   while (quality >= MIN_QUALITY) {
     const result = await processImageToSquareWebP(inputBuffer, width, quality);
     if (result.buffer.length <= MAX_FILE_SIZE || quality <= MIN_QUALITY) {
-      return { buffer: result.buffer, size: result.buffer.length, quality };
+      return { buffer: result.buffer, size: result.buffer.length, quality, format: result.format };
     }
     // Reduce quality by 10 and try again
     quality -= 10;
@@ -135,7 +138,7 @@ async function convertToWebPUnder100KB(
 
   // Final attempt at minimum quality (should always be reached by the loop, but just in case)
   const result = await processImageToSquareWebP(inputBuffer, width, MIN_QUALITY);
-  return { buffer: result.buffer, size: result.buffer.length, quality: MIN_QUALITY };
+  return { buffer: result.buffer, size: result.buffer.length, quality: MIN_QUALITY, format: result.format };
 }
 
 /** Extract all non-WebP image URLs from a document. */
@@ -145,7 +148,7 @@ function extractNonWebPUrls(doc: any, collection: CollectionName): Map<string, s
 
   for (const field of fields) {
     const value = doc[field];
-    if (typeof value === 'string' && value.startsWith('http') && !isWebP(value)) {
+    if (typeof value === 'string' && value.startsWith('http') && !isOptimizedImage(value)) {
       result.set(field, value);
     }
   }
@@ -155,7 +158,7 @@ function extractNonWebPUrls(doc: any, collection: CollectionName): Map<string, s
     for (let i = 0; i < doc.images.length; i++) {
       const img = doc.images[i];
       const url = typeof img === 'string' ? img : (img?.url || null);
-      if (url && typeof url === 'string' && url.startsWith('http') && !isWebP(url)) {
+      if (url && typeof url === 'string' && url.startsWith('http') && !isOptimizedImage(url)) {
         result.set(`images[${i}]`, url);
       }
     }
@@ -171,7 +174,7 @@ function extractNonWebPUrls(doc: any, collection: CollectionName): Map<string, s
 function findOriginalCoverUrl(doc: any): string | null {
   for (const field of ['coverUrl', 'coverArtUrl', 'artworkUrl', 'imageUrl']) {
     const value = doc[field];
-    if (typeof value === 'string' && value.startsWith('http') && !isWebP(value)) {
+    if (typeof value === 'string' && value.startsWith('http') && !isOptimizedImage(value)) {
       return value;
     }
   }
@@ -274,10 +277,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             continue;
           }
 
-          const webpKey = getWebPKey(r2Key);
-          const webpUrl = `${r2Config.publicDomain}/${webpKey}`;
+          // First check if a WebP version already exists (backward compat)
+          const legacyWebPKey = getOutputKey(r2Key, 'webp');
+          const webpExists = await r2ObjectExists(s3Client, r2Config.bucketName, legacyWebPKey);
 
-          const webpExists = await r2ObjectExists(s3Client, r2Config.bucketName, webpKey);
+          let outputKey: string;
+          let outputUrl: string;
 
           if (!webpExists) {
             try {
@@ -303,7 +308,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 ? processingConfig.thumb
                 : processingConfig;
 
-              const converted = await convertToWebPUnder100KB(
+              const converted = await convertImageUnder100KB(
                 bodyBytes.buffer as ArrayBuffer,
                 config.width,
                 config.quality,
@@ -311,21 +316,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
               totalNewSize += converted.size;
 
+              outputKey = getOutputKey(r2Key, converted.format);
+              outputUrl = `${r2Config.publicDomain}/${outputKey}`;
+
               await s3Client.send(new PutObjectCommand({
                 Bucket: r2Config.bucketName,
-                Key: webpKey,
+                Key: outputKey,
                 Body: converted.buffer,
-                ContentType: 'image/webp',
+                ContentType: imageContentType(converted.format),
                 CacheControl: 'public, max-age=31536000, immutable',
               }));
 
-              log.info(`Converted ${r2Key} -> ${webpKey}: ${(bodyBytes.length / 1024).toFixed(1)}KB -> ${(converted.size / 1024).toFixed(1)}KB (q${converted.quality})`);
+              log.info(`Converted ${r2Key} -> ${outputKey}: ${(bodyBytes.length / 1024).toFixed(1)}KB -> ${(converted.size / 1024).toFixed(1)}KB (q${converted.quality}, ${converted.format})`);
             } catch (err: unknown) {
               log.error(`Failed to convert ${r2Key}:`, err);
               continue;
             }
           } else {
-            log.info(`WebP already exists on R2: ${webpKey}`);
+            outputKey = legacyWebPKey;
+            outputUrl = `${r2Config.publicDomain}/${legacyWebPKey}`;
+            log.info(`WebP already exists on R2: ${legacyWebPKey}`);
           }
 
           // Collect field update
@@ -337,11 +347,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }
               fieldUpdates._imagesArrayUpdates.push({
                 index: parseInt(idxMatch[1], 10),
-                newUrl: webpUrl,
+                newUrl: outputUrl,
               });
             }
           } else {
-            fieldUpdates[fieldName] = webpUrl;
+            fieldUpdates[fieldName] = outputUrl;
           }
 
           migratedFields.push(fieldName);
@@ -354,42 +364,51 @@ export const POST: APIRoute = async ({ request, locals }) => {
             ['coverUrl', 'coverArtUrl', 'artworkUrl', 'imageUrl'].includes(f)
           );
           if (coverField && fieldUpdates[coverField]) {
-            const coverWebpKey = extractR2Key(fieldUpdates[coverField], r2Config.publicDomain);
-            if (coverWebpKey) {
-              const dir = coverWebpKey.substring(0, coverWebpKey.lastIndexOf('/') + 1);
-              const thumbKey = `${dir}thumb.webp`;
-              const thumbUrl = `${r2Config.publicDomain}/${thumbKey}`;
+            const coverOutputKey = extractR2Key(fieldUpdates[coverField], r2Config.publicDomain);
+            if (coverOutputKey) {
+              // Find the original source bytes for this cover
+              const originalUrl = nonWebPUrls.get(coverField);
+              const origR2Key = originalUrl ? extractR2Key(originalUrl, r2Config.publicDomain) : null;
+              const sourceBytes = origR2Key ? fetchedBuffers.get(origR2Key) : null;
 
-              const thumbExists = await r2ObjectExists(s3Client, r2Config.bucketName, thumbKey);
-              if (!thumbExists) {
-                // Find the original source bytes for this cover
-                const originalUrl = nonWebPUrls.get(coverField);
-                const origR2Key = originalUrl ? extractR2Key(originalUrl, r2Config.publicDomain) : null;
-                const sourceBytes = origR2Key ? fetchedBuffers.get(origR2Key) : null;
+              // Process thumb to determine format, then build the key
+              let thumbKey: string | null = null;
+              let thumbUrl: string | null = null;
 
-                if (sourceBytes) {
-                  try {
-                    const thumbConverted = await convertToWebPUnder100KB(
-                      sourceBytes.buffer as ArrayBuffer,
-                      processingConfig.thumb.width,
-                      processingConfig.thumb.quality,
-                    );
+              if (sourceBytes) {
+                try {
+                  const thumbConverted = await convertImageUnder100KB(
+                    sourceBytes.buffer as ArrayBuffer,
+                    processingConfig.thumb.width,
+                    processingConfig.thumb.quality,
+                  );
+                  const dir = coverOutputKey.substring(0, coverOutputKey.lastIndexOf('/') + 1);
+                  thumbKey = `${dir}thumb${imageExtension(thumbConverted.format)}`;
+                  thumbUrl = `${r2Config.publicDomain}/${thumbKey}`;
+
+                  const thumbExists = await r2ObjectExists(s3Client, r2Config.bucketName, thumbKey);
+                  if (!thumbExists) {
                     await s3Client.send(new PutObjectCommand({
                       Bucket: r2Config.bucketName,
                       Key: thumbKey,
                       Body: thumbConverted.buffer,
-                      ContentType: 'image/webp',
+                      ContentType: imageContentType(thumbConverted.format),
                       CacheControl: 'public, max-age=31536000, immutable',
                     }));
-                    log.info(`Generated thumb: ${thumbKey} (${(thumbConverted.size / 1024).toFixed(1)}KB)`);
-                  } catch (err: unknown) {
-                    log.warn(`Failed to generate thumb for ${docId}:`, err);
+                    log.info(`Generated thumb: ${thumbKey} (${(thumbConverted.size / 1024).toFixed(1)}KB, ${thumbConverted.format})`);
                   }
+                } catch (err: unknown) {
+                  log.warn(`Failed to generate thumb for ${docId}:`, err);
                 }
+              } else {
+                // No source bytes; check if a legacy webp thumb already exists
+                const dir = coverOutputKey.substring(0, coverOutputKey.lastIndexOf('/') + 1);
+                thumbKey = `${dir}thumb.webp`;
+                thumbUrl = `${r2Config.publicDomain}/${thumbKey}`;
               }
 
               // Update thumbUrl field
-              if (doc.thumbUrl !== undefined || collection === 'releases') {
+              if (thumbUrl && (doc.thumbUrl !== undefined || collection === 'releases')) {
                 fieldUpdates.thumbUrl = thumbUrl;
                 migratedFields.push('thumbUrl');
               }

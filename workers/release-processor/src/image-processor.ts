@@ -1,5 +1,6 @@
-// image-processor.ts - WebP conversion using @cf-wasm/photon
+// image-processor.ts - Image conversion using @cf-wasm/photon
 // Based on existing src/lib/image-processing.ts
+// Generates both WebP and JPEG, returns whichever is smaller
 
 import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
 import type { Env } from './types';
@@ -11,12 +12,23 @@ export interface ProcessedImage {
   format: string;
 }
 
+/** Get file extension for a processed image format */
+export function imageExtension(format: string): string {
+  return format === 'jpeg' ? '.jpg' : '.webp';
+}
+
+/** Get MIME content type for a processed image format */
+export function imageContentType(format: string): string {
+  return format === 'jpeg' ? 'image/jpeg' : 'image/webp';
+}
+
 /**
- * Resize and crop image to a square, then convert to WebP
+ * Resize and crop image to a square, then convert to the smallest format
  */
 export async function processImageToSquareWebP(
   inputBuffer: ArrayBuffer | Uint8Array,
-  targetSize: number
+  targetSize: number,
+  quality: number = 80
 ): Promise<ProcessedImage> {
   const input = inputBuffer instanceof Uint8Array
     ? inputBuffer
@@ -40,16 +52,16 @@ export async function processImageToSquareWebP(
   const resized = resize(cropped, targetSize, targetSize, SamplingFilter.Lanczos3);
   cropped.free();
 
-  // Convert to WebP
+  // Generate both WebP and JPEG, keep the smaller one
+  // (Photon's get_bytes_webp() has no quality param — can produce larger files than JPEG)
   const webpBuffer = resized.get_bytes_webp();
+  const jpegBuffer = resized.get_bytes_jpeg(quality);
   resized.free();
 
-  return {
-    buffer: webpBuffer,
-    width: targetSize,
-    height: targetSize,
-    format: 'webp'
-  };
+  if (jpegBuffer.length < webpBuffer.length) {
+    return { buffer: jpegBuffer, width: targetSize, height: targetSize, format: 'jpeg' };
+  }
+  return { buffer: webpBuffer, width: targetSize, height: targetSize, format: 'webp' };
 }
 
 /**
@@ -74,26 +86,28 @@ export async function processArtwork(
 
   // Process cover (800x800)
   const cover = await processImageToSquareWebP(artworkBuffer, 800);
-  console.log(`[Image] Created cover: ${cover.buffer.byteLength} bytes`);
+  console.log(`[Image] Created cover: ${cover.buffer.byteLength} bytes (${cover.format})`);
 
   // Process thumbnail (400x400)
   const thumb = await processImageToSquareWebP(artworkBuffer, 400);
-  console.log(`[Image] Created thumbnail: ${thumb.buffer.byteLength} bytes`);
+  console.log(`[Image] Created thumbnail: ${thumb.buffer.byteLength} bytes (${thumb.format})`);
 
-  // Upload to releases bucket
-  const coverKey = `releases/${releaseId}/artwork/cover.webp`;
-  const thumbKey = `releases/${releaseId}/artwork/thumb.webp`;
+  // Upload to releases bucket with dynamic extensions based on chosen format
+  const coverExt = imageExtension(cover.format);
+  const thumbExt = imageExtension(thumb.format);
+  const coverKey = `releases/${releaseId}/artwork/cover${coverExt}`;
+  const thumbKey = `releases/${releaseId}/artwork/thumb${thumbExt}`;
 
   await Promise.all([
     env.RELEASES_BUCKET.put(coverKey, cover.buffer, {
       httpMetadata: {
-        contentType: 'image/webp',
+        contentType: imageContentType(cover.format),
         cacheControl: 'public, max-age=31536000, immutable'
       }
     }),
     env.RELEASES_BUCKET.put(thumbKey, thumb.buffer, {
       httpMetadata: {
-        contentType: 'image/webp',
+        contentType: imageContentType(thumb.format),
         cacheControl: 'public, max-age=31536000, immutable'
       }
     })

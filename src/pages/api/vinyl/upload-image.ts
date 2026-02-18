@@ -5,7 +5,7 @@
 import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { processImageToWebP } from '../../../lib/image-processing';
+import { processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
 import { ApiErrors } from '../../../lib/api-utils';
@@ -120,9 +120,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const processed = await processImageToWebP(inputBuffer, MAX_IMAGE_WIDTH, MAX_IMAGE_HEIGHT, WEBP_QUALITY);
     const compressedSize = processed.buffer.length;
 
-    // Generate unique filename
+    // Generate unique filename with correct extension for output format
     const timestamp = Date.now();
-    const filename = `${listingId}_${imageIndex}_${timestamp}.webp`;
+    const filename = `${listingId}_${imageIndex}_${timestamp}${imageExtension(processed.format)}`;
     const key = `vinyl/${sellerId}/${filename}`;
 
     await s3Client.send(
@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         Bucket: r2Config.bucketName,
         Key: key,
         Body: processed.buffer,
-        ContentType: 'image/webp',
+        ContentType: imageContentType(processed.format),
         CacheControl: 'public, max-age=31536000',
       })
     );
