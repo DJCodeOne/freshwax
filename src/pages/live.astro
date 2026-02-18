@@ -2518,16 +2518,12 @@ const nonce = Astro.locals.nonce || '';
     let playlistManager = window.playlistManager;
 
     // If playlist manager hasn't been loaded yet, trigger the lazy load
-    if (!playlistManager) {
-      try {
-        const { initPlaylistModal } = await import('../lib/playlist-modal-init');
-        initPlaylistModal();
-        // Wait briefly for initialization to complete
-        await new Promise(resolve => setTimeout(resolve, 500));
-        playlistManager = window.playlistManager;
-      } catch (err) {
-        return;
-      }
+    // Uses the global function exposed by PlaylistModal.astro's Vite-processed script
+    if (!playlistManager && typeof window.loadPlaylistModule === 'function') {
+      await window.loadPlaylistModule({ silent: true });
+      // Wait for initialization to complete
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      playlistManager = window.playlistManager;
     }
 
     if (!playlistManager) {

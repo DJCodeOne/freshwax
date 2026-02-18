@@ -1913,16 +1913,21 @@
   let _playlistModuleLoaded = false;
   let _playlistModuleLoading = false;
 
-  async function loadPlaylistModule() {
+  async function loadPlaylistModule(options?: { silent?: boolean } | Event) {
     if (_playlistModuleLoaded) return;
     if (_playlistModuleLoading) return; // Prevent double-loading from rapid clicks
     _playlistModuleLoading = true;
 
-    // Show the modal container with loading spinner
-    const modal = document.getElementById('playlistModal');
-    if (modal) {
-      modal.classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
+    // silent mode: init the manager without showing the modal UI (used by playlist fallback)
+    const silent = options && !(options instanceof Event) && options.silent;
+
+    if (!silent) {
+      // Show the modal container with loading spinner
+      const modal = document.getElementById('playlistModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+      }
     }
 
     try {
@@ -1931,16 +1936,20 @@
       _playlistModuleLoaded = true;
     } catch (err) {
       console.error('[PlaylistModal] Failed to load module:', err);
-      // Show error in loader
-      const loader = document.getElementById('playlistModalLoader');
-      if (loader) {
-        loader.innerHTML = '<span style="color: #f87171;">Failed to load playlist. Please try again.</span>';
+      if (!silent) {
+        const loader = document.getElementById('playlistModalLoader');
+        if (loader) {
+          loader.innerHTML = '<span style="color: #f87171;">Failed to load playlist. Please try again.</span>';
+        }
       }
       _playlistModuleLoading = false;
       return;
     }
     _playlistModuleLoading = false;
   }
+
+  // Expose globally so playlist fallback can trigger init without button click
+  window.loadPlaylistModule = loadPlaylistModule;
 
   // Only load when playlist button is clicked — no idle preloading
   function attachPlaylistListener() {

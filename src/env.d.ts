@@ -254,6 +254,7 @@ declare global {
     streamDetectedThisSession?: boolean;
     currentStreamData?: Record<string, unknown>;
     playlistManager?: import('./lib/playlist-manager').PlaylistManager | null;
+    loadPlaylistModule?: (options?: { silent?: boolean }) => Promise<void>;
     playlistChatSetup?: boolean;
     emojiAnimationsEnabled?: boolean;
     userHasCloudSync?: boolean;
