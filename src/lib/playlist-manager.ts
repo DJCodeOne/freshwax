@@ -1459,8 +1459,7 @@ export class PlaylistManager {
   private async pickRandomFromLocalServer(): Promise<GlobalPlaylistItem | null> {
     try {
       // Use authenticated proxy to prevent unauthenticated inventory disclosure
-      const auth = window.firebase?.auth?.();
-      const currentUser = auth?.currentUser;
+      const currentUser = window.firebaseAuth?.currentUser;
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
       const fetchHeaders: Record<string, string> = {};
@@ -1635,8 +1634,7 @@ export class PlaylistManager {
 
     try {
       // Get Firebase auth token for authorization
-      const auth = window.firebase?.auth?.();
-      const currentUser = auth?.currentUser;
+      const currentUser = window.firebaseAuth?.currentUser;
       const idToken = currentUser ? await currentUser.getIdToken() : null;
 
       if (!idToken) {
@@ -2275,8 +2273,7 @@ export class PlaylistManager {
 
   private async getAuthToken(): Promise<string | null> {
     try {
-      const auth = (window as any).firebase?.auth?.();
-      const currentUser = auth?.currentUser;
+      const currentUser = window.firebaseAuth?.currentUser;
       return currentUser ? await currentUser.getIdToken() : null;
     } catch {
       return null;
