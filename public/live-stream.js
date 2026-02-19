@@ -1320,59 +1320,45 @@ async function checkLiveStatus(skipCache = false) {
         wasLiveStreamActive = false;
         streamEndedAt = null;
 
-        // Resume playlist if it was playing
+        // Ensure playlist manager is loaded (may not exist if page loaded during a live stream)
+        if (!playlistManager && typeof window.loadPlaylistModule === 'function') {
+          await window.loadPlaylistModule({ silent: true });
+          await new Promise(resolve => setTimeout(resolve, 500));
+          playlistManager = window.playlistManager;
+        }
+
+        // Resume playlist if it was playing before the stream started
         if (playlistManager?.wasPausedForStream && playlistManager.queue.length > 0) {
           await playlistManager.resume();
           playlistManager.wasPausedForStream = false;
+        } else if (playlistManager && (!playlistManager.isPlaying || playlistManager.queue.length === 0)) {
+          // Auto-start playlist (stream ended, nothing playing)
+          await playlistManager.startAutoPlay();
         }
       } else if (streamEndedAt) {
         // Still waiting for delay before playlist resumes
       }
 
-      // Show playlist in main player if queue has items (only after 10s delay)
+      // Show playlist in main player if queue has items (only after delay)
       const videoPlayer = document.getElementById('videoPlayer');
       const hlsVideo = document.getElementById('hlsVideoElement');
       const playlistPlayer = document.getElementById('playlistPlayer');
 
-      if (canResumePlaylist) {
-        if (playlistManager?.queue.length > 0) {
-          // Show video player container with playlist content
-          if (hlsVideo) hlsVideo.classList.add('hidden');
-          if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-          if (videoPlayer) {
-            videoPlayer.classList.remove('hidden');
-            videoPlayer.style.opacity = '1';
-          }
-        } else {
-          // Queue is empty - try to auto-start playlist from history
-          if (playlistManager && typeof playlistManager.startAutoPlay === 'function') {
-            const started = await playlistManager.startAutoPlay();
-            if (started) {
-              // Show video player for auto-play content
-              if (hlsVideo) hlsVideo.classList.add('hidden');
-              if (playlistPlayer) playlistPlayer.classList.remove('hidden');
-              if (videoPlayer) {
-                videoPlayer.classList.remove('hidden');
-                videoPlayer.style.opacity = '1';
-              }
-            } else {
-              // No history available - hide video container
-              if (videoPlayer) {
-                videoPlayer.style.opacity = '0';
-                setTimeout(() => videoPlayer.classList.add('hidden'), 300);
-              }
-            }
-          } else {
-            // No playlist manager - hide video container
-            if (videoPlayer) {
-              videoPlayer.style.opacity = '0';
-              setTimeout(() => videoPlayer.classList.add('hidden'), 300);
-            }
-          }
+      if (canResumePlaylist && playlistManager?.queue?.length > 0) {
+        if (hlsVideo) hlsVideo.classList.add('hidden');
+        if (playlistPlayer) playlistPlayer.classList.remove('hidden');
+        if (videoPlayer) {
+          videoPlayer.classList.remove('hidden');
+          videoPlayer.style.opacity = '1';
+        }
+      } else if (canResumePlaylist) {
+        // No items playing - hide video container
+        if (videoPlayer) {
+          videoPlayer.style.opacity = '0';
+          setTimeout(() => videoPlayer.classList.add('hidden'), 300);
         }
       } else {
-        // Still in 30-second delay - keep showing offline/waiting state
-        // Don't switch to playlist yet
+        // Still in delay - keep showing offline/waiting state
         if (hlsVideo) hlsVideo.classList.remove('hidden');
         if (playlistPlayer) playlistPlayer.classList.add('hidden');
       }
