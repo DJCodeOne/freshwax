@@ -1249,9 +1249,9 @@ async function setupLiveStatusPusher() {
     });
 
     liveStatusChannel.bind('stream-ended', (data) => {
-      // Clear live stream playing state since stream ended
-      setLiveStreamPlaying(false);
-      // Trigger the 30-second delay countdown
+      // Stop all live stream players immediately
+      stopLiveStream();
+      // Trigger the 10-second delay before resuming playlist
       wasLiveStreamActive = true;
       streamEndedAt = Date.now();
       checkLiveStatus();
@@ -1301,7 +1301,11 @@ async function checkLiveStatus(skipCache = false) {
         console.error('[checkLiveStatus] Error calling showLiveStream:', e);
       }
     } else {
-      // NO LIVE STREAM
+      // NO LIVE STREAM — stop any active players
+      if (hlsPlayer || window.audioHlsPlayer || window.isLiveStreamActive) {
+        stopLiveStream();
+      }
+
       // Track when stream ended (for 10-second delay before resuming playlist)
       if (wasLiveStreamActive && !streamEndedAt) {
         streamEndedAt = Date.now();
@@ -1414,6 +1418,60 @@ function setChatEnabled(enabled) {
   if (loginPrompt) {
     loginPrompt.style.display = enabled ? 'none' : '';
   }
+}
+
+// Stop all live stream players (HLS video, HLS audio, direct audio)
+// Called when stream ends to ensure external clients stop playing
+function stopLiveStream() {
+  // Destroy HLS video player
+  if (hlsPlayer) {
+    try {
+      hlsPlayer.destroy();
+      hlsPlayer = null;
+    } catch (e) {
+      console.error('[LiveStream] Error destroying HLS player:', e);
+    }
+  }
+
+  // Destroy audio HLS player (relay streams)
+  if (window.audioHlsPlayer) {
+    try {
+      window.audioHlsPlayer.destroy();
+      window.audioHlsPlayer = null;
+    } catch (e) {
+      console.error('[LiveStream] Error destroying audio HLS player:', e);
+    }
+  }
+
+  // Pause and reset video element
+  const videoEl = document.getElementById('hlsVideoElement');
+  if (videoEl) {
+    try {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    } catch (e) { /* ignore */ }
+  }
+
+  // Pause and reset audio element
+  const audioEl = document.getElementById('audioElement');
+  if (audioEl) {
+    try {
+      audioEl.pause();
+      audioEl.removeAttribute('src');
+      audioEl.load();
+    } catch (e) { /* ignore */ }
+  }
+
+  // Stop LED meters
+  stopGlobalMeters();
+
+  // Clear stream data
+  currentStream = null;
+  window.currentStreamData = null;
+  window.isLiveStreamActive = false;
+  window.streamDetectedThisSession = false;
+  setLiveStreamPlaying(false);
 }
 
 // Show offline state
