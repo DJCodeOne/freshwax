@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../lib/api-utils';
+
+const log = createLogger('[redeem-access-key]');
 
 const RedeemAccessKeySchema = z.object({
   code: z.string().min(1, 'Access code is required').max(100),
@@ -104,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await setDocument('users', userId, userUpdateData);
       } catch (createError: unknown) {
         // Log but don't fail - djLobbyBypass entry was created successfully
-        console.warn(`[redeem-access-key] Could not set user bypass flag: ${createError instanceof Error ? createError.message : String(createError)}`);
+        log.warn(`Could not set user bypass flag: ${createError instanceof Error ? createError.message : String(createError)}`);
       }
     }
 
@@ -123,7 +125,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       usedBy: updatedUsedBy
     });
 
-    console.log(`[redeem-access-key] User ${userId} (${userEmail}) redeemed access key`);
+    log.info(`User ${userId} (${userEmail}) redeemed access key`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -134,7 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[redeem-access-key] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };

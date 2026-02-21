@@ -6,7 +6,9 @@ import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[retry-payout]');
 
 export const prerender = false;
 
@@ -126,7 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updatedAt: new Date().toISOString()
       });
 
-      console.log('[retry-payout] Successfully retried payout:', payoutId, 'Transfer:', transfer.id);
+      log.info('Successfully retried payout:', payoutId, 'Transfer:', transfer.id);
 
       return new Response(JSON.stringify({
         success: true,
@@ -136,7 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     } catch (transferError: unknown) {
       const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-      console.error('[retry-payout] Transfer failed:', transferMessage);
+      log.error('Transfer failed:', transferMessage);
 
       // Update with new failure reason
       await updateDocument('pendingPayouts', payoutId, {
@@ -150,7 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[retry-payout] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to retry payout');
   }
 };

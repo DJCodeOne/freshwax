@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[set-payout-method]');
 
 // Zod schema for set payout method
 const SetPayoutMethodSchema = z.object({
@@ -32,7 +34,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (!clientEmail || !privateKey) {
-    console.error('[Payout] Service account not configured');
+    log.error('Service account not configured');
     return ApiErrors.serverError('Service account not configured');
   }
 
@@ -119,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     });
 
-    console.log(`[Payout] Set ${entityType} ${docId} payout method to:`, payoutMethod);
+    log.info(`Set ${entityType} ${docId} payout method to:`, payoutMethod);
 
     return new Response(JSON.stringify({
       success: true,
@@ -128,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Payout] Set method error:', error);
+    log.error('Set method error:', error);
     return ApiErrors.serverError('Failed to set payout method');
   }
 };

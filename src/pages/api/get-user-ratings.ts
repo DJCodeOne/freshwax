@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (release?.ratings?.userRatings?.[userId]) {
             userRatings[releaseId] = release.ratings.userRatings[userId];
           }
-        } catch (e) {
+        } catch (e: unknown) {
           // Skip failed fetches
         }
       }

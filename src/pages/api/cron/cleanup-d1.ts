@@ -52,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const deletedErrors = await cleanupErrorLogs(env, ERROR_LOGS_RETENTION_DAYS);
     logger.info(`[Cleanup D1] error_logs: deleted ${deletedErrors} rows older than ${ERROR_LOGS_RETENTION_DAYS} days`);
     results.errorLogs = { deleted: deletedErrors, retentionDays: ERROR_LOGS_RETENTION_DAYS };
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error('[Cleanup D1] error_logs cleanup failed:', err instanceof Error ? err.message : String(err));
     results.errorLogs = { error: 'cleanup failed' };
   }
@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const deletedOrders = result?.meta?.changes || 0;
     logger.info(`[Cleanup D1] pending_orders: deleted ${deletedOrders} completed rows older than ${PENDING_ORDERS_RETENTION_DAYS} days`);
     results.pendingOrders = { deleted: deletedOrders, retentionDays: PENDING_ORDERS_RETENTION_DAYS };
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error('[Cleanup D1] pending_orders cleanup failed:', err instanceof Error ? err.message : String(err));
     results.pendingOrders = { error: 'cleanup failed' };
   }

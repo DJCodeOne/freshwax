@@ -90,7 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('artists', partnerId, artistUpdate, idToken);
         results.push('artists:updated');
         logger.info('[update-partner] Updated artists:', artistUpdate);
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error('[update-partner] artists update failed:', e);
         return ApiErrors.serverError('Failed to update partner: ');
       }
@@ -138,7 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.push('users:created');
         logger.info('[update-partner] Created users document:', partnerId);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn('[update-partner] users update failed:', e instanceof Error ? e.message : e);
     }
 
@@ -197,7 +197,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.push('customers:created');
         logger.info('[update-partner] Created customers record for downgraded partner');
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn('[update-partner] customers update failed:', e instanceof Error ? e.message : e);
     }
 
@@ -235,7 +235,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, idToken);
           results.push('vinylSellers:updated');
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.warn('[update-partner] vinylSellers update failed:', e instanceof Error ? e.message : e);
       }
     }

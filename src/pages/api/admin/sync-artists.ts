@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           synced.push(`${user.displayName || user.email || user.id}`);
           log.info(`[sync-artists] Created artists/${user.id} for ${user.displayName || user.email}`);
-        } catch (err) {
+        } catch (err: unknown) {
           const errorMsg = `Failed to sync ${user.id}: ${err}`;
           errors.push(errorMsg);
           log.error(`[sync-artists] ${errorMsg}`);

@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[link-account]');
 
 // Zod schemas for PayPal link account
 const LinkAccountPostSchema = z.object({
@@ -40,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   if (!clientEmail || !privateKey) {
-    console.error('[PayPal] Service account not configured');
+    log.error('Service account not configured');
     return ApiErrors.serverError('Service account not configured');
   }
 
@@ -122,11 +124,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     };
 
-    console.log(`[PayPal] Updating ${entityType} ${docId} with:`, JSON.stringify(updateData));
+    log.info(`Updating ${entityType} ${docId} with:`, JSON.stringify(updateData));
 
     const updatedDoc = await saUpdateDocument(serviceAccountKey, projectId, collection, docId, updateData);
 
-    console.log(`[PayPal] Updated document response:`, JSON.stringify(updatedDoc));
+    log.info(`Updated document response:`, JSON.stringify(updatedDoc));
 
     return new Response(JSON.stringify({
       success: true,
@@ -139,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[PayPal] Link account error:', error);
+    log.error('Link account error:', error);
     return ApiErrors.serverError('Failed to link PayPal account');
   }
 };
@@ -210,7 +212,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[PayPal] Get status error:', error);
+    log.error('Get status error:', error);
     return ApiErrors.serverError('Failed to get PayPal status');
   }
 };

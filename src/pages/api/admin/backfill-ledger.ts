@@ -120,12 +120,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
                   if (artist?.name || artist?.displayName) {
                     artistName = artist.displayName || artist.name;
                   }
-                } catch (e) {
+                } catch (e: unknown) {
                   // Ignore - use release name
                 }
               }
             }
-          } catch (e) {
+          } catch (e: unknown) {
             // Ignore lookup errors
           }
         }
@@ -139,7 +139,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
               submitterEmail = merch.email || merch.sellerEmail || null;
               artistName = merch.sellerName || merch.supplierName || artistName;
             }
-          } catch (e) {
+          } catch (e: unknown) {
             // Ignore lookup errors
           }
         }

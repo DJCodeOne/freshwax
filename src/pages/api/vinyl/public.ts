@@ -90,7 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       if (db) {
         try {
           collections = await d1GetAllCollections(db);
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('[vinyl/public] D1 collections error:', e);
         }
       }

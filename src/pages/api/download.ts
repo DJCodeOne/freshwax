@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   try {
     const parsedUrl = new URL(fileUrl);
     isAllowed = allowedDomains.some(domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain));
-  } catch (e) {
+  } catch (e: unknown) {
     return ApiErrors.badRequest('Invalid URL');
   }
 

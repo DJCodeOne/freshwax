@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[send-approval-email]');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const sendApprovalEmailSchema = z.object({
@@ -44,7 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = runtime.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.log('[send-approval-email] No Resend API key configured');
+      log.info('[send-approval-email] No Resend API key configured');
       return new Response(JSON.stringify({
         success: false,
         message: 'Email service not configured'
@@ -158,11 +160,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('[send-approval-email] Resend error:', result);
+      log.error('[send-approval-email] Resend error:', result);
       return ApiErrors.serverError(result.message || 'Failed to send email');
     }
 
-    console.log('[send-approval-email] Email sent successfully to:', email);
+    log.info('[send-approval-email] Email sent successfully to:', email);
 
     return new Response(JSON.stringify({
       success: true,
@@ -170,7 +172,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[send-approval-email] Error:', error);
+    log.error('[send-approval-email] Error:', error);
     return ApiErrors.serverError('Failed to send approval email');
   }
 };

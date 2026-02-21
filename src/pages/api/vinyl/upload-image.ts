@@ -8,7 +8,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[vinyl-upload-image]');
 
 export const prerender = false;
 
@@ -138,7 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const publicUrl = `${r2Config.publicDomain}/${key}`;
     const savings = Math.round((1 - compressedSize / originalSize) * 100);
 
-    console.log(`[vinyl/upload-image] Processed: ${(originalSize/1024).toFixed(1)}KB → ${(compressedSize/1024).toFixed(1)}KB (${savings}% smaller)`);
+    log.info(`Processed: ${(originalSize/1024).toFixed(1)}KB → ${(compressedSize/1024).toFixed(1)}KB (${savings}% smaller)`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -155,7 +157,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/upload-image] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to process and upload image');
   }
 };

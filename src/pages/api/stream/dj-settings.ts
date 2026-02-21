@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/firebase-service-account';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[dj-settings]');
 import { verifyAdminKey } from '../../../lib/admin';
 
 const DjSettingsSchema = z.object({
@@ -144,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         bypassedBy: 'admin'
       });
 
-      console.log(`[dj-settings] Granted streaming access to ${displayName} (${userId})`);
+      log.info(`Granted streaming access to ${displayName} (${userId})`);
     } else {
       // Revoke access
       await saDeleteDocument(serviceAccountKey, projectId, 'djLobbyBypass', userId);
@@ -155,11 +157,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           'go-liveBypassed': false,
           bypassRevokedAt: new Date().toISOString()
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // User doc might not exist
       }
 
-      console.log(`[dj-settings] Revoked streaming access for ${displayName} (${userId})`);
+      log.info(`Revoked streaming access for ${displayName} (${userId})`);
     }
 
     return new Response(JSON.stringify({
@@ -174,7 +176,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[dj-settings] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

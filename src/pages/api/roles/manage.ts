@@ -250,7 +250,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
           // Created customers entry during approval
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error(`[roles/manage] Failed to update customers/${uid}:`, e);
       }
 
@@ -258,7 +258,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await deleteDocument('pendingRoleRequests', `${uid}_${roleType}`);
         // Deleted pendingRoleRequests entry
-      } catch (e) {
+      } catch (e: unknown) {
         // May not exist if created before this system
         // pendingRoleRequests not found (may be legacy)
       }
@@ -308,7 +308,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
             // Created artists entry
           }
-        } catch (artistError) {
+        } catch (artistError: unknown) {
           console.error(`[roles/manage] Failed to create/update artists collection for ${uid}:`, artistError);
           // Don't fail the whole approval - user role is still granted
         }
@@ -360,7 +360,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
             // Created vinylSellers entry
           }
-        } catch (vinylError) {
+        } catch (vinylError: unknown) {
           console.error(`[roles/manage] Failed to create/update vinylSellers collection for ${uid}:`, vinylError);
         }
       }
@@ -407,7 +407,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await deleteDocument('pendingRoleRequests', `${uid}_${roleType}`);
         // Deleted pendingRoleRequests entry (denied)
-      } catch (e) {
+      } catch (e: unknown) {
         // May not exist if created before this system
       }
 
@@ -462,7 +462,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (roleType === 'vinylSeller') customerUpdate.isVinylSeller = false;
           await updateDocument('users', uid, customerUpdate);
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error(`[roles/manage] Failed to update customers/${uid} during revoke:`, e);
       }
 
@@ -481,7 +481,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             await updateDocument('artists', uid, artistUpdate);
             // Revoked role from artists
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
         }
       }
@@ -500,7 +500,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
             // Revoked vinylSeller role
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.error(`[roles/manage] Failed to update vinylSellers/${uid} during revoke:`, e);
         }
       }

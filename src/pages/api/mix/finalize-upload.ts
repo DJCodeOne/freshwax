@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (userData?.displayName) {
           displayName = userData.displayName;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.info('[finalize-upload] Could not fetch user data, using provided name');
       }
     }

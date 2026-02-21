@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[vinyl-orders]');
 
 const vinylOrderPostSchema = z.object({
   action: z.enum(['mark-shipped', 'add-tracking']),
@@ -94,7 +96,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       limit: 100
     });
 
-    console.log('[vinyl/orders GET] Found', orders.length, 'orders for seller:', sellerId);
+    log.info('Found', orders.length, 'orders for seller:', sellerId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -106,7 +108,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/orders GET] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch orders');
   }
 };
@@ -179,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
 
         await saUpdateDocument(serviceAccountKey, projectId, 'vinylOrders', orderId, updateData);
 
-        console.log('[vinyl/orders POST] Marked order as shipped:', orderId);
+        log.info('Marked order as shipped:', orderId);
 
         return new Response(JSON.stringify({ success: true, message: 'Order marked as shipped' }), {
           status: 200,
@@ -208,7 +210,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
     }
 
   } catch (error: unknown) {
-    console.error('[vinyl/orders POST] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

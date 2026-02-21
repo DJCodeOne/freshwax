@@ -129,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           Bucket: r2Config.bucketName,
           Key: `avatars/${userId}.${ext}`,
         }));
-      } catch (e) {
+      } catch (e: unknown) {
         // Ignore - file may not exist
       }
     }
@@ -221,7 +221,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
           Bucket: r2Config.bucketName,
           Key: `avatars/${userId}.${ext}`,
         }));
-      } catch (e) {
+      } catch (e: unknown) {
         // Ignore errors for non-existent files
       }
     }

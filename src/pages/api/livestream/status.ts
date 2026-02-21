@@ -7,6 +7,9 @@ import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
+import { createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[livestream/status]');
 
 // Cache TTLs in seconds
 // Pusher handles real-time updates, so polling can be slower
@@ -27,7 +30,7 @@ async function getCached(key: string): Promise<any | null> {
     if (cached) {
       return await cached.json();
     }
-  } catch (e) {
+  } catch (e: unknown) {
     // Cache API not available (local dev) - continue without cache
   }
   return null;
@@ -44,7 +47,7 @@ async function setCached(key: string, data: any, ttlSeconds: number): Promise<vo
       }
     });
     await cache.put(cacheUrl, response);
-  } catch (e) {
+  } catch (e: unknown) {
     // Cache API not available (local dev) - continue without cache
   }
 }
@@ -55,9 +58,9 @@ export async function invalidateStatusCache(): Promise<void> {
     const cache = caches.default;
     // Delete the general status cache
     await cache.delete(`${CACHE_BASE_URL}/general`);
-    console.log('[status] Invalidated Cache API status cache');
-  } catch (e) {
-    console.log('[status] Cache API delete not available:', e);
+    log.info('Invalidated Cache API status cache');
+  } catch (e: unknown) {
+    log.info('Cache API delete not available:', e);
   }
 }
 
@@ -264,7 +267,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return jsonResponse(result, 200, 10);
 
   } catch (error: unknown) {
-    console.error('[livestream/status] Error:', error);
+    log.error('Error:', error);
     return jsonResponse({
       success: false,
       error: 'Failed to get stream status'

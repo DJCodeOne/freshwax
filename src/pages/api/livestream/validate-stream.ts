@@ -12,6 +12,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[validate-stream]');
 
 // Helper to initialize services
 function initServices(locals: App.Locals) {
@@ -35,7 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Also check for Red5-style parameters
   const app = url.searchParams.get('app') || 'live';
   
-  console.log('[validate-stream] Validating stream key:', streamKey?.substring(0, 20) + '...');
+  log.info('[validate-stream] Validating stream key:', streamKey?.substring(0, 20) + '...');
   
   if (!streamKey) {
     return new Response(JSON.stringify({
@@ -153,7 +156,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // All checks passed - allow the stream
-    console.log('[validate-stream] Stream approved for:', slot.djName, 'slot:', slotId);
+    log.info('[validate-stream] Stream approved for:', slot.djName, 'slot:', slotId);
 
     // Update slot to show connecting (non-critical)
     try {
@@ -162,7 +165,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         lastValidation: new Date().toISOString(),
       });
     } catch (updateErr) {
-      console.warn('[validate-stream] Non-critical: Failed to update slot:', updateErr);
+      log.warn('[validate-stream] Non-critical: Failed to update slot:', updateErr);
     }
     
     return new Response(JSON.stringify({
@@ -185,7 +188,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[validate-stream] Error:', error);
+    log.error('[validate-stream] Error:', error);
     
     // On error, deny the stream to be safe
     return new Response(JSON.stringify({
@@ -224,7 +227,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const protocol = data.protocol || 'rtmp';
     const clientIp = data.ip || '';
 
-    console.log('[validate-stream] MediaMTX auth:', { action, protocol, streamKey: streamKey?.substring(0, 20) + '...', ip: clientIp });
+    log.info('[validate-stream] MediaMTX auth:', { action, protocol, streamKey: streamKey?.substring(0, 20) + '...', ip: clientIp });
 
     // Allow read actions without authentication
     if (action === 'read' || action === 'playback') {
@@ -333,7 +336,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // All checks passed - allow the stream
-    console.log('[validate-stream] Stream approved:', slot.djName, slotId);
+    log.info('[validate-stream] Stream approved:', slot.djName, slotId);
 
     // Update slot to connecting (non-critical - don't fail validation if this fails)
     try {
@@ -343,7 +346,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         clientIp: clientIp,
       });
     } catch (updateErr) {
-      console.warn('[validate-stream] Non-critical: Failed to update slot status:', updateErr);
+      log.warn('[validate-stream] Non-critical: Failed to update slot status:', updateErr);
     }
 
     // Return 200 to allow the stream
@@ -357,7 +360,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[validate-stream] Error:', error);
+    log.error('[validate-stream] Error:', error);
     return new Response(JSON.stringify({
       valid: false,
       reason: 'Validation error',

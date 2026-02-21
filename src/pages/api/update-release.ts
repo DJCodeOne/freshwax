@@ -53,7 +53,7 @@ export async function POST({ request, locals }: any) {
   try {
     updates = await request.json();
     logger.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
-  } catch (e) {
+  } catch (e: unknown) {
     return ApiErrors.badRequest('Invalid JSON body');
   }
 

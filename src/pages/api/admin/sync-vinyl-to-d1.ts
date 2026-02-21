@@ -161,7 +161,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         synced++;
         log.info(`[sync-vinyl-to-d1] Synced: ${listing.id} - ${listing.title}`);
-      } catch (e) {
+      } catch (e: unknown) {
         errors++;
         log.error(`[sync-vinyl-to-d1] Error syncing ${listing.id}:`, e);
       }

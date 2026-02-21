@@ -50,7 +50,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           logs.push(`  [${status.toUpperCase()}] ${dj} - Started: ${started}`);
         });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logs.push(`  Error fetching livestreams: ${e}`);
     }
 
@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           logs.push(`  [${status.toUpperCase()}] ${dj} - ${s.id}`);
         });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logs.push(`  Error fetching slots: ${e}`);
     }
 
@@ -87,7 +87,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           logs.push(`  [${status.toUpperCase()}] ${user} - ${created}`);
         });
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logs.push(`  Error fetching requests: ${e}`);
     }
 

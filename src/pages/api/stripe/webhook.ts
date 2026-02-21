@@ -1097,7 +1097,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (metadata.items_json) {
         try {
           items = JSON.parse(metadata.items_json);
-        } catch (e) {
+        } catch (e: unknown) {
           logger.error('[Stripe Webhook] ❌ Error parsing items_json:', e);
           logger.error('[Stripe Webhook] items_json value:', metadata.items_json?.substring(0, 200));
         }
@@ -1158,7 +1158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const errorText = await lineItemsResponse.text();
             logger.error('[Stripe Webhook] ❌ Line items fetch failed:', errorText);
           }
-        } catch (e) {
+        } catch (e: unknown) {
           logger.error('[Stripe Webhook] ❌ Error fetching line items:', e);
         }
       }
@@ -1287,7 +1287,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const { convertReservation } = await import('../../../lib/order-utils');
           await convertReservation(reservationId);
           // Reservation converted
-        } catch (err) {
+        } catch (err: unknown) {
           logger.error('[Stripe Webhook] Failed to convert reservation:', err);
         }
       }
@@ -1347,7 +1347,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         submitterEmail = artistData.email;
                       }
                     }
-                  } catch (e) {
+                  } catch (e: unknown) {
                     // Ignore lookup errors
                   }
                 }
@@ -1713,7 +1713,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const { releaseReservation } = await import('../../../lib/order-utils');
           await releaseReservation(reservationId);
           // Reservation released
-        } catch (err) {
+        } catch (err: unknown) {
           logger.error('[Stripe Webhook] Failed to release reservation:', err);
         }
       }
@@ -1879,7 +1879,7 @@ async function processArtistPayments(params: {
       let artist = null;
       try {
         artist = await getDocument('artists', artistId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Artist not found
       }
 
@@ -1949,7 +1949,7 @@ async function processArtistPayments(params: {
         await updateDocument('artists', payment.artistId, {
           updatedAt: new Date().toISOString()
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // Non-fatal: artist pending balance update failed
       }
     }
@@ -2024,7 +2024,7 @@ async function processSupplierPayments(params: {
       let supplier = null;
       try {
         supplier = await getDocument('merch-suppliers', supplierId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Supplier not found
       }
 
@@ -2170,7 +2170,7 @@ async function processVinylCrateSellerPayments(params: {
       let seller = null;
       try {
         seller = await getDocument('users', sellerId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Seller user not found
       }
 

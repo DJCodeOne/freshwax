@@ -194,7 +194,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         });
 
         referralCode = referralGiftCard.code;
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[get-user-type] Failed to generate referral code:', err);
       }
     }
@@ -208,7 +208,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         if (avatarCheck.ok) {
           avatarUrl = `${potentialAvatarUrl}?t=${Date.now()}`;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // R2 avatar check failed - continue without avatar
       }
     }

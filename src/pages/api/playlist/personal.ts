@@ -6,7 +6,9 @@ import type { APIContext } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, TIER_LIMITS } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[personal-playlist]');
 
 function initEnv(locals: App.Locals) {
   const env = locals.runtime.env;
@@ -24,7 +26,7 @@ async function getUserTierInfo(userId: string): Promise<{ tier: string; isPlus: 
     const trackLimit = TIER_LIMITS[tier].playlistTrackLimit;
     return { tier, isPlus, trackLimit };
   } catch (error: unknown) {
-    console.error('[PersonalPlaylist] Error checking subscription:', error);
+    log.error('Error checking subscription:', error);
     return { tier: 'free', isPlus: false, trackLimit: TIER_LIMITS[SUBSCRIPTION_TIERS.FREE].playlistTrackLimit };
   }
 }
@@ -55,7 +57,7 @@ export async function GET({ request, locals }: APIContext) {
 
     // Load from D1
     if (!db) {
-      console.error('[PersonalPlaylist] D1 database not available');
+      log.error('D1 database not available');
       return new Response(JSON.stringify({
         success: true,
         playlist: [],
@@ -75,8 +77,8 @@ export async function GET({ request, locals }: APIContext) {
     if (result && result.playlist) {
       try {
         playlist = JSON.parse(result.playlist as string);
-      } catch (e) {
-        console.error('[PersonalPlaylist] Error parsing playlist JSON:', e);
+      } catch (e: unknown) {
+        log.error('Error parsing playlist JSON:', e);
       }
     }
 
@@ -89,7 +91,7 @@ export async function GET({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[PersonalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
+    log.error('GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -143,7 +145,7 @@ export async function POST({ request, locals }: APIContext) {
 
     // Save to D1
     if (!db) {
-      console.error('[PersonalPlaylist] D1 database not available');
+      log.error('D1 database not available');
       return ApiErrors.serverError('Database not available');
     }
 
@@ -157,7 +159,7 @@ export async function POST({ request, locals }: APIContext) {
        ON CONFLICT(user_id) DO UPDATE SET playlist = excluded.playlist, updated_at = excluded.updated_at`
     ).bind(userId, playlistJson, now).run();
 
-    console.log('[PersonalPlaylist] Saved to D1 for user:', userId, 'items:', items.length);
+    log.info('Saved to D1 for user:', userId, 'items:', items.length);
 
     return new Response(JSON.stringify({
       success: true,
@@ -168,7 +170,7 @@ export async function POST({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[PersonalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
+    log.error('POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }

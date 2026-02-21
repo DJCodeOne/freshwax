@@ -93,7 +93,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           limit: 1
         });
         results.salesLedger = ledgerEntries.length > 0 ? ledgerEntries[0] : null;
-      } catch (e) {
+      } catch (e: unknown) {
         results.salesLedger = { error: 'Could not query' };
       }
 
@@ -104,7 +104,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           limit: 5
         });
         results.pendingPayouts = payouts;
-      } catch (e) {
+      } catch (e: unknown) {
         results.pendingPayouts = { error: 'Could not query' };
       }
     }
@@ -127,7 +127,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
               artistEmail: release.artistEmail
             });
           }
-        } catch (e) {
+        } catch (e: unknown) {
           releaseInfo.push({ id: releaseId, error: 'Could not fetch' });
         }
       }
@@ -151,7 +151,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           success: true,
           sentTo: testEmail
         };
-      } catch (e) {
+      } catch (e: unknown) {
         results.emailSent = {
           success: false,
           error: e instanceof Error ? e.message : 'Unknown error'

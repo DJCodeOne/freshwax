@@ -4,7 +4,9 @@
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[playlist-history]');
 
 const KV_HISTORY_KEY = 'playlist-history';
 const MAX_HISTORY_SIZE = 500;
@@ -56,7 +58,7 @@ export async function GET({ request, locals }: APIContext) {
       }
     });
   } catch (error: unknown) {
-    console.error('[PlaylistHistory] GET error:', error instanceof Error ? error.message : String(error));
+    log.error('GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -98,7 +100,7 @@ export async function POST({ request, locals }: APIContext) {
         history = data.items;
       }
     } catch (readError: unknown) {
-      console.warn('[PlaylistHistory] Could not read existing history:', readError instanceof Error ? readError.message : String(readError));
+      log.warn('Could not read existing history:', readError instanceof Error ? readError.message : String(readError));
     }
 
     // Check if URL already exists - update timestamp and move to front
@@ -143,7 +145,7 @@ export async function POST({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[PlaylistHistory] POST error:', error instanceof Error ? error.message : String(error));
+    log.error('POST error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -177,7 +179,7 @@ export async function DELETE({ request, locals }: APIContext) {
       return ApiErrors.badRequest('Missing URL');
     }
 
-    console.log(`[PlaylistHistory] Removing blocked video: ${url} (reason: ${reason})`);
+    log.info(`[PlaylistHistory] Removing blocked video: ${url} (reason: ${reason})`);
 
     // Read from KV
     const data = await kv.get(KV_HISTORY_KEY, 'json');
@@ -206,7 +208,7 @@ export async function DELETE({ request, locals }: APIContext) {
         items: filteredItems,
         lastUpdated: new Date().toISOString()
       }), { expirationTtl: 604800 });
-      console.log(`[PlaylistHistory] Removed ${totalRemoved} item(s)`);
+      log.info(`[PlaylistHistory] Removed ${totalRemoved} item(s)`);
     }
 
     return new Response(JSON.stringify({
@@ -220,7 +222,7 @@ export async function DELETE({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[PlaylistHistory] DELETE error:', error instanceof Error ? error.message : String(error));
+    log.error('DELETE error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }

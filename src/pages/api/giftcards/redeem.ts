@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
 import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[giftcards/redeem]');
 
 // Zod schema for gift card redemption
 const RedeemSchema = z.object({
@@ -157,7 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       creditUpdatedAt: nowISO
     });
 
-    console.log('[giftcards/redeem] Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit);
+    log.info('Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit);
 
     return new Response(JSON.stringify({
       success: true,
@@ -175,7 +177,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[giftcards/redeem] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to redeem gift card');
   }
 };

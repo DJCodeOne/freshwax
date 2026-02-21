@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ request }) => {
     try {
       const adminDoc = await getDocument('admins', userId);
       if (adminDoc) isAdmin = true;
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[dashboard-access] Failed to check admin status:', e instanceof Error ? e.message : e);
     }
 
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request }) => {
           if (artistData.isMerchSupplier) roles.merchSeller = true;
           if (artistData.isVinylSeller) roles.vinylSeller = true;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[dashboard-access] Failed to fetch artist data:', e instanceof Error ? e.message : e);
       }
     }
@@ -72,7 +72,7 @@ export const GET: APIRoute = async ({ request }) => {
       if (sellerData && !isVinylSeller) {
         isVinylSeller = sellerData.approved !== false;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[dashboard-access] Failed to fetch vinyl seller data:', e instanceof Error ? e.message : e);
     }
 
@@ -80,7 +80,7 @@ export const GET: APIRoute = async ({ request }) => {
     let merchSellerData: any = null;
     try {
       merchSellerData = await getDocument('merch-sellers', userId);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[dashboard-access] Failed to fetch merch seller data:', e instanceof Error ? e.message : e);
     }
 

@@ -91,7 +91,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       releases = await saQueryCollection(serviceAccountKey, projectId, 'releases', {
         limit: 5000
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[FixSubmitterIds] Error fetching releases:', e);
     }
 
@@ -153,7 +153,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         results.releases.fixed++;
 
-      } catch (err) {
+      } catch (err: unknown) {
         results.releases.errors++;
         console.error(`[FixSubmitterIds] Error fixing release ${release.id}:`, err);
       }
@@ -166,7 +166,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
         limit: 5000
       });
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[FixSubmitterIds] Error fetching ledger entries:', e);
     }
 
@@ -234,7 +234,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         results.ledger.fixed++;
 
-      } catch (err) {
+      } catch (err: unknown) {
         results.ledger.errors++;
         console.error(`[FixSubmitterIds] Error fixing ledger ${entry.id}:`, err);
       }

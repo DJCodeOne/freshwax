@@ -2,6 +2,25 @@
 // D1 database operations for releases, DJ mixes, merch, and livestream slots
 // Used for dual-write (Firebase + D1) and D1-first reads
 
+// Shared type alias for Firebase/Firestore document shapes
+type FirestoreDoc = Record<string, unknown>;
+
+// D1 database handle from Cloudflare Workers runtime
+interface D1Database {
+  prepare(query: string): D1PreparedStatement;
+}
+
+interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement;
+  all(): Promise<{ results: D1Row[] | null }>;
+  first(): Promise<D1Row | null>;
+  run(): Promise<unknown>;
+}
+
+interface D1Row {
+  [key: string]: unknown;
+}
+
 // =============================================
 // RELEASES
 // =============================================
@@ -32,7 +51,7 @@ export interface D1Release {
 }
 
 // Convert Firebase release document to D1 row
-export function releaseToD1Row(id: string, doc: any): Partial<D1Release> {
+export function releaseToD1Row(id: string, doc: FirestoreDoc): Partial<D1Release> {
   const artworkUrl = doc.coverUrl || doc.coverArtUrl || doc.artworkUrl || doc.thumbUrl || doc.imageUrl || null;
   const thumbUrl = doc.thumbUrl || artworkUrl;
 
@@ -63,7 +82,7 @@ export function releaseToD1Row(id: string, doc: any): Partial<D1Release> {
 }
 
 // Convert D1 row back to release document
-export function d1RowToRelease(row: D1Release): any {
+export function d1RowToRelease(row: D1Release): FirestoreDoc | null {
   try {
     const doc = JSON.parse(row.data);
     // Ensure id is set
@@ -99,7 +118,7 @@ export interface D1DjMix {
 }
 
 // Convert Firebase mix document to D1 row
-export function mixToD1Row(id: string, doc: any): Partial<D1DjMix> {
+export function mixToD1Row(id: string, doc: FirestoreDoc): Partial<D1DjMix> {
   const djName = doc.displayName || doc.dj_name || doc.djName || doc.artist || 'Unknown DJ';
   const artworkUrl = doc.artwork_url || doc.artworkUrl || doc.coverUrl || doc.imageUrl || null;
   const audioUrl = doc.audio_url || doc.audioUrl || doc.mp3Url || doc.streamUrl || null;
@@ -124,7 +143,7 @@ export function mixToD1Row(id: string, doc: any): Partial<D1DjMix> {
 }
 
 // Convert D1 row back to mix document
-export function d1RowToMix(row: D1DjMix): any {
+export function d1RowToMix(row: D1DjMix): FirestoreDoc | null {
   try {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
@@ -157,15 +176,15 @@ export interface D1Merch {
 }
 
 // Extract URL from image (can be string or object with url property)
-function extractImageUrl(img: any): string | null {
+function extractImageUrl(img: unknown): string | null {
   if (!img) return null;
   if (typeof img === 'string') return img;
-  if (typeof img === 'object' && img.url) return img.url;
+  if (typeof img === 'object' && img !== null && 'url' in img) return (img as Record<string, unknown>).url as string;
   return null;
 }
 
 // Convert Firebase merch document to D1 row
-export function merchToD1Row(id: string, doc: any): Partial<D1Merch> {
+export function merchToD1Row(id: string, doc: FirestoreDoc): Partial<D1Merch> {
   // Extract image URL - handle both string and object formats
   let imageUrl = extractImageUrl(doc.imageUrl) || extractImageUrl(doc.image);
   if (!imageUrl && doc.images && Array.isArray(doc.images)) {
@@ -202,7 +221,7 @@ export function d1RowToMerch(row: D1Merch): any {
 // D1 DATABASE OPERATIONS
 // =============================================
 
-type D1Database = any; // Will be typed from Cloudflare bindings
+// D1Database type defined at top of file
 
 // --- RELEASES ---
 

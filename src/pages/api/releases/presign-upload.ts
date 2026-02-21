@@ -8,7 +8,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { getAdminKey, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { getAdminKey, errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[presign-upload]');
 import { verifyAdminKey } from '../../../lib/admin';
 import { z } from 'zod';
 
@@ -94,11 +96,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const config = getR2Config(env);
 
-    console.log('[Presign] Request bucket param:', bucket);
-    console.log('[Presign] Config uploadsBucket:', config.uploadsBucket);
+    log.info('[Presign] Request bucket param:', bucket);
+    log.info('[Presign] Config uploadsBucket:', config.uploadsBucket);
 
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
-      console.error('[Presign] Missing R2 credentials');
+      log.error('[Presign] Missing R2 credentials');
       return ApiErrors.serverError('R2 configuration missing');
     }
 
@@ -123,7 +125,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Generate presigned URL valid for 1 hour
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
-    console.log(`[Presign] Generated URL for ${bucketName}/${key}`);
+    log.info(`[Presign] Generated URL for ${bucketName}/${key}`);
 
     return new Response(JSON.stringify({ uploadUrl, key }), {
       status: 200,
@@ -131,7 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Presign] Error:', error);
+    log.error('[Presign] Error:', error);
     return ApiErrors.serverError('Failed to generate upload URL');
   }
 };

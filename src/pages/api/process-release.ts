@@ -273,7 +273,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             copiedFiles.push({ oldKey: artworkKey, newKey: originalKey });
             log.info(`Copied original artwork for downloads: ${originalKey}`);
           }
-        } catch (imgErr) {
+        } catch (imgErr: unknown) {
           // Fallback: copy original if image processing fails
           log.warn(`Image processing failed, copying original: ${imgErr}`);
           const artworkFilename = artworkKey.split('/').pop() || 'cover.webp';
@@ -326,7 +326,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else if (metadata.trackListingJSON) {
       try {
         metadataTracks = JSON.parse(metadata.trackListingJSON);
-      } catch (e) {
+      } catch (e: unknown) {
         log.warn('Failed to parse trackListingJSON:', e);
       }
     }
@@ -458,7 +458,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (!artistOwnerId) {
           log.warn(`No artist found for email: ${artistOwnerEmail}`);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         log.warn(`Failed to lookup artist by email: ${err}`);
       }
     }
@@ -550,7 +550,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const keysToDelete = files.map(f => f);
       await r2.delete(keysToDelete);
       log.info(`Deleted ${keysToDelete.length} submission files`);
-    } catch (deleteError) {
+    } catch (deleteError: unknown) {
       log.warn('Failed to delete some submission files:', deleteError);
     }
 
@@ -567,7 +567,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return errorResponse('Processing failed');
   }
 
-  } catch (outerError) {
+  } catch (outerError: unknown) {
     log.error('Outer error (uncaught):', outerError);
     return errorResponse('An internal error occurred');
   }

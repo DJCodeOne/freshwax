@@ -66,7 +66,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     if (RESEND_API_KEY) {
       try {
         await sendWelcomeEmail(RESEND_API_KEY, subscriber.email, subscriber.name);
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[Newsletter] Welcome email failed:', e);
       }
     }

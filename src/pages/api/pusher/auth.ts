@@ -4,7 +4,9 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[pusher-auth]');
 import { SITE_URL } from '../../../lib/constants';
 
 export const prerender = false;
@@ -49,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const secret = env?.PUSHER_SECRET || import.meta.env.PUSHER_SECRET;
 
     if (!appId || !key || !secret) {
-      console.error('[Pusher Auth] Missing credentials');
+      log.error('Missing credentials');
       return ApiErrors.notConfigured('Pusher');
     }
 
@@ -112,7 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .join('');
 
     // Log successful auth
-    console.log('[Pusher Auth] Success for user:', userId, 'channel:', channelName);
+    log.info('Success for user:', userId, 'channel:', channelName);
 
     // Return auth response in Pusher's expected format
     return new Response(JSON.stringify({
@@ -130,7 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Pusher Auth] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return errorResponse('Auth failed');
   }
 };

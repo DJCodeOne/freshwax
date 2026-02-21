@@ -215,7 +215,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
 
       serverSubtotal += serverPrice * quantity;
       validatedItems.push({ ...item, price: serverPrice, originalClientPrice: item.price, ...extraFields });
-    } catch (err) {
+    } catch (err: unknown) {
       logger.error('[create-order] Error validating price for', item.name, err);
       // SECURITY: Reject items where price validation fails — never trust client price
       return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
@@ -481,7 +481,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           } else {
             logger.info('[create-order] Release NOT found:', releaseId);
           }
-        } catch (e) {
+        } catch (e: unknown) {
           logger.error('[create-order] Error fetching release:', releaseId, e);
         }
       } else {
@@ -983,7 +983,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await atomicIncrement('users', orderData.customer.userId, { orderCount: 1 });
         await updateDocument('users', orderData.customer.userId, { lastOrderAt: now });
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error('[create-order] Error updating customer:', e);
       }
     }

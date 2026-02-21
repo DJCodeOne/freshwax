@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[update-shipping]');
 
 const UpdateShippingSchema = z.object({
   artistId: z.string().min(1).max(500),
@@ -115,13 +117,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      console.error('[Artist] Service account not configured');
+      log.error('Service account not configured');
       return ApiErrors.serverError('Service account not configured');
     }
 
     await saUpdateDocument(serviceAccountKey, projectId, 'artists', artistId, updateData);
 
-    console.log('[Artist] Updated shipping rates for:', artistId, updateData);
+    log.info('Updated shipping rates for:', artistId, updateData);
 
     return new Response(JSON.stringify({
       success: true,
@@ -135,7 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Artist] Update shipping error:', error instanceof Error ? error.message : String(error));
+    log.error('Update shipping error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update shipping rates');
   }
 };

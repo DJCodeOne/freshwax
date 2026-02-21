@@ -6,7 +6,9 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[debug-ledger]');
 
 export const prerender = false;
 
@@ -28,8 +30,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let ledgerSource = 'service_account';
     try {
       ledgerData = await saQuery('salesLedger', { limit: 500 });
-    } catch (err) {
-      console.log('[debug-ledger] SA query failed:', err);
+    } catch (err: unknown) {
+      log.info('SA query failed:', err);
       ledgerSource = 'fallback';
       ledgerData = [];
     }
@@ -105,7 +107,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[debug-ledger] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

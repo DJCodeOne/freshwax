@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           } else {
             trackResult.mp3Error = `HTTP ${mp3Response.status}`;
           }
-        } catch (e) {
+        } catch (e: unknown) {
           trackResult.mp3Error = e instanceof Error ? e.message : 'Unknown error';
         }
       }
@@ -77,7 +77,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           } else {
             trackResult.wavError = `HTTP ${wavResponse.status}`;
           }
-        } catch (e) {
+        } catch (e: unknown) {
           trackResult.wavError = e instanceof Error ? e.message : 'Unknown error';
         }
       }

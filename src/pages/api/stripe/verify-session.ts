@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createOrder } from '../../../lib/order-utils';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[verify-session]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Zod schema for verify-session query params
@@ -57,7 +59,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     if (!sessionResponse.ok) {
       const errorText = await sessionResponse.text();
-      console.error('[verify-session] Invalid session response:', sessionResponse.status, errorText);
+      log.error('Invalid session response:', sessionResponse.status, errorText);
       return ApiErrors.badRequest('Invalid session');
     }
 
@@ -155,7 +157,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Order still not found - create it now as fallback (webhook may have failed)
-    console.log('[verify-session] Fallback order creation for paymentIntentId:', paymentIntentId);
+    log.info('Fallback order creation for paymentIntentId:', paymentIntentId);
 
     // Get line items from Stripe session
     const lineItemsResponse = await fetchWithTimeout(
@@ -174,8 +176,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (session.metadata?.items_json) {
       try {
         items = JSON.parse(session.metadata.items_json);
-      } catch (e) {
-        console.error('[verify-session] Error parsing items_json:', e);
+      } catch (e: unknown) {
+        log.error('Error parsing items_json:', e);
       }
     }
 
@@ -194,7 +196,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     if (items.length === 0) {
-      console.warn('[verify-session] No items found for fallback order');
+      log.warn('No items found for fallback order');
     }
 
     // Build shipping info if present
@@ -237,7 +239,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
     if (result.success) {
-      console.log('[verify-session] Fallback order created:', result.orderNumber, result.orderId);
+      log.info('Fallback order created:', result.orderNumber, result.orderId);
       return new Response(JSON.stringify({
         success: true,
         orderId: result.orderId,
@@ -249,7 +251,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Order creation failed
-    console.error('[verify-session] Fallback order creation failed:', result.error);
+    log.error('Fallback order creation failed:', result.error);
     return new Response(JSON.stringify({
       success: true,
       orderId: null,
@@ -261,7 +263,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[verify-session] EXCEPTION:', errorMessage);
+    log.error('EXCEPTION:', errorMessage);
     return ApiErrors.serverError('Session verification failed');
   }
 };

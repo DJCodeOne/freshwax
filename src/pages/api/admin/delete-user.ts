@@ -64,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('users', userId, softDeleteData);
         results.customers = true;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       log.info('[delete-user] customers:', e instanceof Error ? e.message : 'error');
     }
 
@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         results.users = true;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       log.info('[delete-user] users:', e instanceof Error ? e.message : 'error');
     }
 
@@ -91,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('artists', userId, softDeleteData);
         results.artists = true;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       log.info('[delete-user] artists:', e instanceof Error ? e.message : 'error');
     }
 

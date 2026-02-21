@@ -83,7 +83,7 @@ export const GET: APIRoute = async ({ request, url }) => {
           });
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       // noembed failed, continue
     }
 

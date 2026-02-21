@@ -164,7 +164,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                 }
               };
             }
-          } catch (e) {
+          } catch (e: unknown) {
             logger.error('[get-orders] Error fetching release:', releaseId, e);
           }
 

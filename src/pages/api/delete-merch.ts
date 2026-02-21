@@ -152,7 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
           logger.info('[delete-merch] Updated supplier stats');
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.info('[delete-merch] Could not update supplier stats');
       }
     }

@@ -80,7 +80,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             artistBio = bio;
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         logger.info('[get-release] Could not fetch artist bio:', err);
       }
     }

@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       existingLedger = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
         limit: 5000
       });
-    } catch (e) {
+    } catch (e: unknown) {
       // Collection might not exist yet
       log.info('[Migration] No existing ledger entries found');
     }

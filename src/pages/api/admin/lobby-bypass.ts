@@ -7,7 +7,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[lobby-bypass]');
 
 export const prerender = false;
 
@@ -65,7 +67,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[lobby-bypass] Error listing:', error);
+    log.error('[lobby-bypass] Error listing:', error);
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -154,11 +156,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await setDocument('users', targetUserId, userUpdateData);
         } catch (createError: unknown) {
           // Log but don't fail - the djLobbyBypass entry was created successfully
-          console.warn(`[lobby-bypass] Could not set user bypass flag: ${createError instanceof Error ? createError.message : String(createError)}`);
+          log.warn(`[lobby-bypass] Could not set user bypass flag: ${createError instanceof Error ? createError.message : String(createError)}`);
         }
       }
 
-      console.log(`[lobby-bypass] Granted bypass to ${email} (${targetUserId})`);
+      log.info(`[lobby-bypass] Granted bypass to ${email} (${targetUserId})`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -183,11 +185,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           'go-liveBypassed': false,
           bypassRevokedAt: new Date().toISOString()
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // User doc might not exist, that's ok
       }
 
-      console.log(`[lobby-bypass] Revoked bypass for ${userId}`);
+      log.info(`[lobby-bypass] Revoked bypass for ${userId}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -202,7 +204,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[lobby-bypass] Error:', error);
+    log.error('[lobby-bypass] Error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };

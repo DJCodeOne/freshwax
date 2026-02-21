@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { createLogger, errorResponse, ApiErrors } from '../../lib/api-utils';
+
+const log = createLogger('[generate-referral-code]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const GenerateReferralSchema = z.object({
@@ -25,7 +27,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE as KVNamespace | undefined;
 
     if (!kv) {
-      console.error('[generate-referral-code] KV namespace not available');
+      log.error('KV namespace not available');
       return errorResponse('Storage not available', 503);
     }
 
@@ -51,8 +53,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (tokenUserId !== userId) {
         return ApiErrors.forbidden('User mismatch');
       }
-    } catch (e) {
-      console.error('[generate-referral-code] Token verification failed:', e);
+    } catch (e: unknown) {
+      log.error('Token verification failed:', e);
       return ApiErrors.unauthorized('Invalid authentication token');
     }
 
@@ -93,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Generate referral code
-    console.log('[generate-referral-code] Generating code for user:', userId);
+    log.info('Generating code for user:', userId);
     const referralCode = createReferralCode(
       userId,
       userDoc.displayName || 'Plus Member',
@@ -103,7 +105,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Save to KV
     await saveReferralCode(kv, referralCode);
-    console.log('[generate-referral-code] Saved to KV:', referralCode.code);
+    log.info('Saved to KV:', referralCode.code);
 
     return new Response(JSON.stringify({
       success: true,
@@ -120,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[generate-referral-code] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to generate code');
   }
 };

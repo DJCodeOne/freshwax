@@ -287,7 +287,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               updatedAt: now
             });
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.warn('[vinyl/listing] Failed to update seller count:', e);
         }
 

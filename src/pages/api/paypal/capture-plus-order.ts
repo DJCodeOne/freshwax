@@ -120,7 +120,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Delete pending order
     try {
       await deleteDocument('pendingPayPalOrders', paypalOrderId);
-    } catch (e) {
+    } catch (e: unknown) {
       logger.warn('[PayPal Plus] Failed to delete pending order:', e);
     }
 

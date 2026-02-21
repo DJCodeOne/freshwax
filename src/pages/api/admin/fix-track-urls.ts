@@ -167,7 +167,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             `UPDATE releases_v2 SET data = ?, release_date = ? WHERE id = ?`
           ).bind(dataJson, releaseDate, releaseId).run();
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // D1 sync is best-effort, don't fail the request
       }
     }

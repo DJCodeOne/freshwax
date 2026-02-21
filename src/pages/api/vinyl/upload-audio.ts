@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[vinyl-upload-audio]');
 
 export const prerender = false;
 
@@ -129,7 +131,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const publicUrl = `${r2Config.publicDomain}/${key}`;
 
-    console.log(`[vinyl/upload-audio] Uploaded: ${(file.size/1024).toFixed(1)}KB, ~${Math.round(estimatedDuration)}s`);
+    log.info(`Uploaded: ${(file.size/1024).toFixed(1)}KB, ~${Math.round(estimatedDuration)}s`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -145,7 +147,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/upload-audio] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to upload audio');
   }
 };

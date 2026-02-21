@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[create-paypal-order]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schema for gift card PayPal order creation
@@ -49,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      console.error('[GiftCard PayPal] Missing credentials');
+      log.error('[GiftCard PayPal] Missing credentials');
       return ApiErrors.serverError('PayPal not configured');
     }
 
@@ -84,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Invalid recipient email address');
     }
 
-    console.log('[GiftCard PayPal] Creating order for:', buyerEmail, 'amount:', numAmount);
+    log.info('[GiftCard PayPal] Creating order for:', buyerEmail, 'amount:', numAmount);
 
     // Get access token
     const accessToken = await getPayPalAccessToken(paypalClientId, paypalSecret, paypalMode);
@@ -138,12 +140,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!createResponse.ok) {
       const error = await createResponse.text();
-      console.error('[GiftCard PayPal] Create order error:', error);
+      log.error('[GiftCard PayPal] Create order error:', error);
       return ApiErrors.serverError('Failed to create PayPal order');
     }
 
     const paypalResult = await createResponse.json();
-    console.log('[GiftCard PayPal] Order created:', paypalResult.id);
+    log.info('[GiftCard PayPal] Order created:', paypalResult.id);
 
     // Extract approval URL
     const approvalLink = paypalResult.links?.find((link: any) => link.rel === 'approve');
@@ -167,9 +169,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       await setDocument('pendingGiftCardOrders', paypalResult.id, pendingOrder);
-      console.log('[GiftCard PayPal] Stored pending order:', paypalResult.id);
+      log.info('[GiftCard PayPal] Stored pending order:', paypalResult.id);
     } catch (storeErr) {
-      console.error('[GiftCard PayPal] Failed to store pending order:', storeErr);
+      log.error('[GiftCard PayPal] Failed to store pending order:', storeErr);
       // Continue - capture will need to validate amount
     }
 
@@ -182,7 +184,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[GiftCard PayPal] Error:', errorMessage);
+    log.error('[GiftCard PayPal] Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');
   }
 };

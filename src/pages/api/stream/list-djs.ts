@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           djName = userDoc.displayName || userDoc.name || djName;
           email = userDoc.email || email;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Ignore
       }
 
@@ -60,7 +60,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             ? streamData.startedAt.toISOString()
             : streamData.startedAt || null;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Ignore - might not have index
       }
 

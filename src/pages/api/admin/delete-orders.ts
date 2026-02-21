@@ -5,7 +5,9 @@ import { z } from 'zod';
 import { deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[delete-orders]');
 
 const deleteOrdersSchema = z.object({
   orderIds: z.array(z.string().min(1)).min(1).max(50),
@@ -46,10 +48,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await deleteDocument('orders', orderId);
         results.push({ id: orderId, success: true });
-        console.log(`[delete-orders] Deleted order: ${orderId}`);
+        log.info(`Deleted order: ${orderId}`);
       } catch (error: unknown) {
         results.push({ id: orderId, success: false, error: 'Internal error' });
-        console.error(`[delete-orders] Failed to delete ${orderId}:`, error instanceof Error ? error.message : String(error));
+        log.error(`Failed to delete ${orderId}:`, error instanceof Error ? error.message : String(error));
       }
     }
 
@@ -67,7 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[delete-orders] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };

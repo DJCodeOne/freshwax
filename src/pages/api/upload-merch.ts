@@ -163,7 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       sizes = JSON.parse(sizesJson);
       colors = JSON.parse(colorsJson);
       variants = JSON.parse(variantsJson);
-    } catch (e) {
+    } catch (e: unknown) {
       logger.error('Error parsing variants JSON');
     }
 
@@ -206,7 +206,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (mapJson) {
         imageColorMap = JSON.parse(mapJson);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.info('[upload-merch] No image color map provided');
     }
 
@@ -465,7 +465,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
           logger.info('[upload-merch] Supplier stats updated');
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.info('Note: Supplier document may not exist yet');
       }
     }

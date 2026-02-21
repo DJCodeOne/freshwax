@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[credit-account]');
 
 // Zod schema for admin credit account
 const CreditAccountSchema = z.object({
@@ -86,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Customer doc might not exist yet, that's ok
     }
 
-    console.log(`[credit-account] Credited £${creditAmount} to user ${userId}. New balance: £${newBalance}`);
+    log.info(`Credited £${creditAmount} to user ${userId}. New balance: £${newBalance}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -99,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[credit-account] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to credit account');
   }
 };

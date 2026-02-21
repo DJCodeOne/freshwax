@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { setDocument, getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[create-plus-order]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal Plus order creation
@@ -41,7 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      console.error('[PayPal Plus] Missing credentials');
+      log.error('[PayPal Plus] Missing credentials');
       return ApiErrors.serverError('PayPal not configured');
     }
 
@@ -60,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { email, promoCode } = parseResult.data;
     const userId = verifiedUserId;
 
-    console.log('[PayPal Plus] Creating order for:', email);
+    log.info('[PayPal Plus] Creating order for:', email);
 
     // Check if user already has active Plus
     const userDoc = await getDocument('users', userId);
@@ -89,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           referredBy = kvResult.referralCode.creatorId;
           isKvCode = true;
           finalPrice = PLUS_PROMO_PRICE;
-          console.log(`[PayPal Plus] Valid KV referral code ${normalizedCode}, referred by ${referredBy}`);
+          log.info(`[PayPal Plus] Valid KV referral code ${normalizedCode}, referred by ${referredBy}`);
         } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
           return ApiErrors.badRequest(kvResult.error);
         }
@@ -120,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           referralCardId = referralCard.id;
           referredBy = referralCard.createdByUserId;
           finalPrice = PLUS_PROMO_PRICE;
-          console.log(`[PayPal Plus] Valid Firebase referral code ${normalizedCode}, referred by ${referredBy}`);
+          log.info(`[PayPal Plus] Valid Firebase referral code ${normalizedCode}, referred by ${referredBy}`);
         } else {
           return ApiErrors.badRequest('Invalid referral code');
         }
@@ -168,12 +170,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!paypalResponse.ok) {
       const errorData = await paypalResponse.json();
-      console.error('[PayPal Plus] Order creation failed:', errorData);
+      log.error('[PayPal Plus] Order creation failed:', errorData);
       return ApiErrors.serverError('Failed to create PayPal order');
     }
 
     const paypalOrder = await paypalResponse.json();
-    console.log('[PayPal Plus] Order created:', paypalOrder.id);
+    log.info('[PayPal Plus] Order created:', paypalOrder.id);
 
     // Store pending order in Firebase for security (use same collection as regular orders)
     try {
@@ -192,9 +194,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       await setDocument('pendingPayPalOrders', paypalOrder.id, pendingOrderData);
-      console.log('[PayPal Plus] Stored pending order:', paypalOrder.id);
+      log.info('[PayPal Plus] Stored pending order:', paypalOrder.id);
     } catch (storeErr) {
-      console.error('[PayPal Plus] Failed to store pending order:', storeErr);
+      log.error('[PayPal Plus] Failed to store pending order:', storeErr);
       // Continue anyway - we'll pass the data via URL params or rely on the PayPal order ID
     }
 
@@ -218,7 +220,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[PayPal Plus] Error:', error);
+    log.error('[PayPal Plus] Error:', error);
     return ApiErrors.serverError('Failed to create PayPal order');
   }
 };

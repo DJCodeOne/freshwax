@@ -7,7 +7,9 @@ import { getDocument, updateDocument, setDocument, queryCollection, verifyReques
 import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[apply-referral]');
 
 // Zod schemas for referral endpoints
 const ReferralGetSchema = z.object({
@@ -93,7 +95,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[apply-referral] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to validate referral code');
   }
 };
@@ -225,7 +227,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     // Notify the referrer (optional - could add email notification here)
-    console.log('[apply-referral] Referral code used:', normalizedCode, 'by user:', authenticatedUserId, 'referrer:', giftCard.createdByUserId);
+    log.info('Referral code used:', normalizedCode, 'by user:', authenticatedUserId, 'referrer:', giftCard.createdByUserId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -242,7 +244,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[apply-referral] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to apply referral code');
   }
 };

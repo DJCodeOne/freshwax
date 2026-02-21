@@ -175,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             logger.info(`[upload-mix] Using displayName from users: ${displayName}`);
           }
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.info(`[upload-mix] Could not fetch displayName, using form value: ${djNameFromForm}`);
       }
     }

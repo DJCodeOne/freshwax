@@ -320,7 +320,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         d1Synced,
       });
 
-    } catch (err) {
+    } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       log.error(`Failed to sync ${result.key}:`, err);
       failed++;

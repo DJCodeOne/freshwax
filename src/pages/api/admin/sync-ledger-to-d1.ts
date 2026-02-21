@@ -6,7 +6,9 @@ import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { d1InsertLedgerEntry, d1GetLedgerEntryById } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[sync-ledger]');
 
 export const prerender = false;
 
@@ -47,12 +49,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     // Fetch all Firebase ledger entries
-    console.log('[sync-ledger] Fetching Firebase entries...');
+    log.info('Fetching Firebase entries...');
     const firebaseEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
       orderBy: { field: 'timestamp', direction: 'DESCENDING' },
       limit: 2000
     });
-    console.log('[sync-ledger] Found', firebaseEntries.length, 'Firebase entries');
+    log.info('Found', firebaseEntries.length, 'Firebase entries');
 
     let synced = 0;
     let skipped = 0;
@@ -71,7 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Insert into D1
         await d1InsertLedgerEntry(db, entry.id, entry);
         synced++;
-      } catch (err) {
+      } catch (err: unknown) {
         errors++;
         errorDetails.push(`${entry.id}: ${err instanceof Error ? err.message : 'Unknown error'}`);
       }
@@ -93,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[sync-ledger] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

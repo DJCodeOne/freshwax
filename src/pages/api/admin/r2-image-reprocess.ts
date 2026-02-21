@@ -246,7 +246,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         results.push(result);
         processed++;
-      } catch (err) {
+      } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         log.error(`Failed to process ${key}:`, err);
         results.push({ key, status: 'failed', error: message });

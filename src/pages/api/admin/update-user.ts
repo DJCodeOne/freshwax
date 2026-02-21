@@ -96,7 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('users', userId, customerUpdate);
         results.customers = true;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[update-user] Error updating customers:', e);
     }
 
@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await updateDocument('users', userId, userUpdate);
         results.users = true;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[update-user] Error updating users:', e);
     }
 
@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
           results.artists = true;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[update-user] Error updating artists:', e);
       }
     }

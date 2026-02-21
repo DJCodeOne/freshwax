@@ -262,7 +262,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         updates.sizes = JSON.parse(sizesJson as string);
         updates.hasSizes = updates.sizes.length > 0;
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error('Error parsing sizes JSON');
       }
     }
@@ -272,7 +272,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         updates.colors = JSON.parse(colorsJson as string);
         updates.hasColors = updates.colors.length > 0;
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error('Error parsing colors JSON');
       }
     }
@@ -297,7 +297,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 })
               );
               logger.info('[update-merch] Deleted image:', imageToDelete.key);
-            } catch (e) {
+            } catch (e: unknown) {
               logger.error('[update-merch] Failed to delete image from R2');
             }
           }
@@ -306,7 +306,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         indexesToDelete.sort((a, b) => b - a).forEach(idx => {
           images.splice(idx, 1);
         });
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error('Error parsing deleteImages');
       }
     }

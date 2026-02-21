@@ -123,7 +123,7 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
       }
 
       validatedItems.push({ ...item, price: serverPrice });
-    } catch (err) {
+    } catch (err: unknown) {
       log.error('[FreeOrder] Price validation error for', item.name, err);
       // SECURITY: On price lookup failure, use server price of 0 is NOT safe
       // Reject items where we can't verify the price

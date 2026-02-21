@@ -9,7 +9,9 @@ import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[livestream-slots]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { z } from 'zod';
 
@@ -63,8 +65,8 @@ async function syncSlotToD1(db: any, slotId: string, slotData: any): Promise<voi
   if (!db) return;
   try {
     await d1UpsertSlot(db, slotId, slotData);
-  } catch (e) {
-    console.error('[D1] Error syncing slot (non-critical):', e);
+  } catch (e: unknown) {
+    log.error('[D1] Error syncing slot (non-critical):', e);
   }
 }
 
@@ -73,8 +75,8 @@ async function syncSlotStatusToD1(db: any, slotId: string, status: string, extra
   if (!db) return;
   try {
     await d1UpdateSlotStatus(db, slotId, status, extraData);
-  } catch (e) {
-    console.error('[D1] Error updating slot status (non-critical):', e);
+  } catch (e: unknown) {
+    log.error('[D1] Error updating slot status (non-critical):', e);
   }
 }
 
@@ -159,7 +161,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     initServices(locals);
   } catch (initError: unknown) {
     const initErrMsg = initError instanceof Error ? initError.message : String(initError);
-    console.error('[DEBUG] slots.ts initServices error:', initErrMsg);
+    log.error('initServices error:', initErrMsg);
     return ApiErrors.serverError('Failed to initialize services');
   }
 
@@ -360,7 +362,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           });
 
           if (!hasConsecutive) {
-            console.log(`[slots] Auto-ending expired slot ${liveSlot.id} for ${liveSlot.djName}`);
+            log.info(`Auto-ending expired slot ${liveSlot.id} for ${liveSlot.djName}`);
             try {
               await updateDocument('livestreamSlots', liveSlot.id, {
                 status: 'completed',
@@ -386,7 +388,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
               invalidateCache();
             } catch (autoEndError) {
-              console.error('[slots] Failed to auto-end slot:', autoEndError);
+              log.error('Failed to auto-end slot:', autoEndError);
             }
           }
         }
@@ -417,7 +419,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
 
   } catch (error: unknown) {
-    console.error('[livestream/slots] GET Error:', error);
+    log.error('GET Error:', error);
     return ApiErrors.serverError('Failed to fetch schedule');
   }
 };
@@ -537,7 +539,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               approvedEventHours = eventRequests[0].hoursRequested || 0;
             }
           } catch (eventErr) {
-            console.warn('[livestream/slots] Could not check event requests:', eventErr);
+            log.warn('Could not check event requests:', eventErr);
           }
         }
 
@@ -556,7 +558,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.badRequest(`You've used ${hoursUsed} of your ${hoursLimit} hour${hoursLimit > 1 ? 's' : ''} today.${upgradeMsg}`);
         }
       } catch (limitError) {
-        console.warn('[livestream/slots] Could not check streaming limits:', limitError);
+        log.warn('Could not check streaming limits:', limitError);
         // Continue with booking if limit check fails
       }
 
@@ -922,7 +924,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
       } catch (usageError) {
-        console.warn('[livestream/slots] Could not record streaming usage:', usageError);
+        log.warn('Could not record streaming usage:', usageError);
       }
 
       invalidateCache();
@@ -1121,8 +1123,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (!streamActive && streamCheckAttempts < maxAttempts) {
             await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
           }
-        } catch (e) {
-          console.warn(`[go_live] Stream check attempt ${streamCheckAttempts} failed:`, e);
+        } catch (e: unknown) {
+          log.warn(`Stream check attempt ${streamCheckAttempts} failed:`, e);
           if (streamCheckAttempts < maxAttempts) {
             await new Promise(r => setTimeout(r, 1000));
           }
@@ -1131,7 +1133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // If stream check failed after retries, warn but allow (DJ clicked Ready)
       if (!streamActive) {
-        console.warn('[go_live] Could not verify stream, proceeding with DJ confirmation');
+        log.warn('Could not verify stream, proceeding with DJ confirmation');
       }
 
       // Calculate end time (top of next hour)
@@ -1203,7 +1205,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: 'You are now live!'
         }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       } catch (createError: unknown) {
-        console.error('[go_live] Failed to create slot:', createError);
+        log.error('Failed to create slot:', createError);
         return ApiErrors.serverError('Failed to create live slot');
       }
     }
@@ -1406,7 +1408,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('[livestream/slots] POST Error:', error);
+    log.error('POST Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return ApiErrors.serverError('Failed to process request');
   }
@@ -1474,7 +1476,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    console.error('[livestream/slots] DELETE Error:', errMsg);
+    log.error('DELETE Error:', errMsg);
     return ApiErrors.serverError(errMsg || 'Failed to cancel slot');
   }
 };

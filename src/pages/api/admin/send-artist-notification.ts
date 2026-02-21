@@ -9,7 +9,9 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[send-artist-notification]');
 import { emailWrapper, ctaButton, detailBox, esc as escWrap } from '../../../lib/email-wrapper';
 
 export const prerender = false;
@@ -140,8 +142,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           filters: [{ field: 'orderId', op: 'EQUAL', value: orderId }],
           limit: 10
         });
-      } catch (e) {
-        console.log('[send-artist-notification] Could not fetch pending payouts');
+      } catch (e: unknown) {
+        log.info('Could not fetch pending payouts');
       }
     }
 
@@ -249,7 +251,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           const error = await response.text();
           sent.push({ email: artistEmail, success: false, error });
         }
-      } catch (e) {
+      } catch (e: unknown) {
         sent.push({ email: artistEmail, success: false, error: e instanceof Error ? e.message : 'Unknown error' });
       }
     }
@@ -262,7 +264,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[send-artist-notification] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

@@ -102,7 +102,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           stripeConnected = account.charges_enabled === true && account.payouts_enabled === true;
           stripeConnectStatus = stripeConnected ? 'active' :
             (account.requirements?.disabled_reason ? 'restricted' : 'onboarding');
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('[payment/status] Stripe error:', e);
           // Use cached status
           stripeConnected = stripeConnectStatus === 'active';
@@ -167,7 +167,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             earnings.thisMonthPaid += amount;
           }
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Collection might not exist yet
       }
     }
@@ -188,7 +188,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
                        collection === 'pendingSupplierPayouts' ? 'Merch' : 'Vinyl';
           allPendingPayouts.push({ ...p, type });
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Collection might not exist yet
       }
     }

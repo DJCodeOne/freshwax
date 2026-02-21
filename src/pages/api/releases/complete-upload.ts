@@ -159,7 +159,7 @@ async function processReleaseArtwork(
     const thumbUrl = `${cdnDomain}/${thumbKey}`;
 
     return { coverUrl, thumbUrl, originalArtworkUrl };
-  } catch (err) {
+  } catch (err: unknown) {
     logger.error('Artwork processing failed (using original URL):', err);
     return null;
   }

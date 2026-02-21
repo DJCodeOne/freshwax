@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return { userId: customers[0].id, name: customers[0].displayName || customers[0].firstName || null };
         }
         return null;
-      } catch (e) {
+      } catch (e: unknown) {
         return null;
       }
     }
@@ -319,7 +319,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           isLive: false,
           endedAt: now
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // May not exist
       }
 

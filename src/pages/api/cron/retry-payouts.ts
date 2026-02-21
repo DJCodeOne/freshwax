@@ -13,7 +13,9 @@ import { queryCollection, updateDocument, addDocument, getDocument, updateDocume
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[retry-payouts]');
 
 export const prerender = false;
 
@@ -47,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
   if (!stripeSecretKey) {
-    console.error('[Retry Payouts] Stripe not configured');
+    log.error('Stripe not configured');
     return ApiErrors.serverError('Stripe not configured');
   }
 
@@ -130,7 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (!entity) {
-        console.warn('[Retry Payouts] Entity not found for payout:', pending.id, 'type:', entityType);
+        log.warn('Entity not found for payout:', pending.id, 'type:', entityType);
         results.skipped++;
         continue;
       }
@@ -298,11 +300,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             pending.amount,
             pending.orderNumber || pending.orderId?.slice(-6).toUpperCase(),
             env
-          ).catch(err => console.error('[Retry Payouts] Failed to send email:', err));
+          ).catch(err => log.error('Failed to send email:', err));
         }
 
         const transactionId = payoutResult.stripeTransferId || payoutResult.paypalPayoutId || 'unknown';
-        console.log('[Retry Payouts] ✓ Success:', pending.id, 'via', payoutResult.payoutMethod, 'ID:', transactionId);
+        log.info('Success:', pending.id, 'via', payoutResult.payoutMethod, 'ID:', transactionId);
         results.succeeded++;
         results.details.push({
           payoutId: pending.id,
@@ -316,7 +318,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       } catch (transferError: unknown) {
         const transferErrMsg = transferError instanceof Error ? transferError.message : String(transferError);
-        console.error('[Retry Payouts] ✕ Failed:', pending.id, transferErrMsg);
+        log.error('Failed:', pending.id, transferErrMsg);
 
         // Update with failure reason
         await updateDocument('pendingPayouts', pending.id, {
@@ -351,7 +353,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Retry Payouts] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

@@ -13,7 +13,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[red5-webhook]');
 
 // Helper to initialize Firebase and Red5
 function initServices(locals: App.Locals) {
@@ -43,19 +45,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Reject if no proper secret configured in production
     if (isProduction && (!webhookSecret || webhookSecret === 'webhook-secret-change-in-production')) {
-      console.error('[red5-webhook] CRITICAL: No webhook secret configured in production');
+      log.error('[red5-webhook] CRITICAL: No webhook secret configured in production');
       return errorResponse('Webhook security not configured', 503);
     }
 
     // Always verify signature when secret is properly configured
     if (webhookSecret && webhookSecret !== 'webhook-secret-change-in-production') {
       if (!signature) {
-        console.error('[red5-webhook] Missing webhook signature');
+        log.error('[red5-webhook] Missing webhook signature');
         return ApiErrors.unauthorized('Missing webhook signature');
       }
 
       if (!verifyWebhookSignature(rawBody, signature)) {
-        console.error('[red5-webhook] Invalid signature');
+        log.error('[red5-webhook] Invalid signature');
         return ApiErrors.unauthorized('Invalid webhook signature');
       }
     }
@@ -65,17 +67,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       event = JSON.parse(rawBody);
     } catch (parseErr) {
-      console.error('[red5-webhook] Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
+      log.error('[red5-webhook] Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
       return ApiErrors.badRequest('Invalid JSON payload');
     }
     
-    console.log('[red5-webhook] Received event:', event.event, 'streamKey:', event.streamKey?.substring(0, 8) + '...');
+    log.info('[red5-webhook] Received event:', event.event, 'streamKey:', event.streamKey?.substring(0, 8) + '...');
     
     // Extract slot info from stream key
     // Format: fwx_{djIdShort}_{slotIdShort}_{timestamp}_{signature}
     const keyParts = event.streamKey?.split('_');
     if (!keyParts || keyParts.length < 3 || keyParts[0] !== RED5_CONFIG.security.keyPrefix) {
-      console.warn('[red5-webhook] Unknown stream key format:', event.streamKey);
+      log.warn('[red5-webhook] Unknown stream key format:', event.streamKey);
       // Still return success - we don't want Red5 to retry
       return new Response(JSON.stringify({
         success: true,
@@ -90,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (slots.length === 0) {
-      console.warn('[red5-webhook] No slot found for stream key:', event.streamKey);
+      log.warn('[red5-webhook] No slot found for stream key:', event.streamKey);
       return new Response(JSON.stringify({
         success: true,
         message: 'Acknowledged (slot not found)'
@@ -104,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     switch (event.event) {
       case 'publish': {
         // Stream has started - update slot to live
-        console.log('[red5-webhook] Stream published:', slotData.djName, slotId);
+        log.info('[red5-webhook] Stream published:', slotData.djName, slotId);
 
         await updateDocument('livestreamSlots', slotId, {
           status: 'live',
@@ -163,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       case 'unpublish': {
         // Stream has ended
-        console.log('[red5-webhook] Stream unpublished:', slotData.djName, slotId);
+        log.info('[red5-webhook] Stream unpublished:', slotData.djName, slotId);
 
         const slotEndTime = new Date(slotData.endTime);
         const nowDate = new Date();
@@ -236,7 +238,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       case 'record_start':
       case 'record_stop': {
         // Log recording events but no action needed
-        console.log('[red5-webhook] Recording event:', event.event, slotId);
+        log.info('[red5-webhook] Recording event:', event.event, slotId);
         await updateDocument('livestreamSlots', slotId, {
           [`recordingEvents.${event.event}`]: now,
           updatedAt: now,
@@ -245,7 +247,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
       
       default: {
-        console.log('[red5-webhook] Unknown event type:', event.event);
+        log.info('[red5-webhook] Unknown event type:', event.event);
       }
     }
     
@@ -260,7 +262,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[red5-webhook] Error processing webhook:', error);
+    log.error('[red5-webhook] Error processing webhook:', error);
     
     // Still return 200 to prevent Red5 from retrying
     // Log the error for investigation

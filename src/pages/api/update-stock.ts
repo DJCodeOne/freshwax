@@ -264,7 +264,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           await saUpdateDocument(serviceAccountKey, projectId, 'merch-suppliers', product.supplierId, supplierUpdate);
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.info('Note: Could not update supplier stats');
       }
     }

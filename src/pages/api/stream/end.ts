@@ -7,7 +7,9 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[stream-end]');
 
 export const prerender = false;
 
@@ -61,11 +63,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           slotId: streamId,
           reason: reason || 'admin_ended'
         }, env);
-      } catch (pusherErr) {
-        console.warn('[stream/end] Pusher broadcast failed (non-critical):', pusherErr);
+      } catch (pusherErr: unknown) {
+        log.warn('Pusher broadcast failed (non-critical):', pusherErr);
       }
 
-      console.log(`[stream/end] Admin ended slot ${streamId} (DJ: ${slotDoc.djName || djId})`);
+      log.info(`Admin ended slot ${streamId} (DJ: ${slotDoc.djName || djId})`);
     }
 
     // Also check legacy livestreams collection
@@ -81,7 +83,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       ended = true;
 
-      console.log(`[stream/end] Admin ended legacy stream ${streamId} (DJ: ${streamDoc.djName || djId})`);
+      log.info(`Admin ended legacy stream ${streamId} (DJ: ${streamDoc.djName || djId})`);
     }
 
     if (!ended) {
@@ -105,9 +107,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })
         )
       );
-    } catch (e) {
+    } catch (e: unknown) {
       // Viewers collection might not exist
-      console.warn('[stream/end] Could not update viewer sessions:', e);
+      log.warn('Could not update viewer sessions:', e);
     }
 
     return new Response(JSON.stringify({
@@ -119,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[stream/end] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

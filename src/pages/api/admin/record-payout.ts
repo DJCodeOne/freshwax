@@ -198,7 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         log.info('[admin] ✓ Updated pending payout', pending.id, 'to completed');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       log.error('[admin] Error updating pending payouts:', err);
       // Don't fail the request - the payout record was still created
     }

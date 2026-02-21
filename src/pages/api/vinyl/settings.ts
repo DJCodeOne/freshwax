@@ -202,7 +202,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
           isNewSeller = true;
           logger.info('[vinyl/settings POST] Assigning collection number:', collectionNumber);
         }
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error('[vinyl/settings POST] Error checking existing settings:', e);
       }
     }

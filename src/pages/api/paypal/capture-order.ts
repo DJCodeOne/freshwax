@@ -8,7 +8,9 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
-import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[paypal-capture]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal capture request
@@ -73,8 +75,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-    } catch (idempotencyErr) {
-      console.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+    } catch (idempotencyErr: unknown) {
+      log.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyErr);
       // Don't proceed - we can't verify if this order was already processed
       // Customer can retry when Firebase is back
       return errorResponse('Unable to verify order status. Please try again in a moment.', 503);
@@ -104,17 +106,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await deleteDocument('pendingPayPalOrders', paypalOrderId);
           // Cleaned up pending order
-        } catch (delErr) {
-          console.warn('[PayPal] Could not delete pending order:', delErr);
+        } catch (delErr: unknown) {
+          log.warn('[PayPal] Could not delete pending order:', delErr);
         }
       } else {
         // SECURITY: Reject if no server-side order exists.
         // The pending order is created during create-order and must exist for a legitimate flow.
-        console.error('[PayPal] SECURITY: No pending order found for', paypalOrderId, '- rejecting capture');
+        log.error('[PayPal] SECURITY: No pending order found for', paypalOrderId, '- rejecting capture');
         return ApiErrors.badRequest('Order session expired or invalid. Please try again.');
       }
-    } catch (fetchErr) {
-      console.error('[PayPal] Error fetching pending order:', fetchErr);
+    } catch (fetchErr: unknown) {
+      log.error('[PayPal] Error fetching pending order:', fetchErr);
       return ApiErrors.serverError('Could not verify order data. Please try again.');
     }
 
@@ -123,11 +125,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       const stockCheck = await validateStock(orderData.items || []);
       if (!stockCheck.available) {
-        console.error('[PayPal] Stock unavailable before capture:', stockCheck.unavailableItems);
+        log.error('[PayPal] Stock unavailable before capture:', stockCheck.unavailableItems);
         return ApiErrors.conflict('Some items are no longer available');
       }
-    } catch (stockErr) {
-      console.error('[PayPal] Stock validation error (Firebase may be unreachable):', stockErr);
+    } catch (stockErr: unknown) {
+      log.error('[PayPal] Stock validation error (Firebase may be unreachable):', stockErr);
       // Fail closed: if we can't verify stock (Firebase down), don't capture payment
       // Payment hasn't been captured yet so customer isn't charged - they can retry
       return errorResponse('Unable to verify stock availability. Please try again in a moment.', 503);
@@ -149,7 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!captureResponse.ok) {
       const error = await captureResponse.text();
-      console.error('[PayPal] Capture error:', error);
+      log.error('[PayPal] Capture error:', error);
       return ApiErrors.serverError('Failed to capture PayPal payment');
     }
 
@@ -158,7 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Verify payment was captured successfully
     if (captureResult.status !== 'COMPLETED') {
-      console.error('[PayPal] Payment not completed:', captureResult.status);
+      log.error('[PayPal] Payment not completed:', captureResult.status);
       return ApiErrors.badRequest('Payment was not completed. Please try again.');
     }
 
@@ -175,7 +177,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let amountMismatch = false;
     if (Math.abs(capturedAmount - expectedTotal) > 0.01) {
       amountMismatch = true;
-      console.error('[PayPal] AMOUNT MISMATCH! Captured:', capturedAmount, 'Expected:', expectedTotal, 'PayPal Order:', paypalOrderId);
+      log.error('[PayPal] AMOUNT MISMATCH! Captured:', capturedAmount, 'Expected:', expectedTotal, 'PayPal Order:', paypalOrderId);
       // Flag for admin review via Firebase document
       try {
         await addDocument('flaggedOrders', {
@@ -189,9 +191,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           status: 'needs_review',
           createdAt: new Date().toISOString()
         });
-        console.warn('[PayPal] Order flagged for admin review due to amount mismatch');
-      } catch (flagErr) {
-        console.error('[PayPal] Failed to create flaggedOrders doc:', flagErr);
+        log.warn('[PayPal] Order flagged for admin review due to amount mismatch');
+      } catch (flagErr: unknown) {
+        log.error('[PayPal] Failed to create flaggedOrders doc:', flagErr);
       }
     }
 
@@ -217,7 +219,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // D1 pending_orders row inserted
       } catch (d1Err) {
         // D1 write failure must not block order creation -- log and continue
-        console.error('[PayPal] D1 pending_orders insert failed (non-blocking):', d1Err);
+        log.error('[PayPal] D1 pending_orders insert failed (non-blocking):', d1Err);
       }
     }
 
@@ -245,8 +247,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         env,
         idToken
       });
-    } catch (createErr) {
-      console.error('[PayPal] Order creation threw:', createErr);
+    } catch (createErr: unknown) {
+      log.error('[PayPal] Order creation threw:', createErr);
       result = { success: false, error: createErr instanceof Error ? createErr.message : 'Order creation failed' };
     }
 
@@ -264,7 +266,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           `).bind(result.orderId || '', `paypal:${paypalOrderId}`).run();
           // D1 pending_orders updated to completed
         } catch (d1Err) {
-          console.error('[PayPal] D1 pending_orders update failed (non-blocking):', d1Err);
+          log.error('[PayPal] D1 pending_orders update failed (non-blocking):', d1Err);
         }
       }
 
@@ -279,7 +281,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const firstOrder = duplicateCheck.sort((a: any, b: any) =>
             (a.createdAt || '').localeCompare(b.createdAt || '')
           )[0];
-          console.warn('[PayPal] RACE CONDITION: Duplicate orders detected for paypalOrderId:', paypalOrderId,
+          log.warn('[PayPal] RACE CONDITION: Duplicate orders detected for paypalOrderId:', paypalOrderId,
             'Returning first order:', firstOrder.orderNumber);
           return new Response(JSON.stringify({
             success: true,
@@ -292,8 +294,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { 'Content-Type': 'application/json' }
           });
         }
-      } catch (dupCheckErr) {
-        console.warn('[PayPal] Post-creation duplicate check failed:', dupCheckErr);
+      } catch (dupCheckErr: unknown) {
+        log.warn('[PayPal] Post-creation duplicate check failed:', dupCheckErr);
         // Non-fatal: continue with the order we created
       }
     }
@@ -309,7 +311,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           `).bind(`paypal:${paypalOrderId}`).run();
           // D1 pending_orders marked as failed
         } catch (d1Err) {
-          console.error('[PayPal] D1 pending_orders failure update failed:', d1Err);
+          log.error('[PayPal] D1 pending_orders failure update failed:', d1Err);
         }
       }
 
@@ -333,17 +335,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
             headers: { 'Content-Type': 'application/json' }
           });
         }
-      } catch (fallbackErr) {
-        console.warn('[PayPal] Fallback duplicate check failed:', fallbackErr);
+      } catch (fallbackErr: unknown) {
+        log.warn('[PayPal] Fallback duplicate check failed:', fallbackErr);
       }
 
-      console.error('[PayPal] ORPHANED PAYMENT - Order creation failed after capture.',
+      log.error('[PayPal] ORPHANED PAYMENT - Order creation failed after capture.',
         'PayPal Order:', paypalOrderId, 'Capture:', captureId, 'Amount:', capturedAmount,
         'Customer:', orderData.customer?.email, 'Error:', result.error);
       return ApiErrors.serverError('Payment was captured but order creation failed. Your payment is safe — our team has been notified and will process your order shortly.');
     }
 
-    console.log('[PayPal] Order created:', result.orderNumber);
+    log.info('[PayPal] Order created:', result.orderNumber);
 
     // Convert stock reservation (payment succeeded)
     if (paypalReservationId) {
@@ -351,8 +353,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const { convertReservation } = await import('../../../lib/order-utils');
         await convertReservation(paypalReservationId);
         // Reservation converted
-      } catch (err) {
-        console.error('[PayPal] Failed to convert reservation:', err);
+      } catch (err: unknown) {
+        log.error('[PayPal] Failed to convert reservation:', err);
       }
     }
 
@@ -381,8 +383,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               artistName = release.artistName || release.artist || artistName;
               // Item seller identified
             }
-          } catch (lookupErr) {
-            console.error(`[PayPal] Failed to lookup release ${releaseId}:`, lookupErr);
+          } catch (lookupErr: unknown) {
+            log.error(`[PayPal] Failed to lookup release ${releaseId}:`, lookupErr);
           }
         }
 
@@ -408,15 +410,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       submitterEmail = artistData.email;
                     }
                   }
-                } catch (e) {
+                } catch (e: unknown) {
                   // Ignore lookup errors
                 }
               }
 
               // Merch seller identified
             }
-          } catch (lookupErr) {
-            console.error(`[PayPal] Failed to lookup merch ${item.productId}:`, lookupErr);
+          } catch (lookupErr: unknown) {
+            log.error(`[PayPal] Failed to lookup merch ${item.productId}:`, lookupErr);
           }
         }
 
@@ -448,8 +450,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         db: env?.DB  // D1 database for dual-write
       });
       // Sale recorded to ledger
-    } catch (ledgerErr) {
-      console.error('[PayPal] Failed to record to ledger:', ledgerErr);
+    } catch (ledgerErr: unknown) {
+      log.error('[PayPal] Failed to record to ledger:', ledgerErr);
       // Don't fail the order, ledger is supplementary
     }
 
@@ -474,8 +476,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           stripeSecretKey,
           env
         });
-      } catch (paymentErr) {
-        console.error('[PayPal] Artist payment processing error:', paymentErr);
+      } catch (paymentErr: unknown) {
+        log.error('[PayPal] Artist payment processing error:', paymentErr);
         // Don't fail the order, just log the error
       }
 
@@ -490,8 +492,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           stripeSecretKey,
           env
         });
-      } catch (supplierErr) {
-        console.error('[PayPal] Supplier payment processing error:', supplierErr);
+      } catch (supplierErr: unknown) {
+        log.error('[PayPal] Supplier payment processing error:', supplierErr);
       }
 
       // Process vinyl crate seller payments
@@ -505,8 +507,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           stripeSecretKey,
           env
         });
-      } catch (sellerErr) {
-        console.error('[PayPal] Crate seller payment processing error:', sellerErr);
+      } catch (sellerErr: unknown) {
+        log.error('[PayPal] Crate seller payment processing error:', sellerErr);
       }
     }
 
@@ -547,10 +549,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           // Credit deducted atomically
         } else {
-          console.warn('[PayPal] Insufficient credit balance for deduction');
+          log.warn('[PayPal] Insufficient credit balance for deduction');
         }
-      } catch (creditErr) {
-        console.error('[PayPal] Failed to deduct credit:', creditErr);
+      } catch (creditErr: unknown) {
+        log.error('[PayPal] Failed to deduct credit:', creditErr);
         // Don't fail the order, just log the error
       }
     }
@@ -568,7 +570,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[PayPal] Error:', errorMessage);
+    log.error('[PayPal] Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');
   }
 };
@@ -619,7 +621,7 @@ async function processArtistPayments(params: {
       let artist = null;
       try {
         artist = await getDocument('artists', artistId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Artist not found
       }
 
@@ -678,14 +680,14 @@ async function processArtistPayments(params: {
         await updateDocument('artists', payment.artistId, {
           updatedAt: new Date().toISOString()
         });
-      } catch (e) {
-        console.warn('[PayPal] Could not update artist pending balance');
+      } catch (e: unknown) {
+        log.warn('[PayPal] Could not update artist pending balance');
       }
 
       // Pending payout created
     }
   } catch (error: unknown) {
-    console.error('[PayPal] processArtistPayments error:', error);
+    log.error('[PayPal] processArtistPayments error:', error);
     throw error;
   }
 }
@@ -746,7 +748,7 @@ async function processMerchSupplierPayments(params: {
       }
 
       if (!product) {
-        console.warn('[PayPal] Merch product not found:', productId);
+        log.warn('[PayPal] Merch product not found:', productId);
         continue;
       }
 
@@ -761,7 +763,7 @@ async function processMerchSupplierPayments(params: {
       let supplier = null;
       try {
         supplier = await getDocument('merch-suppliers', supplierId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Supplier not found
       }
 
@@ -860,7 +862,7 @@ async function processMerchSupplierPayments(params: {
 
         } catch (paypalError: unknown) {
           const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
-          console.error('[PayPal] Supplier PayPal payout failed:', paypalMessage);
+          log.error('[PayPal] Supplier PayPal payout failed:', paypalMessage);
 
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
@@ -932,7 +934,7 @@ async function processMerchSupplierPayments(params: {
 
         } catch (transferError: unknown) {
           const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-          console.error('[PayPal] Supplier transfer failed:', transferMessage);
+          log.error('[PayPal] Supplier transfer failed:', transferMessage);
 
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
@@ -972,7 +974,7 @@ async function processMerchSupplierPayments(params: {
       }
     }
   } catch (error: unknown) {
-    console.error('[PayPal] processMerchSupplierPayments error:', error);
+    log.error('[PayPal] processMerchSupplierPayments error:', error);
     throw error;
   }
 }
@@ -1052,7 +1054,7 @@ async function processVinylCrateSellerPayments(params: {
       let seller = null;
       try {
         seller = await getDocument('users', sellerId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Seller user not found
       }
 
@@ -1152,7 +1154,7 @@ async function processVinylCrateSellerPayments(params: {
 
         } catch (paypalError: unknown) {
           const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
-          console.error('[PayPal] Crate seller PayPal payout failed:', paypalMessage);
+          log.error('[PayPal] Crate seller PayPal payout failed:', paypalMessage);
 
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
@@ -1224,7 +1226,7 @@ async function processVinylCrateSellerPayments(params: {
 
         } catch (transferError: unknown) {
           const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-          console.error('[PayPal] Crate seller transfer failed:', transferMessage);
+          log.error('[PayPal] Crate seller transfer failed:', transferMessage);
 
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
@@ -1264,7 +1266,7 @@ async function processVinylCrateSellerPayments(params: {
       }
     }
   } catch (error: unknown) {
-    console.error('[PayPal] processVinylCrateSellerPayments error:', error);
+    log.error('[PayPal] processVinylCrateSellerPayments error:', error);
     throw error;
   }
 }

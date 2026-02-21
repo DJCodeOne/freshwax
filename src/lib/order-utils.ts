@@ -10,6 +10,57 @@ import { sendResendEmail } from './email';
 
 const log = createLogger('[order-utils]');
 
+// Shared type for cart/order items flowing through the system
+interface CartItem {
+  type?: string;
+  productId?: string;
+  releaseId?: string;
+  id?: string;
+  sellerId?: string;
+  name?: string;
+  title?: string;
+  artist?: string;
+  price?: number;
+  originalPrice?: number;
+  quantity?: number;
+  size?: string;
+  color?: string;
+  trackId?: string;
+  isPreOrder?: boolean;
+  releaseDate?: string;
+  image?: string;
+  artwork?: string;
+  format?: string;
+  condition?: string;
+  artistId?: string;
+  artistName?: string;
+  sellerName?: string;
+  sellerEmail?: string;
+  stockistEmail?: string;
+  artistEmail?: string;
+  discountPercent?: number;
+  shippingCost?: number;
+  cratesShippingCost?: number;
+  isCratesItem?: boolean;
+  vinylShippingUK?: number;
+  vinylShippingEU?: number;
+  vinylShippingIntl?: number;
+  artistVinylShippingUK?: number;
+  artistVinylShippingEU?: number;
+  artistVinylShippingIntl?: number;
+  downloads?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+// Variant stock entry shape
+interface VariantStockEntry {
+  stock?: number;
+  reserved?: number;
+  sold?: number;
+  sku?: string;
+  [key: string]: unknown;
+}
+
 // Generate order number
 export function generateOrderNumber(): string {
   const date = new Date();
@@ -36,7 +87,7 @@ const RESERVATION_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
 // Reserve stock for checkout - prevents overselling
 export async function reserveStock(
-  items: any[],
+  items: CartItem[],
   sessionId: string,
   userId?: string
 ): Promise<{ success: boolean; reservationId?: string; expiresAt?: string; error?: string }> {
@@ -127,11 +178,11 @@ export async function reserveStock(
           variantStock[res.variantKey] = variant;
 
           let totalReserved = 0;
-          Object.values(variantStock).forEach((v: any) => {
-            if (typeof v === 'object') totalReserved += v.reserved || 0;
+          Object.values(variantStock).forEach((v: unknown) => {
+            if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
           });
 
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             variantStock,
             reservedStock: totalReserved,
             updatedAt: now.toISOString()
@@ -174,7 +225,7 @@ export async function reserveStock(
             return { success: false, error: `Insufficient vinyl stock. Available: ${available}` };
           }
 
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             vinylReserved: vinylReserved + res.quantity,
             updatedAt: now.toISOString()
           };
@@ -212,7 +263,7 @@ export async function reserveStock(
             return { success: false, error: `Listing no longer available (status: ${listing.status})` };
           }
 
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             status: 'reserved',
             reservedAt: now.toISOString(),
             reservedBy: userId || sessionId,
@@ -271,7 +322,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
 
   try {
     // Find reservation by sessionId or reservationId
-    let reservation: any = null;
+    let reservation: Record<string, unknown> | null = null;
 
     // Try direct lookup first
     reservation = await getDocument('stock-reservations', sessionOrReservationId);
@@ -312,11 +363,11 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
             variantStock[res.variantKey] = variant;
 
             let totalReserved = 0;
-            Object.values(variantStock).forEach((v: any) => {
-              if (typeof v === 'object') totalReserved += v.reserved || 0;
+            Object.values(variantStock).forEach((v: unknown) => {
+              if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
             });
 
-            const updateData: any = {
+            const updateData: Record<string, unknown> = {
               variantStock,
               reservedStock: totalReserved,
               updatedAt: new Date().toISOString()
@@ -339,7 +390,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
             const release = await getDocument('releases', res.productId);
             if (!release) break;
 
-            const updateData: any = {
+            const updateData: Record<string, unknown> = {
               vinylReserved: Math.max(0, (release.vinylReserved ?? 0) - res.quantity),
               updatedAt: new Date().toISOString()
             };
@@ -387,7 +438,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
 // Convert reservation to sold (payment succeeded)
 export async function convertReservation(sessionOrReservationId: string): Promise<void> {
   try {
-    let reservation: any = null;
+    let reservation: Record<string, unknown> | null = null;
 
     reservation = await getDocument('stock-reservations', sessionOrReservationId);
 
@@ -484,7 +535,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
               const release = await getDocument('releases', res.productId);
               if (!release) break;
 
-              const updateData: any = {
+              const updateData: Record<string, unknown> = {
                 vinylReserved: Math.max(0, (release.vinylReserved ?? 0) - res.quantity),
                 updatedAt: new Date().toISOString()
               };
@@ -550,8 +601,8 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
           variantStock[res.variantKey] = variant;
 
           let totalReserved = 0;
-          Object.values(variantStock).forEach((v: any) => {
-            if (typeof v === 'object') totalReserved += v.reserved || 0;
+          Object.values(variantStock).forEach((v: unknown) => {
+            if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
           });
 
           if (product._updateTime) {
@@ -579,7 +630,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
           const release = await getDocument('releases', res.productId);
           if (!release) break;
 
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             vinylReserved: Math.max(0, (release.vinylReserved ?? 0) - res.quantity),
             updatedAt: new Date().toISOString()
           };
@@ -614,7 +665,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
 }
 
 // Validate stock availability before checkout
-export async function validateStock(items: any[]): Promise<{ available: boolean, unavailableItems: string[] }> {
+export async function validateStock(items: CartItem[]): Promise<{ available: boolean, unavailableItems: string[] }> {
   const unavailableItems: string[] = [];
 
   // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
@@ -695,11 +746,11 @@ export async function validateStock(items: any[]): Promise<{ available: boolean,
 // Validate item prices server-side to prevent manipulation
 // Shared by Stripe and PayPal checkout flows
 export async function validateAndGetPrices(
-  items: any[],
+  items: CartItem[],
   options: { logPrefix?: string } = {}
-): Promise<{ validatedItems: any[], hasPriceMismatch: boolean, validationError?: string }> {
+): Promise<{ validatedItems: CartItem[], hasPriceMismatch: boolean, validationError?: string }> {
   const prefix = options.logPrefix || '[Checkout]';
-  const validatedItems: any[] = [];
+  const validatedItems: CartItem[] = [];
   let hasPriceMismatch = false;
 
   // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
@@ -783,7 +834,7 @@ export async function validateAndGetPrices(
                   }
                 }
               } else if (itemType === 'track' && item.trackId) {
-                const track = (release.tracks || []).find((t: any) =>
+                const track = (release.tracks || []).find((t: Record<string, unknown>) =>
                   t.id === item.trackId || t.trackId === item.trackId
                 );
                 serverPrice = track?.price || release.trackPrice || 0.99;
@@ -815,8 +866,8 @@ export async function validateAndGetPrices(
 }
 
 // Process cart items to add download URLs
-export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
-  return Promise.all(items.map(async (item: any) => {
+export async function processItemsWithDownloads(items: CartItem[]): Promise<CartItem[]> {
+  return Promise.all(items.map(async (item: CartItem) => {
     const releaseId = item.releaseId || item.productId || item.id;
 
     log.info('[order-utils] Processing item:', item.name, 'type:', item.type, 'releaseId:', releaseId);
@@ -836,7 +887,7 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
 
             // Method 1: Match by trackId
             if (item.trackId) {
-              track = (releaseData?.tracks || []).find((t: any) =>
+              track = (releaseData?.tracks || []).find((t: Record<string, unknown>) =>
                 t.id === item.trackId ||
                 t.trackId === item.trackId ||
                 String(t.trackNumber) === String(item.trackId)
@@ -847,14 +898,14 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
             if (!track && item.name) {
               const itemNameParts = item.name.split(' - ');
               const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : item.name;
-              track = (releaseData?.tracks || []).find((t: any) =>
+              track = (releaseData?.tracks || []).find((t: Record<string, unknown>) =>
                 (t.trackName || t.name || '').toLowerCase() === trackNameFromItem.toLowerCase()
               );
             }
 
             // Method 3: Match by title field
             if (!track && item.title) {
-              track = (releaseData?.tracks || []).find((t: any) =>
+              track = (releaseData?.tracks || []).find((t: Record<string, unknown>) =>
                 (t.trackName || t.name || '').toLowerCase() === item.title.toLowerCase()
               );
             }
@@ -891,7 +942,7 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
                   artistName,
                   releaseName,
                   artworkUrl,
-                  tracks: (releaseData?.tracks || []).map((t: any) => ({
+                  tracks: (releaseData?.tracks || []).map((t: Record<string, unknown>) => ({
                     name: t.trackName || t.name,
                     mp3Url: t.mp3Url || null,
                     wavUrl: t.wavUrl || null
@@ -910,7 +961,7 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
             artistName,
             releaseName,
             artworkUrl,
-            tracks: (releaseData?.tracks || []).map((track: any) => ({
+            tracks: (releaseData?.tracks || []).map((track: Record<string, unknown>) => ({
               name: track.trackName || track.name,
               mp3Url: track.mp3Url || null,
               wavUrl: track.wavUrl || null
@@ -934,7 +985,7 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
 }
 
 // Update stock for vinyl items (atomic)
-export async function updateVinylStock(items: any[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
+export async function updateVinylStock(items: CartItem[], orderNumber: string, orderId: string, idToken?: string): Promise<void> {
   const now = new Date().toISOString();
 
   for (const item of items) {
@@ -948,7 +999,7 @@ export async function updateVinylStock(items: any[], orderNumber: string, orderI
         log.info('[order-utils] Updating vinyl stock for:', item.name, 'qty:', qty);
 
         // Atomic decrement stock and reserved - prevents race conditions on concurrent purchases
-        const incrementFields: any = {
+        const incrementFields: Record<string, number> = {
           vinylStock: -qty,
           vinylSold: qty
         };
@@ -1000,12 +1051,12 @@ export async function updateVinylStock(items: any[], orderNumber: string, orderI
 // Process vinyl crates orders (marketplace items from sellers)
 // Creates order records for sellers, marks listings as sold, and sends notifications
 export async function processVinylCratesOrders(
-  items: any[],
+  items: CartItem[],
   orderNumber: string,
   orderId: string,
   customer: { email: string; firstName: string; lastName: string },
-  shipping: any,
-  env?: any,
+  shipping: Record<string, unknown> | null,
+  env?: Record<string, unknown>,
   idToken?: string
 ): Promise<void> {
   const now = new Date().toISOString();
@@ -1193,7 +1244,7 @@ export async function processVinylCratesOrders(
 }
 
 // Refund stock when order is cancelled
-export async function refundOrderStock(orderId: string, items: any[], orderNumber: string, idToken?: string, env?: any): Promise<{ failedRefunds: Array<{ item: string; type: string; error: string }> }> {
+export async function refundOrderStock(orderId: string, items: CartItem[], orderNumber: string, idToken?: string, env?: Record<string, unknown>): Promise<{ failedRefunds: Array<{ item: string; type: string; error: string }> }> {
   const now = new Date().toISOString();
   const failedRefunds: Array<{ item: string; type: string; error: string }> = [];
 
@@ -1228,9 +1279,10 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
 
             let totalStock = 0;
             let totalSold = 0;
-            Object.values(variantStock).forEach((v: any) => {
-              totalStock += v.stock || 0;
-              totalSold += v.sold || 0;
+            Object.values(variantStock).forEach((v: unknown) => {
+              const variant = v as VariantStockEntry;
+              totalStock += variant.stock || 0;
+              totalSold += variant.sold || 0;
             });
 
             // Use conditional update if available for concurrency safety
@@ -1376,7 +1428,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
 }
 
 // Update stock for merch items (with optimistic concurrency)
-export async function updateMerchStock(items: any[], orderNumber: string, orderId: string, idToken?: string, env?: any): Promise<void> {
+export async function updateMerchStock(items: CartItem[], orderNumber: string, orderId: string, idToken?: string, env?: Record<string, unknown>): Promise<void> {
   const now = new Date().toISOString();
   const MAX_RETRIES = 3;
 
@@ -1420,10 +1472,11 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
           let totalStock = 0;
           let totalSold = 0;
           let totalReserved = 0;
-          Object.values(variantStock).forEach((v: any) => {
-            totalStock += v.stock || 0;
-            totalSold += v.sold || 0;
-            totalReserved += (typeof v === 'object' ? v.reserved || 0 : 0);
+          Object.values(variantStock).forEach((v: unknown) => {
+            const variant = v as VariantStockEntry;
+            totalStock += variant.stock || 0;
+            totalSold += variant.sold || 0;
+            totalReserved += (typeof v === 'object' ? variant.reserved || 0 : 0);
           });
 
           const updateData = {
@@ -1526,10 +1579,10 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
 
 // Send order confirmation email
 export async function sendOrderConfirmationEmail(
-  order: any,
+  order: Record<string, unknown>,
   orderId: string,
   orderNumber: string,
-  env: any
+  env: Record<string, unknown>
 ): Promise<void> {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
@@ -1570,11 +1623,11 @@ export async function sendOrderConfirmationEmail(
 
 // Send vinyl fulfillment email to stockist
 export async function sendVinylFulfillmentEmail(
-  order: any,
+  order: Record<string, unknown>,
   orderId: string,
   orderNumber: string,
-  vinylItems: any[],
-  env: any
+  vinylItems: CartItem[],
+  env: Record<string, unknown>
 ): Promise<void> {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   const STOCKIST_EMAIL = env?.VINYL_STOCKIST_EMAIL || import.meta.env.VINYL_STOCKIST_EMAIL || 'stockist@freshwax.co.uk';
@@ -1608,16 +1661,16 @@ export async function sendVinylFulfillmentEmail(
 
 // Send digital sale notification to artists
 export async function sendDigitalSaleEmails(
-  order: any,
+  order: Record<string, unknown>,
   orderNumber: string,
-  digitalItems: any[],
-  env: any
+  digitalItems: CartItem[],
+  env: Record<string, unknown>
 ): Promise<void> {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return;
 
   // Group items by artist email
-  const itemsByArtist: { [email: string]: any[] } = {};
+  const itemsByArtist: { [email: string]: CartItem[] } = {};
   for (const item of digitalItems) {
     const artistEmail = item.artistEmail;
     if (artistEmail) {
@@ -1653,16 +1706,16 @@ export async function sendDigitalSaleEmails(
 
 // Send merch sale notification to sellers
 export async function sendMerchSaleEmails(
-  order: any,
+  order: Record<string, unknown>,
   orderNumber: string,
-  merchItems: any[],
-  env: any
+  merchItems: CartItem[],
+  env: Record<string, unknown>
 ): Promise<void> {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) return;
 
   // Group items by seller email
-  const itemsBySeller: { [email: string]: any[] } = {};
+  const itemsBySeller: { [email: string]: CartItem[] } = {};
   for (const item of merchItems) {
     const sellerEmail = item.stockistEmail || item.artistEmail || item.sellerEmail;
     if (sellerEmail) {
@@ -1728,7 +1781,7 @@ export interface CreateOrderParams {
       postcode: string;
       country: string;
     };
-    items: any[];
+    items: CartItem[];
     totals: {
       subtotal: number;
       shipping: number;
@@ -1742,7 +1795,7 @@ export interface CreateOrderParams {
     paymentIntentId?: string;
     paypalOrderId?: string;
   };
-  env: any;
+  env: Record<string, unknown>;
   idToken?: string;
 }
 
@@ -1763,10 +1816,10 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     const itemsWithDownloads = await processItemsWithDownloads(orderData.items);
 
     // Check for pre-orders
-    const hasPreOrderItems = itemsWithDownloads.some((item: any) => item.isPreOrder === true);
+    const hasPreOrderItems = itemsWithDownloads.some((item: CartItem) => item.isPreOrder === true);
     const preOrderReleaseDates = itemsWithDownloads
-      .filter((item: any) => item.isPreOrder && item.releaseDate)
-      .map((item: any) => new Date(item.releaseDate));
+      .filter((item: CartItem) => item.isPreOrder && item.releaseDate)
+      .map((item: CartItem) => new Date(item.releaseDate as string));
     const latestPreOrderDate = preOrderReleaseDates.length > 0
       ? new Date(Math.max(...preOrderReleaseDates.map((d: Date) => d.getTime()))).toISOString()
       : null;
@@ -1833,13 +1886,13 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     await sendOrderConfirmationEmail(order, orderRef.id, orderNumber, env);
 
     // Send vinyl fulfillment email if applicable
-    const vinylItems = order.items.filter((item: any) => item.type === 'vinyl');
+    const vinylItems = order.items.filter((item: CartItem) => item.type === 'vinyl');
     if (vinylItems.length > 0) {
       await sendVinylFulfillmentEmail(order, orderRef.id, orderNumber, vinylItems, env);
     }
 
     // Send digital sale emails
-    const digitalItems = order.items.filter((item: any) =>
+    const digitalItems = order.items.filter((item: CartItem) =>
       item.type === 'track' || item.type === 'digital' || item.type === 'release'
     );
     if (digitalItems.length > 0) {
@@ -1847,7 +1900,7 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     }
 
     // Send merch sale emails
-    const merchItems = order.items.filter((item: any) => item.type === 'merch');
+    const merchItems = order.items.filter((item: CartItem) => item.type === 'merch');
     if (merchItems.length > 0) {
       await sendMerchSaleEmails(order, orderNumber, merchItems, env);
     }
@@ -1877,7 +1930,7 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
 // EMAIL TEMPLATES
 // ============================================
 
-function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order: any): string {
+function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order: Record<string, unknown>): string {
   // Build items HTML - only show image for merch items
   let itemsHtml = '';
   for (const item of order.items) {
@@ -1970,7 +2023,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
     '</table></td></tr></table></body></html>';
 }
 
-function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, order: any, vinylItems: any[]): string {
+function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, order: Record<string, unknown>, vinylItems: CartItem[]): string {
   const orderDate = new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
@@ -1989,7 +2042,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
       '</tr>';
   }
 
-  const vinylTotal = vinylItems.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+  const vinylTotal = vinylItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
   const isTestMode = order.paymentMethod === 'test_mode';
   const paymentStatusColor = order.paymentStatus === 'completed' ? '#16a34a' : '#f59e0b';
   const paymentStatusText = order.paymentStatus === 'completed' ? 'PAID' : 'PENDING';
@@ -2079,8 +2132,8 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     '</table></td></tr></table></body></html>';
 }
 
-function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: any[]): string {
-  const digitalTotal = digitalItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknown>, digitalItems: CartItem[]): string {
+  const digitalTotal = digitalItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
   const subtotal = order.totals?.subtotal || digitalTotal;
   // Calculate fees that are deducted from artist share
   const freshWaxFee = digitalTotal * 0.01; // 1% Fresh Wax fee on these items
@@ -2149,8 +2202,8 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
     '</table></td></tr></table></body></html>';
 }
 
-function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[]): string {
-  const merchTotal = merchItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: CartItem[]): string {
+  const merchTotal = merchItems.reduce((sum: number, item: CartItem) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
   const subtotal = order.totals?.subtotal || merchTotal;
   // Calculate fees deducted from supplier share (5% for merch)
   const freshWaxFee = merchTotal * 0.05; // 5% Fresh Wax fee for merch

@@ -7,7 +7,9 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[fix-order-payout]');
 
 export const prerender = false;
 
@@ -179,8 +181,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
             updatedAt: now
           });
         }
-      } catch (e) {
-        console.log('[fix-order-payout] Could not update artist balance');
+      } catch (e: unknown) {
+        log.info('[fix-order-payout] Could not update artist balance');
       }
     }
 
@@ -200,8 +202,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           artistPayoutStatus: 'pending'
         });
       }
-    } catch (e) {
-      console.log('[fix-order-payout] Could not update ledger entry');
+    } catch (e: unknown) {
+      log.info('[fix-order-payout] Could not update ledger entry');
     }
 
     return new Response(JSON.stringify({
@@ -214,7 +216,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[fix-order-payout] Error:', error);
+    log.error('[fix-order-payout] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

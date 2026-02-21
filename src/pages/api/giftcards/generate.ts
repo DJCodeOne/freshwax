@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[giftcards/generate]');
 
 // Zod schema for gift card generation
 const GenerateGiftCardSchema = z.object({
@@ -50,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // SECURITY: No fallback key - must be configured in environment
     if (!validSystemKey) {
-      console.error('[giftcards/generate] GIFTCARD_SYSTEM_KEY not configured');
+      log.error('GIFTCARD_SYSTEM_KEY not configured');
       return errorResponse('Gift card system not configured', 503);
     }
 
@@ -86,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Save to Firestore
     const result = await addDocument('giftCards', giftCard);
 
-    console.log('[giftcards/generate] Created gift card:', giftCard.code, 'type:', type, 'value:', giftCard.originalValue);
+    log.info('Created gift card:', giftCard.code, 'type:', type, 'value:', giftCard.originalValue);
 
     return new Response(JSON.stringify({
       success: true,
@@ -104,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[giftcards/generate] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to generate gift card');
   }
 };

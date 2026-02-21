@@ -96,7 +96,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
               return djName === displayNameLower;
             });
           }
-        } catch (e) {
+        } catch (e: unknown) {
           // Silently fail - no mixes found for this user
         }
       }

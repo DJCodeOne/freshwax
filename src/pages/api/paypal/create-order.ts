@@ -7,7 +7,9 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[paypal-create]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schemas for PayPal order creation (same structure as Stripe checkout)
@@ -72,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      console.error('[PayPal] Missing credentials');
+      log.error('[PayPal] Missing credentials');
       return ApiErrors.serverError('PayPal not configured');
     }
 
@@ -90,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validating stock availability
     const stockCheck = await validateStock(orderData.items);
     if (!stockCheck.available) {
-      console.warn('[PayPal] Stock validation failed:', stockCheck.unavailableItems);
+      log.warn('[PayPal] Stock validation failed:', stockCheck.unavailableItems);
       return ApiErrors.badRequest('Some items are no longer available');
     }
 
@@ -110,7 +112,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (hasPriceMismatch) {
-      console.warn('[PayPal] SECURITY: Price manipulation detected');
+      log.warn('[PayPal] SECURITY: Price manipulation detected');
       // Continue with server prices - don't reveal that we caught it
     }
 
@@ -281,13 +283,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!createResponse.ok) {
       const error = await createResponse.text();
-      console.error('[PayPal] Create order error:', error);
+      log.error('[PayPal] Create order error:', error);
       if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
       return ApiErrors.serverError('Failed to create PayPal order');
     }
 
     const paypalResult = await createResponse.json();
-    console.log('[PayPal] Order created:', paypalResult.id, 'items:', paypalItems.length);
+    log.info('[PayPal] Order created:', paypalResult.id, 'items:', paypalItems.length);
 
     // Extract approval URL from PayPal response links
     const approvalLink = paypalResult.links?.find((link: any) => link.rel === 'approve');
@@ -338,7 +340,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await setDocument('pendingPayPalOrders', paypalResult.id, pendingOrder);
       // Stored pending order data
     } catch (storeErr) {
-      console.error('[PayPal] Failed to store pending order:', storeErr);
+      log.error('[PayPal] Failed to store pending order:', storeErr);
       // Continue anyway - capture endpoint will fall back to client data with amount validation
     }
 
@@ -354,7 +356,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[PayPal] Error:', errorMessage);
+    log.error('[PayPal] Error:', errorMessage);
     if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
     return ApiErrors.serverError('An internal error occurred');
   }

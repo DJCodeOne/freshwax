@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (tokenUserId !== userId) {
         return ApiErrors.forbidden('User mismatch');
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[save-user-badge] Token verification failed:', e);
       return ApiErrors.unauthorized('Invalid authentication token');
     }

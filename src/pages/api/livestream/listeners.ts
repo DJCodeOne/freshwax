@@ -46,7 +46,7 @@ async function getListenerCount(streamId: string): Promise<{ count: number; list
     }
 
     return { count: activeListeners.length, listeners: activeListeners };
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('[listeners] Error getting count:', e);
     return { count: 0, listeners: [] };
   }
@@ -86,7 +86,7 @@ async function upsertListener(
 
     // Count active listeners
     return Object.keys(listenerMap).length;
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('[listeners] Error upserting:', e);
     return 0;
   }
@@ -119,7 +119,7 @@ async function removeListener(streamId: string, userId: string): Promise<number>
     }
 
     return Object.keys(listenerMap).length;
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('[listeners] Error removing:', e);
     return 0;
   }

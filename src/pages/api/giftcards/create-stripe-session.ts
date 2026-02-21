@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[create-stripe-session]');
 
 // Zod schema for gift card Stripe session creation
 const GiftCardStripeSchema = z.object({
@@ -78,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Invalid recipient email address');
     }
 
-    console.log('[GiftCard Stripe] Creating session for:', buyerEmail, 'amount:', numAmount);
+    log.info('[GiftCard Stripe] Creating session for:', buyerEmail, 'amount:', numAmount);
 
     // Build metadata for webhook processing
     const metadata = {
@@ -122,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Customer email for receipt
     bodyParams.append('customer_email', buyerEmail);
 
-    console.log('[GiftCard Stripe] Creating checkout session...');
+    log.info('[GiftCard Stripe] Creating checkout session...');
 
     // Create Stripe checkout session
     const stripeResponse = await fetchWithTimeout('https://api.stripe.com/v1/checkout/sessions', {
@@ -136,12 +138,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
-      console.error('[GiftCard Stripe] Create session error:', errorData);
+      log.error('[GiftCard Stripe] Create session error:', errorData);
       return ApiErrors.serverError(errorData.error?.message || 'Failed to create checkout session');
     }
 
     const session = await stripeResponse.json();
-    console.log('[GiftCard Stripe] Session created:', session.id);
+    log.info('[GiftCard Stripe] Session created:', session.id);
 
     return new Response(JSON.stringify({
       success: true,
@@ -151,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[GiftCard Stripe] Error:', errorMessage);
+    log.error('[GiftCard Stripe] Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');
   }
 };

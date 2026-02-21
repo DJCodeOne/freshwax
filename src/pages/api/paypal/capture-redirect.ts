@@ -7,7 +7,9 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout } from '../../../lib/api-utils';
+
+const log = createLogger('[paypal-redirect]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal redirect query params
@@ -27,7 +29,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
   const paramResult = PayPalRedirectParamsSchema.safeParse(rawParams);
   if (!paramResult.success) {
-    console.error('[PayPal Redirect] Invalid params');
+    log.error('[PayPal Redirect] Invalid params');
     return redirect('/checkout?error=missing_token');
   }
   const paypalOrderId = paramResult.data.token;
@@ -47,14 +49,14 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     const paypalMode = env?.PAYPAL_MODE || import.meta.env.PAYPAL_MODE || 'sandbox';
 
     if (!paypalClientId || !paypalSecret) {
-      console.error('[PayPal Redirect] PayPal not configured');
+      log.error('[PayPal Redirect] PayPal not configured');
       return redirect('/checkout?error=config');
     }
 
     // Retrieve order data from Firebase (stored when order was created)
     const pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
     if (!pendingOrder) {
-      console.error('[PayPal Redirect] No pending order found for:', paypalOrderId);
+      log.error('[PayPal Redirect] No pending order found for:', paypalOrderId);
       return redirect('/checkout?error=order_not_found');
     }
 
@@ -76,7 +78,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
     if (!captureResponse.ok) {
       const error = await captureResponse.text();
-      console.error('[PayPal Redirect] Capture error:', error);
+      log.error('[PayPal Redirect] Capture error:', error);
       return redirect('/checkout?error=capture_failed');
     }
 
@@ -85,7 +87,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
     // Verify payment was captured successfully
     if (captureResult.status !== 'COMPLETED') {
-      console.error('[PayPal Redirect] Payment not completed:', captureResult.status);
+      log.error('[PayPal Redirect] Payment not completed:', captureResult.status);
       return redirect('/checkout?error=payment_' + captureResult.status.toLowerCase());
     }
 
@@ -112,17 +114,17 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     });
 
     if (!result.success) {
-      console.error('[PayPal Redirect] Order creation failed:', result.error);
+      log.error('[PayPal Redirect] Order creation failed:', result.error);
       return redirect('/checkout?error=order_creation');
     }
 
-    console.log('[PayPal Redirect] Order created:', result.orderNumber, result.orderId);
+    log.info('[PayPal Redirect] Order created:', result.orderNumber, result.orderId);
 
     // Clean up pending order
     try {
       await deleteDocument('pendingPayPalOrders', paypalOrderId);
     } catch (delErr) {
-      console.warn('[PayPal Redirect] Could not delete pending order:', delErr);
+      log.warn('[PayPal Redirect] Could not delete pending order:', delErr);
     }
 
     // Process artist payments via Stripe Connect (same as capture-order.ts)
@@ -147,7 +149,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           env
         });
       } catch (paymentErr) {
-        console.error('[PayPal Redirect] Artist payment processing error:', paymentErr);
+        log.error('[PayPal Redirect] Artist payment processing error:', paymentErr);
       }
 
       // Process merch supplier payments
@@ -162,7 +164,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           env
         });
       } catch (supplierErr) {
-        console.error('[PayPal Redirect] Supplier payment processing error:', supplierErr);
+        log.error('[PayPal Redirect] Supplier payment processing error:', supplierErr);
       }
 
       // Process vinyl crate seller payments
@@ -177,7 +179,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           env
         });
       } catch (sellerErr) {
-        console.error('[PayPal Redirect] Crate seller payment processing error:', sellerErr);
+        log.error('[PayPal Redirect] Crate seller payment processing error:', sellerErr);
       }
     }
 
@@ -217,7 +219,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           // Credit deducted atomically
         }
       } catch (creditErr) {
-        console.error('[PayPal Redirect] Failed to deduct credit:', creditErr);
+        log.error('[PayPal Redirect] Failed to deduct credit:', creditErr);
       }
     }
 
@@ -226,7 +228,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[PayPal Redirect] Error:', errorMessage);
+    log.error('[PayPal Redirect] Error:', errorMessage);
     return redirect('/checkout?error=unknown');
   }
 };
@@ -277,7 +279,7 @@ async function processArtistPayments(params: {
       let artist = null;
       try {
         artist = await getDocument('artists', artistId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Artist not found
       }
 
@@ -336,14 +338,14 @@ async function processArtistPayments(params: {
         await updateDocument('artists', payment.artistId, {
           updatedAt: new Date().toISOString()
         });
-      } catch (e) {
-        console.warn('[PayPal Redirect] Could not update artist pending balance');
+      } catch (e: unknown) {
+        log.warn('[PayPal Redirect] Could not update artist pending balance');
       }
 
       // Pending payout created
     }
   } catch (error: unknown) {
-    console.error('[PayPal Redirect] processArtistPayments error:', error);
+    log.error('[PayPal Redirect] processArtistPayments error:', error);
     throw error;
   }
 }
@@ -405,7 +407,7 @@ async function processMerchSupplierPayments(params: {
       let supplier = null;
       try {
         supplier = await getDocument('merch-suppliers', supplierId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Supplier not found
       }
 
@@ -493,7 +495,7 @@ async function processMerchSupplierPayments(params: {
           }
         } catch (paypalError: unknown) {
           const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
-          console.error('[PayPal Redirect] Supplier PayPal payout failed:', paypalMessage);
+          log.error('[PayPal Redirect] Supplier PayPal payout failed:', paypalMessage);
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
             supplierName: payment.supplierName,
@@ -560,7 +562,7 @@ async function processMerchSupplierPayments(params: {
           });
         } catch (transferError: unknown) {
           const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-          console.error('[PayPal Redirect] Supplier transfer failed:', transferMessage);
+          log.error('[PayPal Redirect] Supplier transfer failed:', transferMessage);
           await addDocument('pendingSupplierPayouts', {
             supplierId: payment.supplierId,
             supplierName: payment.supplierName,
@@ -597,7 +599,7 @@ async function processMerchSupplierPayments(params: {
       }
     }
   } catch (error: unknown) {
-    console.error('[PayPal Redirect] processMerchSupplierPayments error:', error);
+    log.error('[PayPal Redirect] processMerchSupplierPayments error:', error);
     throw error;
   }
 }
@@ -664,7 +666,7 @@ async function processVinylCrateSellerPayments(params: {
       let seller = null;
       try {
         seller = await getDocument('users', sellerId);
-      } catch (e) {
+      } catch (e: unknown) {
         // Seller user not found
       }
 
@@ -752,7 +754,7 @@ async function processVinylCrateSellerPayments(params: {
           }
         } catch (paypalError: unknown) {
           const paypalMessage = paypalError instanceof Error ? paypalError.message : String(paypalError);
-          console.error('[PayPal Redirect] Crate seller PayPal payout failed:', paypalMessage);
+          log.error('[PayPal Redirect] Crate seller PayPal payout failed:', paypalMessage);
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
             sellerName: payment.sellerName,
@@ -819,7 +821,7 @@ async function processVinylCrateSellerPayments(params: {
           });
         } catch (transferError: unknown) {
           const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-          console.error('[PayPal Redirect] Crate seller transfer failed:', transferMessage);
+          log.error('[PayPal Redirect] Crate seller transfer failed:', transferMessage);
           await addDocument('pendingCrateSellerPayouts', {
             sellerId: payment.sellerId,
             sellerName: payment.sellerName,
@@ -856,7 +858,7 @@ async function processVinylCrateSellerPayments(params: {
       }
     }
   } catch (error: unknown) {
-    console.error('[PayPal Redirect] processVinylCrateSellerPayments error:', error);
+    log.error('[PayPal Redirect] processVinylCrateSellerPayments error:', error);
     throw error;
   }
 }

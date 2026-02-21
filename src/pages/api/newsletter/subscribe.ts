@@ -10,7 +10,9 @@ import { z } from 'zod';
 import { getDocument, createDocumentIfNotExists, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[newsletter]');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const SubscribeSchema = z.object({
@@ -61,8 +63,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let existingDoc = null;
     try {
       existingDoc = await getDocument('subscribers', subscriberId);
-    } catch (e) {
-      console.log('[Newsletter] Could not check existing subscriber, will try to create');
+    } catch (e: unknown) {
+      log.info('[Newsletter] Could not check existing subscriber, will try to create');
     }
 
     if (existingDoc) {
@@ -128,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await sendConfirmationEmail(RESEND_API_KEY, normalizedEmail, subscriberId, token, name);
       } catch (emailError) {
-        console.error('[Newsletter] Confirmation email failed:', emailError);
+        log.error('[Newsletter] Confirmation email failed:', emailError);
       }
     }
 
@@ -138,7 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Subscribe error:', error);
+    log.error('[Newsletter] Subscribe error:', error);
     return ApiErrors.serverError('Failed to subscribe. Please try again.');
   }
 };
@@ -185,14 +187,14 @@ async function sendConfirmationEmail(
       })
     }, 10000);
   } catch (fetchError) {
-    console.error('[Newsletter] Resend fetch failed:', fetchError);
+    log.error('[Newsletter] Resend fetch failed:', fetchError);
     return; // Subscription was created, email failure is non-blocking
   }
 
   if (!response.ok) {
     let errorBody: string | undefined;
     try { errorBody = await response.text(); } catch (_e: unknown) { /* non-critical: could not read error response body */ }
-    console.error('[Newsletter] Resend API error:', response.status, errorBody);
+    log.error('[Newsletter] Resend API error:', response.status, errorBody);
     return;
   }
 }

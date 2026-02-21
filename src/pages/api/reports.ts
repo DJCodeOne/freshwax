@@ -2,7 +2,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../lib/api-utils';
+
+const log = createLogger('[reports]');
 
 export const prerender = false;
 
@@ -149,7 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     const result = await addDocument('reports', report);
-    console.log('[Reports] New report:', result.id, type, category);
+    log.info('New report:', result.id, type, category);
 
     return new Response(JSON.stringify({ success: true, reportId: result.id, message: 'Report submitted. Our team will review it shortly.' }), {
       headers: { 'Content-Type': 'application/json' }

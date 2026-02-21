@@ -202,7 +202,7 @@ async function getLivestreamInfo(): Promise<HealthCheckResponse['livestream']> {
     }
 
     return { isLive: false };
-  } catch (e) {
+  } catch (e: unknown) {
     return null;
   }
 }
@@ -241,7 +241,7 @@ async function getQuickStats(): Promise<HealthCheckResponse['stats']> {
       ordersToday,
       revenueToday
     };
-  } catch (e) {
+  } catch (e: unknown) {
     return {};
   }
 }

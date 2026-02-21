@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else {
           failed.push({ id: item.id, name: item.name, error: 'Upsert returned false' });
         }
-      } catch (e) {
+      } catch (e: unknown) {
         const errMsg = e instanceof Error ? e.message : String(e);
         log.error(`[sync-merch-to-d1] Failed to sync ${item.id}:`, e);
         failed.push({ id: item.id, name: item.name, error: errMsg });

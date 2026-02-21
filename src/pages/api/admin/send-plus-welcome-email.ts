@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[send-plus-welcome-email]');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 export const prerender = false;
@@ -42,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const RESEND_API_KEY = runtime.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.log('[send-plus-welcome-email] No Resend API key configured');
+      log.info('[send-plus-welcome-email] No Resend API key configured');
       return new Response(JSON.stringify({
         success: false,
         message: 'Email service not configured'
@@ -185,11 +187,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('[send-plus-welcome-email] Resend error:', result);
+      log.error('[send-plus-welcome-email] Resend error:', result);
       return ApiErrors.serverError(result.message || 'Failed to send email');
     }
 
-    console.log('[send-plus-welcome-email] Email sent successfully to:', email);
+    log.info('[send-plus-welcome-email] Email sent successfully to:', email);
 
     return new Response(JSON.stringify({
       success: true,
@@ -197,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[send-plus-welcome-email] Error:', error);
+    log.error('[send-plus-welcome-email] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

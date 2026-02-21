@@ -6,7 +6,9 @@ import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { SITE_URL } from '../../../../lib/constants';
-import { ApiErrors } from '../../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../../lib/api-utils';
+
+const log = createLogger('[stripe-connect-create]');
 
 export const prerender = false;
 
@@ -116,7 +118,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       type: 'account_onboarding',
     });
 
-    console.log('[Stripe Connect] Created account for artist:', artistId, 'Account:', account.id);
+    log.info('Created account for artist:', artistId, 'Account:', account.id);
 
     return new Response(JSON.stringify({
       success: true,
@@ -126,7 +128,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Stripe Connect] Create account error:', error instanceof Error ? error.message : String(error));
+    log.error('Create account error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to create Stripe account');
   }
 };

@@ -146,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }))
             };
           }
-        } catch (e) {
+        } catch (e: unknown) {
           log.error('[admin] Error fetching release for downloads:', e);
         }
       }

@@ -7,7 +7,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[mix-presign]');
 
 const ALLOWED_AUDIO_CONTENT_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'] as const;
 
@@ -83,7 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const config = getR2Config(env);
 
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
-      console.error('[Mix Presign] Missing R2 credentials');
+      log.error('Missing R2 credentials');
       return ApiErrors.serverError('R2 configuration missing');
     }
 
@@ -133,10 +135,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       artworkUploadUrl = await getSignedUrl(s3Client, artworkCommand, { expiresIn: 7200 });
       artworkPublicUrl = `${config.publicDomain}/${artworkKey}`;
-      console.log(`[Mix Presign] Also generated artwork URL for ${artworkKey}`);
+      log.info(`Also generated artwork URL for ${artworkKey}`);
     }
 
-    console.log(`[Mix Presign] Generated URL for ${audioKey} (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
+    log.info(`Generated URL for ${audioKey} (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -153,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Mix Presign] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

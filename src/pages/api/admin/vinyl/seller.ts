@@ -141,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 'roles.vinylSeller': approved && !suspended,
                 updatedAt: new Date().toISOString()
               });
-            } catch (e) {
+            } catch (e: unknown) {
               console.error('[API vinyl/seller] Failed to update user roles:', e);
             }
           }
@@ -174,7 +174,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               'roles.vinylSeller': false,
               updatedAt: new Date().toISOString()
             });
-          } catch (e) {
+          } catch (e: unknown) {
             console.error('[API vinyl/seller] Failed to update user roles:', e);
           }
         }
@@ -194,7 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               });
             }
           }
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('[API vinyl/seller] Failed to update listings:', e);
         }
 
@@ -231,7 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 'roles.vinylSeller': true,
                 updatedAt: new Date().toISOString()
               });
-            } catch (e) {
+            } catch (e: unknown) {
               console.error('[API vinyl/seller] Failed to update user roles:', e);
             }
           }
@@ -260,7 +260,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             'roles.vinylSeller': false,
             updatedAt: new Date().toISOString()
           });
-        } catch (e) {
+        } catch (e: unknown) {
           console.error('[API vinyl/seller] Failed to update user roles:', e);
         }
 

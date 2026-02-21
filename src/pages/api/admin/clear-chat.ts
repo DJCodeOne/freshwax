@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[clear-chat]');
 import {
   checkRateLimit,
   checkBatchLimit,
@@ -27,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: max 5 clear operations per minute
   const rateCheck = checkRateLimit(`clear-chat:${clientId}`, RateLimiters.adminBulk);
   if (!rateCheck.allowed) {
-    console.warn(`[Admin] Rate limit exceeded for clear-chat from ${clientId}`);
+    log.warn(`Rate limit exceeded for clear-chat from ${clientId}`);
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
@@ -75,11 +77,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!batchCheck.allowed) {
-      console.warn(`[Admin] Batch limit exceeded for clear-chat: ${batchCheck.error}`);
+      log.warn(`Batch limit exceeded for clear-chat: ${batchCheck.error}`);
       return ApiErrors.tooManyRequests(batchCheck.error);
     }
 
-    console.log(`[Admin] Starting to delete ${chatMessages.length} chat messages (limit: ${requestLimit})`);
+    log.info(`Starting to delete ${chatMessages.length} chat messages (limit: ${requestLimit})`);
 
     // Delete messages with small delays to prevent overwhelming Firestore
     let deleted = 0;
@@ -94,13 +96,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (deleted % 10 === 0 && DELAY_BETWEEN_DELETES_MS > 0) {
           await delay(DELAY_BETWEEN_DELETES_MS);
         }
-      } catch (err) {
-        console.error(`Failed to delete message ${msg.id}:`, err);
+      } catch (err: unknown) {
+        log.error(`Failed to delete message ${msg.id}:`, err);
         failed++;
 
         // Stop if too many failures (something is wrong)
         if (failed > 10) {
-          console.error('[Admin] Too many delete failures, stopping');
+          log.error('Too many delete failures, stopping');
           break;
         }
       }
@@ -108,7 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const hasMore = chatMessages.length === requestLimit;
 
-    console.log(`[Admin] Cleared ${deleted} chat messages${streamId ? ` for stream ${streamId}` : ''}, ${failed} failed${hasMore ? ', more remaining' : ''}`);
+    log.info(`Cleared ${deleted} chat messages${streamId ? ` for stream ${streamId}` : ''}, ${failed} failed${hasMore ? ', more remaining' : ''}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -120,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('Clear chat error:', error instanceof Error ? error.message : String(error));
+    log.error('Clear chat error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to clear chat');
   }
 };
@@ -156,7 +158,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('Get chat count error:', error instanceof Error ? error.message : String(error));
+    log.error('Get chat count error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get chat count');
   }
 };

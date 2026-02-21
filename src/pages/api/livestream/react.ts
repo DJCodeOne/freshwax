@@ -111,7 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           const result = await atomicIncrement('livestreamSlots', streamId, { totalLikes: 1 });
           totalLikes = result.newValues.totalLikes ?? 0;
-        } catch (e) {
+        } catch (e: unknown) {
           try {
             const result = await atomicIncrement('livestreams', streamId, { totalLikes: 1 });
             totalLikes = result.newValues.totalLikes ?? 0;
@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           const result = await atomicIncrement('livestreamSlots', streamId, { totalLikes: 1 });
           totalLikes = result.newValues.totalLikes ?? 0;
-        } catch (e) {
+        } catch (e: unknown) {
           try {
             // Fall back to livestreams collection
             const result = await atomicIncrement('livestreams', streamId, { totalLikes: 1 });

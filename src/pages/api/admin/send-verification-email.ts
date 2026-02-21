@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[send-verification-email]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
@@ -123,11 +125,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const resendResult = await resendResponse.json();
 
     if (!resendResponse.ok) {
-      console.error('[SendVerification] Resend error:', resendResult);
+      log.error('Resend error:', resendResult);
       return ApiErrors.serverError('Failed to send email');
     }
 
-    console.log('[SendVerification] Email sent to:', email, 'ID:', resendResult.id);
+    log.info('Email sent to:', email, 'ID:', resendResult.id);
 
     return new Response(JSON.stringify({
       success: true,
@@ -139,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[SendVerification] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to send verification email');
   }
 };

@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[chat-cleanup]');
 
 export const prerender = false;
 
@@ -85,7 +87,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     
     return ApiErrors.badRequest('Invalid action');
   } catch (error: unknown) {
-    console.error('Chat cleanup error:', error instanceof Error ? error.message : String(error));
+    log.error('Chat cleanup error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -162,7 +164,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('Chat cleanup check error:', error instanceof Error ? error.message : String(error));
+    log.error('Chat cleanup check error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -190,7 +192,7 @@ async function deleteStreamChat(streamId: string): Promise<number> {
     ));
 
     totalDeleted += chatMessages.length;
-    console.log(`[Chat Cleanup] Deleted batch of ${chatMessages.length} messages for stream ${streamId}`);
+    log.info(`Deleted batch of ${chatMessages.length} messages for stream ${streamId}`);
 
     // If we got less than the limit, we're done
     if (chatMessages.length < MAX_MESSAGES_PER_BATCH) {
@@ -198,6 +200,6 @@ async function deleteStreamChat(streamId: string): Promise<number> {
     }
   }
 
-  console.log(`[Chat Cleanup] Total deleted: ${totalDeleted} messages for stream ${streamId}`);
+  log.info(`Total deleted: ${totalDeleted} messages for stream ${streamId}`);
   return totalDeleted;
 }

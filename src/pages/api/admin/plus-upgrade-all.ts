@@ -209,7 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           });
           results.upgraded.push(userEmail);
-        } catch (err) {
+        } catch (err: unknown) {
           results.errors.push(`Failed to upgrade ${userEmail}: ${err}`);
         }
       }
@@ -240,7 +240,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // Small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 200));
-      } catch (err) {
+      } catch (err: unknown) {
         results.emailsFailed.push(userEmail);
       }
     }

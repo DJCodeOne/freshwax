@@ -90,7 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           pendingBalance: { increment: payoutData.amount }
         });
         log.info('[create-pending-payout] Updated artist pending balance');
-      } catch (e) {
+      } catch (e: unknown) {
         log.info('[create-pending-payout] Could not update artist balance (artist doc may not exist)');
       }
     }

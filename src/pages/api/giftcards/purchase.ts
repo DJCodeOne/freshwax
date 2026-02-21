@@ -10,7 +10,9 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
 import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[purchase]');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 // Zod schema for admin gift card creation
@@ -33,7 +35,7 @@ const AdminGiftCardSchema = z.object({
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) {
-    console.error('[giftcards/purchase] No Resend API key configured');
+    log.error('[giftcards/purchase] No Resend API key configured');
     return false;
   }
 
@@ -54,13 +56,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('[giftcards/purchase] Resend error:', response.status, error);
+      log.error('[giftcards/purchase] Resend error:', response.status, error);
       return false;
     }
 
     return true;
   } catch (error: unknown) {
-    console.error('[giftcards/purchase] Email send error:', error);
+    log.error('[giftcards/purchase] Email send error:', error);
     return false;
   }
 }
@@ -156,11 +158,11 @@ async function sendGiftCardEmail(
     const sent = await sendEmail(toEmail, subject, html);
 
     if (sent) {
-      console.log(`[giftcards/purchase] Email sent to ${toEmail}`);
+      log.info(`[giftcards/purchase] Email sent to ${toEmail}`);
     }
     return sent;
   } catch (error: unknown) {
-    console.error('[giftcards/purchase] Email error:', error);
+    log.error('[giftcards/purchase] Email error:', error);
     return false;
   }
 }
@@ -229,7 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (buyerDoc) {
         buyerName = buyerDoc.displayName || buyerDoc.fullName || buyerDoc.firstName || '';
       }
-    } catch (e) {
+    } catch (e: unknown) {
       // Ignore
     }
 
@@ -269,7 +271,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     const giftCardResult = await addDocument('giftCards', giftCard);
-    console.log(`[giftcards/purchase] Created gift card ${code} for £${numAmount}`);
+    log.info(`[giftcards/purchase] Created gift card ${code} for £${numAmount}`);
 
     // Store purchase record in customer's account
     const purchaseRecord = {
@@ -332,13 +334,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (!subcollectionResponse.ok) {
         const errorText = await subcollectionResponse.text();
-        console.error(`[giftcards/purchase] Failed to add purchase record: ${subcollectionResponse.status}`, errorText);
+        log.error(`[giftcards/purchase] Failed to add purchase record: ${subcollectionResponse.status}`, errorText);
       } else {
-        console.log(`[giftcards/purchase] Added purchase record to customer ${buyerUserId}`);
+        log.info(`[giftcards/purchase] Added purchase record to customer ${buyerUserId}`);
       }
     } catch (purchaseRecordErr: unknown) {
       // Non-critical: gift card already created, just log the error
-      console.error('[giftcards/purchase] Failed to store purchase record:', purchaseRecordErr);
+      log.error('[giftcards/purchase] Failed to store purchase record:', purchaseRecordErr);
     }
 
     // Send email to recipient
@@ -378,7 +380,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[giftcards/purchase] Error:', error);
+    log.error('[giftcards/purchase] Error:', error);
     return ApiErrors.serverError('Failed to create gift card');
   }
 };

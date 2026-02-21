@@ -6,7 +6,9 @@ import Stripe from 'stripe';
 import { getDocument, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { SITE_URL } from '../../../../lib/constants';
-import { ApiErrors } from '../../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../../lib/api-utils';
+
+const log = createLogger('[stripe-connect-refresh]');
 
 export const prerender = false;
 
@@ -59,7 +61,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       type: 'account_onboarding',
     });
 
-    console.log('[Stripe Connect] Refreshed onboarding link for artist:', artistId);
+    log.info('Refreshed onboarding link for artist:', artistId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -67,7 +69,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Stripe Connect] Refresh link error:', error instanceof Error ? error.message : String(error));
+    log.error('Refresh link error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to generate onboarding link');
   }
 };

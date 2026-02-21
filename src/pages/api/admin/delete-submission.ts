@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[delete-submission]');
 
 export const prerender = false;
 
@@ -65,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Batch delete all files
     await r2.delete(keys);
-    console.log(`[delete-submission] Deleted ${keys.length} files from ${prefix}`);
+    log.info(`Deleted ${keys.length} files from ${prefix}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -79,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[delete-submission] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to delete');
   }
 };

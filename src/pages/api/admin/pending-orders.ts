@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[Admin] Error querying pending_orders:', err);
     return ApiErrors.serverError('Failed to query pending orders');
   }

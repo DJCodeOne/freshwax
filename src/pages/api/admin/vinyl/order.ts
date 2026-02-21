@@ -4,7 +4,9 @@ import { getDocument, updateDocument, addDocument } from '../../../../lib/fireba
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { escapeHtml } from '../../../../lib/escape-html';
-import { fetchWithTimeout, ApiErrors } from '../../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../../lib/api-utils';
+
+const log = createLogger('[vinyl-order]');
 
 export const prerender = false;
 
@@ -43,7 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[API vinyl/order] Error:', error);
+    log.error('[API vinyl/order] Error:', error);
     return ApiErrors.serverError('Failed to fetch order');
   }
 };
@@ -196,7 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           });
         } catch (stripeErr: unknown) {
-          console.error('[vinyl/order refund] Stripe refund failed:', stripeErr);
+          log.error('[vinyl/order refund] Stripe refund failed:', stripeErr);
           const stripeType = (stripeErr as any)?.type;
           if (stripeType === 'StripeCardError' || stripeType === 'StripeInvalidRequestError') {
             return ApiErrors.badRequest('Stripe refund request failed');
@@ -226,9 +228,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               status: 'published',
               updatedAt: now
             });
-            console.log('[vinyl/order refund] Listing restored to published:', order.listingId);
+            log.info('[vinyl/order refund] Listing restored to published:', order.listingId);
           } catch (listingErr) {
-            console.error('[vinyl/order refund] Failed to restore listing:', listingErr);
+            log.error('[vinyl/order refund] Failed to restore listing:', listingErr);
           }
         }
 
@@ -254,7 +256,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             createdAt: now
           });
         } catch (refundDocErr) {
-          console.error('[vinyl/order refund] Failed to record refund doc:', refundDocErr);
+          log.error('[vinyl/order refund] Failed to record refund doc:', refundDocErr);
         }
 
         // 8. Send customer refund confirmation email
@@ -335,9 +337,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 </html>`
               })
             }, 10000);
-            console.log('[vinyl/order refund] Buyer refund email sent');
+            log.info('[vinyl/order refund] Buyer refund email sent');
           } catch (emailErr) {
-            console.error('[vinyl/order refund] Buyer email error:', emailErr);
+            log.error('[vinyl/order refund] Buyer email error:', emailErr);
           }
         }
 
@@ -429,10 +431,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 </html>`
                 })
               }, 10000);
-              console.log('[vinyl/order refund] Seller refund notification sent to:', sellerEmail);
+              log.info('[vinyl/order refund] Seller refund notification sent to:', sellerEmail);
             }
           } catch (sellerEmailErr) {
-            console.error('[vinyl/order refund] Seller email error:', sellerEmailErr);
+            log.error('[vinyl/order refund] Seller email error:', sellerEmailErr);
           }
         }
 
@@ -475,7 +477,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('Invalid action');
     }
   } catch (error: unknown) {
-    console.error('[API vinyl/order] Error:', error);
+    log.error('[API vinyl/order] Error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

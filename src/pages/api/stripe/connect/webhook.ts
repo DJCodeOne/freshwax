@@ -8,6 +8,9 @@ import { queryCollection, updateDocument, addDocument, getDocument, atomicIncrem
 import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
 import { logConnectEvent } from '../../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../../lib/paypal-payouts';
+import { createLogger } from '../../../../lib/api-utils';
+
+const log = createLogger('[connect-webhook]');
 
 export const prerender = false;
 
@@ -26,7 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const webhookSecret = env?.STRIPE_CONNECT_WEBHOOK_SECRET || import.meta.env.STRIPE_CONNECT_WEBHOOK_SECRET;
 
   if (!stripeSecretKey) {
-    console.error('[Connect Webhook] Stripe secret key not configured');
+    log.error('Stripe secret key not configured');
     return new Response('Stripe not configured', { status: 500 });
   }
 
@@ -37,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const sig = request.headers.get('stripe-signature');
 
     if (!sig) {
-      console.error('[Connect Webhook] Missing signature header - REJECTING');
+      log.error('Missing signature header - REJECTING');
       return new Response('Missing signature', { status: 401 });
     }
 
@@ -52,20 +55,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
         event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
       } catch (err: unknown) {
         const errMessage = err instanceof Error ? err.message : String(err);
-        console.error('[Connect Webhook] Signature verification failed:', errMessage);
+        log.error('Signature verification failed:', errMessage);
         return new Response('Webhook signature verification failed', { status: 401 });
       }
     } else if (!isDevelopment) {
       // SECURITY: In production, REQUIRE webhook secret - reject without it
-      console.error('[Connect Webhook] SECURITY: Webhook secret not configured in production - REJECTING');
+      log.error('SECURITY: Webhook secret not configured in production - REJECTING');
       return new Response('Webhook not configured', { status: 500 });
     } else {
       // Only in local dev - allow without verification
-      console.warn('[Connect Webhook] ⚠️ DEV MODE: Skipping signature verification');
+      log.warn('⚠️ DEV MODE: Skipping signature verification');
       event = JSON.parse(body);
     }
 
-    console.log('[Connect Webhook] Received event:', event.type);
+    log.info('Received event:', event.type);
 
     switch (event.type) {
       case 'account.updated':
@@ -74,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: `Account updated: ${(event.data.object as Stripe.Account).id}`,
           metadata: { accountId: (event.data.object as Stripe.Account).id },
           processingTimeMs: Date.now() - startTime
-        }).catch(e => console.error('[Connect Webhook] Log error:', e));
+        }).catch(e => log.error('Log error:', e));
         break;
 
       case 'transfer.created':
@@ -83,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: `Transfer created: ${(event.data.object as Stripe.Transfer).id}`,
           metadata: { transferId: (event.data.object as Stripe.Transfer).id },
           processingTimeMs: Date.now() - startTime
-        }).catch(e => console.error('[Connect Webhook] Log error:', e));
+        }).catch(e => log.error('Log error:', e));
         break;
 
       case 'transfer.reversed':
@@ -92,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           message: `Transfer reversed: ${(event.data.object as Stripe.Transfer).id}`,
           metadata: { transferId: (event.data.object as Stripe.Transfer).id },
           processingTimeMs: Date.now() - startTime
-        }).catch(e => console.error('[Connect Webhook] Log error:', e));
+        }).catch(e => log.error('Log error:', e));
         break;
 
       default:
@@ -105,12 +108,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Connect Webhook] Error:', error);
+    log.error('Error:', error);
 
     logConnectEvent('connect_webhook_error', 'unknown', false, {
       message: 'Connect webhook processing error',
       error: 'Internal error'
-    }).catch(e => console.error('[Connect Webhook] Log error:', e));
+    }).catch(e => log.error('Log error:', e));
 
     return new Response('Webhook processing error', { status: 500 });
   }
@@ -399,12 +402,12 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
           pending.amount,
           pending.orderNumber || pending.orderId?.slice(-6).toUpperCase(),
           env
-        ).catch(err => console.error('[Connect Webhook] Failed to send payout email:', err));
+        ).catch(err => log.error('Failed to send payout email:', err));
       }
 
     } catch (transferError: unknown) {
       const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);
-      console.error('[Connect Webhook] Failed to process pending payout:', pending.id, transferMessage);
+      log.error('Failed to process pending payout:', pending.id, transferMessage);
 
       // Mark as failed for retry
       await updateDocument('pendingPayouts', pending.id, {

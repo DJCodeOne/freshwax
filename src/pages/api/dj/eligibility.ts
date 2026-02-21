@@ -70,7 +70,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       let userData: any = null;
       try {
         userData = await getDocument('users', uid);
-      } catch (e) {
+      } catch (e: unknown) {
         // Users collection requires auth - this is ok, we'll check other criteria
       }
 

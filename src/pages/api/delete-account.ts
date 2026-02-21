@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (userDoc) {
         userEmail = (userDoc.email || '').toLowerCase().trim();
       }
-    } catch (e) {
+    } catch (e: unknown) {
       logger.info('[delete-account] Could not fetch user doc for email lookup');
     }
 
@@ -164,7 +164,7 @@ async function deleteByQuery(collection: string, field: string, value: string): 
       try {
         await deleteDocument(collection, docId);
         count++;
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error(`[delete-account] Failed to delete ${collection}/${docId}`);
       }
     }
@@ -194,7 +194,7 @@ async function anonymizeOrders(userId: string, timestamp: string): Promise<Delet
           gdprAnonymizedAt: timestamp
         });
         count++;
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error(`[delete-account] Failed to anonymize order ${orderId}`);
       }
     }
@@ -224,7 +224,7 @@ async function anonymizeComments(userId: string): Promise<DeletionResult> {
           gdprAnonymized: true
         });
         count++;
-      } catch (e) {
+      } catch (e: unknown) {
         logger.error(`[delete-account] Failed to anonymize comment ${commentId}`);
       }
     }
@@ -285,7 +285,7 @@ async function cleanupKV(cache: any, userId: string): Promise<DeletionResult> {
       `user:orders:${userId}`,
     ];
     for (const key of keys) {
-      try { await cache.delete(key); } catch (e) { logger.error('[delete-account] Failed to delete KV cache key:', key, e instanceof Error ? e.message : e); }
+      try { await cache.delete(key); } catch (e: unknown) { logger.error('[delete-account] Failed to delete KV cache key:', key, e instanceof Error ? e.message : e); }
     }
     return { success: true, count: keys.length };
   } catch (e: unknown) {

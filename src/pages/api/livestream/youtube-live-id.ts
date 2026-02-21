@@ -5,7 +5,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[youtube-live-id]');
 
 export const prerender = false;
 
@@ -33,7 +35,7 @@ async function resolveChannelId(apiKey: string, handle: string): Promise<string 
     const response = await fetchWithTimeout(channelUrl.toString(), {}, 10000);
 
     if (!response.ok) {
-      console.error('[youtube-live-id] Failed to resolve handle:', handle);
+      log.error('[youtube-live-id] Failed to resolve handle:', handle);
       return null;
     }
 
@@ -41,13 +43,13 @@ async function resolveChannelId(apiKey: string, handle: string): Promise<string 
 
     if (data.items && data.items.length > 0) {
       const channelId = data.items[0].id;
-      console.log('[youtube-live-id] Resolved handle', handle, 'to channel ID:', channelId);
+      log.info('[youtube-live-id] Resolved handle', handle, 'to channel ID:', channelId);
       return channelId;
     }
 
     return null;
   } catch (error: unknown) {
-    console.error('[youtube-live-id] Error resolving channel handle:', error);
+    log.error('[youtube-live-id] Error resolving channel handle:', error);
     return null;
   }
 }
@@ -61,7 +63,7 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
     if (!channelIdOrHandle.startsWith('UC')) {
       const resolved = await resolveChannelId(apiKey, channelIdOrHandle);
       if (!resolved) {
-        console.error('[youtube-live-id] Could not resolve channel:', channelIdOrHandle);
+        log.error('[youtube-live-id] Could not resolve channel:', channelIdOrHandle);
         return null;
       }
       channelId = resolved;
@@ -80,7 +82,7 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[youtube-live-id] YouTube API error:', response.status, errorText);
+      log.error('[youtube-live-id] YouTube API error:', response.status, errorText);
       return null;
     }
 
@@ -88,14 +90,14 @@ async function fetchYouTubeLiveVideoId(apiKey: string, channelIdOrHandle: string
 
     if (data.items && data.items.length > 0) {
       const videoId = data.items[0].id?.videoId;
-      console.log('[youtube-live-id] Found live video:', videoId);
+      log.info('[youtube-live-id] Found live video:', videoId);
       return videoId;
     }
 
-    console.log('[youtube-live-id] No live videos found for channel');
+    log.info('[youtube-live-id] No live videos found for channel');
     return null;
   } catch (error: unknown) {
-    console.error('[youtube-live-id] Error fetching YouTube live ID:', error);
+    log.error('[youtube-live-id] Error fetching YouTube live ID:', error);
     return null;
   }
 }
@@ -142,7 +144,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const apiKey = getYouTubeApiKey(env);
 
     if (!apiKey) {
-      console.warn('[youtube-live-id] No YouTube API key configured');
+      log.warn('[youtube-live-id] No YouTube API key configured');
       return new Response(JSON.stringify({
         success: false,
         error: 'YouTube API key not configured',
@@ -183,7 +185,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           },
           updatedAt: new Date().toISOString()
         });
-        console.log('[youtube-live-id] Updated slot', slotId, 'with YouTube video ID:', youtubeLiveId);
+        log.info('[youtube-live-id] Updated slot', slotId, 'with YouTube video ID:', youtubeLiveId);
       }
 
       // Also update livestreams collection
@@ -211,7 +213,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[youtube-live-id] Error:', error);
+    log.error('[youtube-live-id] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

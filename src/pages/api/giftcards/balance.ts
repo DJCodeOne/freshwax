@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, updateDocumentConditional, verifyRequestUser } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors } from '../../../lib/api-utils';
+
+const log = createLogger('[giftcards/balance]');
 
 // Zod schema for applying credit to an order
 const ApplyCreditSchema = z.object({
@@ -58,7 +60,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[giftcards/balance] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to get balance');
   }
 };
@@ -135,7 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           creditUpdatedAt: now
         });
 
-        console.log('[giftcards/balance] Applied credit:', amount, 'for user:', userId, 'order:', orderId);
+        log.info('Applied credit:', amount, 'for user:', userId, 'order:', orderId);
 
         return new Response(JSON.stringify({
           success: true,
@@ -148,7 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       } catch (condError: unknown) {
         if (attempt < MAX_RETRIES - 1 && condError instanceof Error && condError.message.includes('condition')) {
-          console.warn('[giftcards/balance] Concurrent modification, retrying...', attempt + 1);
+          log.warn('Concurrent modification, retrying...', attempt + 1);
           continue;
         }
         throw condError;
@@ -158,7 +160,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.conflict('Could not apply credit due to concurrent access. Please try again.');
 
   } catch (error: unknown) {
-    console.error('[giftcards/balance] Error applying credit:', error);
+    log.error('Error applying credit:', error);
     return ApiErrors.serverError('Failed to apply credit');
   }
 };

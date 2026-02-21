@@ -195,7 +195,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await saUpdateDocument(serviceAccountKey, projectId, collectionName, productId, updateData);
         results.push(productId);
         log.info(`[assign-seller] Updated ${collectionName}/${productId} -> sellerId: ${sellerId}`);
-      } catch (err) {
+      } catch (err: unknown) {
         errors.push(`${productId}: ${err}`);
       }
     }
