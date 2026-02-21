@@ -28,7 +28,7 @@ try {
   } else {
     errorMessage = 'Release not found';
   }
-} catch (error) {
+} catch (error: unknown) {
   console.error('[EDIT] Error loading release:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }
@@ -714,7 +714,7 @@ if (!release) {
             currentIdToken = await user.getIdToken();
           }
         });
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[Admin] Firebase init error:', err);
       }
     })();
@@ -839,8 +839,8 @@ if (!release) {
             btn.textContent = '🔄 Refresh';
           }
         })
-        .catch(function(error) {
-          alert('❌ Error: ' + error.message);
+        .catch(function(error: unknown) {
+          alert('❌ Error: ' + (error instanceof Error ? error.message : String(error)));
           btn.disabled = false;
           btn.textContent = '🔄 Refresh';
         });
@@ -1146,8 +1146,8 @@ if (!release) {
           saveBtn.disabled = false;
         }
       })
-      .catch(function(error) {
-        alert('❌ Error: ' + error.message);
+      .catch(function(error: unknown) {
+        alert('❌ Error: ' + (error instanceof Error ? error.message : String(error)));
         saveBtn.textContent = '✓ Save All Changes';
         saveBtn.disabled = false;
       });

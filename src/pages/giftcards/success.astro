@@ -90,7 +90,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           errorMessage.textContent = result.error || 'Failed to create gift card';
           return;
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[giftcard-success] PayPal error:', error);
         loadingState.style.display = 'none';
         errorState.style.display = 'block';
@@ -150,7 +150,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         errorMessage.textContent = result.error || 'Payment verification failed';
         return;
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[giftcard-success] Error (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
           loadingState.style.display = 'none';

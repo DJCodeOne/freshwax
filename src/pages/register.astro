@@ -908,7 +908,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (!recaptchaSiteKey || !recaptchaReady) return null;
       try {
         return await grecaptcha.execute(recaptchaSiteKey, { action });
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[Register] reCAPTCHA error:', err);
         return null;
       }
@@ -1099,7 +1099,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           displayNameHint.textContent = 'Name is available';
           displayNameHint.className = 'input-hint success';
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[Register] Name check error:', err);
         displayNameStatus.textContent = '';
         displayNameStatus.className = 'input-status';
@@ -1209,7 +1209,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           window.location.href = '/account/dashboard/';
         }, 2000);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[Register] Google sign-in error:', error);
 
         if (error.code === 'auth/popup-closed-by-user') {
@@ -1434,7 +1434,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           window.location.href = '/verify-email/';
         }, 3000);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Registration error:', error);
         
         let errorMessage = 'Registration failed. Please try again.';

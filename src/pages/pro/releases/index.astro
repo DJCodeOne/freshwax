@@ -321,7 +321,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
         allReleases = data.releases || [];
         renderReleases();
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading releases:', error);
         releasesList.innerHTML = '<div class="loading">Error loading releases</div>';
       }

@@ -20,7 +20,7 @@ const env = Astro.locals?.runtime?.env;
 let post: any = null;
 try {
   post = await getDocument('blog-posts', id!);
-} catch (e) {
+} catch (e: unknown){
   console.error('Failed to fetch post:', e);
 }
 
@@ -594,7 +594,7 @@ const nonce = Astro.locals.nonce || '';
       setTimeout(() => {
         btn.textContent = originalText;
       }, 2000);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Save failed:', error);
       alert('Failed to save: ' + (error instanceof Error ? error.message : String(error)));
       btn.textContent = originalText;

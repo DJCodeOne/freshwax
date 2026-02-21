@@ -1389,7 +1389,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         if (likeCountEl) likeCountEl.textContent = currentCount;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Reaction] API error:', error);
       // Revert optimistic update on error
       if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -1473,7 +1473,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           if (result.success && result.totalLikes > 0 && likeCountEl) {
             likeCountEl.textContent = result.totalLikes;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[Like] Error:', error);
           // Revert optimistic update on error
           if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -2355,7 +2355,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
                 });
               }
             }
-          } catch (err) {
+          } catch (err: unknown) {
             console.error('[Live] Auth check error:', err);
           }
 
@@ -2797,7 +2797,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         }
       });
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('[LiveStatus] Failed to setup Pusher:', err);
     }
   }
@@ -3474,7 +3474,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         takeoverSection.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error checking for takeover option:', error);
     }
   }
@@ -3540,7 +3540,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           // Takeover was approved! Show the key
           showTakeoverApproved(result.streamKey);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error polling takeover status:', error);
       }
     }, 3000); // Poll every 3 seconds
@@ -3630,7 +3630,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         btn.disabled = false;
         btn.innerHTML = '<span>🎧 Request Takeover</span>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error requesting takeover:', error);
       alert('Failed to send takeover request');
       btn.disabled = false;
@@ -3669,7 +3669,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         // Restart polling if cancel failed
         startTakeoverPolling();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error cancelling takeover:', error);
       startTakeoverPolling();
     }
@@ -3786,7 +3786,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           token
         })
       });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to notify slot expiry:', err);
     }
   }
@@ -3846,7 +3846,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           token
         })
       });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to notify ready status:', err);
     }
   }
@@ -4448,7 +4448,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         errorDiv.textContent = result.error || 'Failed to book slot';
         errorDiv.classList.remove('hidden');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       errorDiv.textContent = 'Network error. Please try again.';
       errorDiv.classList.remove('hidden');
     }
@@ -4570,7 +4570,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         errorDiv.textContent = result.error || 'Failed to go live';
         errorDiv.classList.remove('hidden');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       errorDiv.textContent = 'Network error. Please try again.';
       errorDiv.classList.remove('hidden');
     }
@@ -4606,7 +4606,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         alert(result.error || 'Failed to cancel');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       alert('Network error');
     }
   };
@@ -4638,7 +4638,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         if (goLiveBtn) goLiveBtn.disabled = false;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to go live:', err);
       if (goLiveBtn) goLiveBtn.disabled = false;
     }
@@ -4689,7 +4689,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         claimBtn.disabled = false;
         claimBtn.textContent = '🎧 Claim This Slot';
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to claim slot:', err);
       alert('Network error. Please try again.');
       claimBtn.disabled = false;
@@ -4724,7 +4724,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             slotAvailable?.classList.remove('hidden');
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error polling for available slots:', err);
       }
     }, 5000); // Poll every 5 seconds
@@ -4808,7 +4808,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           endBtn.textContent = '⏹️ End Stream';
         }
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to end stream:', err);
       alert('Network error. Please try again.');
       if (endBtn) {
@@ -5216,7 +5216,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         console.warn('[NowPlaying] Playlist manager not available');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[NowPlaying] Error saving track:', err);
     }
   });

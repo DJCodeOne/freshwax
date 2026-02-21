@@ -1091,7 +1091,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       // Inject JSON-LD structured data
       injectJsonLd(listing);
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading listing:', err);
       loadingState.style.display = 'none';
       errorState.style.display = 'block';
@@ -1609,7 +1609,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         btn.disabled = false;
       }, 2000);
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error adding to bag:', err);
       btn.innerHTML = 'Error - Try Again';
       setTimeout(() => {

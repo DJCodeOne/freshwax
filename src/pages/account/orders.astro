@@ -425,7 +425,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
         return [];
       })
-      .catch(function(error) {
+      .catch(function(error: unknown) {
         console.error('[Orders] Fetch error:', error);
         return [];
       });
@@ -565,7 +565,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             
             document.getElementById('loadingScreen').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
-          }).catch(function(error) {
+          }).catch(function(error: unknown) {
             console.error('[Orders] Error:', error);
             document.getElementById('loadingScreen').classList.add('hidden');
             document.getElementById('mainContent').classList.remove('hidden');
@@ -580,7 +580,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           window.location.href = '/login/?redirect=/account/orders/';
         }
       });
-    }).catch(function(error) {
+    }).catch(function(error: unknown) {
       console.error('[Orders] Firebase load error:', error);
       document.getElementById('loadingScreen').classList.add('hidden');
       document.getElementById('mainContent').classList.remove('hidden');

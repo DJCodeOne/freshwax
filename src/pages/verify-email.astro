@@ -380,7 +380,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         lastResendTime = Date.now();
         successMessage.textContent = 'Verification email sent! Check your inbox.';
         successMessage.style.display = 'block';
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Resend error:', error);
         if (error.code === 'auth/too-many-requests') {
           errorMessage.textContent = 'Too many requests. Please try again later.';
@@ -420,7 +420,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           errorMessage.textContent = 'Email not yet verified. Please click the link in your email.';
           errorMessage.style.display = 'block';
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Check error:', error);
         errorMessage.textContent = 'Failed to check status. Please try again.';
         errorMessage.style.display = 'block';

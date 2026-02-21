@@ -478,7 +478,7 @@ export const prerender = false;
       } else {
         sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p>' + result.error + '</p></div>';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p>' + (error instanceof Error ? error.message : String(error)) + '</p></div>';
     }
   }
@@ -597,7 +597,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error saving source: ' + (error instanceof Error ? error.message : String(error)));
     }
   });
@@ -643,7 +643,7 @@ export const prerender = false;
       } else {
         alert('Error: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error deleting source: ' + (error instanceof Error ? error.message : String(error)));
     }
   };
@@ -666,7 +666,7 @@ export const prerender = false;
         alert(`Status: ${relay.isLive ? 'Live' : 'Offline'}\n${relay.nowPlaying ? 'Now Playing: ' + relay.nowPlaying : ''}`);
         loadSources(); // Refresh to show updated status
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error checking status:', error);
     }
   };

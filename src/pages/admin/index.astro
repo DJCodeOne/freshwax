@@ -80,7 +80,7 @@ try {
   refundsData = results[9].status === 'fulfilled' ? results[9].value : [];
   ledgerData = results[10].status === 'fulfilled' ? results[10].value : [];
   blogPostsData = results[11].status === 'fulfilled' ? results[11].value : [];
-} catch (error) {
+} catch (error: unknown) {
   console.error('[Admin Dashboard] Error fetching data:', error);
 }
 
@@ -110,7 +110,7 @@ try {
       r2SubmissionsCount++;
     }
   }
-} catch (error) {
+} catch (error: unknown) {
   console.error('[Admin Dashboard] Error fetching R2 submissions:', error);
 }
 
@@ -1229,7 +1229,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
   document.addEventListener('astro:page-load', async function() {
     // Wait for Firebase auth before making admin API calls
     if (window.getAdminToken) {
-      try { await window.getAdminToken(); } catch(e) { return; }
+      try { await window.getAdminToken(); } catch (e: unknown) { return; }
     }
 
     const toggleMixCharts = document.getElementById('toggleMixCharts');
@@ -1241,7 +1241,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       if (data.success && data.settings) {
         toggleMixCharts.checked = data.settings.showMixCharts || false;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load settings:', error);
     }
 
@@ -1253,7 +1253,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ showMixCharts: this.checked })
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to save setting:', error);
       }
     });
@@ -1272,7 +1272,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
       try {
         const data = localStorage.getItem(HISTORY_KEY);
         return data ? JSON.parse(data) : [];
-      } catch (e) {
+      } catch (e: unknown){
         return [];
       }
     }
@@ -1386,7 +1386,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'expire', requestId })
       });
-    } catch (e) {
+    } catch (e: unknown){
       console.error('Failed to expire request:', e);
     }
   }
@@ -1428,7 +1428,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
           btn.textContent = '✓ Approve';
           alert('Failed to approve: ' + result.error);
         }
-      } catch (e) {
+      } catch (e: unknown){
         btn.disabled = false;
         btn.textContent = '✓ Approve';
         alert('Error approving request');
@@ -1473,7 +1473,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
           btn.textContent = '✕ Reject';
           alert('Failed to reject: ' + result.error);
         }
-      } catch (e) {
+      } catch (e: unknown){
         btn.disabled = false;
         btn.textContent = '✕ Reject';
         alert('Error rejecting request');
@@ -1520,7 +1520,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
               btn.removeAttribute('disabled');
             }, 2000);
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Failed to start playlist:', error);
           btn.innerHTML = '<span class="action-icon">❌</span><span class="action-label">Error</span>';
           setTimeout(() => {
@@ -1573,7 +1573,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         } else {
           throw new Error('API error');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         serverStatus.textContent = 'OFFLINE';
         serverStatus.className = 'status-badge offline';
         trackCount.textContent = '';
@@ -1591,7 +1591,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
             updateQueue(result.playlist);
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to fetch playlist state:', error);
       }
     }
@@ -1680,7 +1680,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         } else {
           alert('Failed to remove: ' + (result.error || 'Unknown error'));
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to remove from queue:', error);
         alert('Failed to remove track from queue');
       }
@@ -1699,7 +1699,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         if (response.ok) {
           fetchPlaylistState();
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to skip track:', error);
       } finally {
         skipBtn.disabled = false;
@@ -1720,7 +1720,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         if (response.ok) {
           fetchPlaylistState();
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to start playlist:', error);
       } finally {
         startBtn.disabled = false;
@@ -1741,7 +1741,7 @@ Astro.response.headers.set('Pragma', 'no-cache');
         if (response.ok) {
           fetchPlaylistState();
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to stop playlist:', error);
       } finally {
         stopBtn.disabled = false;

@@ -348,7 +348,7 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('partnersTable').style.display = 'block';
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Error loading partners:', error);
           document.getElementById('loadingState').innerHTML = `
             <div class="empty-state">
@@ -605,7 +605,7 @@ export const prerender = false;
             await loadPartners();
           }
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('[manage] Save error:', error);
           showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         } finally {
@@ -658,7 +658,7 @@ export const prerender = false;
 
           closeModal('approveModal');
           loadPartners();
-        } catch (error) {
+        } catch (error: unknown) {
           showToast('Error approving partner: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       };
@@ -686,7 +686,7 @@ export const prerender = false;
           closeModal('deleteModal');
           showToast('Partner deleted');
           loadPartners();
-        } catch (error) {
+        } catch (error: unknown) {
           showToast('Error deleting partner: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
       };

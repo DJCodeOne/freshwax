@@ -83,7 +83,7 @@ try {
 
   vinylListings = results[1].status === 'fulfilled' ? results[1].value : [];
   vinylOrders = results[2].status === 'fulfilled' ? results[2].value : [];
-} catch (error) {
+} catch (error: unknown) {
   console.error('[Admin Vinyl] Error fetching data:', error);
 }
 
@@ -672,7 +672,7 @@ export const prerender = false;
         } else {
           alert('Failed to load seller data');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error loading seller: ' + (error instanceof Error ? error.message : String(error)));
       }
     });
@@ -709,7 +709,7 @@ export const prerender = false;
       } else {
         alert('Failed to save: ' + result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error saving: ' + (error instanceof Error ? error.message : String(error)));
     }
   });
@@ -735,7 +735,7 @@ export const prerender = false;
         } else {
           alert('Failed to suspend: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error: ' + (error instanceof Error ? error.message : String(error)));
       }
     });
@@ -762,7 +762,7 @@ export const prerender = false;
         } else {
           alert('Failed to unsuspend: ' + result.error);
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error: ' + (error instanceof Error ? error.message : String(error)));
       }
     });

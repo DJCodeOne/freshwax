@@ -105,7 +105,6 @@ const debugLog = document.getElementById("debugLog");
 function debug(msg) {
   const time = new Date().toISOString().split('T')[1].split('.')[0];
   const line = `[${time}] ${msg}`;
-  console.log(line);
   debugLog.textContent += line + "\n";
   debugLog.scrollTop = debugLog.scrollHeight;
 }
@@ -327,9 +326,9 @@ async function processZip(file) {
       extractedData.releaseName = prompt("Enter release name:") || "Unknown Release";
     }
 
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("ZIP processing error:", err);
-    setStatus(`Failed to process ZIP: ${err.message}`, true);
+    setStatus(`Failed to process ZIP: ${err instanceof Error ? err.message : String(err)}`, true);
   }
 }
 
@@ -520,10 +519,11 @@ uploadBtn.onclick = async () => {
     extractedData = null;
     extractedSection.style.display = "none";
 
-  } catch (err) {
-    debug(`UPLOAD ERROR: ${err.message}`);
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    debug(`UPLOAD ERROR: ${errMsg}`);
     console.error("Upload error:", err);
-    setStatus(`Error: ${err.message}`, true);
+    setStatus(`Error: ${errMsg}`, true);
     uploadBtn.disabled = false;
   }
 };
@@ -610,9 +610,10 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
         debug(`Track ${i + 1} processing failed: ${result.error}`);
         processedTracks.push({ ...track, error: result.error });
       }
-    } catch (err) {
-      debug(`Track ${i + 1} processing error: ${err.message}`);
-      processedTracks.push({ ...track, error: err.message });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      debug(`Track ${i + 1} processing error: ${errMsg}`);
+      processedTracks.push({ ...track, error: errMsg });
     }
   }
 
@@ -638,8 +639,8 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
       if (!updateResult.success) {
         debug(`Failed to update release: ${updateResult.error}`);
       }
-    } catch (err) {
-      debug(`Update error: ${err.message}`);
+    } catch (err: unknown) {
+      debug(`Update error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -766,9 +767,9 @@ manualBtn.onclick = async () => {
     coverInput.value = "";
     tracksInput.value = "";
 
-  } catch (err) {
+  } catch (err: unknown) {
     console.error("Upload error:", err);
-    setStatus(`Error: ${err.message}`, true);
+    setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, true);
     manualBtn.disabled = false;
   }
 };

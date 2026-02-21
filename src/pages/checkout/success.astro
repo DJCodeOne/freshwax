@@ -174,7 +174,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           if (errorMessage) errorMessage.textContent = result.error || 'Payment verification failed';
           return;
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error(`[success] Verification error (attempt ${attempt}):`, error);
         if (attempt === maxRetries) {
           if (loadingState) loadingState.style.display = 'none';

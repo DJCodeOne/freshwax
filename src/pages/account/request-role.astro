@@ -503,7 +503,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Load DJ eligibility
         await loadDJEligibility(uid, roles, pendingRoles);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading user data:', error);
         loadingState.textContent = 'Error loading data';
       }
@@ -615,7 +615,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             }
           }
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading DJ eligibility:', error);
       }
     }
@@ -649,7 +649,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 
@@ -685,7 +685,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 
@@ -722,7 +722,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 
@@ -755,7 +755,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert(data.error || 'Error submitting request');
         }
-      } catch (error) {
+      } catch (error: unknown) {
         alert('Error submitting request');
       }
 

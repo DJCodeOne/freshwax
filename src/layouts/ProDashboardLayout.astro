@@ -660,7 +660,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         loadingState.style.display = 'none';
         dashboardContent.style.display = 'grid';
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[ProDashboard] Error loading user data:', error);
         loadingState.style.display = 'none';
         accessDenied.style.display = 'flex';
@@ -672,7 +672,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       try {
         await signOut(auth);
         window.location.href = '/';
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Logout error:', error);
       }
     });

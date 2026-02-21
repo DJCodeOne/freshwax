@@ -321,7 +321,7 @@ export const prerender = false;
         </div>
       `).join('');
       
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading bypass requests:', err);
       container.innerHTML = '<div class="error-state">Error loading requests</div>';
     }
@@ -351,7 +351,7 @@ export const prerender = false;
         alert('Action failed: ' + (data.error || 'Unknown error'));
         if (card) card.style.opacity = '1';
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error:', err);
       alert('Action failed');
       if (card) card.style.opacity = '1';
@@ -392,7 +392,7 @@ export const prerender = false;
         </div>
       `).join('');
       
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading partner applications:', err);
       container.innerHTML = '<div class="empty-state"><span>📋</span><p>No pending applications</p></div>';
     }
@@ -421,7 +421,7 @@ export const prerender = false;
         alert('Action failed: ' + (data.error || 'Unknown error'));
         if (card) card.style.opacity = '1';
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error:', err);
       alert('Action failed');
       if (card) card.style.opacity = '1';
@@ -472,7 +472,7 @@ export const prerender = false;
         </div>
       `).join('');
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading vinyl listings:', err);
       container.innerHTML = '<div class="error-state">Error loading vinyl listings</div>';
     }
@@ -501,7 +501,7 @@ export const prerender = false;
         alert('Action failed: ' + (data.error || 'Unknown error'));
         if (card) card.style.opacity = '1';
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error:', err);
       alert('Action failed');
       if (card) card.style.opacity = '1';

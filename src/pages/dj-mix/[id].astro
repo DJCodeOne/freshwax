@@ -1017,7 +1017,7 @@ Artist - Track Title
           if (data.likes !== undefined && likesCount) {
             likesCount.textContent = data.likes;
           }
-        }).catch(function(error) {
+        }).catch(function(error: unknown) {
           console.error('Error tracking unlike:', error);
         });
       } else {
@@ -1041,7 +1041,7 @@ Artist - Track Title
           if (data.likes !== undefined && likesCount) {
             likesCount.textContent = data.likes;
           }
-        }).catch(function(error) {
+        }).catch(function(error: unknown) {
           console.error('Error tracking like:', error);
         });
       }
@@ -1079,7 +1079,7 @@ Artist - Track Title
           const downloadsCount = document.getElementById('downloads-count');
           if (downloadsCount) downloadsCount.textContent = data.downloads;
         }
-      }).catch(function(error) {
+      }).catch(function(error: unknown) {
         console.error('Error tracking download:', error);
       });
     }
@@ -1114,7 +1114,7 @@ Artist - Track Title
         downloadBtn.classList.remove('downloaded');
       }, 3000);
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Download error:', error);
       if (downloadText) downloadText.textContent = 'Error - Retry';
       downloadBtn.classList.remove('downloading');
@@ -1263,7 +1263,7 @@ Artist - Track Title
         text: `Check out this DJ mix on Fresh Wax`,
         url: currentShareData.url
       });
-    } catch (err) {
+    } catch (err: unknown) {
       // Share cancelled or failed
     }
   });
@@ -1400,7 +1400,7 @@ Artist - Track Title
             }
           }
           return { name: user.displayName || user.email?.split('@')[0] || 'User', avatarUrl: user.photoURL || null };
-        } catch (err) {
+        } catch (err: unknown) {
           return { name: user.displayName || user.email?.split('@')[0] || 'User', avatarUrl: user.photoURL || null };
         }
       }
@@ -1424,7 +1424,7 @@ Artist - Track Title
         }
       }
       
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[Comments] Firebase init error:', err);
     }
   }
@@ -1582,7 +1582,7 @@ Artist - Track Title
         console.error('[Comments] API error:', data.error);
         alert(data.error || 'Failed to post comment');
       }
-    }).catch(function(error) {
+    }).catch(function(error: unknown) {
       console.error('[Comments] Fetch error:', error);
       alert('Failed to post comment. Please try again.');
     }).finally(function() {
@@ -1688,7 +1688,7 @@ Artist - Track Title
       if (isOwner) {
         editTracklistBtn.classList.remove('hidden');
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[Tracklist] Ownership check error:', err);
     }
   }
@@ -1827,7 +1827,7 @@ Artist - Track Title
       } else {
         alert(data.error || 'Failed to update tracklist');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Tracklist] Save error:', error);
       alert('Failed to save tracklist. Please try again.');
     } finally {
@@ -1882,7 +1882,7 @@ Artist - Track Title
       const data = await response.json();
       if (data.gifs) renderGiphyResults(data.gifs);
       else giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Failed to load GIFs</p>';
-    } catch (err) {
+    } catch (err: unknown) {
       giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Failed to load GIFs</p>';
     }
   }
@@ -1910,7 +1910,7 @@ Artist - Track Title
         } else {
           renderGiphyResults(data.gifs);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Search failed</p>';
       }
     }, 300);
@@ -2002,7 +2002,7 @@ Artist - Track Title
       } else {
         alert(data.error || 'Failed to post GIF');
       }
-    }).catch(function(error) {
+    }).catch(function(error: unknown) {
       console.error('[Comments] GIF post error:', error);
       alert('Failed to post GIF. Please try again.');
     }).finally(function() {

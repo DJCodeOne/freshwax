@@ -1680,7 +1680,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               window.ADMIN_KEY = await window._firebaseUser.getIdToken();
             }
           }, 45 * 60 * 1000);
-        } catch (e) {
+        } catch (e: unknown){
           console.error('[AdminLayout] Failed to get token:', e);
         }
       }

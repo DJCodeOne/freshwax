@@ -527,7 +527,7 @@ export const prerender = false;
       } else {
         listEl.textContent = 'Error: ' + (data.error || 'Unknown error');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading reports:', error);
       listEl.innerHTML = '<div class="empty-state">Failed to load reports</div>';
     }
@@ -642,7 +642,7 @@ export const prerender = false;
       if (report) report.adminNotes = notes;
       
       alert('Notes saved');
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Failed to save notes');
     }
   }
@@ -658,7 +658,7 @@ export const prerender = false;
       if ((await res.json()).success) {
         loadReports();
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Failed to update status');
     }
   }

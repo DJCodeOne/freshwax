@@ -1131,7 +1131,7 @@ Artist - Track Title
       if (result.success && result.settings?.djMixes) {
         uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('Could not load upload settings, using defaults');
     }
   }
@@ -1268,7 +1268,7 @@ Artist - Track Title
           quickDropGenre.addEventListener('change', autoUploadOnGenre);
           quickDropConfirm.disabled = true; // Keep disabled until genre selected
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('WAV conversion failed:', err);
         alert('Conversion failed. Please convert to MP3 using Audacity or an online converter.');
         quickDropModal.classList.add('hidden');
@@ -1419,7 +1419,7 @@ Artist - Track Title
         quickDropModal.classList.add('hidden');
         return;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('Could not check upload limits:', err);
     }
 
@@ -1636,7 +1636,7 @@ Artist - Track Title
               userId: user.uid
             })
           });
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn('Could not record usage:', err);
         }
 
@@ -1649,7 +1649,7 @@ Artist - Track Title
         throw new Error(result.error || 'Upload failed');
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Quick Drop upload error:', error);
       activeQuickDropXhr = null;
 
@@ -1700,7 +1700,7 @@ Artist - Track Title
         }
         return;
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('Could not check upload limits:', err);
       // Continue with upload if limit check fails
     }
@@ -1983,7 +1983,7 @@ Artist - Track Title
               })
             });
           }
-        } catch (err) {
+        } catch (err: unknown) {
           console.warn('Could not record upload usage:', err);
         }
 
@@ -2004,7 +2004,7 @@ Your mix is now available on the DJ Mixes page!`);
         throw new Error(result.error || result.details || 'Upload failed');
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('✗ Upload error:', error);
       const uploadErrMsg = error instanceof Error ? error.message : 'Unknown error';
       statusText.textContent = 'Upload failed - ' + uploadErrMsg;

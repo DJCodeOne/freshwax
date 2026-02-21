@@ -1354,7 +1354,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           return null;
         }
         return data.v;
-      } catch (e) { return null; }
+      } catch (e: unknown){ return null; }
     },
     
     set: function(key, value, ttl) {
@@ -1364,7 +1364,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           ts: Date.now(),
           ttl: ttl || this.TTL.RATINGS
         }));
-      } catch (e) {
+      } catch (e: unknown){
         this.cleanup();
       }
     },
@@ -1377,7 +1377,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
     },
     
     remove: function(key) {
-      try { localStorage.removeItem(this.PREFIX + key); } catch (e) {}
+      try { localStorage.removeItem(this.PREFIX + key); } catch (e: unknown){}
     },
     
     cleanup: function() {
@@ -1396,7 +1396,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           }
         }
         keysToRemove.forEach(function(k) { localStorage.removeItem(k); });
-      } catch (e) {}
+      } catch (e: unknown){}
     }
   };
 
@@ -1417,7 +1417,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           }
         }
       }
-    } catch (e) { /* ignore cache errors */ }
+    } catch (e: unknown){ /* ignore cache errors */ }
 
     // If authReady promise exists (from Header), wait for it with timeout
     if (window.authReady) {
@@ -1426,7 +1426,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           window.authReady,
           new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000))
         ]);
-      } catch (e) {
+      } catch (e: unknown){
         // Timeout - check cache again or Firebase directly
       }
     }
@@ -1533,7 +1533,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       }
       return {};
     })
-    .catch(function(error) {
+    .catch(function(error: unknown) {
       pendingRatingsRequest = null;
       return {};
     });
@@ -1592,7 +1592,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           if (window.firebaseAuth && window.firebaseAuth.currentUser) {
             idToken = await window.firebaseAuth.currentUser.getIdToken();
           }
-        } catch (e) { /* Ignore token errors, API will use userId fallback */ }
+        } catch (e: unknown){ /* Ignore token errors, API will use userId fallback */ }
 
         var card = document.querySelector('[data-release="' + releaseId + '"]');
 
@@ -1633,7 +1633,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             }
           }
         })
-        .catch(function(error) { console.error('[ReleasePlate] Rating submission error:', error); });
+        .catch(function(error: unknown) { console.error('[ReleasePlate] Rating submission error:', error); });
       };
     });
   }
@@ -1665,7 +1665,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       if (window.firebaseAuth && window.firebaseAuth.currentUser) {
         idToken = await window.firebaseAuth.currentUser.getIdToken();
       }
-    } catch (e) { /* Ignore */ }
+    } catch (e: unknown){ /* Ignore */ }
 
     if (!idToken) return;
 
@@ -1698,7 +1698,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           }
         });
       }
-    } catch (e) {
+    } catch (e: unknown){
       console.error('[Ratings] Failed to fetch user ratings:', e);
     }
   }
@@ -1833,7 +1833,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           text: 'Check out this release on Fresh Wax',
           url: d.url
         });
-      } catch (err) {
+      } catch (err: unknown) {
         // Share cancelled or failed
       }
     });
@@ -2138,7 +2138,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             return;
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
       }
       
       var cart = FreshWaxCart.get();
@@ -2282,7 +2282,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             return;
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
       }
       
       items.push({
@@ -2356,7 +2356,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             .catch(function(err) {
               console.error('Failed to load wishlist state:', err);
             });
-        } catch (err) {
+        } catch (err: unknown) {
           console.error('Failed to get auth token for wishlist:', err);
         }
       }
@@ -2432,7 +2432,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           console.error('Wishlist error:', err);
           showToast('Failed to update wishlist');
         });
-      } catch (err) {
+      } catch (err: unknown) {
         btn.style.opacity = '1';
         btn.style.pointerEvents = 'auto';
         console.error('Auth error:', err);

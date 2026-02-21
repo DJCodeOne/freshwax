@@ -680,7 +680,7 @@ const firebaseConfig = {
 
     // After widget is created, apply saved language by selecting it in the dropdown.
     var lang = null;
-    try { lang = localStorage.getItem('fw_translate_lang'); } catch (e) {}
+    try { lang = localStorage.getItem('fw_translate_lang'); } catch (e: unknown){}
     if (lang) {
       waitForSelect(function(sel) {
         if (sel.value !== lang) {
@@ -729,11 +729,11 @@ const firebaseConfig = {
     var domainCookie = location.hostname.indexOf('.') !== -1 ? ';domain=.' + location.hostname : '';
 
     if (langCode && langCode !== 'en') {
-      try { localStorage.setItem('fw_translate_lang', langCode); } catch (e) {}
+      try { localStorage.setItem('fw_translate_lang', langCode); } catch (e: unknown){}
       document.cookie = 'googtrans=/en/' + langCode + ';path=/';
       if (domainCookie) document.cookie = 'googtrans=/en/' + langCode + ';path=/' + domainCookie;
     } else {
-      try { localStorage.removeItem('fw_translate_lang'); } catch (e) {}
+      try { localStorage.removeItem('fw_translate_lang'); } catch (e: unknown){}
       document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT';
       if (domainCookie) document.cookie = 'googtrans=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT' + domainCookie;
     }
@@ -771,7 +771,7 @@ const firebaseConfig = {
 
     // Highlight current language
     var current = 'en';
-    try { current = localStorage.getItem('fw_translate_lang') || 'en'; } catch (e) {}
+    try { current = localStorage.getItem('fw_translate_lang') || 'en'; } catch (e: unknown){}
     updatePanelSelection(current);
 
     panel.hidden = false;
@@ -884,7 +884,7 @@ const firebaseConfig = {
 
   // On page load, if there's a saved language, set cookie and load GT
   var savedLang = null;
-  try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e) {}
+  try { savedLang = localStorage.getItem('fw_translate_lang'); } catch (e: unknown){}
   if (savedLang) {
     // Set cookie on both path and domain for maximum compatibility
     document.cookie = 'googtrans=/en/' + savedLang + ';path=/';
@@ -917,7 +917,7 @@ const firebaseConfig = {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     window.firebaseAuth = auth;
-  } catch (e) {
+  } catch (e: unknown){
     // App already initialized, get existing instance
     const { getApps, getApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
     app = getApps().length ? getApp() : initializeApp(firebaseConfig);
@@ -998,7 +998,7 @@ const firebaseConfig = {
       resultsContainer.style.display = 'block';
       if (searchInputEl) searchInputEl.setAttribute('aria-expanded', 'true');
       window.trackSearch?.(query, (data.results || []).length);
-    } catch (error) {
+    } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') return; // Cancelled by newer search
       console.error('Search error:', error);
       contentContainer.innerHTML = '<p style="padding: 1rem; color: #666; text-align: center;">Search unavailable</p>';
@@ -1089,7 +1089,7 @@ const firebaseConfig = {
           btn.classList.remove('is-live');
         }
       });
-    } catch (e) {
+    } catch (e: unknown){
       // Ignore errors
     }
   }
@@ -1429,7 +1429,7 @@ const firebaseConfig = {
             sessionStorage.removeItem('fw_auth_cache');
             await signOut(auth);
             window.location.href = '/';
-          } catch (e) {
+          } catch (e: unknown){
             console.error('Logout error:', e);
           }
         });
@@ -1483,11 +1483,11 @@ const firebaseConfig = {
                 timestamp: Date.now(),
                 cachedAt: Date.now()
               }));
-            } catch (e) { /* Ignore storage errors */ }
+            } catch (e: unknown){ /* Ignore storage errors */ }
           } else {
             setCachedUserType('customer', false, null);
           }
-        } catch (e) {
+        } catch (e: unknown){
           setCachedUserType('customer', false, null);
         }
       } else {
@@ -1496,7 +1496,7 @@ const firebaseConfig = {
           try {
             const freshToken = await user.getIdToken();
             document.cookie = `__session=${freshToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
-          } catch (e) { /* Token refresh failed, cookie will expire naturally */ }
+          } catch (e: unknown){ /* Token refresh failed, cookie will expire naturally */ }
         }
         // Even with cached data, ensure fw_auth_cache is set
         try {
@@ -1513,11 +1513,11 @@ const firebaseConfig = {
               cachedAt: Date.now()
             }));
           }
-        } catch (e) { /* Ignore storage errors */ }
+        } catch (e: unknown){ /* Ignore storage errors */ }
       }
     } else {
       // User logged out - clear the auth cache and admin session cookie
-      try { sessionStorage.removeItem('fw_auth_cache'); } catch (e) {}
+      try { sessionStorage.removeItem('fw_auth_cache'); } catch (e: unknown){}
       document.cookie = '__session=; path=/; max-age=0; SameSite=Lax; Secure';
     }
     // Update UI AFTER any fetch is complete
@@ -1547,7 +1547,7 @@ const firebaseConfig = {
             count = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
           }
         }
-      } catch (e) {
+      } catch (e: unknown){
         console.error('Error reading cart:', e);
       }
     }

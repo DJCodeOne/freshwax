@@ -370,7 +370,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           
           renderStockTable();
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to load data:', err);
       }
       
@@ -386,7 +386,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         if (data.success && data.movements) {
           renderMovements(data.movements);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Failed to load movements');
       }
     }
@@ -539,7 +539,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           showToast(data.error || 'Failed to adjust', 'error');
         }
-      } catch (err) {
+      } catch (err: unknown) {
         showToast('Error adjusting stock', 'error');
       }
     }
@@ -812,7 +812,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           showToast(data.error || 'Failed to update stock', 'error');
         }
-      } catch (err) {
+      } catch (err: unknown) {
         showToast('Error updating stock', 'error');
       }
       
@@ -908,7 +908,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         } else {
           showToast(data.error || 'Failed to update stock', 'error');
         }
-      } catch (err) {
+      } catch (err: unknown) {
         showToast('Error updating stock', 'error');
       }
     }
@@ -1189,7 +1189,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           const data = await response.json();
           if (data.success) success++;
           else failed++;
-        } catch (err) {
+        } catch (err: unknown) {
           failed++;
         }
       }

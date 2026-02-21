@@ -30,7 +30,7 @@ const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({
   token_uri: 'https://oauth2.googleapis.com/token'
 }) : null;
 
-console.log('[payments] Service account configured:', !!serviceAccountKey);
+console.debug('[payments] Service account configured:', !!serviceAccountKey);
 
 // Fetch disputes
 const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
@@ -68,16 +68,16 @@ if (serviceAccountKey) {
       ],
       limit: 100
     });
-    console.log('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
+    console.debug('[payments] Found', manualPendingPayouts.length, 'pending artist payouts');
     if (manualPendingPayouts.length > 0) {
-      console.log('[payments] Pending payout orderIds:', manualPendingPayouts.map(p => p.orderId).join(', '));
+      console.debug('[payments] Pending payout orderIds:', manualPendingPayouts.map(p => p.orderId).join(', '));
     }
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('[payments] Error fetching manualPendingPayouts:', err);
   }
 } else {
   console.warn('[payments] No service account key - cannot fetch pending payouts');
-  console.log('[payments] clientEmail:', !!clientEmail, 'privateKey:', !!privateKey);
+  console.debug('[payments] clientEmail:', !!clientEmail, 'privateKey:', !!privateKey);
 }
 
 // Fetch pending supplier payouts
@@ -87,10 +87,10 @@ if (serviceAccountKey) {
     pendingSupplierPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSupplierPayouts', {
       limit: 100
     });
-    console.log('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
-  } catch (err) {
+    console.debug('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
+  } catch (err: unknown) {
     // Collection might not exist yet
-    console.log('[payments] No pending supplier payouts collection');
+    console.debug('[payments] No pending supplier payouts collection');
   }
 }
 
@@ -101,10 +101,10 @@ if (serviceAccountKey) {
     pendingSellerPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSellerPayouts', {
       limit: 100
     });
-    console.log('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
-  } catch (err) {
+    console.debug('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
+  } catch (err: unknown) {
     // Collection might not exist yet
-    console.log('[payments] No pending seller payouts collection');
+    console.debug('[payments] No pending seller payouts collection');
   }
 }
 
@@ -202,10 +202,10 @@ for (const payout of pendingSellerPayouts) {
 const orderArtistMap = orderPayeesMap;
 
 // Debug: log which orders have pending payouts mapped
-console.log('[payments] Orders with pending payouts:', Object.keys(orderPayeesMap).length);
+console.debug('[payments] Orders with pending payouts:', Object.keys(orderPayeesMap).length);
 if (Object.keys(orderPayeesMap).length > 0) {
   for (const [orderId, payees] of Object.entries(orderPayeesMap)) {
-    console.log(`[payments] Order ${orderId}:`, (payees as PayeeInfo[]).map(p => `${p.name}: £${p.amount.toFixed(2)}`).join(', '));
+    console.debug(`[payments] Order ${orderId}:`, (payees as PayeeInfo[]).map(p => `${p.name}: £${p.amount.toFixed(2)}`).join(', '));
   }
 }
 
@@ -216,7 +216,7 @@ try {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
     limit: 100
   });
-} catch (err) {
+} catch (err: unknown) {
   console.error('[payments] Error fetching payouts:', err);
 }
 
@@ -238,7 +238,7 @@ if (serviceAccountKey) {
       orderBy: { field: 'timestamp', direction: 'DESCENDING' },
       limit: 500
     });
-    console.log('[payments] Firebase:', ledgerEntries.length, 'ledger entries');
+    console.debug('[payments] Firebase:', ledgerEntries.length, 'ledger entries');
   } catch (fbErr) {
     console.error('[payments] Firebase failed, trying D1:', fbErr);
   }
@@ -248,7 +248,7 @@ if (serviceAccountKey) {
 if (ledgerEntries.length === 0 && db) {
   try {
     ledgerEntries = await d1GetLedgerEntries(db, { limit: 500 });
-    console.log('[payments] D1 fallback:', ledgerEntries.length, 'ledger entries');
+    console.debug('[payments] D1 fallback:', ledgerEntries.length, 'ledger entries');
   } catch (d1Error) {
     console.error('[payments] D1 also failed:', d1Error);
   }
@@ -1228,7 +1228,7 @@ const nonce = Astro.locals.nonce || '';
           } else {
             showToast(result.error || 'Failed to retry payout', 'error');
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to retry payout', 'error');
         }
@@ -1306,7 +1306,7 @@ const nonce = Astro.locals.nonce || '';
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to trigger payout', 'error');
           btn.disabled = false;
@@ -1376,7 +1376,7 @@ const nonce = Astro.locals.nonce || '';
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to trigger payout', 'error');
           btn.disabled = false;
@@ -1424,7 +1424,7 @@ const nonce = Astro.locals.nonce || '';
             btn.disabled = false;
             btn.innerHTML = originalText;
           }
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to record payout', 'error');
           btn.disabled = false;

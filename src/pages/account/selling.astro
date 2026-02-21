@@ -288,7 +288,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Failed to load selling settings:', error);
         if (loadingState) loadingState.style.display = 'none';
         if (mainContent) mainContent.style.display = 'block';
@@ -426,7 +426,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         throw new Error(data.error || 'Failed to start Stripe setup');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert(error instanceof Error ? error.message : String(error));
       if (btn) {
         btn.disabled = false;

@@ -137,7 +137,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
 
     async function doSendGif(targetStreamId) {
       const chatHeaders = { 'Content-Type': 'application/json' };
-      try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
+      try { const t = await user.getIdToken(); if (t) chatHeaders['Authorization'] = `Bearer ${t}`; } catch (e: unknown) {}
       return fetch('/api/livestream/chat/', {
         method: 'POST',
         headers: chatHeaders,
@@ -171,7 +171,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
           }
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[GIF] Error sending:', error);
     }
   }
@@ -333,7 +333,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
         } else {
           gifResults.innerHTML = '<p class="gif-modal-loading">No GIFs found</p>';
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[GIF] Error:', err);
         gifResults.innerHTML = '<p class="gif-modal-loading">Error loading GIFs</p>';
       }
@@ -391,7 +391,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
 
       try {
         const dmHeaders = { 'Content-Type': 'application/json' };
-        try { const t = await user.getIdToken(); if (t) dmHeaders['Authorization'] = `Bearer ${t}`; } catch(e) {}
+        try { const t = await user.getIdToken(); if (t) dmHeaders['Authorization'] = `Bearer ${t}`; } catch (e: unknown) {}
         const response = await fetch('/api/livestream/chat/', {
           method: 'POST',
           headers: dmHeaders,
@@ -409,7 +409,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
           dmInput.value = '';
           currentDmRecipient = null;
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[DM] Error sending:', err);
       }
     });

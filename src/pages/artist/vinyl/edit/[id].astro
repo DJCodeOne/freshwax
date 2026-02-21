@@ -237,7 +237,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.getElementById('loadingState').style.display = 'none';
       document.getElementById('listingForm').style.display = 'block';
 
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error loading listing:', error);
       document.getElementById('loadingState').innerHTML = `
         <div class="empty-icon">❌</div>
@@ -293,7 +293,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       alert('Listing updated successfully!');
       window.location.href = '/artist/vinyl/';
 
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       saveBtn.textContent = 'Save Changes';
@@ -326,7 +326,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       window.location.href = '/artist/vinyl/';
 
-    } catch (error) {
+    } catch (error: unknown) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   });

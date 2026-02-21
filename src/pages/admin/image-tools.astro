@@ -372,7 +372,7 @@ export const prerender = false;
       scanStatusText.textContent = 'Scan complete';
       setTimeout(() => { scanStatus.style.display = 'none'; }, 1500);
 
-    } catch (err) {
+    } catch (err: unknown) {
       addLog(`Scan error: ${err}`, 'error');
       window.showToast?.('Scan failed', 'error');
       scanStatus.style.display = 'none';
@@ -479,7 +479,7 @@ export const prerender = false;
 
         addLog(`Batch ${b + 1} complete: ${data.processed} processed, ${data.failed} failed`, data.failed > 0 ? 'error' : 'success');
 
-      } catch (err) {
+      } catch (err: unknown) {
         addLog(`Batch ${b + 1} error: ${err}`, 'error');
       }
     }
@@ -547,7 +547,7 @@ export const prerender = false;
       syncStatus.style.color = failed > 0 ? 'var(--accent-red)' : 'var(--accent-green)';
       if (failed > 0) syncStatus.textContent += `, ${failed} failed`;
 
-    } catch (err) {
+    } catch (err: unknown) {
       addLog(`Firebase sync error: ${err}`, 'error');
       window.showToast?.('Firebase sync failed', 'error');
       syncFirebaseBtn.disabled = false;
@@ -686,7 +686,7 @@ export const prerender = false;
       migrateStatusText.textContent = `${mode} complete`;
       setTimeout(() => { migrateStatus.style.display = 'none'; }, 1500);
 
-    } catch (err) {
+    } catch (err: unknown) {
       addLog(`Migration error: ${err}`, 'error');
       window.showToast?.('Migration failed', 'error');
       migrateStatus.style.display = 'none';

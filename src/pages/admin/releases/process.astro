@@ -140,7 +140,7 @@ const nonce = Astro.locals.nonce || '';
             btn.addEventListener('click', () => processSubmission(btn.dataset.id, btn));
           });
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Failed to load submissions:', error);
           submissionsContainer.innerHTML = `
             <div class="empty-state" style="color: var(--accent-red);">
@@ -192,7 +192,7 @@ const nonce = Astro.locals.nonce || '';
             throw new Error(data.error || 'Processing failed');
           }
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Processing failed:', error);
           const procErrMsg = error instanceof Error ? error.message : String(error);
           log(`ERROR: ${procErrMsg}`);

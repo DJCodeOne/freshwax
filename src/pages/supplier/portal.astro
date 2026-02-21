@@ -176,7 +176,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
       }
 
-    } catch (error) {
+    } catch (error: unknown) {
       loadingState.style.display = 'none';
       errorState.style.display = 'block';
       errorMessage.textContent = error instanceof Error ? error.message : String(error);
@@ -381,7 +381,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         throw new Error(data.error || 'Failed to start Connect setup');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       alert(error instanceof Error ? error.message : String(error));
       btn.disabled = false;
       btn.textContent = 'Try Again';

@@ -469,7 +469,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
           `).join('');
         }
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading analytics:', error);
       }
     }

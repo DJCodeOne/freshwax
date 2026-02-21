@@ -75,7 +75,6 @@ if (partnerId) {
         if (db) {
           try {
             allLedgerEntries = await d1GetLedgerEntries(db, { limit: 1000 });
-            console.log(`[release-stats] D1 read: ${allLedgerEntries.length} ledger entries`);
           } catch (d1Error) {
             console.error('[release-stats] D1 read failed:', d1Error);
           }
@@ -88,7 +87,6 @@ if (partnerId) {
               orderBy: { field: 'timestamp', direction: 'DESCENDING' },
               limit: 1000
             });
-            console.log(`[release-stats] Firebase fallback: ${allLedgerEntries.length} ledger entries`);
           } catch (fbError) {
             console.error('[release-stats] Firebase fallback failed:', fbError);
           }

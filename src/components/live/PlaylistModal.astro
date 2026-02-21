@@ -1934,7 +1934,7 @@
       const { initPlaylistModal } = await import('../../lib/playlist-modal-init');
       initPlaylistModal();
       _playlistModuleLoaded = true;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[PlaylistModal] Failed to load module:', err);
       if (!silent) {
         const loader = document.getElementById('playlistModalLoader');

@@ -266,7 +266,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
           `;
         }).join('');
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error loading products:', error);
         productsList.innerHTML = '<div class="loading">Error loading products</div>';
       }

@@ -31,9 +31,7 @@ try {
     return dateB.getTime() - dateA.getTime();
   });
 
-  console.log('[MANAGE] Loaded releases:', releases.length, 'Pending:', releases.filter(r => r.status === 'pending').length);
-
-} catch (error) {
+} catch (error: unknown) {
   console.error('[MANAGE] Error loading releases:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }
@@ -588,11 +586,11 @@ const nonce = Astro.locals.nonce || '';
                   console.error(`Track ${trackNum} processing failed:`, result.error);
                   addTrackStatus(trackNum, trackTitle, 'error', result.error || 'Failed');
                 }
-              } catch (err) {
+              } catch (err: unknown) {
                 console.error(`Track processing error:`, err);
                 const trackNum = track.displayTrackNumber || (track.trackNumber + 1);
                 const trackTitle = track.trackName || track.title || `Track ${trackNum}`;
-                addTrackStatus(trackNum, trackTitle, 'error', err.message || 'Error');
+                addTrackStatus(trackNum, trackTitle, 'error', (err instanceof Error ? err.message : String(err)) || 'Error');
               }
               processed++;
             }
@@ -628,7 +626,7 @@ const nonce = Astro.locals.nonce || '';
               btn.textContent = alreadyProcessed ? '✓' : '🎵';
             }
 
-          } catch (error) {
+          } catch (error: unknown) {
             console.error(error);
             finishAudioModal(false, `Processing failed: ${error instanceof Error ? error.message : String(error)}`);
             btn.disabled = false;
@@ -659,7 +657,7 @@ const nonce = Astro.locals.nonce || '';
             showToast('Release published successfully!');
             setTimeout(() => location.reload(), 1000);
             
-          } catch (error) {
+          } catch (error: unknown) {
             console.error(error);
             showToast('Failed to publish release', 'error');
             btn.disabled = false;
@@ -735,7 +733,7 @@ const nonce = Astro.locals.nonce || '';
 
           showToast('Release deleted');
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(error);
           showToast('Failed to delete release', 'error');
           btn.disabled = false;

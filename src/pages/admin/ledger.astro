@@ -72,7 +72,6 @@ try {
         orderBy: { field: 'timestamp', direction: 'DESCENDING' },
         limit: 2000
       });
-      console.log('[ledger] Firebase:', ledgerEntries.length, 'entries');
     } catch (fbErr) {
       console.error('[ledger] Firebase failed, trying D1:', fbErr);
     }
@@ -80,7 +79,6 @@ try {
   if (ledgerEntries.length === 0 && db) {
     try {
       ledgerEntries = await d1GetLedgerEntries(db, { limit: 2000 });
-      console.log('[ledger] D1 fallback:', ledgerEntries.length, 'entries');
     } catch (d1Err) {
       console.error('[ledger] D1 also failed:', d1Err);
     }
@@ -163,7 +161,7 @@ try {
 
   // Calculate current PayPal balance
   paypalBalance.currentBalance = paypalBalance.actualNet - paypalBalance.artistPayouts - paypalBalance.payoutFees;
-} catch (e) {
+} catch (e: unknown){
   console.error('Error fetching ledger:', e);
 }
 
@@ -515,7 +513,7 @@ const formatDate = (dateStr: string) => {
         } else {
           alert('Migration failed: ' + (data.error || 'Unknown error'));
         }
-      } catch (err) {
+      } catch (err: unknown) {
         alert('Migration error: ' + (err instanceof Error ? err.message : 'Unknown'));
       } finally {
         btn.disabled = false;
@@ -552,7 +550,7 @@ const formatDate = (dateStr: string) => {
       });
       const data = await response.json();
       return data.success && data.isAdmin;
-    } catch (e) {
+    } catch (e: unknown){
       console.error('Error checking admin:', e);
     }
     return false;

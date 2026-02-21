@@ -424,7 +424,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
     // Initialize
     document.addEventListener('astro:page-load', async () => {
-      if (window.getAdminToken) { try { await window.getAdminToken(); } catch(e) { return; } }
+      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e: unknown) { return; } }
       loadSuppliers();
       setupEventListeners();
       updateTypeVisibility();
@@ -1217,7 +1217,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = '/admin/inventory/';
         }, 1500);
         
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Upload error:', error);
         showToast(error instanceof Error ? error.message : String(error), 'error');
         submitBtn.disabled = false;

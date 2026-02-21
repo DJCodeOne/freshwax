@@ -1425,7 +1425,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         allCollections = data.collections;
         renderCollections();
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading collections:', err);
       container.innerHTML = '<div class="loading-text">No collections yet</div>';
     }
@@ -1506,7 +1506,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         grid.innerHTML = '';
         empty.style.display = 'block';
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading listings:', err);
       grid.innerHTML = '';
       empty.style.display = 'block';

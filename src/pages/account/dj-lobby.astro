@@ -1457,9 +1457,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Expose auth globally for pusher module to get idToken
   window.firebaseAuth = auth;
 
-  // Debug logging - set to false for production
-  const DEBUG = false;
-  const log = (...args) => DEBUG && console.log(...args);
+  // Debug logging disabled in production
+  const log = (...args) => {};
 
   // Normalize HLS URLs to use the correct base URL (handles old trycloudflare URLs)
   function normalizeHlsUrl(url) {
@@ -1936,7 +1935,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         currentBypassStatus = { ...result, ...eligibility };
         updateBypassUI(result);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Error checking status:', error);
     }
   }
@@ -2023,7 +2022,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btn.disabled = false;
         btn.textContent = '🎫 Request Bypass Access';
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Submit error:', error);
       alert('Failed to submit request. Please try again.');
       btn.disabled = false;
@@ -2052,7 +2051,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         alert(result.error || 'Failed to cancel request');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Cancel error:', error);
     }
   });
@@ -2075,7 +2074,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
       await checkBypassStatus(currentBypassStatus || {});
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[Bypass] Resubmit error:', error);
     }
   });
@@ -2137,7 +2136,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btnText?.classList.remove('hidden');
         btnSpinner?.classList.add('hidden');
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[QuickAccess] Redeem error:', error);
       errorEl.textContent = 'Failed to redeem code. Please try again.';
       errorEl.classList.remove('hidden');
@@ -2216,8 +2215,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           source.nowPlaying = nowPlaying;
           source.listeners = result.listeners || 0;
         }
-      } catch (err) {
-        console.warn('[Relay] Check failed for', source.name, err.message);
+      } catch (err: unknown) {
+        console.warn('[Relay] Check failed for', source.name, err instanceof Error ? err.message : String(err));
         source.isCurrentlyLive = false;
       }
     }
@@ -2855,7 +2854,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     window.addEventListener('beforeunload', async () => {
       try {
         await cleanupPusher();
-      } catch(e) {
+      } catch (e: unknown) {
         console.error('Cleanup error:', e);
       }
     });
@@ -2878,7 +2877,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
 
         await cleanupPusher();
-      } catch(e) {
+      } catch (e: unknown) {
         console.error('View Transition cleanup error:', e);
       }
     });
@@ -3157,7 +3156,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const result = await response.json();
         if (!result.success) throw new Error(result.error);
         console.debug('[Broadcast] Updated via API:', { mode, hlsUrl });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[Broadcast] Failed to update broadcast mode:', error);
       }
     }
@@ -4671,7 +4670,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     }
 
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[BroadcastMeters] ERROR:', err);
     }
     broadcastMeterAnimationId = requestAnimationFrame(animateBroadcastMeters);
@@ -6803,7 +6802,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
         console.error('[GoLive] Failed to generate key:', result.error);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('[GoLive] Error loading stream key:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
       const errName = error instanceof Error ? error.name : '';
@@ -8158,7 +8157,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         console.debug('[DJ Lobby] Spawned key:', mySlot.id);
 
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[DJ Lobby] Spawn key error:', error);
         streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
         btn.textContent = 'Spawn';
@@ -8544,7 +8543,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success && result.messages) {
         renderLivestreamMessages(result.messages);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('[LivestreamChat] Failed to load messages:', err);
     }
 
@@ -8824,7 +8823,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             }
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('[LivestreamChat] Send error:', err);
       } finally {
         chatInput.disabled = false;
@@ -8971,8 +8970,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         isRelayLive = result.isLive || false;
         console.debug('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
       }
-    } catch (err) {
-      console.warn('[Relay] Live check failed:', err.message);
+    } catch (err: unknown) {
+      console.warn('[Relay] Live check failed:', err instanceof Error ? err.message : String(err));
       // If check fails, assume it might be live (let user try)
       isRelayLive = true;
     }

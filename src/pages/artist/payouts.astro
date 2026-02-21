@@ -56,7 +56,6 @@ if (partnerId) {
       if (db) {
         try {
           ledgerEntries = await d1GetLedgerEntriesByArtist(db, partnerId);
-          console.log('[Artist Payouts] D1 ledger entries:', ledgerEntries.length);
         } catch (d1Err) {
           console.error('[Artist Payouts] D1 error:', d1Err);
         }
@@ -74,7 +73,6 @@ if (partnerId) {
             e.artistId === partnerId ||
             e.artistName === partnerDoc.artistName
           );
-          console.log('[Artist Payouts] Firebase fallback entries:', ledgerEntries.length);
         } catch (fbErr) {
           console.error('[Artist Payouts] Firebase error:', fbErr);
         }

@@ -40,8 +40,8 @@ if (!partnerId) {
 }
 
 // Debug logging
-console.log('[Partner Dashboard] partnerId:', partnerId || 'NOT SET');
-console.log('[Partner Dashboard] Cookies - partnerId:', Astro.cookies.get('partnerId')?.value || 'none',
+console.debug('[Partner Dashboard] partnerId:', partnerId || 'NOT SET');
+console.debug('[Partner Dashboard] Cookies - partnerId:', Astro.cookies.get('partnerId')?.value || 'none',
             'userId:', Astro.cookies.get('userId')?.value || 'none',
             'customerId:', Astro.cookies.get('customerId')?.value || 'none');
 
@@ -69,11 +69,11 @@ if (partnerId) {
   try {
     // Try artists collection first
     const partnerDoc = await getDocument('artists', partnerId);
-    console.log('[Partner Dashboard] artists doc exists:', !!partnerDoc);
+    console.debug('[Partner Dashboard] artists doc exists:', !!partnerDoc);
 
     if (partnerDoc) {
       partner = { id: partnerId, ...partnerDoc };
-      console.log('[Partner Dashboard] Found in artists:', partner.artistName);
+      console.debug('[Partner Dashboard] Found in artists:', partner.artistName);
 
       // Fetch earnings from salesLedger (source of truth)
       stats.stripeConnected = !!partnerDoc.stripeConnectId && partnerDoc.stripeConnectStatus === 'active';
@@ -86,7 +86,7 @@ if (partnerId) {
         try {
           // D1 is primary source of truth
           artistEntries = await d1GetLedgerEntriesByArtist(db, partnerId);
-          console.log('[Partner Dashboard] D1 ledger entries:', artistEntries.length);
+          console.debug('[Partner Dashboard] D1 ledger entries:', artistEntries.length);
         } catch (d1Err) {
           console.error('[Partner Dashboard] D1 error, trying Firebase:', d1Err);
         }
@@ -103,7 +103,7 @@ if (partnerId) {
             e.submitterId === partnerId ||
             e.artistName === partnerDoc.artistName
           );
-          console.log('[Partner Dashboard] Firebase fallback entries:', artistEntries.length);
+          console.debug('[Partner Dashboard] Firebase fallback entries:', artistEntries.length);
         } catch (fbErr) {
           console.error('[Partner Dashboard] Firebase error:', fbErr);
         }
@@ -131,10 +131,10 @@ if (partnerId) {
     } else {
       // Fallback: check users collection for partner info
       const userData = await getDocument('users', partnerId);
-      console.log('[Partner Dashboard] users doc exists:', !!userData);
+      console.debug('[Partner Dashboard] users doc exists:', !!userData);
 
       if (userData) {
-        console.log('[Partner Dashboard] User roles:', JSON.stringify(userData?.roles));
+        console.debug('[Partner Dashboard] User roles:', JSON.stringify(userData?.roles));
 
         // Check if they have partner roles
         if (userData.roles?.artist || userData.roles?.dj || userData.roles?.merchSupplier || userData.roles?.vinylSeller) {
@@ -149,14 +149,14 @@ if (partnerId) {
             approved: userData.partnerInfo?.approved || userData.approved || false,
             avatarUrl: userData.avatarUrl || null
           };
-          console.log('[Partner Dashboard] Created partner from users:', partner.artistName, 'approved:', partner.approved);
+          console.debug('[Partner Dashboard] Created partner from users:', partner.artistName, 'approved:', partner.approved);
         }
       }
     }
 
     // Admin fallback - if document lookup failed but user is admin, create default partner
     if (!partner && isAdminUser) {
-      console.log('[Partner Dashboard] Admin fallback - creating default partner for:', partnerId);
+      console.debug('[Partner Dashboard] Admin fallback - creating default partner for:', partnerId);
       partner = {
         id: partnerId,
         artistName: 'Admin',

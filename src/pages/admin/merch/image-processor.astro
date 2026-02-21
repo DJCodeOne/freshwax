@@ -272,10 +272,10 @@ const csrfToken = Astro.locals.csrfToken || '';
         try {
           const processed = await processImage(file, mainSize, thumbSize, quality);
           processedImages.push(processed);
-        } catch (err) {
+        } catch (err: unknown) {
           processedImages.push({
             originalName: file.name,
-            error: err.message
+            error: err instanceof Error ? err.message : String(err)
           });
         }
         
@@ -474,7 +474,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           } else {
             throw new Error(data.error || 'Upload failed');
           }
-        } catch (err) {
+        } catch (err: unknown) {
           badge.textContent = 'Error';
           badge.className = 'status-badge error';
           console.error('Upload error:', err);

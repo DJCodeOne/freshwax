@@ -401,7 +401,7 @@ export const prerender = false;
           document.getElementById('loadingState').style.display = 'none';
           document.getElementById('usersTable').style.display = 'block';
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Error loading users:', error);
           document.getElementById('loadingState').innerHTML = `
             <div class="empty-state">
@@ -703,7 +703,7 @@ export const prerender = false;
           // Reload users to show updated data
           await loadUsers();
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Save error:', error);
           showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         } finally {
@@ -747,7 +747,7 @@ export const prerender = false;
           showToast('User approved!', 'success');
           await loadUsers();
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Approve error:', error);
           showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         }
@@ -790,7 +790,7 @@ export const prerender = false;
           showToast('User suspended successfully', 'success');
           await loadUsers();
 
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Suspend error:', error);
           showToast('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
         } finally {

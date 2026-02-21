@@ -24,7 +24,7 @@ try {
   if (settings) {
     showMixCharts = settings.showMixCharts || false;
   }
-} catch (error) {
+} catch (error: unknown) {
   console.error('[DJ-MIXES PAGE] Error loading mixes:', error);
 }
 
@@ -643,7 +643,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         // Load chart data
         loadChartData();
       }
-    } catch (error) {
+    } catch (error: unknown) {
     }
 
     // Toggle chart visibility
@@ -680,7 +680,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         } else {
           chartList.innerHTML = '<div class="chart-empty">No chart data yet</div>';
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[DJ-MIXES] Chart load error:', error);
         chartList.innerHTML = '<div class="chart-empty">Failed to load chart</div>';
       }
@@ -1239,7 +1239,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             btn.classList.remove('downloaded');
           }, 3000);
           
-        } catch (error) {
+        } catch (error: unknown) {
           console.error('Download error:', error);
           if (btnText) btnText.textContent = 'Error - Retry';
           btn.classList.remove('downloading');
@@ -1424,7 +1424,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           text: 'Check out this DJ mix on Fresh Wax',
           url: d.url
         });
-      } catch (err) {
+      } catch (err: unknown) {
         // Share cancelled or failed
       }
     });
