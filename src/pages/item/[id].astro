@@ -1419,7 +1419,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           sessionStorage.removeItem('fw_auth_cache');
         }
       }
-    } catch (e) { /* Ignore cache errors */ }
+    } catch (e: unknown) { /* Ignore cache errors */ }
     return false;
   }
 
@@ -1495,7 +1495,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   avatarUrl: profile.avatarUrl || user.photoURL || null
                 };
               }
-            } catch (e) { /* ignore parse errors */ }
+            } catch (e: unknown) { /* ignore parse errors */ }
           }
           
           // Fetch from consolidated API endpoint
@@ -1508,7 +1508,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             if (profile.success) {
               // Cache the result
               profile.cachedAt = Date.now();
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e) {}
+              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e: unknown) {}
               // Firebase Auth displayName is the public name (same as Header.astro)
               const displayName = user.displayName || profile.partnerDisplayName || user.email?.split('@')[0] || 'User';
               return {

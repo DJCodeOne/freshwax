@@ -3,6 +3,19 @@
 
 import { fetchWithTimeout } from './api-utils';
 
+// Environment bindings needed by chatbot commands
+interface ChatbotEnv {
+  FIREBASE_API_KEY?: string;
+}
+
+// Livestream slot shape from Firestore
+interface LivestreamSlotInfo {
+  djName: string;
+  title: string;
+  genre?: string;
+  scheduledFor?: string;
+}
+
 // Bot identity
 export const BOT_USER = {
   id: 'freshwax-bot',
@@ -73,7 +86,7 @@ export function shouldWelcomeUser(): boolean {
 // Bot commands and their handlers
 export const BOT_COMMANDS: Record<string, {
   description: string;
-  handler: (streamId: string, env: any) => Promise<string>;
+  handler: (streamId: string, env: ChatbotEnv) => Promise<string>;
 }> = {
   '!help': {
     description: 'Show available commands',
@@ -143,7 +156,7 @@ export const BOT_COMMANDS: Record<string, {
 };
 
 // Helper: Get current stream info
-async function getCurrentStream(streamId: string, env: any): Promise<any> {
+async function getCurrentStream(streamId: string, env: ChatbotEnv): Promise<LivestreamSlotInfo | null> {
   try {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
     const projectId = 'freshwax-store';
@@ -168,7 +181,7 @@ async function getCurrentStream(streamId: string, env: any): Promise<any> {
 }
 
 // Helper: Get today's schedule
-async function getTodaySchedule(env: any): Promise<any[]> {
+async function getTodaySchedule(env: ChatbotEnv): Promise<LivestreamSlotInfo[]> {
   try {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
     const projectId = 'freshwax-store';
@@ -219,20 +232,23 @@ async function getTodaySchedule(env: any): Promise<any[]> {
     if (!response.ok) return [];
 
     const results = await response.json();
-    return results
-      .filter((r: any) => r.document)
-      .map((r: any) => ({
-        djName: r.document.fields?.djName?.stringValue || 'TBA',
-        title: r.document.fields?.title?.stringValue || '',
-        scheduledFor: r.document.fields?.scheduledFor?.stringValue || ''
-      }));
+    return (results as Record<string, unknown>[])
+      .filter((r) => r.document)
+      .map((r) => {
+        const doc = r.document as Record<string, Record<string, Record<string, unknown>>>;
+        return {
+          djName: (doc.fields?.djName?.stringValue as string) || 'TBA',
+          title: (doc.fields?.title?.stringValue as string) || '',
+          scheduledFor: (doc.fields?.scheduledFor?.stringValue as string) || ''
+        };
+      });
   } catch {
     return [];
   }
 }
 
 // Helper: Get next scheduled slot
-async function getNextSlot(env: any): Promise<any> {
+async function getNextSlot(env: ChatbotEnv): Promise<LivestreamSlotInfo | null> {
   try {
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
     const projectId = 'freshwax-store';
@@ -302,7 +318,7 @@ export function isBotCommand(message: string): boolean {
 }
 
 // Process a bot command and return the response
-export async function processBotCommand(message: string, streamId: string, env: any): Promise<string | null> {
+export async function processBotCommand(message: string, streamId: string, env: ChatbotEnv): Promise<string | null> {
   const command = message.trim().toLowerCase().split(' ')[0];
   const handler = BOT_COMMANDS[command];
 

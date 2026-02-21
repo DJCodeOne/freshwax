@@ -1,9 +1,12 @@
 // src/lib/payout-emails.ts
 // Email notifications for artist payouts and refunds
 
+import { createLogger } from './api-utils';
 import { SITE_URL } from './constants';
 import { sendResendEmail } from './email';
 import { emailWrapper, ctaButton, detailBox, esc } from './email-wrapper';
+
+const log = createLogger('[payout-emails]');
 
 // Send email notification when a payout is completed to an artist
 export async function sendPayoutCompletedEmail(
@@ -15,14 +18,14 @@ export async function sendPayoutCompletedEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
-      console.log('[Payout Email] No email address for artist, skipping payout notification');
+      log.info('No email address for artist, skipping payout notification');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.log('[Payout Email] No Resend API key configured, skipping payout email');
+      log.info('No Resend API key configured, skipping payout email');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -73,7 +76,7 @@ export async function sendPayoutCompletedEmail(
     return result;
 
   } catch (error: unknown) {
-    console.error('[Payout Email] Error sending payout completed email:', error);
+    log.error('Error sending payout completed email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -90,14 +93,14 @@ export async function sendRefundNotificationEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
-      console.log('[Payout Email] No email address for artist, skipping refund notification');
+      log.info('No email address for artist, skipping refund notification');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.log('[Payout Email] No Resend API key configured, skipping refund email');
+      log.info('No Resend API key configured, skipping refund email');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -153,7 +156,7 @@ export async function sendRefundNotificationEmail(
     return result;
 
   } catch (error: unknown) {
-    console.error('[Payout Email] Error sending refund notification email:', error);
+    log.error('Error sending refund notification email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

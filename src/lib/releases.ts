@@ -10,7 +10,7 @@ const log = createLogger('[releases]');
 // SERVER-SIDE CACHE - Critical for quota management
 // ==========================================
 interface CacheEntry {
-  data: any;
+  data: unknown;
   expires: number;
   fetchedAt: number;
 }
@@ -25,7 +25,7 @@ const CACHE_TTL = {
   GROUPED: 30 * 60 * 1000,          // 30 minutes for grouped data
 };
 
-function getCached(key: string): any | null {
+function getCached(key: string): unknown | null {
   const entry = releasesCache.get(key);
   if (entry && Date.now() < entry.expires) {
     log.info(`[releases] Cache HIT: ${key} (age: ${Math.round((Date.now() - entry.fetchedAt) / 1000)}s)`);
@@ -38,7 +38,7 @@ function getCached(key: string): any | null {
   return null;
 }
 
-function setCache(key: string, data: any, ttl: number): void {
+function setCache(key: string, data: unknown, ttl: number): void {
   releasesCache.set(key, {
     data,
     expires: Date.now() + ttl,
@@ -82,17 +82,17 @@ export function invalidateReleasesCache(pattern?: string): void {
 }
 
 // Helper function to get label from release data
-export function getLabelFromRelease(release: any): string {
-  return release.labelName ||
+export function getLabelFromRelease(release: Record<string, unknown>): string {
+  return (release.labelName ||
          release.label ||
          release.recordLabel ||
          release.copyrightHolder ||
-         'Unknown Label';
+         'Unknown Label') as string;
 }
 
 // Helper function to normalize ratings data
-export function normalizeRatings(data: any): { average: number; count: number; total: number; fiveStarCount?: number } {
-  const ratings = data.ratings || data.overallRating || {};
+export function normalizeRatings(data: Record<string, unknown>): { average: number; count: number; total: number; fiveStarCount?: number } {
+  const ratings = (data.ratings || data.overallRating || {}) as Record<string, unknown>;
 
   return {
     average: Number(ratings.average) || 0,
@@ -103,7 +103,7 @@ export function normalizeRatings(data: any): { average: number; count: number; t
 }
 
 // Helper function to normalize a single release document
-export function normalizeRelease(data: any, id?: string): any {
+export function normalizeRelease(data: Record<string, unknown>, id?: string): Record<string, unknown> | null {
   if (!data) return null;
 
   const normalizedRatings = normalizeRatings(data);
@@ -114,7 +114,7 @@ export function normalizeRelease(data: any, id?: string): any {
     label: getLabelFromRelease(data),
     ratings: normalizedRatings,
     overallRating: normalizedRatings, // Backward compatibility
-    tracks: (data.tracks || []).map((track: any, index: number) => ({
+    tracks: ((data.tracks || []) as Record<string, unknown>[]).map((track, index: number) => ({
       ...track,
       trackNumber: track.trackNumber || track.displayTrackNumber || (index + 1),
       displayTrackNumber: track.displayTrackNumber || track.trackNumber || (index + 1),
@@ -129,18 +129,18 @@ export function normalizeRelease(data: any, id?: string): any {
   };
 }
 
-export async function getAllReleases(): Promise<any[]> {
+export async function getAllReleases(): Promise<Record<string, unknown>[]> {
   // Check cache first (before Firebase init to save resources)
   const cacheKey = 'all-releases';
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>[];
 
   try {
     const results = await queryCollection('releases', {
       filters: [{ field: 'status', op: 'EQUAL', value: 'live' }]
     });
 
-    const releases: any[] = [];
+    const releases: Record<string, unknown>[] = [];
 
     for (const doc of results) {
       const normalized = normalizeRelease(doc);
@@ -170,11 +170,11 @@ export async function getAllReleases(): Promise<any[]> {
   }
 }
 
-export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
+export async function getReleasesForPage(limit: number = 20): Promise<Record<string, unknown>[]> {
   // Check cache first - use limit-specific key
   const cacheKey = `releases-page:${limit}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>[];
 
   try {
     const results = await queryCollection('releases', {
@@ -183,7 +183,7 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
       limit
     });
 
-    const releases: any[] = [];
+    const releases: Record<string, unknown>[] = [];
 
     for (const doc of results) {
       const normalized = normalizeRelease(doc);
@@ -213,16 +213,16 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
   }
 }
 
-export async function getReleaseById(id: string): Promise<any | null> {
+export async function getReleaseById(id: string): Promise<Record<string, unknown> | null> {
   // Check cache first
   const cacheKey = `release:${id}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>;
 
   // Also check if it's in the all-releases cache
-  const allCached = getCached('all-releases');
+  const allCached = getCached('all-releases') as Record<string, unknown>[] | null;
   if (allCached) {
-    const found = allCached.find((r: any) => r.id === id);
+    const found = allCached.find((r) => r.id === id);
     if (found) {
       log.info(`[getReleaseById] Found ${id} in all-releases cache`);
       setCache(cacheKey, found, CACHE_TTL.SINGLE_RELEASE);
@@ -267,16 +267,16 @@ export async function getReleaseById(id: string): Promise<any | null> {
   }
 }
 
-export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>> {
+export async function getReleasesGroupedByLabel(): Promise<Record<string, Record<string, unknown>[]>> {
   // Check cache first
   const cacheKey = 'releases-grouped-by-label';
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, Record<string, unknown>[]>;
 
   try {
     log.info('[getReleasesGroupedByLabel] Fetching and grouping releases');
     const releases = await getAllReleases(); // This now uses cache
-    const releasesByLabel: Record<string, any[]> = {};
+    const releasesByLabel: Record<string, Record<string, unknown>[]> = {};
 
     releases.forEach(release => {
       const label = release.label || getLabelFromRelease(release);
@@ -311,18 +311,18 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
   }
 }
 
-export async function getReleasesByArtist(artistName: string): Promise<any[]> {
+export async function getReleasesByArtist(artistName: string): Promise<Record<string, unknown>[]> {
   // Check cache first
   const cacheKey = `releases-by-artist:${artistName.toLowerCase()}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>[];
 
   // Try to use the all-releases cache first (avoids extra Firebase read)
-  const allCached = getCached('all-releases');
+  const allCached = getCached('all-releases') as Record<string, unknown>[] | null;
   if (allCached) {
     const filtered = allCached
-      .filter((r: any) => r.artistName?.toLowerCase() === artistName.toLowerCase())
-      .sort((a: any, b: any) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+      .filter((r) => (r.artistName as string)?.toLowerCase() === artistName.toLowerCase())
+      .sort((a, b) => new Date(b.releaseDate as string).getTime() - new Date(a.releaseDate as string).getTime());
 
     log.info(`[getReleasesByArtist] Found ${filtered.length} releases for "${artistName}" from cache`);
     setCache(cacheKey, filtered, CACHE_TTL.BY_ARTIST);
@@ -338,7 +338,7 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
       ]
     });
 
-    const releases: any[] = [];
+    const releases: Record<string, unknown>[] = [];
 
     for (const doc of results) {
       const normalized = normalizeRelease(doc);
@@ -347,7 +347,7 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
       }
     }
 
-    releases.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+    releases.sort((a, b) => new Date(b.releaseDate as string).getTime() - new Date(a.releaseDate as string).getTime());
 
     log.info(`[getReleasesByArtist] Found ${releases.length} releases for "${artistName}"`);
 
@@ -361,21 +361,21 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
   }
 }
 
-export async function getReleasesByLabel(labelName: string): Promise<any[]> {
+export async function getReleasesByLabel(labelName: string): Promise<Record<string, unknown>[]> {
   // Check cache first
   const cacheKey = `releases-by-label:${labelName.toLowerCase()}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>[];
 
   // OPTIMIZED: Use all-releases cache and filter locally instead of 3 Firebase queries
-  const allCached = getCached('all-releases');
+  const allCached = getCached('all-releases') as Record<string, unknown>[] | null;
   if (allCached) {
-    const filtered = allCached.filter((release: any) => {
-      const releaseLabel = release.labelName || release.recordLabel || release.copyrightHolder || '';
+    const filtered = allCached.filter((release) => {
+      const releaseLabel = (release.labelName || release.recordLabel || release.copyrightHolder || '') as string;
       return releaseLabel.toLowerCase() === labelName.toLowerCase();
-    }).sort((a: any, b: any) => {
-      const codeA = a.catalogNumber || a.labelCode || '';
-      const codeB = b.catalogNumber || b.labelCode || '';
+    }).sort((a, b) => {
+      const codeA = (a.catalogNumber || a.labelCode || '') as string;
+      const codeB = (b.catalogNumber || b.labelCode || '') as string;
       return codeA.localeCompare(codeB);
     });
 
@@ -408,7 +408,7 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
     ];
 
     const results = await Promise.all(queries);
-    const releaseMap = new Map<string, any>();
+    const releaseMap = new Map<string, Record<string, unknown>>();
 
     for (const resultSet of results) {
       for (const doc of resultSet) {

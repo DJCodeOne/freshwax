@@ -365,7 +365,7 @@ const nonce = Astro.locals.nonce || '';
         try {
           await navigator.clipboard.writeText(command);
           showToast('Command copied! Run in terminal: ' + command);
-        } catch (e) {
+        } catch (e: unknown) {
           showToast('Run in terminal: ' + command);
         }
       });
@@ -393,7 +393,7 @@ const nonce = Astro.locals.nonce || '';
             if (data.status === 'healthy' && data.r2Configured) {
               return true;
             }
-          } catch (e) {
+          } catch (e: unknown) {
             // Try next URL
           }
         }

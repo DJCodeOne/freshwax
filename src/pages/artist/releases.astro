@@ -104,7 +104,7 @@ if (partnerId) {
         return String(codeA).localeCompare(String(codeB));
       });
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Error fetching releases:', e);
   }
 }

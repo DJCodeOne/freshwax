@@ -112,7 +112,7 @@ export async function getServiceAccountToken(serviceAccountKey: string): Promise
 }
 
 // Convert JS value to Firestore value
-function toFirestoreValue(value: any): any {
+function toFirestoreValue(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'string') return { stringValue: value };
   if (typeof value === 'boolean') return { booleanValue: value };
@@ -128,7 +128,7 @@ function toFirestoreValue(value: any): any {
     return { arrayValue: { values: value.map(toFirestoreValue) } };
   }
   if (typeof value === 'object') {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
       fields[k] = toFirestoreValue(v);
     }
@@ -138,19 +138,22 @@ function toFirestoreValue(value: any): any {
 }
 
 // Convert Firestore value to JS value
-function fromFirestoreValue(value: any): any {
-  if ('stringValue' in value) return value.stringValue;
-  if ('integerValue' in value) return parseInt(value.integerValue, 10);
-  if ('doubleValue' in value) return value.doubleValue;
-  if ('booleanValue' in value) return value.booleanValue;
-  if ('timestampValue' in value) return value.timestampValue;
-  if ('nullValue' in value) return null;
-  if ('arrayValue' in value) {
-    return (value.arrayValue?.values || []).map(fromFirestoreValue);
+function fromFirestoreValue(value: unknown): unknown {
+  const val = value as Record<string, unknown>;
+  if ('stringValue' in val) return val.stringValue;
+  if ('integerValue' in val) return parseInt(val.integerValue as string, 10);
+  if ('doubleValue' in val) return val.doubleValue;
+  if ('booleanValue' in val) return val.booleanValue;
+  if ('timestampValue' in val) return val.timestampValue;
+  if ('nullValue' in val) return null;
+  if ('arrayValue' in val) {
+    const arrVal = val.arrayValue as Record<string, unknown> | undefined;
+    return ((arrVal?.values || []) as unknown[]).map(fromFirestoreValue);
   }
-  if ('mapValue' in value) {
-    const result: Record<string, any> = {};
-    const fields = value.mapValue?.fields || {};
+  if ('mapValue' in val) {
+    const result: Record<string, unknown> = {};
+    const mapVal = val.mapValue as Record<string, unknown> | undefined;
+    const fields = (mapVal?.fields || {}) as Record<string, unknown>;
     for (const [k, v] of Object.entries(fields)) {
       result[k] = fromFirestoreValue(v);
     }
@@ -170,7 +173,7 @@ export async function saGetDocument(
   projectId: string,
   collection: string,
   docId: string
-): Promise<Record<string, any> | null> {
+): Promise<Record<string, unknown> | null> {
   const token = await getServiceAccountToken(serviceAccountKey);
   const url = getFirestoreUrl(projectId, `${collection}/${docId}`);
 
@@ -185,10 +188,10 @@ export async function saGetDocument(
     throw new Error(`Failed to get document: ${error}`);
   }
 
-  const doc = await response.json() as any;
+  const doc = await response.json() as Record<string, unknown>;
 
   // Convert to plain object
-  const result: Record<string, any> = {};
+  const result: Record<string, unknown> = {};
   const fields = doc.fields || {};
   for (const [key, value] of Object.entries(fields)) {
     result[key] = fromFirestoreValue(value);
@@ -204,12 +207,12 @@ export async function saSetDocument(
   projectId: string,
   collection: string,
   docId: string,
-  data: Record<string, any>
-): Promise<Record<string, any>> {
+  data: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const token = await getServiceAccountToken(serviceAccountKey);
   const url = getFirestoreUrl(projectId, `${collection}/${docId}`);
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -228,10 +231,10 @@ export async function saSetDocument(
     throw new Error(`Failed to set document: ${error}`);
   }
 
-  const doc = await response.json() as any;
+  const doc = await response.json() as Record<string, unknown>;
 
   // Convert to plain object
-  const result: Record<string, any> = {};
+  const result: Record<string, unknown> = {};
   const docFields = doc.fields || {};
   for (const [key, value] of Object.entries(docFields)) {
     result[key] = fromFirestoreValue(value);
@@ -252,8 +255,8 @@ function escapeFieldPath(key: string): string {
 
 // Convert flat dotted keys to nested Firestore structure
 // e.g., {'subscription.expiresAt': 'value'} -> {subscription: {expiresAt: 'value'}}
-function unflattenObject(data: Record<string, any>): Record<string, any> {
-  const result: Record<string, any> = {};
+function unflattenObject(data: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(data)) {
     const parts = key.split('.');
@@ -279,8 +282,8 @@ export async function saUpdateDocument(
   projectId: string,
   collection: string,
   docId: string,
-  data: Record<string, any>
-): Promise<Record<string, any>> {
+  data: Record<string, unknown>
+): Promise<Record<string, unknown>> {
   const token = await getServiceAccountToken(serviceAccountKey);
 
   // Build update mask - escape field paths with special characters
@@ -291,7 +294,7 @@ export async function saUpdateDocument(
 
   // Convert flat dotted keys to nested structure for Firestore
   const nestedData = unflattenObject(data);
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(nestedData)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -310,9 +313,9 @@ export async function saUpdateDocument(
     throw new Error(`Failed to update document: ${error}`);
   }
 
-  const doc = await response.json() as any;
+  const doc = await response.json() as Record<string, unknown>;
 
-  const result: Record<string, any> = {};
+  const result: Record<string, unknown> = {};
   const docFields = doc.fields || {};
   for (const [key, value] of Object.entries(docFields)) {
     result[key] = fromFirestoreValue(value);
@@ -348,13 +351,13 @@ export async function saAddDocument(
   serviceAccountKey: string,
   projectId: string,
   collection: string,
-  data: Record<string, any>
-): Promise<{ id: string; data: Record<string, any> }> {
+  data: Record<string, unknown>
+): Promise<{ id: string; data: Record<string, unknown> }> {
   const token = await getServiceAccountToken(serviceAccountKey);
   const url = getFirestoreUrl(projectId, collection);
 
   // Convert data to Firestore fields format
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -380,7 +383,7 @@ export async function saAddDocument(
   const docId = nameParts[nameParts.length - 1] || '';
 
   // Convert result fields back to plain object
-  const resultData: Record<string, any> = {};
+  const resultData: Record<string, unknown> = {};
   const docFields = result.fields || {};
   for (const [key, value] of Object.entries(docFields)) {
     resultData[key] = fromFirestoreValue(value);
@@ -398,11 +401,11 @@ export async function saQueryCollection(
   projectId: string,
   collection: string,
   options?: {
-    filters?: Array<{ field: string; op: string; value: any }>;
+    filters?: Array<{ field: string; op: string; value: unknown }>;
     orderBy?: { field: string; direction?: 'ASCENDING' | 'DESCENDING' };
     limit?: number;
   }
-): Promise<Record<string, any>[]> {
+): Promise<Record<string, unknown>[]> {
   const token = await getServiceAccountToken(serviceAccountKey);
 
   // If we have filters, use structured query (POST)
@@ -438,7 +441,7 @@ export async function saQueryCollection(
       }
     }));
 
-    let where: any;
+    let where: Record<string, unknown>;
     if (fieldFilters.length === 1) {
       where = fieldFilters[0];
     } else {
@@ -450,7 +453,7 @@ export async function saQueryCollection(
       };
     }
 
-    const structuredQuery: any = {
+    const structuredQuery: Record<string, unknown> = {
       from: [{ collectionId: collection }],
       where
     };
@@ -481,17 +484,17 @@ export async function saQueryCollection(
       return [];
     }
 
-    const results = await response.json() as any[];
+    const results = await response.json() as Record<string, unknown>[];
     return results
-      .filter((r: any) => r.document) // Filter out empty results
-      .map((r: any) => {
-        const doc = r.document;
-        const result: Record<string, any> = {};
-        const fields = doc.fields || {};
+      .filter((r) => r.document) // Filter out empty results
+      .map((r) => {
+        const doc = r.document as Record<string, unknown>;
+        const result: Record<string, unknown> = {};
+        const fields = (doc.fields || {}) as Record<string, unknown>;
         for (const [key, value] of Object.entries(fields)) {
           result[key] = fromFirestoreValue(value);
         }
-        const nameParts = doc.name.split('/');
+        const nameParts = (doc.name as string).split('/');
         result.id = nameParts[nameParts.length - 1];
         return result;
       });
@@ -522,17 +525,17 @@ export async function saQueryCollection(
     return [];
   }
 
-  const data = await response.json() as any;
-  const documents = data.documents || [];
+  const data = await response.json() as Record<string, unknown>;
+  const documents = (data.documents || []) as Record<string, unknown>[];
 
-  return documents.map((doc: any) => {
-    const result: Record<string, any> = {};
-    const fields = doc.fields || {};
+  return documents.map((doc) => {
+    const result: Record<string, unknown> = {};
+    const fields = (doc.fields || {}) as Record<string, unknown>;
     for (const [key, value] of Object.entries(fields)) {
       result[key] = fromFirestoreValue(value);
     }
     // Extract document ID from name
-    const nameParts = doc.name.split('/');
+    const nameParts = (doc.name as string).split('/');
     result.id = nameParts[nameParts.length - 1];
     return result;
   });

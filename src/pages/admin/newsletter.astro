@@ -615,7 +615,7 @@ Stay fresh! 🎵
       });
       const data = await res.json();
       if (!data.isAdmin) { alert('Admin access required'); window.location.href = '/account/dashboard/'; return; }
-    } catch (e) { console.error(e); }
+    } catch (e: unknown) { console.error(e); }
     loadSubscribers();
   });
   
@@ -657,7 +657,7 @@ Stay fresh! 🎵
           renderSubscribers();
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
       document.getElementById('loadingState').innerHTML = `<div style="color:red;text-align:center;padding:2rem;"><h3>Error loading</h3><button class="btn btn-primary" id="retryLoadBtn">Retry</button></div>`;
       document.getElementById('retryLoadBtn')?.addEventListener('click', () => location.reload());
@@ -762,7 +762,7 @@ Stay fresh! 🎵
       document.getElementById('uploadArea').style.display = 'none';
       document.getElementById('uploadStatus').style.display = 'flex';
       document.getElementById('uploadFileName').textContent = file.name;
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e: unknown) { alert('Error: ' + (e instanceof Error ? e.message : String(e))); }
   }
   
   function clearUpload() {
@@ -810,7 +810,7 @@ Stay fresh! 🎵
       const res = await fetch('/api/newsletter/send/', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Key': window.ADMIN_KEY || '' }, body: JSON.stringify({ subject: subj, content: cont, testEmail: email }) });
       const data = await res.json();
       alert(data.success ? `Test sent to ${email}` : (data.error || 'Failed'));
-    } catch (e) { alert('Error'); }
+    } catch (e: unknown) { alert('Error'); }
     finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
@@ -832,7 +832,7 @@ Stay fresh! 🎵
         document.getElementById('emailSubject').value = ''; document.getElementById('emailContent').value = '';
         clearUpload(); selectedIds.clear(); loadSubscribers();
       } else alert(data.error || 'Failed');
-    } catch (e) { alert('Error: ' + e.message); }
+    } catch (e: unknown) { alert('Error: ' + (e instanceof Error ? e.message : String(e))); }
     finally { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('hidden'); btn.querySelector('.btn-loading').classList.add('hidden'); }
   }
   
@@ -846,7 +846,7 @@ Stay fresh! 🎵
       const data = await res.json();
       if (data.success) { closeModal('addSubscriberModal'); loadSubscribers(); }
       else alert(data.error || 'Failed');
-    } catch (e) { alert('Error'); }
+    } catch (e: unknown) { alert('Error'); }
   }
   
   function editSubscriber(id) {
@@ -872,7 +872,7 @@ Stay fresh! 🎵
         document.getElementById('activeCount').textContent = allSubscribers.filter(s => s.status === 'active').length;
         document.getElementById('unsubscribedCount').textContent = allSubscribers.filter(s => s.status === 'unsubscribed').length;
       } else alert(data.error || 'Failed');
-    } catch (e) { alert('Error'); }
+    } catch (e: unknown) { alert('Error'); }
   }
   
   function deleteSubscriber(id) {
@@ -896,6 +896,6 @@ Stay fresh! 🎵
         if (allSubscribers.length === 0) { document.getElementById('subscribersTable').style.display = 'none'; document.getElementById('emptyState').style.display = 'block'; }
         else renderSubscribers();
       } else alert(data.error || 'Failed');
-    } catch (e) { alert('Error'); }
+    } catch (e: unknown) { alert('Error'); }
   }
 </script>

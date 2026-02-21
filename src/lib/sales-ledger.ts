@@ -3,8 +3,11 @@
 // Each completed order creates an immutable ledger entry
 // Architecture: D1 (primary read) + Firebase (backup)
 
+import { createLogger } from './api-utils';
 import { addDocument, queryCollection } from './firebase-rest';
 import { d1InsertLedgerEntry, d1GetLedgerEntries, d1GetLedgerTotals } from './d1-catalog';
+
+const log = createLogger('[sales-ledger]');
 
 // D1 database type (from Cloudflare bindings)
 type D1Database = any;
@@ -179,20 +182,20 @@ export async function recordSale(params: {
     if (params.db) {
       try {
         await d1InsertLedgerEntry(params.db, ledgerId, { ...entry, id: ledgerId });
-        console.log(`[sales-ledger] D1 write successful for: ${ledgerId}`);
+        log.info(`D1 write successful for: ${ledgerId}`);
       } catch (d1Error) {
         // Log D1 error but don't fail - Firebase backup is sufficient
-        console.error('[sales-ledger] D1 write failed (Firebase backup exists):', d1Error);
+        log.error('D1 write failed (Firebase backup exists):', d1Error);
       }
     } else {
-      console.log('[sales-ledger] D1 not available, Firebase-only write');
+      log.info('D1 not available, Firebase-only write');
     }
 
-    console.log(`[sales-ledger] Recorded sale: ${params.orderNumber} - £${params.grossTotal.toFixed(2)}`);
+    log.info(`Recorded sale: ${params.orderNumber} - £${params.grossTotal.toFixed(2)}`);
 
     return { success: true, ledgerId };
   } catch (error: unknown) {
-    console.error('[sales-ledger] Error recording sale:', error);
+    log.error('Error recording sale:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -232,10 +235,10 @@ export async function getLedgerEntries(options: {
         });
       }
 
-      console.log(`[sales-ledger] D1 read: ${filtered.length} entries`);
+      log.info(`D1 read: ${filtered.length} entries`);
       return filtered as LedgerEntry[];
     } catch (d1Error) {
-      console.error('[sales-ledger] D1 read failed, falling back to Firebase:', d1Error);
+      log.error('D1 read failed, falling back to Firebase:', d1Error);
     }
   }
 
@@ -267,10 +270,10 @@ export async function getLedgerEntries(options: {
       });
     }
 
-    console.log(`[sales-ledger] Firebase fallback read: ${filtered.length} entries`);
+    log.info(`Firebase fallback read: ${filtered.length} entries`);
     return filtered as LedgerEntry[];
   } catch (error: unknown) {
-    console.error('[sales-ledger] Error fetching entries:', error);
+    log.error('Error fetching entries:', error);
     return [];
   }
 }
@@ -452,23 +455,23 @@ export async function recordMultiSellerSale(params: {
         try {
           await d1InsertLedgerEntry(params.db, ledgerId, { ...entry, id: ledgerId });
         } catch (d1Error) {
-          console.error(`[sales-ledger] D1 write failed for seller ${sellerId}:`, d1Error);
+          log.error(`D1 write failed for seller ${sellerId}:`, d1Error);
         }
       }
 
-      console.log(`[sales-ledger] Recorded sale for seller ${sellerId}: ${params.orderNumber} - £${sellerSubtotal.toFixed(2)} (net: £${sellerNetRevenue.toFixed(2)})`);
+      log.info(`Recorded sale for seller ${sellerId}: ${params.orderNumber} - £${sellerSubtotal.toFixed(2)} (net: £${sellerNetRevenue.toFixed(2)})`);
     }
 
     // Handle items with unknown seller (platform keeps this revenue)
     if (unknownSellerItems.length > 0) {
       const unknownSubtotal = unknownSellerItems.reduce((sum, item) =>
         sum + (item.price * (item.quantity || 1)), 0);
-      console.log(`[sales-ledger] ${unknownSellerItems.length} items with unknown seller (£${unknownSubtotal.toFixed(2)}) - platform revenue`);
+      log.info(`${unknownSellerItems.length} items with unknown seller (£${unknownSubtotal.toFixed(2)}) - platform revenue`);
     }
 
     return { success: true, ledgerIds };
   } catch (error: unknown) {
-    console.error('[sales-ledger] Error recording multi-seller sale:', error);
+    log.error('Error recording multi-seller sale:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

@@ -1,9 +1,12 @@
 // src/lib/vinyl-order-emails.ts
 // Email notifications for vinyl crates orders - seller and admin notifications
 
+import { createLogger } from './api-utils';
 import { SITE_URL } from './constants';
 import { emailWrapper, ctaButton, detailBox, esc } from './email-wrapper';
 import { sendResendEmail } from './email';
+
+const log = createLogger('[vinyl-order-emails]');
 
 // Send email to seller when their vinyl is purchased
 export async function sendVinylOrderSellerEmail(
@@ -22,14 +25,14 @@ export async function sendVinylOrderSellerEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!sellerEmail) {
-      console.log('[Vinyl Email] No seller email, skipping notification');
+      log.info('No seller email, skipping notification');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.log('[Vinyl Email] No Resend API key configured');
+      log.info('No Resend API key configured');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -103,8 +106,8 @@ export async function sendVinylOrderSellerEmail(
 
     return result;
 
-  } catch (err) {
-    console.error('[Vinyl Email] Error:', err);
+  } catch (err: unknown) {
+    log.error('Error:', err);
     return { success: false, error: 'Email error' };
   }
 }
@@ -178,8 +181,8 @@ export async function sendVinylOrderAdminEmail(
 
     return result;
 
-  } catch (err) {
-    console.error('[Vinyl Email] Admin email error:', err);
+  } catch (err: unknown) {
+    log.error('Admin email error:', err);
     return { success: false, error: 'Email error' };
   }
 }

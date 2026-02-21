@@ -10,7 +10,7 @@ const log = createLogger('[dj-mixes]');
 // SERVER-SIDE CACHE - Reduces Firebase reads
 // ==========================================
 interface CacheEntry {
-  data: any;
+  data: unknown;
   expires: number;
   fetchedAt: number;
 }
@@ -23,7 +23,7 @@ const CACHE_TTL = {
   BY_DJ: 15 * 60 * 1000,        // 15 minutes for DJ queries
 };
 
-function getCached(key: string): any | null {
+function getCached(key: string): unknown | null {
   const entry = mixesCache.get(key);
   if (entry && Date.now() < entry.expires) {
     log.info(`[dj-mixes] Cache HIT: ${key} (age: ${Math.round((Date.now() - entry.fetchedAt) / 1000)}s)`);
@@ -36,7 +36,7 @@ function getCached(key: string): any | null {
   return null;
 }
 
-function setCache(key: string, data: any, ttl: number): void {
+function setCache(key: string, data: unknown, ttl: number): void {
   mixesCache.set(key, {
     data,
     expires: Date.now() + ttl,
@@ -69,7 +69,7 @@ function invalidateMixesCache(pattern?: string): void {
 }
 
 // Helper function to normalize mix data
-function normalizeMix(data: any): any {
+function normalizeMix(data: Record<string, unknown>): Record<string, unknown> | null {
   if (!data) return null;
 
   return {
@@ -94,11 +94,11 @@ function normalizeMix(data: any): any {
 }
 
 // Get all published DJ mixes
-export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
+export async function getDJMixesForPage(limit: number = 50): Promise<Record<string, unknown>[]> {
   // Check cache first
   const cacheKey = `mixes-page:${limit}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>[];
 
   try {
     log.info(`[getDJMixesForPage] Fetching up to ${limit} mixes from Firebase...`);
@@ -124,7 +124,7 @@ export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
       });
     }
 
-    const mixes: any[] = [];
+    const mixes: Record<string, unknown>[] = [];
 
     for (const doc of results) {
       const normalized = normalizeMix(doc);
@@ -154,16 +154,16 @@ export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
 }
 
 // Get single DJ mix by ID
-export async function getDJMixById(mixId: string): Promise<any | null> {
+export async function getDJMixById(mixId: string): Promise<Record<string, unknown> | null> {
   // Check cache first
   const cacheKey = `mix:${mixId}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>;
 
   // Also check if it's in the all-mixes cache
-  const allCached = getCached('mixes-page:50');
+  const allCached = getCached('mixes-page:50') as Record<string, unknown>[] | null;
   if (allCached) {
-    const found = allCached.find((m: any) => m.id === mixId);
+    const found = allCached.find((m) => m.id === mixId);
     if (found) {
       log.info(`[getDJMixById] Found ${mixId} in all-mixes cache`);
       setCache(cacheKey, found, CACHE_TTL.SINGLE_MIX);
@@ -197,23 +197,23 @@ export async function getDJMixById(mixId: string): Promise<any | null> {
 }
 
 // Get mixes by DJ name
-export async function getDJMixesByDJ(djName: string, limit: number = 20): Promise<any[]> {
+export async function getDJMixesByDJ(djName: string, limit: number = 20): Promise<Record<string, unknown>[]> {
   // Check cache first
   const cacheKey = `mixes-by-dj:${djName.toLowerCase()}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as Record<string, unknown>[];
 
   try {
     // Try to use the all-mixes cache first (avoids extra Firebase read)
     const allCached = getCached('mixes-page:50');
     if (allCached) {
-      const filtered = allCached
-        .filter((m: any) =>
-          (m.dj_name?.toLowerCase() === djName.toLowerCase()) ||
-          (m.djName?.toLowerCase() === djName.toLowerCase()) ||
-          (m.artist?.toLowerCase() === djName.toLowerCase())
+      const filtered = (allCached as Record<string, unknown>[])
+        .filter((m) =>
+          ((m.dj_name as string)?.toLowerCase() === djName.toLowerCase()) ||
+          ((m.djName as string)?.toLowerCase() === djName.toLowerCase()) ||
+          ((m.artist as string)?.toLowerCase() === djName.toLowerCase())
         )
-        .sort((a: any, b: any) => {
+        .sort((a, b) => {
           const dateA = new Date(a.upload_date || 0).getTime();
           const dateB = new Date(b.upload_date || 0).getTime();
           return dateB - dateA;
@@ -231,7 +231,7 @@ export async function getDJMixesByDJ(djName: string, limit: number = 20): Promis
       limit
     });
 
-    const mixes: any[] = [];
+    const mixes: Record<string, unknown>[] = [];
 
     for (const doc of results) {
       const normalized = normalizeMix(doc);
@@ -241,8 +241,8 @@ export async function getDJMixesByDJ(djName: string, limit: number = 20): Promis
     }
 
     mixes.sort((a, b) => {
-      const dateA = new Date(a.upload_date || 0).getTime();
-      const dateB = new Date(b.upload_date || 0).getTime();
+      const dateA = new Date((a.upload_date as string) || 0).getTime();
+      const dateB = new Date((b.upload_date as string) || 0).getTime();
       return dateB - dateA;
     });
 

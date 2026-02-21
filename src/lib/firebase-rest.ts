@@ -112,13 +112,13 @@ async function getServiceAccountToken(): Promise<string | null> {
       return getLegacyAuthToken();
     }
 
-    const tokenData: any = await tokenResponse.json();
-    _serviceAccountToken = tokenData.access_token;
+    const tokenData = await tokenResponse.json() as Record<string, unknown>;
+    _serviceAccountToken = tokenData.access_token as string;
     // Refresh 5 minutes before expiry (tokens last 3600s)
-    _serviceAccountExpiry = Date.now() + ((tokenData.expires_in || 3600) * 1000) - (5 * 60 * 1000);
+    _serviceAccountExpiry = Date.now() + (((tokenData.expires_in as number) || 3600) * 1000) - (5 * 60 * 1000);
     log.info('Service account token acquired');
     return _serviceAccountToken;
-  } catch (err) {
+  } catch (err: unknown) {
     log.error('Service account auth error:', err);
     return getLegacyAuthToken();
   }
@@ -154,13 +154,13 @@ async function getLegacyAuthToken(): Promise<string | null> {
       return null;
     }
 
-    const data: any = await response.json();
-    _legacyAuthToken = data.idToken;
+    const data = await response.json() as Record<string, unknown>;
+    _legacyAuthToken = data.idToken as string;
     // Refresh 5 minutes before expiry (tokens last ~3600s)
-    _legacyAuthExpiry = Date.now() + (parseInt(data.expiresIn || '3600') * 1000) - (5 * 60 * 1000);
+    _legacyAuthExpiry = Date.now() + (parseInt((data.expiresIn as string) || '3600') * 1000) - (5 * 60 * 1000);
     log.info('Legacy auth token refreshed');
     return _legacyAuthToken;
-  } catch (err) {
+  } catch (err: unknown) {
     log.error('Legacy auth error:', err);
     return null;
   }
@@ -196,7 +196,7 @@ export function initFirebaseEnv(env: Record<string, string>) {
 
 // Get env var with fallback chain: runtime cache -> import.meta.env -> default
 function getEnvVar(name: string, defaultValue?: string): string | undefined {
-  return runtimeEnvCache[name] || (import.meta.env as any)?.[name] || defaultValue;
+  return runtimeEnvCache[name] || (import.meta.env as Record<string, string>)?.[name] || defaultValue;
 }
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 
@@ -205,7 +205,7 @@ const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_I
 // ==========================================
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   expires: number;
   fetchedAt: number;
 }
@@ -238,9 +238,9 @@ const CACHE_TTL = {
 };
 
 // Request deduplication - prevent duplicate in-flight requests
-const pendingRequests = new Map<string, Promise<any>>();
+const pendingRequests = new Map<string, Promise<unknown>>();
 
-function getCached(key: string): any | null {
+function getCached(key: string): unknown | null {
   const entry = cache.get(key);
   if (entry && Date.now() < entry.expires) {
     log.info(`Cache HIT: ${key} (age: ${Math.round((Date.now() - entry.fetchedAt) / 1000)}s)`);
@@ -253,7 +253,7 @@ function getCached(key: string): any | null {
   return null;
 }
 
-function setCache(key: string, data: any, ttl: number = CACHE_TTL.DEFAULT): void {
+function setCache(key: string, data: unknown, ttl: number = CACHE_TTL.DEFAULT): void {
   cache.set(key, { 
     data, 
     expires: Date.now() + ttl,
@@ -298,7 +298,7 @@ type FirestoreOp = 'EQUAL' | 'NOT_EQUAL' | 'LESS_THAN' | 'LESS_THAN_OR_EQUAL' | 
 interface QueryFilter {
   field: string;
   op: FirestoreOp;
-  value: any;
+  value: unknown;
 }
 
 interface QueryOptions {
@@ -314,12 +314,12 @@ interface QueryOptions {
 // VALUE CONVERSION
 // ==========================================
 
-function toFirestoreValue(value: any): any {
+function toFirestoreValue(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'string') return { stringValue: value };
   if (typeof value === 'boolean') return { booleanValue: value };
   if (typeof value === 'number') {
-    return Number.isInteger(value) 
+    return Number.isInteger(value)
       ? { integerValue: String(value) }
       : { doubleValue: value };
   }
@@ -330,8 +330,8 @@ function toFirestoreValue(value: any): any {
     return { arrayValue: { values: value.map(toFirestoreValue) } };
   }
   if (typeof value === 'object') {
-    const fields: any = {};
-    for (const [k, v] of Object.entries(value)) {
+    const fields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       fields[k] = toFirestoreValue(v);
     }
     return { mapValue: { fields } };
@@ -339,34 +339,37 @@ function toFirestoreValue(value: any): any {
   return { stringValue: String(value) };
 }
 
-function fromFirestoreValue(val: any): any {
+function fromFirestoreValue(val: unknown): unknown {
   if (val === undefined || val === null) return null;
-  if ('nullValue' in val) return null;
-  if ('stringValue' in val) return val.stringValue;
-  if ('integerValue' in val) return parseInt(val.integerValue, 10);
-  if ('doubleValue' in val) return val.doubleValue;
-  if ('booleanValue' in val) return val.booleanValue;
-  if ('timestampValue' in val) return new Date(val.timestampValue);
-  if ('arrayValue' in val) {
-    return (val.arrayValue.values || []).map(fromFirestoreValue);
+  const v = val as Record<string, unknown>;
+  if ('nullValue' in v) return null;
+  if ('stringValue' in v) return v.stringValue;
+  if ('integerValue' in v) return parseInt(v.integerValue as string, 10);
+  if ('doubleValue' in v) return v.doubleValue;
+  if ('booleanValue' in v) return v.booleanValue;
+  if ('timestampValue' in v) return new Date(v.timestampValue as string);
+  if ('arrayValue' in v) {
+    const av = v.arrayValue as Record<string, unknown>;
+    return ((av.values || []) as unknown[]).map(fromFirestoreValue);
   }
-  if ('mapValue' in val) {
-    const obj: any = {};
-    for (const [k, v] of Object.entries(val.mapValue.fields || {})) {
-      obj[k] = fromFirestoreValue(v);
+  if ('mapValue' in v) {
+    const mv = v.mapValue as Record<string, unknown>;
+    const obj: Record<string, unknown> = {};
+    for (const [k, fv] of Object.entries((mv.fields || {}) as Record<string, unknown>)) {
+      obj[k] = fromFirestoreValue(fv);
     }
     return obj;
   }
   return null;
 }
 
-function parseDocument(doc: any): any {
+function parseDocument(doc: Record<string, unknown>): Record<string, unknown> | null {
   if (!doc || !doc.name) return null;
-  
-  const id = doc.name.split('/').pop();
-  const fields = doc.fields || {};
-  
-  const parsed: any = { id };
+
+  const id = (doc.name as string).split('/').pop();
+  const fields = (doc.fields || {}) as Record<string, unknown>;
+
+  const parsed: Record<string, unknown> = { id };
   for (const [key, val] of Object.entries(fields)) {
     parsed[key] = fromFirestoreValue(val);
   }
@@ -397,7 +400,7 @@ export async function queryCollection(
   collection: string,
   options: QueryOptions = {},
   throwOnError = false
-): Promise<any[]> {
+): Promise<Record<string, unknown>[]> {
   validatePath(collection, 'collection');
   // Generate cache key
   const cacheKey = options.cacheKey || `query:${collection}:${JSON.stringify(options)}`;
@@ -420,7 +423,7 @@ export async function queryCollection(
     ? `${FIRESTORE_BASE}:runQuery?key=${apiKey}`
     : `${FIRESTORE_BASE}:runQuery`;
 
-  const structuredQuery: any = {
+  const structuredQuery: Record<string, unknown> = {
     from: [{ collectionId: collection }],
   };
   
@@ -486,11 +489,12 @@ export async function queryCollection(
         return [];
       }
       
-      const data = await response.json();
-      
+      const data = await response.json() as Record<string, unknown>[];
+
       const results = data
-        .filter((item: any) => item.document)
-        .map((item: any) => parseDocument(item.document));
+        .filter((item) => (item as Record<string, unknown>).document)
+        .map((item) => parseDocument((item as Record<string, unknown>).document as Record<string, unknown>))
+        .filter((doc): doc is Record<string, unknown> => doc !== null);
       
       log.info(`Found ${results.length} documents in ${collection}`);
       
@@ -519,7 +523,7 @@ export async function queryCollection(
 // This is a client-side Firebase API key - safe to include in code
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-export async function getDocument(collection: string, docId: string, ttl?: number, throwOnError = false): Promise<any | null> {
+export async function getDocument(collection: string, docId: string, ttl?: number, throwOnError = false): Promise<Record<string, unknown> | null> {
   validatePath(collection, 'collection');
   validatePath(docId, 'docId');
   const cacheKey = `doc:${collection}:${docId}`;
@@ -592,7 +596,7 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
  * Get admin settings with 30-minute cache
  * Use this instead of getDocument('settings', 'admin') to reduce reads
  */
-export async function getSettings(): Promise<any | null> {
+export async function getSettings(): Promise<Record<string, unknown> | null> {
   return getDocument('settings', 'admin', CACHE_TTL.SETTINGS);
 }
 
@@ -604,8 +608,8 @@ export async function getDocumentsBatch(
   collection: string, 
   docIds: string[],
   ttl?: number
-): Promise<Map<string, any>> {
-  const results = new Map<string, any>();
+): Promise<Map<string, Record<string, unknown>>> {
+  const results = new Map<string, Record<string, unknown>>();
   const uncachedIds: string[] = [];
   
   // Check cache first
@@ -677,7 +681,7 @@ export async function getDocumentsBatch(
 // Get releases with extended cache for quota optimization
 // Now supports D1 as primary source with Firebase fallback
 // Cache tiers: 1) in-memory (~0ms) → 2) KV (~30ms) → 3) D1/Firebase (~300-900ms)
-export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> {
+export async function getLiveReleases(limit?: number, db?: D1Database): Promise<Record<string, unknown>[]> {
   const cacheKey = `live-releases-v2:${limit || 'all'}`;
 
   // Tier 1: in-memory cache (same worker process, ~0ms)
@@ -699,19 +703,19 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
           const { results } = await stmt.all();
 
           if (results && results.length > 0) {
-            let releases = results.map((row: any) => {
+            let releases = results.map((row) => {
               try {
-                const doc = JSON.parse(row.data);
-                doc.id = doc.id || row.id;
+                const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+                doc.id = doc.id || (row as Record<string, unknown>).id;
                 return doc;
-              } catch (e) {
+              } catch (e: unknown) {
                 log.error('[firebase-rest] Failed to parse D1 release row:', e instanceof Error ? e.message : e);
                 return null;
               }
-            }).filter(Boolean);
+            }).filter(Boolean) as Record<string, unknown>[];
 
             // Sort by upload date (newest first)
-            releases.sort((a: any, b: any) => {
+            releases.sort((a, b) => {
               const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
               const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
               return dateB - dateA;
@@ -725,7 +729,7 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
             log.info(`[firebase-rest] D1: ${releases.length} releases loaded`);
             return releases;
           }
-        } catch (e) {
+        } catch (e: unknown) {
           log.error('[firebase-rest] D1 releases error, falling back to Firebase:', e);
         }
       }
@@ -768,7 +772,7 @@ export async function getLiveReleases(limit?: number, db?: any): Promise<any[]> 
 
 // Get DJ mixes with extended cache
 // Now supports D1 as primary source with Firebase fallback
-export async function getLiveDJMixes(limit?: number, db?: any): Promise<any[]> {
+export async function getLiveDJMixes(limit?: number, db?: D1Database): Promise<Record<string, unknown>[]> {
   const cacheKey = `live-mixes:${limit || 'all'}`;
   const cached = getCached(cacheKey);
   if (cached) return cached;
@@ -784,22 +788,22 @@ export async function getLiveDJMixes(limit?: number, db?: any): Promise<any[]> {
       const { results } = await stmt.all();
 
       if (results && results.length > 0) {
-        const mixes = results.map((row: any) => {
+        const mixes = results.map((row) => {
           try {
-            const doc = JSON.parse(row.data);
-            doc.id = doc.id || row.id;
+            const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+            doc.id = doc.id || (row as Record<string, unknown>).id;
             return doc;
-          } catch (e) {
+          } catch (e: unknown) {
             log.error('[firebase-rest] Failed to parse D1 mix row:', e instanceof Error ? e.message : e);
             return null;
           }
-        }).filter(Boolean);
+        }).filter(Boolean) as Record<string, unknown>[];
 
         log.info(`[firebase-rest] D1: ${mixes.length} mixes loaded`);
         setCache(cacheKey, mixes, CACHE_TTL.DJ_MIXES_LIST);
         return mixes;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       log.error('[firebase-rest] D1 mixes error, falling back to Firebase:', e);
     }
   }
@@ -825,7 +829,7 @@ export async function getLiveDJMixes(limit?: number, db?: any): Promise<any[]> {
 }
 
 // Get published merch with D1 support
-export async function getLiveMerch(limit?: number, db?: any, skipCache?: boolean): Promise<any[]> {
+export async function getLiveMerch(limit?: number, db?: D1Database, skipCache?: boolean): Promise<Record<string, unknown>[]> {
   const cacheKey = `live-merch:${limit || 'all'}`;
 
   // Skip cache if requested (for ensuring fresh data)
@@ -845,22 +849,22 @@ export async function getLiveMerch(limit?: number, db?: any, skipCache?: boolean
       const { results } = await stmt.all();
 
       if (results && results.length > 0) {
-        const items = results.map((row: any) => {
+        const items = results.map((row) => {
           try {
-            const doc = JSON.parse(row.data);
-            doc.id = doc.id || row.id;
+            const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+            doc.id = doc.id || (row as Record<string, unknown>).id;
             return doc;
-          } catch (e) {
+          } catch (e: unknown) {
             log.error('[firebase-rest] Failed to parse D1 merch row:', e instanceof Error ? e.message : e);
             return null;
           }
-        }).filter(Boolean);
+        }).filter(Boolean) as Record<string, unknown>[];
 
         log.info(`[firebase-rest] D1: ${items.length} merch items loaded`);
         setCache(cacheKey, items, 10 * 60 * 1000);
         return items;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       log.error('[firebase-rest] D1 merch error, falling back to Firebase:', e);
     }
   }
@@ -884,8 +888,8 @@ export async function getLiveMerch(limit?: number, db?: any, skipCache?: boolean
 }
 
 // Extract tracks with preview URLs from releases
-export function extractTracksFromReleases(releases: any[]): any[] {
-  const tracks: any[] = [];
+export function extractTracksFromReleases(releases: Record<string, unknown>[]): Record<string, unknown>[] {
+  const tracks: Record<string, unknown>[] = [];
   
   for (const release of releases) {
     const releaseTracks = release.tracks || [];
@@ -976,7 +980,7 @@ export function getCacheStats(): { size: number; keys: string[] } {
 export async function setDocument(
   collection: string,
   docId: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   idToken?: string
 ): Promise<{ success: boolean; id: string }> {
   validatePath(collection, 'collection');
@@ -990,7 +994,7 @@ export async function setDocument(
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -1015,7 +1019,7 @@ export async function setDocument(
     try {
       const errorJson = JSON.parse(errorText);
       errorMessage = errorJson.error?.message || errorJson.error?.status || errorMessage;
-    } catch (e) {
+    } catch (e: unknown) {
       // Use raw text if not JSON
       if (errorText) errorMessage += ` - ${errorText.substring(0, 200)}`;
     }
@@ -1033,7 +1037,7 @@ export async function setDocument(
 export async function createDocumentIfNotExists(
   collection: string,
   docId: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): Promise<{ success: boolean; exists: boolean }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID') || PROJECT_ID;
   const apiKey = getEnvVar('FIREBASE_API_KEY') || getEnvVar('PUBLIC_FIREBASE_API_KEY') || FIREBASE_API_KEY_FALLBACK;
@@ -1045,7 +1049,7 @@ export async function createDocumentIfNotExists(
   // Use currentDocument.exists=false to only create if doesn't exist
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?currentDocument.exists=false&key=${apiKey}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -1080,7 +1084,7 @@ export async function createDocumentIfNotExists(
 export async function updateDocument(
   collection: string,
   docId: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   idToken?: string
 ): Promise<{ success: boolean }> {
   validatePath(collection, 'collection');
@@ -1107,7 +1111,7 @@ export async function updateDocument(
   }).join('&');
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?${updateMask}&key=${apiKey}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -1257,7 +1261,7 @@ export async function atomicIncrement(
 export async function updateDocumentConditional(
   collection: string,
   docId: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   expectedUpdateTime: string
 ): Promise<{ success: boolean }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
@@ -1270,7 +1274,7 @@ export async function updateDocumentConditional(
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
   const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }
@@ -1328,8 +1332,8 @@ export async function arrayUnion(
   collection: string,
   docId: string,
   fieldName: string,
-  values: any[],
-  additionalFields?: Record<string, any>
+  values: unknown[],
+  additionalFields?: Record<string, unknown>
 ): Promise<{ success: boolean }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
@@ -1341,7 +1345,7 @@ export async function arrayUnion(
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
   const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
 
-  const writes: any[] = [];
+  const writes: Record<string, unknown>[] = [];
 
   // Write 1: Field transform to atomically append to the array
   writes.push({
@@ -1358,7 +1362,7 @@ export async function arrayUnion(
 
   // Write 2: If there are additional fields to update (e.g. updatedAt, commentCount), add a separate update write
   if (additionalFields && Object.keys(additionalFields).length > 0) {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(additionalFields)) {
       fields[key] = toFirestoreValue(value);
     }
@@ -1406,8 +1410,8 @@ export async function arrayRemove(
   collection: string,
   docId: string,
   fieldName: string,
-  values: any[],
-  additionalFields?: Record<string, any>
+  values: unknown[],
+  additionalFields?: Record<string, unknown>
 ): Promise<{ success: boolean }> {
   const projectId = getEnvVar('FIREBASE_PROJECT_ID', PROJECT_ID);
   const apiKey = getEnvVar('FIREBASE_API_KEY');
@@ -1419,7 +1423,7 @@ export async function arrayRemove(
   const commitUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:commit?key=${apiKey}`;
   const documentPath = `projects/${projectId}/databases/(default)/documents/${collection}/${docId}`;
 
-  const writes: any[] = [];
+  const writes: Record<string, unknown>[] = [];
 
   // Write 1: Field transform to atomically remove from the array
   writes.push({
@@ -1436,7 +1440,7 @@ export async function arrayRemove(
 
   // Write 2: If there are additional fields to update (e.g. updatedAt), add a separate update write
   if (additionalFields && Object.keys(additionalFields).length > 0) {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(additionalFields)) {
       fields[key] = toFirestoreValue(value);
     }
@@ -1475,7 +1479,7 @@ export async function arrayRemove(
 // idToken is optional - if provided, request is authenticated
 export async function addDocument(
   collection: string,
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   idToken?: string
 ): Promise<{ success: boolean; id: string }> {
   validatePath(collection, 'collection');
@@ -1488,7 +1492,7 @@ export async function addDocument(
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}?key=${apiKey}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }

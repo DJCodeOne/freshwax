@@ -432,7 +432,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return;
       }
       sellerInfo = { id: user.uid, name: data.displayName || user.displayName || 'Unknown' };
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to verify seller status:', e);
     }
   });

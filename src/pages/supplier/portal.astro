@@ -260,7 +260,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btn.textContent = 'Link PayPal';
         btn.disabled = false;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       alert('Failed to link PayPal');
       btn.textContent = 'Link PayPal';
       btn.disabled = false;
@@ -283,7 +283,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to update');
-    } catch (e) {
+    } catch (e: unknown) {
       alert('Failed to update');
     }
   }
@@ -298,7 +298,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to set method');
-    } catch (e) {
+    } catch (e: unknown) {
       alert('Failed to set method');
     }
   }

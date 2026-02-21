@@ -981,7 +981,7 @@ Artist - Track Title
   // Like button
   if (likeBtn && mixId) {
     let likedMixes = [];
-    try { likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]'); } catch (e) {}
+    try { likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]'); } catch (e: unknown) {}
     const likeText = likeBtn.querySelector('.like-text');
     const likedText = likeBtn.querySelector('.liked-text');
 
@@ -1006,7 +1006,7 @@ Artist - Track Title
             likedMixes.splice(index, 1);
             localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
           }
-        } catch (e) {}
+        } catch (e: unknown) {}
         fetch('/api/track-mix-unlike/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1030,7 +1030,7 @@ Artist - Track Title
             likedMixes.push(mixId);
             localStorage.setItem('liked-mixes', JSON.stringify(likedMixes));
           }
-        } catch (e) {}
+        } catch (e: unknown) {}
         fetch('/api/track-mix-like/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1305,7 +1305,7 @@ Artist - Track Title
         sessionStorage.removeItem('fw_auth_cache');
       }
     }
-  } catch (e) { /* Ignore cache errors */ }
+  } catch (e: unknown) { /* Ignore cache errors */ }
 
   // Function to update UI based on auth state
   function updateCommentUI(user, userName, avatarUrl) {
@@ -1377,7 +1377,7 @@ Artist - Track Title
                   avatarUrl: profile.avatarUrl || user.photoURL || null
                 };
               }
-            } catch (e) { /* ignore parse errors */ }
+            } catch (e: unknown) { /* ignore parse errors */ }
           }
           
           // Fetch from consolidated API endpoint
@@ -1390,7 +1390,7 @@ Artist - Track Title
             if (profile.success) {
               // Cache the result
               profile.cachedAt = Date.now();
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e) {}
+              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e: unknown) {}
               // Firebase Auth displayName is the public name (same as Header.astro)
               const displayName = user.displayName || profile.partnerDisplayName || user.email?.split('@')[0] || 'User';
               return {
@@ -1658,7 +1658,7 @@ Artist - Track Title
               if (profile.cachedAt && Date.now() - profile.cachedAt < 300000) {
                 artistName = (profile.partnerDisplayName || '').toLowerCase().trim();
               }
-            } catch (e) {}
+            } catch (e: unknown) {}
           }
           
           // If not cached, fetch from API
@@ -1671,7 +1671,7 @@ Artist - Track Title
               const profile = await response.json();
               if (profile.success) {
                 profile.cachedAt = Date.now();
-                try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e) {}
+                try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e: unknown) {}
                 artistName = (profile.partnerDisplayName || '').toLowerCase().trim();
               }
             }
@@ -1680,7 +1680,7 @@ Artist - Track Title
           if (artistName && artistName === mixDjName) {
             isOwner = true;
           }
-        } catch (e) {
+        } catch (e: unknown) {
           // Ignore error
         }
       }

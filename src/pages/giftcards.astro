@@ -447,7 +447,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       if (result.success && result.displayName) {
         currentUserName = result.displayName;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       // Could not fetch user name
     }
   }

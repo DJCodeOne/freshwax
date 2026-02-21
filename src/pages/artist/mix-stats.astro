@@ -67,7 +67,7 @@ if (partnerId) {
       
       totals.mixes = mixes.length;
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Error fetching mix stats:', e);
   }
 }

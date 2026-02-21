@@ -46,7 +46,7 @@ if (partnerId) {
         products = await d1GetMerchBySupplierName(db, partner.artistName);
       }
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Error fetching data:', e);
   }
 }

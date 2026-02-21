@@ -308,7 +308,7 @@ export async function reserveStock(
       createdAt: now.toISOString(),
       expiresAt
     });
-  } catch (err) {
+  } catch (err: unknown) {
     log.error('[order-utils] Failed to store reservation record:', err);
   }
 
@@ -417,7 +417,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
               updatedAt: new Date().toISOString()
             });
           }
-        } catch (err) {
+        } catch (err: unknown) {
           log.error('[order-utils] Failed to release listing reservation for', res.productId, err);
         }
       }
@@ -430,7 +430,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
     });
 
     log.info('[order-utils] Reservation released:', reservation.id);
-  } catch (err) {
+  } catch (err: unknown) {
     log.error('[order-utils] Error releasing reservation:', err);
   }
 }
@@ -465,7 +465,7 @@ export async function convertReservation(sessionOrReservationId: string): Promis
     });
 
     log.info('[order-utils] Reservation converted:', reservation.id);
-  } catch (err) {
+  } catch (err: unknown) {
     log.error('[order-utils] Error converting reservation:', err);
   }
 }
@@ -562,7 +562,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
                 updatedAt: new Date().toISOString()
               });
             }
-          } catch (err) {
+          } catch (err: unknown) {
             log.error('[order-utils] Cleanup: failed to release listing for', res.productId);
           }
         }
@@ -574,7 +574,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
       });
       cleanedCount++;
     }
-  } catch (err) {
+  } catch (err: unknown) {
     log.error('[order-utils] Cleanup error:', err);
   }
 
@@ -657,7 +657,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
             updatedAt: new Date().toISOString()
           });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         log.error('[order-utils] Rollback failed for vinyl listing', res.productId, err);
       }
     }
@@ -856,7 +856,7 @@ export async function validateAndGetPrices(
         price: serverPrice,
         originalClientPrice: item.price
       });
-    } catch (err) {
+    } catch (err: unknown) {
       log.error(prefix, 'Error validating price for', item.name, err);
       return { validatedItems: [], hasPriceMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
     }
@@ -976,7 +976,7 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
             downloads
           };
         }
-      } catch (e) {
+      } catch (e: unknown) {
         log.error('[order-utils] Error fetching release:', releaseId, e);
       }
     }
@@ -1189,7 +1189,7 @@ export async function processVinylCratesOrders(
           const user = await getDocument('users', sellerId);
           sellerEmail = user?.email || '';
         }
-      } catch (e) {
+      } catch (e: unknown) {
         log.info('[order-utils] Could not fetch seller email');
       }
 
@@ -1237,7 +1237,7 @@ export async function processVinylCratesOrders(
         log.error('[order-utils] Admin email failed:', adminEmailErr);
       }
 
-    } catch (err) {
+    } catch (err: unknown) {
       log.error('[order-utils] Error processing crates item:', err);
     }
   }
@@ -1758,7 +1758,7 @@ export async function updateCustomerOrderCount(userId: string): Promise<void> {
     await updateDocument('users', userId, {
       lastOrderAt: new Date().toISOString()
     });
-  } catch (e) {
+  } catch (e: unknown) {
     log.error('[order-utils] Error updating customer:', e);
   }
 }

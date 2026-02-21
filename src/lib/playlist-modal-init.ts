@@ -8,6 +8,21 @@ import { PlaylistManager } from './playlist-manager';
 import { getPlatformName } from './url-parser';
 import { SITE_URL } from './constants';
 
+// Lightweight interface for playlist items used in the modal UI
+interface PlaylistItem {
+  id: string;
+  url: string;
+  platform: string;
+  embedId?: string;
+  title?: string;
+  thumbnail?: string;
+  addedAt?: string;
+  addedBy?: string;
+  addedByName?: string;
+  playedAt?: string;
+  name?: string;
+}
+
 // Guard against multiple initializations
 let _initialized = false;
 
@@ -400,12 +415,12 @@ export function initPlaylistModal() {
   const ITEMS_PER_PAGE = 20;
   const MAX_ITEMS = 500;
   let currentPlaylistPage = 1;
-  let cachedPersonalItems: any[] = [];
+  let cachedPersonalItems: PlaylistItem[] = [];
   let cachedUserTracksInQueue = 0;
   let currentSortOrder: 'recent' | 'oldest' | 'alpha-az' | 'alpha-za' = 'recent';
 
   // Sort personal playlist items
-  function sortPersonalItems(items: any[], sortOrder: string): any[] {
+  function sortPersonalItems(items: PlaylistItem[], sortOrder: string): PlaylistItem[] {
     const sorted = [...items];
     switch (sortOrder) {
       case 'recent':
@@ -415,9 +430,9 @@ export function initPlaylistModal() {
         // Oldest first (original order)
         return sorted;
       case 'alpha-az':
-        return sorted.sort((a: any, b: any) => (a.title || '').localeCompare(b.title || ''));
+        return sorted.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
       case 'alpha-za':
-        return sorted.sort((a: any, b: any) => (b.title || '').localeCompare(a.title || ''));
+        return sorted.sort((a, b) => (b.title || '').localeCompare(a.title || ''));
       default:
         return sorted.reverse();
     }
@@ -523,7 +538,7 @@ export function initPlaylistModal() {
           return true;
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn('[PlaylistModal] Could not read auth from sessionStorage:', e);
     }
 
@@ -531,8 +546,8 @@ export function initPlaylistModal() {
   }
 
   // Listen for userAuthReady event from live.astro
-  document.addEventListener('userAuthReady', (e: any) => {
-    const { userInfo } = e.detail;
+  document.addEventListener('userAuthReady', (e: Event) => {
+    const { userInfo } = (e as CustomEvent).detail;
     if (userInfo && userInfo.loggedIn) {
       currentUserId = userInfo.id;
       isAuthenticated = true;
@@ -844,7 +859,7 @@ export function initPlaylistModal() {
           content += `Total Tracks: ${sortedItems.length}\n`;
           content += `${'='.repeat(title.length)}\n\n`;
 
-          sortedItems.forEach((item: any, index: number) => {
+          sortedItems.forEach((item, index) => {
             const num = (index + 1).toString().padStart(2, '0');
             content += `${num}. ${item.title || 'Untitled'}\n`;
             content += `    Platform: ${getPlatformName(item.platform)}\n`;
@@ -858,7 +873,7 @@ export function initPlaylistModal() {
 
         } else if (format === 'csv') {
           content = 'Title,Platform,URL,Added Date\n';
-          sortedItems.forEach((item: any) => {
+          sortedItems.forEach((item) => {
             const csvTitle = (item.title || 'Untitled').replace(/"/g, '""');
             const csvUrl = item.url.replace(/"/g, '""');
             const addedDate = item.addedAt ? new Date(item.addedAt).toISOString().split('T')[0] : '';
@@ -869,7 +884,7 @@ export function initPlaylistModal() {
 
         } else if (format === 'pdf') {
           // Generate HTML for PDF printing with page-break control
-          function escP(s: any) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+          function escP(s: unknown) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
           const pdfHTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -944,7 +959,7 @@ export function initPlaylistModal() {
     <div class="meta">${now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} • ${sortedItems.length} tracks</div>
   </div>
   <div class="tracks">
-  ${sortedItems.map((item: any, i: number) => `
+  ${sortedItems.map((item, i) => `
     <div class="track">
       <span class="track-num">${i + 1}</span>
       <span class="track-title">${escP(item.title || 'Untitled')}</span>
@@ -1093,7 +1108,7 @@ export function initPlaylistModal() {
   }
 
   // Listen for playlist updates (only add once, not per page load)
-  function handlePlaylistUpdate(event: any) {
+  function handlePlaylistUpdate(event: Event) {
     const {
       queue,
       currentIndex,
@@ -1108,7 +1123,7 @@ export function initPlaylistModal() {
       personalPlaylist,
       trackStartedAt,
       recentlyPlayed
-    } = event.detail;
+    } = (event as CustomEvent).detail;
 
     // Update auth state from event
     if (authState !== undefined) {
@@ -1206,7 +1221,7 @@ export function initPlaylistModal() {
   }
 
   // Update Now Playing Strip
-  function updateNowPlayingStrip(queue: any[], currentIndex: number, currentDj: any, trackStartedAt?: string | null) {
+  function updateNowPlayingStrip(queue: PlaylistItem[], currentIndex: number, currentDj: Record<string, unknown> | null, trackStartedAt?: string | null) {
     const strip = document.getElementById('nowPlayingStrip');
     const title = document.getElementById('nowPlayingTitle');
 
@@ -1227,7 +1242,7 @@ export function initPlaylistModal() {
   }
 
   // Cache for global recently played to avoid excessive API calls
-  let recentlyPlayedCache: any[] | null = null;
+  let recentlyPlayedCache: PlaylistItem[] | null = null;
   let recentlyPlayedCacheTime = 0;
   const CACHE_TTL = 30000; // 30 seconds cache
 
@@ -1273,7 +1288,7 @@ export function initPlaylistModal() {
   }
 
   // Render the recently played list
-  function renderRecentlyPlayed(container: HTMLElement, tracks: any[]) {
+  function renderRecentlyPlayed(container: HTMLElement, tracks: PlaylistItem[]) {
     if (!tracks || tracks.length === 0) {
       container.innerHTML = '<div class="recently-played-empty">No tracks played yet</div>';
       return;
@@ -1297,7 +1312,7 @@ export function initPlaylistModal() {
     }
 
     // Render initial HTML - show best available title (no async loading)
-    container.innerHTML = tracks.slice(0, 10).map((track: any, index: number) => {
+    container.innerHTML = tracks.slice(0, 10).map((track, index) => {
       let title = track.title || track.name || '';
 
       // If placeholder title, show a fallback
@@ -1350,7 +1365,7 @@ export function initPlaylistModal() {
     }).join('');
 
     // Asynchronously fetch real titles for YouTube tracks with placeholder titles
-    tracks.slice(0, 10).forEach(async (track: any, index: number) => {
+    tracks.slice(0, 10).forEach(async (track, index) => {
       const title = track.title || track.name || '';
       const needsFetch = isPlaceholderTitle(title) && track.url;
 
@@ -1374,7 +1389,7 @@ export function initPlaylistModal() {
                 track.title = data.title;
               }
             }
-          } catch (e) {
+          } catch (e: unknown) {
             console.warn('[PlaylistModal] Could not fetch YouTube title for', videoId, e);
           }
         }
@@ -1438,7 +1453,7 @@ export function initPlaylistModal() {
   }
 
   // Update the track info display (video player removed, just showing track details)
-  function updateVideoPreview(currentItem: any, currentDj: any, trackStartedAt?: string | null) {
+  function updateVideoPreview(currentItem: PlaylistItem | null, currentDj: Record<string, unknown> | null, trackStartedAt?: string | null) {
     const previewTrackInfo = document.getElementById('previewTrackInfo');
     const previewTitle = document.getElementById('previewTrackTitle');
     const previewDjName = document.getElementById('previewTrackDj');
@@ -1498,7 +1513,7 @@ export function initPlaylistModal() {
     if (playlistManager) {
       try {
         playlistManager.destroy();
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[PlaylistModal] Error destroying manager:', e);
       }
     }
@@ -1553,13 +1568,13 @@ export function initPlaylistModal() {
       setTimeout(() => {
         btn.innerHTML = originalText;
       }, 2000);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Failed to copy:', err);
     }
   }
 
   // Render queue items in compact DJ waitlist format
-  function renderQueue(queue: any[], currentIndex: number) {
+  function renderQueue(queue: PlaylistItem[], currentIndex: number) {
     const queueDiv = document.getElementById('playlistQueue');
     if (!queueDiv) return;
 
@@ -1576,7 +1591,7 @@ export function initPlaylistModal() {
       return;
     }
 
-    queueDiv.innerHTML = queue.map((item: any, index: number) => {
+    queueDiv.innerHTML = queue.map((item, index) => {
       const canRemove = isAuthenticated && currentUserId && item.addedBy === currentUserId;
       const djName = item.addedByName || 'Anonymous';
       const isCurrentTrack = index === 0; // First item is always now playing
@@ -1682,7 +1697,7 @@ export function initPlaylistModal() {
   }
 
   // Render personal playlist items with pagination
-  function renderPersonalPlaylist(personalItems: any[], userTracksInQueue: number) {
+  function renderPersonalPlaylist(personalItems: PlaylistItem[], userTracksInQueue: number) {
     const section = document.getElementById('myPlaylistSection');
     const grid = document.getElementById('myPlaylistGrid');
     const countEl = document.getElementById('myPlaylistCount');
@@ -1786,7 +1801,7 @@ export function initPlaylistModal() {
   }
 
   // Render a specific page of the personal playlist
-  function renderPersonalPlaylistPage(sortedItems: any[], userTracksInQueue: number) {
+  function renderPersonalPlaylistPage(sortedItems: PlaylistItem[], userTracksInQueue: number) {
     const grid = document.getElementById('myPlaylistGrid');
     if (!grid) return;
 
@@ -1794,7 +1809,7 @@ export function initPlaylistModal() {
     const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, sortedItems.length, MAX_ITEMS);
     const pageItems = sortedItems.slice(startIndex, endIndex);
 
-    grid.innerHTML = pageItems.map((item: any) => `
+    grid.innerHTML = pageItems.map((item) => `
       <div class="personal-playlist-item" data-id="${item.id}">
         <div class="personal-item-thumb">
           ${item.thumbnail

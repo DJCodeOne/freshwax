@@ -40,23 +40,23 @@ function generateListingId(): string {
 }
 
 // Validate listing data
-function validateListing(data: any): { valid: boolean; error?: string } {
-  if (!data.title || data.title.length > MAX_TITLE_LENGTH) {
+function validateListing(data: Record<string, unknown>): { valid: boolean; error?: string } {
+  if (!data.title || (data.title as string).length > MAX_TITLE_LENGTH) {
     return { valid: false, error: `Title required and must be under ${MAX_TITLE_LENGTH} characters` };
   }
-  if (!data.artist || data.artist.length > MAX_ARTIST_LENGTH) {
+  if (!data.artist || (data.artist as string).length > MAX_ARTIST_LENGTH) {
     return { valid: false, error: `Artist required and must be under ${MAX_ARTIST_LENGTH} characters` };
   }
-  if (data.description && data.description.length > MAX_DESCRIPTION_LENGTH) {
+  if (data.description && (data.description as string).length > MAX_DESCRIPTION_LENGTH) {
     return { valid: false, error: `Description must be under ${MAX_DESCRIPTION_LENGTH} characters` };
   }
-  if (!data.mediaCondition || !VALID_CONDITIONS.includes(data.mediaCondition)) {
+  if (!data.mediaCondition || !VALID_CONDITIONS.includes(data.mediaCondition as string)) {
     return { valid: false, error: 'Valid media condition required (M, NM, VG+, VG, G+, G, F, P)' };
   }
-  if (!data.sleeveCondition || !VALID_CONDITIONS.includes(data.sleeveCondition)) {
+  if (!data.sleeveCondition || !VALID_CONDITIONS.includes(data.sleeveCondition as string)) {
     return { valid: false, error: 'Valid sleeve condition required (M, NM, VG+, VG, G+, G, F, P)' };
   }
-  if (data.format && !VALID_FORMATS.includes(data.format)) {
+  if (data.format && !VALID_FORMATS.includes(data.format as string)) {
     return { valid: false, error: 'Invalid format' };
   }
   if (typeof data.price !== 'number' || data.price <= 0 || data.price > MAX_PRICE) {
@@ -65,7 +65,7 @@ function validateListing(data: any): { valid: boolean; error?: string } {
   if (typeof data.shippingCost !== 'number' || data.shippingCost < 0 || data.shippingCost > MAX_SHIPPING) {
     return { valid: false, error: `Shipping cost must be between £0 and £${MAX_SHIPPING}` };
   }
-  if (data.images && data.images.length > MAX_IMAGES) {
+  if (data.images && (data.images as unknown[]).length > MAX_IMAGES) {
     return { valid: false, error: `Maximum ${MAX_IMAGES} images allowed` };
   }
   return { valid: true };
@@ -134,33 +134,33 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const results = await queryResponse.json();
 
     const listings = results
-      .filter((r: any) => r.document)
-      .map((r: any) => {
-        const doc = r.document;
-        const id = doc.name.split('/').pop();
-        const fields = doc.fields || {};
+      .filter((r: Record<string, unknown>) => r.document)
+      .map((r: Record<string, unknown>) => {
+        const doc = r.document as Record<string, unknown>;
+        const id = (doc.name as string).split('/').pop();
+        const fields = (doc.fields || {}) as Record<string, unknown>;
 
         // Parse Firestore document format
-        const parseValue = (v: any): any => {
+        const parseValue = (v: Record<string, unknown>): unknown => {
           if (!v) return null;
           if (v.stringValue !== undefined) return v.stringValue;
-          if (v.integerValue !== undefined) return parseInt(v.integerValue);
+          if (v.integerValue !== undefined) return parseInt(v.integerValue as string);
           if (v.doubleValue !== undefined) return v.doubleValue;
           if (v.booleanValue !== undefined) return v.booleanValue;
-          if (v.arrayValue) return (v.arrayValue.values || []).map(parseValue);
+          if (v.arrayValue) return (((v.arrayValue as Record<string, unknown>).values as Record<string, unknown>[]) || []).map(parseValue);
           if (v.mapValue) {
-            const obj: any = {};
-            for (const [k, val] of Object.entries(v.mapValue.fields || {})) {
-              obj[k] = parseValue(val);
+            const obj: Record<string, unknown> = {};
+            for (const [k, val] of Object.entries(((v.mapValue as Record<string, unknown>).fields as Record<string, unknown>) || {})) {
+              obj[k] = parseValue(val as Record<string, unknown>);
             }
             return obj;
           }
           return null;
         };
 
-        const listing: any = { id };
+        const listing: Record<string, unknown> = { id };
         for (const [key, value] of Object.entries(fields)) {
-          listing[key] = parseValue(value);
+          listing[key] = parseValue(value as Record<string, unknown>);
         }
         return listing;
       });
@@ -223,10 +223,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const now = new Date().toISOString();
 
         // Process tracks - sanitize each track object
-        const tracks = (data.tracks || []).slice(0, 20).map((track: any, index: number) => ({
+        const tracks = (data.tracks || []).slice(0, 20).map((track: Record<string, unknown>, index: number) => ({
           position: index + 1,
-          side: ['A', 'B', 'C', 'D'].includes(track.side) ? track.side : 'A',
-          name: (track.name || '').trim().slice(0, 100),
+          side: ['A', 'B', 'C', 'D'].includes(track.side as string) ? track.side : 'A',
+          name: ((track.name as string) || '').trim().slice(0, 100),
           audioSampleUrl: track.audioSampleUrl || null,
           audioSampleDuration: track.audioSampleDuration || null
         }));
@@ -312,7 +312,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         // Build update object
-        const updateData: any = { updatedAt: new Date().toISOString() };
+        const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
 
         const allowedFields = [
           'title', 'artist', 'label', 'catalogNumber', 'format', 'releaseYear',
@@ -323,10 +323,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // If tracks are being updated, sanitize them
         if (data.tracks) {
-          data.tracks = data.tracks.slice(0, 20).map((track: any, index: number) => ({
+          data.tracks = data.tracks.slice(0, 20).map((track: Record<string, unknown>, index: number) => ({
             position: index + 1,
-            side: ['A', 'B', 'C', 'D'].includes(track.side) ? track.side : 'A',
-            name: (track.name || '').trim().slice(0, 100),
+            side: ['A', 'B', 'C', 'D'].includes(track.side as string) ? track.side : 'A',
+            name: ((track.name as string) || '').trim().slice(0, 100),
             audioSampleUrl: track.audioSampleUrl || null,
             audioSampleDuration: track.audioSampleDuration || null
           }));

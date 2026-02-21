@@ -1,20 +1,15 @@
-// src/pages/api/update-master-json.js
+// src/pages/api/update-master-json.ts
 // FIXED: Sets status to 'pending' by default, admin must approve before going live
-import { getDocument, updateDocument, setDocument } from '../../lib/firebase-rest.js';
-import { requireAdminAuth } from '../../lib/admin.ts';
-
-// Conditional logging - only logs in development
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args) => isDev && console.log(...args),
-  error: (...args) => console.error(...args),
-};
+import type { APIRoute } from 'astro';
+import { getDocument, setDocument } from '../../lib/firebase-rest';
+import { requireAdminAuth } from '../../lib/admin';
+import { createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
-export async function POST({ request, locals }) {
-  const env = locals?.runtime?.env;
+const logger = createLogger('update-master-json');
 
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const body = await request.json();
 
@@ -22,7 +17,7 @@ export async function POST({ request, locals }) {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { release } = body;
+    const { release } = body as { release?: Record<string, unknown> };
 
     if (!release || !release.id) {
       return new Response(JSON.stringify({
@@ -33,40 +28,40 @@ export async function POST({ request, locals }) {
       });
     }
 
-    log.info(`[Master JSON] Updating release: ${release.id}`);
+    logger.info(`[Master JSON] Updating release: ${release.id}`);
 
     // CRITICAL: Default to pending status unless explicitly set
     // Admin must manually approve and publish from the admin panel
-    const releaseData = {
+    const releaseData: Record<string, unknown> = {
       ...release,
       updatedAt: new Date().toISOString(),
-      createdAt: release.createdAt || new Date().toISOString(),
-      status: release.status || 'pending', // Default to pending
+      createdAt: (release.createdAt as string) || new Date().toISOString(),
+      status: (release.status as string) || 'pending', // Default to pending
       published: release.published === true ? true : false, // Explicitly false unless set to true
       approved: release.approved === true ? true : false, // Default to not approved
       storage: 'r2' // Mark that this release uses R2 storage
     };
 
-    log.info(`[Master JSON] Status: ${releaseData.status}, Published: ${releaseData.published}, Approved: ${releaseData.approved}`);
+    logger.info(`[Master JSON] Status: ${releaseData.status}, Published: ${releaseData.published}, Approved: ${releaseData.approved}`);
 
     // Set the document (will create or update)
-    await setDocument('releases', release.id, releaseData);
+    await setDocument('releases', release.id as string, releaseData);
 
-    log.info(`[Master JSON] ✓ Release stored in Firestore [STATUS: ${releaseData.status}]`);
+    logger.info(`[Master JSON] Release stored in Firestore [STATUS: ${releaseData.status}]`);
 
     // Also maintain a master list document for quick access
-    const masterListDoc = await getDocument('system', 'releases-master');
+    const masterListDoc = await getDocument('system', 'releases-master') as Record<string, unknown> | null;
 
-    let releasesList = [];
+    let releasesList: Array<Record<string, unknown>> = [];
     if (masterListDoc) {
-      releasesList = masterListDoc.releases || [];
+      releasesList = (masterListDoc.releases || []) as Array<Record<string, unknown>>;
     }
 
     // Check if release already exists in master list
-    const existingIndex = releasesList.findIndex(r => r.id === release.id);
+    const existingIndex = releasesList.findIndex((r: Record<string, unknown>) => r.id === release.id);
 
     // Create summary for master list
-    const releaseSummary = {
+    const releaseSummary: Record<string, unknown> = {
       id: release.id,
       title: release.title,
       artist: release.artist,
@@ -82,11 +77,11 @@ export async function POST({ request, locals }) {
     if (existingIndex >= 0) {
       // Update existing entry
       releasesList[existingIndex] = releaseSummary;
-      log.info(`[Master JSON] Updated existing release in master list`);
+      logger.info(`[Master JSON] Updated existing release in master list`);
     } else {
       // Add new entry
       releasesList.push(releaseSummary);
-      log.info(`[Master JSON] Added new release to master list`);
+      logger.info(`[Master JSON] Added new release to master list`);
     }
 
     // Update master list
@@ -96,7 +91,7 @@ export async function POST({ request, locals }) {
       lastUpdated: new Date().toISOString()
     });
 
-    log.info(`[Master JSON] ✓ Master list updated (${releasesList.length} total releases)`);
+    logger.info(`[Master JSON] Master list updated (${releasesList.length} total releases)`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -111,8 +106,9 @@ export async function POST({ request, locals }) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
-    console.error('[Master JSON] ✗ Error:', error);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    logger.error('[Master JSON] Error:', message);
     return new Response(JSON.stringify({
       success: false,
       error: 'Internal error'
@@ -121,12 +117,12 @@ export async function POST({ request, locals }) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-}
+};
 
 // GET endpoint to retrieve all releases
-export async function GET() {
+export const GET: APIRoute = async () => {
   try {
-    const masterListDoc = await getDocument('system', 'releases-master');
+    const masterListDoc = await getDocument('system', 'releases-master') as Record<string, unknown> | null;
 
     if (!masterListDoc) {
       return new Response(JSON.stringify({
@@ -147,8 +143,9 @@ export async function GET() {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
-    console.error('[Master JSON] ✗ GET Error:', error);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    logger.error('[Master JSON] GET Error:', message);
     return new Response(JSON.stringify({
       error: 'Internal error'
     }), {
@@ -156,4 +153,4 @@ export async function GET() {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-}
+};

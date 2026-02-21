@@ -230,8 +230,8 @@ async function processZip(file) {
           releaseName = parsed.releaseName || parsed.title || parsed.album || "";
           debug(`Parsed JSON - Artist: ${artistName}, Release: ${releaseName}`);
           debug(`JSON keys: ${Object.keys(parsed).join(', ')}`);
-        } catch (e) {
-          debug(`ERROR parsing JSON: ${e.message}`);
+        } catch (e: unknown) {
+          debug(`ERROR parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
           console.error("Could not parse JSON:", name, e);
         }
       }
@@ -544,8 +544,8 @@ async function checkAudioProcessor() {
     if (!response.ok) return false;
     const data = await response.json();
     return data.status === 'healthy' && data.r2Configured;
-  } catch (e) {
-    debug(`Audio processor not available: ${e.message}`);
+  } catch (e: unknown) {
+    debug(`Audio processor not available: ${e instanceof Error ? e.message : String(e)}`);
     return false;
   }
 }

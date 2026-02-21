@@ -55,7 +55,7 @@ try {
   // Sort by chart score descending
   releases.sort((a, b) => b.chartScore - a.chartScore);
 
-} catch (e) {
+} catch (e: unknown) {
   console.error('Error fetching weekly releases:', e);
 }
 

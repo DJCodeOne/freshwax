@@ -236,7 +236,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         document.cookie = 'customerId=; path=/; max-age=0';
         document.cookie = 'partnerId=; path=/; max-age=0';
         
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[Login] Cache clear error:', e);
       }
     })();
@@ -363,7 +363,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         const emailInput = document.getElementById('email');
         if (emailInput) emailInput.value = savedEmail;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       // localStorage may throw in Safari private browsing
     }
 
@@ -517,7 +517,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             localStorage.removeItem('fw_remember_me');
             localStorage.removeItem('fw_saved_email');
           }
-        } catch (e) {
+        } catch (e: unknown) {
           // localStorage may throw in Safari private browsing
         }
         
@@ -593,7 +593,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             try {
               profile.cachedAt = Date.now();
               sessionStorage.setItem(`fw_user_profile_${user.uid}`, JSON.stringify(profile));
-            } catch (e) { /* Ignore cache errors */ }
+            } catch (e: unknown) { /* Ignore cache errors */ }
           }
           
           // Set partnerId cookie if they have any partner role (needed for artist dashboard)

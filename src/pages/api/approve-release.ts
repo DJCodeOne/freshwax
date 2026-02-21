@@ -1,21 +1,19 @@
-// src/pages/api/approve-release.js
+// src/pages/api/approve-release.ts
 // Approves or rejects pending releases in Firebase
-import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest.js';
-import { d1UpsertRelease } from '../../lib/d1-catalog.ts';
-import { requireAdminAuth } from '../../lib/admin.ts';
-import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache.ts';
+import type { APIRoute } from 'astro';
+import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/firebase-rest';
+import { d1UpsertRelease } from '../../lib/d1-catalog';
+import { requireAdminAuth } from '../../lib/admin';
+import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
+import { createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args) => isDev && console.log(...args),
-  error: (...args) => console.error(...args),
-};
+const logger = createLogger('approve-release');
 
-export async function POST({ request, locals }) {
+export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase env for write operations (Cloudflare runtime)
-  const env = locals?.runtime?.env;
+  const env = (locals as App.Locals).runtime?.env;
 
   try {
     const body = await request.json();
@@ -24,7 +22,7 @@ export async function POST({ request, locals }) {
     const authError = await requireAdminAuth(request, locals, body);
     if (authError) return authError;
 
-    const { releaseId, action } = body;
+    const { releaseId, action } = body as { releaseId?: string; action?: string };
 
     // Validate input
     if (!releaseId || !action) {
@@ -47,10 +45,10 @@ export async function POST({ request, locals }) {
       });
     }
 
-    log.info(`[approve-release] ${action} release ${releaseId}`);
+    logger.info(`[approve-release] ${action} release ${releaseId}`);
 
     // Get release from Firestore
-    const releaseData = await getDocument('releases', releaseId);
+    const releaseData = await getDocument('releases', releaseId) as Record<string, unknown> | null;
 
     if (!releaseData) {
       return new Response(JSON.stringify({
@@ -76,12 +74,12 @@ export async function POST({ request, locals }) {
 
     // Update master list
     try {
-      const masterListDoc = await getDocument('system', 'releases-master');
+      const masterListDoc = await getDocument('system', 'releases-master') as Record<string, unknown> | null;
 
       if (masterListDoc) {
-        const releasesList = masterListDoc.releases || [];
+        const releasesList = (masterListDoc.releases || []) as Array<Record<string, unknown>>;
 
-        const releaseIndex = releasesList.findIndex(r => r.id === releaseId);
+        const releaseIndex = releasesList.findIndex((r: Record<string, unknown>) => r.id === releaseId);
         if (releaseIndex >= 0) {
           releasesList[releaseIndex] = {
             ...releasesList[releaseIndex],
@@ -96,8 +94,9 @@ export async function POST({ request, locals }) {
           });
         }
       }
-    } catch (error) {
-      log.error('[approve-release] Warning: Could not update master list:', error.message);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      logger.error('[approve-release] Warning: Could not update master list:', message);
     }
 
     // Sync to D1 for immediate visibility
@@ -106,9 +105,10 @@ export async function POST({ request, locals }) {
       try {
         const updatedRelease = { ...releaseData, ...updateData };
         await d1UpsertRelease(db, releaseId, updatedRelease);
-        log.info('[approve-release] D1 synced');
-      } catch (d1Error) {
-        log.error('[approve-release] Warning: D1 sync failed:', d1Error.message);
+        logger.info('[approve-release] D1 synced');
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        logger.error('[approve-release] Warning: D1 sync failed:', message);
       }
     }
 
@@ -116,9 +116,9 @@ export async function POST({ request, locals }) {
     invalidateReleasesCache();
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
-    log.info('[approve-release] Cache invalidated');
+    logger.info('[approve-release] Cache invalidated');
 
-    log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
+    logger.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -132,8 +132,9 @@ export async function POST({ request, locals }) {
       headers: { 'Content-Type': 'application/json' }
     });
 
-  } catch (error) {
-    log.error('[approve-release] Error:', error.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    logger.error('[approve-release] Error:', message);
 
     return new Response(JSON.stringify({
       success: false,
@@ -143,4 +144,4 @@ export async function POST({ request, locals }) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-}
+};

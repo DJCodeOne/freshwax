@@ -184,7 +184,7 @@ if (partnerId) {
             partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
           }
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Ignore errors fetching customer data
       }
 
@@ -312,7 +312,7 @@ if (partnerId) {
         }
       }
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Error fetching partner:', e);
   }
 }
@@ -1481,7 +1481,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           // They're logged in but not a partner - show login prompt with message
           showLogin();
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[Partner Dashboard Client] Error fetching profile:', e);
         showLogin();
       }

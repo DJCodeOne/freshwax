@@ -1104,7 +1104,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           body: testData,
           mode: 'cors'
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // Fallback if httpbin fails - estimate from download
       }
       
@@ -1138,7 +1138,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       }
       
       text.textContent = 'Test Again';
-    } catch (e) {
+    } catch (e: unknown) {
       text.textContent = 'Test Failed';
       downloadEl.textContent = '-- Mbps';
       uploadEl.textContent = '-- Mbps';
@@ -2128,7 +2128,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           text: getShareText(),
           url: getShareUrl()
         });
-      } catch (e) {
+      } catch (e: unknown) {
         // Share cancelled
       }
     }
@@ -2239,7 +2239,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         console.error('Shoutout send failed:', response.status);
       }
       // Shoutout will come back via Pusher to handleIncomingShoutout
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Shoutout error:', e);
     }
     
@@ -2300,7 +2300,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         sessionStorage.removeItem('fw_auth_cache');
       }
     }
-  } catch (e) { /* Ignore cache errors */ }
+  } catch (e: unknown) { /* Ignore cache errors */ }
 
   window.currentUserInfo = cachedAuth || { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
 
@@ -2323,7 +2323,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         const checkAuth = async () => {
           let user = null;
           let cachedUid = null;
-          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
+          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e: unknown) {}
 
           try {
             // First check if we already have a current user
@@ -2427,7 +2427,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
     // Check localStorage for saved preference
     let metersHidden = false;
-    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e) {}
+    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e: unknown) {}
     if (metersHidden) {
       stereoMeters.classList.add('meters-hidden');
       toggleBtn.classList.add('meters-off');
@@ -2446,7 +2446,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       toggleBtn.classList.toggle('meters-off', isHidden);
       if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
       if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
-      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e) {}
+      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e: unknown) {}
     });
   }
 
@@ -2666,7 +2666,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             cachedAuth = null;
           }
         }
-      } catch (e) { /* ignore */ }
+      } catch (e: unknown) { /* ignore */ }
 
       const userId = currentUser?.uid || cachedAuth?.id || getOrCreateSessionId();
       const userName = userInfo?.name || cachedAuth?.name || currentUser?.displayName || 'Viewer';
@@ -2855,7 +2855,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             if (badgeData.success && badgeData.badge) {
               window.userBadge = badgeData.badge;
             }
-          } catch (e) {
+          } catch (e: unknown) {
             console.warn('[Live] Failed to fetch user badge:', e);
           }
         }
@@ -2879,7 +2879,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             avatarUrl: result.avatarUrl || currentUser?.photoURL || '',
             cachedAt: Date.now()
           }));
-        } catch (e) { /* Ignore storage errors */ }
+        } catch (e: unknown) { /* Ignore storage errors */ }
 
         // Re-subscribe to presence channel with correct user info
         // This ensures the user's name shows correctly in the online list
@@ -2945,7 +2945,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           setupTakeoverActions();
         }
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Could not check user status:', e);
     }
   }
@@ -2982,7 +2982,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           } else {
             hideTakeoverNotification();
           }
-        } catch (e) { console.warn('[Takeover] Poll error:', e); }
+        } catch (e: unknown) { console.warn('[Takeover] Poll error:', e); }
       }, 10000);
       return;
     }
@@ -3075,7 +3075,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         } else {
           alert('Failed to accept takeover: ' + (approveResult.error || 'Unknown error'));
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Accept takeover error:', e);
         alert('Failed to accept takeover');
       }
@@ -3104,7 +3104,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         if (result.success) {
           notification.classList.add('hidden');
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Decline takeover error:', e);
       }
     });
@@ -3162,7 +3162,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         // Inject Event structured data (JSON-LD) for SEO
         updateEventJsonLd(result.currentLive, result.upcoming, allSlots);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to load schedule:', e);
     }
   }
@@ -3334,7 +3334,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         if (fsViewers) fsViewers.textContent = data.activeViewers;
         if (chatViewers) chatViewers.textContent = `${data.activeViewers} watching`;
       }
-    } catch (e) {
+    } catch (e: unknown) {
       console.warn('[Viewers] Registration failed:', e);
     }
   }
@@ -3367,7 +3367,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             userName: userInfo?.name || 'Viewer'
           })
         });
-      } catch (e) { /* silent */ }
+      } catch (e: unknown) { /* silent */ }
     }, 60000); // Every 60 seconds
   }
 
@@ -4384,7 +4384,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           // Update cached userInfo
           if (userInfo) userInfo.avatar = freshAvatarUrl;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[Booking] Could not fetch fresh avatar:', e);
       }
 
@@ -4512,7 +4512,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           // Update cached userInfo
           if (userInfo) userInfo.avatar = freshAvatarUrl;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[Go Live] Could not fetch fresh avatar:', e);
       }
 

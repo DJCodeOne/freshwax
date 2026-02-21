@@ -53,8 +53,8 @@ const FreeOrderSchema = z.object({
 export const prerender = false;
 
 // SECURITY: Validate item prices server-side to prevent getting items for free
-async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], validatedSubtotal: number }> {
-  const validatedItems: any[] = [];
+async function validateAndGetPrices(items: Record<string, unknown>[]): Promise<{ validatedItems: Record<string, unknown>[], validatedSubtotal: number }> {
+  const validatedItems: Record<string, unknown>[] = [];
 
   // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
   const merchIds = items.filter(i => (i.type || 'digital') === 'merch' && i.productId).map(i => i.productId);
@@ -106,7 +106,7 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
               if (itemType === 'vinyl') {
                 serverPrice = release.vinylPrice || release.price || item.price;
               } else if (itemType === 'track' && item.trackId) {
-                const track = (release.tracks || []).find((t: any) =>
+                const track = (release.tracks || []).find((t: Record<string, unknown>) =>
                   t.id === item.trackId || t.trackId === item.trackId
                 );
                 serverPrice = track?.price || release.trackPrice || 0.99;
@@ -131,8 +131,8 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
     }
   }
 
-  const validatedSubtotal = validatedItems.reduce((sum: number, item: any) =>
-    sum + ((item.price || 0) * (item.quantity || 1)), 0);
+  const validatedSubtotal = validatedItems.reduce((sum: number, item: Record<string, unknown>) =>
+    sum + (((item.price as number) || 0) * ((item.quantity as number) || 1)), 0);
 
   return { validatedItems, validatedSubtotal };
 }
@@ -162,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // SECURITY: Validate item prices server-side (prevent getting items for free)
     const { validatedItems, validatedSubtotal } = await validateAndGetPrices(orderData.items);
-    const hasPhysicalItems = validatedItems.some((item: any) =>
+    const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch');
     const shipping = hasPhysicalItems ? (validatedSubtotal >= 50 ? 0 : 4.99) : 0;
     const validatedTotal = validatedSubtotal + shipping;
@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const appliedCredit = orderData.appliedCredit || 0;
 
     // SECURITY: Reject orders with items that failed price validation
-    const failedItems = validatedItems.filter((item: any) => item.priceValidationFailed);
+    const failedItems = validatedItems.filter((item: Record<string, unknown>) => item.priceValidationFailed);
     if (failedItems.length > 0) {
       return ApiErrors.badRequest('Unable to verify item prices. Please try again.');
     }
@@ -209,7 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Idempotency check - prevent duplicate free orders
-    const orderKey = `${verifiedUserId}:${validatedItems.map((i: any) => `${i.id || i.productId}:${i.quantity}`).join(',')}`;
+    const orderKey = `${verifiedUserId}:${validatedItems.map((i: Record<string, unknown>) => `${i.id || i.productId}:${i.quantity}`).join(',')}`;
     const recentOrders = await queryCollection('orders', {
       filters: [
         { field: 'customer.userId', op: 'EQUAL', value: verifiedUserId },
@@ -221,10 +221,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     if (recentOrders && recentOrders.length > 0) {
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const duplicate = recentOrders.find((order: any) => {
-        if (!order.createdAt || order.createdAt < fiveMinutesAgo) return false;
-        const orderItemKeys = (order.items || []).map((i: any) => `${i.id || i.productId}:${i.quantity}`).join(',');
-        const currentItemKeys = validatedItems.map((i: any) => `${i.id || i.productId}:${i.quantity}`).join(',');
+      const duplicate = recentOrders.find((order: Record<string, unknown>) => {
+        if (!order.createdAt || (order.createdAt as string) < fiveMinutesAgo) return false;
+        const orderItemKeys = ((order.items as Record<string, unknown>[]) || []).map((i: Record<string, unknown>) => `${i.id || i.productId}:${i.quantity}`).join(',');
+        const currentItemKeys = validatedItems.map((i: Record<string, unknown>) => `${i.id || i.productId}:${i.quantity}`).join(',');
         return orderItemKeys === currentItemKeys;
       });
       if (duplicate) {
@@ -277,7 +277,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Create the order using the shared order creation utility
-    let result: any;
+    let result: { success: boolean; orderId?: string; orderNumber?: string; error?: string };
     try {
       result = await createOrder({
         orderData: {
@@ -314,7 +314,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Record to sales ledger (even for free/credit orders for accurate tracking)
       try {
-        const enrichedItems = await Promise.all((validatedItems || []).map(async (item: any) => {
+        const enrichedItems = await Promise.all((validatedItems || []).map(async (item: Record<string, unknown>) => {
           const releaseId = item.releaseId || item.productId || item.id;
           let submitterId = null;
           let submitterEmail = null;
@@ -352,7 +352,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           paymentMethod: appliedCredit > 0 ? 'giftcard' : 'free',
           paymentId: null,
           hasPhysical: hasPhysicalItems || false,
-          hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+          hasDigital: enrichedItems.some((i: Record<string, unknown>) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
           items: enrichedItems,
           db: env?.DB
         });

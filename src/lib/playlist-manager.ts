@@ -20,6 +20,23 @@ const LOCAL_PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
 // Fallback thumbnail for audio files without thumbnails
 const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
 
+// Server history item from /api/playlist/history/ response
+interface ServerHistoryItem {
+  url: string;
+  platform: string;
+  embedId?: string;
+  title?: string;
+  thumbnail?: string;
+}
+
+// Server file item from /api/playlist/server-list/ response
+interface ServerFileItem {
+  url: string;
+  name: string;
+  thumbnail?: string;
+  duration?: number;
+}
+
 // History entry for offline playlist creation
 interface PlaylistHistoryEntry {
   id: string;
@@ -52,11 +69,11 @@ export class PlaylistManager {
   public wasPausedForStream: boolean = false;
   private playHistory: PlaylistHistoryEntry[] = [];
   private personalPlaylist: PersonalPlaylistItem[] = []; // User's saved tracks
-  private pusherChannel: any = null;
+  private pusherChannel: { bind: (event: string, callback: (...args: unknown[]) => void) => void; unbind_all: () => void } | null = null;
   private isSubscribed: boolean = false;
   private trackTimer: number | null = null; // Timer for max track duration
   private recentlyPlayed: Map<string, number> = new Map(); // URL -> timestamp
-  private globalRecentlyPlayed: any[] = []; // Recently played from Pusher (global)
+  private globalRecentlyPlayed: Record<string, unknown>[] = []; // Recently played from Pusher (global)
   private countdownInterval: number | null = null; // Countdown display interval
   private countdownTrackId: string | null = null; // Track ID countdown is running for
   private isFetchingDuration: boolean = false; // Prevent duplicate duration fetches
@@ -262,7 +279,7 @@ export class PlaylistManager {
   /**
    * Handle remote playlist update from Pusher
    */
-  private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: any[] }): Promise<void> {
+  private async handleRemoteUpdate(newPlaylist: GlobalPlaylist & { recentlyPlayed?: Record<string, unknown>[] }): Promise<void> {
     // If live stream is active, ignore "isPlaying" from remote updates
     const liveStreamActive = window.isLiveStreamActive;
     if (liveStreamActive && newPlaylist.isPlaying) {
@@ -787,7 +804,7 @@ export class PlaylistManager {
           await this.handleTrackEnded();
           return;
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[PlaylistManager] Could not check duration, allowing track to play:', e);
       }
 
@@ -1329,13 +1346,13 @@ export class PlaylistManager {
       const response = await fetch('/api/playlist/history/');
       const result = await response.json();
       if (result.success && result.items && result.items.length > 0) {
-        const serverHistory = result.items;
+        const serverHistory = result.items as ServerHistoryItem[];
 
         // Filter out recently played tracks and the last played track
         const AUTO_PLAY_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
         const now = Date.now();
 
-        const availableTracks = serverHistory.filter((entry: any) => {
+        const availableTracks = serverHistory.filter((entry) => {
           // Never pick the track that just finished playing
           if (entry.url === this.lastPlayedUrl) return false;
 
@@ -1347,7 +1364,7 @@ export class PlaylistManager {
 
         if (availableTracks.length === 0) {
           // All tracks on cooldown - just pick a random one that isn't the last played
-          const fallbackTracks = serverHistory.filter((entry: any) => entry.url !== this.lastPlayedUrl);
+          const fallbackTracks = serverHistory.filter((entry) => entry.url !== this.lastPlayedUrl);
           if (fallbackTracks.length > 0) {
             const randomIndex = Math.floor(Math.random() * fallbackTracks.length);
             const selected = fallbackTracks[randomIndex];
@@ -1462,7 +1479,7 @@ export class PlaylistManager {
 
       // Filter out recently played tracks
       const now = Date.now();
-      const availableTracks = data.files.filter((file: any) => {
+      const availableTracks = (data.files as ServerFileItem[]).filter((file) => {
         const url = `${LOCAL_PLAYLIST_SERVER}${file.url}`;
         if (url === this.lastPlayedUrl) return false;
         const timestamp = this.recentlyPlayed.get(url);
@@ -1473,7 +1490,7 @@ export class PlaylistManager {
       // Pick from available or all if all on cooldown
       const tracksToPickFrom = availableTracks.length > 0
         ? availableTracks
-        : data.files.filter((f: any) => `${LOCAL_PLAYLIST_SERVER}${f.url}` !== this.lastPlayedUrl);
+        : (data.files as ServerFileItem[]).filter((f) => `${LOCAL_PLAYLIST_SERVER}${f.url}` !== this.lastPlayedUrl);
 
       if (tracksToPickFrom.length === 0) {
         console.warn('[PlaylistManager] No local tracks available');
@@ -1481,7 +1498,7 @@ export class PlaylistManager {
       }
 
       // Prefer tracks with thumbnails
-      const tracksWithThumbs = tracksToPickFrom.filter((f: any) => f.thumbnail);
+      const tracksWithThumbs = tracksToPickFrom.filter((f) => f.thumbnail);
       const finalTracks = tracksWithThumbs.length > 0 ? tracksWithThumbs : tracksToPickFrom;
 
       const randomIndex = Math.floor(Math.random() * finalTracks.length);
@@ -1565,7 +1582,7 @@ export class PlaylistManager {
         const localItems = this.personalPlaylist;
 
         // Create a map of existing URLs from D1
-        const d1Urls = new Set(d1Items.map((item: any) => item.url));
+        const d1Urls = new Set(d1Items.map((item: PersonalPlaylistItem) => item.url));
 
         // Add local items that aren't in D1
         const mergedItems = [...d1Items];

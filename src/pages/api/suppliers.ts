@@ -41,14 +41,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
 
       // Get their products if requested
-      let products: any[] = [];
+      let products: Record<string, unknown>[] = [];
       if (includeProducts) {
         const supplierMerch = await queryCollection('merch', {
           filters: [{ field: 'supplierId', op: 'EQUAL', value: supplierId }],
           limit: 200
         });
         products = supplierMerch
-          .map((data: any) => ({
+          .map((data: Record<string, unknown>) => ({
             id: data.id,
             name: data.name,
             sku: data.sku,
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         return ApiErrors.unauthorized('Invalid access code');
       }
 
-      const supplier: any = supplierDoc;
+      const supplier = supplierDoc as Record<string, unknown>;
 
       // Get their products (server-side filter by supplierId)
       const supplierMerch = await queryCollection('merch', {
@@ -96,7 +96,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         limit: 200
       });
       const products = supplierMerch
-        .map((data: any) => ({
+        .map((data: Record<string, unknown>) => ({
           id: data.id,
           name: data.name,
           sku: data.sku,
@@ -115,8 +115,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
       // Calculate earnings
       let totalEarnings = 0;
-      products.forEach((p: any) => {
-        totalEarnings += (p.retailPrice * p.soldStock * (p.supplierCut / 100));
+      products.forEach((p: Record<string, unknown>) => {
+        totalEarnings += ((p.retailPrice as number) * (p.soldStock as number) * ((p.supplierCut as number) / 100));
       });
 
       return new Response(JSON.stringify({
@@ -130,10 +130,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         products: products,
         stats: {
           totalProducts: products.length,
-          totalStock: products.reduce((sum: number, p: any) => sum + p.totalStock, 0),
-          totalSold: products.reduce((sum: number, p: any) => sum + p.soldStock, 0),
-          lowStockItems: products.filter((p: any) => p.isLowStock).length,
-          outOfStockItems: products.filter((p: any) => p.isOutOfStock).length,
+          totalStock: products.reduce((sum: number, p: Record<string, unknown>) => sum + (p.totalStock as number), 0),
+          totalSold: products.reduce((sum: number, p: Record<string, unknown>) => sum + (p.soldStock as number), 0),
+          lowStockItems: products.filter((p: Record<string, unknown>) => p.isLowStock).length,
+          outOfStockItems: products.filter((p: Record<string, unknown>) => p.isOutOfStock).length,
           totalEarnings: totalEarnings
         }
       }), {
@@ -155,24 +155,25 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Helper to calculate supplier stats from merch products
     function calcSupplierStats(supplierId: string, supplierName?: string) {
-      const products = allMerch.filter((m: any) =>
+      const products = allMerch.filter((m: Record<string, unknown>) =>
         m.supplierId === supplierId ||
         (supplierName && m.supplierName === supplierName)
       );
       return {
         totalProducts: products.length,
-        totalStock: products.reduce((sum: number, p: any) => sum + (p.totalStock || p.stock || 0), 0),
-        totalSold: products.reduce((sum: number, p: any) => sum + (p.totalSold || p.soldStock || 0), 0)
+        totalStock: products.reduce((sum: number, p: Record<string, unknown>) => sum + ((p.totalStock as number) || (p.stock as number) || 0), 0),
+        totalSold: products.reduce((sum: number, p: Record<string, unknown>) => sum + ((p.totalSold as number) || (p.soldStock as number) || 0), 0)
       };
     }
 
     // Convert users with merchSupplier/merchSeller role to supplier format
+    // Firestore user documents have deeply nested dynamic shape — keep : any for property access
     const userSuppliers = allUsers
-      .filter((u: any) => {
+      .filter((u: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
         const roles = u.roles || {};
         return (roles.merchSupplier === true || roles.merchSeller === true) && u.deleted !== true;
       })
-      .map((u: any) => {
+      .map((u: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
         const supplierName = u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || 'Unknown';
         const stats = calcSupplierStats(u.id, supplierName);
         return {
@@ -198,7 +199,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
 
     // Update merch-suppliers with calculated stats too
-    const merchSuppliersWithStats = merchSuppliers.map((s: any) => {
+    const merchSuppliersWithStats = merchSuppliers.map((s: Record<string, unknown>) => {
       const stats = calcSupplierStats(s.id, s.name);
       return {
         ...s,
@@ -210,10 +211,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
     // Combine both sources, avoiding duplicates by email
-    const supplierEmails = new Set(merchSuppliers.map((s: any) => s.email?.toLowerCase()));
+    const supplierEmails = new Set(merchSuppliers.map((s: Record<string, unknown>) => (s.email as string)?.toLowerCase()));
     const combinedSuppliers = [
       ...merchSuppliersWithStats,
-      ...userSuppliers.filter((u: any) => !u.email || !supplierEmails.has(u.email.toLowerCase()))
+      ...userSuppliers.filter((u: Record<string, unknown>) => !u.email || !supplierEmails.has((u.email as string).toLowerCase()))
     ];
 
     logger.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');

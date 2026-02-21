@@ -50,7 +50,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-function jsonResponse(data: any, status = 200) {
+function jsonResponse(data: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
     headers: { 'Content-Type': 'application/json' }
@@ -65,7 +65,7 @@ async function handleReleases(userId: string) {
 
   return jsonResponse({
     success: true,
-    releases: (releases || []).map((r: any) => ({
+    releases: (releases || []).map((r: Record<string, unknown>) => ({
       id: r.id || r._id,
       title: r.title || 'Untitled',
       artistName: r.artistName || 'Unknown Artist',
@@ -86,7 +86,7 @@ async function handleMerch(userId: string) {
 
   return jsonResponse({
     success: true,
-    products: (products || []).map((p: any) => ({
+    products: (products || []).map((p: Record<string, unknown>) => ({
       id: p.id || p._id,
       name: p.name || 'Unnamed Product',
       category: p.category || 'Merchandise',
@@ -105,7 +105,7 @@ async function handleOrders(userId: string) {
 
   return jsonResponse({
     success: true,
-    orders: (orders || []).map((o: any) => ({
+    orders: (orders || []).map((o: Record<string, unknown>) => ({
       id: o.id || o._id,
       status: o.status || 'pending',
       total: o.total || 0,
@@ -124,7 +124,7 @@ async function handleStock(userId: string) {
 
   return jsonResponse({
     success: true,
-    products: (products || []).map((p: any) => ({
+    products: (products || []).map((p: Record<string, unknown>) => ({
       id: p.id || p._id,
       name: p.name || 'Unnamed',
       sku: p.sku || null,
@@ -155,9 +155,9 @@ async function handleAnalytics(userId: string, params: URLSearchParams) {
   let totalUnits = 0;
   const productSales: Record<string, { units: number; revenue: number }> = {};
   const dailySales: Record<string, { revenue: number; orders: number }> = {};
-  const recentSales: any[] = [];
+  const recentSales: Record<string, unknown>[] = [];
 
-  (orders || []).forEach((order: any) => {
+  (orders || []).forEach((order: Record<string, unknown>) => {
     totalOrders++;
     totalRevenue += order.total || 0;
 
@@ -169,7 +169,7 @@ async function handleAnalytics(userId: string, params: URLSearchParams) {
     dailySales[dateKey].revenue += order.total || 0;
     dailySales[dateKey].orders++;
 
-    (order.items || []).forEach((item: any) => {
+    ((order.items as Record<string, unknown>[]) || []).forEach((item: Record<string, unknown>) => {
       const qty = item.quantity || 1;
       totalUnits += qty;
 
@@ -219,7 +219,7 @@ async function handleOverview(userId: string) {
   const userData = await getDocument('users', userId);
   const roles = userData?.roles || {};
 
-  const result: any = { success: true, roles };
+  const result: Record<string, unknown> = { success: true, roles };
 
   // Artist stats
   if (roles.artist) {
@@ -231,14 +231,14 @@ async function handleOverview(userId: string) {
     });
 
     let pending = 0;
-    (releases || []).forEach((r: any) => {
+    (releases || []).forEach((r: Record<string, unknown>) => {
       if (r.status === 'pending') pending++;
     });
 
     let monthTotal = 0;
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    (sales || []).forEach((s: any) => {
+    (sales || []).forEach((s: Record<string, unknown>) => {
       const saleDate = s.createdAt ? new Date(s.createdAt) : new Date(0);
       if (saleDate >= startOfMonth) {
         monthTotal += s.amount || s.price || 0;
@@ -266,7 +266,7 @@ async function handleOverview(userId: string) {
     });
 
     let lowStock = 0;
-    (products || []).forEach((p: any) => {
+    (products || []).forEach((p: Record<string, unknown>) => {
       if ((p.stock || 0) < 5) lowStock++;
     });
 

@@ -61,7 +61,7 @@ function initServices(locals: App.Locals) {
 }
 
 // Helper to sync slot to D1 (non-blocking, fire-and-forget)
-async function syncSlotToD1(db: any, slotId: string, slotData: any): Promise<void> {
+async function syncSlotToD1(db: unknown, slotId: string, slotData: Record<string, unknown>): Promise<void> {
   if (!db) return;
   try {
     await d1UpsertSlot(db, slotId, slotData);
@@ -71,7 +71,7 @@ async function syncSlotToD1(db: any, slotId: string, slotData: any): Promise<voi
 }
 
 // Helper to update slot status in D1 (non-blocking)
-async function syncSlotStatusToD1(db: any, slotId: string, status: string, extraData?: any): Promise<void> {
+async function syncSlotStatusToD1(db: unknown, slotId: string, status: string, extraData?: Record<string, unknown>): Promise<void> {
   if (!db) return;
   try {
     await d1UpdateSlotStatus(db, slotId, status, extraData);
@@ -84,13 +84,13 @@ const SLOT_DURATIONS = [30, 45, 60, 120, 180, 240];
 const MAX_BOOKING_DAYS = 30;
 
 // SECURITY: Sanitize slot data to remove sensitive fields from public responses
-function sanitizeSlot(slot: any): any {
+function sanitizeSlot(slot: Record<string, unknown>): Record<string, unknown> {
   if (!slot) return slot;
   const { streamKey, twitchStreamKey, rtmpUrl, ...safeSlot } = slot;
   return safeSlot;
 }
 
-function sanitizeSlots(slots: any[]): any[] {
+function sanitizeSlots(slots: Record<string, unknown>[]): Record<string, unknown>[] {
   return slots.map(sanitizeSlot);
 }
 
@@ -111,17 +111,17 @@ function generateStreamKey(djId: string, slotId: string, startTime: Date, endTim
 }
 
 // Server cache
-const serverCache = new Map<string, { data: any; timestamp: number }>();
+const serverCache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL = 5000;
 
-function getFromCache(key: string): any | null {
+function getFromCache(key: string): unknown | null {
   const entry = serverCache.get(key);
   if (entry && Date.now() - entry.timestamp < CACHE_TTL) return entry.data;
   if (entry) serverCache.delete(key);
   return null;
 }
 
-function setCache(key: string, data: any): void {
+function setCache(key: string, data: unknown): void {
   if (serverCache.size > 100) {
     const oldest = serverCache.keys().next().value;
     if (oldest) serverCache.delete(oldest);
@@ -354,7 +354,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             limit: 10
           });
 
-          const hasConsecutive = djSlots.some((s: any) => {
+          const hasConsecutive = djSlots.some((s: Record<string, unknown>) => {
             if (s.id === liveSlot.id) return false;
             if (!['scheduled', 'in_lobby', 'queued'].includes(s.status)) return false;
             const nextStart = new Date(s.startTime);
@@ -396,13 +396,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Filter slots for the requested date range
-    slots = allSlots.filter((slot: any) => slot.startTime >= startDate && slot.startTime <= endDate);
-    if (djId) slots = slots.filter((slot: any) => slot.djId === djId);
+    slots = allSlots.filter((slot: Record<string, unknown>) => (slot.startTime as string) >= startDate && (slot.startTime as string) <= endDate);
+    if (djId) slots = slots.filter((slot: Record<string, unknown>) => slot.djId === djId);
 
     const nowISO = now.toISOString();
     // Find any slot that's currently live (regardless of scheduled end time - they might still be streaming)
-    const liveSlot = slots.find((slot: any) => slot.status === 'live');
-    const upcomingSlots = slots.filter((slot: any) => slot.startTime > nowISO && ['scheduled', 'in_lobby', 'queued'].includes(slot.status));
+    const liveSlot = slots.find((slot: Record<string, unknown>) => slot.status === 'live');
+    const upcomingSlots = slots.filter((slot: Record<string, unknown>) => (slot.startTime as string) > nowISO && ['scheduled', 'in_lobby', 'queued'].includes(slot.status as string));
 
     // SECURITY: Sanitize all slots to remove stream keys from public response
     return new Response(JSON.stringify({
@@ -1237,7 +1237,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Build update object with only provided fields
-      const updates: Record<string, any> = {
+      const updates: Record<string, unknown> = {
         updatedAt: nowISO
       };
 
@@ -1318,7 +1318,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Verify the DJ has a booked slot covering the current time (admins bypass)
       const relayIsAdmin = await isAdmin(authUserId);
-      let bookedSlot: any = null;
+      let bookedSlot: Record<string, unknown> | null = null;
 
       if (!relayIsAdmin) {
         const djSlots = await queryCollection('livestreamSlots', {
@@ -1326,7 +1326,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           skipCache: true
         });
 
-        bookedSlot = djSlots.find((slot: any) => {
+        bookedSlot = djSlots.find((slot: Record<string, unknown>) => {
           if (slot.status !== 'scheduled' && slot.status !== 'in_lobby') return false;
           const slotStart = new Date(slot.startTime).getTime();
           const slotEnd = new Date(slot.endTime).getTime();

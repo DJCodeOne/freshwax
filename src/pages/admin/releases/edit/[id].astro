@@ -736,7 +736,7 @@ if (!release) {
         var mins = date.getMinutes().toString().padStart(2, '0');
         
         return day + ' ' + month + ' ' + year + ' at ' + hours + ':' + mins;
-      } catch (e) {
+      } catch (e: unknown) {
         return 'Unknown';
       }
     }

@@ -548,7 +548,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       var app;
       try {
         app = firebaseApp.getApp();
-      } catch (e) {
+      } catch (e: unknown) {
         app = firebaseApp.initializeApp(firebaseConfig);
       }
       

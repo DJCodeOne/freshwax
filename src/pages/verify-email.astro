@@ -320,7 +320,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             'Authorization': `Bearer ${idToken}`
           }
         });
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[Verify] Could not update verification status:', e);
       }
     }

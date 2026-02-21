@@ -12,7 +12,7 @@ import { ApiErrors } from '../../../lib/api-utils';
 export const prerender = false;
 
 // Get service account key from environment
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
                           import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -84,7 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 
     // Get collections (sellers with listings)
     if (type === 'collections') {
-      let collections: any[] = [];
+      let collections: Record<string, unknown>[] = [];
 
       // Try D1 first
       if (db) {
@@ -101,7 +101,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
           orderBy: { field: 'collectionNumber', direction: 'ASCENDING' },
           limit: 50
         });
-        collections = sellers.map((s: any) => ({
+        collections = sellers.map((s: Record<string, unknown>) => ({
           id: s.userId || s.id,
           collectionNumber: s.collectionNumber,
           storeName: s.storeName || `Collection ${s.collectionNumber}`,
@@ -128,10 +128,10 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 
       // Filter for deals (discountPercent > 0) and sort client-side
       const deals = listings
-        .filter((l: any) => l.discountPercent && l.discountPercent > 0)
-        .sort((a: any, b: any) => {
-          const dateA = new Date(a.publishedAt || a.createdAt).getTime();
-          const dateB = new Date(b.publishedAt || b.createdAt).getTime();
+        .filter((l: Record<string, unknown>) => l.discountPercent && (l.discountPercent as number) > 0)
+        .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+          const dateA = new Date((a.publishedAt as string) || (a.createdAt as string)).getTime();
+          const dateB = new Date((b.publishedAt as string) || (b.createdAt as string)).getTime();
           return dateB - dateA;
         })
         .slice(0, limit);
@@ -148,7 +148,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 
     // Default: Get published listings
     // Query just by status (no orderBy to avoid needing composite index)
-    let listings: any[];
+    let listings: Record<string, unknown>[];
 
     if (collectionId) {
       // Filter by seller - just query by sellerId (single field)
@@ -159,7 +159,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         limit: 200
       });
       // Then filter for published status client-side
-      listings = listings.filter((l: any) => l.status === 'published');
+      listings = listings.filter((l: Record<string, unknown>) => l.status === 'published');
     } else {
       // No collection filter - query by status
       listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
@@ -171,20 +171,20 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
     }
 
     // Sort client-side by publishedAt DESC
-    listings.sort((a: any, b: any) => {
-      const dateA = new Date(a.publishedAt || a.createdAt).getTime();
-      const dateB = new Date(b.publishedAt || b.createdAt).getTime();
+    listings.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const dateA = new Date((a.publishedAt as string) || (a.createdAt as string)).getTime();
+      const dateB = new Date((b.publishedAt as string) || (b.createdAt as string)).getTime();
       return dateB - dateA;
     });
 
     // Client-side filter for genre (Firebase doesn't support multiple field filters easily)
     let filteredListings = listings;
     if (genre && genre !== 'all') {
-      filteredListings = listings.filter((l: any) => l.genre === genre);
+      filteredListings = listings.filter((l: Record<string, unknown>) => l.genre === genre);
     }
 
     // Get unique genres for filter
-    const genres = [...new Set(listings.map((l: any) => l.genre).filter(Boolean))];
+    const genres = [...new Set(listings.map((l: Record<string, unknown>) => l.genre as string).filter(Boolean))];
 
     return new Response(JSON.stringify({
       success: true,

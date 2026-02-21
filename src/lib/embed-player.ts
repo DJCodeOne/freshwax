@@ -12,13 +12,48 @@ export interface PlayerCallbacks {
   onTitleUpdate?: (title: string) => void;
 }
 
+// Minimal type interfaces for third-party player SDKs (loaded via CDN)
+interface YouTubePlayerInstance {
+  destroy: () => void;
+  playVideo: () => void;
+  pauseVideo: () => void;
+  seekTo: (seconds: number, allowSeekAhead: boolean) => void;
+  setVolume: (volume: number) => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getPlayerState: () => number;
+  getVideoData: () => { title?: string } | undefined;
+}
+
+interface VimeoPlayerInstance {
+  destroy: () => Promise<void>;
+  play: () => Promise<void>;
+  pause: () => Promise<void>;
+  setCurrentTime: (seconds: number) => Promise<void>;
+  setVolume: (volume: number) => Promise<void>;
+  getCurrentTime: () => Promise<number>;
+  getDuration: () => Promise<number>;
+  on: (event: string, callback: (...args: unknown[]) => void) => void;
+}
+
+interface SoundCloudWidgetInstance {
+  play: () => void;
+  pause: () => void;
+  seekTo: (ms: number) => void;
+  setVolume: (volume: number) => void;
+  getPosition: (callback: (position: number) => void) => void;
+  getDuration: (callback: (duration: number) => void) => void;
+  bind: (event: unknown, callback: (...args: unknown[]) => void) => void;
+  unbind: (event: unknown) => void;
+}
+
 export class EmbedPlayerManager {
   private containerId: string;
   private currentPlatform: MediaPlatform | null = null;
-  private youtubePlayer: any = null;
+  private youtubePlayer: YouTubePlayerInstance | null = null;
   private youtubePlayerReady: boolean = false;
-  private vimeoPlayer: any = null;
-  private soundcloudWidget: any = null;
+  private vimeoPlayer: VimeoPlayerInstance | null = null;
+  private soundcloudWidget: SoundCloudWidgetInstance | null = null;
   private directVideo: HTMLVideoElement | null = null;
   private callbacks: PlayerCallbacks;
   private isSDKLoaded: { [key: string]: boolean } = {
@@ -132,7 +167,7 @@ export class EmbedPlayerManager {
             }, 500);
           }
         },
-        onStateChange: (event: any) => {
+        onStateChange: (event: { data: number }) => {
           // @ts-ignore
           if (event.data === YT.PlayerState.ENDED) {
             this.callbacks.onEnded?.();
@@ -161,12 +196,12 @@ export class EmbedPlayerManager {
               if (videoData?.title) {
                 this.callbacks.onTitleUpdate?.(videoData.title);
               }
-            } catch (e) {
+            } catch (e: unknown) {
               // Ignore errors getting video data
             }
           }
         },
-        onError: (event: any) => {
+        onError: (event: { data: number }) => {
           // YouTube error codes:
           // 2: Invalid video ID
           // 5: HTML5 player error
@@ -216,8 +251,8 @@ export class EmbedPlayerManager {
       this.callbacks.onEnded?.();
     });
 
-    this.vimeoPlayer.on('error', (error: any) => {
-      this.callbacks.onError?.('Vimeo player error: ' + error.message);
+    this.vimeoPlayer.on('error', (error: unknown) => {
+      this.callbacks.onError?.('Vimeo player error: ' + (error instanceof Error ? error.message : String(error)));
     });
 
     this.vimeoPlayer.on('play', async () => {
@@ -228,7 +263,7 @@ export class EmbedPlayerManager {
         this.pendingSeekPosition = null;
         try {
           await this.vimeoPlayer?.setCurrentTime(seekPos);
-        } catch (e) {
+        } catch (e: unknown) {
           console.warn('[Vimeo] Seek error:', e);
         }
       }
@@ -345,7 +380,7 @@ export class EmbedPlayerManager {
           this.callbacks.onReady?.();
         });
 
-        hls.on(Hls.Events.ERROR, (event: any, data: any) => {
+        hls.on(Hls.Events.ERROR, (_event: unknown, data: { fatal?: boolean }) => {
           if (data.fatal) {
             this.callbacks.onError?.('HLS playback error');
           }
@@ -385,7 +420,7 @@ export class EmbedPlayerManager {
       `;
       const audio = document.getElementById('direct-audio') as HTMLAudioElement;
       // Use the same property name for consistency
-      this.directVideo = audio as any;
+      this.directVideo = audio as unknown as HTMLVideoElement;
 
       audio.src = item.url;
       audio.play().catch((err: unknown) => {
@@ -696,7 +731,7 @@ export class EmbedPlayerManager {
     if (this.youtubePlayer) {
       try {
         this.youtubePlayer.destroy();
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[YouTube] Cleanup error:', e);
       }
       this.youtubePlayer = null;
@@ -705,7 +740,7 @@ export class EmbedPlayerManager {
     if (this.vimeoPlayer) {
       try {
         await this.vimeoPlayer.destroy();
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[Vimeo] Cleanup error:', e);
       }
       this.vimeoPlayer = null;
@@ -720,7 +755,7 @@ export class EmbedPlayerManager {
           this.soundcloudWidget.unbind(SC.Widget.Events.ERROR);
           this.soundcloudWidget.unbind(SC.Widget.Events.PLAY);
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.warn('[SoundCloud] Cleanup error:', e);
       }
       this.soundcloudWidget = null;

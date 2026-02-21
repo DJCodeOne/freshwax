@@ -155,7 +155,7 @@ if (partnerId) {
         return bSales - aSales;
       });
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Error fetching release stats:', e);
   }
 }

@@ -3,7 +3,9 @@
 // All transactional emails should use sendResendEmail() instead of
 // calling the Resend API directly.
 
-import { fetchWithTimeout } from './api-utils';
+import { fetchWithTimeout, createLogger } from './api-utils';
+
+const log = createLogger('[email]');
 
 // ============================================
 // TYPES
@@ -99,9 +101,9 @@ export async function logEmailToD1(
         data.error?.slice(0, 2000) || null
       )
       .run();
-  } catch (err) {
+  } catch (err: unknown) {
     // Log but never throw — D1 logging is best-effort
-    console.error('[email] D1 log failed:', err instanceof Error ? err.message : err);
+    log.error('D1 log failed:', err instanceof Error ? err.message : err);
   }
 }
 
@@ -140,7 +142,7 @@ export async function sendResendEmail(
 
   if (!apiKey) {
     const error = 'RESEND_API_KEY not configured';
-    console.error(`[email] ${error}`);
+    log.error(error);
     if (db) {
       await logEmailToD1(db, { messageId: null, toEmail, subject, template, status: 'failed', error });
     }
@@ -149,7 +151,7 @@ export async function sendResendEmail(
 
   if (!toEmail) {
     const error = 'No recipient email address';
-    console.error(`[email] ${error}`);
+    log.error(error);
     return { success: false, error };
   }
 
@@ -180,7 +182,7 @@ export async function sendResendEmail(
 
   try {
     response = await fetchWithTimeout(RESEND_API_URL, fetchOptions, timeoutMs);
-  } catch (err) {
+  } catch (err: unknown) {
     networkError = err instanceof Error ? err : new Error(String(err));
   }
 
@@ -196,19 +198,19 @@ export async function sendResendEmail(
     shouldRetry = true;
     retryDelay = 0;
     firstAttemptError = `Network error: ${networkError.message}`;
-    console.warn(`[email] Network error sending to ${toEmail} (template: ${template}): ${networkError.message} — retrying`);
+    log.warn(`Network error sending to ${toEmail} (template: ${template}): ${networkError.message} — retrying`);
   } else if (response && response.status === 429) {
     // Rate limited — retry after 1 second
     shouldRetry = true;
     retryDelay = RATE_LIMIT_RETRY_DELAY_MS;
     firstAttemptError = 'Rate limited (429)';
-    console.warn(`[email] Rate limited sending to ${toEmail} (template: ${template}) — retrying in ${retryDelay}ms`);
+    log.warn(`Rate limited sending to ${toEmail} (template: ${template}) — retrying in ${retryDelay}ms`);
   } else if (response && response.status >= 500) {
     // Server error — retry after 2 seconds
     shouldRetry = true;
     retryDelay = SERVER_ERROR_RETRY_DELAY_MS;
     firstAttemptError = `Server error (${response.status})`;
-    console.warn(`[email] Server error ${response.status} sending to ${toEmail} (template: ${template}) — retrying in ${retryDelay}ms`);
+    log.warn(`Server error ${response.status} sending to ${toEmail} (template: ${template}) — retrying in ${retryDelay}ms`);
   }
 
   // ------------------------------------------
@@ -224,14 +226,14 @@ export async function sendResendEmail(
 
     try {
       response = await fetchWithTimeout(RESEND_API_URL, fetchOptions, timeoutMs);
-    } catch (err) {
+    } catch (err: unknown) {
       networkError = err instanceof Error ? err : new Error(String(err));
     }
 
     // If the retry also failed with a network error
     if (networkError) {
       const error = `Retry failed — ${firstAttemptError}; then: ${networkError.message}`;
-      console.error(`[email] FAILED sending to ${toEmail} (template: ${template}): ${error}`);
+      log.error(`FAILED sending to ${toEmail} (template: ${template}): ${error}`);
 
       if (db) {
         await logEmailToD1(db, { messageId: null, toEmail, subject, template, status: 'failed', error });
@@ -246,7 +248,7 @@ export async function sendResendEmail(
   if (!response) {
     // Should not happen, but defensive
     const error = 'No response from Resend API';
-    console.error(`[email] ${error} for ${toEmail} (template: ${template})`);
+    log.error(`${error} for ${toEmail} (template: ${template})`);
     if (db) {
       await logEmailToD1(db, { messageId: null, toEmail, subject, template, status: 'failed', error });
     }
@@ -263,8 +265,8 @@ export async function sendResendEmail(
     }
 
     const status = shouldRetry ? 'retried' : 'sent';
-    console.log(
-      `[email] ${status === 'retried' ? 'RETRIED+SENT' : 'SENT'} to=${toEmail} template=${template} messageId=${messageId || 'unknown'}`
+    log.info(
+      `${status === 'retried' ? 'RETRIED+SENT' : 'SENT'} to=${toEmail} template=${template} messageId=${messageId || 'unknown'}`
     );
 
     if (db) {
@@ -293,8 +295,8 @@ export async function sendResendEmail(
     ? `Retry failed — ${firstAttemptError}; then: HTTP ${response.status} ${errorBody}`
     : `HTTP ${response.status}: ${errorBody}`;
 
-  console.error(
-    `[email] FAILED to=${toEmail} template=${template} status=${response.status} error=${errorBody}`
+  log.error(
+    `FAILED to=${toEmail} template=${template} status=${response.status} error=${errorBody}`
   );
 
   if (db) {

@@ -67,7 +67,7 @@ if (partnerId) {
             const productDocs = await Promise.all(productPromises);
             merchProducts = productDocs.filter((d): d is NonNullable<typeof d> => d !== null);
           }
-        } catch (e) {
+        } catch (e: unknown) {
           // Ignore errors from merch-suppliers lookup
         }
       }
@@ -128,7 +128,7 @@ if (partnerId) {
         });
       }
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Error fetching data:', e);
   }
 }

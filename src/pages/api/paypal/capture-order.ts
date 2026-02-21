@@ -83,7 +83,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // SECURITY: Retrieve order data from Firebase - never trust client-submitted data
-    let orderData: any;
+    let orderData: Record<string, unknown>;
     let usedServerData = false;
     let paypalReservationId: string | null = null;
 
@@ -226,7 +226,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Create order in Firebase using shared utility
     // Wrap in try/catch to handle race condition: if a concurrent request already
     // created the order between our idempotency check and now, return the existing one.
-    let result: any;
+    let result: { success: boolean; orderId?: string; orderNumber?: string; error?: string };
     try {
       result = await createOrder({
         orderData: {
@@ -278,8 +278,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (duplicateCheck && duplicateCheck.length > 1) {
           // Race condition detected: multiple orders for same paypalOrderId
           // Return the first one (earliest created) and log the duplicate
-          const firstOrder = duplicateCheck.sort((a: any, b: any) =>
-            (a.createdAt || '').localeCompare(b.createdAt || '')
+          const firstOrder = duplicateCheck.sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
+            ((a.createdAt as string) || '').localeCompare((b.createdAt as string) || '')
           )[0];
           log.warn('[PayPal] RACE CONDITION: Duplicate orders detected for paypalOrderId:', paypalOrderId,
             'Returning first order:', firstOrder.orderNumber);
@@ -366,7 +366,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const paypalFee = (capturedAmount * 0.029) + 0.30;
 
       // Enrich items with seller info from release lookup
-      const enrichedItems = await Promise.all((orderData.items || []).map(async (item: any) => {
+      const enrichedItems = await Promise.all(((orderData.items as Record<string, unknown>[]) || []).map(async (item: Record<string, unknown>) => {
         const releaseId = item.releaseId || item.productId || item.id;
         let submitterId = null;
         let submitterEmail = null;
@@ -445,7 +445,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         paymentMethod: 'paypal',
         paymentId: paypalOrderId,
         hasPhysical: orderData.hasPhysicalItems,
-        hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+        hasDigital: enrichedItems.some((i: Record<string, unknown>) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
         items: enrichedItems,
         db: env?.DB  // D1 database for dual-write
       });
@@ -462,7 +462,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const totalItemCount = (orderData.items || []).length;
 
       // Calculate order subtotal for processing fee calculation
-      const orderSubtotal = (orderData.items || []).reduce((sum: number, item: any) => {
+      const orderSubtotal = ((orderData.items as Record<string, unknown>[]) || []).reduce((sum: number, item: Record<string, unknown>) => {
         return sum + ((item.price || 0) * (item.quantity || 1));
       }, 0);
 
@@ -580,11 +580,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal } = params;
 
@@ -598,7 +598,7 @@ async function processArtistPayments(params: {
       items: string[];
     }> = {};
 
-    const releaseCache: Record<string, any> = {};
+    const releaseCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of items) {
       // Skip merch items - they go to suppliers
@@ -696,11 +696,11 @@ async function processArtistPayments(params: {
 async function processMerchSupplierPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -983,11 +983,11 @@ async function processMerchSupplierPayments(params: {
 async function processVinylCrateSellerPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });

@@ -796,7 +796,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         };
       }
       return {};
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Error loading customer data:', e);
       return {};
     }
@@ -1762,7 +1762,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     let tracks = [];
     try {
       tracks = JSON.parse(button.dataset.tracks || '[]');
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to parse tracks:', e);
     }
 
@@ -2425,7 +2425,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 data.timestamp = Date.now();
                 sessionStorage.setItem(cacheKey, JSON.stringify(data));
               }
-            } catch (e) {
+            } catch (e: unknown) {
               console.warn('Failed to update avatar cache:', e);
             }
             
@@ -2529,7 +2529,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 data.timestamp = Date.now();
                 sessionStorage.setItem(cacheKey, JSON.stringify(data));
               }
-            } catch (e) {
+            } catch (e: unknown) {
               console.warn('Failed to update avatar cache:', e);
             }
             
@@ -2632,7 +2632,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         a.remove();
         URL.revokeObjectURL(url);
         if (gdprStatus) gdprStatus.textContent = 'Downloaded!';
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('GDPR export error:', e);
         if (gdprStatus) gdprStatus.textContent = 'Export failed. Try again.';
       } finally {
@@ -2803,7 +2803,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           mixesSection.style.display = 'none';
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Error loading mixes:', e);
         mixesSection.style.display = 'none';
       }

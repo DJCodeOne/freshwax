@@ -1586,14 +1586,14 @@ Artist - Track Title
             if (xhr.status >= 200 && xhr.status < 300) {
               try {
                 resolve(JSON.parse(xhr.responseText));
-              } catch (e) {
+              } catch (e: unknown) {
                 reject(new Error('Invalid server response'));
               }
             } else {
               try {
                 const errorResponse = JSON.parse(xhr.responseText);
                 reject(new Error(errorResponse.error || `Server error: ${xhr.status}`));
-              } catch (e) {
+              } catch (e: unknown) {
                 reject(new Error(`Server error: ${xhr.status}`));
               }
             }
@@ -1928,14 +1928,14 @@ Artist - Track Title
               try {
                 const response = JSON.parse(xhr.responseText);
                 resolve(response);
-              } catch (e) {
+              } catch (e: unknown) {
                 reject(new Error('Invalid server response'));
               }
             } else {
               try {
                 const errorResponse = JSON.parse(xhr.responseText);
                 reject(new Error(errorResponse.error || errorResponse.details || `Server error: ${xhr.status}`));
-              } catch (e) {
+              } catch (e: unknown) {
                 reject(new Error(`Server error: ${xhr.status}`));
               }
             }

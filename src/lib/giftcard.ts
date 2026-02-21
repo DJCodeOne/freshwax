@@ -1,7 +1,9 @@
 // src/lib/giftcard.ts
 // Gift Card System - Generate, validate, and redeem gift cards
 
-import { escapeHtml, fetchWithTimeout } from './api-utils';
+import { escapeHtml, fetchWithTimeout, createLogger } from './api-utils';
+
+const log = createLogger('[giftcard]');
 import { SITE_URL } from './constants';
 import { sendResendEmail } from './email';
 import { emailWrapper, ctaButton, esc } from './email-wrapper';
@@ -222,7 +224,7 @@ export async function sendGiftCardEmail(
 ): Promise<boolean> {
   const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) {
-    console.error('[giftcard] No Resend API key configured');
+    log.error('No Resend API key configured');
     return false;
   }
 
@@ -313,7 +315,7 @@ export async function sendGiftCardEmail(
 
     return result.success;
   } catch (error: unknown) {
-    console.error('[giftcard] Email send error:', error);
+    log.error('Email send error:', error);
     return false;
   }
 }
@@ -369,7 +371,7 @@ export async function createGiftCardAfterPayment(
         if (buyerDoc) {
           buyerName = buyerDoc.displayName || buyerDoc.fullName || buyerDoc.firstName || '';
         }
-      } catch (e) {
+      } catch (e: unknown) {
         // Ignore
       }
     }
@@ -411,7 +413,7 @@ export async function createGiftCardAfterPayment(
     };
 
     const giftCardResult = await addDocument('giftCards', giftCard);
-    console.log(`[giftcard] Created gift card ${code} for £${data.amount}`);
+    log.info(`Created gift card ${code} for £${data.amount}`);
 
     // Store purchase record in customer's account
     const displayExpiryDate = new Date(now);
@@ -441,9 +443,9 @@ export async function createGiftCardAfterPayment(
         },
         10000
       );
-      console.log(`[giftcard] Added purchase record to customer ${data.buyerUserId}`);
-    } catch (e) {
-      console.error('[giftcard] Failed to add purchase record:', e);
+      log.info(`Added purchase record to customer ${data.buyerUserId}`);
+    } catch (e: unknown) {
+      log.error('Failed to add purchase record:', e);
     }
 
     // Send email to recipient
@@ -478,7 +480,7 @@ export async function createGiftCardAfterPayment(
     };
 
   } catch (error: unknown) {
-    console.error('[giftcard] Error creating gift card:', error);
+    log.error('Error creating gift card:', error);
     return {
       success: false,
       error: 'Failed to create gift card'

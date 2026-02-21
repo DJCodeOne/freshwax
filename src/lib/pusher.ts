@@ -1,7 +1,9 @@
 // Shared Pusher utility for server-side broadcasts
 // Used by chat.ts, slots.ts, and other APIs
 
-import { fetchWithTimeout } from './api-utils';
+import { fetchWithTimeout, createLogger } from './api-utils';
+
+const log = createLogger('[pusher]');
 
 // Simple MD5 implementation (for Pusher body signing)
 function simpleMd5(str: string): string {
@@ -175,7 +177,7 @@ export async function triggerPusher(channel: string, event: string, data: any, e
   const PUSHER_CLUSTER = env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
 
   if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
-    console.error('[Pusher] Missing configuration - cannot broadcast');
+    log.error('Missing configuration - cannot broadcast');
     return false;
   }
 
@@ -209,14 +211,14 @@ export async function triggerPusher(channel: string, event: string, data: any, e
     }, 10000);
 
     if (!response.ok) {
-      console.error('[Pusher] Failed:', response.status, await response.text());
+      log.error('Failed:', response.status, await response.text());
       return false;
     }
 
-    console.log(`[Pusher] Broadcast ${event} to ${channel}`);
+    log.info(`Broadcast ${event} to ${channel}`);
     return true;
   } catch (error: unknown) {
-    console.error('[Pusher] Error:', error);
+    log.error('Error:', error);
     return false;
   }
 }

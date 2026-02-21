@@ -67,6 +67,48 @@ const CreateOrderSchema = z.object({
 
 const logger = createLogger('create-order');
 
+// Minimal type for track data from Firestore
+interface TrackData {
+  id?: string;
+  trackId?: string;
+  trackNumber?: number;
+  trackName?: string;
+  name?: string;
+  price?: number;
+  mp3Url?: string;
+  wavUrl?: string;
+  [key: string]: unknown;
+}
+
+// Minimal type for order items flowing through the pipeline
+interface OrderItem {
+  id?: string;
+  productId?: string;
+  releaseId?: string;
+  trackId?: string;
+  name: string;
+  type?: string;
+  price: number;
+  quantity: number;
+  size?: string;
+  color?: string;
+  image?: string;
+  artwork?: string;
+  artist?: string;
+  artistId?: string;
+  artistName?: string;
+  artistEmail?: string;
+  title?: string;
+  isPreOrder?: boolean;
+  releaseDate?: string;
+  sellerId?: string;
+  supplierId?: string;
+  sellerEmail?: string;
+  stockistEmail?: string;
+  downloads?: { artworkUrl?: string; tracks?: { name: string; mp3Url?: string | null; wavUrl?: string | null }[] };
+  [key: string]: unknown;
+}
+
 // Order validation constants
 const MAX_ITEMS_PER_ORDER = 50;
 const MAX_QUANTITY_PER_ITEM = 99;
@@ -83,8 +125,8 @@ function escHtml(str: string | null | undefined): string {
 }
 
 // Validate item prices server-side to prevent manipulation
-async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[], serverSubtotal: number, hasMismatch: boolean, validationError?: string }> {
-  const validatedItems: any[] = [];
+async function validateOrderPrices(items: Record<string, unknown>[]): Promise<{ validatedItems: Record<string, unknown>[], serverSubtotal: number, hasMismatch: boolean, validationError?: string }> {
+  const validatedItems: Record<string, unknown>[] = [];
   let serverSubtotal = 0;
   let hasMismatch = false;
 
@@ -134,7 +176,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
     let serverPrice = item.price;
     const itemType = item.type || 'digital';
     const quantity = item.quantity || 1;
-    const extraFields: Record<string, any> = {};
+    const extraFields: Record<string, unknown> = {};
 
     try {
       if (itemType === 'merch' && item.productId) {
@@ -188,7 +230,7 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
           if (!release) {
             return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Product not found: ${item.name}` };
           }
-          const track = (release.tracks || []).find((t: any) =>
+          const track = (release.tracks || []).find((t: TrackData) =>
             t.id === item.trackId || t.trackId === item.trackId
           );
           serverPrice = track?.price || release.trackPrice || 0.99;
@@ -296,8 +338,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Server-side shipping calculation — never trust client-submitted shipping
-    const hasMerchItems = pricedItems.some((item: any) => item.type === 'merch');
-    const hasVinylItems = pricedItems.some((item: any) => item.type === 'vinyl');
+    const hasMerchItems = pricedItems.some((item: OrderItem) => item.type === 'merch');
+    const hasVinylItems = pricedItems.some((item: OrderItem) => item.type === 'vinyl');
     const customerCountry = orderData.shipping?.country || 'GB';
     const isUK = customerCountry === 'GB' || customerCountry === 'United Kingdom' || customerCountry === 'UK';
     const euCountries = ['DE', 'FR', 'NL', 'BE', 'IE', 'ES', 'IT', 'AT', 'PL', 'PT', 'DK', 'SE', 'FI', 'CZ', 'GR', 'HU', 'RO', 'BG', 'HR', 'SK', 'SI', 'LT', 'LV', 'EE', 'CY', 'MT', 'LU'];
@@ -309,8 +351,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (hasMerchItems) {
       const merchSubtotal = pricedItems
-        .filter((item: any) => item.type === 'merch')
-        .reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+        .filter((item: OrderItem) => item.type === 'merch')
+        .reduce((sum: number, item: OrderItem) => sum + (item.price * (item.quantity || 1)), 0);
       merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
     }
 
@@ -355,7 +397,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get download URLs for digital items
-    const itemsWithDownloads = await Promise.all(pricedItems.map(async (item: any) => {
+    const itemsWithDownloads = await Promise.all(pricedItems.map(async (item: OrderItem) => {
       // Get the release ID (could be stored as id, productId, or releaseId)
       const releaseId = item.releaseId || item.productId || item.id;
 
@@ -380,7 +422,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
               // Method 1: Match by trackId
               if (item.trackId) {
-                track = (releaseData?.tracks || []).find((t: any) =>
+                track = (releaseData?.tracks || []).find((t: TrackData) =>
                   t.id === item.trackId ||
                   t.trackId === item.trackId ||
                   String(t.trackNumber) === String(item.trackId)
@@ -391,14 +433,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               if (!track && item.name) {
                 const itemNameParts = item.name.split(' - ');
                 const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : item.name;
-                track = (releaseData?.tracks || []).find((t: any) =>
+                track = (releaseData?.tracks || []).find((t: TrackData) =>
                   (t.trackName || t.name || '').toLowerCase() === trackNameFromItem.toLowerCase()
                 );
               }
 
               // Method 3: Match by title field
               if (!track && item.title) {
-                track = (releaseData?.tracks || []).find((t: any) =>
+                track = (releaseData?.tracks || []).find((t: TrackData) =>
                   (t.trackName || t.name || '').toLowerCase() === item.title.toLowerCase()
                 );
               }
@@ -442,7 +484,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     artistName,
                     releaseName,
                     artworkUrl,
-                    tracks: (releaseData?.tracks || []).map((t: any) => ({
+                    tracks: (releaseData?.tracks || []).map((t: TrackData) => ({
                       name: t.trackName || t.name,
                       mp3Url: t.mp3Url || null,
                       wavUrl: t.wavUrl || null
@@ -463,7 +505,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               artistName,
               releaseName,
               artworkUrl,
-              tracks: (releaseData?.tracks || []).map((track: any) => ({
+              tracks: (releaseData?.tracks || []).map((track: TrackData) => ({
                 name: track.trackName || track.name,
                 mp3Url: track.mp3Url || null,
                 wavUrl: track.wavUrl || null
@@ -491,13 +533,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }));
 
     // Strip download URLs from pending orders - these get added by the webhook when payment is confirmed
-    const safeItems = itemsWithDownloads.map((item: any) => {
+    const safeItems = itemsWithDownloads.map((item: OrderItem) => {
       if (item.downloads?.tracks) {
         return {
           ...item,
           downloads: {
             ...item.downloads,
-            tracks: item.downloads.tracks.map((track: any) => {
+            tracks: item.downloads.tracks.map((track: { name: string; mp3Url?: string | null; wavUrl?: string | null }) => {
               const { mp3Url, wavUrl, ...safeTrack } = track;
               return safeTrack;
             })
@@ -509,10 +551,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Create order document
     // Check if any items are pre-orders
-    const hasPreOrderItems = safeItems.some((item: any) => item.isPreOrder === true);
+    const hasPreOrderItems = safeItems.some((item: OrderItem) => item.isPreOrder === true);
     const preOrderReleaseDates = safeItems
-      .filter((item: any) => item.isPreOrder && item.releaseDate)
-      .map((item: any) => new Date(item.releaseDate));
+      .filter((item: OrderItem) => item.isPreOrder && item.releaseDate)
+      .map((item: OrderItem) => new Date(item.releaseDate!));
     const latestPreOrderDate = preOrderReleaseDates.length > 0
       ? new Date(Math.max(...preOrderReleaseDates.map((d: Date) => d.getTime()))).toISOString()
       : null;
@@ -565,7 +607,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           let previousStock = 0;
           let newStock = 0;
           let variantKey = '';
-          let productData: any = null;
+          let productData: Record<string, unknown> | null = null;
 
           for (let attempt = 0; attempt < MAX_STOCK_RETRIES; attempt++) {
             // Clear cache on retry to get fresh data
@@ -578,9 +620,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             if (!productData) break;
 
             // Deep clone variantStock to avoid mutating cached data
-            const variantStock: Record<string, any> = {};
-            for (const [k, v] of Object.entries(productData.variantStock || {})) {
-              variantStock[k] = { ...(v as any) };
+            const variantStock: Record<string, Record<string, unknown>> = {};
+            for (const [k, v] of Object.entries((productData.variantStock as Record<string, Record<string, unknown>>) || {})) {
+              variantStock[k] = { ...v };
             }
 
             // Build variant key from size and color
@@ -621,9 +663,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             let totalStock = 0;
             let totalSold = 0;
-            Object.values(variantStock).forEach((v: any) => {
-              totalStock += v.stock || 0;
-              totalSold += v.sold || 0;
+            Object.values(variantStock).forEach((v: Record<string, unknown>) => {
+              totalStock += (v.stock as number) || 0;
+              totalSold += (v.sold as number) || 0;
             });
 
             try {
@@ -812,7 +854,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Send fulfillment email to stockist/label for vinyl orders
-    const vinylItems = order.items.filter((item: any) => item.type === 'vinyl');
+    const vinylItems = order.items.filter((item: OrderItem) => item.type === 'vinyl');
     if (vinylItems.length > 0) {
       try {
         const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
@@ -873,13 +915,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Send notification emails to artists for digital sales (tracks/releases)
-    const digitalItems = order.items.filter((item: any) => item.type === 'track' || item.type === 'digital' || item.type === 'release');
+    const digitalItems = order.items.filter((item: OrderItem) => item.type === 'track' || item.type === 'digital' || item.type === 'release');
     if (digitalItems.length > 0) {
       try {
         const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
         // Group items by artist email
-        const itemsByArtist: { [email: string]: any[] } = {};
+        const itemsByArtist: { [email: string]: OrderItem[] } = {};
         for (const item of digitalItems) {
           const artistEmail = item.artistEmail;
           if (artistEmail) {
@@ -926,13 +968,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Send notification emails to merch sellers
-    const merchItems = order.items.filter((item: any) => item.type === 'merch');
+    const merchItems = order.items.filter((item: OrderItem) => item.type === 'merch');
     if (merchItems.length > 0) {
       try {
         const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
         // Group items by seller email (use stockistEmail or artistEmail)
-        const itemsBySeller: { [email: string]: any[] } = {};
+        const itemsBySeller: { [email: string]: OrderItem[] } = {};
         for (const item of merchItems) {
           const sellerEmail = item.stockistEmail || item.artistEmail || item.sellerEmail;
           if (sellerEmail) {
@@ -1008,7 +1050,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Email template function - Light theme
-function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order: any): string {
+function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order: Record<string, unknown>): string {
   const confirmationUrl = `${SITE_URL}/order-confirmation/${orderId}`;
 
   // Build items HTML - only show image for merch items
@@ -1135,7 +1177,7 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
 }
 
 // Stockist/Label fulfillment email - sent when vinyl is ordered
-function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, order: any, vinylItems: any[]): string {
+function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, order: Record<string, unknown>, vinylItems: OrderItem[]): string {
   const orderDate = new Date().toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
@@ -1156,7 +1198,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
   }
 
   // Calculate vinyl total
-  const vinylTotal = vinylItems.reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+  const vinylTotal = vinylItems.reduce((sum: number, item: OrderItem) => sum + (item.price * (item.quantity || 1)), 0);
 
   // Payment status display
   const isTestMode = order.paymentMethod === 'test_mode';
@@ -1282,8 +1324,8 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
 }
 
 // Build artist notification email for digital sales (tracks/releases)
-function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: any[]): string {
-  const digitalTotal = digitalItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknown>, digitalItems: OrderItem[]): string {
+  const digitalTotal = digitalItems.reduce((sum: number, item: OrderItem) => sum + (item.price * item.quantity), 0);
 
   // Calculate fees - use passed values or calculate from subtotal
   const subtotal = order.totals?.subtotal || digitalTotal;
@@ -1373,8 +1415,8 @@ function buildDigitalSaleEmail(orderNumber: string, order: any, digitalItems: an
 }
 
 // Build merch seller notification email
-function buildMerchSaleEmail(orderNumber: string, order: any, merchItems: any[]): string {
-  const merchTotal = merchItems.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0);
+function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>, merchItems: OrderItem[]): string {
+  const merchTotal = merchItems.reduce((sum: number, item: OrderItem) => sum + (item.price * item.quantity), 0);
 
   // Calculate fees - use passed values or calculate from subtotal
   const subtotal = order.totals?.subtotal || merchTotal;

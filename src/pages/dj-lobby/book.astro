@@ -769,7 +769,7 @@ const csrfToken = Astro.locals.csrfToken || '';
     async function waitForAuth() {
       // Check if we have cached auth info first (for faster initial check)
       let cachedUid = null;
-      try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
+      try { cachedUid = localStorage.getItem('fw_uid'); } catch (e: unknown) {}
 
       // Always wait for Firebase onAuthStateChanged to ensure proper sync
       // This is more reliable than window.authReady during View Transitions
@@ -831,13 +831,13 @@ const csrfToken = Astro.locals.csrfToken || '';
 
       if (!user) {
         // No user - redirect to login
-        try { localStorage.removeItem('fw_uid'); localStorage.removeItem('fw_displayName'); } catch (e) {}
+        try { localStorage.removeItem('fw_uid'); localStorage.removeItem('fw_displayName'); } catch (e: unknown) {}
         window.location.href = '/login/?redirect=/dj-lobby/book/';
         return;
       }
 
       // Cache auth info for faster subsequent loads
-      try { localStorage.setItem('fw_uid', user.uid); } catch (e) {}
+      try { localStorage.setItem('fw_uid', user.uid); } catch (e: unknown) {}
       currentUser = user;
 
       // Get user data via API (replaces client-side Firestore read)
@@ -855,13 +855,13 @@ const csrfToken = Astro.locals.csrfToken || '';
             subscription: accessData.subscription
           };
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('[Book] Error fetching user data:', e);
       }
 
       // Cache display name
       if (userData.displayName) {
-        try { localStorage.setItem('fw_displayName', userData.displayName); } catch (e) {}
+        try { localStorage.setItem('fw_displayName', userData.displayName); } catch (e: unknown) {}
       }
 
       // Check subscription tier for booking limits
@@ -890,7 +890,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
       // Set user info
       let cachedDisplayName = '';
-      try { cachedDisplayName = localStorage.getItem('fw_displayName') || ''; } catch (e) {}
+      try { cachedDisplayName = localStorage.getItem('fw_displayName') || ''; } catch (e: unknown) {}
       const displayName = userData.displayName || cachedDisplayName || user.email;
       const userNameEl = document.getElementById('userName');
       const djNameEl = document.getElementById('djName');

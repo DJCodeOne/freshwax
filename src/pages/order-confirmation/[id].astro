@@ -28,7 +28,7 @@ try {
       error = 'Order not found';
     }
   }
-} catch (e) {
+} catch (e: unknown) {
   console.error('Error fetching order:', e);
   error = 'Failed to load order';
 }
@@ -162,7 +162,7 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
       };
     } else {
     }
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('[order-confirmation] Error fetching release:', releaseId, e);
   }
   
@@ -1415,7 +1415,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
       localStorage.removeItem('cart');
       window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('[order-confirmation] Error clearing cart:', e);
     }
   })();
@@ -1488,7 +1488,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     let tracks: { name: string; mp3Url?: string; wavUrl?: string }[] = [];
     try {
       tracks = JSON.parse(button.dataset.tracks || '[]');
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('Failed to parse tracks:', e);
     }
 

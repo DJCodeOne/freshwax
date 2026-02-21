@@ -206,7 +206,7 @@ export function merchToD1Row(id: string, doc: FirestoreDoc): Partial<D1Merch> {
 }
 
 // Convert D1 row back to merch document
-export function d1RowToMerch(row: D1Merch): any {
+export function d1RowToMerch(row: D1Merch): FirestoreDoc | null {
   try {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
@@ -225,20 +225,20 @@ export function d1RowToMerch(row: D1Merch): any {
 
 // --- RELEASES ---
 
-export async function d1GetAllPublishedReleases(db: D1Database, limit: number = 500): Promise<any[]> {
+export async function d1GetAllPublishedReleases(db: D1Database, limit: number = 500): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM releases_v2 WHERE published = 1 ORDER BY release_date DESC LIMIT ?`
     ).bind(limit).all();
 
-    return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToRelease(row as D1Release)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting published releases:', error);
     return [];
   }
 }
 
-export async function d1SearchPublishedReleases(db: D1Database, query: string, limit: number = 50): Promise<any[]> {
+export async function d1SearchPublishedReleases(db: D1Database, query: string, limit: number = 50): Promise<FirestoreDoc[]> {
   try {
     const pattern = `%${query}%`;
     const { results } = await db.prepare(
@@ -249,14 +249,14 @@ export async function d1SearchPublishedReleases(db: D1Database, query: string, l
       ) ORDER BY release_date DESC LIMIT ?2`
     ).bind(pattern, limit).all();
 
-    return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToRelease(row as D1Release)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error searching releases:', error);
     return [];
   }
 }
 
-export async function d1SearchPublishedMixes(db: D1Database, query: string, limit: number = 50): Promise<any[]> {
+export async function d1SearchPublishedMixes(db: D1Database, query: string, limit: number = 50): Promise<FirestoreDoc[]> {
   try {
     const pattern = `%${query}%`;
     const { results } = await db.prepare(
@@ -267,14 +267,14 @@ export async function d1SearchPublishedMixes(db: D1Database, query: string, limi
       ) ORDER BY upload_date DESC LIMIT ?2`
     ).bind(pattern, limit).all();
 
-    return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error searching mixes:', error);
     return [];
   }
 }
 
-export async function d1SearchPublishedMerch(db: D1Database, query: string, limit: number = 50): Promise<any[]> {
+export async function d1SearchPublishedMerch(db: D1Database, query: string, limit: number = 50): Promise<FirestoreDoc[]> {
   try {
     const pattern = `%${query}%`;
     const { results } = await db.prepare(
@@ -284,40 +284,40 @@ export async function d1SearchPublishedMerch(db: D1Database, query: string, limi
       ) ORDER BY created_at DESC LIMIT ?2`
     ).bind(pattern, limit).all();
 
-    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error searching merch:', error);
     return [];
   }
 }
 
-export async function d1GetReleaseById(db: D1Database, id: string): Promise<any | null> {
+export async function d1GetReleaseById(db: D1Database, id: string): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       `SELECT id, data FROM releases_v2 WHERE id = ?`
     ).bind(id).first();
 
-    return row ? d1RowToRelease(row) : null;
+    return row ? d1RowToRelease(row as D1Release) : null;
   } catch (error: unknown) {
     console.error('[D1] Error getting release:', error);
     return null;
   }
 }
 
-export async function d1GetReleasesByArtist(db: D1Database, artist: string): Promise<any[]> {
+export async function d1GetReleasesByArtist(db: D1Database, artist: string): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM releases_v2 WHERE artist_name = ? AND published = 1 ORDER BY release_date DESC`
     ).bind(artist).all();
 
-    return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToRelease(row as D1Release)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting releases by artist:', error);
     return [];
   }
 }
 
-export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Promise<boolean> {
+export async function d1UpsertRelease(db: D1Database, id: string, doc: FirestoreDoc): Promise<boolean> {
   try {
     const row = releaseToD1Row(id, doc);
 
@@ -362,59 +362,59 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
 
 // --- DJ MIXES ---
 
-export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500): Promise<any[]> {
+export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data, plays, downloads, likes FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
     ).bind(limit).all();
 
-    return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting published mixes:', error);
     return [];
   }
 }
 
-export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promise<any[]> {
+export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data, plays, downloads, likes FROM dj_mixes ORDER BY upload_date DESC LIMIT ?`
     ).bind(limit).all();
 
-    return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting all mixes:', error);
     return [];
   }
 }
 
-export async function d1GetMixById(db: D1Database, id: string): Promise<any | null> {
+export async function d1GetMixById(db: D1Database, id: string): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       `SELECT id, data, plays, downloads, likes FROM dj_mixes WHERE id = ?`
     ).bind(id).first();
 
-    return row ? d1RowToMix(row) : null;
+    return row ? d1RowToMix(row as D1DjMix) : null;
   } catch (error: unknown) {
     console.error('[D1] Error getting mix:', error);
     return null;
   }
 }
 
-export async function d1GetMixesByUser(db: D1Database, userId: string): Promise<any[]> {
+export async function d1GetMixesByUser(db: D1Database, userId: string): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM dj_mixes WHERE user_id = ? ORDER BY upload_date DESC`
     ).bind(userId).all();
 
-    return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting mixes by user:', error);
     return [];
   }
 }
 
-export async function d1UpsertMix(db: D1Database, id: string, doc: any): Promise<boolean> {
+export async function d1UpsertMix(db: D1Database, id: string, doc: FirestoreDoc): Promise<boolean> {
   try {
     const row = mixToD1Row(id, doc);
 
@@ -461,33 +461,33 @@ export async function d1DeleteMix(db: D1Database, id: string): Promise<boolean> 
 
 // --- MERCH ---
 
-export async function d1GetAllPublishedMerch(db: D1Database, limit: number = 500): Promise<any[]> {
+export async function d1GetAllPublishedMerch(db: D1Database, limit: number = 500): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM merch WHERE published = 1 ORDER BY created_at DESC LIMIT ?`
     ).bind(limit).all();
 
-    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting published merch:', error);
     return [];
   }
 }
 
-export async function d1GetMerchById(db: D1Database, id: string): Promise<any | null> {
+export async function d1GetMerchById(db: D1Database, id: string): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       `SELECT id, data FROM merch WHERE id = ?`
     ).bind(id).first();
 
-    return row ? d1RowToMerch(row) : null;
+    return row ? d1RowToMerch(row as D1Merch) : null;
   } catch (error: unknown) {
     console.error('[D1] Error getting merch:', error);
     return null;
   }
 }
 
-export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promise<boolean> {
+export async function d1UpsertMerch(db: D1Database, id: string, doc: FirestoreDoc): Promise<boolean> {
   try {
     const row = merchToD1Row(id, doc);
 
@@ -526,7 +526,7 @@ export async function d1DeleteMerch(db: D1Database, id: string): Promise<boolean
 }
 
 // Get merch by supplier ID (for artist dashboards)
-export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string): Promise<any[]> {
+export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string): Promise<FirestoreDoc[]> {
   try {
     // Query using JSON extraction for supplierId
     const { results } = await db.prepare(
@@ -535,7 +535,7 @@ export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string)
        ORDER BY created_at DESC`
     ).bind(supplierId).all();
 
-    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting merch by supplier:', error);
     return [];
@@ -543,7 +543,7 @@ export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string)
 }
 
 // Get merch by supplier name (fallback for artist dashboards)
-export async function d1GetMerchBySupplierName(db: D1Database, supplierName: string): Promise<any[]> {
+export async function d1GetMerchBySupplierName(db: D1Database, supplierName: string): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM merch
@@ -551,7 +551,7 @@ export async function d1GetMerchBySupplierName(db: D1Database, supplierName: str
        ORDER BY created_at DESC`
     ).bind(supplierName).all();
 
-    return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting merch by supplier name:', error);
     return [];
@@ -576,23 +576,26 @@ export interface D1Comment {
 }
 
 // Get comments for an item (release or mix)
-export async function d1GetComments(db: D1Database, itemId: string, itemType: 'release' | 'mix'): Promise<any[]> {
+export async function d1GetComments(db: D1Database, itemId: string, itemType: 'release' | 'mix'): Promise<Record<string, unknown>[]> {
   try {
     const { results } = await db.prepare(
       `SELECT * FROM comments WHERE item_id = ? AND item_type = ? ORDER BY created_at DESC`
     ).bind(itemId, itemType).all();
 
-    return (results || []).map((row: any) => ({
-      id: row.id,
-      userId: row.user_id,
-      userName: row.user_name,
-      avatarUrl: row.avatar_url,
-      comment: row.comment || '',
-      gifUrl: row.gif_url,
-      timestamp: row.created_at,
-      createdAt: row.created_at,
-      approved: row.approved === 1
-    }));
+    return (results || []).map((row) => {
+      const r = row as D1Row;
+      return {
+        id: r.id,
+        userId: r.user_id,
+        userName: r.user_name,
+        avatarUrl: r.avatar_url,
+        comment: (r.comment as string) || '',
+        gifUrl: r.gif_url,
+        timestamp: r.created_at,
+        createdAt: r.created_at,
+        approved: r.approved === 1
+      };
+    });
   } catch (error: unknown) {
     console.error('[D1] Error getting comments:', error);
     return [];
@@ -640,7 +643,7 @@ export async function d1GetCommentCount(db: D1Database, itemId: string, itemType
       `SELECT COUNT(*) as count FROM comments WHERE item_id = ? AND item_type = ?`
     ).bind(itemId, itemType).first();
 
-    return (result as any)?.count || 0;
+    return (result as D1Row)?.count as number || 0;
   } catch (error: unknown) {
     console.error('[D1] Error getting comment count:', error);
     return 0;
@@ -669,10 +672,11 @@ export async function d1GetRatings(db: D1Database, releaseId: string): Promise<{
 
     if (!row) return null;
 
+    const r = row as D1Row;
     return {
-      average: (row as any).average || 0,
-      count: (row as any).count || 0,
-      fiveStarCount: (row as any).five_star_count || 0
+      average: (r.average as number) || 0,
+      count: (r.count as number) || 0,
+      fiveStarCount: (r.five_star_count as number) || 0
     };
   } catch (error: unknown) {
     console.error('[D1] Error getting ratings:', error);
@@ -687,7 +691,7 @@ export async function d1GetUserRating(db: D1Database, releaseId: string, userId:
       `SELECT rating FROM user_ratings WHERE release_id = ? AND user_id = ?`
     ).bind(releaseId, userId).first();
 
-    return row ? (row as any).rating : null;
+    return row ? (row as D1Row).rating as number : null;
   } catch (error: unknown) {
     console.error('[D1] Error getting user rating:', error);
     return null;
@@ -705,7 +709,7 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
       `SELECT rating FROM user_ratings WHERE release_id = ? AND user_id = ?`
     ).bind(releaseId, userId).first();
 
-    const existingRating = existingRow ? (existingRow as any).rating : null;
+    const existingRating = existingRow ? (existingRow as D1Row).rating as number : null;
 
     // Upsert user rating
     await db.prepare(`
@@ -725,11 +729,12 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
     let newCount: number;
     let newFiveStarCount: number;
 
+    const cr = currentRatings as D1Row | null;
     if (existingRating !== null) {
       // Update existing - recalculate
-      const currentAvg = (currentRatings as any)?.average || 0;
-      const currentCount = (currentRatings as any)?.count || 0;
-      const currentFive = (currentRatings as any)?.five_star_count || 0;
+      const currentAvg = (cr?.average as number) || 0;
+      const currentCount = (cr?.count as number) || 0;
+      const currentFive = (cr?.five_star_count as number) || 0;
 
       const totalRating = (currentAvg * currentCount) - existingRating + rating;
       newAverage = currentCount > 0 ? totalRating / currentCount : rating;
@@ -737,9 +742,9 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
       newFiveStarCount = currentFive - (existingRating === 5 ? 1 : 0) + (rating === 5 ? 1 : 0);
     } else {
       // New rating
-      const currentAvg = (currentRatings as any)?.average || 0;
-      const currentCount = (currentRatings as any)?.count || 0;
-      const currentFive = (currentRatings as any)?.five_star_count || 0;
+      const currentAvg = (cr?.average as number) || 0;
+      const currentCount = (cr?.count as number) || 0;
+      const currentFive = (cr?.five_star_count as number) || 0;
 
       const totalRating = currentAvg * currentCount + rating;
       newCount = currentCount + 1;
@@ -791,7 +796,7 @@ export interface D1LivestreamSlot {
 }
 
 // Convert Firebase slot document to D1 row
-export function slotToD1Row(id: string, doc: any): Partial<D1LivestreamSlot> {
+export function slotToD1Row(id: string, doc: FirestoreDoc): Partial<D1LivestreamSlot> {
   return {
     id,
     dj_id: doc.djId || doc.userId || null,
@@ -811,7 +816,7 @@ export function slotToD1Row(id: string, doc: any): Partial<D1LivestreamSlot> {
 }
 
 // Convert D1 row back to slot document
-export function d1RowToSlot(row: D1LivestreamSlot): any {
+export function d1RowToSlot(row: D1LivestreamSlot): FirestoreDoc | null {
   try {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
@@ -823,13 +828,13 @@ export function d1RowToSlot(row: D1LivestreamSlot): any {
 }
 
 // Get all live slots (status = 'live')
-export async function d1GetLiveSlots(db: D1Database): Promise<any[]> {
+export async function d1GetLiveSlots(db: D1Database): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM livestream_slots WHERE status = 'live' ORDER BY start_time ASC`
     ).all();
 
-    return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToSlot(row as D1LivestreamSlot)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting live slots:', error);
     return [];
@@ -837,7 +842,7 @@ export async function d1GetLiveSlots(db: D1Database): Promise<any[]> {
 }
 
 // Get scheduled slots (for today/upcoming)
-export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Promise<any[]> {
+export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Promise<FirestoreDoc[]> {
   try {
     const now = fromTime || new Date().toISOString();
     const { results } = await db.prepare(
@@ -848,7 +853,7 @@ export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Pr
        LIMIT 50`
     ).bind(now).all();
 
-    return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToSlot(row as D1LivestreamSlot)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting scheduled slots:', error);
     return [];
@@ -856,13 +861,13 @@ export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Pr
 }
 
 // Get slot by ID
-export async function d1GetSlotById(db: D1Database, id: string): Promise<any | null> {
+export async function d1GetSlotById(db: D1Database, id: string): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       `SELECT id, data FROM livestream_slots WHERE id = ?`
     ).bind(id).first();
 
-    return row ? d1RowToSlot(row) : null;
+    return row ? d1RowToSlot(row as D1LivestreamSlot) : null;
   } catch (error: unknown) {
     console.error('[D1] Error getting slot:', error);
     return null;
@@ -870,13 +875,13 @@ export async function d1GetSlotById(db: D1Database, id: string): Promise<any | n
 }
 
 // Get slots by DJ
-export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<any[]> {
+export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT id, data FROM livestream_slots WHERE dj_id = ? ORDER BY start_time DESC LIMIT 20`
     ).bind(djId).all();
 
-    return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToSlot(row as D1LivestreamSlot)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting slots by DJ:', error);
     return [];
@@ -884,7 +889,7 @@ export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<any[
 }
 
 // Upsert a slot
-export async function d1UpsertSlot(db: D1Database, id: string, doc: any): Promise<boolean> {
+export async function d1UpsertSlot(db: D1Database, id: string, doc: FirestoreDoc): Promise<boolean> {
   try {
     const row = slotToD1Row(id, doc);
 
@@ -919,7 +924,7 @@ export async function d1UpsertSlot(db: D1Database, id: string, doc: any): Promis
 }
 
 // Update slot status only (quick update)
-export async function d1UpdateSlotStatus(db: D1Database, id: string, status: string, extraData?: any): Promise<boolean> {
+export async function d1UpdateSlotStatus(db: D1Database, id: string, status: string, extraData?: Record<string, unknown>): Promise<boolean> {
   try {
     // First get the current data
     const row = await db.prepare(`SELECT data FROM livestream_slots WHERE id = ?`).bind(id).first();
@@ -927,7 +932,7 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
       return false;
     }
 
-    const doc = JSON.parse((row as any).data);
+    const doc = JSON.parse((row as D1Row).data as string);
     doc.status = status;
     if (extraData) {
       Object.assign(doc, extraData);
@@ -999,7 +1004,7 @@ export interface D1LedgerEntry {
 }
 
 // Convert ledger entry to D1 row format
-export function ledgerToD1Row(entry: any): Partial<D1LedgerEntry> {
+export function ledgerToD1Row(entry: FirestoreDoc): Partial<D1LedgerEntry> {
   return {
     id: entry.id,
     order_id: entry.orderId,
@@ -1037,7 +1042,7 @@ export function ledgerToD1Row(entry: any): Partial<D1LedgerEntry> {
 }
 
 // Convert D1 row to ledger entry format
-export function d1RowToLedger(row: D1LedgerEntry): any {
+export function d1RowToLedger(row: D1LedgerEntry): FirestoreDoc | null {
   try {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
@@ -1052,7 +1057,7 @@ export function d1RowToLedger(row: D1LedgerEntry): any {
 }
 
 // Insert a new ledger entry
-export async function d1InsertLedgerEntry(db: D1Database, id: string, entry: any): Promise<boolean> {
+export async function d1InsertLedgerEntry(db: D1Database, id: string, entry: FirestoreDoc): Promise<boolean> {
   try {
     const row = ledgerToD1Row({ ...entry, id });
 
@@ -1084,11 +1089,11 @@ export async function d1InsertLedgerEntry(db: D1Database, id: string, entry: any
 }
 
 // Update ledger entry (for corrections)
-export async function d1UpdateLedgerEntry(db: D1Database, id: string, updates: any): Promise<boolean> {
+export async function d1UpdateLedgerEntry(db: D1Database, id: string, updates: Record<string, unknown>): Promise<boolean> {
   try {
     // Build update query dynamically based on what fields are provided
     const fields: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     if (updates.artistPayoutStatus !== undefined) {
       fields.push('artist_payout_status = ?');
@@ -1153,10 +1158,10 @@ export async function d1GetLedgerEntries(db: D1Database, options: {
   artistId?: string;
   payoutStatus?: string;
   limit?: number;
-} = {}): Promise<any[]> {
+} = {}): Promise<FirestoreDoc[]> {
   try {
     let query = 'SELECT data, artist_payout_status, artist_payout FROM sales_ledger WHERE 1=1';
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (options.year) {
       query += ' AND year = ?';
@@ -1187,7 +1192,7 @@ export async function d1GetLedgerEntries(db: D1Database, options: {
       ? await stmt.bind(...params).all()
       : await stmt.all();
 
-    return (results || []).map((row: any) => d1RowToLedger(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToLedger(row as D1LedgerEntry)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting ledger entries:', error);
     return [];
@@ -1195,7 +1200,7 @@ export async function d1GetLedgerEntries(db: D1Database, options: {
 }
 
 // Get ledger entry by ID
-export async function d1GetLedgerEntryById(db: D1Database, id: string): Promise<any | null> {
+export async function d1GetLedgerEntryById(db: D1Database, id: string): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       'SELECT data, artist_payout_status, artist_payout FROM sales_ledger WHERE id = ?'
@@ -1209,13 +1214,13 @@ export async function d1GetLedgerEntryById(db: D1Database, id: string): Promise<
 }
 
 // Get ledger entries by order ID
-export async function d1GetLedgerEntriesByOrder(db: D1Database, orderId: string): Promise<any[]> {
+export async function d1GetLedgerEntriesByOrder(db: D1Database, orderId: string): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       'SELECT data, artist_payout_status, artist_payout FROM sales_ledger WHERE order_id = ? ORDER BY timestamp DESC'
     ).bind(orderId).all();
 
-    return (results || []).map((row: any) => d1RowToLedger(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToLedger(row as D1LedgerEntry)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting ledger entries by order:', error);
     return [];
@@ -1223,13 +1228,13 @@ export async function d1GetLedgerEntriesByOrder(db: D1Database, orderId: string)
 }
 
 // Get ledger entries for an artist
-export async function d1GetLedgerEntriesByArtist(db: D1Database, artistId: string): Promise<any[]> {
+export async function d1GetLedgerEntriesByArtist(db: D1Database, artistId: string): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       'SELECT data, artist_payout_status, artist_payout FROM sales_ledger WHERE artist_id = ? OR submitter_id = ? ORDER BY timestamp DESC'
     ).bind(artistId, artistId).all();
 
-    return (results || []).map((row: any) => d1RowToLedger(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToLedger(row as D1LedgerEntry)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting ledger entries by artist:', error);
     return [];
@@ -1260,7 +1265,7 @@ export async function d1GetLedgerTotals(db: D1Database, options: {
         COALESCE(SUM(CASE WHEN artist_payout_status = 'paid' THEN artist_payout ELSE 0 END), 0) as paid_payouts
       FROM sales_ledger WHERE 1=1
     `;
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (options.year) {
       query += ' AND year = ?';
@@ -1280,13 +1285,14 @@ export async function d1GetLedgerTotals(db: D1Database, options: {
       ? await stmt.bind(...params).first()
       : await stmt.first();
 
+    const r = row as D1Row | null;
     return {
-      orders: (row as any)?.orders || 0,
-      grossRevenue: (row as any)?.gross_revenue || 0,
-      netRevenue: (row as any)?.net_revenue || 0,
-      totalFees: (row as any)?.total_fees || 0,
-      pendingPayouts: (row as any)?.pending_payouts || 0,
-      paidPayouts: (row as any)?.paid_payouts || 0
+      orders: (r?.orders as number) || 0,
+      grossRevenue: (r?.gross_revenue as number) || 0,
+      netRevenue: (r?.net_revenue as number) || 0,
+      totalFees: (r?.total_fees as number) || 0,
+      pendingPayouts: (r?.pending_payouts as number) || 0,
+      paidPayouts: (r?.paid_payouts as number) || 0
     };
   } catch (error: unknown) {
     console.error('[D1] Error getting ledger totals:', error);
@@ -1329,7 +1335,7 @@ export interface D1VinylSeller {
 }
 
 // Convert vinyl seller document to D1 row
-export function vinylSellerToD1Row(id: string, doc: any): Partial<D1VinylSeller> {
+export function vinylSellerToD1Row(id: string, doc: FirestoreDoc): Partial<D1VinylSeller> {
   return {
     id,
     store_name: doc.storeName || null,
@@ -1349,7 +1355,7 @@ export function vinylSellerToD1Row(id: string, doc: any): Partial<D1VinylSeller>
 }
 
 // Convert D1 row back to vinyl seller document
-export function d1RowToVinylSeller(row: D1VinylSeller): any {
+export function d1RowToVinylSeller(row: D1VinylSeller): FirestoreDoc | null {
   try {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
@@ -1362,7 +1368,7 @@ export function d1RowToVinylSeller(row: D1VinylSeller): any {
 }
 
 // Get vinyl seller settings by user ID
-export async function d1GetVinylSeller(db: D1Database, userId: string): Promise<any | null> {
+export async function d1GetVinylSeller(db: D1Database, userId: string): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       `SELECT data FROM vinyl_sellers WHERE id = ?`
@@ -1376,7 +1382,7 @@ export async function d1GetVinylSeller(db: D1Database, userId: string): Promise<
 }
 
 // Upsert vinyl seller settings
-export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: any): Promise<boolean> {
+export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: FirestoreDoc): Promise<boolean> {
   try {
     const row = vinylSellerToD1Row(userId, doc);
 
@@ -1419,13 +1425,13 @@ export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: a
 }
 
 // Get all vinyl sellers (for admin)
-export async function d1GetAllVinylSellers(db: D1Database): Promise<any[]> {
+export async function d1GetAllVinylSellers(db: D1Database): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT data FROM vinyl_sellers ORDER BY updated_at DESC`
     ).all();
 
-    return (results || []).map((row: any) => d1RowToVinylSeller(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToVinylSeller(row as D1VinylSeller)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting all vinyl sellers:', error);
     return [];
@@ -1439,7 +1445,7 @@ export async function d1GetNextCollectionNumber(db: D1Database): Promise<number>
       `SELECT MAX(json_extract(data, '$.collectionNumber')) as max_num FROM vinyl_sellers`
     ).first();
 
-    const maxNum = (result as any)?.max_num || 0;
+    const maxNum = ((result as D1Row)?.max_num as number) || 0;
     return maxNum + 1;
   } catch (error: unknown) {
     console.error('[D1] Error getting next collection number:', error);
@@ -1448,7 +1454,7 @@ export async function d1GetNextCollectionNumber(db: D1Database): Promise<number>
 }
 
 // Get vinyl seller by collection number (for public crates page)
-export async function d1GetVinylSellerByCollection(db: D1Database, collectionNumber: number): Promise<any | null> {
+export async function d1GetVinylSellerByCollection(db: D1Database, collectionNumber: number): Promise<FirestoreDoc | null> {
   try {
     const row = await db.prepare(
       `SELECT data FROM vinyl_sellers WHERE json_extract(data, '$.collectionNumber') = ?`
@@ -1462,7 +1468,7 @@ export async function d1GetVinylSellerByCollection(db: D1Database, collectionNum
 }
 
 // Get all vinyl sellers with collection numbers (for public crates sidebar)
-export async function d1GetAllCollections(db: D1Database): Promise<any[]> {
+export async function d1GetAllCollections(db: D1Database): Promise<FirestoreDoc[]> {
   try {
     const { results } = await db.prepare(
       `SELECT data FROM vinyl_sellers
@@ -1470,7 +1476,7 @@ export async function d1GetAllCollections(db: D1Database): Promise<any[]> {
        ORDER BY json_extract(data, '$.collectionNumber') ASC`
     ).all();
 
-    return (results || []).map((row: any) => d1RowToVinylSeller(row)).filter(Boolean);
+    return (results || []).map((row) => d1RowToVinylSeller(row as D1VinylSeller)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
     console.error('[D1] Error getting all collections:', error);
     return [];

@@ -88,7 +88,7 @@ async function sendPendingEarningsEmail(
   artistEmail: string,
   artistName: string,
   amount: number,
-  env: any
+  env: Record<string, unknown>
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
@@ -226,7 +226,7 @@ async function sendPayoutCompletedEmail(
   artistName: string,
   amount: number,
   orderNumber: string,
-  env: any
+  env: Record<string, unknown>
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
@@ -380,7 +380,7 @@ async function sendRefundNotificationEmail(
   originalPayout: number,
   orderNumber: string,
   isFullRefund: boolean,
-  env: any
+  env: Record<string, unknown>
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
@@ -1088,7 +1088,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Parse items from metadata or retrieve from pending checkout
-      let items: any[] = [];
+      let items: Record<string, unknown>[] = [];
 
       // Track artist shipping breakdown for payouts (artist gets item price + their shipping fee)
       let artistShippingBreakdown: Record<string, { artistId: string; artistName: string; amount: number }> | null = null;
@@ -1143,17 +1143,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
           if (lineItemsResponse.ok) {
             const lineItemsData = await lineItemsResponse.json();
             items = lineItemsData.data
-              .filter((item: any) => item.description !== 'Processing and platform fees')
-              .map((item: any, index: number) => ({
-                id: `stripe_item_${index}`,
-                name: item.description || 'Item',
-                // Use unit_amount if available, otherwise calculate from amount_total / quantity
-                price: item.price?.unit_amount
-                  ? item.price.unit_amount / 100
-                  : (item.amount_total / 100) / (item.quantity || 1),
-                quantity: item.quantity,
-                type: 'digital' // Default type
-              }));
+              .filter((item: Record<string, unknown>) => item.description !== 'Processing and platform fees')
+              .map((item: Record<string, unknown>, index: number) => {
+                const price = item.price as Record<string, unknown> | undefined;
+                const unitAmount = price?.unit_amount as number | undefined;
+                return {
+                  id: `stripe_item_${index}`,
+                  name: item.description || 'Item',
+                  price: unitAmount
+                    ? unitAmount / 100
+                    : ((item.amount_total as number) / 100) / ((item.quantity as number) || 1),
+                  quantity: item.quantity,
+                  type: 'digital' // Default type
+                };
+              });
           } else {
             const errorText = await lineItemsResponse.text();
             logger.error('[Stripe Webhook] ❌ Line items fetch failed:', errorText);
@@ -1302,7 +1305,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const stripeFee = serviceFees > 0 ? (serviceFees - freshWaxFee) : ((session.amount_total / 100) * 0.015 + 0.20);
 
         // Enrich items with seller info from release/product lookup
-        const enrichedItems = await Promise.all(items.map(async (item: any) => {
+        const enrichedItems = await Promise.all(items.map(async (item: Record<string, unknown>) => {
           const releaseId = item.releaseId || item.productId || item.id;
           let submitterId = null;
           let submitterEmail = null;
@@ -1382,7 +1385,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           paymentMethod: 'stripe',
           paymentId: session.payment_intent as string,
           hasPhysical: metadata.hasPhysicalItems === 'true',
-          hasDigital: enrichedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+          hasDigital: enrichedItems.some((i: Record<string, unknown>) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
           items: enrichedItems,
           db: env?.DB  // D1 database for dual-write
         });
@@ -1398,7 +1401,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const totalItemCount = items.length;
 
         // Calculate order subtotal for processing fee calculation
-        const orderSubtotal = items.reduce((sum: number, item: any) => {
+        const orderSubtotal = items.reduce((sum: number, item: Record<string, unknown>) => {
           return sum + ((item.price || 0) * (item.quantity || 1));
         }, 0);
 
@@ -1723,7 +1726,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const itemsMeta = session.metadata?.items;
       if (customerEmail && itemsMeta) {
         try {
-          let items: any[] = [];
+          let items: Record<string, unknown>[] = [];
           try { items = JSON.parse(itemsMeta); } catch { /* invalid JSON */ }
 
           if (items.length > 0) {
@@ -1733,7 +1736,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             if (userId) {
               try {
                 const userDoc = await getDocument('customers', userId, env);
-                if (userDoc && (userDoc as any).emailOptOut) {
+                if (userDoc && (userDoc as Record<string, unknown>).emailOptOut) {
                   optedOut = true;
                 }
               } catch { /* user not found, proceed */ }
@@ -1835,12 +1838,12 @@ function getCountryName(code: string): string {
 async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   artistShippingBreakdown?: Record<string, { artistId: string; artistName: string; amount: number }> | null;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, artistShippingBreakdown, env } = params;
 
@@ -1856,7 +1859,7 @@ async function processArtistPayments(params: {
     }> = {};
 
     // Cache for release lookups
-    const releaseCache: Record<string, any> = {};
+    const releaseCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of items) {
       // Skip merch items - they go to suppliers, not artists
@@ -1965,11 +1968,11 @@ async function processArtistPayments(params: {
 async function processSupplierPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -2107,11 +2110,11 @@ async function processSupplierPayments(params: {
 async function processVinylCrateSellerPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -2256,7 +2259,7 @@ async function processVinylCrateSellerPayments(params: {
 }
 
 // Handle dispute created - reverse transfers to recover funds from artists
-async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
+async function handleDisputeCreated(dispute: Record<string, unknown>, stripeSecretKey: string) {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -2286,7 +2289,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
 
     // Find related transfers by transfer_group (orderId)
     const transferGroup = charge.transfer_group || order?.id;
-    let transfersReversed: any[] = [];
+    let transfersReversed: Record<string, unknown>[] = [];
     let totalRecovered = 0;
 
     if (transferGroup) {
@@ -2407,7 +2410,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
 }
 
 // Handle dispute closed - update status and track outcome
-async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
+async function handleDisputeClosed(dispute: Record<string, unknown>, stripeSecretKey: string) {
   try {
     // Find the dispute record
     const disputes = await queryCollection('disputes', {
@@ -2425,7 +2428,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
 
     // Calculate net impact
     let netImpact = 0;
-    let retransfersCreated: any[] = [];
+    let retransfersCreated: Record<string, unknown>[] = [];
 
     if (outcome === 'lost') {
       // We lost - platform absorbs the loss minus any recovered amount
@@ -2565,7 +2568,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
 }
 
 // Handle refund - reverse artist transfers proportionally
-async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
+async function handleRefund(charge: Record<string, unknown>, stripeSecretKey: string, env: Record<string, unknown>) {
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   try {
@@ -2609,7 +2612,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     // Calculate how much we've already refunded
     let previouslyRefunded = 0;
     if (existingRefunds.length > 0) {
-      previouslyRefunded = existingRefunds.reduce((sum: number, r: any) => sum + (r.amountRefunded || 0), 0);
+      previouslyRefunded = existingRefunds.reduce((sum: number, r: Record<string, unknown>) => sum + ((r.amountRefunded as number) || 0), 0);
     }
 
     // Calculate the new refund amount (incremental)
@@ -2676,7 +2679,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     // Processing payouts for transfer reversal
 
     // Reverse transfers proportionally
-    let transfersReversed: any[] = [];
+    let transfersReversed: Record<string, unknown>[] = [];
     let totalReversed = 0;
 
     for (const payout of payouts) {
@@ -2826,7 +2829,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
       updatedAt: new Date().toISOString()
     });
 
-    logger.info('[Stripe Webhook] ✓ Refund processed. Reversed', totalReversed, 'GBP from', transfersReversed.filter((t: any) => !t.failed).length, 'transfers');
+    logger.info('[Stripe Webhook] ✓ Refund processed. Reversed', totalReversed, 'GBP from', transfersReversed.filter((t: Record<string, unknown>) => !t.failed).length, 'transfers');
 
     // Send email notifications to affected artists
     for (const reversal of transfersReversed) {
@@ -2836,7 +2839,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
       const artist = await getDocument('artists', reversal.artistId);
       if (artist?.email) {
         // Find original payout amount
-        const payout = payouts.find((p: any) => p.stripeTransferId === reversal.transferId);
+        const payout = payouts.find((p: Record<string, unknown>) => p.stripeTransferId === reversal.transferId);
         const originalAmount = payout?.amount || reversal.amount;
 
         sendRefundNotificationEmail(

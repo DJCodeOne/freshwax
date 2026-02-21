@@ -846,7 +846,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           return null;
         }
         return data.v;
-      } catch (e) { return null; }
+      } catch (e: unknown) { return null; }
     },
     
     set: function(key, value, ttl) {
@@ -856,7 +856,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           ts: Date.now(),
           ttl: ttl || this.TTL.STATS
         }));
-      } catch (e) { console.warn('[DJ Mixes] localStorage set failed:', e); }
+      } catch (e: unknown) { console.warn('[DJ Mixes] localStorage set failed:', e); }
     },
 
     update: function(key, updateFn) {
@@ -1258,7 +1258,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       
       var mixId = btn.getAttribute('data-mix-id');
       var likedMixes = [];
-      try { likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]'); } catch (e) {}
+      try { likedMixes = JSON.parse(localStorage.getItem('liked-mixes') || '[]'); } catch (e: unknown) {}
       var likeText = btn.querySelector('.like-text-btn');
       var likedText = btn.querySelector('.liked-text-btn');
 
@@ -1284,7 +1284,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               liked.splice(idx, 1);
               localStorage.setItem('liked-mixes', JSON.stringify(liked));
             }
-          } catch (e) {}
+          } catch (e: unknown) {}
 
           trackUnlike(mixId).then(function(result) {
             if (result && result.likes !== undefined) updateLikeCount(mixId, result.likes);
@@ -1301,7 +1301,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               liked.push(mixId);
               localStorage.setItem('liked-mixes', JSON.stringify(liked));
             }
-          } catch (e) {}
+          } catch (e: unknown) {}
 
           trackLike(mixId).then(function(result) {
             if (result && result.likes !== undefined) updateLikeCount(mixId, result.likes);

@@ -117,13 +117,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Recalculate totals with validated prices
-    const itemTotal = validatedItems.reduce((sum: number, item: any) =>
-      sum + (item.price * (item.quantity || 1)), 0);
-    const hasPhysicalItems = validatedItems.some((item: any) =>
+    const itemTotal = validatedItems.reduce((sum: number, item: Record<string, unknown>) =>
+      sum + ((item.price as number) * ((item.quantity as number) || 1)), 0);
+    const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch'
     );
-    const hasMerchItems = validatedItems.some((item: any) => item.type === 'merch');
-    const hasVinylItems = validatedItems.some((item: any) => item.type === 'vinyl');
+    const hasMerchItems = validatedItems.some((item: Record<string, unknown>) => item.type === 'merch');
+    const hasVinylItems = validatedItems.some((item: Record<string, unknown>) => item.type === 'vinyl');
 
     // Determine customer's shipping region
     const customerCountry = orderData.shipping?.country || 'GB';
@@ -138,8 +138,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Merch shipping: only count merch items toward free shipping threshold
     if (hasMerchItems) {
       const merchSubtotal = validatedItems
-        .filter((item: any) => item.type === 'merch')
-        .reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+        .filter((item: Record<string, unknown>) => item.type === 'merch')
+        .reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) * ((item.quantity as number) || 1)), 0);
       merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
     }
 
@@ -193,18 +193,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const baseUrl = getPayPalBaseUrl(paypalMode);
 
     // Build PayPal order items using VALIDATED prices
-    const paypalItems = validatedItems.map((item: any) => ({
-      name: item.name.substring(0, 127), // PayPal name limit
+    const paypalItems = validatedItems.map((item: Record<string, unknown>) => ({
+      name: (item.name as string).substring(0, 127), // PayPal name limit
       unit_amount: {
         currency_code: 'GBP',
-        value: item.price.toFixed(2) // This is now the validated server price
+        value: (item.price as number).toFixed(2) // This is now the validated server price
       },
-      quantity: String(item.quantity || 1),
+      quantity: String((item.quantity as number) || 1),
       category: item.type === 'merch' || item.type === 'vinyl' ? 'PHYSICAL_GOODS' : 'DIGITAL_GOODS'
     }));
 
     // Build PayPal order request using VALIDATED totals
-    const paypalOrder: any = {
+    const paypalOrder: Record<string, unknown> = {
       intent: 'CAPTURE',
       purchase_units: [{
         reference_id: 'freshwax_order',
@@ -213,7 +213,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           customer: orderData.customer,
           shipping: orderData.shipping,
           hasPhysicalItems: hasPhysicalItems,
-          items: validatedItems.map((item: any) => ({
+          items: validatedItems.map((item: Record<string, unknown>) => ({
             id: item.id,
             productId: item.productId,
             releaseId: item.releaseId,
@@ -253,7 +253,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Add shipping address if physical items (using validated check)
     if (hasPhysicalItems && orderData.shipping) {
-      paypalOrder.purchase_units[0].shipping = {
+      (paypalOrder.purchase_units as Record<string, unknown>[])[0].shipping = {
         name: {
           full_name: `${orderData.customer.firstName} ${orderData.customer.lastName}`
         },
@@ -292,7 +292,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[PayPal] Order created:', paypalResult.id, 'items:', paypalItems.length);
 
     // Extract approval URL from PayPal response links
-    const approvalLink = paypalResult.links?.find((link: any) => link.rel === 'approve');
+    const approvalLink = paypalResult.links?.find((link: Record<string, unknown>) => link.rel === 'approve');
     const approvalUrl = approvalLink?.href || null;
 
     // Store VALIDATED order data in Firebase for secure retrieval during capture
@@ -303,7 +303,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         customer: orderData.customer,
         shipping: orderData.shipping || null,
         // Use VALIDATED items with server-verified prices
-        items: validatedItems.map((item: any) => ({
+        items: validatedItems.map((item: Record<string, unknown>) => ({
           id: item.id,
           productId: item.productId,
           releaseId: item.releaseId,
@@ -311,7 +311,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           name: item.name,
           type: item.type,
           price: item.price, // This is now the validated server price
-          quantity: item.quantity || 1,
+          quantity: (item.quantity as number) || 1,
           size: item.size,
           color: item.color,
           image: item.image,
