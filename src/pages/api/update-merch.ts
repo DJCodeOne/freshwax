@@ -9,13 +9,9 @@ import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('update-merch');
 
 export const prerender = false;
 
@@ -74,7 +70,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('Product ID is required');
       }
 
-      log.info('[update-merch] JSON update for product:', productId);
+      logger.info('[update-merch] JSON update for product:', productId);
 
       const productDoc = await getDocument('merch', productId);
 
@@ -181,14 +177,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const updatedProduct = await getDocument('merch', productId);
           if (updatedProduct) {
             await d1UpsertMerch(db, productId, updatedProduct);
-            log.info('[update-merch] Images also updated in D1');
+            logger.info('[update-merch] Images also updated in D1');
           }
         } catch (d1Error) {
-          log.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
+          logger.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
         }
       }
 
-      log.info('[update-merch] Images updated for:', productId);
+      logger.info('[update-merch] Images updated for:', productId);
 
       // Clear all merch caches to ensure fresh data on next page load
       clearAllMerchCache();
@@ -211,7 +207,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Product ID is required');
     }
 
-    log.info('[update-merch] Updating product:', productId);
+    logger.info('[update-merch] Updating product:', productId);
 
     const existingProduct = await getDocument('merch', productId);
 
@@ -267,7 +263,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.sizes = JSON.parse(sizesJson as string);
         updates.hasSizes = updates.sizes.length > 0;
       } catch (e) {
-        log.error('Error parsing sizes JSON');
+        logger.error('Error parsing sizes JSON');
       }
     }
 
@@ -277,7 +273,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updates.colors = JSON.parse(colorsJson as string);
         updates.hasColors = updates.colors.length > 0;
       } catch (e) {
-        log.error('Error parsing colors JSON');
+        logger.error('Error parsing colors JSON');
       }
     }
 
@@ -300,9 +296,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   Key: imageToDelete.key
                 })
               );
-              log.info('[update-merch] Deleted image:', imageToDelete.key);
+              logger.info('[update-merch] Deleted image:', imageToDelete.key);
             } catch (e) {
-              log.error('[update-merch] Failed to delete image from R2');
+              logger.error('[update-merch] Failed to delete image from R2');
             }
           }
         }
@@ -311,7 +307,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           images.splice(idx, 1);
         });
       } catch (e) {
-        log.error('Error parsing deleteImages');
+        logger.error('Error parsing deleteImages');
       }
     }
 
@@ -324,7 +320,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (!imageFile || imageFile.size === 0) continue;
 
-        log.info('[update-merch] Uploading new image', i + 1);
+        logger.info('[update-merch] Uploading new image', i + 1);
 
         const imageBuffer = await imageFile.arrayBuffer();
 
@@ -337,9 +333,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + imageExtension(processed.format);
           uploadBody = processed.buffer;
           uploadContentType = imageContentType(processed.format);
-          log.info('[update-merch] Converted to', processed.format + ':', processed.width, 'x', processed.height);
+          logger.info('[update-merch] Converted to', processed.format + ':', processed.width, 'x', processed.height);
         } catch (imgErr) {
-          log.warn('[update-merch] WebP conversion failed, uploading original:', imgErr);
+          logger.warn('[update-merch] WebP conversion failed, uploading original:', imgErr);
           const imageExt = imageFile.name.split('.').pop() || 'jpg';
           imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.' + imageExt;
           uploadBody = Buffer.from(imageBuffer);
@@ -365,7 +361,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           isPrimary: images.length === 0
         });
 
-        log.info('[update-merch] Uploaded:', imageUrl);
+        logger.info('[update-merch] Uploaded:', imageUrl);
       }
     }
 
@@ -427,13 +423,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (db && updatedDoc) {
       try {
         await d1UpsertMerch(db, productId, updatedDoc);
-        log.info('[update-merch] Also updated in D1');
+        logger.info('[update-merch] Also updated in D1');
       } catch (d1Error) {
-        log.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
-    log.info('[update-merch] Product updated:', productId);
+    logger.info('[update-merch] Product updated:', productId);
 
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
@@ -448,8 +444,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    // Always log errors in production too
-    console.error('[update-merch] Error:', error);
+    logger.error('[update-merch] Error:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 

@@ -7,7 +7,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const PresignDownloadSchema = z.object({
@@ -19,11 +19,7 @@ const PresignDownloadSchema = z.object({
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('presign-download');
 
 function getR2Config(env: any) {
   return {
@@ -91,7 +87,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { orderId, releaseId, trackIndex, fileType } = parseResult.data;
 
-    log.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
+    logger.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
 
     // SECURITY: Fetch and verify order ownership
     const order = await getDocument('orders', orderId);
@@ -103,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify user owns this order
     const orderUserId = order.customer?.userId || order.userId || order.customerId;
     if (orderUserId !== userId) {
-      log.error('[presign-download] Unauthorized access attempt:', { orderId, orderUserId, requestingUserId: userId });
+      logger.error('[presign-download] Unauthorized access attempt:', { orderId, orderUserId, requestingUserId: userId });
       return ApiErrors.forbidden('Unauthorized');
     }
 
@@ -165,7 +161,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Fall back to current release data if order doesn't have URLs
     if (!fileUrl) {
-      log.info('[presign-download] Order has no stored URL, fetching from release');
+      logger.info('[presign-download] Order has no stored URL, fetching from release');
       const releaseData = await getDocument('releases', releaseId);
 
       if (!releaseData) {
@@ -202,7 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!fileUrl) {
-      log.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
+      logger.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
       return ApiErrors.notFound('${fileType} file not available for this item');
     }
 
@@ -213,13 +209,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!objectKey) {
       // If it's not a recognized R2 URL, reject the request
-      log.error('[presign-download] Unrecognized URL format:', fileUrl);
+      logger.error('[presign-download] Unrecognized URL format:', fileUrl);
       return ApiErrors.badRequest('Invalid file URL format');
     }
 
     // Validate R2 configuration
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
-      log.error('[presign-download] Missing R2 credentials');
+      logger.error('[presign-download] Missing R2 credentials');
       return ApiErrors.serverError('Server configuration error');
     }
 
@@ -242,7 +238,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn });
 
-    log.info('[presign-download] Generated presigned URL for:', objectKey);
+    logger.info('[presign-download] Generated presigned URL for:', objectKey);
 
     return new Response(JSON.stringify({
       success: true,
@@ -254,7 +250,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[presign-download] Error:', error);
+    logger.error('[presign-download] Error:', error);
     return ApiErrors.serverError('Failed to generate download URL');
   }
 };

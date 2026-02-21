@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -13,11 +13,7 @@ function initServices(locals: App.Locals) {
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('suppliers');
 
 // GET - List all suppliers or get specific supplier
 export const GET: APIRoute = async ({ request, url, locals }) => {
@@ -220,7 +216,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       ...userSuppliers.filter((u: any) => !u.email || !supplierEmails.has(u.email.toLowerCase()))
     ];
 
-    log.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');
+    logger.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');
 
     return new Response(JSON.stringify({
       success: true,
@@ -235,7 +231,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[suppliers] GET Error:', error);
+    logger.error('[suppliers] GET Error:', error);
 
     return ApiErrors.serverError('Failed to fetch suppliers');
   }
@@ -296,7 +292,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('merch-suppliers', supplierId, supplierData);
 
-    log.info('[suppliers] Created supplier:', name, '(' + supplierId + ')');
+    logger.info('[suppliers] Created supplier:', name, '(' + supplierId + ')');
 
     return new Response(JSON.stringify({
       success: true,
@@ -309,7 +305,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[suppliers] POST Error:', error);
+    logger.error('[suppliers] POST Error:', error);
 
     return ApiErrors.serverError('Failed to create supplier');
   }
@@ -345,7 +341,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     await updateDocument('merch-suppliers', supplierId, updates);
 
-    log.info('[suppliers] Updated supplier:', supplierId);
+    logger.info('[suppliers] Updated supplier:', supplierId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -356,7 +352,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[suppliers] PUT Error:', error);
+    logger.error('[suppliers] PUT Error:', error);
 
     return ApiErrors.serverError('Failed to update supplier');
   }
@@ -382,7 +378,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     if (hardDelete) {
       await deleteDocument('merch-suppliers', supplierId);
 
-      log.info('[suppliers] Permanently deleted supplier:', supplierId);
+      logger.info('[suppliers] Permanently deleted supplier:', supplierId);
 
       return new Response(JSON.stringify({
         success: true,
@@ -397,7 +393,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
         deactivatedAt: new Date().toISOString()
       });
 
-      log.info('[suppliers] Deactivated supplier:', supplierId);
+      logger.info('[suppliers] Deactivated supplier:', supplierId);
 
       return new Response(JSON.stringify({
         success: true,
@@ -409,7 +405,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    log.error('[suppliers] DELETE Error:', error);
+    logger.error('[suppliers] DELETE Error:', error);
 
     return ApiErrors.serverError('Failed to delete supplier');
   }

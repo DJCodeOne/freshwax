@@ -696,7 +696,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           };
 
           try {
-            const updateResponse = await fetch(
+            const updateResponse = await fetchWithTimeout(
               `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
               {
                 method: 'PATCH',
@@ -711,7 +711,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               // Send welcome email
               try {
                 const origin = new URL(request.url).origin;
-                const welcomeEmailRes = await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+                const welcomeEmailRes = await fetchWithTimeout(`${origin}/api/admin/send-plus-welcome-email/`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -760,7 +760,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       }
                     };
 
-                    const redeemRes = await fetch(
+                    const redeemRes = await fetchWithTimeout(
                       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
                       {
                         method: 'PATCH',
@@ -874,7 +874,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             };
 
             try {
-              const updateResponse = await fetch(
+              const updateResponse = await fetchWithTimeout(
                 `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
                 {
                   method: 'PATCH',
@@ -889,7 +889,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 // Send welcome email
                 try {
                   const origin = new URL(request.url).origin;
-                  const welcomeEmailRes = await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+                  const welcomeEmailRes = await fetchWithTimeout(`${origin}/api/admin/send-plus-welcome-email/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -940,7 +940,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       }
                     };
 
-                    const redeemRes = await fetch(
+                    const redeemRes = await fetchWithTimeout(
                       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
                       {
                         method: 'PATCH',
@@ -1131,7 +1131,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // If no items in metadata, try to retrieve from session line items
       if (items.length === 0 && stripeSecretKey) {
         try {
-          const lineItemsResponse = await fetch(
+          const lineItemsResponse = await fetchWithTimeout(
             `https://api.stripe.com/v1/checkout/sessions/${session.id}/line_items`,
             {
               headers: {
@@ -1516,14 +1516,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
         if (stripeSecretKey) {
           try {
-            const subResponse = await fetch(
+            const subResponse = await fetchWithTimeout(
               `https://api.stripe.com/v1/subscriptions/${invoice.subscription}`,
               {
                 headers: { 'Authorization': `Bearer ${stripeSecretKey}` }
               }
             );
             if (!subResponse.ok) {
-              logger.error(`[Stripe Webhook] Failed to fetch subscription from Stripe: ${subResponse.status}`);
+              logger.error(`[Stripe Webhook] Failed to fetch subscription: ${subResponse.status}`);
+              return new Response(JSON.stringify({ received: true, error: 'Failed to fetch subscription' }), {
+                status: 200, headers: { 'Content-Type': 'application/json' }
+              });
             }
             const subscription = await subResponse.json();
 
@@ -1536,11 +1539,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const FIREBASE_API_KEY = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
               // Get current user to check existing expiry
-              const userResponse = await fetch(
+              const userResponse = await fetchWithTimeout(
                 `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?key=${FIREBASE_API_KEY}`
               );
               if (!userResponse.ok) {
-                logger.error(`[Stripe Webhook] Failed to fetch user from Firestore: ${userResponse.status}`);
+                logger.error(`[Stripe Webhook] Failed to fetch user: ${userResponse.status}`);
+                return new Response(JSON.stringify({ received: true, error: 'Failed to fetch user' }), {
+                  status: 200, headers: { 'Content-Type': 'application/json' }
+                });
               }
               const userData = await userResponse.json();
 
@@ -1592,7 +1598,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   userData.fields.subscription.mapValue.fields.plusId;
               }
 
-              const updateResponse = await fetch(
+              const updateResponse = await fetchWithTimeout(
                 `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
                 {
                   method: 'PATCH',
@@ -1607,7 +1613,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 // Send renewal confirmation email
                 try {
                   const origin = new URL(request.url).origin;
-                  const renewalEmailRes = await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+                  const renewalEmailRes = await fetchWithTimeout(`${origin}/api/admin/send-plus-welcome-email/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

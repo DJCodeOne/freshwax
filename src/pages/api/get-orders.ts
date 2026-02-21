@@ -5,13 +5,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocumentsBatch, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('get-orders');
 
 export const prerender = false;
 
@@ -36,7 +32,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const userId = verifiedUserId;
 
   try {
-    log.info('[get-orders] Fetching orders for user:', userId);
+    logger.info('[get-orders] Fetching orders for user:', userId);
 
     // Query orders filtered by customer.userId (server-side Firestore filter)
     const userOrders = await queryCollection('orders', {
@@ -63,7 +59,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       ? await getDocumentsBatch('releases', Array.from(releaseIds))
       : new Map<string, any>();
 
-    log.info('[get-orders] Batch fetched', releaseCache.size, 'releases for', userOrders.length, 'orders');
+    logger.info('[get-orders] Batch fetched', releaseCache.size, 'releases for', userOrders.length, 'orders');
 
     const orders = userOrders.map((orderData: any) => {
       if (orderData.items && Array.isArray(orderData.items)) {
@@ -169,7 +165,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
               };
             }
           } catch (e) {
-            log.error('[get-orders] Error fetching release:', releaseId, e);
+            logger.error('[get-orders] Error fetching release:', releaseId, e);
           }
 
           return item;
@@ -185,7 +181,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return dateB - dateA;
     });
 
-    log.info('[get-orders] Found', orders.length, 'orders');
+    logger.info('[get-orders] Found', orders.length, 'orders');
 
     return new Response(JSON.stringify({
       success: true,
@@ -200,7 +196,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[get-orders] Error:', error);
+    logger.error('[get-orders] Error:', error);
     return ApiErrors.serverError('Failed to fetch orders');
   }
 };

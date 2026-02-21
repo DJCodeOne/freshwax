@@ -9,7 +9,7 @@ import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from 
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const DeleteMixSchema = z.object({
@@ -17,11 +17,7 @@ const DeleteMixSchema = z.object({
   folderPath: z.string().max(500).nullish(),
 }).passthrough();
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('delete-mix');
 
 // Max files to delete from R2 per mix (prevent runaway)
 const MAX_R2_FILES_TO_DELETE = 50;
@@ -54,7 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: destructive operation - 3 per hour
   const rateCheck = checkRateLimit(`delete-mix:${clientId}`, RateLimiters.destructive);
   if (!rateCheck.allowed) {
-    log.error(`[delete-mix] Rate limit exceeded for ${clientId}`);
+    logger.error(`[delete-mix] Rate limit exceeded for ${clientId}`);
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
@@ -87,12 +83,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { mixId, folderPath } = parseResult.data;
 
-    log.info('[delete-mix] Deleting mix:', mixId, 'for user:', userId);
+    logger.info('[delete-mix] Deleting mix:', mixId, 'for user:', userId);
 
     const mixData = await getDocument('dj-mixes', mixId);
 
     if (!mixData) {
-      log.info('[delete-mix] Mix not found, may already be deleted');
+      logger.info('[delete-mix] Mix not found, may already be deleted');
       return new Response(JSON.stringify({
         success: true,
         message: 'Mix not found (may already be deleted)'
@@ -104,14 +100,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Verify the user owns this mix
     if (mixData.userId !== userId) {
-      log.error('[delete-mix] User', userId, 'does not own mix', mixId, '(owner:', mixData.userId + ')');
+      logger.error('[delete-mix] User', userId, 'does not own mix', mixId, '(owner:', mixData.userId + ')');
       return ApiErrors.forbidden('You do not have permission to delete this mix');
     }
 
     // SECURITY: Always derive R2 path from verified mix document, never from client input
     const r2FolderPath = mixData?.folder_path || 'dj-mixes/' + mixId;
 
-    log.info('[delete-mix] R2 folder:', r2FolderPath);
+    logger.info('[delete-mix] R2 folder:', r2FolderPath);
 
     // Delete files from R2 (with limit to prevent runaway)
     try {
@@ -125,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
         const filesToDelete = listedObjects.Contents.slice(0, MAX_R2_FILES_TO_DELETE);
-        log.info('[delete-mix] Found', listedObjects.Contents.length, 'files, deleting up to', filesToDelete.length);
+        logger.info('[delete-mix] Found', listedObjects.Contents.length, 'files, deleting up to', filesToDelete.length);
 
         let deleted = 0;
         for (const object of filesToDelete) {
@@ -139,14 +135,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             deleted++;
           }
         }
-        log.info('[delete-mix] Deleted', deleted, 'R2 files');
+        logger.info('[delete-mix] Deleted', deleted, 'R2 files');
 
         if (listedObjects.IsTruncated) {
-          log.info('[delete-mix] Note: More files may remain (hit limit)');
+          logger.info('[delete-mix] Note: More files may remain (hit limit)');
         }
       }
     } catch (r2Error) {
-      log.error('[delete-mix] R2 deletion error:', r2Error);
+      logger.error('[delete-mix] R2 deletion error:', r2Error);
     }
 
     // Note: Comments subcollection deletion not supported in firebase-rest
@@ -155,16 +151,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Delete mix document from Firebase
     await deleteDocument('dj-mixes', mixId);
-    log.info('[delete-mix] Mix deleted from Firebase');
+    logger.info('[delete-mix] Mix deleted from Firebase');
 
     // Also delete from D1 (secondary, non-blocking)
     const db = env?.DB;
     if (db) {
       try {
         await d1DeleteMix(db, mixId);
-        log.info('[delete-mix] Mix also deleted from D1');
+        logger.info('[delete-mix] Mix also deleted from D1');
       } catch (d1Error) {
-        log.error('[delete-mix] D1 delete failed (non-critical):', d1Error);
+        logger.error('[delete-mix] D1 delete failed (non-critical):', d1Error);
       }
     }
 
@@ -185,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[delete-mix] Error:', error);
+    logger.error('[delete-mix] Error:', error);
 
     return ApiErrors.serverError('Failed to delete mix');
   }

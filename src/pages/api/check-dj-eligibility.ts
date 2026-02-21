@@ -8,16 +8,12 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 const REQUIRED_LIKES = 10;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('check-dj-eligibility');
 
 export const GET: APIRoute = async ({ request }) => {
   // Rate limit: standard API - 60 per minute
@@ -44,7 +40,7 @@ export const GET: APIRoute = async ({ request }) => {
     return ApiErrors.forbidden('You can only check your own eligibility');
   }
 
-  log.info('[check-dj-eligibility] Checking eligibility for:', userId);
+  logger.info('[check-dj-eligibility] Checking eligibility for:', userId);
   
   try {
     // First check if user is banned or on hold
@@ -52,7 +48,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (moderation) {
       if (moderation.status === 'banned') {
-        log.info('[check-dj-eligibility] User is banned');
+        logger.info('[check-dj-eligibility] User is banned');
         return new Response(JSON.stringify({
           success: true,
           eligible: false,
@@ -66,7 +62,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
       
       if (moderation.status === 'hold') {
-        log.info('[check-dj-eligibility] User is on hold');
+        logger.info('[check-dj-eligibility] User is on hold');
         return new Response(JSON.stringify({
           success: true,
           eligible: false,
@@ -84,7 +80,7 @@ export const GET: APIRoute = async ({ request }) => {
     const bypass = await getDocument('djLobbyBypass', userId);
 
     if (bypass) {
-      log.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
+      logger.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
       return new Response(JSON.stringify({
         success: true,
         eligible: true,
@@ -101,7 +97,7 @@ export const GET: APIRoute = async ({ request }) => {
     const userData = await getDocument('users', userId);
     if (userData) {
       if (userData['go-liveBypassed'] === true) {
-        log.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
+        logger.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
         return new Response(JSON.stringify({ 
           success: true,
           eligible: true,
@@ -137,7 +133,7 @@ export const GET: APIRoute = async ({ request }) => {
     const mixes = await queryCollection('dj-mixes', {
       filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
     });
-    log.info('[check-dj-eligibility] Found', mixes.length, 'mixes for user');
+    logger.info('[check-dj-eligibility] Found', mixes.length, 'mixes for user');
     
     // Check if they have any mixes
     if (mixes.length === 0) {
@@ -162,7 +158,7 @@ export const GET: APIRoute = async ({ request }) => {
       return likes >= REQUIRED_LIKES;
     });
     
-    log.info('[check-dj-eligibility] Qualifying mixes (10+ likes):', qualifyingMixes.length);
+    logger.info('[check-dj-eligibility] Qualifying mixes (10+ likes):', qualifyingMixes.length);
     
     if (qualifyingMixes.length === 0) {
       // Find the mix with the most likes to show progress
@@ -204,7 +200,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error: unknown) {
-    log.error('[check-dj-eligibility] Error:', error instanceof Error ? error.message : String(error));
+    logger.error('[check-dj-eligibility] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to check eligibility');
   }
 };

@@ -7,7 +7,7 @@ import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const updateReleaseSchema = z.object({
   id: z.string().min(1),
@@ -17,11 +17,7 @@ const updateReleaseSchema = z.object({
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('update-release');
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -44,7 +40,7 @@ function getServiceAccountKey(env: any): string | null {
 }
 
 export async function POST({ request, locals }: any) {
-  log.info('[update-release] POST request received');
+  logger.info('[update-release] POST request received');
 
   // Rate limit: write operations - 30 per minute
   const clientId = getClientId(request);
@@ -56,7 +52,7 @@ export async function POST({ request, locals }: any) {
   let updates: any;
   try {
     updates = await request.json();
-    log.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
+    logger.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
   } catch (e) {
     return ApiErrors.badRequest('Invalid JSON body');
   }
@@ -73,19 +69,19 @@ export async function POST({ request, locals }: any) {
 
     const parsed = updateReleaseSchema.safeParse(updates);
     if (!parsed.success) {
-      log.error('[update-release] Invalid request');
+      logger.error('[update-release] Invalid request');
       return ApiErrors.badRequest('Invalid request');
     }
 
     const { id, idToken, adminKey, ...updateData } = parsed.data;
 
-    log.info('[update-release] Updating release:', id);
+    logger.info('[update-release] Updating release:', id);
 
     // Get release from Firestore
     const releaseDoc = await getDocument('releases', id);
 
     if (!releaseDoc) {
-      log.error('[update-release] Release not found:', id);
+      logger.error('[update-release] Release not found:', id);
       return ApiErrors.notFound('Release not found');
     }
 
@@ -158,20 +154,20 @@ export async function POST({ request, locals }: any) {
       delete cleanedData.trackUpdates; // Remove trackUpdates from the data to save
     }
 
-    log.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
+    logger.info('[update-release] Cleaned data:', JSON.stringify(cleanedData, null, 2));
 
     // Get service account key for writes
     const serviceAccountKey = getServiceAccountKey(env);
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      log.error('[update-release] Service account not configured');
+      logger.error('[update-release] Service account not configured');
       return ApiErrors.serverError('Service account not configured');
     }
 
     // Update in Firestore using service account auth
     await saUpdateDocument(serviceAccountKey, projectId, 'releases', id, cleanedData);
-    log.info('[update-release] Updated in Firestore');
+    logger.info('[update-release] Updated in Firestore');
 
     // Dual-write to D1 (secondary, non-blocking)
     const db = env?.DB;
@@ -181,11 +177,11 @@ export async function POST({ request, locals }: any) {
         const updatedDoc = await getDocument('releases', id);
         if (updatedDoc) {
           await d1UpsertRelease(db, id, updatedDoc);
-          log.info('[update-release] Also updated in D1');
+          logger.info('[update-release] Also updated in D1');
         }
       } catch (d1Error) {
         // Log D1 error but don't fail the request
-        log.error('[update-release] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[update-release] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -215,11 +211,11 @@ export async function POST({ request, locals }: any) {
             lastUpdated: new Date().toISOString()
           });
 
-          log.info('[update-release] Updated master list');
+          logger.info('[update-release] Updated master list');
         }
       }
     } catch (error: unknown) {
-      log.error('[update-release] Warning: Could not update master list:', error);
+      logger.error('[update-release] Warning: Could not update master list:', error);
       // Don't fail the whole operation if master list update fails
     }
 
@@ -227,7 +223,7 @@ export async function POST({ request, locals }: any) {
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    log.info('[update-release] Success - Update complete');
+    logger.info('[update-release] Success - Update complete');
 
     return new Response(JSON.stringify({
       success: true,
@@ -239,8 +235,8 @@ export async function POST({ request, locals }: any) {
     });
 
   } catch (error: unknown) {
-    console.error('[update-release] Critical error:', error instanceof Error ? error.message : String(error));
-    console.error('[update-release] Stack:', error instanceof Error ? error.stack : undefined);
+    logger.error('[update-release] Critical error:', error instanceof Error ? error.message : String(error));
+    logger.error('[update-release] Stack:', error instanceof Error ? error.stack : undefined);
 
     return ApiErrors.serverError('Internal server error');
   }

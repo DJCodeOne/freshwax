@@ -5,12 +5,11 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../lib/kv-cache';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
-// Production-safe logging - only errors in production
-const isDev = import.meta.env.DEV;
+const logger = createLogger('get-dj-mixes');
 
 // Cache config for DJ mixes (5 min)
 const MIXES_CACHE = { prefix: 'mixes', ttl: 300 };
@@ -175,7 +174,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error: unknown) {
     // Only log errors in development
-    if (isDev) console.error('[get-dj-mixes] Error:', error);
+    logger.error('[get-dj-mixes] Error:', error);
     return ApiErrors.serverError('Failed to fetch DJ mixes');
   }
 };

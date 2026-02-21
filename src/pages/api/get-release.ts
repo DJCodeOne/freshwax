@@ -5,13 +5,9 @@ import { getDocument, clearCache, verifyRequestUser } from '../../lib/firebase-r
 import { normalizeRelease } from '../../lib/releases';
 import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('get-release');
 
 export const prerender = false;
 
@@ -45,7 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Release ID required');
   }
 
-  log.info('[get-release] Fetching:', releaseId, noCache ? '(nocache)' : '', isAdminUser ? '(admin)' : '');
+  logger.info('[get-release] Fetching:', releaseId, noCache ? '(nocache)' : '', isAdminUser ? '(admin)' : '');
   
   // Clear cache for this release if nocache requested
   if (noCache) {
@@ -56,13 +52,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const release = await getDocument('releases', releaseId);
     
     if (!release) {
-      log.info('[get-release] Not found:', releaseId);
+      logger.info('[get-release] Not found:', releaseId);
       return ApiErrors.notFound('Release not found');
     }
     
     // Only check status for public requests (non-admin)
     if (!isAdminUser && release.status !== 'live') {
-      log.info('[get-release] Not live:', releaseId, release.status);
+      logger.info('[get-release] Not live:', releaseId, release.status);
       return ApiErrors.notFound('Release not available');
     }
     
@@ -85,11 +81,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
           }
         }
       } catch (err) {
-        log.info('[get-release] Could not fetch artist bio:', err);
+        logger.info('[get-release] Could not fetch artist bio:', err);
       }
     }
 
-    log.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName, artistBio ? '(has bio)' : '(no bio)');
+    logger.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName, artistBio ? '(has bio)' : '(no bio)');
 
     return new Response(JSON.stringify({
       success: true,
@@ -104,7 +100,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    log.error('[get-release] Error:', error);
+    logger.error('[get-release] Error:', error);
     return ApiErrors.serverError('Failed to fetch release');
   }
 };

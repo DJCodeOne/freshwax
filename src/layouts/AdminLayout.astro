@@ -3,6 +3,8 @@
 // Unified Admin Layout - Light Theme with Fresh Wax Branding
 // All admin pages use this for consistent styling
 
+import '../styles/admin-global.css';
+
 interface Props {
   title: string;
   activeNav?: string;
@@ -1465,6 +1467,21 @@ const navItems = [
       }
     }
 
+    /* Skip link - accessibility */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #000;
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 10000;
+      transition: top 0.2s;
+    }
+    .skip-link:focus {
+      top: 0;
+    }
+
     /* Reduced motion - accessibility */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -1479,6 +1496,7 @@ const navItems = [
   <slot name="head" />
 </head>
 <body>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- CSRF: Auto-inject X-CSRF-Token header on state-changing fetch() calls -->
   <script is:inline>
     (function() {
@@ -1574,7 +1592,7 @@ const navItems = [
   )}
   
   <!-- Main Content -->
-  <main class="admin-main">
+  <main class="admin-main" id="main-content">
     <slot />
   </main>
   

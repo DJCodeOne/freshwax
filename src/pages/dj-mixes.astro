@@ -136,6 +136,8 @@ const mixesItemList = {
     position: i + 1,
   }))
 };
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
 <Layout title="DJ Mixes - Jungle & DnB Sets" description="Listen to DJ mixes on Fresh Wax. Jungle, drum & bass, and breakbeat sets from UK underground DJs." itemList={mixesItemList}>

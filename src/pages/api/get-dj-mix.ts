@@ -3,13 +3,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('get-dj-mix');
 
 export const prerender = false;
 
@@ -29,7 +25,7 @@ export const GET: APIRoute = async ({ request }) => {
     return ApiErrors.badRequest('Mix ID required');
   }
   
-  log.info('[get-dj-mix] Fetching mix:', mixId, noCache ? '(nocache)' : '');
+  logger.info('[get-dj-mix] Fetching mix:', mixId, noCache ? '(nocache)' : '');
   
   // Clear cache for this mix if nocache requested
   if (noCache) {
@@ -40,7 +36,7 @@ export const GET: APIRoute = async ({ request }) => {
     const mix = await getDocument('dj-mixes', mixId);
     
     if (!mix) {
-      log.info('[get-dj-mix] Not found:', mixId);
+      logger.info('[get-dj-mix] Not found:', mixId);
       return ApiErrors.notFound('Mix not found');
     }
     
@@ -65,7 +61,7 @@ export const GET: APIRoute = async ({ request }) => {
       ...mix
     };
     
-    log.info('[get-dj-mix] Returning:', normalized.title);
+    logger.info('[get-dj-mix] Returning:', normalized.title);
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -80,7 +76,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error: unknown) {
-    log.error('[get-dj-mix] Error:', error);
+    logger.error('[get-dj-mix] Error:', error);
     return ApiErrors.serverError('Failed to fetch mix');
   }
 };

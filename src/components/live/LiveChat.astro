@@ -39,7 +39,7 @@
         <input type="text" id="chatInput" placeholder="Say something..." maxlength="500" autocomplete="off" aria-label="Chat message" />
         <button type="button" id="openEmojiPanel" class="chat-tool-btn" title="Emojis">😀</button>
         <button type="button" id="openGifModal" class="chat-tool-btn" title="GIFs">GIF</button>
-        <button type="submit" id="sendBtn">
+        <button type="submit" id="sendBtn" aria-label="Send message">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
       </div>
@@ -48,7 +48,7 @@
 </div>
 
 <!-- DM Modal -->
-<div id="dmModal" class="dm-modal-bg" style="display: none;">
+<div id="dmModal" class="dm-modal-bg" style="display: none;" role="dialog" aria-modal="true" aria-label="Direct message">
   <div class="dm-modal-box">
     <div class="dm-modal-header">
       <span>Message <strong id="dmRecipientName"></strong></span>
@@ -64,7 +64,7 @@
 </div>
 
 <!-- GIF Modal -->
-<div id="gifModal" class="gif-modal-bg" style="display: none;">
+<div id="gifModal" class="gif-modal-bg" style="display: none;" role="dialog" aria-modal="true" aria-label="Choose a GIF">
   <div class="gif-modal-box">
     <div class="gif-modal-top">
       <h2>Choose a GIF</h2>

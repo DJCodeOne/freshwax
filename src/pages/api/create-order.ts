@@ -8,7 +8,7 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
 import { SITE_URL } from '../../lib/constants';
-import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 
 // Zod schemas for order creation
 const OrderItemSchema = z.object({
@@ -65,12 +65,7 @@ const CreateOrderSchema = z.object({
   idToken: z.string().optional(),
 }).passthrough();
 
-// Conditional logging - only logs in development
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('create-order');
 
 // Order validation constants
 const MAX_ITEMS_PER_ORDER = 50;
@@ -275,19 +270,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // If user is an artist but NOT a customer, deny the order
       if (isArtist && !isCustomer) {
-        log.info('[create-order] ✗ Denied: Artist account attempting to purchase');
+        logger.info('[create-order] ✗ Denied: Artist account attempting to purchase');
         return ApiErrors.forbidden('Artist accounts cannot make purchases. Please create a separate customer account to buy items.');
       }
 
       // Log warning if no customer record found but still allow guest checkout
       if (!isCustomer) {
-        log.info('[create-order] ⚠️ No customer record found for userId:', orderData.customer.userId);
+        logger.info('[create-order] ⚠️ No customer record found for userId:', orderData.customer.userId);
       } else {
-        log.info('[create-order] ✓ Customer verified:', orderData.customer.userId);
+        logger.info('[create-order] ✓ Customer verified:', orderData.customer.userId);
       }
     } else {
       // Guest checkout - allowed for non-logged-in users
-      log.info('[create-order] Guest checkout for:', orderData.customer.email);
+      logger.info('[create-order] Guest checkout for:', orderData.customer.email);
     }
 
     const orderNumber = generateOrderNumber();
@@ -364,20 +359,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Get the release ID (could be stored as id, productId, or releaseId)
       const releaseId = item.releaseId || item.productId || item.id;
 
-      log.info('[create-order] Processing item:', item.name, 'type:', item.type, 'releaseId:', releaseId);
+      logger.info('[create-order] Processing item:', item.name, 'type:', item.type, 'releaseId:', releaseId);
 
       // Check if this is a digital release, track, or vinyl
       if (item.type === 'digital' || item.type === 'release' || item.type === 'track' || item.type === 'vinyl' || (!item.type && releaseId)) {
         try {
           // Try to fetch release data for download URLs
-          log.info('[create-order] Fetching release from Firebase:', releaseId);
+          logger.info('[create-order] Fetching release from Firebase:', releaseId);
           const releaseData = await getDocument('releases', releaseId);
 
           if (releaseData) {
-            log.info('[create-order] Release found:', releaseData?.releaseName);
-            log.info('[create-order] Tracks count:', releaseData?.tracks?.length || 0);
-            log.info('[create-order] Artwork fields - coverArtUrl:', releaseData?.coverArtUrl, 'artwork.cover:', releaseData?.artwork?.cover, 'artwork.artworkUrl:', releaseData?.artwork?.artworkUrl);
-            log.info('[create-order] Item artwork from cart:', item.artwork, 'Item image from cart:', item.image);
+            logger.info('[create-order] Release found:', releaseData?.releaseName);
+            logger.info('[create-order] Tracks count:', releaseData?.tracks?.length || 0);
+            logger.info('[create-order] Artwork fields - coverArtUrl:', releaseData?.coverArtUrl, 'artwork.cover:', releaseData?.artwork?.cover, 'artwork.artworkUrl:', releaseData?.artwork?.artworkUrl);
+            logger.info('[create-order] Item artwork from cart:', item.artwork, 'Item image from cart:', item.image);
 
             // If it's a single track purchase, only include that track
             if (item.type === 'track') {
@@ -408,7 +403,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 );
               }
 
-              log.info('[create-order] Single track found:', track?.trackName || 'NOT FOUND');
+              logger.info('[create-order] Single track found:', track?.trackName || 'NOT FOUND');
 
               // Get artist and release name for filename
               const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
@@ -417,7 +412,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               if (track) {
                 // Get artwork from Firebase - prefer original full-res for buyer downloads
                 const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
-                log.info('[create-order] Track artwork URL:', artworkUrl);
+                logger.info('[create-order] Track artwork URL:', artworkUrl);
                 return {
                   ...item,
                   releaseId,
@@ -437,7 +432,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               } else {
                 // Fallback: include all tracks if we can't find the specific one
                 const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
-                log.info('[create-order] Fallback artwork URL:', artworkUrl);
+                logger.info('[create-order] Fallback artwork URL:', artworkUrl);
                 return {
                   ...item,
                   releaseId,
@@ -462,7 +457,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
             // Get artwork from Firebase - prefer original full-res for buyer downloads
             const artworkUrl = releaseData?.originalArtworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
-            log.info('[create-order] Full release artwork URL:', artworkUrl);
+            logger.info('[create-order] Full release artwork URL:', artworkUrl);
 
             const downloads = {
               artistName,
@@ -474,7 +469,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 wavUrl: track.wavUrl || null
               }))
             };
-            log.info('[create-order] Downloads prepared:', downloads.tracks.length, 'tracks, artworkUrl:', artworkUrl ? 'YES' : 'NO');
+            logger.info('[create-order] Downloads prepared:', downloads.tracks.length, 'tracks, artworkUrl:', artworkUrl ? 'YES' : 'NO');
 
             return {
               ...item,
@@ -484,13 +479,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
               downloads
             };
           } else {
-            log.info('[create-order] Release NOT found:', releaseId);
+            logger.info('[create-order] Release NOT found:', releaseId);
           }
         } catch (e) {
           console.error('[create-order] Error fetching release:', releaseId, e);
         }
       } else {
-        log.info('[create-order] Skipping non-digital item:', item.type);
+        logger.info('[create-order] Skipping non-digital item:', item.type);
       }
       return { ...item, releaseId };
     }));
@@ -557,14 +552,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Save to Firebase (with idToken for authenticated write)
     const orderRef = await addDocument('orders', order, idToken);
 
-    log.info('[create-order] ✓ Order created:', orderNumber, orderRef.id);
+    logger.info('[create-order] ✓ Order created:', orderNumber, orderRef.id);
 
     // Update stock for merch items (with optimistic concurrency to prevent overselling)
     const MAX_STOCK_RETRIES = 3;
     for (const item of order.items) {
       if (item.type === 'merch' && item.productId) {
         try {
-          log.info('[create-order] Updating stock for merch item:', item.name, 'qty:', item.quantity);
+          logger.info('[create-order] Updating stock for merch item:', item.name, 'qty:', item.quantity);
 
           let stockUpdated = false;
           let previousStock = 0;
@@ -576,7 +571,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Clear cache on retry to get fresh data
             if (attempt > 0) {
               clearCache(`doc:merch:${item.productId}`);
-              log.info(`[create-order] Stock update retry ${attempt + 1}/${MAX_STOCK_RETRIES} for ${item.name}`);
+              logger.info(`[create-order] Stock update retry ${attempt + 1}/${MAX_STOCK_RETRIES} for ${item.name}`);
             }
 
             productData = await getDocument('merch', item.productId);
@@ -606,7 +601,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             const variant = variantStock[variantKey];
             if (!variant) {
-              log.info('[create-order] ⚠️ Variant not found:', variantKey, 'for product:', item.productId);
+              logger.info('[create-order] ⚠️ Variant not found:', variantKey, 'for product:', item.productId);
               break;
             }
 
@@ -614,7 +609,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             newStock = Math.max(0, previousStock - item.quantity);
 
             if (previousStock < item.quantity) {
-              log.info('[create-order] ⚠️ Insufficient stock:', item.name, variantKey,
+              logger.info('[create-order] ⚠️ Insufficient stock:', item.name, variantKey,
                 '- Ordered:', item.quantity, '- Available:', previousStock);
               // Allow order but flag it - stock already went negative, alert admin
               // Order was already created above, so we proceed but log the oversell
@@ -654,12 +649,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 });
               }
               stockUpdated = true;
-              log.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
+              logger.info('[create-order] ✓ Stock updated:', item.name, variantKey, previousStock, '->', newStock);
               break; // Success - exit retry loop
             } catch (conflictErr: unknown) {
               const conflictMessage = conflictErr instanceof Error ? conflictErr.message : String(conflictErr);
               if (conflictMessage?.includes('CONFLICT') && attempt < MAX_STOCK_RETRIES - 1) {
-                log.info(`[create-order] Stock conflict for ${item.name}, retrying...`);
+                logger.info(`[create-order] Stock conflict for ${item.name}, retrying...`);
                 continue;
               }
               throw conflictErr;
@@ -695,10 +690,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 const updatedProduct = await getDocument('merch', item.productId);
                 if (updatedProduct) {
                   await d1UpsertMerch(db, item.productId, updatedProduct);
-                  log.info('[create-order] ✓ D1 synced for:', item.name);
+                  logger.info('[create-order] ✓ D1 synced for:', item.name);
                 }
               } catch (d1Error) {
-                log.error('[create-order] D1 sync failed (non-critical):', d1Error);
+                logger.error('[create-order] D1 sync failed (non-critical):', d1Error);
               }
             }
 
@@ -714,14 +709,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   totalRevenue: supplierRevenue,
                 });
                 await updateDocument('merch-suppliers', productData.supplierId, { updatedAt: now });
-                log.info('[create-order] ✓ Supplier stats updated (atomic)');
+                logger.info('[create-order] ✓ Supplier stats updated (atomic)');
 
                 // Fetch supplier data for email (read-only, no race concern)
                 const supplierData = await getDocument('merch-suppliers', productData.supplierId);
                 if (supplierData?.email) {
                   item.sellerEmail = supplierData.email;
                   item.supplierId = productData.supplierId;
-                  log.info('[create-order] ✓ Attached seller email from merch-suppliers:', supplierData.email);
+                  logger.info('[create-order] ✓ Attached seller email from merch-suppliers:', supplierData.email);
                 }
 
                 // If no email yet, try users collection
@@ -730,7 +725,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   if (userData?.email) {
                     item.sellerEmail = userData.email;
                     item.supplierId = productData.supplierId;
-                    log.info('[create-order] ✓ Attached seller email from users:', userData.email);
+                    logger.info('[create-order] ✓ Attached seller email from users:', userData.email);
                   }
                 }
 
@@ -740,11 +735,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   if (artistData?.email) {
                     item.sellerEmail = artistData.email;
                     item.supplierId = productData.supplierId;
-                    log.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
+                    logger.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
                   }
                 }
               } catch (supplierErr) {
-                log.info('[create-order] Could not update supplier stats:', supplierErr);
+                logger.info('[create-order] Could not update supplier stats:', supplierErr);
               }
             }
 
@@ -757,7 +752,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               item.sellerId = productData.sellerId;
             }
           } else if (!productData) {
-            log.info('[create-order] ⚠️ Product not found for stock update:', item.productId);
+            logger.info('[create-order] ⚠️ Product not found for stock update:', item.productId);
           }
         } catch (stockErr) {
           // Log but don't fail the order
@@ -768,7 +763,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Log item artwork data for debugging
     for (const item of order.items) {
-      log.info('[create-order] Item for email:', item.name, '| artwork:', item.artwork, '| image:', item.image, '| downloads.artworkUrl:', item.downloads?.artworkUrl);
+      logger.info('[create-order] Item for email:', item.name, '| artwork:', item.artwork, '| image:', item.image, '| downloads.artworkUrl:', item.downloads?.artworkUrl);
     }
 
     // Send confirmation email directly
@@ -776,7 +771,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
       if (RESEND_API_KEY && order.customer?.email) {
-        log.info('[create-order] Sending email to:', order.customer.email);
+        logger.info('[create-order] Sending email to:', order.customer.email);
 
         // Extract short order number for customer display (e.g., "FW-ABC123" from "FW-241204-abc123")
         const orderParts = orderNumber.split('-');
@@ -803,13 +798,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (emailResponse.ok) {
           const emailResult = await emailResponse.json();
-          log.info('[create-order] ✓ Email sent! ID:', emailResult.id);
+          logger.info('[create-order] ✓ Email sent! ID:', emailResult.id);
         } else {
           const error = await emailResponse.text();
           console.error('[create-order] ❌ Email failed:', error);
         }
       } else {
-        log.info('[create-order] Skipping email - no API key or no customer email');
+        logger.info('[create-order] Skipping email - no API key or no customer email');
       }
     } catch (emailError) {
       console.error('[create-order] Email error:', emailError);
@@ -824,7 +819,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const STOCKIST_EMAIL = env?.VINYL_STOCKIST_EMAIL || import.meta.env.VINYL_STOCKIST_EMAIL || 'stockist@freshwax.co.uk';
 
         if (RESEND_API_KEY && STOCKIST_EMAIL) {
-          log.info('[create-order] Sending vinyl fulfillment email to stockist:', STOCKIST_EMAIL);
+          logger.info('[create-order] Sending vinyl fulfillment email to stockist:', STOCKIST_EMAIL);
 
           const fulfillmentHtml = buildStockistFulfillmentEmail(orderRef.id, orderNumber, order, vinylItems);
 
@@ -845,7 +840,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           if (fulfillmentResponse.ok) {
             const result = await fulfillmentResponse.json();
-            log.info('[create-order] ✓ Stockist email sent! ID:', result.id);
+            logger.info('[create-order] ✓ Stockist email sent! ID:', result.id);
           } else {
             const error = await fulfillmentResponse.text();
             console.error('[create-order] ❌ Stockist email failed:', error);
@@ -868,7 +863,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 orderId: orderRef.id,
                 orderNumber
               });
-              log.info('[create-order] Marked vinyl listing as sold:', listingId);
+              logger.info('[create-order] Marked vinyl listing as sold:', listingId);
             } catch (vinylErr) {
               console.error('[create-order] Failed to mark vinyl as sold:', listingId, vinylErr);
             }
@@ -898,7 +893,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Send email to each artist
         for (const [artistEmail, items] of Object.entries(itemsByArtist)) {
           if (RESEND_API_KEY && artistEmail) {
-            log.info('[create-order] Sending digital sale email to artist:', artistEmail);
+            logger.info('[create-order] Sending digital sale email to artist:', artistEmail);
 
             const digitalHtml = buildDigitalSaleEmail(orderNumber, order, items);
 
@@ -918,7 +913,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }, 10000);
 
             if (digitalResponse.ok) {
-              log.info('[create-order] ✓ Digital sale email sent to:', artistEmail);
+              logger.info('[create-order] ✓ Digital sale email sent to:', artistEmail);
             } else {
               const error = await digitalResponse.text();
               console.error('[create-order] ❌ Digital sale email failed:', error);
@@ -951,7 +946,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Send email to each seller
         for (const [sellerEmail, items] of Object.entries(itemsBySeller)) {
           if (RESEND_API_KEY && sellerEmail) {
-            log.info('[create-order] Sending merch sale email to seller:', sellerEmail);
+            logger.info('[create-order] Sending merch sale email to seller:', sellerEmail);
 
             const merchHtml = buildMerchSaleEmail(orderNumber, order, items);
 
@@ -971,7 +966,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }, 10000);
 
             if (merchResponse.ok) {
-              log.info('[create-order] ✓ Merch sale email sent to:', sellerEmail);
+              logger.info('[create-order] ✓ Merch sale email sent to:', sellerEmail);
             } else {
               const error = await merchResponse.text();
               console.error('[create-order] ❌ Merch sale email failed:', error);

@@ -7,18 +7,14 @@ import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const RateReleaseSchema = z.object({
   releaseId: z.string().min(1, 'Release ID is required').max(200),
   rating: z.number().int().min(1).max(5),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('rate-release');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard - 60 per minute
@@ -43,18 +39,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const parsed = RateReleaseSchema.safeParse(body);
     if (!parsed.success) {
-      log.info('[rate-release] Validation failed:', parsed.error.issues);
+      logger.info('[rate-release] Validation failed:', parsed.error.issues);
       return ApiErrors.badRequest('Invalid request');
     }
     const { releaseId, rating } = parsed.data;
 
-    log.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
+    logger.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
 
     // Get release from Firebase
     const releaseData: any = await getDocument('releases', releaseId);
 
     if (!releaseData) {
-      log.info('[rate-release] Release not found:', releaseId);
+      logger.info('[rate-release] Release not found:', releaseId);
       return ApiErrors.notFound('Release not found');
     }
 
@@ -76,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (existingRating) {
       // Update existing rating
-      log.info('[rate-release] Updating existing rating for user:', userId);
+      logger.info('[rate-release] Updating existing rating for user:', userId);
 
       const currentAverage = releaseData.ratings.average || 0;
       const ratingsCount = releaseData.ratings.count || 0;
@@ -95,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
     } else {
       // New rating
-      log.info('[rate-release] Adding new rating for user:', userId);
+      logger.info('[rate-release] Adding new rating for user:', userId);
       
       const currentAverage = releaseData.ratings.average || 0;
       const ratingsCount = releaseData.ratings.count || 0;
@@ -119,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     releaseData.ratings.lastRatedAt = new Date().toISOString();
     releaseData.updatedAt = new Date().toISOString();
 
-    log.info('[rate-release] Updated:', releaseData.ratings.average, 'avg,', releaseData.ratings.count, 'count');
+    logger.info('[rate-release] Updated:', releaseData.ratings.average, 'avg,', releaseData.ratings.count, 'count');
 
     // Save to Firebase - update both ratings and overallRating for backward compatibility
     await updateDocument('releases', releaseId, {
@@ -133,15 +129,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: releaseData.updatedAt
     });
 
-    log.info('[rate-release] Saved to Firebase');
+    logger.info('[rate-release] Saved to Firebase');
 
     // Dual-write to D1 (non-blocking)
     if (db) {
       try {
         await d1UpsertRating(db, releaseId, userId, rating);
-        log.info('[rate-release] Also written to D1');
+        logger.info('[rate-release] Also written to D1');
       } catch (d1Error) {
-        log.error('[rate-release] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[rate-release] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -167,7 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[rate-release] Error:', error);
+    logger.error('[rate-release] Error:', error);
     return ApiErrors.serverError('Failed to save rating');
   }
 };

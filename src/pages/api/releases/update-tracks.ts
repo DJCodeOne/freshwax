@@ -4,16 +4,12 @@
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument } from '../../../lib/firebase-service-account';
-import { getAdminKey, ApiErrors } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors, createLogger } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log('[update-tracks]', ...args),
-  error: (...args: any[]) => console.error('[update-tracks]', ...args),
-};
+const logger = createLogger('update-tracks');
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -71,8 +67,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Release not found');
     }
 
-    log.info(`Updating tracks for release: ${releaseId}`);
-    log.info(`Tracks to update: ${tracks.length}`);
+    logger.info(`Updating tracks for release: ${releaseId}`);
+    logger.info(`Tracks to update: ${tracks.length}`);
 
     // Update existing tracks with processed URLs
     // Match by canonical trackNumber (displayTrackNumber - 1) since trackNumber field can be inconsistent
@@ -119,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, updatedRelease);
-    log.info(`Release updated: ${releaseId}`);
+    logger.info(`Release updated: ${releaseId}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -132,7 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('Failed to update tracks:', error);
+    logger.error('Failed to update tracks:', error);
     return ApiErrors.serverError('Failed to update tracks');
   }
 };

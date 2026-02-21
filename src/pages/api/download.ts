@@ -3,14 +3,10 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser, queryCollection } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors, fetchWithTimeout } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, fetchWithTimeout, createLogger } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('download');
 
 export const prerender = false;
 
@@ -81,17 +77,17 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return ApiErrors.forbidden('Purchase required');
     }
   } catch (purchaseErr) {
-    log.error('[download] Purchase verification error:', purchaseErr);
+    logger.error('[download] Purchase verification error:', purchaseErr);
     return errorResponse('Could not verify purchase');
   }
 
   try {
-    log.info('[download] Fetching:', fileUrl);
+    logger.info('[download] Fetching:', fileUrl);
 
     const response = await fetchWithTimeout(fileUrl, {}, 30000);
 
     if (!response.ok) {
-      log.error('[download] Fetch failed:', response.status);
+      logger.error('[download] Fetch failed:', response.status);
       return errorResponse('Failed to fetch file', response.status);
     }
 
@@ -112,7 +108,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     // Stream the response instead of buffering to handle large files
     const contentLength = response.headers.get('content-length');
 
-    log.info('[download] Streaming file, size:', contentLength || 'unknown');
+    logger.info('[download] Streaming file, size:', contentLength || 'unknown');
 
     const headers: Record<string, string> = {
       'Content-Type': contentType,
@@ -131,7 +127,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[download] Error:', error);
+    logger.error('[download] Error:', error);
     return errorResponse('Download failed');
   }
 };

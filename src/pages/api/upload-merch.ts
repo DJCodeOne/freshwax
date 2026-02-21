@@ -12,18 +12,14 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 
 // Image processing settings
 const IMAGE_SIZE = 800;
 const WEBP_QUALITY = 85;
 const MAX_IMAGES = 20; // Safety limit on number of images per product
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('upload-merch');
 
 export const prerender = false;
 
@@ -132,7 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(r2Config);
 
   try {
-    log.info('[upload-merch] Started');
+    logger.info('[upload-merch] Started');
 
     const formData = await request.formData();
 
@@ -168,12 +164,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       colors = JSON.parse(colorsJson);
       variants = JSON.parse(variantsJson);
     } catch (e) {
-      log.error('Error parsing variants JSON');
+      logger.error('Error parsing variants JSON');
     }
 
     const imageCount = parseInt(formData.get('imageCount') as string || '0');
 
-    log.info('[upload-merch] Product:', productName, productType);
+    logger.info('[upload-merch] Product:', productName, productType);
 
     if (!productName) {
       return ApiErrors.badRequest('Product name is required');
@@ -201,7 +197,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const generatedSKU = sku || generateSKU(productType, supplierCode);
     const folderPath = 'merch/' + category + '/' + productId;
 
-    log.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
+    logger.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
 
     // Parse image-color mappings
     let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null; keepOriginal?: boolean}> = [];
@@ -211,7 +207,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         imageColorMap = JSON.parse(mapJson);
       }
     } catch (e) {
-      log.info('[upload-merch] No image color map provided');
+      logger.info('[upload-merch] No image color map provided');
     }
 
     const uploadedImages: Array<{
@@ -235,7 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return errorResponse('Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.', 413);
       }
 
-      log.info('[upload-merch] Processing image', i + 1);
+      logger.info('[upload-merch] Processing image', i + 1);
 
       const inputBuffer = await imageFile.arrayBuffer();
       const originalSize = inputBuffer.byteLength;
@@ -249,7 +245,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (keepOriginal) {
         // Convert to WebP without cropping - maintains original aspect ratio
         processed = await processImageToWebP(inputBuffer, 4096, 4096, WEBP_QUALITY);
-        log.info('[upload-merch] Keeping original dimensions:', processed.width, 'x', processed.height);
+        logger.info('[upload-merch] Keeping original dimensions:', processed.width, 'x', processed.height);
       } else {
         // Crop to square, resize to 800x800, convert to WebP
         processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
@@ -280,7 +276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         colorHex: colorMapping?.colorHex || null
       });
 
-      log.info('[upload-merch] Image processed and uploaded:', imageUrl,
+      logger.info('[upload-merch] Image processed and uploaded:', imageUrl,
         `(${(originalSize/1024).toFixed(1)}KB → ${(processed.buffer.length/1024).toFixed(1)}KB)`,
         colorMapping?.color ? `[Color: ${colorMapping.color}]` : '');
     }
@@ -416,24 +412,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       revenue: 0,
     };
 
-    log.info('[upload-merch] Saving to Firebase');
+    logger.info('[upload-merch] Saving to Firebase');
 
     // Get service account credentials
     const { key: serviceAccountKey, projectId } = getServiceAccountKey(env);
 
     // Write to Firebase first (primary)
     await saSetDocument(serviceAccountKey, projectId, 'merch', productId, productData);
-    log.info('[upload-merch] Product saved to Firebase');
+    logger.info('[upload-merch] Product saved to Firebase');
 
     // Dual-write to D1 (secondary, non-blocking)
     const db = env?.DB;
     if (db) {
       try {
         await d1UpsertMerch(db, productId, productData);
-        log.info('[upload-merch] Product also written to D1');
+        logger.info('[upload-merch] Product also written to D1');
       } catch (d1Error) {
         // Log D1 error but don't fail the request
-        log.error('[upload-merch] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[upload-merch] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -455,7 +451,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         createdBy: 'admin'
       });
 
-      log.info('[upload-merch] Stock movement logged');
+      logger.info('[upload-merch] Stock movement logged');
     }
 
     if (supplierId) {
@@ -467,14 +463,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalStock: (supplierData.totalStock || 0) + totalStock,
             updatedAt: new Date().toISOString()
           });
-          log.info('[upload-merch] Supplier stats updated');
+          logger.info('[upload-merch] Supplier stats updated');
         }
       } catch (e) {
-        log.info('Note: Supplier document may not exist yet');
+        logger.info('Note: Supplier document may not exist yet');
       }
     }
 
-    log.info('[upload-merch] Complete:', productId);
+    logger.info('[upload-merch] Complete:', productId);
 
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
@@ -491,7 +487,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[upload-merch] Error:', error);
+    logger.error('[upload-merch] Error:', error);
 
     return ApiErrors.serverError('Failed to upload product');
   }

@@ -9,7 +9,7 @@ import { processImageToSquareWebP, imageExtension, imageContentType } from '../.
 import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { z } from 'zod';
 
@@ -41,11 +41,7 @@ const CompleteUploadSchema = z.object({
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log('[complete-upload]', ...args),
-  error: (...args: any[]) => console.error('[complete-upload]', ...args),
-};
+const logger = createLogger('complete-upload');
 
 function getR2Config(env: any) {
   return {
@@ -76,7 +72,7 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
 async function processReleaseArtwork(
   coverArtUrl: string,
   env: any,
-  logger: typeof log
+  logger: typeof logger
 ): Promise<{ coverUrl: string; thumbUrl: string; originalArtworkUrl: string } | null> {
   if (!coverArtUrl || coverArtUrl === '') return null;
 
@@ -288,14 +284,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const adminDb = await getAdminDb();
 
       if (adminDb) {
-        log.info('Using Firebase Admin SDK for write...');
+        logger.info('Using Firebase Admin SDK for write...');
         await adminDb.collection('releases').doc(releaseId).set(releaseDoc, { merge: true });
-        log.info(`Release document created/updated via Admin SDK: ${releaseId}`);
+        logger.info(`Release document created/updated via Admin SDK: ${releaseId}`);
       } else {
         // Fallback to REST API
-        log.info('Admin SDK not available, using REST API...');
+        logger.info('Admin SDK not available, using REST API...');
         await setDocument('releases', releaseId, releaseDoc);
-        log.info(`Release document created/updated via REST API: ${releaseId}`);
+        logger.info(`Release document created/updated via REST API: ${releaseId}`);
       }
 
       // Dual-write to D1 (secondary, non-blocking)
@@ -303,14 +299,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (db) {
         try {
           await d1UpsertRelease(db, releaseId, releaseDoc);
-          log.info(`Release also written to D1: ${releaseId}`);
+          logger.info(`Release also written to D1: ${releaseId}`);
         } catch (d1Error) {
           // Log D1 error but don't fail the request
-          log.error('D1 dual-write failed (non-critical):', d1Error);
+          logger.error('D1 dual-write failed (non-critical):', d1Error);
         }
       }
     } catch (setError: unknown) {
-      log.error('Firebase write failed:', setError);
+      logger.error('Firebase write failed:', setError);
       // Return more detailed error
       return ApiErrors.serverError('Failed to save release data');
     }
@@ -326,7 +322,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('Failed to complete upload:', error);
+    logger.error('Failed to complete upload:', error);
     return ApiErrors.serverError('Failed to complete upload');
   }
 };

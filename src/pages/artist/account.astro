@@ -5,7 +5,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-import { getDocument, queryCollection } from '../../lib/firebase-rest';
+import { getDocument, getDocumentsBatch, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
@@ -320,20 +320,32 @@ if (partnerId) {
 
       // Add orders from ledger that aren't already in the orders list
       const orderIds = new Set(orders.map((o: any) => o.id));
+
+      // Collect unique order IDs that need fetching (N+1 fix: batch instead of sequential)
+      const missingOrderIds: string[] = [];
+      const ledgerEntriesByOrderId = new Map<string, any>();
       for (const entry of ledgerEntries) {
-        if (entry.orderId && !orderIds.has(entry.orderId)) {
-          // Try to fetch this order
-          try {
-            const ledgerOrder = await getDocument('orders', entry.orderId);
-            if (ledgerOrder) {
-              orders.push({ id: entry.orderId, ...ledgerOrder });
-              orderIds.add(entry.orderId);
-            }
-          } catch (e) {
-            // Order might not exist, create a placeholder from ledger data
+        if (entry.orderId && !orderIds.has(entry.orderId) && !ledgerEntriesByOrderId.has(entry.orderId)) {
+          missingOrderIds.push(entry.orderId);
+          ledgerEntriesByOrderId.set(entry.orderId, entry);
+        }
+      }
+
+      if (missingOrderIds.length > 0) {
+        // Batch fetch all missing orders in parallel
+        const batchResults = await getDocumentsBatch('orders', missingOrderIds);
+
+        for (const orderId of missingOrderIds) {
+          const entry = ledgerEntriesByOrderId.get(orderId)!;
+          const ledgerOrder = batchResults.get(orderId);
+          if (ledgerOrder) {
+            orders.push({ id: orderId, ...ledgerOrder });
+            orderIds.add(orderId);
+          } else {
+            // Order not found — create a placeholder from ledger data
             orders.push({
-              id: entry.orderId,
-              orderNumber: entry.orderNumber || entry.orderId,
+              id: orderId,
+              orderNumber: entry.orderNumber || orderId,
               createdAt: entry.timestamp,
               customer: { email: entry.customerEmail, firstName: 'Customer', lastName: '' },
               items: [{

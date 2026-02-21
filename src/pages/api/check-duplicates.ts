@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const CartItemSchema = z.object({
@@ -21,12 +21,7 @@ const CheckDuplicatesSchema = z.object({
   cartItems: z.array(CartItemSchema).max(100),
 }).passthrough();
 
-// Conditional logging - only logs in development
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('check-duplicates');
 
 export const prerender = false;
 
@@ -41,7 +36,7 @@ async function getOwnershipData(userId: string): Promise<{
   // Check cache first
   const cached = ownershipCache.get(userId);
   if (cached && Date.now() < cached.expires) {
-    log.info('[check-duplicates] Using cached ownership data for', userId);
+    logger.info('[check-duplicates] Using cached ownership data for', userId);
     return cached.data;
   }
   
@@ -169,7 +164,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
     
-    log.info('[check-duplicates] User:', userId, 'Owned releases:', ownedReleases.size, 'Duplicates found:', duplicates.length);
+    logger.info('[check-duplicates] User:', userId, 'Owned releases:', ownedReleases.size, 'Duplicates found:', duplicates.length);
     
     return new Response(JSON.stringify({ 
       duplicates,

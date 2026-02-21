@@ -13,7 +13,7 @@ import { getLiveReleases } from '../lib/firebase-rest';
 // KV-cached for 10 minutes so Firebase is only hit infrequently
 const featuredReleases = await getLiveReleases(20);
 
-Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 // Preload the first release cover image for faster LCP (with srcset for responsive)
 const firstArtwork = featuredReleases[0]?.coverArtUrl;

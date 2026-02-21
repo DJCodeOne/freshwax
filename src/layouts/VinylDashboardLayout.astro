@@ -22,6 +22,7 @@ const csrfToken = Astro.locals.csrfToken || '';
   <title>{title} | Vinyl Crates | Fresh Wax</title>
 </head>
 <body data-active-section={activeSection || ''}>
+  <a href="#main-content" class="skip-link">Skip to main content</a>
   <!-- CSRF: Auto-inject X-CSRF-Token header on state-changing fetch() calls -->
   <script is:inline>
     (function() {
@@ -149,7 +150,7 @@ const csrfToken = Astro.locals.csrfToken || '';
       </aside>
 
       <!-- Main content -->
-      <main class="main-content">
+      <main class="main-content" id="main-content">
         <header class="content-header">
           <h1>{title}</h1>
           <div class="user-info" id="userInfo">
@@ -467,6 +468,21 @@ const csrfToken = Astro.locals.csrfToken || '';
     .content-body {
       flex: 1;
       padding: 2rem;
+    }
+
+    /* Skip link - accessibility */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #000;
+      color: #fff;
+      padding: 8px 16px;
+      z-index: 10000;
+      transition: top 0.2s;
+    }
+    .skip-link:focus {
+      top: 0;
     }
 
     /* Reduced motion - accessibility */

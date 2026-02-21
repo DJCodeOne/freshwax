@@ -5,17 +5,13 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, atomicIncrement, updateDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('track-mix-like');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute (prevent like spam)
@@ -44,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       last_liked_date: new Date().toISOString()
     });
 
-    log.info('[track-mix-like] Mix', mixId, 'likes:', likes);
+    logger.info('[track-mix-like] Mix', mixId, 'likes:', likes);
 
     // Invalidate caches for this mix and the listing
     clearCache(`doc:dj-mixes:${mixId}`);
@@ -62,10 +58,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await db.prepare('UPDATE dj_mixes SET data = ?, likes = ?, updated_at = ? WHERE id = ?')
             .bind(JSON.stringify(data), likes, new Date().toISOString(), mixId)
             .run();
-          log.info('[track-mix-like] D1 synced for mix', mixId);
+          logger.info('[track-mix-like] D1 synced for mix', mixId);
         }
       } catch (d1Error) {
-        log.error('[track-mix-like] D1 sync error (non-fatal):', d1Error);
+        logger.error('[track-mix-like] D1 sync error (non-fatal):', d1Error);
       }
     }
 
@@ -81,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[track-mix-like] Error:', error);
+    logger.error('[track-mix-like] Error:', error);
     return ApiErrors.serverError('Failed to track like');
   }
 };

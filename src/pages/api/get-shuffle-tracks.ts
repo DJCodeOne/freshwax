@@ -2,13 +2,9 @@
 import type { APIRoute } from 'astro';
 import { getLiveReleases, extractTracksFromReleases, shuffleArray } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('get-shuffle-tracks');
 
 export const prerender = false;
 
@@ -32,7 +28,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   
   try {
     if (cachedResult && (Date.now() - lastFetchTime) < CACHE_DURATION) {
-      log.info('[get-shuffle-tracks] Returning cached result');
+      logger.info('[get-shuffle-tracks] Returning cached result');
       
       const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
       
@@ -54,7 +50,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
     
     if (pendingRequest) {
-      log.info('[get-shuffle-tracks] Waiting for pending request');
+      logger.info('[get-shuffle-tracks] Waiting for pending request');
       const result = await pendingRequest;
       return new Response(JSON.stringify(result), {
         status: 200,
@@ -63,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
     
     pendingRequest = (async () => {
-      log.info('[get-shuffle-tracks] Fetching fresh data');
+      logger.info('[get-shuffle-tracks] Fetching fresh data');
 
       const releases = await getLiveReleases(50);
       const allTracks = extractTracksFromReleases(releases);
@@ -94,7 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const result = await pendingRequest;
     pendingRequest = null;
     
-    log.info('[get-shuffle-tracks] Returning', result.tracks.length, 'tracks');
+    logger.info('[get-shuffle-tracks] Returning', result.tracks.length, 'tracks');
     
     return new Response(JSON.stringify(result), {
       status: 200,
@@ -106,10 +102,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
   } catch (error: unknown) {
     pendingRequest = null;
-    log.error('[get-shuffle-tracks] Error:', error instanceof Error ? error.message : String(error));
+    logger.error('[get-shuffle-tracks] Error:', error instanceof Error ? error.message : String(error));
     
     if (cachedResult) {
-      log.info('[get-shuffle-tracks] Returning stale cache');
+      logger.info('[get-shuffle-tracks] Returning stale cache');
       const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
       return new Response(JSON.stringify({
         success: true,

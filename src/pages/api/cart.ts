@@ -5,8 +5,10 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../lib/firebase-rest';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+
+const logger = createLogger('cart');
 
 const CartItemSchema = z.object({
   id: z.string().min(1).max(200),
@@ -20,8 +22,6 @@ const CartSaveSchema = z.object({
 });
 
 export const prerender = false;
-
-const isDev = import.meta.env.DEV;
 
 // Helper to get user ID - prefers verified Firebase auth, falls back to customerId cookie
 async function getUserId(request: Request, locals: App.Locals): Promise<string | null> {
@@ -66,7 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      if (isDev) console.log('[Cart API] KV not available, returning empty cart');
+      logger.info('[Cart API] KV not available, returning empty cart');
       return new Response(JSON.stringify({
         success: true,
         cart: { items: [], updatedAt: null },
@@ -79,7 +79,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const cartKey = `cart:${userId}`;
     const cartData = await kv.get(cartKey, 'json');
 
-    if (isDev) console.log('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
+    logger.info('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
 
     return new Response(JSON.stringify({
       success: true,
@@ -90,7 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Cart API] GET error:', error);
+    logger.error('[Cart API] GET error:', error);
     return ApiErrors.serverError('Failed to retrieve cart');
   }
 };
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      if (isDev) console.log('[Cart API] KV not available, cart not persisted');
+      logger.info('[Cart API] KV not available, cart not persisted');
       return new Response(JSON.stringify({
         success: true,
         persisted: false,
@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       expirationTtl: 30 * 24 * 60 * 60
     });
 
-    if (isDev) console.log('[Cart API] POST', cartKey, 'saved', items.length, 'items');
+    logger.info('[Cart API] POST', cartKey, 'saved', items.length, 'items');
 
     return new Response(JSON.stringify({
       success: true,
@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Cart API] POST error:', error);
+    logger.error('[Cart API] POST error:', error);
     return ApiErrors.serverError('Failed to save cart');
   }
 };
@@ -188,7 +188,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const cartKey = `cart:${userId}`;
     await kv.delete(cartKey);
 
-    if (isDev) console.log('[Cart API] DELETE', cartKey);
+    logger.info('[Cart API] DELETE', cartKey);
 
     return new Response(JSON.stringify({
       success: true
@@ -197,7 +197,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Cart API] DELETE error:', error);
+    logger.error('[Cart API] DELETE error:', error);
     return ApiErrors.serverError('Failed to clear cart');
   }
 };

@@ -8,7 +8,7 @@ import { containsProfanity } from '../../lib/validation';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,11 +20,7 @@ const AddCommentSchema = z.object({
   avatarUrl: z.string().url().max(2048).optional().nullable(),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('add-comment');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: chat/comments - 30 per minute per IP
@@ -66,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fall back to body userName if user doc lookup fails
     }
 
-    log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
+    logger.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
 
     // Allow GIF-only comments (no text required if GIF present)
     if (!releaseId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
@@ -133,9 +129,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           comment: newComment.comment,
           gifUrl: newComment.gifUrl || undefined
         });
-        log.info('[add-comment] Also written to D1');
+        logger.info('[add-comment] Also written to D1');
       } catch (d1Error) {
-        log.error('[add-comment] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[add-comment] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -147,7 +143,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    log.info('[add-comment] Added comment to:', releaseId);
+    logger.info('[add-comment] Added comment to:', releaseId);
 
     return new Response(JSON.stringify({ success: true, comment: newComment }), { 
       status: 200, 
@@ -158,7 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[add-comment] Error:', error);
+    logger.error('[add-comment] Error:', error);
     return ApiErrors.serverError('Failed to add comment');
   }
 };

@@ -10,17 +10,13 @@ import { saUpdateDocument, saDeleteDocument, saAddDocument } from '../../lib/fir
 import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const deleteMerchSchema = z.object({
   productId: z.string().min(1),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('delete-merch');
 
 export const prerender = false;
 
@@ -105,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { productId } = parsed.data;
 
-    log.info('[delete-merch] Deleting product:', productId);
+    logger.info('[delete-merch] Deleting product:', productId);
 
     const product = await getDocument('merch', productId);
 
@@ -115,7 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Delete images from R2
     if (product.r2FolderPath) {
-      log.info('[delete-merch] Deleting R2 folder:', product.r2FolderPath);
+      logger.info('[delete-merch] Deleting R2 folder:', product.r2FolderPath);
 
       try {
         const listResult = await s3Client.send(
@@ -134,10 +130,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }
             })
           );
-          log.info('[delete-merch] Deleted', listResult.Contents.length, 'files from R2');
+          logger.info('[delete-merch] Deleted', listResult.Contents.length, 'files from R2');
         }
       } catch (r2Error) {
-        log.error('[delete-merch] R2 deletion error:', r2Error);
+        logger.error('[delete-merch] R2 deletion error:', r2Error);
       }
     }
 
@@ -154,10 +150,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalStock: (supplierData.totalStock || 0) - (product.totalStock || 0),
             updatedAt: new Date().toISOString()
           });
-          log.info('[delete-merch] Updated supplier stats');
+          logger.info('[delete-merch] Updated supplier stats');
         }
       } catch (e) {
-        log.info('[delete-merch] Could not update supplier stats');
+        logger.info('[delete-merch] Could not update supplier stats');
       }
     }
 
@@ -184,9 +180,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (db) {
       try {
         await d1DeleteMerch(db, productId);
-        log.info('[delete-merch] Also deleted from D1');
+        logger.info('[delete-merch] Also deleted from D1');
       } catch (d1Error) {
-        log.error('[delete-merch] D1 deletion failed (non-critical):', d1Error);
+        logger.error('[delete-merch] D1 deletion failed (non-critical):', d1Error);
       }
     }
 
@@ -194,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache('merch');
     clearCache('live-merch');
 
-    log.info('[delete-merch] Product deleted:', productId);
+    logger.info('[delete-merch] Product deleted:', productId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -207,7 +203,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[delete-merch] Error:', error);
+    logger.error('[delete-merch] Error:', error);
 
     return ApiErrors.serverError('Failed to delete product');
   }

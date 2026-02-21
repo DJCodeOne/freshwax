@@ -6,7 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { getAdminKey, ApiErrors } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors, createLogger } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
 import { z } from 'zod';
 
@@ -26,11 +26,7 @@ const PresignedUploadSchema = z.object({
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log('[presigned-upload]', ...args),
-  error: (...args: any[]) => console.error('[presigned-upload]', ...args),
-};
+const logger = createLogger('presigned-upload');
 
 // Supported file types
 const ALLOWED_TYPES: Record<string, string> = {
@@ -98,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const r2Config = getR2Config(env);
 
     if (!r2Config.accountId || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
-      log.error('R2 credentials not configured');
+      logger.error('R2 credentials not configured');
       return ApiErrors.serverError('Storage not configured');
     }
 
@@ -186,7 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         contentType: file.contentType,
       });
 
-      log.info(`Generated presigned URL for: ${key}`);
+      logger.info(`Generated presigned URL for: ${key}`);
     }
 
     return new Response(JSON.stringify({
@@ -201,7 +197,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('Failed to generate presigned URLs:', error);
+    logger.error('Failed to generate presigned URLs:', error);
     return ApiErrors.serverError('Failed to generate upload URLs');
   }
 };

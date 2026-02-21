@@ -4,13 +4,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { d1GetRatings } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('get-ratings');
 
 export const prerender = false;
 
@@ -39,14 +35,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Release ID required');
     }
 
-    log.info('[get-ratings] Fetching ratings for:', releaseId);
+    logger.info('[get-ratings] Fetching ratings for:', releaseId);
 
     // Try D1 first
     if (db) {
       try {
         const ratings = await d1GetRatings(db, releaseId);
         if (ratings) {
-          log.info('[get-ratings] D1:', ratings);
+          logger.info('[get-ratings] D1:', ratings);
           return new Response(JSON.stringify({
             success: true,
             average: ratings.average,
@@ -62,7 +58,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           });
         }
       } catch (d1Error) {
-        log.error('[get-ratings] D1 error, falling back to Firebase:', d1Error);
+        logger.error('[get-ratings] D1 error, falling back to Firebase:', d1Error);
       }
     }
 
@@ -75,7 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const ratings = release.ratings || { average: 0, count: 0, fiveStarCount: 0 };
 
-    log.info('[get-ratings] Firebase:', ratings);
+    logger.info('[get-ratings] Firebase:', ratings);
 
     return new Response(JSON.stringify({
       success: true,
@@ -92,7 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[get-ratings] Error:', error);
+    logger.error('[get-ratings] Error:', error);
     return ApiErrors.serverError('Failed to fetch ratings');
   }
 };

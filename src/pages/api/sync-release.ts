@@ -6,16 +6,11 @@ import { requireAdminAuth } from '../../lib/admin';
 import AdmZip from 'adm-zip';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-  warn: (...args: any[]) => isDev && console.warn(...args),
-};
+const logger = createLogger('sync-release');
 
 // Audio file extensions
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.aiff', '.aif', '.m4a'];
@@ -27,7 +22,7 @@ export const POST = async ({ request, locals }: any) => {
     const authError = await requireAdminAuth(request, locals);
     if (authError) return authError;
 
-    log.info('[sync-release] Sync release API called');
+    logger.info('[sync-release] Sync release API called');
 
     const formData = await request.formData();
     const zipFile = formData.get('zipFile');
@@ -59,7 +54,7 @@ export const POST = async ({ request, locals }: any) => {
       throw new Error('Firebase credentials not configured');
     }
 
-    log.info('[sync-release] Configuration validated');
+    logger.info('[sync-release] Configuration validated');
 
     // Read ZIP file
     const buffer = Buffer.from(await zipFile.arrayBuffer());
@@ -75,7 +70,7 @@ export const POST = async ({ request, locals }: any) => {
 
     if (hasReleasesFolder && hasMetadata) {
       // Pre-processed package - use existing R2FirebaseSync
-      log.info('[sync-release] Detected pre-processed package, using R2FirebaseSync');
+      logger.info('[sync-release] Detected pre-processed package, using R2FirebaseSync');
       
       const tempDir = path.join(process.cwd(), 'temp');
       if (!fs.existsSync(tempDir)) {
@@ -94,7 +89,7 @@ export const POST = async ({ request, locals }: any) => {
       
     } else {
       // Raw ZIP - process directly
-      log.info('[sync-release] Detected raw ZIP, processing directly');
+      logger.info('[sync-release] Detected raw ZIP, processing directly');
       
       const originalFilename = zipFile.name || 'Unknown - Untitled.zip';
       const result = await processRawZip(zip, zipEntries, originalFilename, config);
@@ -110,14 +105,14 @@ export const POST = async ({ request, locals }: any) => {
 
         if (releaseDoc) {
           release = releaseDoc;
-          log.info('[sync-release] Fetched release data:', release.releaseName, 'by', release.artistName);
+          logger.info('[sync-release] Fetched release data:', release.releaseName, 'by', release.artistName);
         }
       } catch (fetchError) {
-        log.warn('[sync-release] Could not fetch release data:', fetchError);
+        logger.warn('[sync-release] Could not fetch release data:', fetchError);
       }
     }
 
-    log.info('[sync-release] Success:', releaseId);
+    logger.info('[sync-release] Success:', releaseId);
 
     return new Response(JSON.stringify({
       success: true,
@@ -130,7 +125,7 @@ export const POST = async ({ request, locals }: any) => {
     });
 
   } catch (error: unknown) {
-    log.error('[sync-release] Sync failed:', error);
+    logger.error('[sync-release] Sync failed:', error);
     
     return ApiErrors.serverError('Sync failed');
   }
@@ -160,7 +155,7 @@ async function processRawZip(
     releaseName = baseName.trim();
   }
   
-  log.info(`[sync-release] Parsed: "${artistName}" - "${releaseName}"`);
+  logger.info(`[sync-release] Parsed: "${artistName}" - "${releaseName}"`);
   
   // Generate release ID
   const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
@@ -216,7 +211,7 @@ async function processRawZip(
   // Sort by track number
   audioEntries.sort((a, b) => a.trackNumber - b.trackNumber);
   
-  log.info(`[sync-release] Found ${audioEntries.length} tracks, cover: ${coverEntry ? 'yes' : 'no'}`);
+  logger.info(`[sync-release] Found ${audioEntries.length} tracks, cover: ${coverEntry ? 'yes' : 'no'}`);
   
   if (audioEntries.length === 0) {
     throw new Error('No audio files found in ZIP. Supported formats: MP3, WAV, FLAC, AIFF');
@@ -250,7 +245,7 @@ async function processRawZip(
       CacheControl: 'public, max-age=31536000',
     }));
     originalArtworkUrl = `${config.r2.publicDomain}/${originalKey}`;
-    log.info(`[sync-release] Uploaded original: ${originalArtworkUrl}`);
+    logger.info(`[sync-release] Uploaded original: ${originalArtworkUrl}`);
 
     try {
       const coverResult = await processImageToSquareWebP(coverBuffer.buffer as ArrayBuffer, 800, 80);
@@ -278,10 +273,10 @@ async function processRawZip(
 
       coverUrl = `${config.r2.publicDomain}/${coverKey}`;
       thumbUrl = `${config.r2.publicDomain}/${thumbKey}`;
-      log.info(`[sync-release] Uploaded cover: ${coverUrl} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
-      log.info(`[sync-release] Uploaded thumb: ${thumbUrl} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
+      logger.info(`[sync-release] Uploaded cover: ${coverUrl} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
+      logger.info(`[sync-release] Uploaded thumb: ${thumbUrl} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
     } catch (imgErr) {
-      log.warn('[sync-release] WebP conversion failed, using original as cover:', imgErr);
+      logger.warn('[sync-release] WebP conversion failed, using original as cover:', imgErr);
       coverUrl = originalArtworkUrl;
     }
   }
@@ -323,7 +318,7 @@ async function processRawZip(
       fileSize: entry.getData().length,
     });
     
-    log.info(`[sync-release] Uploaded track ${trackNumber}: ${title}`);
+    logger.info(`[sync-release] Uploaded track ${trackNumber}: ${title}`);
   }
   
 
@@ -356,7 +351,7 @@ async function processRawZip(
   };
 
   await setDocument('releases', releaseId, releaseDoc);
-  log.info(`[sync-release] Created release document: ${releaseId}`);
+  logger.info(`[sync-release] Created release document: ${releaseId}`);
 
   return { releaseId, release: releaseDoc };
 }

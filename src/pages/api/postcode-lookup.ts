@@ -5,18 +5,13 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 
 const PostcodeLookupSchema = z.object({
   postcode: z.string().min(1, 'Postcode is required').max(10).transform(val => val.trim().toUpperCase().replace(/\s+/g, '')),
 });
 
-// Conditional logging - only logs in development
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('postcode-lookup');
 
 export const prerender = false;
 
@@ -35,7 +30,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
   const postcode = parsed.data.postcode;
 
-  log.info('[postcode-lookup] Cleaned:', postcode);
+  logger.info('[postcode-lookup] Cleaned:', postcode);
 
   // Validate UK postcode format (basic validation)
   const postcodeRegex = /^[A-Z]{1,2}[0-9][0-9A-Z]?[0-9][A-Z]{2}$/;
@@ -46,7 +41,7 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     // Call postcodes.io API (FREE, no authentication required!)
     const apiUrl = `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`;
-    log.info('[postcode-lookup] Calling postcodes.io:', apiUrl);
+    logger.info('[postcode-lookup] Calling postcodes.io:', apiUrl);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -61,7 +56,7 @@ export const GET: APIRoute = async ({ request }) => {
     
     clearTimeout(timeoutId);
     
-    log.info('[postcode-lookup] API response status:', response.status);
+    logger.info('[postcode-lookup] API response status:', response.status);
     
     if (!response.ok) {
       if (response.status === 404) {
@@ -112,7 +107,7 @@ export const GET: APIRoute = async ({ request }) => {
       parliamentary_constituency: result.parliamentary_constituency || ''
     };
     
-    log.info('[postcode-lookup] Returning location data:', locationData);
+    logger.info('[postcode-lookup] Returning location data:', locationData);
     
     return new Response(JSON.stringify({
       success: true,

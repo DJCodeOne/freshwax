@@ -7,18 +7,13 @@ import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-a
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const deleteReleaseSchema = z.object({
   releaseId: z.string().min(1),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-  warn: (...args: any[]) => isDev && console.warn(...args),
-};
+const logger = createLogger('delete-release');
 
 // Build service account key from individual env vars
 function getServiceAccountKey(env: any): string | null {
@@ -66,14 +61,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { releaseId } = parsed.data;
 
-    log.info(`[delete-release] Deleting: ${releaseId}`);
+    logger.info(`[delete-release] Deleting: ${releaseId}`);
 
     // Get service account key for writes
     const serviceAccountKey = getServiceAccountKey(env);
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      log.error('[delete-release] Service account not configured');
+      logger.error('[delete-release] Service account not configured');
       return ApiErrors.serverError('Service account not configured');
     }
 
@@ -113,10 +108,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for (const track of tracks) {
           await saDeleteDocument(serviceAccountKey, projectId, 'tracks', track.id);
         }
-        log.info(`[delete-release] Deleted ${tracks.length} associated tracks`);
+        logger.info(`[delete-release] Deleted ${tracks.length} associated tracks`);
       }
     } catch (error: unknown) {
-      log.warn('[delete-release] Could not delete tracks:', error);
+      logger.warn('[delete-release] Could not delete tracks:', error);
     }
 
     // Remove from master list
@@ -134,14 +129,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
     } catch (error: unknown) {
-      log.warn('[delete-release] Could not update master list:', error);
+      logger.warn('[delete-release] Could not update master list:', error);
     }
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    log.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
+    logger.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -155,7 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
+    logger.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
 
     return ApiErrors.serverError('Internal server error');
   }

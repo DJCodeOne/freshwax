@@ -9,7 +9,7 @@ import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -21,11 +21,7 @@ const AddMixCommentSchema = z.object({
   avatarUrl: z.string().url().max(2048).optional().nullable(),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('add-mix-comment');
 
 function containsLinks(text: string): boolean {
   const urlPatterns = [
@@ -132,7 +128,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Fall back to body userName if user doc lookup fails
     }
 
-    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
+    logger.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
 
     if (!mixId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
       return ApiErrors.badRequest('Missing required fields');
@@ -182,7 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       createdAt: new Date().toISOString()
     };
 
-    log.info('[add-mix-comment] Adding comment:', newComment);
+    logger.info('[add-mix-comment] Adding comment:', newComment);
 
     // Use atomic arrayUnion to prevent lost comments under concurrent writes
     const currentCount = Array.isArray(mixData.comments) ? mixData.comments.length : 0;
@@ -204,9 +200,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           comment: newComment.comment,
           gifUrl: newComment.gifUrl || undefined
         });
-        log.info('[add-mix-comment] Also written to D1');
+        logger.info('[add-mix-comment] Also written to D1');
       } catch (d1Error) {
-        log.error('[add-mix-comment] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[add-mix-comment] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -219,7 +215,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
-    log.info('[add-mix-comment] Comment saved');
+    logger.info('[add-mix-comment] Comment saved');
 
     return new Response(JSON.stringify({
       success: true,
@@ -234,7 +230,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[add-mix-comment] Error:', error);
+    logger.error('[add-mix-comment] Error:', error);
     return ApiErrors.serverError('Failed to save comment');
   }
 };

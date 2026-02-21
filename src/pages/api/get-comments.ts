@@ -4,13 +4,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { d1GetComments } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('get-comments');
 
 export const prerender = false;
 
@@ -39,14 +35,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Release ID required');
     }
 
-    log.info('[get-comments] Fetching comments for:', releaseId);
+    logger.info('[get-comments] Fetching comments for:', releaseId);
 
     // Try D1 first
     if (db) {
       try {
         const comments = await d1GetComments(db, releaseId, 'release');
         if (comments.length > 0) {
-          log.info('[get-comments] D1: Found', comments.length, 'comments');
+          logger.info('[get-comments] D1: Found', comments.length, 'comments');
           return new Response(JSON.stringify({
             success: true,
             comments,
@@ -61,7 +57,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           });
         }
       } catch (d1Error) {
-        log.error('[get-comments] D1 error, falling back to Firebase:', d1Error);
+        logger.error('[get-comments] D1 error, falling back to Firebase:', d1Error);
       }
     }
 
@@ -80,7 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return dateB - dateA;
     });
 
-    log.info('[get-comments] Firebase: Found', sortedComments.length, 'comments');
+    logger.info('[get-comments] Firebase: Found', sortedComments.length, 'comments');
 
     return new Response(JSON.stringify({
       success: true,
@@ -96,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[get-comments] Error:', error);
+    logger.error('[get-comments] Error:', error);
     return ApiErrors.serverError('Failed to fetch comments');
   }
 };

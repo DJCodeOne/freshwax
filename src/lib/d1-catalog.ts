@@ -69,8 +69,8 @@ export function d1RowToRelease(row: D1Release): any {
     // Ensure id is set
     doc.id = row.id;
     return doc;
-  } catch (e) {
-    console.error('[D1] Error parsing release data:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error parsing release data:', error);
     return null;
   }
 }
@@ -133,8 +133,8 @@ export function d1RowToMix(row: D1DjMix): any {
     if (row.downloads != null) doc.downloads = row.downloads;
     if (row.likes != null) doc.likes = row.likes;
     return doc;
-  } catch (e) {
-    console.error('[D1] Error parsing mix data:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error parsing mix data:', error);
     return null;
   }
 }
@@ -192,8 +192,8 @@ export function d1RowToMerch(row: D1Merch): any {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
     return doc;
-  } catch (e) {
-    console.error('[D1] Error parsing merch data:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error parsing merch data:', error);
     return null;
   }
 }
@@ -213,8 +213,8 @@ export async function d1GetAllPublishedReleases(db: D1Database, limit: number = 
     ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting published releases:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting published releases:', error);
     return [];
   }
 }
@@ -231,8 +231,8 @@ export async function d1SearchPublishedReleases(db: D1Database, query: string, l
     ).bind(pattern, limit).all();
 
     return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error searching releases:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error searching releases:', error);
     return [];
   }
 }
@@ -249,8 +249,8 @@ export async function d1SearchPublishedMixes(db: D1Database, query: string, limi
     ).bind(pattern, limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error searching mixes:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error searching mixes:', error);
     return [];
   }
 }
@@ -266,8 +266,8 @@ export async function d1SearchPublishedMerch(db: D1Database, query: string, limi
     ).bind(pattern, limit).all();
 
     return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error searching merch:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error searching merch:', error);
     return [];
   }
 }
@@ -279,8 +279,8 @@ export async function d1GetReleaseById(db: D1Database, id: string): Promise<any 
     ).bind(id).first();
 
     return row ? d1RowToRelease(row) : null;
-  } catch (e) {
-    console.error('[D1] Error getting release:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting release:', error);
     return null;
   }
 }
@@ -292,8 +292,8 @@ export async function d1GetReleasesByArtist(db: D1Database, artist: string): Pro
     ).bind(artist).all();
 
     return (results || []).map((row: any) => d1RowToRelease(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting releases by artist:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting releases by artist:', error);
     return [];
   }
 }
@@ -335,8 +335,8 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: any): Pro
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error upserting release:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error upserting release:', error);
     return false;
   }
 }
@@ -350,8 +350,8 @@ export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500
     ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting published mixes:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting published mixes:', error);
     return [];
   }
 }
@@ -363,8 +363,8 @@ export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promis
     ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting all mixes:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting all mixes:', error);
     return [];
   }
 }
@@ -376,8 +376,8 @@ export async function d1GetMixById(db: D1Database, id: string): Promise<any | nu
     ).bind(id).first();
 
     return row ? d1RowToMix(row) : null;
-  } catch (e) {
-    console.error('[D1] Error getting mix:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting mix:', error);
     return null;
   }
 }
@@ -389,8 +389,8 @@ export async function d1GetMixesByUser(db: D1Database, userId: string): Promise<
     ).bind(userId).all();
 
     return (results || []).map((row: any) => d1RowToMix(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting mixes by user:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting mixes by user:', error);
     return [];
   }
 }
@@ -424,8 +424,8 @@ export async function d1UpsertMix(db: D1Database, id: string, doc: any): Promise
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error upserting mix:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error upserting mix:', error);
     return false;
   }
 }
@@ -434,8 +434,8 @@ export async function d1DeleteMix(db: D1Database, id: string): Promise<boolean> 
   try {
     await db.prepare(`DELETE FROM dj_mixes WHERE id = ?`).bind(id).run();
     return true;
-  } catch (e) {
-    console.error('[D1] Error deleting mix:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error deleting mix:', error);
     return false;
   }
 }
@@ -449,8 +449,8 @@ export async function d1GetAllPublishedMerch(db: D1Database, limit: number = 500
     ).bind(limit).all();
 
     return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting published merch:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting published merch:', error);
     return [];
   }
 }
@@ -462,8 +462,8 @@ export async function d1GetMerchById(db: D1Database, id: string): Promise<any | 
     ).bind(id).first();
 
     return row ? d1RowToMerch(row) : null;
-  } catch (e) {
-    console.error('[D1] Error getting merch:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting merch:', error);
     return null;
   }
 }
@@ -489,8 +489,8 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: any): Promi
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error upserting merch:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error upserting merch:', error);
     return false;
   }
 }
@@ -500,8 +500,8 @@ export async function d1DeleteMerch(db: D1Database, id: string): Promise<boolean
   try {
     await db.prepare('DELETE FROM merch WHERE id = ?').bind(id).run();
     return true;
-  } catch (e) {
-    console.error('[D1] Error deleting merch:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error deleting merch:', error);
     return false;
   }
 }
@@ -517,8 +517,8 @@ export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string)
     ).bind(supplierId).all();
 
     return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting merch by supplier:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting merch by supplier:', error);
     return [];
   }
 }
@@ -533,8 +533,8 @@ export async function d1GetMerchBySupplierName(db: D1Database, supplierName: str
     ).bind(supplierName).all();
 
     return (results || []).map((row: any) => d1RowToMerch(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting merch by supplier name:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting merch by supplier name:', error);
     return [];
   }
 }
@@ -574,8 +574,8 @@ export async function d1GetComments(db: D1Database, itemId: string, itemType: 'r
       createdAt: row.created_at,
       approved: row.approved === 1
     }));
-  } catch (e) {
-    console.error('[D1] Error getting comments:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting comments:', error);
     return [];
   }
 }
@@ -608,8 +608,8 @@ export async function d1AddComment(db: D1Database, comment: {
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error adding comment:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error adding comment:', error);
     return false;
   }
 }
@@ -622,8 +622,8 @@ export async function d1GetCommentCount(db: D1Database, itemId: string, itemType
     ).bind(itemId, itemType).first();
 
     return (result as any)?.count || 0;
-  } catch (e) {
-    console.error('[D1] Error getting comment count:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting comment count:', error);
     return 0;
   }
 }
@@ -655,8 +655,8 @@ export async function d1GetRatings(db: D1Database, releaseId: string): Promise<{
       count: (row as any).count || 0,
       fiveStarCount: (row as any).five_star_count || 0
     };
-  } catch (e) {
-    console.error('[D1] Error getting ratings:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting ratings:', error);
     return null;
   }
 }
@@ -669,8 +669,8 @@ export async function d1GetUserRating(db: D1Database, releaseId: string, userId:
     ).bind(releaseId, userId).first();
 
     return row ? (row as any).rating : null;
-  } catch (e) {
-    console.error('[D1] Error getting user rating:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting user rating:', error);
     return null;
   }
 }
@@ -743,8 +743,8 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
     `).bind(releaseId, newAverage, newCount, newFiveStarCount, now, now).run();
 
     return { average: newAverage, count: newCount, fiveStarCount: newFiveStarCount };
-  } catch (e) {
-    console.error('[D1] Error upserting rating:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error upserting rating:', error);
     return null;
   }
 }
@@ -797,8 +797,8 @@ export function d1RowToSlot(row: D1LivestreamSlot): any {
     const doc = JSON.parse(row.data);
     doc.id = row.id;
     return doc;
-  } catch (e) {
-    console.error('[D1] Error parsing slot data:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error parsing slot data:', error);
     return null;
   }
 }
@@ -811,8 +811,8 @@ export async function d1GetLiveSlots(db: D1Database): Promise<any[]> {
     ).all();
 
     return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting live slots:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting live slots:', error);
     return [];
   }
 }
@@ -830,8 +830,8 @@ export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Pr
     ).bind(now).all();
 
     return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting scheduled slots:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting scheduled slots:', error);
     return [];
   }
 }
@@ -844,8 +844,8 @@ export async function d1GetSlotById(db: D1Database, id: string): Promise<any | n
     ).bind(id).first();
 
     return row ? d1RowToSlot(row) : null;
-  } catch (e) {
-    console.error('[D1] Error getting slot:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting slot:', error);
     return null;
   }
 }
@@ -858,8 +858,8 @@ export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<any[
     ).bind(djId).all();
 
     return (results || []).map((row: any) => d1RowToSlot(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting slots by DJ:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting slots by DJ:', error);
     return [];
   }
 }
@@ -893,8 +893,8 @@ export async function d1UpsertSlot(db: D1Database, id: string, doc: any): Promis
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error upserting slot:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error upserting slot:', error);
     return false;
   }
 }
@@ -921,8 +921,8 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
     `).bind(status, JSON.stringify(doc), new Date().toISOString(), id).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error updating slot status:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error updating slot status:', error);
     return false;
   }
 }
@@ -932,8 +932,8 @@ export async function d1DeleteSlot(db: D1Database, id: string): Promise<boolean>
   try {
     await db.prepare(`DELETE FROM livestream_slots WHERE id = ?`).bind(id).run();
     return true;
-  } catch (e) {
-    console.error('[D1] Error deleting slot:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error deleting slot:', error);
     return false;
   }
 }
@@ -1026,8 +1026,8 @@ export function d1RowToLedger(row: D1LedgerEntry): any {
     doc.artistPayoutStatus = row.artist_payout_status;
     doc.artistPayout = row.artist_payout;
     return doc;
-  } catch (e) {
-    console.error('[D1] Error parsing ledger data:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error parsing ledger data:', error);
     return null;
   }
 }
@@ -1058,8 +1058,8 @@ export async function d1InsertLedgerEntry(db: D1Database, id: string, entry: any
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error inserting ledger entry:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error inserting ledger entry:', error);
     return false;
   }
 }
@@ -1121,8 +1121,8 @@ export async function d1UpdateLedgerEntry(db: D1Database, id: string, updates: a
     `).bind(...values).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error updating ledger entry:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error updating ledger entry:', error);
     return false;
   }
 }
@@ -1169,8 +1169,8 @@ export async function d1GetLedgerEntries(db: D1Database, options: {
       : await stmt.all();
 
     return (results || []).map((row: any) => d1RowToLedger(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting ledger entries:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting ledger entries:', error);
     return [];
   }
 }
@@ -1183,8 +1183,8 @@ export async function d1GetLedgerEntryById(db: D1Database, id: string): Promise<
     ).bind(id).first();
 
     return row ? d1RowToLedger(row as D1LedgerEntry) : null;
-  } catch (e) {
-    console.error('[D1] Error getting ledger entry:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting ledger entry:', error);
     return null;
   }
 }
@@ -1197,8 +1197,8 @@ export async function d1GetLedgerEntriesByOrder(db: D1Database, orderId: string)
     ).bind(orderId).all();
 
     return (results || []).map((row: any) => d1RowToLedger(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting ledger entries by order:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting ledger entries by order:', error);
     return [];
   }
 }
@@ -1211,8 +1211,8 @@ export async function d1GetLedgerEntriesByArtist(db: D1Database, artistId: strin
     ).bind(artistId, artistId).all();
 
     return (results || []).map((row: any) => d1RowToLedger(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting ledger entries by artist:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting ledger entries by artist:', error);
     return [];
   }
 }
@@ -1269,8 +1269,8 @@ export async function d1GetLedgerTotals(db: D1Database, options: {
       pendingPayouts: (row as any)?.pending_payouts || 0,
       paidPayouts: (row as any)?.paid_payouts || 0
     };
-  } catch (e) {
-    console.error('[D1] Error getting ledger totals:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting ledger totals:', error);
     return { orders: 0, grossRevenue: 0, netRevenue: 0, totalFees: 0, pendingPayouts: 0, paidPayouts: 0 };
   }
 }
@@ -1280,8 +1280,8 @@ export async function d1DeleteLedgerEntry(db: D1Database, id: string): Promise<b
   try {
     await db.prepare('DELETE FROM sales_ledger WHERE id = ?').bind(id).run();
     return true;
-  } catch (e) {
-    console.error('[D1] Error deleting ledger entry:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error deleting ledger entry:', error);
     return false;
   }
 }
@@ -1336,8 +1336,8 @@ export function d1RowToVinylSeller(row: D1VinylSeller): any {
     doc.id = row.id;
     doc.userId = row.id;
     return doc;
-  } catch (e) {
-    console.error('[D1] Error parsing vinyl seller data:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error parsing vinyl seller data:', error);
     return null;
   }
 }
@@ -1350,8 +1350,8 @@ export async function d1GetVinylSeller(db: D1Database, userId: string): Promise<
     ).bind(userId).first();
 
     return row ? d1RowToVinylSeller(row as D1VinylSeller) : null;
-  } catch (e) {
-    console.error('[D1] Error getting vinyl seller:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting vinyl seller:', error);
     return null;
   }
 }
@@ -1393,8 +1393,8 @@ export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: a
     ).run();
 
     return true;
-  } catch (e) {
-    console.error('[D1] Error upserting vinyl seller:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error upserting vinyl seller:', error);
     return false;
   }
 }
@@ -1407,8 +1407,8 @@ export async function d1GetAllVinylSellers(db: D1Database): Promise<any[]> {
     ).all();
 
     return (results || []).map((row: any) => d1RowToVinylSeller(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting all vinyl sellers:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting all vinyl sellers:', error);
     return [];
   }
 }
@@ -1422,8 +1422,8 @@ export async function d1GetNextCollectionNumber(db: D1Database): Promise<number>
 
     const maxNum = (result as any)?.max_num || 0;
     return maxNum + 1;
-  } catch (e) {
-    console.error('[D1] Error getting next collection number:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting next collection number:', error);
     return 1; // Default to 1 if error
   }
 }
@@ -1436,8 +1436,8 @@ export async function d1GetVinylSellerByCollection(db: D1Database, collectionNum
     ).bind(collectionNumber).first();
 
     return row ? d1RowToVinylSeller(row as D1VinylSeller) : null;
-  } catch (e) {
-    console.error('[D1] Error getting vinyl seller by collection:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting vinyl seller by collection:', error);
     return null;
   }
 }
@@ -1452,8 +1452,8 @@ export async function d1GetAllCollections(db: D1Database): Promise<any[]> {
     ).all();
 
     return (results || []).map((row: any) => d1RowToVinylSeller(row)).filter(Boolean);
-  } catch (e) {
-    console.error('[D1] Error getting all collections:', e);
+  } catch (error: unknown) {
+    console.error('[D1] Error getting all collections:', error);
     return [];
   }
 }

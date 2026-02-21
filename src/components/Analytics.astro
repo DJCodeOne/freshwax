@@ -31,6 +31,13 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
   <>
     <!-- GA4 consent-gated loader -->
     <script define:vars={{ ga4Id, ecommerce, debug, gtmId }} nonce={nonce}>
+      // Module-scope handler refs so we can remove listeners on View Transitions
+      var _clickHandler = null;
+      var _scrollHandler = null;
+      var _timeOnPageInterval = null;
+      var _beforeSwapHandler = null;
+      var _pageLoadHandler = null;
+
       // Only initialize analytics if user has consented
       function initAnalytics() {
         if (window._analyticsInitialized) return;
@@ -235,8 +242,9 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
           });
         };
 
-        // Track external link clicks
-        document.addEventListener('click', function(e) {
+        // Track external link clicks (remove old handler first to prevent leaks on View Transitions)
+        if (_clickHandler) document.removeEventListener('click', _clickHandler);
+        _clickHandler = function(e) {
           const link = e.target.closest('a');
           if (link && link.href && !link.href.includes('freshwax.co.uk')) {
             window.trackEvent('outbound_click', {
@@ -244,12 +252,14 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
               'event_label': link.href
             });
           }
-        });
+        };
+        document.addEventListener('click', _clickHandler);
 
         // Track scroll depth (throttled with requestAnimationFrame)
-        let scrollDepthTracked = {};
+        var scrollDepthTracked = {};
         var scrollTicking = false;
-        window.addEventListener('scroll', function() {
+        if (_scrollHandler) window.removeEventListener('scroll', _scrollHandler);
+        _scrollHandler = function() {
           if (!scrollTicking) {
             scrollTicking = true;
             requestAnimationFrame(function() {
@@ -269,11 +279,13 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
               scrollTicking = false;
             });
           }
-        });
+        };
+        window.addEventListener('scroll', _scrollHandler);
 
         // Track time on page
-        let timeOnPage = 0;
-        var timeOnPageInterval = setInterval(function() {
+        var timeOnPage = 0;
+        if (_timeOnPageInterval) clearInterval(_timeOnPageInterval);
+        _timeOnPageInterval = setInterval(function() {
           timeOnPage += 30;
           if (timeOnPage === 30 || timeOnPage === 60 || timeOnPage === 180 || timeOnPage === 300) {
             window.trackEvent('time_on_page', {
@@ -285,21 +297,24 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
         }, 30000);
 
         // Reset scroll depth + time-on-page tracking on Astro View Transitions
-        document.addEventListener('astro:before-swap', function() {
-          scrollDepthTracked = {};
-          timeOnPage = 0;
-          clearInterval(timeOnPageInterval);
-          timeOnPageInterval = setInterval(function() {
-            timeOnPage += 30;
-            if (timeOnPage === 30 || timeOnPage === 60 || timeOnPage === 180 || timeOnPage === 300) {
-              window.trackEvent('time_on_page', {
-                'event_category': 'Engagement',
-                'event_label': timeOnPage + ' seconds',
-                'value': timeOnPage
-              });
-            }
-          }, 30000);
-        });
+        // Remove old handler first to prevent accumulation
+        if (_beforeSwapHandler) document.removeEventListener('astro:before-swap', _beforeSwapHandler);
+        _beforeSwapHandler = function() {
+          // Remove listeners — setupTrackingHelpers() will re-add them on astro:page-load
+          if (_clickHandler) { document.removeEventListener('click', _clickHandler); _clickHandler = null; }
+          if (_scrollHandler) { window.removeEventListener('scroll', _scrollHandler); _scrollHandler = null; }
+          if (_timeOnPageInterval) { clearInterval(_timeOnPageInterval); _timeOnPageInterval = null; }
+        };
+        document.addEventListener('astro:before-swap', _beforeSwapHandler);
+
+        // Re-setup tracking helpers after View Transition page load
+        if (_pageLoadHandler) document.removeEventListener('astro:page-load', _pageLoadHandler);
+        _pageLoadHandler = function() {
+          if (window._analyticsInitialized) {
+            setupTrackingHelpers();
+          }
+        };
+        document.addEventListener('astro:page-load', _pageLoadHandler);
       }
 
       // No-op tracking helpers when analytics not consented

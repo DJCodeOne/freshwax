@@ -5,15 +5,11 @@
 import type { APIRoute } from 'astro';
 import { getLiveReleases, CACHE_TTL } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log('[get-suggestions]', ...args),
-  error: (...args: any[]) => console.error('[get-suggestions]', ...args),
-};
+const logger = createLogger('get-suggestions');
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
@@ -31,7 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const genre = url.searchParams.get('genre') || '';
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '8'), 12);
 
-    log.info('Fetching suggestions for:', { currentId, artist, label, genre });
+    logger.info('Fetching suggestions for:', { currentId, artist, label, genre });
 
     // Use cached releases - this is very efficient due to firebase-rest caching
     const releases = await getLiveReleases(40);
@@ -106,7 +102,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       matchType
     }));
     
-    log.info('Returning', suggestions.length, 'suggestions');
+    logger.info('Returning', suggestions.length, 'suggestions');
     
     return new Response(JSON.stringify({ 
       success: true,
@@ -121,7 +117,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    log.error('Error:', error);
+    logger.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch suggestions');
   }
 };

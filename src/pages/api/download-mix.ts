@@ -1,14 +1,10 @@
 // src/pages/api/download-mix.ts
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('download-mix');
 
 // Only allow downloads from trusted domains
 const ALLOWED_DOMAINS = [
@@ -63,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    log.info('[download-mix] Proxying download for:', audioUrl);
+    logger.info('[download-mix] Proxying download for:', audioUrl);
 
     const response = await fetch(audioUrl, {
       signal: AbortSignal.timeout(30000) // 30s timeout
@@ -76,7 +72,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Stream the response instead of buffering to handle large files
     const contentLength = response.headers.get('content-length');
 
-    log.info('[download-mix] Streaming file, size:', contentLength || 'unknown');
+    logger.info('[download-mix] Streaming file, size:', contentLength || 'unknown');
 
     const headers: Record<string, string> = {
       'Content-Type': 'audio/mpeg',
@@ -95,7 +91,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[download-mix] Error:', error);
+    logger.error('[download-mix] Error:', error);
     return ApiErrors.serverError('Failed to download file');
   }
 };

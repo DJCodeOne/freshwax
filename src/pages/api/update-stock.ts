@@ -7,7 +7,7 @@ import { getDocument, queryCollection, clearAllMerchCache, clearCache } from '..
 import { saUpdateDocument, saSetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const updateStockSchema = z.object({
   productId: z.string().min(1),
@@ -19,11 +19,7 @@ const updateStockSchema = z.object({
   userId: z.string().optional().default('admin'),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('update-stock');
 
 export const prerender = false;
 
@@ -98,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       userId
     } = parsed.data;
 
-    log.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
+    logger.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
 
     if (quantity < 0 && !['adjust', 'damaged', 'set'].includes(operation)) {
       return ApiErrors.badRequest('Quantity must be positive for this operation');
@@ -269,11 +265,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await saUpdateDocument(serviceAccountKey, projectId, 'merch-suppliers', product.supplierId, supplierUpdate);
         }
       } catch (e) {
-        log.info('Note: Could not update supplier stats');
+        logger.info('Note: Could not update supplier stats');
       }
     }
 
-    log.info('[update-stock]', operation + ':', previousStock, '->', newStock);
+    logger.info('[update-stock]', operation + ':', previousStock, '->', newStock);
 
     // Dual-write to D1 so stock changes reflect on merch page
     const db = env?.DB;
@@ -284,10 +280,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const updatedProduct = await getDocument('merch', productId);
         if (updatedProduct) {
           await d1UpsertMerch(db, productId, updatedProduct);
-          log.info('[update-stock] Also updated in D1');
+          logger.info('[update-stock] Also updated in D1');
         }
       } catch (d1Error) {
-        log.error('[update-stock] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[update-stock] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -311,7 +307,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[update-stock] Error:', error);
+    logger.error('[update-stock] Error:', error);
 
     return ApiErrors.serverError('Failed to update stock');
   }
@@ -450,7 +446,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[get-stock] Error:', error);
+    logger.error('[get-stock] Error:', error);
 
     return ApiErrors.serverError('Failed to fetch stock');
   }

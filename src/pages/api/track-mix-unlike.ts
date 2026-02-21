@@ -5,17 +5,13 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { atomicIncrement, updateDocument, clearCache, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
 
 const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
 });
 
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const logger = createLogger('track-mix-unlike');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute (prevent unlike spam)
@@ -68,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await updateDocument('dj-mixes', mixId, { likes: 0 });
     }
 
-    log.info('[track-mix-unlike] Mix', mixId, 'likes:', finalLikes);
+    logger.info('[track-mix-unlike] Mix', mixId, 'likes:', finalLikes);
 
     // Invalidate caches for this mix and the listing
     clearCache(`doc:dj-mixes:${mixId}`);
@@ -85,10 +81,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await db.prepare('UPDATE dj_mixes SET data = ? WHERE id = ?')
             .bind(JSON.stringify(data), mixId)
             .run();
-          log.info('[track-mix-unlike] D1 synced for mix', mixId);
+          logger.info('[track-mix-unlike] D1 synced for mix', mixId);
         }
       } catch (d1Error) {
-        log.error('[track-mix-unlike] D1 sync error (non-fatal):', d1Error);
+        logger.error('[track-mix-unlike] D1 sync error (non-fatal):', d1Error);
       }
     }
 
@@ -104,7 +100,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    log.error('[track-mix-unlike] Error:', error);
+    logger.error('[track-mix-unlike] Error:', error);
     return ApiErrors.serverError('Failed to track unlike');
   }
 };
