@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // D1 found some but not all - check Firebase for missing ones
         logger.info('[get-user-ratings] D1 missing some ratings, checking Firebase for remaining');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[get-user-ratings] D1 error:', d1Error);
         // Fall through to Firebase
       }

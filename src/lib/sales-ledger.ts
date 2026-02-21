@@ -183,7 +183,7 @@ export async function recordSale(params: {
       try {
         await d1InsertLedgerEntry(params.db, ledgerId, { ...entry, id: ledgerId });
         log.info(`D1 write successful for: ${ledgerId}`);
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         // Log D1 error but don't fail - Firebase backup is sufficient
         log.error('D1 write failed (Firebase backup exists):', d1Error);
       }
@@ -237,7 +237,7 @@ export async function getLedgerEntries(options: {
 
       log.info(`D1 read: ${filtered.length} entries`);
       return filtered as LedgerEntry[];
-    } catch (d1Error) {
+    } catch (d1Error: unknown) {
       log.error('D1 read failed, falling back to Firebase:', d1Error);
     }
   }
@@ -454,7 +454,7 @@ export async function recordMultiSellerSale(params: {
       if (params.db) {
         try {
           await d1InsertLedgerEntry(params.db, ledgerId, { ...entry, id: ledgerId });
-        } catch (d1Error) {
+        } catch (d1Error: unknown) {
           log.error(`D1 write failed for seller ${sellerId}:`, d1Error);
         }
       }

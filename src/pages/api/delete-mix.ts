@@ -141,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           logger.info('[delete-mix] Note: More files may remain (hit limit)');
         }
       }
-    } catch (r2Error) {
+    } catch (r2Error: unknown) {
       logger.error('[delete-mix] R2 deletion error:', r2Error);
     }
 
@@ -159,7 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1DeleteMix(db, mixId);
         logger.info('[delete-mix] Mix also deleted from D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[delete-mix] D1 delete failed (non-critical):', d1Error);
       }
     }

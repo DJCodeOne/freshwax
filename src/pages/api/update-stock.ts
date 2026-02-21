@@ -282,7 +282,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await d1UpsertMerch(db, productId, updatedProduct);
           logger.info('[update-stock] Also updated in D1');
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[update-stock] D1 dual-write failed (non-critical):', d1Error);
       }
     }

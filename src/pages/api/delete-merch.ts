@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           );
           logger.info('[delete-merch] Deleted', listResult.Contents.length, 'files from R2');
         }
-      } catch (r2Error) {
+      } catch (r2Error: unknown) {
         logger.error('[delete-merch] R2 deletion error:', r2Error);
       }
     }
@@ -181,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1DeleteMerch(db, productId);
         logger.info('[delete-merch] Also deleted from D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[delete-merch] D1 deletion failed (non-critical):', d1Error);
       }
     }

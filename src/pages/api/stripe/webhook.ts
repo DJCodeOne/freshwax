@@ -604,7 +604,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       logger.debug('[Stripe Webhook] DEV MODE: Skipping signature verification');
       try {
         event = JSON.parse(payload);
-      } catch (parseErr) {
+      } catch (parseErr: unknown) {
         logger.error('[Stripe Webhook] ❌ Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
         return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
           status: 400,
@@ -784,7 +784,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   metadata: { userId, plusId, promoCode: promoCodeUsed || null },
                   processingTimeMs: Date.now() - startTime
                 }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
-              } catch (emailError) {
+              } catch (emailError: unknown) {
                 logger.error('[Stripe Webhook] Failed to send welcome email:', emailError);
               }
             } else {
@@ -906,7 +906,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   } else {
                     logger.debug('[Stripe Webhook] Welcome email sent');
                   }
-                } catch (emailError) {
+                } catch (emailError: unknown) {
                   logger.error('[Stripe Webhook] Failed to send welcome email:', emailError);
                 }
 
@@ -1118,7 +1118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Clean up pending checkout
             try {
               await deleteDocument('pendingCheckouts', metadata.pending_checkout_id);
-            } catch (cleanupErr) {
+            } catch (cleanupErr: unknown) {
               // Non-fatal: cleanup can be retried
             }
           }
@@ -1213,7 +1213,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             metadata.items_json || JSON.stringify(items)
           ).run();
           // D1 pending record created
-        } catch (d1Err) {
+        } catch (d1Err: unknown) {
           // D1 write failure must not block order creation — log and continue
           logger.error('[Stripe Webhook] D1 pending_orders insert failed (non-blocking):', d1Err);
         }
@@ -1278,7 +1278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             WHERE stripe_session_id = ?
           `).bind(result.orderId || '', session.id).run();
           // D1 pending record updated
-        } catch (d1Err) {
+        } catch (d1Err: unknown) {
           logger.error('[Stripe Webhook] D1 pending_orders update failed (non-blocking):', d1Err);
         }
       }
@@ -1323,7 +1323,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
                 // seller lookup done
               }
-            } catch (lookupErr) {
+            } catch (lookupErr: unknown) {
               logger.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
             }
           }
@@ -1357,7 +1357,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
                 // merch seller lookup done
               }
-            } catch (lookupErr) {
+            } catch (lookupErr: unknown) {
               logger.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
             }
           }
@@ -1390,7 +1390,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           db: env?.DB  // D1 database for dual-write
         });
         // Sale recorded to ledger
-      } catch (ledgerErr) {
+      } catch (ledgerErr: unknown) {
         logger.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
         // Don't fail the order, ledger is supplementary
       }
@@ -1631,7 +1631,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   if (!renewalEmailRes.ok) {
                     logger.error(`[Stripe Webhook] Failed to send renewal email: ${renewalEmailRes.status}`);
                   }
-                } catch (emailError) {
+                } catch (emailError: unknown) {
                   logger.error('[Stripe Webhook] Failed to send renewal email:', emailError);
                 }
               } else {
@@ -1777,7 +1777,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               logger.debug('[Stripe Webhook] Customer opted out of emails');
             }
           }
-        } catch (emailErr) {
+        } catch (emailErr: unknown) {
           logger.error('[Stripe Webhook] Abandoned cart email error:', emailErr);
         }
       }

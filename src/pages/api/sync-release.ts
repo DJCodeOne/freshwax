@@ -275,7 +275,7 @@ async function processRawZip(
       thumbUrl = `${config.r2.publicDomain}/${thumbKey}`;
       logger.info(`[sync-release] Uploaded cover: ${coverUrl} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
       logger.info(`[sync-release] Uploaded thumb: ${thumbUrl} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
-    } catch (imgErr) {
+    } catch (imgErr: unknown) {
       logger.warn('[sync-release] WebP conversion failed, using original as cover:', imgErr);
       coverUrl = originalArtworkUrl;
     }

@@ -217,7 +217,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           JSON.stringify(orderData.items || [])
         ).run();
         // D1 pending_orders row inserted
-      } catch (d1Err) {
+      } catch (d1Err: unknown) {
         // D1 write failure must not block order creation -- log and continue
         log.error('[PayPal] D1 pending_orders insert failed (non-blocking):', d1Err);
       }
@@ -265,7 +265,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             WHERE stripe_session_id = ?
           `).bind(result.orderId || '', `paypal:${paypalOrderId}`).run();
           // D1 pending_orders updated to completed
-        } catch (d1Err) {
+        } catch (d1Err: unknown) {
           log.error('[PayPal] D1 pending_orders update failed (non-blocking):', d1Err);
         }
       }
@@ -310,7 +310,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             WHERE stripe_session_id = ?
           `).bind(`paypal:${paypalOrderId}`).run();
           // D1 pending_orders marked as failed
-        } catch (d1Err) {
+        } catch (d1Err: unknown) {
           log.error('[PayPal] D1 pending_orders failure update failed:', d1Err);
         }
       }

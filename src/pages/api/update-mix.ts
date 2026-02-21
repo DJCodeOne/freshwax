@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (updatedMix) {
           await d1UpsertMix(db, mixId, updatedMix);
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
         console.error('[update-mix] D1 dual-write failed (non-critical):', d1Error);
       }

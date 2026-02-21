@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let event: Red5WebhookEvent;
     try {
       event = JSON.parse(rawBody);
-    } catch (parseErr) {
+    } catch (parseErr: unknown) {
       log.error('[red5-webhook] Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
       return ApiErrors.badRequest('Invalid JSON payload');
     }

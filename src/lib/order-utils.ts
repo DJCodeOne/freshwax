@@ -1211,7 +1211,7 @@ export async function processVinylCratesOrders(
             env
           );
           log.info('[order-utils] ✓ Seller email sent to:', sellerEmail);
-        } catch (emailErr) {
+        } catch (emailErr: unknown) {
           log.error('[order-utils] Seller email failed:', emailErr);
         }
       }
@@ -1337,13 +1337,13 @@ export async function refundOrderStock(orderId: string, items: CartItem[], order
                   await d1UpsertMerch(db, item.productId, updatedProduct);
                   log.info('[order-utils] ✓ D1 synced after refund:', item.name);
                 }
-              } catch (d1Error) {
+              } catch (d1Error: unknown) {
                 log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
               }
             }
           }
         }
-      } catch (refundErr) {
+      } catch (refundErr: unknown) {
         log.error('[order-utils] Merch refund error:', refundErr);
         failedRefunds.push({ item: item.name || item.productId, type: 'merch', error: refundErr instanceof Error ? refundErr.message : String(refundErr) });
       }
@@ -1391,7 +1391,7 @@ export async function refundOrderStock(orderId: string, items: CartItem[], order
 
           log.info('[order-utils] ✓ Vinyl stock refunded:', item.name, previousStock, '->', newStock);
         }
-      } catch (refundErr) {
+      } catch (refundErr: unknown) {
         log.error('[order-utils] Vinyl refund error:', refundErr);
         failedRefunds.push({ item: item.name || releaseId, type: 'vinyl', error: refundErr instanceof Error ? refundErr.message : String(refundErr) });
       }
@@ -1553,7 +1553,7 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
               await d1UpsertMerch(db, item.productId, updatedProduct);
               log.info('[order-utils] ✓ D1 synced for:', item.name);
             }
-          } catch (d1Error) {
+          } catch (d1Error: unknown) {
             log.error('[order-utils] D1 sync failed (non-critical):', d1Error);
           }
         }
@@ -1616,7 +1616,7 @@ export async function sendOrderConfirmationEmail(
     } else {
       log.error('[sendEmail] Email failed:', result.error);
     }
-  } catch (emailError) {
+  } catch (emailError: unknown) {
     log.error('[sendEmail] ❌ Exception:', emailError);
   }
 }

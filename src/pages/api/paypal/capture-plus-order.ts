@@ -181,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         })
       }, 10000);
       logger.info('[PayPal Plus] ✓ Welcome email sent to:', email);
-    } catch (emailError) {
+    } catch (emailError: unknown) {
       logger.error('[PayPal Plus] Failed to send welcome email:', emailError);
     }
 

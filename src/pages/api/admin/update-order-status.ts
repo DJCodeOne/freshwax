@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await refundOrderStock(orderId, orderData.items, orderData.orderNumber || orderId);
         log.info('[update-order-status] Stock refunded successfully');
-      } catch (refundErr) {
+      } catch (refundErr: unknown) {
         log.error('[update-order-status] Stock refund error:', refundErr);
         // Continue - order is still cancelled even if refund fails
       }
@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, 10000);
           log.info('[update-order-status] Cancellation notification sent');
         }
-      } catch (emailErr) {
+      } catch (emailErr: unknown) {
         log.error('[update-order-status] Email notification error:', emailErr);
         // Continue - status update succeeded even if email fails
       }

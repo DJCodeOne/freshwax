@@ -190,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })
         }, 10000);
         log.info('[process-refund] Refund email sent');
-      } catch (emailErr) {
+      } catch (emailErr: unknown) {
         log.error('[process-refund] Email error:', emailErr);
       }
     }

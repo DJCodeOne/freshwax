@@ -118,7 +118,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       await saUpdateDocument(serviceAccountKey, projectId, 'users', userId, updateData);
       log.info(`[extend-subscription] Update successful for ${userId}`);
-    } catch (updateErr) {
+    } catch (updateErr: unknown) {
       log.error(`[extend-subscription] Update failed:`, updateErr);
       throw updateErr;
     }

@@ -129,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (RESEND_API_KEY) {
       try {
         await sendConfirmationEmail(RESEND_API_KEY, normalizedEmail, subscriberId, token, name);
-      } catch (emailError) {
+      } catch (emailError: unknown) {
         log.error('[Newsletter] Confirmation email failed:', emailError);
       }
     }

@@ -300,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await d1UpsertRelease(db, releaseId, releaseDoc);
           logger.info(`Release also written to D1: ${releaseId}`);
-        } catch (d1Error) {
+        } catch (d1Error: unknown) {
           // Log D1 error but don't fail the request
           logger.error('D1 dual-write failed (non-critical):', d1Error);
         }

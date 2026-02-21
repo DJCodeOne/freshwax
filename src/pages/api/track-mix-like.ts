@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             .run();
           logger.info('[track-mix-like] D1 synced for mix', mixId);
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[track-mix-like] D1 sync error (non-fatal):', d1Error);
       }
     }

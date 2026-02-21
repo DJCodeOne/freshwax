@@ -105,7 +105,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
           source = 'd1';
           logger.info('[vinyl/settings GET] Loaded from D1:', userId);
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[vinyl/settings GET] D1 error:', d1Error);
       }
     }
@@ -243,7 +243,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
         if (d1Success) {
           logger.info('[vinyl/settings POST] Saved to D1:', userId);
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[vinyl/settings POST] D1 error:', d1Error);
       }
     }

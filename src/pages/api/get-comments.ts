@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             }
           });
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[get-comments] D1 error, falling back to Firebase:', d1Error);
       }
     }

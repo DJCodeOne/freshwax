@@ -196,11 +196,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
             logger.info(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
-          } catch (thumbErr) {
+          } catch (thumbErr: unknown) {
             logger.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
           }
         }
-      } catch (imgErr) {
+      } catch (imgErr: unknown) {
         logger.error('[finalize-upload] WebP processing failed, using original:', imgErr);
       }
     }
@@ -259,7 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1UpsertMix(db, mixId, mixData);
         logger.info(`[finalize-upload] Mix also written to D1: ${mixId}`);
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
         logger.error('[finalize-upload] D1 dual-write failed (non-critical):', d1Error);
       }

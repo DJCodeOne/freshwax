@@ -186,7 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             `
           })
         }, 10000);
-      } catch (emailErr) {
+      } catch (emailErr: unknown) {
         console.error('[manage-return] Email error:', emailErr);
       }
     }

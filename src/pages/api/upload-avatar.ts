@@ -143,7 +143,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ContentType: imageContentType(processed.format),
         CacheControl: 'public, max-age=3600', // 1 hour cache (mutable - avatar can be re-uploaded)
       }));
-    } catch (r2Error) {
+    } catch (r2Error: unknown) {
       console.error('[upload-avatar] R2 upload failed:', r2Error);
       return ApiErrors.serverError('Failed to upload to storage');
     }

@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}${imageExtension(processed.format)}`;
       artworkBody = Buffer.from(processed.buffer);
       artworkContentType = imageContentType(processed.format);
-    } catch (imgErr) {
+    } catch (imgErr: unknown) {
       console.error('[update-mix-artwork] WebP processing failed, using original:', imgErr);
       artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
       artworkBody = Buffer.from(rawBuffer);
@@ -124,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         CacheControl: 'public, max-age=31536000',
       }));
       thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-    } catch (thumbErr) {
+    } catch (thumbErr: unknown) {
       console.error('[update-mix-artwork] Thumbnail generation failed (non-critical):', thumbErr);
     }
 

@@ -235,7 +235,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         hasDigital: processedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
         db: env?.DB,
       });
-    } catch (ledgerErr) {
+    } catch (ledgerErr: unknown) {
       log.error('[admin] Failed to record to sales ledger:', ledgerErr);
       // Don't fail the order if ledger write fails
     }
@@ -265,7 +265,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (!emailResponse.ok) {
           log.error('[admin] Email failed:', await emailResponse.text());
         }
-      } catch (emailErr) {
+      } catch (emailErr: unknown) {
         log.error('[admin] Email error:', emailErr);
       }
     }

@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             await d1UpsertMerch(db, productId, updatedProduct);
             logger.info('[update-merch] Images also updated in D1');
           }
-        } catch (d1Error) {
+        } catch (d1Error: unknown) {
           logger.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
         }
       }
@@ -334,7 +334,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           uploadBody = processed.buffer;
           uploadContentType = imageContentType(processed.format);
           logger.info('[update-merch] Converted to', processed.format + ':', processed.width, 'x', processed.height);
-        } catch (imgErr) {
+        } catch (imgErr: unknown) {
           logger.warn('[update-merch] WebP conversion failed, uploading original:', imgErr);
           const imageExt = imageFile.name.split('.').pop() || 'jpg';
           imageKey = folderPath + '/image_' + (startIndex + i) + '_' + Date.now() + '.' + imageExt;
@@ -424,7 +424,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1UpsertMerch(db, productId, updatedDoc);
         logger.info('[update-merch] Also updated in D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[update-merch] D1 dual-write failed (non-critical):', d1Error);
       }
     }

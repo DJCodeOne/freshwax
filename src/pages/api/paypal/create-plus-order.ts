@@ -195,7 +195,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('pendingPayPalOrders', paypalOrder.id, pendingOrderData);
       log.info('[PayPal Plus] Stored pending order:', paypalOrder.id);
-    } catch (storeErr) {
+    } catch (storeErr: unknown) {
       log.error('[PayPal Plus] Failed to store pending order:', storeErr);
       // Continue anyway - we'll pass the data via URL params or rely on the PayPal order ID
     }

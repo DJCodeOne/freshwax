@@ -136,7 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1UpsertRating(db, releaseId, userId, rating);
         logger.info('[rate-release] Also written to D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[rate-release] D1 dual-write failed (non-critical):', d1Error);
       }
     }

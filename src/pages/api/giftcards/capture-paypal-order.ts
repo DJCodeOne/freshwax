@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let pendingOrder = null;
     try {
       pendingOrder = await getDocument('pendingGiftCardOrders', paypalOrderId);
-    } catch (fetchErr) {
+    } catch (fetchErr: unknown) {
       console.error('[GiftCard PayPal] Error fetching pending order:', fetchErr);
     }
 

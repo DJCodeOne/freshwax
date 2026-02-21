@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     try {
       ordersData = await saQueryCollection(serviceAccountKey, projectId, 'orders', { limit: 500 });
       log.info('[backfill] Got', ordersData.length, 'orders from SA query');
-    } catch (ordersErr) {
+    } catch (ordersErr: unknown) {
       log.error('[backfill] Orders query failed:', ordersErr);
       return ApiErrors.serverError('Orders query failed: ');
     }
@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     try {
       ledgerData = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', { limit: 500 });
       log.info('[backfill] Got', ledgerData.length, 'ledger entries from SA query');
-    } catch (ledgerErr) {
+    } catch (ledgerErr: unknown) {
       log.info('[backfill] Ledger query failed (may not exist yet):', ledgerErr);
       // Ledger might not exist yet - continue with empty
       ledgerData = [];
@@ -264,7 +264,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
               status: 'created'
             });
             totalCreated++;
-          } catch (writeErr) {
+          } catch (writeErr: unknown) {
             results.push({
               orderId: order.id,
               item: item.title || item.name,

@@ -172,7 +172,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             results.notified++;
             logger.info('[Restock Notifications] Sent to', sub.email, 'for', productName);
 
-          } catch (emailErr) {
+          } catch (emailErr: unknown) {
             logger.error('[Restock Notifications] Email error:', emailErr);
             results.errors++;
           }

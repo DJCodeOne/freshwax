@@ -69,7 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           entries = await d1GetLedgerEntries(db, { limit: 100 });
           log.info('[update-ledger] D1 read:', entries.length, 'entries');
-        } catch (d1Error) {
+        } catch (d1Error: unknown) {
           log.error('[update-ledger] D1 read failed:', d1Error);
         }
       }
@@ -108,7 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await d1UpdateLedgerEntry(db, ledgerId, updates);
           log.info('[update-ledger] D1 updated:', ledgerId);
-        } catch (d1Error) {
+        } catch (d1Error: unknown) {
           log.error('[update-ledger] D1 update failed:', d1Error);
           // Don't fail - Firebase update succeeded
         }
@@ -129,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await d1DeleteLedgerEntry(db, ledgerId);
           log.info('[update-ledger] D1 deleted:', ledgerId);
-        } catch (d1Error) {
+        } catch (d1Error: unknown) {
           log.error('[update-ledger] D1 delete failed:', d1Error);
           // Don't fail - Firebase delete succeeded
         }

@@ -734,7 +734,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   await d1UpsertMerch(db, item.productId, updatedProduct);
                   logger.info('[create-order] ✓ D1 synced for:', item.name);
                 }
-              } catch (d1Error) {
+              } catch (d1Error: unknown) {
                 logger.error('[create-order] D1 sync failed (non-critical):', d1Error);
               }
             }
@@ -848,7 +848,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } else {
         logger.info('[create-order] Skipping email - no API key or no customer email');
       }
-    } catch (emailError) {
+    } catch (emailError: unknown) {
       logger.error('[create-order] Email error:', emailError);
       // Don't fail the order if email fails
     }

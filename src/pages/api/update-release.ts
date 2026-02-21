@@ -179,7 +179,7 @@ export async function POST({ request, locals }: any) {
           await d1UpsertRelease(db, id, updatedDoc);
           logger.info('[update-release] Also updated in D1');
         }
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
         logger.error('[update-release] D1 dual-write failed (non-critical):', d1Error);
       }

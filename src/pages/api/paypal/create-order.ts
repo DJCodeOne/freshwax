@@ -339,7 +339,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('pendingPayPalOrders', paypalResult.id, pendingOrder);
       // Stored pending order data
-    } catch (storeErr) {
+    } catch (storeErr: unknown) {
       log.error('[PayPal] Failed to store pending order:', storeErr);
       // Continue anyway - capture endpoint will fall back to client data with amount validation
     }

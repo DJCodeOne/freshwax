@@ -110,7 +110,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
-      } catch (emailError) {
+      } catch (emailError: unknown) {
         console.error('[Newsletter] Preview email failed:', emailError);
         return ApiErrors.serverError('Failed to send preview email');
       }

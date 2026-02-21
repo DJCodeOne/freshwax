@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           gifUrl: newComment.gifUrl || undefined
         });
         logger.info('[add-comment] Also written to D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[add-comment] D1 dual-write failed (non-critical):', d1Error);
       }
     }

@@ -567,7 +567,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
 
-      } catch (emailError) {
+      } catch (emailError: unknown) {
         console.error('[admin/giftcards] Email error:', emailError);
         return ApiErrors.serverError('Failed to send email');
       }

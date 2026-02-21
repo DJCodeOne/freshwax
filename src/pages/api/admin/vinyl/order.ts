@@ -338,7 +338,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               })
             }, 10000);
             log.info('[vinyl/order refund] Buyer refund email sent');
-          } catch (emailErr) {
+          } catch (emailErr: unknown) {
             log.error('[vinyl/order refund] Buyer email error:', emailErr);
           }
         }

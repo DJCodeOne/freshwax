@@ -237,7 +237,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         artworkContentType = imageContentType(processed.format);
         artworkBody = Buffer.from(processed.buffer);
         logger.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
-      } catch (imgErr) {
+      } catch (imgErr: unknown) {
         logger.error('[upload-mix] WebP processing failed, using original:', imgErr);
         const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
         artworkKey = `${folderPath}/artwork.${artworkExt}`;
@@ -274,7 +274,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         uploadedR2Keys.push(thumbKey);
         thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
         logger.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
-      } catch (thumbErr) {
+      } catch (thumbErr: unknown) {
         logger.error('[upload-mix] Thumbnail generation failed (non-critical):', thumbErr);
       }
     } else {
@@ -329,7 +329,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1UpsertMix(db, mixId, mixData);
         logger.info('[upload-mix] Also written to D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         logger.error('[upload-mix] D1 dual-write failed (non-critical):', d1Error);
       }
     }

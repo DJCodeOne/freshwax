@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           logger.info('[admin/delete-mix] Warning: More files exist in folder, may need another deletion');
         }
       }
-    } catch (r2Error) {
+    } catch (r2Error: unknown) {
       logger.error('[admin/delete-mix] R2 deletion error:', r2Error);
     }
 

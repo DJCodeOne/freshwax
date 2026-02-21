@@ -299,7 +299,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
           await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
-        } catch (refundErr) {
+        } catch (refundErr: unknown) {
           log.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }
       }
@@ -328,7 +328,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 submitterEmail = release.email || release.submitterEmail || release.metadata?.email || null;
                 artistName = release.artistName || release.artist || artistName;
               }
-            } catch (lookupErr) {
+            } catch (lookupErr: unknown) {
               log.error(`[FreeOrder] Failed to lookup release ${releaseId}:`, lookupErr);
             }
           }
@@ -356,7 +356,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           items: enrichedItems,
           db: env?.DB
         });
-      } catch (ledgerErr) {
+      } catch (ledgerErr: unknown) {
         log.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
       }
 
@@ -406,7 +406,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
           await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
-        } catch (refundErr) {
+        } catch (refundErr: unknown) {
           log.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }
       }

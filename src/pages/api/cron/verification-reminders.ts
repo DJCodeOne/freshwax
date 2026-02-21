@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.error(`[VerifyReminders] Failed to send to ${email}:`, await resendResponse.text());
           skipped++;
         }
-      } catch (emailErr) {
+      } catch (emailErr: unknown) {
         log.error(`[VerifyReminders] Error sending to ${email}:`, emailErr);
         skipped++;
       }

@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           try {
             const result = await atomicIncrement('livestreams', streamId, { totalLikes: 1 });
             totalLikes = result.newValues.totalLikes ?? 0;
-          } catch (e2) {
+          } catch (e2: unknown) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
             logger.info('[react] Stream not found for reaction counter, skipping increment');
           }
@@ -184,7 +184,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Fall back to livestreams collection
             const result = await atomicIncrement('livestreams', streamId, { totalLikes: 1 });
             totalLikes = result.newValues.totalLikes ?? 0;
-          } catch (e2) {
+          } catch (e2: unknown) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
             logger.info('[react] Stream not found for like counter, skipping increment');
           }

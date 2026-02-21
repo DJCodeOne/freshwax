@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('pendingGiftCardOrders', paypalResult.id, pendingOrder);
       log.info('[GiftCard PayPal] Stored pending order:', paypalResult.id);
-    } catch (storeErr) {
+    } catch (storeErr: unknown) {
       log.error('[GiftCard PayPal] Failed to store pending order:', storeErr);
       // Continue - capture will need to validate amount
     }

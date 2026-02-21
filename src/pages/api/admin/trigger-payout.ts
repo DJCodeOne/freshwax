@@ -138,7 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 paypalBatchId: payoutResult.batchId
               });
             }
-          } catch (updateErr) {
+          } catch (updateErr: unknown) {
             console.warn('[admin] Could not update pending payout record:', updateErr);
           }
 

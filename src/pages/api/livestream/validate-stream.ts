@@ -164,7 +164,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         status: slot.status === 'live' ? 'live' : 'connecting',
         lastValidation: new Date().toISOString(),
       });
-    } catch (updateErr) {
+    } catch (updateErr: unknown) {
       log.warn('[validate-stream] Non-critical: Failed to update slot:', updateErr);
     }
     
@@ -345,7 +345,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         lastValidation: new Date().toISOString(),
         clientIp: clientIp,
       });
-    } catch (updateErr) {
+    } catch (updateErr: unknown) {
       log.warn('[validate-stream] Non-critical: Failed to update slot status:', updateErr);
     }
 

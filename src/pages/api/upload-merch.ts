@@ -427,7 +427,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await d1UpsertMerch(db, productId, productData);
         logger.info('[upload-merch] Product also written to D1');
-      } catch (d1Error) {
+      } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
         logger.error('[upload-merch] D1 dual-write failed (non-critical):', d1Error);
       }
