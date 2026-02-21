@@ -4,7 +4,7 @@
 // Only a lightweight placeholder is rendered server-side to avoid ~8KB of DOM on every load.
 ---
 
-<div id="playlistModal" class="playlist-modal hidden">
+<div id="playlistModal" class="playlist-modal hidden" role="dialog" aria-modal="true" aria-label="Playlist">
   <!-- Loading spinner shown while the modal JS + HTML loads on first click -->
   <div id="playlistModalLoader" class="playlist-modal-loader">
     <div class="playlist-modal-loader-spinner"></div>

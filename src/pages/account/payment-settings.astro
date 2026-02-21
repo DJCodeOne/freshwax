@@ -13,6 +13,7 @@ const url = new URL(Astro.request.url);
 const stripeConnected = url.searchParams.get('stripe_connected') === 'true';
 const stripeRefresh = url.searchParams.get('stripe_refresh') === 'true';
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <Layout title="Payment Settings" noindex={true}>

@@ -4,7 +4,8 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, setDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[sync-artists]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -29,7 +30,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       skipCache: true,
       limit: 500  // Max 500 users per sync to prevent runaway
     });
-    console.log(`[sync-artists] Found ${users.length} users (limited to 500)`);
+    log.info(`[sync-artists] Found ${users.length} users (limited to 500)`);
 
     // Get existing artists with limit
     const existingArtists = await saQuery('artists', {
@@ -37,7 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       limit: 500  // Max 500 artists to prevent runaway
     });
     const artistIds = new Set(existingArtists.map(a => a.id));
-    console.log(`[sync-artists] Found ${existingArtists.length} existing artists (limited to 500)`);
+    log.info(`[sync-artists] Found ${existingArtists.length} existing artists (limited to 500)`);
 
     const synced: string[] = [];
     const errors: string[] = [];
@@ -80,11 +81,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
 
           synced.push(`${user.displayName || user.email || user.id}`);
-          console.log(`[sync-artists] Created artists/${user.id} for ${user.displayName || user.email}`);
+          log.info(`[sync-artists] Created artists/${user.id} for ${user.displayName || user.email}`);
         } catch (err) {
           const errorMsg = `Failed to sync ${user.id}: ${err}`;
           errors.push(errorMsg);
-          console.error(`[sync-artists] ${errorMsg}`);
+          log.error(`[sync-artists] ${errorMsg}`);
         }
       }
     }
@@ -109,7 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[sync-artists] Error:', error);
+    log.error('[sync-artists] Error:', error);
     return ApiErrors.serverError('Failed to sync artists');
   }
 };

@@ -67,6 +67,7 @@ const seoImage = post?.featuredImage || '/og-image.webp';
 const publishedTime = post?.publishedAt || new Date().toISOString();
 const modifiedTime = publishedTime;
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, stale-while-revalidate=1800');
 ---
 
 <Layout

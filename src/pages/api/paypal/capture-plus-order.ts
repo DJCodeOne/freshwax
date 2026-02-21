@@ -7,6 +7,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { getDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { redeemReferralCode } from '../../../lib/referral-codes';
 import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 const logger = createLogger('paypal-plus');
 
@@ -18,35 +19,6 @@ const PayPalPlusCaptureSchema = z.object({
 }).passthrough();
 
 export const prerender = false;
-
-// Get PayPal API base URL based on mode
-function getPayPalBaseUrl(mode: string): string {
-  return mode === 'live'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com';
-}
-
-// Get PayPal access token
-async function getPayPalAccessToken(clientId: string, clientSecret: string, mode: string): Promise<string> {
-  const baseUrl = getPayPalBaseUrl(mode);
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  }, 10000);
-
-  if (!response.ok) {
-    throw new Error('Failed to get PayPal access token');
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 // Generate Plus ID
 function generatePlusId(userId: string): string {
@@ -175,13 +147,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     };
 
-    const updateResponse = await fetch(
+    const updateResponse = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?updateMask.fieldPaths=subscription&key=${FIREBASE_API_KEY}`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData)
-      }
+      },
+      10000
     );
 
     if (!updateResponse.ok) {
@@ -195,7 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Send welcome email
     try {
       const origin = new URL(request.url).origin;
-      await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+      await fetchWithTimeout(`${origin}/api/admin/send-plus-welcome-email/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -206,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           plusId,
           isRenewal: false
         })
-      });
+      }, 10000);
       logger.info('[PayPal Plus] ✓ Welcome email sent to:', email);
     } catch (emailError) {
       logger.error('[PayPal Plus] Failed to send welcome email:', emailError);
@@ -237,13 +210,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           };
 
-          await fetch(
+          await fetchWithTimeout(
             `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
             {
               method: 'PATCH',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(redeemData)
-            }
+            },
+            10000
           );
           logger.info(`[PayPal Plus] ✓ Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
         } catch (referralError) {

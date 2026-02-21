@@ -6,7 +6,7 @@ import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -46,11 +46,11 @@ async function getToken(serviceAccountKey: string): Promise<string> {
 
   const jwt = `${headerB64}.${payloadB64}.${signatureB64}`;
 
-  const tokenResponse = await fetch(key.token_uri, {
+  const tokenResponse = await fetchWithTimeout(key.token_uri, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-  });
+  }, 10000);
 
   const tokenData = await tokenResponse.json() as any;
   return tokenData.access_token;
@@ -133,7 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const token = await getToken(serviceAccountKey);
     const docUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/releases/${releaseId}?updateMask.fieldPaths=tracks`;
 
-    const patchResponse = await fetch(docUrl, {
+    const patchResponse = await fetchWithTimeout(docUrl, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
       })
-    });
+    }, 10000);
 
     if (!patchResponse.ok) {
       const errorData = await patchResponse.json();

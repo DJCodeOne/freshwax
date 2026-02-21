@@ -304,7 +304,7 @@ const breadcrumbSchema = breadcrumbs ? {
       "@type": "ListItem",
       "position": i + 2,
       "name": decodeURIComponent(part).replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-      "item": `${SITE.url}/${pathParts.slice(0, i + 1).join('/')}`
+      "item": `${SITE.url}/${pathParts.slice(0, i + 1).join('/')}/`
     }))
   ]
 } : null;

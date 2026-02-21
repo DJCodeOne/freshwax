@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -44,11 +44,11 @@ async function getToken(serviceAccountKey: string): Promise<string> {
 
   const jwt = `${headerB64}.${payloadB64}.${signatureB64}`;
 
-  const tokenResponse = await fetch(key.token_uri, {
+  const tokenResponse = await fetchWithTimeout(key.token_uri, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-  });
+  }, 10000);
 
   const tokenData = await tokenResponse.json() as any;
   return tokenData.access_token;
@@ -92,9 +92,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const docUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${userId}`;
 
     // First, GET the current document
-    const getResponse = await fetch(docUrl, {
+    const getResponse = await fetchWithTimeout(docUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
-    });
+    }, 10000);
     const currentDoc = await getResponse.json() as any;
 
     // Extract current roles
@@ -137,14 +137,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     };
 
-    const patchResponse = await fetch(patchUrl, {
+    const patchResponse = await fetchWithTimeout(patchUrl, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(patchBody)
-    });
+    }, 10000);
 
     const patchResult = await patchResponse.json();
 
@@ -153,9 +153,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Verify by fetching again
-    const verifyResponse = await fetch(docUrl, {
+    const verifyResponse = await fetchWithTimeout(docUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
-    });
+    }, 10000);
     const verifyDoc = await verifyResponse.json() as any;
 
     const verifyRoles: any = {};

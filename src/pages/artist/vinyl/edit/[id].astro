@@ -6,6 +6,7 @@ import VinylDashboardLayout from '../../../../layouts/VinylDashboardLayout.astro
 const { id } = Astro.params;
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <VinylDashboardLayout title="Edit Listing" activeSection="listings">

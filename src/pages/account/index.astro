@@ -5,4 +5,5 @@
 export const prerender = false;
 
 return Astro.redirect('/account/dashboard');
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---

@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saUpdateDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[vinyl-listings]');
 
 export const prerender = false;
 
@@ -72,7 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       limit: 50
     });
 
-    console.log('[admin/vinyl-listings GET] Found', listings.length, 'pending listings');
+    log.info('[admin/vinyl-listings GET] Found', listings.length, 'pending listings');
 
     return new Response(JSON.stringify({
       success: true,
@@ -84,7 +86,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
     });
 
   } catch (error: unknown) {
-    console.error('[admin/vinyl-listings GET] Error:', error);
+    log.error('[admin/vinyl-listings GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch listings');
   }
 };
@@ -141,14 +143,14 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
         approvedAt: now,
         updatedAt: now
       };
-      console.log('[admin/vinyl-listings POST] Approved listing:', listingId);
+      log.info('[admin/vinyl-listings POST] Approved listing:', listingId);
     } else {
       updateData = {
         status: 'rejected',
         rejectedAt: now,
         updatedAt: now
       };
-      console.log('[admin/vinyl-listings POST] Rejected listing:', listingId);
+      log.info('[admin/vinyl-listings POST] Rejected listing:', listingId);
     }
 
     await saUpdateDocument(serviceAccountKey, projectId, 'vinylListings', listingId, updateData);
@@ -163,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
     });
 
   } catch (error: unknown) {
-    console.error('[admin/vinyl-listings POST] Error:', error);
+    log.error('[admin/vinyl-listings POST] Error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

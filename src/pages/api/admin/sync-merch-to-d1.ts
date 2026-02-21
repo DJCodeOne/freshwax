@@ -6,7 +6,9 @@ import { queryCollection, clearCache } from '../../../lib/firebase-rest';
 import { d1UpsertMerch, d1DeleteMerch } from '../../../lib/d1-catalog';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[sync-merch-to-d1]');
 
 export const prerender = false;
 
@@ -34,12 +36,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get all merch from Firebase (no limit — sync must fetch everything to avoid deleting valid D1 items)
     const merchItems = await queryCollection('merch', { skipCache: true });
-    console.log(`[sync-merch-to-d1] Found ${merchItems.length} items in Firebase`);
+    log.info(`[sync-merch-to-d1] Found ${merchItems.length} items in Firebase`);
 
     // Get existing D1 merch IDs
     const d1Result = await db.prepare('SELECT id FROM merch').all();
     const d1Ids = new Set((d1Result.results || []).map((r: any) => r.id));
-    console.log(`[sync-merch-to-d1] Found ${d1Ids.size} items in D1`);
+    log.info(`[sync-merch-to-d1] Found ${d1Ids.size} items in D1`);
 
     // Firebase IDs
     const firebaseIds = new Set(merchItems.map((item: any) => item.id));
@@ -48,7 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const toDelete = [...d1Ids].filter(id => !firebaseIds.has(id));
     for (const id of toDelete) {
       await d1DeleteMerch(db, id);
-      console.log(`[sync-merch-to-d1] Deleted stale item: ${id}`);
+      log.info(`[sync-merch-to-d1] Deleted stale item: ${id}`);
     }
 
     // Upsert all Firebase items to D1
@@ -65,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);
-        console.error(`[sync-merch-to-d1] Failed to sync ${item.id}:`, e);
+        log.error(`[sync-merch-to-d1] Failed to sync ${item.id}:`, e);
         failed.push({ id: item.id, name: item.name, error: errMsg });
       }
     }
@@ -86,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[sync-merch-to-d1] Error:', error);
+    log.error('[sync-merch-to-d1] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

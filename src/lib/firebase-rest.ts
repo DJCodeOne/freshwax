@@ -2,13 +2,8 @@
 // Firebase REST API client - OPTIMIZED for 50k read quota
 // Features: Extended caching, request deduplication, batch operations, smart invalidation
 
-// Conditional logging - only logs in development
-const isDev = import.meta.env?.DEV ?? false;
-const log = {
-  info: (...args: any[]) => isDev && console.log('[firebase-rest]', ...args),
-  warn: (...args: any[]) => isDev && console.warn('[firebase-rest]', ...args),
-  error: (...args: any[]) => console.error('[firebase-rest]', ...args),
-};
+import { createLogger } from './api-utils';
+const log = createLogger('[firebase-rest]');
 
 import { kvCacheThrough, CACHE_CONFIG } from './kv-cache';
 
@@ -1132,9 +1127,9 @@ export async function updateDocument(
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('updateDocument error:', response.status, error);
-    console.error('updateDocument collection:', collection, 'docId:', docId);
-    console.error('updateDocument had token:', !!idToken);
+    log.error('updateDocument error:', response.status, error);
+    log.error('updateDocument collection:', collection, 'docId:', docId);
+    log.error('updateDocument had token:', !!idToken);
     throw new Error(`Failed to update document: ${response.status} - ${error}`);
   }
 

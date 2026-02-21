@@ -209,6 +209,7 @@ const bestMonthText = bestMonthEntry[1].revenue > 0 ? bestMonthName + ' (' + for
 
 // Average units per order
 const avgUnitsPerOrder = orders.length > 0 ? (totalUnits / orders.length).toFixed(1) : '0';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <html lang="en">

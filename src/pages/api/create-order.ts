@@ -209,14 +209,14 @@ async function validateOrderPrices(items: any[]): Promise<{ validatedItems: any[
 
       // Check for price mismatch (allow 1p rounding difference)
       if (Math.abs(serverPrice - item.price) > 0.01) {
-        console.warn('[create-order] SECURITY: Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
+        logger.warn('[create-order] SECURITY: Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
         hasMismatch = true;
       }
 
       serverSubtotal += serverPrice * quantity;
       validatedItems.push({ ...item, price: serverPrice, originalClientPrice: item.price, ...extraFields });
     } catch (err) {
-      console.error('[create-order] Error validating price for', item.name, err);
+      logger.error('[create-order] Error validating price for', item.name, err);
       // SECURITY: Reject items where price validation fails — never trust client price
       return { validatedItems: [], serverSubtotal: 0, hasMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
     }
@@ -350,7 +350,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Reject if client total is significantly lower than server-calculated total
     const clientTotal = orderData.totals?.total || 0;
     if (serverTotal > 0 && clientTotal < serverTotal * 0.95) {
-      console.error('[create-order] SECURITY: Client total', clientTotal, 'is below server total', serverTotal, '(subtotal:', serverSubtotal, 'shipping:', serverShipping, ')');
+      logger.error('[create-order] SECURITY: Client total', clientTotal, 'is below server total', serverTotal, '(subtotal:', serverSubtotal, 'shipping:', serverShipping, ')');
       return ApiErrors.badRequest('Price validation failed. Please refresh and try again.');
     }
 
@@ -482,7 +482,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             logger.info('[create-order] Release NOT found:', releaseId);
           }
         } catch (e) {
-          console.error('[create-order] Error fetching release:', releaseId, e);
+          logger.error('[create-order] Error fetching release:', releaseId, e);
         }
       } else {
         logger.info('[create-order] Skipping non-digital item:', item.type);
@@ -756,7 +756,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         } catch (stockErr) {
           // Log but don't fail the order
-          console.error('[create-order] Stock update error:', stockErr);
+          logger.error('[create-order] Stock update error:', stockErr);
         }
       }
     }
@@ -801,13 +801,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
           logger.info('[create-order] ✓ Email sent! ID:', emailResult.id);
         } else {
           const error = await emailResponse.text();
-          console.error('[create-order] ❌ Email failed:', error);
+          logger.error('[create-order] ❌ Email failed:', error);
         }
       } else {
         logger.info('[create-order] Skipping email - no API key or no customer email');
       }
     } catch (emailError) {
-      console.error('[create-order] Email error:', emailError);
+      logger.error('[create-order] Email error:', emailError);
       // Don't fail the order if email fails
     }
 
@@ -843,11 +843,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             logger.info('[create-order] ✓ Stockist email sent! ID:', result.id);
           } else {
             const error = await fulfillmentResponse.text();
-            console.error('[create-order] ❌ Stockist email failed:', error);
+            logger.error('[create-order] ❌ Stockist email failed:', error);
           }
         }
       } catch (stockistError) {
-        console.error('[create-order] Stockist email error:', stockistError);
+        logger.error('[create-order] Stockist email error:', stockistError);
         // Don't fail the order if stockist email fails
       }
 
@@ -865,7 +865,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               });
               logger.info('[create-order] Marked vinyl listing as sold:', listingId);
             } catch (vinylErr) {
-              console.error('[create-order] Failed to mark vinyl as sold:', listingId, vinylErr);
+              logger.error('[create-order] Failed to mark vinyl as sold:', listingId, vinylErr);
             }
           }
         }
@@ -916,12 +916,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
               logger.info('[create-order] ✓ Digital sale email sent to:', artistEmail);
             } else {
               const error = await digitalResponse.text();
-              console.error('[create-order] ❌ Digital sale email failed:', error);
+              logger.error('[create-order] ❌ Digital sale email failed:', error);
             }
           }
         }
       } catch (digitalError) {
-        console.error('[create-order] Digital sale email error:', digitalError);
+        logger.error('[create-order] Digital sale email error:', digitalError);
       }
     }
 
@@ -969,12 +969,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
               logger.info('[create-order] ✓ Merch sale email sent to:', sellerEmail);
             } else {
               const error = await merchResponse.text();
-              console.error('[create-order] ❌ Merch sale email failed:', error);
+              logger.error('[create-order] ❌ Merch sale email failed:', error);
             }
           }
         }
       } catch (merchError) {
-        console.error('[create-order] Merch sale email error:', merchError);
+        logger.error('[create-order] Merch sale email error:', merchError);
       }
     }
 
@@ -984,7 +984,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await atomicIncrement('users', orderData.customer.userId, { orderCount: 1 });
         await updateDocument('users', orderData.customer.userId, { lastOrderAt: now });
       } catch (e) {
-        console.error('[create-order] Error updating customer:', e);
+        logger.error('[create-order] Error updating customer:', e);
       }
     }
 
@@ -1000,8 +1000,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : '';
-    console.error('[create-order] Error:', errorMessage);
-    console.error('[create-order] Stack:', errorStack);
+    logger.error('[create-order] Error:', errorMessage);
+    logger.error('[create-order] Stack:', errorStack);
     // SECURITY: Don't expose internal error details to client
     return ApiErrors.serverError('Failed to create order. Please try again or contact support.');
   }

@@ -50,6 +50,7 @@ function brandFreshWax(text: string): string {
   const escaped = escapeHtml(text);
   return escaped.replace(/Fresh\s+Wax/gi, 'Fresh <span class="text-red">Wax</span>');
 }
+Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, stale-while-revalidate=1800');
 ---
 
 <Layout

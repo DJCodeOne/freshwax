@@ -7,7 +7,9 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[extend-subscription]');
 
 const extendSubscriptionSchema = z.object({
   userId: z.string().min(1),
@@ -111,17 +113,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       token_uri: 'https://oauth2.googleapis.com/token'
     });
 
-    console.log(`[extend-subscription] Attempting update for ${userId}:`, JSON.stringify(updateData));
+    log.info(`[extend-subscription] Attempting update for ${userId}:`, JSON.stringify(updateData));
 
     try {
       await saUpdateDocument(serviceAccountKey, projectId, 'users', userId, updateData);
-      console.log(`[extend-subscription] Update successful for ${userId}`);
+      log.info(`[extend-subscription] Update successful for ${userId}`);
     } catch (updateErr) {
-      console.error(`[extend-subscription] Update failed:`, updateErr);
+      log.error(`[extend-subscription] Update failed:`, updateErr);
       throw updateErr;
     }
 
-    console.log(`[extend-subscription] Extended ${userId} by ${days} days until ${newExpiry.toISOString()}`);
+    log.info(`[extend-subscription] Extended ${userId} by ${days} days until ${newExpiry.toISOString()}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -130,7 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[extend-subscription] Error:', error);
+    log.error('[extend-subscription] Error:', error);
     return ApiErrors.serverError('Failed to extend subscription');
   }
 };

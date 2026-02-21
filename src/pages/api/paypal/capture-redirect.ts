@@ -8,6 +8,7 @@ import Stripe from 'stripe';
 import { createOrder } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion } from '../../../lib/firebase-rest';
 import { fetchWithTimeout } from '../../../lib/api-utils';
+import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schema for PayPal redirect query params
 const PayPalRedirectParamsSchema = z.object({
@@ -16,35 +17,6 @@ const PayPalRedirectParamsSchema = z.object({
 });
 
 export const prerender = false;
-
-// Get PayPal API base URL based on mode
-function getPayPalBaseUrl(mode: string): string {
-  return mode === 'live'
-    ? 'https://api-m.paypal.com'
-    : 'https://api-m.sandbox.paypal.com';
-}
-
-// Get PayPal access token
-async function getPayPalAccessToken(clientId: string, clientSecret: string, mode: string): Promise<string> {
-  const baseUrl = getPayPalBaseUrl(mode);
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  }, 10000);
-
-  if (!response.ok) {
-    throw new Error('Failed to get PayPal access token');
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
 
 export const GET: APIRoute = async ({ request, locals, redirect }) => {
   const url = new URL(request.url);

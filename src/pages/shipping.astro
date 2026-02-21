@@ -33,6 +33,7 @@ const faqs = [
     answer: "Digital downloads are non-refundable once downloaded, as per UK consumer law for digital content. Exceptions may be made for technical issues."
   }
 ];
+Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400');
 ---
 
 <InfoPageLayout 

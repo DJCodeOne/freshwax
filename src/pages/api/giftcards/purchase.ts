@@ -8,6 +8,7 @@ import { getDocument, updateDocument, addDocument, queryCollection } from '../..
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
+import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
@@ -285,26 +286,60 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Note: Firebase REST API doesn't support subcollections directly via addDocument
     // We'll use a workaround by creating a document with a generated ID
     const purchaseRecordId = `purchase_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await fetch(
-      `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/users/${buyerUserId}/purchasedGiftCards?documentId=${purchaseRecordId}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fields: {
-            giftCardId: { stringValue: giftCardResult.id },
-            amount: { integerValue: String(numAmount) },
-            recipientEmail: { stringValue: targetEmail },
-            recipientName: { stringValue: recipientName || '' },
-            recipientType: { stringValue: recipientType },
-            purchasedAt: { stringValue: purchasedAt },
-            displayExpiresAt: { stringValue: displayExpiresAt },
-            status: { stringValue: 'sent' }
-          }
-        })
+    try {
+      // Build service account key from env for authenticated Firestore write
+      const env = locals.runtime.env;
+      const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+      const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+      const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+
+      let authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (clientEmail && privateKey) {
+        const serviceAccountKey = JSON.stringify({
+          type: 'service_account',
+          project_id: projectId,
+          private_key_id: 'auto',
+          private_key: privateKey.replace(/\\n/g, '\n'),
+          client_email: clientEmail,
+          client_id: '',
+          auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+          token_uri: 'https://oauth2.googleapis.com/token'
+        });
+        const saToken = await getServiceAccountToken(serviceAccountKey);
+        authHeaders['Authorization'] = 'Bearer ' + saToken;
       }
-    );
-    console.log(`[giftcards/purchase] Added purchase record to customer ${buyerUserId}`);
+
+      const subcollectionResponse = await fetchWithTimeout(
+        `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/users/${buyerUserId}/purchasedGiftCards?documentId=${purchaseRecordId}`,
+        {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            fields: {
+              giftCardId: { stringValue: giftCardResult.id },
+              amount: { integerValue: String(numAmount) },
+              recipientEmail: { stringValue: targetEmail },
+              recipientName: { stringValue: recipientName || '' },
+              recipientType: { stringValue: recipientType },
+              purchasedAt: { stringValue: purchasedAt },
+              displayExpiresAt: { stringValue: displayExpiresAt },
+              status: { stringValue: 'sent' }
+            }
+          })
+        },
+        10000
+      );
+
+      if (!subcollectionResponse.ok) {
+        const errorText = await subcollectionResponse.text();
+        console.error(`[giftcards/purchase] Failed to add purchase record: ${subcollectionResponse.status}`, errorText);
+      } else {
+        console.log(`[giftcards/purchase] Added purchase record to customer ${buyerUserId}`);
+      }
+    } catch (purchaseRecordErr: unknown) {
+      // Non-critical: gift card already created, just log the error
+      console.error('[giftcards/purchase] Failed to store purchase record:', purchaseRecordErr);
+    }
 
     // Send email to recipient
     const isGift = recipientType === 'gift';

@@ -6,4 +6,5 @@
 export const prerender = false;
 
 return Astro.redirect('/account/mixes', 301);
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---

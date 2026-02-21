@@ -277,6 +277,7 @@ const productAvailability = isPreOrder ? 'PreOrder' as const
 
 // Determine effective price for structured data (use digital price, fall back to track price * count)
 const structuredPrice = actualPricePerSale > 0 ? actualPricePerSale : (actualTrackPrice * tracksWithIds.length);
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
 <Layout

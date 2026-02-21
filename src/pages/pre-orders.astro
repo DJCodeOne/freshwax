@@ -65,6 +65,7 @@ const getLabel = (release: any) => release.labelName || release.recordLabel || r
 const getPrice = (release: any) => release.pricePerSale || release.pricing?.digital || (release.trackPrice || 1) * (release.tracks?.length || 4);
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
 <Layout title="Pre-Orders - Upcoming Releases" description="Pre-order upcoming jungle and drum & bass releases. Secure limited vinyl and digital downloads before they drop.">

@@ -8,7 +8,8 @@ import { saUpdateDocument, saQueryCollection, saDeleteDocument } from '../../../
 import { d1GetLedgerEntries, d1UpdateLedgerEntry, d1DeleteLedgerEntry } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[update-ledger-entry]');
 
 const updateLedgerEntrySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('list'), adminKey: z.string().optional() }),
@@ -67,9 +68,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (db) {
         try {
           entries = await d1GetLedgerEntries(db, { limit: 100 });
-          console.log('[update-ledger] D1 read:', entries.length, 'entries');
+          log.info('[update-ledger] D1 read:', entries.length, 'entries');
         } catch (d1Error) {
-          console.error('[update-ledger] D1 read failed:', d1Error);
+          log.error('[update-ledger] D1 read failed:', d1Error);
         }
       }
 
@@ -106,9 +107,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (db) {
         try {
           await d1UpdateLedgerEntry(db, ledgerId, updates);
-          console.log('[update-ledger] D1 updated:', ledgerId);
+          log.info('[update-ledger] D1 updated:', ledgerId);
         } catch (d1Error) {
-          console.error('[update-ledger] D1 update failed:', d1Error);
+          log.error('[update-ledger] D1 update failed:', d1Error);
           // Don't fail - Firebase update succeeded
         }
       }
@@ -127,9 +128,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (db) {
         try {
           await d1DeleteLedgerEntry(db, ledgerId);
-          console.log('[update-ledger] D1 deleted:', ledgerId);
+          log.info('[update-ledger] D1 deleted:', ledgerId);
         } catch (d1Error) {
-          console.error('[update-ledger] D1 delete failed:', d1Error);
+          log.error('[update-ledger] D1 delete failed:', d1Error);
           // Don't fail - Firebase delete succeeded
         }
       }

@@ -11,7 +11,8 @@ import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-uti
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[create-manual-order]');
 
 const createManualOrderSchema = z.object({
   orderData: z.object({
@@ -146,7 +147,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             };
           }
         } catch (e) {
-          console.error('[admin] Error fetching release for downloads:', e);
+          log.error('[admin] Error fetching release for downloads:', e);
         }
       }
 
@@ -208,7 +209,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Generate a unique order ID
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    console.log('[admin] Creating manual order:', orderNumber, 'for:', order.customer.email);
+    log.info('[admin] Creating manual order:', orderNumber, 'for:', order.customer.email);
 
     // Save order using service account
     await saSetDocument(serviceAccountKey, projectId, 'orders', orderId, order);
@@ -235,7 +236,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         db: env?.DB,
       });
     } catch (ledgerErr) {
-      console.error('[admin] Failed to record to sales ledger:', ledgerErr);
+      log.error('[admin] Failed to record to sales ledger:', ledgerErr);
       // Don't fail the order if ledger write fails
     }
 
@@ -262,10 +263,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }, 10000);
 
         if (!emailResponse.ok) {
-          console.error('[admin] Email failed:', await emailResponse.text());
+          log.error('[admin] Email failed:', await emailResponse.text());
         }
       } catch (emailErr) {
-        console.error('[admin] Email error:', emailErr);
+        log.error('[admin] Email error:', emailErr);
       }
     }
 
@@ -302,7 +303,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               // Artist notification sent
             }
           } catch (artistErr) {
-            console.error('[admin] Artist notification error:', artistErr);
+            log.error('[admin] Artist notification error:', artistErr);
           }
         }
       }
@@ -435,7 +436,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               status: 'failed',
               error: payoutResult.error
             });
-            console.error('[admin] Auto-payout failed:', payoutResult.error);
+            log.error('[admin] Auto-payout failed:', payoutResult.error);
           }
         } catch (err: unknown) {
           payoutResults.push({
@@ -445,7 +446,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             status: 'error',
             error: 'Payout processing failed'
           });
-          console.error('[admin] Auto-payout error:', err instanceof Error ? err.message : String(err));
+          log.error('[admin] Auto-payout error:', err instanceof Error ? err.message : String(err));
         }
       }
     }
@@ -462,7 +463,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin] Error creating manual order:', error);
+    log.error('[admin] Error creating manual order:', error);
     return ApiErrors.serverError('Failed to create order');
   }
 };

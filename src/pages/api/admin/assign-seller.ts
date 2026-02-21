@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saUpdateDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[assign-seller]');
 
 const assignSellerSchema = z.object({
   productIds: z.array(z.string().min(1)).optional(),
@@ -111,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // If searchTerm provided, find matching products
     if (searchTerm && !productIds?.length) {
-      console.log(`[assign-seller] Searching ${collectionName} for: ${searchTerm}`);
+      log.info(`[assign-seller] Searching ${collectionName} for: ${searchTerm}`);
 
       const allProducts = await saQueryCollection(serviceAccountKey, projectId, collectionName, {
         limit: 500
@@ -130,9 +132,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         })
         .map((p: any) => p.id);
 
-      console.log(`[assign-seller] Search "${searchTerm}" found ${idsToUpdate.length} products:`, idsToUpdate);
+      log.info(`[assign-seller] Search "${searchTerm}" found ${idsToUpdate.length} products:`, idsToUpdate);
 
-      console.log(`[assign-seller] Found ${idsToUpdate.length} matching products`);
+      log.info(`[assign-seller] Found ${idsToUpdate.length} matching products`);
     }
 
     if (!idsToUpdate.length) {
@@ -192,7 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         await saUpdateDocument(serviceAccountKey, projectId, collectionName, productId, updateData);
         results.push(productId);
-        console.log(`[assign-seller] Updated ${collectionName}/${productId} -> sellerId: ${sellerId}`);
+        log.info(`[assign-seller] Updated ${collectionName}/${productId} -> sellerId: ${sellerId}`);
       } catch (err) {
         errors.push(`${productId}: ${err}`);
       }
@@ -212,7 +214,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[assign-seller] Error:', error);
+    log.error('[assign-seller] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

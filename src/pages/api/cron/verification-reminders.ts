@@ -9,7 +9,8 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[verification-reminders]');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 export const prerender = false;
@@ -45,7 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    console.log('[VerifyReminders] Starting verification reminder run');
+    log.info('[VerifyReminders] Starting verification reminder run');
 
     // Query unverified users
     const unverifiedUsers = await queryCollection('users', {
@@ -54,7 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       skipCache: true
     });
 
-    console.log(`[VerifyReminders] Found ${unverifiedUsers.length} unverified users`);
+    log.info(`[VerifyReminders] Found ${unverifiedUsers.length} unverified users`);
 
     const now = Date.now();
     const minAge = MIN_ACCOUNT_AGE_HOURS * 60 * 60 * 1000;
@@ -111,16 +112,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
           sent++;
         } else {
-          console.error(`[VerifyReminders] Failed to send to ${email}:`, await resendResponse.text());
+          log.error(`[VerifyReminders] Failed to send to ${email}:`, await resendResponse.text());
           skipped++;
         }
       } catch (emailErr) {
-        console.error(`[VerifyReminders] Error sending to ${email}:`, emailErr);
+        log.error(`[VerifyReminders] Error sending to ${email}:`, emailErr);
         skipped++;
       }
     }
 
-    console.log(`[VerifyReminders] Done. Sent: ${sent}, Skipped: ${skipped}`);
+    log.info(`[VerifyReminders] Done. Sent: ${sent}, Skipped: ${skipped}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -133,7 +134,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[VerifyReminders] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[VerifyReminders] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

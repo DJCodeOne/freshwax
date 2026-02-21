@@ -11,8 +11,6 @@ import '../styles/merch.css';
 
 export const prerender = false;
 
-// Note: We pass skipCache=true below to always get fresh data from D1
-
 // Get D1 binding for optimized reads
 const db = Astro.locals.runtime.env?.DB;
 
@@ -32,7 +30,7 @@ const categoryLabels: Record<string, string> = {
 };
 
 try {
-  const merchData = await getLiveMerch(undefined, db, true); // skipCache=true for fresh data
+  const merchData = await getLiveMerch(undefined, db);
 
   products = merchData.map(doc => {
     // Build hierarchical category filter
@@ -137,6 +135,8 @@ const nonce = Astro.locals.nonce || '';
 
 // Preload first product image for faster LCP
 const firstProductImage = products[0]?.imageUrl;
+
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 
 // Build ItemList structured data for SEO
 const merchItemList = {

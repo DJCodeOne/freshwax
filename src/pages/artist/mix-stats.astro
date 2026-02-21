@@ -83,6 +83,7 @@ const formatDate = (dateStr: string) => {
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <Layout title="Mix Analytics" noindex={true}>

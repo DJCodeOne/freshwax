@@ -11,6 +11,7 @@ export const prerender = false;
 const sessionId = Astro.url.searchParams.get('session_id');
 const paypalOrderId = Astro.url.searchParams.get('token'); // PayPal uses 'token' param
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <Layout title="Gift Card Processing" noindex={true}>

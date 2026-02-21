@@ -3,6 +3,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { getDocument } from '../../lib/firebase-rest';
 
 const { id } = Astro.params;
 
@@ -12,19 +13,16 @@ let error = null;
 let comments = [];
 
 try {
-  // Add nocache timestamp to ensure fresh data (plays/likes/comments update frequently)
-  const apiUrl = `${Astro.url.origin}/api/get-dj-mix/?id=${id}&nocache=${Date.now()}`;
-  
-  const response = await fetch(apiUrl);
-  const data = await response.json();
-  
-  if (data.success && data.mix) {
-    mix = data.mix;
+  // Direct Firestore read instead of self-fetch (avoids ~200ms HTTP round-trip)
+  const doc = await getDocument('dj-mixes', id!);
+
+  if (doc) {
+    mix = doc;
   } else {
-    error = data.error || 'Mix not found';
+    error = 'Mix not found';
   }
-} catch (err) {
-  console.error('[DJ MIX PAGE] ✗ Fetch error:', err);
+} catch (err: unknown) {
+  console.error('[DJ MIX PAGE] Fetch error:', err);
   error = 'Failed to load mix';
 }
 
@@ -141,6 +139,7 @@ const formattedDate = mix ? new Date(upload_date).toLocaleDateString('en-GB', {
   year: 'numeric'
 }) : '';
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
 <Layout

@@ -16,6 +16,7 @@ const firebaseConfig = {
 const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY || '';
 const nonce = Astro.locals.nonce || '';
 const csrfToken = Astro.locals.csrfToken || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 <html lang="en">
 <head>

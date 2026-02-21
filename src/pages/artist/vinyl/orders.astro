@@ -3,6 +3,7 @@
 // Vinyl seller's orders management page
 import VinylDashboardLayout from '../../../layouts/VinylDashboardLayout.astro';
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <VinylDashboardLayout title="Vinyl Orders" activeSection="orders">

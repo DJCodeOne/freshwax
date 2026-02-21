@@ -76,6 +76,7 @@ const formatDate = (dateValue: any) => {
 const getLabel = (release: any) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
 <Layout title="Weekly Chart - Top Selling Releases" description="This week's top jungle and drum & bass releases ranked by sales and streams on Fresh Wax.">

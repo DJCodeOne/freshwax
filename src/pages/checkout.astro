@@ -7,6 +7,7 @@ import '../styles/checkout.css';
 
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <Layout title="Checkout" noindex={true}>
@@ -592,7 +593,7 @@ const nonce = Astro.locals.nonce || '';
             
             <!-- Postcode Lookup -->
             <div style="margin-bottom: 1.25rem; padding-bottom: 1.25rem; border-bottom: 1px solid #e5e7eb;">
-              <label style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.375rem;">Verify Your Postcode</label>
+              <label for="postcodeSearch" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 0.375rem;">Verify Your Postcode</label>
               <div class="postcode-lookup-row" style="display: flex; gap: 0.75rem;">
                 <input type="text" id="postcodeSearch" placeholder="Enter postcode (e.g. E1 6AN)" value="${postcode}" style="flex: 1; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
                 <button type="button" id="findAddressBtn" style="padding: 0.875rem 1.25rem; background: #dc2626; color: #fff; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer; white-space: nowrap;">

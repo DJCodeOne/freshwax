@@ -5,7 +5,8 @@ import type { APIRoute } from 'astro';
 
 import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[create-pending-payout]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -80,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Create pending payout with generated ID
     const payoutId = `payout_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     await saSetDocument(serviceAccountKey, projectId, 'pendingPayouts', payoutId, pendingPayout);
-    console.log('[create-pending-payout] Created:', payoutId);
+    log.info('[create-pending-payout] Created:', payoutId);
 
     // Optionally update artist's pending balance
     if (updateArtistBalance && payoutData.artistId) {
@@ -88,9 +89,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await saUpdateDocument(serviceAccountKey, projectId, 'artists', payoutData.artistId, {
           pendingBalance: { increment: payoutData.amount }
         });
-        console.log('[create-pending-payout] Updated artist pending balance');
+        log.info('[create-pending-payout] Updated artist pending balance');
       } catch (e) {
-        console.log('[create-pending-payout] Could not update artist balance (artist doc may not exist)');
+        log.info('[create-pending-payout] Could not update artist balance (artist doc may not exist)');
       }
     }
 
@@ -105,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[create-pending-payout] Error:', error);
+    log.error('[create-pending-payout] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

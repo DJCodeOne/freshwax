@@ -36,6 +36,7 @@ const navItems = [
   { href: '/admin/errors', label: 'Errors', icon: '🐛', id: 'errors' },
   { href: '/admin/image-tools', label: 'Images', icon: '🖼️', id: 'images' },
 ];
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <!DOCTYPE html>

@@ -7,7 +7,9 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[migrate-orders-to-ledger]');
 
 export const prerender = false;
 
@@ -43,8 +45,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    console.log('[Migration] Starting orders to ledger migration...');
-    console.log('[Migration] Dry run:', dryRun);
+    log.info('[Migration] Starting orders to ledger migration...');
+    log.info('[Migration] Dry run:', dryRun);
 
     // Get service account for Firebase writes
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
@@ -78,7 +80,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Failed to fetch orders: ');
     }
 
-    console.log(`[Migration] Found ${orders.length} orders`);
+    log.info(`[Migration] Found ${orders.length} orders`);
 
     // Check existing ledger entries to avoid duplicates
     let existingLedger: any[] = [];
@@ -88,10 +90,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     } catch (e) {
       // Collection might not exist yet
-      console.log('[Migration] No existing ledger entries found');
+      log.info('[Migration] No existing ledger entries found');
     }
     const existingOrderIds = new Set(existingLedger.map((e: any) => e.orderId));
-    console.log(`[Migration] Found ${existingLedger.length} existing ledger entries`);
+    log.info(`[Migration] Found ${existingLedger.length} existing ledger entries`);
 
     const results = {
       total: orders.length,
@@ -227,7 +229,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         results.migrated++;
 
       } catch (orderErr) {
-        console.error(`[Migration] Error processing order ${order.id}:`, orderErr);
+        log.error(`[Migration] Error processing order ${order.id}:`, orderErr);
         results.errors++;
         results.details.push({
           orderId: order.id,
@@ -237,7 +239,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    console.log('[Migration] Complete:', results);
+    log.info('[Migration] Complete:', results);
 
     return new Response(JSON.stringify({
       success: true,
@@ -252,7 +254,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Migration] Error:', error);
+    log.error('[Migration] Error:', error);
     return ApiErrors.serverError('Migration failed');
   }
 };

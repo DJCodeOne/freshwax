@@ -7,7 +7,9 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[record-payout]');
 
 const recordPayoutSchema = z.object({
   orderId: z.string().min(1),
@@ -64,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Order not found');
     }
 
-    console.log('[admin] Recording manual payout for order:', order.orderNumber || orderId);
+    log.info('[admin] Recording manual payout for order:', order.orderNumber || orderId);
 
     // Calculate artist payments from order items
     const items = order.items || [];
@@ -141,7 +143,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 'recorded'
       });
 
-      console.log('[admin] ✓ Recorded manual payout for', payment.artistName, '£' + payment.amount.toFixed(2));
+      log.info('[admin] ✓ Recorded manual payout for', payment.artistName, '£' + payment.amount.toFixed(2));
     }
 
     // If no artist payouts were created (e.g., all items are low-value/merch),
@@ -175,7 +177,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         amount: 0,
         status: 'cleared'
       });
-      console.log('[admin] ✓ Created cleared record for order', order.orderNumber);
+      log.info('[admin] ✓ Created cleared record for order', order.orderNumber);
     }
 
     // Also remove/update any pending payout records for this order
@@ -194,10 +196,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           completedBy: 'admin_manual',
           notes: notes || 'Marked as paid by admin'
         });
-        console.log('[admin] ✓ Updated pending payout', pending.id, 'to completed');
+        log.info('[admin] ✓ Updated pending payout', pending.id, 'to completed');
       }
     } catch (err) {
-      console.error('[admin] Error updating pending payouts:', err);
+      log.error('[admin] Error updating pending payouts:', err);
       // Don't fail the request - the payout record was still created
     }
 
@@ -213,7 +215,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin] Record payout error:', error);
+    log.error('[admin] Record payout error:', error);
     return ApiErrors.serverError('Failed to record payout');
   }
 };

@@ -23,9 +23,10 @@ const faqs = [
     answer: "Usage rights depend on the specific sample pack. Check each product listing for detailed licensing information before purchase."
   }
 ];
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
-<Layout 
+<Layout
   title="Sample Packs" 
   description="Professional jungle and drum & bass sample packs from trusted producers and stockists. Drums, breaks, basslines, and atmospheres for music production."
   faqs={faqs}

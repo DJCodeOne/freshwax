@@ -3,13 +3,8 @@
 // OPTIMIZED: Server-side caching to reduce Firebase reads significantly
 
 import { getDocument, queryCollection } from './firebase-rest';
-
-// Conditional logging - only logs in development
-const isDev = import.meta.env?.DEV ?? false;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+import { createLogger } from './api-utils';
+const log = createLogger('[releases]');
 
 // ==========================================
 // SERVER-SIDE CACHE - Critical for quota management
@@ -170,7 +165,7 @@ export async function getAllReleases(): Promise<any[]> {
 
     return releases;
   } catch (error: unknown) {
-    console.error('[getAllReleases] Error:', error);
+    log.error('[getAllReleases] Error:', error);
     return [];
   }
 }
@@ -205,7 +200,7 @@ export async function getReleasesForPage(limit: number = 20): Promise<any[]> {
     return releases;
 
   } catch (error: unknown) {
-    console.warn('[getReleasesForPage] Indexed query failed, falling back to getAllReleases:', error);
+    log.warn('[getReleasesForPage] Indexed query failed, falling back to getAllReleases:', error);
     const all = await getAllReleases();
     const sorted = all
       .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime())
@@ -267,7 +262,7 @@ export async function getReleaseById(id: string): Promise<any | null> {
 
     return result;
   } catch (error: unknown) {
-    console.error(`[getReleaseById] Error:`, error);
+    log.error(`[getReleaseById] Error:`, error);
     return null;
   }
 }
@@ -311,7 +306,7 @@ export async function getReleasesGroupedByLabel(): Promise<Record<string, any[]>
 
     return releasesByLabel;
   } catch (error: unknown) {
-    console.error('[getReleasesGroupedByLabel] Error:', error);
+    log.error('[getReleasesGroupedByLabel] Error:', error);
     return {};
   }
 }
@@ -361,7 +356,7 @@ export async function getReleasesByArtist(artistName: string): Promise<any[]> {
 
     return releases;
   } catch (error: unknown) {
-    console.error('[getReleasesByArtist] Error:', error);
+    log.error('[getReleasesByArtist] Error:', error);
     return [];
   }
 }
@@ -440,7 +435,7 @@ export async function getReleasesByLabel(labelName: string): Promise<any[]> {
 
     return releases;
   } catch (error: unknown) {
-    console.error('[getReleasesByLabel] Error:', error);
+    log.error('[getReleasesByLabel] Error:', error);
     return [];
   }
 }

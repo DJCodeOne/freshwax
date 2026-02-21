@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const updateOrderSchema = z.object({
@@ -142,11 +142,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const fields: any = {};
     for (const [k, v] of Object.entries(updateData)) fields[k] = toFirestoreValue(v);
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify({ fields })
-    });
+    }, 10000);
 
     if (!response.ok) {
       const error = await response.text();

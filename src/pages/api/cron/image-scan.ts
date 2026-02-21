@@ -7,7 +7,9 @@
 // Logs findings to D1 — does NOT auto-convert (admin triggers reprocess manually).
 
 import type { APIRoute } from 'astro';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[image-scan]');
 
 export const prerender = false;
 
@@ -17,7 +19,7 @@ const MAX_OBJECTS_PER_RUN = 500;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  console.log('[Image Scan] ========== CRON JOB STARTED ==========');
+  log.info('[Image Scan] ========== CRON JOB STARTED ==========');
 
   const env = locals.runtime.env;
 
@@ -39,7 +41,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const db: D1Database | undefined = env?.DB;
 
   if (!r2) {
-    console.error('[Image Scan] R2 binding not available');
+    log.error('[Image Scan] R2 binding not available');
     return ApiErrors.serverError('R2 binding not configured');
   }
 
@@ -133,13 +135,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
       }
 
-      console.log(`[Image Scan] Logged ${issues.length} issues to D1`);
+      log.info(`[Image Scan] Logged ${issues.length} issues to D1`);
     }
 
     const duration = Date.now() - startTime;
-    console.log('[Image Scan] ========== COMPLETED ==========');
-    console.log(`[Image Scan] Duration: ${duration}ms`);
-    console.log(`[Image Scan] Scanned: ${totalScanned}, Non-WebP: ${totalNonWebp}, Skipped (WebP exists): ${totalSkipped}`);
+    log.info('[Image Scan] ========== COMPLETED ==========');
+    log.info(`[Image Scan] Duration: ${duration}ms`);
+    log.info(`[Image Scan] Scanned: ${totalScanned}, Non-WebP: ${totalNonWebp}, Skipped (WebP exists): ${totalSkipped}`);
 
     return new Response(JSON.stringify({
       success: true,
@@ -157,7 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Image Scan] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[Image Scan] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

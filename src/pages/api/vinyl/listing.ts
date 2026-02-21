@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 const vinylListingPostSchema = z.object({
   action: z.enum(['create', 'update', 'publish', 'unpublish', 'delete']),
@@ -112,7 +112,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
 
-    const queryResponse = await fetch(queryUrl, {
+    const queryResponse = await fetchWithTimeout(queryUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -129,7 +129,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           limit: 100
         }
       })
-    });
+    }, 10000);
 
     const results = await queryResponse.json();
 

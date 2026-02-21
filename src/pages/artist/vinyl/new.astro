@@ -3,6 +3,7 @@
 // Create new vinyl listing page for sellers
 import VinylDashboardLayout from '../../../layouts/VinylDashboardLayout.astro';
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <VinylDashboardLayout title="List New Vinyl" activeSection="new">

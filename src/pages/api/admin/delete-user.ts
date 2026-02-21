@@ -7,7 +7,8 @@ import { z } from 'zod';
 import { getDocument, updateDocument, invalidateUsersCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[delete-user]');
 
 const deleteUserSchema = z.object({
   userId: z.string().min(1),
@@ -64,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.customers = true;
       }
     } catch (e) {
-      console.log('[delete-user] customers:', e instanceof Error ? e.message : 'error');
+      log.info('[delete-user] customers:', e instanceof Error ? e.message : 'error');
     }
 
     // Soft-delete from users collection
@@ -80,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.users = true;
       }
     } catch (e) {
-      console.log('[delete-user] users:', e instanceof Error ? e.message : 'error');
+      log.info('[delete-user] users:', e instanceof Error ? e.message : 'error');
     }
 
     // Soft-delete from artists collection
@@ -91,7 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.artists = true;
       }
     } catch (e) {
-      console.log('[delete-user] artists:', e instanceof Error ? e.message : 'error');
+      log.info('[delete-user] artists:', e instanceof Error ? e.message : 'error');
     }
 
     // Check if at least one update succeeded
@@ -114,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin/delete-user] Error:', error);
+    log.error('[admin/delete-user] Error:', error);
     return ApiErrors.serverError('Failed to delete user');
   }
 };

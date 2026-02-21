@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 const addArtistSchema = z.object({
   userId: z.string().min(1),
@@ -57,11 +57,11 @@ async function writeToFirestore(collection: string, docId: string, data: Record<
     fields[key] = toFirestoreValue(value);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ fields })
-  });
+  }, 10000);
 
   if (!response.ok) {
     const error = await response.text();

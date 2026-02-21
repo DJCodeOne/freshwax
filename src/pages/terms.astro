@@ -3,6 +3,7 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400');
 ---
 
 <Layout title="Terms of Service - User Agreement" description="Fresh Wax terms of service - rules and guidelines for using our platform.">

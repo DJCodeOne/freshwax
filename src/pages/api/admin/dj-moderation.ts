@@ -10,7 +10,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[dj-moderation]');
 
 export const prerender = false;
 
@@ -95,7 +97,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[dj-moderation] Error listing:', error instanceof Error ? error.message : String(error));
+    log.error('[dj-moderation] Error listing:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -192,7 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      console.log(`[dj-moderation] Banned ${email} (${user.userId})`);
+      log.info(`[dj-moderation] Banned ${email} (${user.userId})`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -209,7 +211,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await deleteDocument('djModeration', userId);
 
-      console.log(`[dj-moderation] Unbanned ${userId}`);
+      log.info(`[dj-moderation] Unbanned ${userId}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -257,7 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      console.log(`[dj-moderation] Put ${email} on hold (${user.userId})`);
+      log.info(`[dj-moderation] Put ${email} on hold (${user.userId})`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -274,7 +276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await deleteDocument('djModeration', userId);
 
-      console.log(`[dj-moderation] Released ${userId} from hold`);
+      log.info(`[dj-moderation] Released ${userId} from hold`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -321,7 +323,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // May not exist
       }
 
-      console.log(`[dj-moderation] Kicked ${userId} from stream`);
+      log.info(`[dj-moderation] Kicked ${userId} from stream`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -336,7 +338,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[dj-moderation] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[dj-moderation] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

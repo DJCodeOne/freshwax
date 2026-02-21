@@ -5,7 +5,8 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[update-order-status]');
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -84,12 +85,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Refund stock if order is cancelled
     if (status === 'cancelled' && orderData?.items) {
-      console.log('[update-order-status] Refunding stock for cancelled order:', orderId);
+      log.info('[update-order-status] Refunding stock for cancelled order:', orderId);
       try {
         await refundOrderStock(orderId, orderData.items, orderData.orderNumber || orderId);
-        console.log('[update-order-status] Stock refunded successfully');
+        log.info('[update-order-status] Stock refunded successfully');
       } catch (refundErr) {
-        console.error('[update-order-status] Stock refund error:', refundErr);
+        log.error('[update-order-status] Stock refund error:', refundErr);
         // Continue - order is still cancelled even if refund fails
       }
     }
@@ -126,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               `
             })
           }, 10000);
-          console.log('[update-order-status] Shipping notification sent');
+          log.info('[update-order-status] Shipping notification sent');
         } else if (status === 'cancelled') {
           await fetchWithTimeout('https://api.resend.com/emails', {
             method: 'POST',
@@ -150,10 +151,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
               `
             })
           }, 10000);
-          console.log('[update-order-status] Cancellation notification sent');
+          log.info('[update-order-status] Cancellation notification sent');
         }
       } catch (emailErr) {
-        console.error('[update-order-status] Email notification error:', emailErr);
+        log.error('[update-order-status] Email notification error:', emailErr);
         // Continue - status update succeeded even if email fails
       }
     }
@@ -164,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('Error updating order status:', error);
+    log.error('Error updating order status:', error);
     return ApiErrors.serverError('Failed to update order status');
   }
 };

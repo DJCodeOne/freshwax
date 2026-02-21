@@ -7,7 +7,8 @@ import { createOrder, validateStock } from '../../lib/order-utils';
 import { getDocument, queryCollection, updateDocument, atomicIncrement, arrayUnion, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { recordMultiSellerSale } from '../../lib/sales-ledger';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+const log = createLogger('[complete-free-order]');
 
 // Zod schemas for free/credit order
 const FreeOrderItemSchema = z.object({
@@ -55,13 +56,38 @@ export const prerender = false;
 async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any[], validatedSubtotal: number }> {
   const validatedItems: any[] = [];
 
+  // Pre-fetch all needed documents in parallel to avoid N+1 sequential calls
+  const merchIds = items.filter(i => (i.type || 'digital') === 'merch' && i.productId).map(i => i.productId);
+  const releaseIds = items.filter(i => {
+    const t = i.type || 'digital';
+    if (t === 'vinyl' && i.sellerId && !i.releaseId) return false; // crates items use vinylListings
+    return ['digital', 'track', 'vinyl', 'release'].includes(t) && (i.releaseId || i.productId || i.id);
+  }).map(i => i.releaseId || i.productId || i.id);
+  const listingIds = items.filter(i => (i.type || 'digital') === 'vinyl' && i.sellerId && !i.releaseId).map(i => i.id || i.productId).filter(Boolean);
+
+  // Deduplicate IDs
+  const uniqueMerchIds = [...new Set(merchIds)];
+  const uniqueReleaseIds = [...new Set(releaseIds)];
+  const uniqueListingIds = [...new Set(listingIds)];
+
+  const [merchDocs, releaseDocs, listingDocs] = await Promise.all([
+    Promise.all(uniqueMerchIds.map(id => getDocument('merch', id))),
+    Promise.all(uniqueReleaseIds.map(id => getDocument('releases', id))),
+    Promise.all(uniqueListingIds.map(id => getDocument('vinylListings', id)))
+  ]);
+
+  // Build lookup maps
+  const merchMap = new Map(uniqueMerchIds.map((id, i) => [id, merchDocs[i]]));
+  const releaseMap = new Map(uniqueReleaseIds.map((id, i) => [id, releaseDocs[i]]));
+  const listingMap = new Map(uniqueListingIds.map((id, i) => [id, listingDocs[i]]));
+
   for (const item of items) {
     let serverPrice = item.price;
     const itemType = item.type || 'digital';
 
     try {
       if (itemType === 'merch' && item.productId) {
-        const product = await getDocument('merch', item.productId);
+        const product = merchMap.get(item.productId);
         if (product) {
           serverPrice = product.salePrice || product.retailPrice || product.price || item.price;
         }
@@ -69,13 +95,13 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
         if (itemType === 'vinyl' && item.sellerId && !item.releaseId) {
           const listingId = item.id || item.productId;
           if (listingId) {
-            const listing = await getDocument('vinylListings', listingId);
+            const listing = listingMap.get(listingId);
             if (listing) serverPrice = listing.price || item.price;
           }
         } else {
           const releaseId = item.releaseId || item.productId || item.id;
           if (releaseId) {
-            const release = await getDocument('releases', releaseId);
+            const release = releaseMap.get(releaseId);
             if (release) {
               if (itemType === 'vinyl') {
                 serverPrice = release.vinylPrice || release.price || item.price;
@@ -98,7 +124,7 @@ async function validateAndGetPrices(items: any[]): Promise<{ validatedItems: any
 
       validatedItems.push({ ...item, price: serverPrice });
     } catch (err) {
-      console.error('[FreeOrder] Price validation error for', item.name, err);
+      log.error('[FreeOrder] Price validation error for', item.name, err);
       // SECURITY: On price lookup failure, use server price of 0 is NOT safe
       // Reject items where we can't verify the price
       validatedItems.push({ ...item, price: item.price || 0, priceValidationFailed: true });
@@ -221,11 +247,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let creditDeducted = false;
     if (appliedCredit > 0) {
       try {
-        await atomicIncrement('userCredits', verifiedUserId, { balance: -appliedCredit });
-        await atomicIncrement('users', verifiedUserId, { creditBalance: -appliedCredit });
+        await Promise.all([
+          atomicIncrement('userCredits', verifiedUserId, { balance: -appliedCredit }),
+          atomicIncrement('users', verifiedUserId, { creditBalance: -appliedCredit })
+        ]);
         creditDeducted = true;
       } catch (creditErr) {
-        console.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
+        log.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
         return ApiErrors.serverError('Failed to apply credit. Please try again.');
       }
     }
@@ -272,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
           await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
         } catch (refundErr) {
-          console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
+          log.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }
       }
       throw orderErr;
@@ -301,7 +329,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 artistName = release.artistName || release.artist || artistName;
               }
             } catch (lookupErr) {
-              console.error(`[FreeOrder] Failed to lookup release ${releaseId}:`, lookupErr);
+              log.error(`[FreeOrder] Failed to lookup release ${releaseId}:`, lookupErr);
             }
           }
 
@@ -329,7 +357,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           db: env?.DB
         });
       } catch (ledgerErr) {
-        console.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
+        log.error('[FreeOrder] Failed to record to ledger:', ledgerErr);
       }
 
       // If credit was applied (already deducted before order creation), record the transaction
@@ -359,7 +387,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await updateDocument('users', verifiedUserId, { creditUpdatedAt: now });
 
         } catch (txnErr) {
-          console.error('[FreeOrder] Failed to record credit transaction:', txnErr);
+          log.error('[FreeOrder] Failed to record credit transaction:', txnErr);
           // Credit already deducted, transaction record is non-critical
         }
       }
@@ -379,14 +407,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await atomicIncrement('userCredits', verifiedUserId, { balance: appliedCredit });
           await atomicIncrement('users', verifiedUserId, { creditBalance: appliedCredit });
         } catch (refundErr) {
-          console.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
+          log.error('[FreeOrder] CRITICAL: Failed to refund credit after order failure:', refundErr);
         }
       }
       return ApiErrors.serverError(result.error || 'Failed to create order');
     }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[complete-free-order] Error:', errorMessage);
+    log.error('[complete-free-order] Error:', errorMessage);
 
     return ApiErrors.serverError('An internal error occurred');
   }

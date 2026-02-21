@@ -3,6 +3,7 @@
 // Vinyl seller's listings management page
 import VinylDashboardLayout from '../../../layouts/VinylDashboardLayout.astro';
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <VinylDashboardLayout title="My Vinyl Listings" activeSection="listings">

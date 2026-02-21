@@ -6,6 +6,7 @@ import Layout from '../layouts/Layout.astro';
 export const prerender = false;
 
 const email = Astro.url.searchParams.get('email') || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <Layout title="Unsubscribe" noindex={true}>

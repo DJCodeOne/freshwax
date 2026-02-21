@@ -212,10 +212,11 @@ digitalItems.forEach((item: any) => {
 
 releaseMap.forEach((item) => groupedDigitalItems.push(item));
 
-const physicalItems = enrichedItems.filter((item: any) => 
-  item.type === 'vinyl' || 
+const physicalItems = enrichedItems.filter((item: any) =>
+  item.type === 'vinyl' ||
   item.type === 'merch'
 ) || [];
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <Layout title="Order Confirmed" noindex={true}>

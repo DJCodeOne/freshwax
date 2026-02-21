@@ -6,7 +6,7 @@ import type { APIContext } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 import { z } from 'zod';
 
 const PlaylistItemSchema = z.object({
@@ -777,11 +777,11 @@ async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: an
 
     const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?auth_key=${PUSHER_KEY}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}&auth_signature=${signature}`;
 
-    const pusherResponse = await fetch(url, {
+    const pusherResponse = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body
-    });
+    }, 5000);
 
     // Emoji broadcast sent
   } catch (error: unknown) {
@@ -833,11 +833,11 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
 
     const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?auth_key=${PUSHER_KEY}&auth_timestamp=${timestamp}&auth_version=1.0&body_md5=${bodyMd5}&auth_signature=${signature}`;
 
-    const pusherResponse = await fetch(url, {
+    const pusherResponse = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body
-    });
+    }, 5000);
 
     const pusherResult = await pusherResponse.text();
     // Playlist broadcast sent

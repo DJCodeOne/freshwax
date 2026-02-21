@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[sync-vinyl-to-d1]');
 
 export const prerender = false;
 
@@ -60,14 +62,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Firebase not configured');
     }
 
-    console.log('[sync-vinyl-to-d1] Fetching listings from Firebase...');
+    log.info('[sync-vinyl-to-d1] Fetching listings from Firebase...');
 
     // Fetch all vinyl listings from Firebase
     const listings = await saQueryCollection(serviceAccountKey, projectId, 'vinylListings', {
       limit: 500
     });
 
-    console.log(`[sync-vinyl-to-d1] Found ${listings.length} listings in Firebase`);
+    log.info(`[sync-vinyl-to-d1] Found ${listings.length} listings in Firebase`);
 
     let synced = 0;
     let errors = 0;
@@ -158,10 +160,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ).run();
 
         synced++;
-        console.log(`[sync-vinyl-to-d1] Synced: ${listing.id} - ${listing.title}`);
+        log.info(`[sync-vinyl-to-d1] Synced: ${listing.id} - ${listing.title}`);
       } catch (e) {
         errors++;
-        console.error(`[sync-vinyl-to-d1] Error syncing ${listing.id}:`, e);
+        log.error(`[sync-vinyl-to-d1] Error syncing ${listing.id}:`, e);
       }
     }
 
@@ -177,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[sync-vinyl-to-d1] Error:', error);
+    log.error('[sync-vinyl-to-d1] Error:', error);
     return ApiErrors.serverError('Migration failed');
   }
 };

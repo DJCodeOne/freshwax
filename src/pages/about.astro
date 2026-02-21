@@ -27,6 +27,7 @@ const faqs = [
     answer: "Yes! We're always looking for quality jungle and drum & bass releases to stock. If you know of a release we should carry, contact us at contact@freshwax.co.uk with details."
   }
 ];
+Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400');
 ---
 
 <InfoPageLayout 

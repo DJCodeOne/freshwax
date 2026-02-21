@@ -8,7 +8,8 @@ import { getDocument, updateDocument, setDocument, deleteDocument, queryCollecti
 import { BOT_USER, isBotCommand, processBotCommand, getRandomTuneComment, getWelcomeMessage, shouldCommentOnTune, shouldWelcomeUser } from '../../../lib/chatbot';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[livestream/chat]');
 
 const LivestreamChatSchema = z.object({
   streamId: z.string().min(1).max(500),
@@ -336,7 +337,7 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
   const PUSHER_CLUSTER = env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
 
   if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
-    console.error('[Pusher] Missing configuration - cannot broadcast chat');
+    log.error('[Pusher] Missing configuration - cannot broadcast chat');
     return false;
   }
 
@@ -363,20 +364,20 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 
     const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?${params.toString()}&auth_signature=${signature}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body
-    });
+    }, 5000);
 
     if (!response.ok) {
-      console.error('[Pusher] Failed:', response.status, await response.text());
+      log.error('[Pusher] Failed:', response.status, await response.text());
       return false;
     }
 
     return true;
   } catch (error: unknown) {
-    console.error('[Pusher] Error:', error);
+    log.error('[Pusher] Error:', error);
     return false;
   }
 }
@@ -436,7 +437,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[livestream/chat] GET Error:', error);
+    log.error('[livestream/chat] GET Error:', error);
     return ApiErrors.serverError('Failed to get messages');
   }
 };
@@ -516,7 +517,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } catch (rateLimitError) {
       // Skip rate limiting if query fails (missing index)
-      console.warn('[chat] Rate limit check failed:', rateLimitError);
+      log.warn('[chat] Rate limit check failed:', rateLimitError);
     }
     
     const now = new Date().toISOString();
@@ -583,7 +584,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           };
         }
       } catch (botError) {
-        console.error('[chat] Bot command error:', botError);
+        log.error('[chat] Bot command error:', botError);
       }
     }
 
@@ -654,7 +655,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         } catch (interactiveError) {
           // Silent fail - don't break the chat for interactive features
-          console.error('[chat] Interactive bot error:', interactiveError);
+          log.error('[chat] Interactive bot error:', interactiveError);
         }
       })();
 
@@ -679,7 +680,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[livestream/chat] POST Error:', error instanceof Error ? error.message : String(error));
+    log.error('[livestream/chat] POST Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to send message');
   }
 };
@@ -724,7 +725,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[livestream/chat] DELETE Error:', error);
+    log.error('[livestream/chat] DELETE Error:', error);
     return ApiErrors.serverError('Failed to delete message');
   }
 };

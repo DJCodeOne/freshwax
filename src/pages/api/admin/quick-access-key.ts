@@ -7,7 +7,9 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[quick-access-key]');
 
 export const prerender = false;
 
@@ -81,7 +83,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[quick-access-key] Error getting key:', error instanceof Error ? error.message : String(error));
+    log.error('[quick-access-key] Error getting key:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -125,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await saSetDocument(serviceAccountKey, projectId, 'system', 'quickAccessKey', newKeyData);
 
-      console.log(`[quick-access-key] Generated new key: ${newCode}`);
+      log.info(`[quick-access-key] Generated new key: ${newCode}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -150,7 +152,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         revokedAt: new Date().toISOString()
       });
 
-      console.log('[quick-access-key] Key revoked');
+      log.info('[quick-access-key] Key revoked');
 
       return new Response(JSON.stringify({
         success: true,
@@ -173,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         expiresAt: expiresAt || null
       });
 
-      console.log(`[quick-access-key] Expiry updated to: ${expiresAt || 'none'}`);
+      log.info(`[quick-access-key] Expiry updated to: ${expiresAt || 'none'}`);
 
       return new Response(JSON.stringify({
         success: true,
@@ -188,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[quick-access-key] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[quick-access-key] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

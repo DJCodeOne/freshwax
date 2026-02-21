@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { deleteDocument, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -20,12 +20,12 @@ async function listSubcollectionDocs(parentPath: string, idToken: string): Promi
   const { baseUrl, apiKey } = getFirestoreBaseUrl();
   const url = `${baseUrl}/${parentPath}?key=${apiKey}&pageSize=500`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
     }
-  });
+  }, 10000);
 
   if (!response.ok) {
     return [];
@@ -45,13 +45,13 @@ async function deleteSubcollectionDoc(parentPath: string, docId: string, idToken
   const { baseUrl, apiKey } = getFirestoreBaseUrl();
   const url = `${baseUrl}/${parentPath}/${docId}?key=${apiKey}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
     }
-  });
+  }, 10000);
 
   if (!response.ok && response.status !== 404) {
     const error = await response.text();

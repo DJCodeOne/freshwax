@@ -5,4 +5,5 @@ export const prerender = false;
 
 // Redirect to shipping page which now contains returns information
 return Astro.redirect('/shipping#returns-refunds', 301);
+Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600, stale-while-revalidate=86400');
 ---

@@ -6,7 +6,8 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[process-refund]');
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -140,9 +141,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (isFullRefund && order.items) {
       try {
         await refundOrderStock(orderId, order.items, order.orderNumber || orderId);
-        console.log('[process-refund] Stock restored for full refund');
+        log.info('[process-refund] Stock restored for full refund');
       } catch (stockErr) {
-        console.error('[process-refund] Stock restore error:', stockErr);
+        log.error('[process-refund] Stock restore error:', stockErr);
       }
     } else if (refundItems && refundItems.length > 0) {
       // Partial refund with specific items
@@ -152,10 +153,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
         if (itemsToRefund.length > 0) {
           await refundOrderStock(orderId, itemsToRefund, order.orderNumber || orderId);
-          console.log('[process-refund] Stock restored for refunded items');
+          log.info('[process-refund] Stock restored for refunded items');
         }
       } catch (stockErr) {
-        console.error('[process-refund] Partial stock restore error:', stockErr);
+        log.error('[process-refund] Partial stock restore error:', stockErr);
       }
     }
 
@@ -188,9 +189,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             `
           })
         }, 10000);
-        console.log('[process-refund] Refund email sent');
+        log.info('[process-refund] Refund email sent');
       } catch (emailErr) {
-        console.error('[process-refund] Email error:', emailErr);
+        log.error('[process-refund] Email error:', emailErr);
       }
     }
 
@@ -207,7 +208,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[process-refund] Error:', error);
+    log.error('[process-refund] Error:', error);
 
     // Handle specific Stripe errors
     const stripeType = (error as any)?.type;

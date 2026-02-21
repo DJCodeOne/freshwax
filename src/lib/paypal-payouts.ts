@@ -2,6 +2,7 @@
 // PayPal Payouts API integration
 
 import { fetchWithTimeout } from './api-utils';
+import { getPayPalBaseUrl, getPayPalAccessToken } from './paypal-auth';
 
 interface PayPalConfig {
   clientId: string;
@@ -26,30 +27,14 @@ interface PayoutResult {
   error?: string;
 }
 
-// Get PayPal access token
+// Helper to convert PayPalConfig to mode string for shared auth
+function configToMode(config: PayPalConfig): string {
+  return config.sandbox ? 'sandbox' : 'live';
+}
+
+// Get PayPal access token using shared module
 async function getAccessToken(config: PayPalConfig): Promise<string> {
-  const baseUrl = config.sandbox
-    ? 'https://api-m.sandbox.paypal.com'
-    : 'https://api-m.paypal.com';
-
-  const auth = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64');
-
-  const response = await fetchWithTimeout(`${baseUrl}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Basic ${auth}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  }, 10000);
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`PayPal auth failed: ${error}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
+  return getPayPalAccessToken(config.clientId, config.clientSecret, configToMode(config));
 }
 
 // Create a single payout
@@ -59,9 +44,7 @@ export async function createPayout(
 ): Promise<PayoutResult> {
   try {
     const accessToken = await getAccessToken(config);
-    const baseUrl = config.sandbox
-      ? 'https://api-m.sandbox.paypal.com'
-      : 'https://api-m.paypal.com';
+    const baseUrl = getPayPalBaseUrl(configToMode(config));
 
     const batchId = `FW-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -127,9 +110,7 @@ export async function createBatchPayout(
 ): Promise<PayoutResult & { items?: any[] }> {
   try {
     const accessToken = await getAccessToken(config);
-    const baseUrl = config.sandbox
-      ? 'https://api-m.sandbox.paypal.com'
-      : 'https://api-m.paypal.com';
+    const baseUrl = getPayPalBaseUrl(configToMode(config));
 
     const batchId = `FW-BATCH-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -192,9 +173,7 @@ export async function getPayoutStatus(
 ): Promise<{ success: boolean; status?: string; items?: any[]; error?: string }> {
   try {
     const accessToken = await getAccessToken(config);
-    const baseUrl = config.sandbox
-      ? 'https://api-m.sandbox.paypal.com'
-      : 'https://api-m.paypal.com';
+    const baseUrl = getPayPalBaseUrl(configToMode(config));
 
     const response = await fetchWithTimeout(`${baseUrl}/v1/payments/payouts/${batchId}`, {
       headers: {

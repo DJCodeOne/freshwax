@@ -7,7 +7,9 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('[backfill-ledger]');
 
 export const prerender = false;
 
@@ -48,17 +50,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     try {
       ordersData = await saQueryCollection(serviceAccountKey, projectId, 'orders', { limit: 500 });
-      console.log('[backfill] Got', ordersData.length, 'orders from SA query');
+      log.info('[backfill] Got', ordersData.length, 'orders from SA query');
     } catch (ordersErr) {
-      console.error('[backfill] Orders query failed:', ordersErr);
+      log.error('[backfill] Orders query failed:', ordersErr);
       return ApiErrors.serverError('Orders query failed: ');
     }
 
     try {
       ledgerData = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', { limit: 500 });
-      console.log('[backfill] Got', ledgerData.length, 'ledger entries from SA query');
+      log.info('[backfill] Got', ledgerData.length, 'ledger entries from SA query');
     } catch (ledgerErr) {
-      console.log('[backfill] Ledger query failed (may not exist yet):', ledgerErr);
+      log.info('[backfill] Ledger query failed (may not exist yet):', ledgerErr);
       // Ledger might not exist yet - continue with empty
       ledgerData = [];
     }
@@ -290,7 +292,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[backfill-ledger] Error:', error);
+    log.error('[backfill-ledger] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

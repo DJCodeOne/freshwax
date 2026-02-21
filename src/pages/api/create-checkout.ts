@@ -5,7 +5,8 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
-import { fetchWithTimeout, errorResponse, ApiErrors } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+const log = createLogger('[create-checkout]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Zod schema for Plus subscription checkout
@@ -54,7 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
     if (!stripeSecretKey) {
-      console.log('[create-checkout] Stripe not configured - Plus upgrades not available');
+      log.info('[create-checkout] Stripe not configured - Plus upgrades not available');
       return errorResponse('Plus upgrades are coming soon! Payment system is being configured.', 503);
     }
 
@@ -74,7 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           validatedPromoCode = normalizedCode;
           referredBy = kvResult.referralCode.creatorId;
           isKvCode = true;
-          console.log(`[create-checkout] Valid KV referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
+          log.info(`[create-checkout] Valid KV referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
         } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
           // KV code exists but has an error
           return ApiErrors.badRequest(kvResult.error);
@@ -108,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         validatedPromoCode = normalizedCode;
         referralCardId = referralCard.id;
         referredBy = referralCard.createdByUserId;
-        console.log(`[create-checkout] Valid Firebase referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
+        log.info(`[create-checkout] Valid Firebase referral code ${normalizedCode} for user ${userId}, referred by ${referredBy}`);
       }
     }
 
@@ -161,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
-      console.error('[create-checkout] Stripe error:', errorData);
+      log.error('[create-checkout] Stripe error:', errorData);
       return ApiErrors.serverError('Failed to create checkout session');
     }
 
@@ -174,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[create-checkout] Error:', error);
+    log.error('[create-checkout] Error:', error);
     return ApiErrors.serverError('Failed to process checkout request');
   }
 };

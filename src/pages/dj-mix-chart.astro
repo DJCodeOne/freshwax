@@ -65,6 +65,7 @@ const renderStars = (rating: number) => {
 };
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
 ---
 
 <Layout title="DJ Mix Chart - Top Rated Mixes" description="Top DJ mixes ranked by plays and engagement. Discover the best jungle and drum & bass mixes on Fresh Wax.">

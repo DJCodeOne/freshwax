@@ -5,7 +5,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+const log = createLogger('[dj-lobby/dm]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const DmSchema = z.object({
@@ -190,7 +191,7 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
   const PUSHER_CLUSTER = env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
 
   if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
-    console.error('[Pusher] Missing configuration');
+    log.error('[Pusher] Missing configuration');
     return false;
   }
 
@@ -217,20 +218,20 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 
     const url = `https://api-${PUSHER_CLUSTER}.pusher.com/apps/${PUSHER_APP_ID}/events?${params.toString()}&auth_signature=${signature}`;
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body
-    });
+    }, 5000);
 
     if (!response.ok) {
-      console.error('[Pusher] Failed:', response.status, await response.text());
+      log.error('[Pusher] Failed:', response.status, await response.text());
       return false;
     }
 
     return true;
   } catch (error: unknown) {
-    console.error('[Pusher] Error:', error);
+    log.error('[Pusher] Error:', error);
     return false;
   }
 }
@@ -324,7 +325,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/dm] GET Error:', error);
+    log.error('[dj-lobby/dm] GET Error:', error);
     return ApiErrors.serverError('Failed to get messages');
   }
 };
@@ -423,7 +424,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/dm] POST Error:', error);
+    log.error('[dj-lobby/dm] POST Error:', error);
     return ApiErrors.serverError('Failed to send message');
   }
 };
@@ -491,7 +492,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/dm] DELETE Error:', error);
+    log.error('[dj-lobby/dm] DELETE Error:', error);
     return ApiErrors.serverError('Failed to delete conversation');
   }
 };

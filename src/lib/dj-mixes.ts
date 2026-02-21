@@ -3,13 +3,8 @@
 // OPTIMIZED: Server-side caching to reduce Firebase reads
 
 import { getDocument, queryCollection } from './firebase-rest';
-
-// Conditional logging - only logs in development
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+import { createLogger } from './api-utils';
+const log = createLogger('[dj-mixes]');
 
 // ==========================================
 // SERVER-SIDE CACHE - Reduces Firebase reads
@@ -153,7 +148,7 @@ export async function getDJMixesForPage(limit: number = 50): Promise<any[]> {
     return mixes;
 
   } catch (error: unknown) {
-    console.error('[getDJMixesForPage] Error:', error);
+    log.error('[getDJMixesForPage] Error:', error);
     return [];
   }
 }
@@ -196,7 +191,7 @@ export async function getDJMixById(mixId: string): Promise<any | null> {
     return normalized;
 
   } catch (error: unknown) {
-    console.error('[getDJMixById] Error:', error);
+    log.error('[getDJMixById] Error:', error);
     return null;
   }
 }
@@ -259,7 +254,7 @@ export async function getDJMixesByDJ(djName: string, limit: number = 20): Promis
     return mixes;
 
   } catch (error: unknown) {
-    console.error('[getDJMixesByDJ] Error:', error);
+    log.error('[getDJMixesByDJ] Error:', error);
     return [];
   }
 }

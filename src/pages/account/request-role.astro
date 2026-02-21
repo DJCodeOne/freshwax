@@ -3,6 +3,7 @@
 // Users can request Artist, Merch Seller, or Vinyl Seller roles
 import '../../styles/global.css';
 const csrfToken = Astro.locals.csrfToken || '';
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 <html lang="en">
 <head>

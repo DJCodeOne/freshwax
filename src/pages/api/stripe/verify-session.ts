@@ -78,7 +78,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Query Firestore for order with this payment intent
       const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
 
-      const queryResponse = await fetch(queryUrl, {
+      const queryResponse = await fetchWithTimeout(queryUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -94,7 +94,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
             limit: 1
           }
         })
-      });
+      }, 10000);
 
       if (queryResponse.ok) {
         const results = await queryResponse.json();
@@ -120,7 +120,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     // Check again after waiting
     if (paymentIntentId) {
       const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
-      const retryResponse = await fetch(queryUrl, {
+      const retryResponse = await fetchWithTimeout(queryUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -136,7 +136,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
             limit: 1
           }
         })
-      });
+      }, 10000);
 
       if (retryResponse.ok) {
         const retryResults = await retryResponse.json();

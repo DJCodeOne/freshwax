@@ -25,9 +25,8 @@ const LOG_LEVELS: Record<LogLevel, number> = {
  * Logs are disabled in production unless explicitly enabled
  */
 export function createLogger(prefix: string, config?: Partial<LoggerConfig>) {
-  const isProd = typeof process !== 'undefined'
-    ? process.env.NODE_ENV === 'production'
-    : false;
+  const isProd = (typeof import.meta !== 'undefined' && import.meta.env?.PROD === true)
+    || (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production');
 
   const settings: LoggerConfig = {
     enabled: config?.enabled ?? !isProd,

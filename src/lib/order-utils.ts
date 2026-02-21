@@ -4,16 +4,11 @@
 import { getDocument, updateDocument, addDocument, clearCache, setDocument, atomicIncrement, updateDocumentConditional, queryCollection } from './firebase-rest';
 import { d1UpsertMerch } from './d1-catalog';
 import { sendVinylOrderSellerEmail, sendVinylOrderAdminEmail } from './vinyl-order-emails';
-import { escapeHtml, fetchWithTimeout } from './api-utils';
+import { escapeHtml, fetchWithTimeout, createLogger } from './api-utils';
 import { SITE_URL } from './constants';
 import { sendResendEmail } from './email';
 
-// Conditional logging - only logs in development
-const isDev = import.meta.env.DEV;
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+const log = createLogger('[order-utils]');
 
 // Generate order number
 export function generateOrderNumber(): string {
@@ -263,7 +258,7 @@ export async function reserveStock(
       expiresAt
     });
   } catch (err) {
-    console.error('[order-utils] Failed to store reservation record:', err);
+    log.error('[order-utils] Failed to store reservation record:', err);
   }
 
   log.info('[order-utils] Stock reserved:', reservationId, 'expires:', expiresAt);
@@ -335,7 +330,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
             break;
           } catch (err: unknown) {
             if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
-            console.error('[order-utils] Failed to release merch reservation for', res.productId, err);
+            log.error('[order-utils] Failed to release merch reservation for', res.productId, err);
           }
         }
       } else if (itemType === 'vinyl-release') {
@@ -357,7 +352,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
             break;
           } catch (err: unknown) {
             if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
-            console.error('[order-utils] Failed to release vinyl reservation for', res.productId, err);
+            log.error('[order-utils] Failed to release vinyl reservation for', res.productId, err);
           }
         }
       } else if (itemType === 'vinyl-listing') {
@@ -372,7 +367,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
             });
           }
         } catch (err) {
-          console.error('[order-utils] Failed to release listing reservation for', res.productId, err);
+          log.error('[order-utils] Failed to release listing reservation for', res.productId, err);
         }
       }
     }
@@ -385,7 +380,7 @@ export async function releaseReservation(sessionOrReservationId: string): Promis
 
     log.info('[order-utils] Reservation released:', reservation.id);
   } catch (err) {
-    console.error('[order-utils] Error releasing reservation:', err);
+    log.error('[order-utils] Error releasing reservation:', err);
   }
 }
 
@@ -420,7 +415,7 @@ export async function convertReservation(sessionOrReservationId: string): Promis
 
     log.info('[order-utils] Reservation converted:', reservation.id);
   } catch (err) {
-    console.error('[order-utils] Error converting reservation:', err);
+    log.error('[order-utils] Error converting reservation:', err);
   }
 }
 
@@ -480,7 +475,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
               break;
             } catch (err: unknown) {
               if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
-              console.error('[order-utils] Cleanup: failed to release merch stock for', res.productId);
+              log.error('[order-utils] Cleanup: failed to release merch stock for', res.productId);
             }
           }
         } else if (itemType === 'vinyl-release') {
@@ -502,7 +497,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
               break;
             } catch (err: unknown) {
               if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
-              console.error('[order-utils] Cleanup: failed to release vinyl stock for', res.productId);
+              log.error('[order-utils] Cleanup: failed to release vinyl stock for', res.productId);
             }
           }
         } else if (itemType === 'vinyl-listing') {
@@ -517,7 +512,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
               });
             }
           } catch (err) {
-            console.error('[order-utils] Cleanup: failed to release listing for', res.productId);
+            log.error('[order-utils] Cleanup: failed to release listing for', res.productId);
           }
         }
       }
@@ -529,7 +524,7 @@ export async function cleanupExpiredReservations(): Promise<number> {
       cleanedCount++;
     }
   } catch (err) {
-    console.error('[order-utils] Cleanup error:', err);
+    log.error('[order-utils] Cleanup error:', err);
   }
 
   return cleanedCount;
@@ -575,7 +570,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
           break;
         } catch (err: unknown) {
           if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
-          console.error('[order-utils] Rollback failed for merch', res.productId, err);
+          log.error('[order-utils] Rollback failed for merch', res.productId, err);
         }
       }
     } else if (itemType === 'vinyl-release') {
@@ -597,7 +592,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
           break;
         } catch (err: unknown) {
           if (err instanceof Error && err.message.includes('CONFLICT') && attempt < MAX_RETRIES - 1) continue;
-          console.error('[order-utils] Rollback failed for vinyl release', res.productId, err);
+          log.error('[order-utils] Rollback failed for vinyl release', res.productId, err);
         }
       }
     } else if (itemType === 'vinyl-listing') {
@@ -612,7 +607,7 @@ async function rollbackReservations(reserved: { itemType: string; productId: str
           });
         }
       } catch (err) {
-        console.error('[order-utils] Rollback failed for vinyl listing', res.productId, err);
+        log.error('[order-utils] Rollback failed for vinyl listing', res.productId, err);
       }
     }
   }
@@ -801,7 +796,7 @@ export async function validateAndGetPrices(
       }
 
       if (Math.abs(serverPrice - item.price) > 0.01) {
-        console.warn(prefix, 'Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
+        log.warn(prefix, 'Price mismatch for', item.name, '- Client:', item.price, 'Server:', serverPrice);
         hasPriceMismatch = true;
       }
 
@@ -811,7 +806,7 @@ export async function validateAndGetPrices(
         originalClientPrice: item.price
       });
     } catch (err) {
-      console.error(prefix, 'Error validating price for', item.name, err);
+      log.error(prefix, 'Error validating price for', item.name, err);
       return { validatedItems: [], hasPriceMismatch: true, validationError: `Price validation failed for ${item.name}. Please try again.` };
     }
   }
@@ -931,7 +926,7 @@ export async function processItemsWithDownloads(items: any[]): Promise<any[]> {
           };
         }
       } catch (e) {
-        console.error('[order-utils] Error fetching release:', releaseId, e);
+        log.error('[order-utils] Error fetching release:', releaseId, e);
       }
     }
     return { ...item, releaseId };
@@ -996,7 +991,7 @@ export async function updateVinylStock(items: any[], orderNumber: string, orderI
 
         log.info('[order-utils] ✓ Vinyl stock updated atomically:', item.name, previousStock, '->', newStock);
       } catch (stockErr) {
-        console.error('[order-utils] Vinyl stock update error:', stockErr);
+        log.error('[order-utils] Vinyl stock update error:', stockErr);
       }
     }
   }
@@ -1052,7 +1047,7 @@ export async function processVinylCratesOrders(
             updatedAt: now
           }, listing._updateTime);
         } else if (listing && listing.status !== 'sold' && !listing._updateTime) {
-          console.error('[order-utils] CRITICAL: Listing missing _updateTime, cannot guarantee concurrency protection:', listingId);
+          log.error('[order-utils] CRITICAL: Listing missing _updateTime, cannot guarantee concurrency protection:', listingId);
           const freshListing = await getDocument('vinylListings', listingId);
           const freshCanSell = freshListing && (freshListing.status === 'published' || freshListing.status === 'reserved');
           if (freshCanSell && freshListing._updateTime) {
@@ -1067,7 +1062,7 @@ export async function processVinylCratesOrders(
               updatedAt: now
             }, freshListing._updateTime);
           } else if (freshCanSell) {
-            console.error('[order-utils] WARNING: Listing missing _updateTime, using non-conditional update for:', listingId);
+            log.error('[order-utils] WARNING: Listing missing _updateTime, using non-conditional update for:', listingId);
             await updateDocument('vinylListings', listingId, {
               status: 'sold',
               soldAt: now,
@@ -1080,14 +1075,14 @@ export async function processVinylCratesOrders(
             });
           }
         } else {
-          console.error('[order-utils] Listing already sold or missing:', listingId);
+          log.error('[order-utils] Listing already sold or missing:', listingId);
         }
         log.info('[order-utils] ✓ Listing marked as sold:', listingId);
       } catch (markSoldErr: unknown) {
         if (markSoldErr instanceof Error && markSoldErr.message.includes('CONFLICT')) {
-          console.error('[order-utils] Listing was modified concurrently (possible double-sell prevented):', listingId);
+          log.error('[order-utils] Listing was modified concurrently (possible double-sell prevented):', listingId);
         } else {
-          console.error('[order-utils] Failed to mark listing as sold:', markSoldErr);
+          log.error('[order-utils] Failed to mark listing as sold:', markSoldErr);
         }
       }
 
@@ -1124,7 +1119,7 @@ export async function processVinylCratesOrders(
         await setDocument('vinylOrders', vinylOrderId, vinylOrder);
         log.info('[order-utils] ✓ Vinyl order created:', vinylOrderId);
       } catch (orderErr) {
-        console.error('[order-utils] Failed to create vinyl order:', orderErr);
+        log.error('[order-utils] Failed to create vinyl order:', orderErr);
       }
 
       // 3. Get seller email and send notifications
@@ -1166,7 +1161,7 @@ export async function processVinylCratesOrders(
           );
           log.info('[order-utils] ✓ Seller email sent to:', sellerEmail);
         } catch (emailErr) {
-          console.error('[order-utils] Seller email failed:', emailErr);
+          log.error('[order-utils] Seller email failed:', emailErr);
         }
       }
 
@@ -1188,11 +1183,11 @@ export async function processVinylCratesOrders(
         );
         log.info('[order-utils] ✓ Admin email sent');
       } catch (adminEmailErr) {
-        console.error('[order-utils] Admin email failed:', adminEmailErr);
+        log.error('[order-utils] Admin email failed:', adminEmailErr);
       }
 
     } catch (err) {
-      console.error('[order-utils] Error processing crates item:', err);
+      log.error('[order-utils] Error processing crates item:', err);
     }
   }
 }
@@ -1218,7 +1213,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
 
           // Exact match only - no heuristic guessing to avoid refunding wrong variant
           if (!variantStock[variantKey]) {
-            console.error('[order-utils] Refund: variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
+            log.error('[order-utils] Refund: variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
           }
 
           const variant = variantStock[variantKey];
@@ -1297,7 +1292,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
           }
         }
       } catch (refundErr) {
-        console.error('[order-utils] Merch refund error:', refundErr);
+        log.error('[order-utils] Merch refund error:', refundErr);
         failedRefunds.push({ item: item.name || item.productId, type: 'merch', error: refundErr instanceof Error ? refundErr.message : String(refundErr) });
       }
     }
@@ -1345,7 +1340,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
           log.info('[order-utils] ✓ Vinyl stock refunded:', item.name, previousStock, '->', newStock);
         }
       } catch (refundErr) {
-        console.error('[order-utils] Vinyl refund error:', refundErr);
+        log.error('[order-utils] Vinyl refund error:', refundErr);
         failedRefunds.push({ item: item.name || releaseId, type: 'vinyl', error: refundErr instanceof Error ? refundErr.message : String(refundErr) });
       }
     }
@@ -1365,7 +1360,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
           });
           log.info('[order-utils] ✓ Vinyl crates listing restored:', listingId);
         } catch (restoreErr) {
-          console.error('[order-utils] Failed to restore vinyl crates listing:', restoreErr);
+          log.error('[order-utils] Failed to restore vinyl crates listing:', restoreErr);
           failedRefunds.push({ item: item.name || listingId, type: 'vinyl-crates', error: restoreErr instanceof Error ? restoreErr.message : String(restoreErr) });
         }
       }
@@ -1374,7 +1369,7 @@ export async function refundOrderStock(orderId: string, items: any[], orderNumbe
 
   // Report any failed refunds
   if (failedRefunds.length > 0) {
-    console.error('[order-utils] CRITICAL: Failed to refund', failedRefunds.length, 'item(s) for order', orderNumber, ':', JSON.stringify(failedRefunds));
+    log.error('[order-utils] CRITICAL: Failed to refund', failedRefunds.length, 'item(s) for order', orderNumber, ':', JSON.stringify(failedRefunds));
   }
 
   return { failedRefunds };
@@ -1406,7 +1401,7 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
 
           // Exact match only - no heuristic guessing to avoid updating wrong variant
           if (!variantStock[variantKey]) {
-            console.error('[order-utils] Variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
+            log.error('[order-utils] Variant key not found:', variantKey, 'for item:', item.name, 'available keys:', Object.keys(variantStock));
             break;
           }
 
@@ -1460,7 +1455,7 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
           }
         } catch (stockErr) {
           if (attempt === MAX_RETRIES - 1) {
-            console.error('[order-utils] Stock update error after', MAX_RETRIES, 'attempts:', stockErr);
+            log.error('[order-utils] Stock update error after', MAX_RETRIES, 'attempts:', stockErr);
           }
         }
       }
@@ -1492,7 +1487,7 @@ export async function updateMerchStock(items: any[], orderNumber: string, orderI
             createdBy: 'system'
           }, idToken);
         } catch (movementErr) {
-          console.error('[order-utils] Stock movement log error:', movementErr);
+          log.error('[order-utils] Stock movement log error:', movementErr);
         }
 
         // Sync to D1
@@ -1541,7 +1536,7 @@ export async function sendOrderConfirmationEmail(
   // Attempting to send confirmation email
 
   if (!RESEND_API_KEY || !order.customer?.email) {
-    console.warn('[sendEmail] Skipping email - no API key or no customer email');
+    log.warn('[sendEmail] Skipping email - no API key or no customer email');
     return;
   }
 
@@ -1566,10 +1561,10 @@ export async function sendOrderConfirmationEmail(
     if (result.success) {
       // Email sent successfully
     } else {
-      console.error('[sendEmail] Email failed:', result.error);
+      log.error('[sendEmail] Email failed:', result.error);
     }
   } catch (emailError) {
-    console.error('[sendEmail] ❌ Exception:', emailError);
+    log.error('[sendEmail] ❌ Exception:', emailError);
   }
 }
 
@@ -1604,10 +1599,10 @@ export async function sendVinylFulfillmentEmail(
     if (result.success) {
       log.info('[order-utils] Stockist email sent!');
     } else {
-      console.error('[order-utils] Stockist email failed:', result.error);
+      log.error('[order-utils] Stockist email failed:', result.error);
     }
   } catch (stockistError) {
-    console.error('[order-utils] Stockist email error:', stockistError);
+    log.error('[order-utils] Stockist email error:', stockistError);
   }
 }
 
@@ -1651,7 +1646,7 @@ export async function sendDigitalSaleEmails(
       });
       log.info('[order-utils] Digital sale email sent to:', artistEmail);
     } catch (digitalError) {
-      console.error('[order-utils] Digital sale email error:', digitalError);
+      log.error('[order-utils] Digital sale email error:', digitalError);
     }
   }
 }
@@ -1696,7 +1691,7 @@ export async function sendMerchSaleEmails(
       });
       log.info('[order-utils] Merch sale email sent to:', sellerEmail);
     } catch (merchError) {
-      console.error('[order-utils] Merch sale email error:', merchError);
+      log.error('[order-utils] Merch sale email error:', merchError);
     }
   }
 }
@@ -1711,7 +1706,7 @@ export async function updateCustomerOrderCount(userId: string): Promise<void> {
       lastOrderAt: new Date().toISOString()
     });
   } catch (e) {
-    console.error('[order-utils] Error updating customer:', e);
+    log.error('[order-utils] Error updating customer:', e);
   }
 }
 
@@ -1815,7 +1810,7 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
 
     // Save to Firebase
     const orderRef = await addDocument('orders', order, idToken);
-    console.log('[createOrder] Order created:', orderNumber, orderRef.id);
+    log.info('[createOrder] Order created:', orderNumber, orderRef.id);
 
     // Update stock for merch items (includes D1 sync)
     await updateMerchStock(order.items, orderNumber, orderRef.id, idToken, env);
@@ -1869,8 +1864,8 @@ export async function createOrder(params: CreateOrderParams): Promise<CreateOrde
     };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[createOrder] ❌ ERROR:', errorMessage);
-    console.error('[createOrder] Stack:', error instanceof Error ? error.stack : 'no stack');
+    log.error('[createOrder] ❌ ERROR:', errorMessage);
+    log.error('[createOrder] Stack:', error instanceof Error ? error.stack : 'no stack');
     return {
       success: false,
       error: errorMessage

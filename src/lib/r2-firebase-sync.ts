@@ -5,12 +5,8 @@ import AdmZip from 'adm-zip';
 import * as path from 'path';
 import * as fs from 'fs';
 
-// Conditional logging - only logs in development
-const isDev = import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production';
-const log = {
-  info: (...args: any[]) => isDev && console.log(...args),
-  error: (...args: any[]) => console.error(...args),
-};
+import { createLogger } from './api-utils';
+const log = createLogger('[r2-firebase-sync]');
 
 interface R2Config {
   accountId: string;
@@ -310,7 +306,7 @@ export class R2FirebaseSync {
       fs.rmSync(extractDir, { recursive: true, force: true });
       log.info(`🧹 Cleaned up: ${extractDir}`);
     } catch (error: unknown) {
-      console.warn(`⚠️ Could not cleanup ${extractDir}:`, error);
+      log.warn(`⚠️ Could not cleanup ${extractDir}:`, error);
     }
   }
 
