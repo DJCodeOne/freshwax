@@ -69,7 +69,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     // Method 2: Try noembed.com (sometimes has duration)
     try {
       const noembedUrl = `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`;
-      const noembedResponse = await fetch(noembedUrl, { signal: AbortSignal.timeout(5000) });
+      const noembedResponse = await fetchWithTimeout(noembedUrl, {}, 5000);
 
       if (noembedResponse.ok) {
         const data = await noembedResponse.json();

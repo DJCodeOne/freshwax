@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout } from '../../lib/api-utils';
 
 const STATION_CHECK_URLS: Record<string, string | null> = {
   'underground-lair': 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get',
@@ -39,9 +39,7 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   try {
-    const response = await fetch(checkUrl, {
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout(checkUrl, {}, 5000);
 
     if (!response.ok) {
       return new Response(JSON.stringify({

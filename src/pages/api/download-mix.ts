@@ -1,7 +1,7 @@
 // src/pages/api/download-mix.ts
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const logger = createLogger('download-mix');
@@ -61,9 +61,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     logger.info('[download-mix] Proxying download for:', audioUrl);
 
-    const response = await fetch(audioUrl, {
-      signal: AbortSignal.timeout(30000) // 30s timeout
-    });
+    const response = await fetchWithTimeout(audioUrl, {}, 10000);
 
     if (!response.ok) {
       throw new Error('Failed to fetch: ' + response.status);

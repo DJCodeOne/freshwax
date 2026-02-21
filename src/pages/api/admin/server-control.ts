@@ -8,7 +8,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 
 const serverControlSchema = z.object({
   action: z.enum([
@@ -328,10 +328,9 @@ async function testStream(): Promise<{ success: boolean; message?: string; error
     // Check stream server connectivity
     const streamUrl = 'https://stream.freshwax.co.uk/live/test/index.m3u8';
 
-    const response = await fetch(streamUrl, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000)
-    }).catch(() => null);
+    const response = await fetchWithTimeout(streamUrl, {
+      method: 'HEAD'
+    }, 5000).catch(() => null);
 
     if (response && response.ok) {
       return { success: true, message: 'Stream server is reachable and responding' };
@@ -362,10 +361,9 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
 
     // Check stream server via API endpoint
     try {
-      const response = await fetch('https://stream.freshwax.co.uk/v3/paths/list', {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000)
-      });
+      const response = await fetchWithTimeout('https://stream.freshwax.co.uk/v3/paths/list', {
+        method: 'GET'
+      }, 5000);
       checks.stream = response.ok;
     } catch (_e: unknown) {
       /* non-critical: stream server health check probe failed */
@@ -373,10 +371,9 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
 
     // Check R2/CDN
     try {
-      const response = await fetch('https://cdn.freshwax.co.uk/', {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(5000)
-      });
+      const response = await fetchWithTimeout('https://cdn.freshwax.co.uk/', {
+        method: 'HEAD'
+      }, 5000);
       checks.storage = response.ok || response.status === 404;
     } catch (_e: unknown) {
       /* non-critical: R2/CDN health check probe failed */
@@ -401,10 +398,9 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
 // Helper to check MediaMTX status
 async function checkMediaMTXStatus(): Promise<{ online: boolean }> {
   try {
-    const response = await fetch('https://stream.freshwax.co.uk/v3/config/global/get', {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout('https://stream.freshwax.co.uk/v3/config/global/get', {
+      method: 'GET'
+    }, 5000);
     return { online: response.ok };
   } catch {
     return { online: false };

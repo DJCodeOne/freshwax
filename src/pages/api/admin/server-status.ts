@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -32,16 +32,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Try to reach the MediaMTX API
     const streamServerUrl = 'https://stream.freshwax.co.uk';
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
     try {
-      const response = await fetch(`${streamServerUrl}/v3/config/global/get`, {
-        method: 'GET',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeout);
+      const response = await fetchWithTimeout(`${streamServerUrl}/v3/config/global/get`, {
+        method: 'GET'
+      }, 5000);
 
       if (response.ok) {
         return new Response(JSON.stringify({
@@ -53,15 +47,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
         });
       }
     } catch (fetchError) {
-      clearTimeout(timeout);
+      // Primary endpoint check failed
     }
 
     // Try alternate check - just see if server responds at all
     try {
-      const altResponse = await fetch(streamServerUrl, {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(3000)
-      });
+      const altResponse = await fetchWithTimeout(streamServerUrl, {
+        method: 'HEAD'
+      }, 5000);
 
       if (altResponse.ok || altResponse.status === 404) {
         return new Response(JSON.stringify({

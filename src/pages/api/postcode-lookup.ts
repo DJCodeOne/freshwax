@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
 
 const PostcodeLookupSchema = z.object({
   postcode: z.string().min(1, 'Postcode is required').max(10).transform(val => val.trim().toUpperCase().replace(/\s+/g, '')),
@@ -43,18 +43,12 @@ export const GET: APIRoute = async ({ request }) => {
     const apiUrl = `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`;
     logger.info('[postcode-lookup] Calling postcodes.io:', apiUrl);
     
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithTimeout(apiUrl, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-      },
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
+      }
+    }, 8000);
     
     logger.info('[postcode-lookup] API response status:', response.status);
     

@@ -3,6 +3,7 @@
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { fetchWithTimeout } from '../../lib/api-utils';
 
 export async function GET({ request, locals }: APIContext) {
   // Rate limit: standard API - 60 per minute
@@ -16,17 +17,11 @@ export async function GET({ request, locals }: APIContext) {
   const icecastUrl = runtime?.env?.ICECAST_STATUS_URL || 'https://icecast.freshwax.co.uk/status-json.xsl';
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(icecastUrl, {
-      signal: controller.signal,
+    const response = await fetchWithTimeout(icecastUrl, {
       headers: {
         'Accept': 'application/json'
       }
-    });
-
-    clearTimeout(timeout);
+    }, 5000);
 
     if (!response.ok) {
       return new Response(JSON.stringify({

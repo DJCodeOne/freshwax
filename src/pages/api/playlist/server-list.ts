@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -30,10 +30,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     const playlistToken = env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
-    const response = await fetch(`${PLAYLIST_SERVER}/list`, {
-      headers: { 'Authorization': `Bearer ${playlistToken}` },
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout(`${PLAYLIST_SERVER}/list`, {
+      headers: { 'Authorization': `Bearer ${playlistToken}` }
+    }, 5000);
 
     if (!response.ok) {
       return errorResponse('Playlist server unavailable', 502);

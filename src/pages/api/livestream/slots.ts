@@ -9,7 +9,7 @@ import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 
 const log = createLogger('[livestream-slots]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -1115,10 +1115,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       while (streamCheckAttempts < maxAttempts && !streamActive) {
         streamCheckAttempts++;
         try {
-          const checkResponse = await fetch(hlsCheckUrl.replace('/index.m3u8', '/'), {
-            method: 'HEAD',
-            signal: AbortSignal.timeout(5000)
-          });
+          const checkResponse = await fetchWithTimeout(hlsCheckUrl.replace('/index.m3u8', '/'), {
+            method: 'HEAD'
+          }, 5000);
           streamActive = checkResponse.ok || checkResponse.status === 200;
           if (!streamActive && streamCheckAttempts < maxAttempts) {
             await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry

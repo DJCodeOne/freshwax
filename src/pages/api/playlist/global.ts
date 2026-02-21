@@ -665,10 +665,9 @@ async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null
   try {
     const playlistToken = env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
     // Trying local playlist server
-    const response = await fetch(`${LOCAL_PLAYLIST_SERVER}/random`, {
-      headers: { 'Authorization': `Bearer ${playlistToken}` },
-      signal: AbortSignal.timeout(5000) // Fast endpoint, 5s is plenty
-    });
+    const response = await fetchWithTimeout(`${LOCAL_PLAYLIST_SERVER}/random`, {
+      headers: { 'Authorization': `Bearer ${playlistToken}` }
+    }, 5000);
 
     if (!response.ok) {
       // Local server returned non-OK

@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -25,18 +25,12 @@ interface RelayStatus {
 async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
     // Try to fetch stream metadata
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'HEAD',
-      signal: controller.signal,
       headers: {
         'Icy-MetaData': '1'
       }
-    });
-    
-    clearTimeout(timeout);
+    }, 5000);
     
     // If we get a response, stream is likely available
     if (response.ok || response.status === 200) {
@@ -66,14 +60,7 @@ async function checkIcecastStream(url: string): Promise<{ isLive: boolean; nowPl
 // Check Icecast status page (JSON)
 async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-    
-    const response = await fetch(statusUrl, {
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeout);
+    const response = await fetchWithTimeout(statusUrl, {}, 5000);
     
     if (!response.ok) {
       return { isLive: false, nowPlaying: '', listeners: undefined };
@@ -112,15 +99,9 @@ async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean;
 // Simple HTTP check (just see if URL responds)
 async function checkHttpStatus(url: string): Promise<{ isLive: boolean; nowPlaying: string; listeners: number | undefined }> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
-
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: controller.signal
-    });
-
-    clearTimeout(timeout);
+    const response = await fetchWithTimeout(url, {
+      method: 'HEAD'
+    }, 5000);
 
     return {
       isLive: response.ok,

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -32,10 +32,9 @@ function initServices(locals: App.Locals) {
 async function checkStreamHealth(streamKey: string): Promise<{ isLive: boolean; error?: string }> {
   try {
     const hlsUrl = buildHlsUrl(streamKey);
-    const response = await fetch(hlsUrl.replace('/index.m3u8', '/'), {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout(hlsUrl.replace('/index.m3u8', '/'), {
+      method: 'HEAD'
+    }, 5000);
     return { isLive: response.ok || response.status === 200 };
   } catch (error: unknown) {
     return { isLive: false, error: 'Connection failed' };

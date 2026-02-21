@@ -3,6 +3,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -39,9 +40,10 @@ async function checkFirebase(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
     // Use releases collection (public) to verify Firebase is reachable
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/releases?pageSize=1&key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}`,
-      { signal: AbortSignal.timeout(5000) }
+      {},
+      5000
     );
     const latency = Date.now() - start;
 
@@ -58,10 +60,9 @@ async function checkFirebase(): Promise<ServiceStatus> {
 async function checkR2(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    const response = await fetch('https://cdn.freshwax.co.uk/health-check.txt', {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout('https://cdn.freshwax.co.uk/health-check.txt', {
+      method: 'HEAD'
+    }, 5000);
     const latency = Date.now() - start;
 
     if (response.ok || response.status === 404) {
@@ -78,10 +79,9 @@ async function checkStripe(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
     // Just check if Stripe's API is reachable (public endpoint)
-    const response = await fetch('https://api.stripe.com/v1/', {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout('https://api.stripe.com/v1/', {
+      method: 'GET'
+    }, 5000);
     const latency = Date.now() - start;
 
     // Stripe returns 401/404 without auth, which means it's reachable
@@ -99,10 +99,9 @@ async function checkPlaylist(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
     const token = import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
-    const response = await fetch('https://playlist.freshwax.co.uk/health', {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout('https://playlist.freshwax.co.uk/health', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    }, 5000);
     const latency = Date.now() - start;
 
     if (response.ok) {
@@ -123,9 +122,7 @@ async function checkPlaylist(): Promise<ServiceStatus> {
 async function checkIcecast(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
-    const response = await fetch('https://icecast.freshwax.co.uk/status-json.xsl', {
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout('https://icecast.freshwax.co.uk/status-json.xsl', {}, 5000);
     const latency = Date.now() - start;
 
     if (response.ok) {
@@ -148,10 +145,9 @@ async function checkStreaming(): Promise<ServiceStatus> {
   const start = Date.now();
   try {
     // Check the MediaMTX API endpoint (more reliable than HLS)
-    const response = await fetch('https://stream.freshwax.co.uk/v3/paths/list', {
-      method: 'GET',
-      signal: AbortSignal.timeout(5000)
-    });
+    const response = await fetchWithTimeout('https://stream.freshwax.co.uk/v3/paths/list', {
+      method: 'GET'
+    }, 5000);
     const latency = Date.now() - start;
 
     if (response.ok) {
@@ -172,9 +168,10 @@ async function checkStreaming(): Promise<ServiceStatus> {
 // Get active livestream info
 async function getLivestreamInfo(): Promise<HealthCheckResponse['livestream']> {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/livestreamSlots?key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}`,
-      { signal: AbortSignal.timeout(5000) }
+      {},
+      5000
     );
 
     if (!response.ok) return null;
@@ -214,9 +211,10 @@ async function getQuickStats(): Promise<HealthCheckResponse['stats']> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const ordersResponse = await fetch(
+    const ordersResponse = await fetchWithTimeout(
       `https://firestore.googleapis.com/v1/projects/freshwax-store/databases/(default)/documents/orders?key=${import.meta.env.PUBLIC_FIREBASE_API_KEY}&pageSize=100`,
-      { signal: AbortSignal.timeout(5000) }
+      {},
+      5000
     );
 
     let ordersToday = 0;

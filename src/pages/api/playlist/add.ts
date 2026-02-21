@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -41,9 +41,7 @@ function getThumbnailUrl(platform: MediaPlatform, embedId?: string, url?: string
 // Fetch video metadata using noembed.com (free oEmbed proxy)
 async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbnail?: string }> {
   try {
-    const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {
-      signal: AbortSignal.timeout(5000) // 5s timeout
-    });
+    const response = await fetchWithTimeout(`https://noembed.com/embed?url=${encodeURIComponent(url)}`, {}, 8000);
     if (!response.ok) return {};
 
     // SECURITY: Reject oversized responses to prevent DoS
