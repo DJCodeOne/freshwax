@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('bypass-requests');
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -95,7 +97,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       } catch (queryError: unknown) {
-        console.warn('[bypass-requests] Status check query error:', queryError instanceof Error ? queryError.message : String(queryError));
+        logger.warn('[bypass-requests] Status check query error:', queryError instanceof Error ? queryError.message : String(queryError));
         // Return empty status on error
         return new Response(JSON.stringify({
           success: true,
@@ -192,7 +194,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         headers: { 'Content-Type': 'application/json' }
       });
     } catch (queryError: unknown) {
-      console.warn('[bypass-requests] List query error:', queryError instanceof Error ? queryError.message : String(queryError));
+      logger.warn('[bypass-requests] List query error:', queryError instanceof Error ? queryError.message : String(queryError));
       return new Response(JSON.stringify({
         success: true,
         requests: []
@@ -202,7 +204,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
   } catch (error: unknown) {
-    console.error('Error fetching bypass requests:', error);
+    logger.error('Error fetching bypass requests:', error);
     return ApiErrors.serverError('Failed to fetch requests');
   }
 };
@@ -267,7 +269,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const approvedStationName = existingRequest.stationName || '';
         const approvedRelayUrl = existingRequest.relayUrl || '';
 
-        console.log('[bypass-requests] Approving request:', { requestId, targetUserId, targetRequestType });
+        logger.info('[bypass-requests] Approving request:', { requestId, targetUserId, targetRequestType });
 
         if (targetUserId) {
           try {
@@ -288,14 +290,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               };
             }
 
-            console.log('[bypass-requests] Updating user document...');
+            logger.info('[bypass-requests] Updating user document...');
             const existingUser = await getDocument('users', targetUserId);
             if (existingUser) {
               await updateDocument('users', targetUserId, updateData);
             } else {
               await setDocument('users', targetUserId, updateData);
             }
-            console.log('[bypass-requests] User document updated');
+            logger.info('[bypass-requests] User document updated');
 
             // Also add to djLobbyBypass collection for the admin list
             const bypassData: any = {
@@ -313,22 +315,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
               bypassData.relayApproved = true;
             }
 
-            console.log('[bypass-requests] Adding to djLobbyBypass...');
+            logger.info('[bypass-requests] Adding to djLobbyBypass...');
             await setDocument('djLobbyBypass', targetUserId, bypassData);
-            console.log('[bypass-requests] Added to djLobbyBypass');
+            logger.info('[bypass-requests] Added to djLobbyBypass');
           } catch (userUpdateError: unknown) {
-            console.error('[bypass-requests] Error updating user:', userUpdateError);
+            logger.error('[bypass-requests] Error updating user:', userUpdateError);
             throw userUpdateError;
           }
         }
 
         // Update request status
-        console.log('[bypass-requests] Updating request status...');
+        logger.info('[bypass-requests] Updating request status...');
         await updateDocument('bypassRequests', requestId, {
           status: 'approved',
           processedAt: new Date().toISOString()
         });
-        console.log('[bypass-requests] Request approved successfully');
+        logger.info('[bypass-requests] Request approved successfully');
 
         return new Response(JSON.stringify({
           success: true,
@@ -383,7 +385,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
     } catch (queryError: unknown) {
-      console.warn('[bypass-requests] Check existing query error:', queryError instanceof Error ? queryError.message : String(queryError));
+      logger.warn('[bypass-requests] Check existing query error:', queryError instanceof Error ? queryError.message : String(queryError));
       // Continue - allow request even if we can't check for duplicates
     }
 
@@ -420,7 +422,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('Error processing bypass request:', error);
+    logger.error('Error processing bypass request:', error);
     return ApiErrors.serverError('Failed to process request');
   }
 };
@@ -457,7 +459,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('Error deleting bypass request:', error);
+    logger.error('Error deleting bypass request:', error);
     return ApiErrors.serverError('Failed to delete request');
   }
 };

@@ -6,6 +6,7 @@ import { initFirebaseEnv } from './lib/firebase-rest';
 import { initKVCache } from './lib/kv-cache';
 import { initRateLimitKV, checkRateLimit, getClientId, rateLimitResponse } from './lib/rate-limit';
 import { logServerError } from './lib/error-logger';
+import { SITE_URL } from './lib/constants';
 import {
   generateCsrfToken,
   getCsrfCookie,
@@ -35,8 +36,8 @@ const MAX_JSON_BODY_SIZE = 2 * 1024 * 1024;
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
-  'https://freshwax.co.uk',
-  'https://www.freshwax.co.uk',
+  SITE_URL,
+  SITE_URL.replace('https://', 'https://www.'),
   'https://freshwax.pages.dev',
   'https://stream.freshwax.co.uk',
   'https://icecast.freshwax.co.uk',
@@ -192,8 +193,9 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   const url = new URL(request.url);
 
   // WWW canonicalization — redirect www to non-www
-  if (url.hostname === 'www.freshwax.co.uk') {
-    url.hostname = 'freshwax.co.uk';
+  const siteHostname = new URL(SITE_URL).hostname;
+  if (url.hostname === `www.${siteHostname}`) {
+    url.hostname = siteHostname;
     return new Response(null, {
       status: 301,
       headers: { 'Location': url.toString() }

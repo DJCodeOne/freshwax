@@ -3,9 +3,10 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { saQueryCollection, saDeleteDocument } from '../../../lib/firebase-service-account';
+import { saDeleteDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
@@ -32,16 +33,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`list-payouts:${clientId}`, RateLimiters.admin);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = locals.runtime.env;
-
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
 
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
-  const serviceAccountKey = getServiceAccountKey(env);
-
   try {
-    const payouts = await saQueryCollection(serviceAccountKey, projectId, 'payouts', {
+    const saQuery = getSaQuery(locals);
+    const payouts = await saQuery('payouts', {
       orderBy: { field: 'createdAt', direction: 'DESCENDING' },
       limit: 50
     });

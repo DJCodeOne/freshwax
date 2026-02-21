@@ -73,7 +73,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-    } catch {}
+    } catch (_e: unknown) {
+      /* non-critical: alternate server connectivity probe failed */
+    }
 
     return new Response(JSON.stringify({
       online: false,

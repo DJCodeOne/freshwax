@@ -3,24 +3,13 @@
 // Uses Firebase REST API to bypass Firestore rules
 
 import type { APIRoute } from 'astro';
-import { queryCollection } from '../../../lib/firebase-rest';
-import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors } from '../../../lib/api-utils';
+import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
-// Build service account query function for blocked collections
-function getSaQuery(locals: App.Locals) {
-  const env = locals?.runtime?.env || {};
-  const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-  if (!clientEmail || !privateKey) return (c: string, o?: any) => queryCollection(c, o);
-  const key = JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail });
-  return (c: string, o?: any) => saQueryCollection(key, projectId, c, o);
-}
 
 interface UserData {
   id: string;

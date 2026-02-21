@@ -222,7 +222,9 @@ async function clearChat(): Promise<{ success: boolean; message?: string; error?
       try {
         await deleteDocument('livestream-chat', msg.id);
         deleted++;
-      } catch {}
+      } catch (e: unknown) {
+        console.error('[server-control] Failed to delete chat message:', e instanceof Error ? e.message : e);
+      }
     }
 
     return {
@@ -245,7 +247,9 @@ async function kickViewers(): Promise<{ success: boolean; message?: string; erro
       try {
         await deleteDocument('listeners', listener.id);
         deleted++;
-      } catch {}
+      } catch (e: unknown) {
+        console.error('[server-control] Failed to delete listener:', e instanceof Error ? e.message : e);
+      }
     }
 
     return {
@@ -352,7 +356,9 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
     try {
       await queryCollection('settings', { limit: 1 });
       checks.firebase = true;
-    } catch {}
+    } catch (_e: unknown) {
+      /* non-critical: Firebase health check probe failed */
+    }
 
     // Check stream server via API endpoint
     try {
@@ -361,7 +367,9 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
         signal: AbortSignal.timeout(5000)
       });
       checks.stream = response.ok;
-    } catch {}
+    } catch (_e: unknown) {
+      /* non-critical: stream server health check probe failed */
+    }
 
     // Check R2/CDN
     try {
@@ -370,7 +378,9 @@ async function runHealthCheck(): Promise<{ success: boolean; message?: string; e
         signal: AbortSignal.timeout(5000)
       });
       checks.storage = response.ok || response.status === 404;
-    } catch {}
+    } catch (_e: unknown) {
+      /* non-critical: R2/CDN health check probe failed */
+    }
 
     const passed = Object.values(checks).filter(Boolean).length;
     const total = Object.keys(checks).length;

@@ -7,10 +7,11 @@ export const prerender = false;
 
 // Get current stream info for meta tags
 import { queryCollection } from '../../lib/firebase-rest';
+import { SITE_URL } from '../../lib/constants';
 
 let currentStream: any = null;
 let hlsUrl = '';
-let thumbnailUrl = 'https://freshwax.co.uk/og-image.webp';
+let thumbnailUrl = `${SITE_URL}/og-image.webp`;
 let streamTitle = 'Fresh Wax Live';
 let djName = 'Fresh Wax';
 
@@ -25,7 +26,7 @@ try {
     hlsUrl = currentStream.hlsUrl || '';
     streamTitle = currentStream.title || 'Live Stream';
     djName = currentStream.djName || 'Fresh Wax DJ';
-    thumbnailUrl = currentStream.coverImage || currentStream.djAvatar || 'https://freshwax.co.uk/og-image.webp';
+    thumbnailUrl = currentStream.coverImage || currentStream.djAvatar || `${SITE_URL}/og-image.webp`;
   }
 } catch (e) {
   console.error('Error fetching stream:', e);
@@ -44,15 +45,15 @@ const nonce = Astro.locals.nonce || '';
 
   <!-- Essential OG Tags for Facebook Video -->
   <meta property="og:type" content="video.other" />
-  <meta property="og:url" content="https://freshwax.co.uk/live" />
+  <meta property="og:url" content={`${SITE_URL}/live`} />
   <meta property="og:title" content={`${isLive ? '🔴 LIVE NOW: ' : ''}${streamTitle}`} />
   <meta property="og:description" content={isLive ? `${djName} is streaming live on Fresh Wax! Tune in now for jungle, drum & bass, and breakbeat.` : 'Watch live DJ streams on Fresh Wax. Jungle, drum & bass, and breakbeat.'} />
   <meta property="og:site_name" content="Fresh Wax" />
   <meta property="og:locale" content="en_GB" />
 
   <!-- Video Tags -->
-  <meta property="og:video" content="https://freshwax.co.uk/live/embed" />
-  <meta property="og:video:secure_url" content="https://freshwax.co.uk/live/embed" />
+  <meta property="og:video" content={`${SITE_URL}/live/embed`} />
+  <meta property="og:video:secure_url" content={`${SITE_URL}/live/embed`} />
   <meta property="og:video:type" content="text/html" />
   <meta property="og:video:width" content="1280" />
   <meta property="og:video:height" content="720" />
@@ -71,13 +72,13 @@ const nonce = Astro.locals.nonce || '';
   <meta name="twitter:title" content={`${isLive ? '🔴 LIVE: ' : ''}${streamTitle}`} />
   <meta name="twitter:description" content={isLive ? `${djName} is streaming live!` : 'Watch live DJ streams on Fresh Wax'} />
   <meta name="twitter:image" content={thumbnailUrl} />
-  <meta name="twitter:player" content="https://freshwax.co.uk/live/embed" />
+  <meta name="twitter:player" content={`${SITE_URL}/live/embed`} />
   <meta name="twitter:player:width" content="1280" />
   <meta name="twitter:player:height" content="720" />
 
   <!-- Allow embedding -->
   <!-- Embed page: allow framing from known social/embed platforms only via CSP -->
-  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://freshwax.co.uk https://www.freshwax.co.uk https://*.facebook.com https://*.twitter.com https://*.x.com" />
+  <meta http-equiv="Content-Security-Policy" content={`frame-ancestors 'self' ${SITE_URL} ${SITE_URL.replace('https://', 'https://www.')} https://*.facebook.com https://*.twitter.com https://*.x.com`} />
 
   <style>
     * {
@@ -268,7 +269,7 @@ const nonce = Astro.locals.nonce || '';
         <>
           <div class="offline-message">No Live Stream</div>
           <p class="offline-sub">Check back later for live DJ sets</p>
-          <a href="https://freshwax.co.uk/live" class="watch-btn" target="_blank" rel="noopener noreferrer">Visit Fresh Wax Live</a>
+          <a href={`${SITE_URL}/live`} class="watch-btn" target="_blank" rel="noopener noreferrer">Visit Fresh Wax Live</a>
         </>
       )}
 

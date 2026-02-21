@@ -9,6 +9,7 @@ import LiveReactions from '../components/live/LiveReactions.astro';
 import '../styles/live.css';
 import ScheduleModal from '../components/ScheduleModal.astro';
 import PlaylistModal from '../components/live/PlaylistModal.astro';
+import { SITE_URL } from '../lib/constants';
 
 export const prerender = false;
 
@@ -23,7 +24,7 @@ const firebaseConfig = {
 };
 
 // Dynamic thumbnail URL for social sharing - shows current stream or DJ image when live
-const ogImageUrl = 'https://freshwax.co.uk/api/livestream/thumbnail/';
+const ogImageUrl = `${SITE_URL}/api/livestream/thumbnail/`;
 const nonce = Astro.locals.nonce || '';
 ---
 
@@ -39,8 +40,8 @@ const nonce = Astro.locals.nonce || '';
     duration: "PT0M",
     uploadDate: new Date().toISOString(),
     thumbnailUrl: ogImageUrl,
-    contentUrl: "https://freshwax.co.uk/live",
-    embedUrl: "https://freshwax.co.uk/live/embed"
+    contentUrl: `${SITE_URL}/live`,
+    embedUrl: `${SITE_URL}/live/embed`
   }}
 >
   <Header />
@@ -977,7 +978,7 @@ const nonce = Astro.locals.nonce || '';
         </div>
         
         <div class="share-link-box">
-          <input type="text" id="shareLinkInput" readonly value="https://freshwax.co.uk/live" />
+          <input type="text" id="shareLinkInput" readonly value={`${SITE_URL}/live`} />
           <button id="copyShareLink" class="copy-share-btn">Copy</button>
         </div>
         
@@ -2096,7 +2097,7 @@ const nonce = Astro.locals.nonce || '';
     const url = encodeURIComponent(shareUrl);
     // Use feed dialog for richer sharing with video preview
     window.open(
-      `https://www.facebook.com/dialog/feed?app_id=966242223397117&link=${url}&name=${title}&description=${description}&redirect_uri=${encodeURIComponent('https://freshwax.co.uk/live')}`,
+      `https://www.facebook.com/dialog/feed?app_id=966242223397117&link=${url}&name=${title}&description=${description}&redirect_uri=${encodeURIComponent(window.location.origin + '/live')}`,
       '_blank',
       'noopener,noreferrer,width=626,height=436'
     );
@@ -3170,6 +3171,7 @@ const nonce = Astro.locals.nonce || '';
     // Remove any previously injected event JSON-LD
     document.querySelectorAll('script[data-live-jsonld]').forEach(el => el.remove());
 
+    const siteUrl = window.location.origin;
     const events = [];
 
     // If someone is live now, add a BroadcastEvent
@@ -3186,12 +3188,12 @@ const nonce = Astro.locals.nonce || '';
         "eventStatus": "https://schema.org/EventScheduled",
         "location": {
           "@type": "VirtualLocation",
-          "url": "https://freshwax.co.uk/live"
+          "url": siteUrl + "/live"
         },
         "organizer": {
           "@type": "Organization",
           "name": "Fresh Wax",
-          "url": "https://freshwax.co.uk"
+          "url": siteUrl
         },
         ...(currentLive.djName && {
           "performer": {
@@ -3205,7 +3207,7 @@ const nonce = Astro.locals.nonce || '';
           "price": "0",
           "priceCurrency": "GBP",
           "availability": "https://schema.org/InStock",
-          "url": "https://freshwax.co.uk/live"
+          "url": siteUrl + "/live"
         }
       });
     }
@@ -3229,12 +3231,12 @@ const nonce = Astro.locals.nonce || '';
         "eventStatus": "https://schema.org/EventScheduled",
         "location": {
           "@type": "VirtualLocation",
-          "url": "https://freshwax.co.uk/live"
+          "url": siteUrl + "/live"
         },
         "organizer": {
           "@type": "Organization",
           "name": "Fresh Wax",
-          "url": "https://freshwax.co.uk"
+          "url": siteUrl
         },
         ...(slot.djName && {
           "performer": {
@@ -3248,7 +3250,7 @@ const nonce = Astro.locals.nonce || '';
           "price": "0",
           "priceCurrency": "GBP",
           "availability": "https://schema.org/InStock",
-          "url": "https://freshwax.co.uk/live"
+          "url": siteUrl + "/live"
         }
       });
     });

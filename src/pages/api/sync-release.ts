@@ -90,7 +90,7 @@ export const POST = async ({ request, locals }: any) => {
       });
       releaseId = await sync.processPackageAndSync(tempZipPath);
       
-      try { fs.unlinkSync(tempZipPath); } catch (e) {}
+      try { fs.unlinkSync(tempZipPath); } catch (_e: unknown) { /* non-critical: temp file cleanup */ }
       
     } else {
       // Raw ZIP - process directly

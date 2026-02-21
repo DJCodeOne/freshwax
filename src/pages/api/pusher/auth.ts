@@ -5,12 +5,13 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { SITE_URL } from '../../../lib/constants';
 
 export const prerender = false;
 
 const ALLOWED_ORIGINS = [
-  'https://freshwax.co.uk',
-  'https://www.freshwax.co.uk',
+  SITE_URL,
+  SITE_URL.replace('://', '://www.'),
   'https://freshwax.pages.dev',
   'http://localhost:4321',
   'http://localhost:3000',

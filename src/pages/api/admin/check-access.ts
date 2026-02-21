@@ -27,7 +27,9 @@ export const GET: APIRoute = async ({ request }) => {
       if (adminDoc) {
         isAdmin = true;
       }
-    } catch (e) {}
+    } catch (_e: unknown) {
+      /* non-critical: admins collection lookup failed, will check users/artists next */
+    }
 
     // Check users collection
     if (!isAdmin) {
@@ -38,7 +40,9 @@ export const GET: APIRoute = async ({ request }) => {
             userDoc.role === 'admin' ||
             userDoc.roles?.admin === true;
         }
-      } catch (e) {}
+      } catch (_e: unknown) {
+        /* non-critical: users collection lookup failed, will check artists next */
+      }
     }
 
     // Check artists collection
@@ -48,7 +52,9 @@ export const GET: APIRoute = async ({ request }) => {
         if (artistDoc) {
           isAdmin = artistDoc.isAdmin === true || artistDoc.role === 'admin';
         }
-      } catch (e) {}
+      } catch (_e: unknown) {
+        /* non-critical: artists collection lookup failed */
+      }
     }
 
     return new Response(JSON.stringify({

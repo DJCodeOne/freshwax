@@ -8,7 +8,9 @@ import { getDocument, setDocument, verifyRequestUser } from '../../../lib/fireba
 import { d1GetVinylSeller, d1UpsertVinylSeller, d1GetNextCollectionNumber } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { saSetDocument } from '../../../lib/firebase-service-account';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('vinyl-settings');
 
 const VinylSettingsSchema = z.object({
   userId: z.string().min(1).max(500),
@@ -101,10 +103,10 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         settings = await d1GetVinylSeller(db, userId);
         if (settings) {
           source = 'd1';
-          console.log('[vinyl/settings GET] Loaded from D1:', userId);
+          logger.info('[vinyl/settings GET] Loaded from D1:', userId);
         }
       } catch (d1Error) {
-        console.error('[vinyl/settings GET] D1 error:', d1Error);
+        logger.error('[vinyl/settings GET] D1 error:', d1Error);
       }
     }
 
@@ -114,20 +116,20 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         settings = await getDocument('vinyl-sellers', userId);
         if (settings) {
           source = 'firebase';
-          console.log('[vinyl/settings GET] Loaded from Firebase:', userId);
+          logger.info('[vinyl/settings GET] Loaded from Firebase:', userId);
 
           // Backfill to D1 if available
           if (db && settings) {
             try {
               await d1UpsertVinylSeller(db, userId, settings);
-              console.log('[vinyl/settings GET] Backfilled to D1:', userId);
+              logger.info('[vinyl/settings GET] Backfilled to D1:', userId);
             } catch (backfillError) {
-              console.error('[vinyl/settings GET] D1 backfill failed:', backfillError);
+              logger.error('[vinyl/settings GET] D1 backfill failed:', backfillError);
             }
           }
         }
       } catch (fbError) {
-        console.error('[vinyl/settings GET] Firebase error:', fbError);
+        logger.error('[vinyl/settings GET] Firebase error:', fbError);
       }
     }
 
@@ -141,7 +143,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/settings GET] Error:', error);
+    logger.error('[vinyl/settings GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch settings');
   }
 };
@@ -198,10 +200,10 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
           // New seller - assign next collection number
           collectionNumber = await d1GetNextCollectionNumber(db);
           isNewSeller = true;
-          console.log('[vinyl/settings POST] Assigning collection number:', collectionNumber);
+          logger.info('[vinyl/settings POST] Assigning collection number:', collectionNumber);
         }
       } catch (e) {
-        console.error('[vinyl/settings POST] Error checking existing settings:', e);
+        logger.error('[vinyl/settings POST] Error checking existing settings:', e);
       }
     }
 
@@ -239,10 +241,10 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       try {
         d1Success = await d1UpsertVinylSeller(db, userId, settings);
         if (d1Success) {
-          console.log('[vinyl/settings POST] Saved to D1:', userId);
+          logger.info('[vinyl/settings POST] Saved to D1:', userId);
         }
       } catch (d1Error) {
-        console.error('[vinyl/settings POST] D1 error:', d1Error);
+        logger.error('[vinyl/settings POST] D1 error:', d1Error);
       }
     }
 
@@ -254,15 +256,15 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       if (serviceAccountKey) {
         await saSetDocument(serviceAccountKey, projectId, 'vinyl-sellers', userId, settings);
         firebaseSuccess = true;
-        console.log('[vinyl/settings POST] Saved to Firebase:', userId);
+        logger.info('[vinyl/settings POST] Saved to Firebase:', userId);
       } else {
         // Try client API as fallback
         await setDocument('vinyl-sellers', userId, settings);
         firebaseSuccess = true;
-        console.log('[vinyl/settings POST] Saved to Firebase (client API):', userId);
+        logger.info('[vinyl/settings POST] Saved to Firebase (client API):', userId);
       }
     } catch (fbError) {
-      console.error('[vinyl/settings POST] Firebase backup failed (non-critical):', fbError);
+      logger.error('[vinyl/settings POST] Firebase backup failed (non-critical):', fbError);
     }
 
     // At least one storage must succeed
@@ -282,7 +284,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/settings POST] Error:', error);
+    logger.error('[vinyl/settings POST] Error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

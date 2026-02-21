@@ -1,9 +1,9 @@
 // src/pages/robots.txt.ts
 // Enhanced robots.txt for Fresh Wax - optimized for search engine crawling
 
-export const prerender = false;
+import { SITE_URL } from '../lib/constants';
 
-const SITE_URL = 'https://freshwax.co.uk';
+export const prerender = false;
 
 export const GET = () => {
   const robotsTxt = `# ===========================================

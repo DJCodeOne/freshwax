@@ -7,7 +7,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, atomicIncrement, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { triggerPusher } from '../../../lib/pusher';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('livestream-react');
 import { z } from 'zod';
 
 const ReactSchema = z.object({
@@ -100,9 +102,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         };
 
-        console.log('[react.ts] Broadcasting emoji to channel:', channel, 'data:', reactionData);
+        logger.info('[react.ts] Broadcasting emoji to channel:', channel, 'data:', reactionData);
         const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
-        console.log('[react.ts] Pusher broadcast result:', pusherSuccess);
+        logger.info('[react.ts] Pusher broadcast result:', pusherSuccess);
 
         // Atomically increment total likes counter
         let totalLikes = 0;
@@ -115,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
-            console.log('[react] Stream not found for reaction counter, skipping increment');
+            logger.info('[react] Stream not found for reaction counter, skipping increment');
           }
         }
 
@@ -184,7 +186,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
-            console.log('[react] Stream not found for like counter, skipping increment');
+            logger.info('[react] Stream not found for like counter, skipping increment');
           }
         }
 
@@ -389,13 +391,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         const shoutoutChannel = `stream-${streamId}`;
-        console.log('[react.ts] Broadcasting shoutout to channel:', shoutoutChannel);
+        logger.info('[react.ts] Broadcasting shoutout to channel:', shoutoutChannel);
         const shoutoutSuccess = await triggerPusher(shoutoutChannel, 'shoutout', {
           name: userName || 'Someone',
           message: message,
           timestamp: now
         }, env);
-        console.log('[react.ts] Shoutout broadcast result:', shoutoutSuccess);
+        logger.info('[react.ts] Shoutout broadcast result:', shoutoutSuccess);
 
         if (!shoutoutSuccess) {
           return ApiErrors.serverError('Failed to broadcast shoutout via Pusher');
@@ -412,7 +414,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     
   } catch (error: unknown) {
-    console.error('[livestream/react] Error:', error);
+    logger.error('[livestream/react] Error:', error);
     return ApiErrors.serverError('Failed to process reaction');
   }
 };
@@ -455,7 +457,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  try {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     
   } catch (error: unknown) {
-    console.error('[livestream/react] GET Error:', error);
+    logger.error('[livestream/react] GET Error:', error);
     return ApiErrors.serverError('Failed to get reactions');
   }
 };

@@ -4163,13 +4163,13 @@ const csrfToken = Astro.locals.csrfToken || '';
   function shareToTwitter() {
     const postText = document.getElementById('socialPostText')?.value || '';
     const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
-    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    const url = encodeURIComponent(window.location.origin + '/live');
     window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   // Share to Facebook
   function shareToFacebook() {
-    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    const url = encodeURIComponent(window.location.origin + '/live');
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
@@ -4303,18 +4303,18 @@ const csrfToken = Astro.locals.csrfToken || '';
   function shareToTwitterFromModal() {
     const postText = document.getElementById('sharePostText')?.value || '';
     const text = encodeURIComponent(postText || 'Live now on Fresh Wax! 🎧🔊');
-    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    const url = encodeURIComponent(window.location.origin + '/live');
     window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   function shareToFacebookFromModal() {
-    const url = encodeURIComponent('https://freshwax.co.uk/live');
+    const url = encodeURIComponent(window.location.origin + '/live');
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'noopener,noreferrer,width=550,height=420');
   }
 
   function copyStreamLink() {
     const btn = document.getElementById('shareCopyLink');
-    const url = 'https://freshwax.co.uk/live';
+    const url = window.location.origin + '/live';
 
     navigator.clipboard.writeText(url).then(() => {
       if (btn) {

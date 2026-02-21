@@ -30,7 +30,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const result = await verifyRequestUser(request);
     if (result.userId) userId = result.userId;
-  } catch { }
+  } catch (_e: unknown) {
+    /* non-critical: token verification failed, will try cookie fallback */
+  }
   // Also try cookie fallback
   if (!userId) {
     const cookieHeader = request.headers.get('cookie') || '';

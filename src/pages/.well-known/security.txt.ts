@@ -1,6 +1,7 @@
 // src/pages/.well-known/security.txt.ts
 // RFC 9116 security.txt — https://www.rfc-editor.org/rfc/rfc9116
 import type { APIRoute } from 'astro';
+import { SITE_URL } from '../../lib/constants';
 
 export const prerender = false;
 
@@ -15,7 +16,7 @@ export const GET: APIRoute = () => {
   const body = `Contact: mailto:security@freshwax.co.uk
 Expires: ${getExpiry()}
 Preferred-Languages: en
-Canonical: https://freshwax.co.uk/.well-known/security.txt
+Canonical: ${SITE_URL}/.well-known/security.txt
 `;
 
   return new Response(body, {

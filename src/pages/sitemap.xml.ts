@@ -5,10 +5,9 @@
 
 import { getLiveReleases, getLiveDJMixes, getLiveMerch, queryCollection } from '../lib/firebase-rest';
 import { blogPosts } from '../data/blog-posts';
+import { SITE_URL } from '../lib/constants';
 
 export const prerender = false;
-
-const SITE_URL = 'https://freshwax.co.uk';
 
 // Static pages with priority and change frequency based on importance
 // Pages with lastmod: 'dynamic:<source>' will be resolved at request time from fetched data

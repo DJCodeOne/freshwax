@@ -223,7 +223,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
               name: customer.displayName || customer.firstName || 'Unknown'
             };
           }
-        } catch (e) {}
+        } catch (_e: unknown) {
+          /* non-critical: customer info lookup for balance display */
+        }
 
         return {
           userId: credit.id,
@@ -397,7 +399,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           creditBalance: newBalance,
           creditUpdatedAt: now
         });
-      } catch (e) {}
+      } catch (e: unknown) {
+        console.error('[admin/giftcards] Failed to sync credit balance to user doc:', e instanceof Error ? e.message : e);
+      }
 
       return new Response(JSON.stringify({
         success: true,

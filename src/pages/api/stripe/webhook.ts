@@ -27,7 +27,9 @@ import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('stripe-webhook');
 
 export const prerender = false;
 
@@ -44,14 +46,14 @@ async function verifyStripeSignature(
     const v1Signature = parts.find(p => p.startsWith('v1='))?.split('=')[1];
 
     if (!timestamp || !v1Signature) {
-      console.error('[Stripe Webhook] Missing signature components');
+      logger.error('[Stripe Webhook] Missing signature components');
       return false;
     }
 
     // Check timestamp is within tolerance (5 minutes)
     const currentTime = Math.floor(Date.now() / 1000);
     if (Math.abs(currentTime - parseInt(timestamp)) > 300) {
-      console.error('[Stripe Webhook] Timestamp too old');
+      logger.error('[Stripe Webhook] Timestamp too old');
       return false;
     }
 
@@ -76,7 +78,7 @@ async function verifyStripeSignature(
 
     return expectedSignature === v1Signature;
   } catch (error: unknown) {
-    console.error('[Stripe Webhook] Signature verification error:', error);
+    logger.error('[Stripe Webhook] Signature verification error:', error);
     return false;
   }
 }
@@ -90,14 +92,14 @@ async function sendPendingEarningsEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
-      console.debug('[Stripe Webhook] No email address for artist, skipping notification');
+      logger.debug('[Stripe Webhook] No email address for artist, skipping notification');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.debug('[Stripe Webhook] No Resend API key configured, skipping email');
+      logger.debug('[Stripe Webhook] No Resend API key configured, skipping email');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -203,17 +205,17 @@ async function sendPendingEarningsEmail(
 
     if (!response.ok) {
       let errorBody: string | undefined;
-      try { errorBody = await response.text(); } catch {}
-      console.error('[Stripe Webhook] Resend error:', response.status, errorBody);
+      try { errorBody = await response.text(); } catch (_e: unknown) { /* non-critical: could not read error response body */ }
+      logger.error('[Stripe Webhook] Resend error:', response.status, errorBody);
       return { success: false, error: 'Failed to send email' };
     }
 
     const result = await response.json();
-    console.debug('[Stripe Webhook] Pending earnings email sent');
+    logger.debug('[Stripe Webhook] Pending earnings email sent');
     return { success: true, messageId: result.id };
 
   } catch (error: unknown) {
-    console.error('[Stripe Webhook] Error sending pending earnings email:', error);
+    logger.error('[Stripe Webhook] Error sending pending earnings email:', error);
     return { success: false, error: 'Unknown error' };
   }
 }
@@ -228,14 +230,14 @@ async function sendPayoutCompletedEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
-      console.debug('[Stripe Webhook] No email address for artist, skipping payout notification');
+      logger.debug('[Stripe Webhook] No email address for artist, skipping payout notification');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.debug('[Stripe Webhook] No Resend API key configured, skipping payout email');
+      logger.debug('[Stripe Webhook] No Resend API key configured, skipping payout email');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -355,17 +357,17 @@ async function sendPayoutCompletedEmail(
 
     if (!response.ok) {
       let errorBody: string | undefined;
-      try { errorBody = await response.text(); } catch {}
-      console.error('[Stripe Webhook] Resend error (payout email):', response.status, errorBody);
+      try { errorBody = await response.text(); } catch (_e: unknown) { /* non-critical: could not read error response body */ }
+      logger.error('[Stripe Webhook] Resend error (payout email):', response.status, errorBody);
       return { success: false, error: 'Failed to send email' };
     }
 
     const result = await response.json();
-    console.debug('[Stripe Webhook] Payout completed email sent');
+    logger.debug('[Stripe Webhook] Payout completed email sent');
     return { success: true, messageId: result.id };
 
   } catch (error: unknown) {
-    console.error('[Stripe Webhook] Error sending payout completed email:', error);
+    logger.error('[Stripe Webhook] Error sending payout completed email:', error);
     return { success: false, error: 'Unknown error' };
   }
 }
@@ -382,14 +384,14 @@ async function sendRefundNotificationEmail(
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
-      console.debug('[Stripe Webhook] No email address for artist, skipping refund notification');
+      logger.debug('[Stripe Webhook] No email address for artist, skipping refund notification');
       return { success: false, error: 'No email address' };
     }
 
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
     if (!RESEND_API_KEY) {
-      console.debug('[Stripe Webhook] No Resend API key configured, skipping refund email');
+      logger.debug('[Stripe Webhook] No Resend API key configured, skipping refund email');
       return { success: false, error: 'Email service not configured' };
     }
 
@@ -517,17 +519,17 @@ async function sendRefundNotificationEmail(
 
     if (!response.ok) {
       let errorBody: string | undefined;
-      try { errorBody = await response.text(); } catch {}
-      console.error('[Stripe Webhook] Resend error (refund email):', response.status, errorBody);
+      try { errorBody = await response.text(); } catch (_e: unknown) { /* non-critical: could not read error response body */ }
+      logger.error('[Stripe Webhook] Resend error (refund email):', response.status, errorBody);
       return { success: false, error: 'Failed to send email' };
     }
 
     const result = await response.json();
-    console.debug('[Stripe Webhook] Refund notification email sent');
+    logger.debug('[Stripe Webhook] Refund notification email sent');
     return { success: true, messageId: result.id };
 
   } catch (error: unknown) {
-    console.error('[Stripe Webhook] Error sending refund notification email:', error);
+    logger.error('[Stripe Webhook] Error sending refund notification email:', error);
     return { success: false, error: 'Unknown error' };
   }
 }
@@ -542,32 +544,32 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const webhookSecret = env?.STRIPE_WEBHOOK_SECRET || import.meta.env.STRIPE_WEBHOOK_SECRET;
     const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
-    console.debug('[Stripe Webhook] Environment check:');
-    console.debug('[Stripe Webhook]   - webhookSecret exists:', !!webhookSecret);
-    console.debug('[Stripe Webhook]   - stripeSecretKey exists:', !!stripeSecretKey);
-    console.debug('[Stripe Webhook]   - env from locals:', !!env);
+    logger.debug('[Stripe Webhook] Environment check:');
+    logger.debug('[Stripe Webhook]   - webhookSecret exists:', !!webhookSecret);
+    logger.debug('[Stripe Webhook]   - stripeSecretKey exists:', !!stripeSecretKey);
+    logger.debug('[Stripe Webhook]   - env from locals:', !!env);
 
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
     const apiKey = env?.FIREBASE_API_KEY || import.meta.env.FIREBASE_API_KEY;
 
-    console.debug('[Stripe Webhook]   - Firebase projectId:', projectId || 'MISSING');
-    console.debug('[Stripe Webhook]   - Firebase apiKey exists:', !!apiKey);
+    logger.debug('[Stripe Webhook]   - Firebase projectId:', projectId || 'MISSING');
+    logger.debug('[Stripe Webhook]   - Firebase apiKey exists:', !!apiKey);
 
     // Get raw body for signature verification
     const payload = await request.text();
     const signature = request.headers.get('stripe-signature');
 
-    console.debug('[Stripe Webhook] Request details:');
-    console.debug('[Stripe Webhook]   - Payload length:', payload.length);
-    console.debug('[Stripe Webhook]   - Signature exists:', !!signature);
-    console.debug('[Stripe Webhook]   - Signature preview:', signature ? signature.substring(0, 50) + '...' : 'none');
+    logger.debug('[Stripe Webhook] Request details:');
+    logger.debug('[Stripe Webhook]   - Payload length:', payload.length);
+    logger.debug('[Stripe Webhook]   - Signature exists:', !!signature);
+    logger.debug('[Stripe Webhook]   - Signature preview:', signature ? signature.substring(0, 50) + '...' : 'none');
 
     // SECURITY: Signature verification is REQUIRED in production
     // Only skip in development if explicitly configured
     const isDevelopment = import.meta.env.DEV;
 
     if (!signature) {
-      console.error('[Stripe Webhook] ❌ Missing signature header - REJECTING REQUEST');
+      logger.error('[Stripe Webhook] ❌ Missing signature header - REJECTING REQUEST');
       return new Response(JSON.stringify({ error: 'Missing signature' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json' }
@@ -577,15 +579,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let event: Stripe.Event;
 
     if (webhookSecret && stripeSecretKey) {
-      console.debug('[Stripe Webhook] Verifying signature with official Stripe SDK...');
+      logger.debug('[Stripe Webhook] Verifying signature with official Stripe SDK...');
       try {
         const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
         // Use constructEventAsync for Cloudflare Workers (Web Crypto API)
         event = await stripe.webhooks.constructEventAsync(payload, signature, webhookSecret);
-        console.debug('[Stripe Webhook] Signature verified successfully via Stripe SDK');
+        logger.debug('[Stripe Webhook] Signature verified successfully via Stripe SDK');
       } catch (err: unknown) {
         const errMessage = err instanceof Error ? err.message : String(err);
-        console.error('[Stripe Webhook] ❌ Stripe signature verification failed:', errMessage);
+        logger.error('[Stripe Webhook] ❌ Stripe signature verification failed:', errMessage);
         return new Response(JSON.stringify({ error: 'Invalid signature' }), {
           status: 401,
           headers: { 'Content-Type': 'application/json' }
@@ -593,24 +595,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } else if (!isDevelopment) {
       // In production, REQUIRE webhook secret
-      console.error('[Stripe Webhook] ❌ SECURITY: Webhook secret not configured in production - REJECTING');
+      logger.error('[Stripe Webhook] ❌ SECURITY: Webhook secret not configured in production - REJECTING');
       return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
     } else {
-      console.debug('[Stripe Webhook] DEV MODE: Skipping signature verification');
+      logger.debug('[Stripe Webhook] DEV MODE: Skipping signature verification');
       try {
         event = JSON.parse(payload);
       } catch (parseErr) {
-        console.error('[Stripe Webhook] ❌ Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
+        logger.error('[Stripe Webhook] ❌ Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
         return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
       }
     }
-    console.log('[Stripe Webhook] Event:', event.type, event.id || 'no-id');
+    logger.info('[Stripe Webhook] Event:', event.type, event.id || 'no-id');
 
     // Handle checkout.session.completed event
     if (event.type === 'checkout.session.completed') {
@@ -629,13 +631,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const userDoc = await getDocument('users', subUserId);
             const existingSub = userDoc?.subscription;
             if (existingSub && existingSub.subscriptionId === (session.subscription || session.id)) {
-              console.debug('[Stripe Webhook] Subscription already processed for user:', subUserId);
+              logger.debug('[Stripe Webhook] Subscription already processed for user:', subUserId);
               return new Response(JSON.stringify({ received: true, message: 'Subscription already processed' }), {
                 status: 200, headers: { 'Content-Type': 'application/json' }
               });
             }
           } catch (idempotencyErr) {
-            console.error('[Stripe Webhook] Subscription idempotency check failed:', idempotencyErr);
+            logger.error('[Stripe Webhook] Subscription idempotency check failed:', idempotencyErr);
             // Return 500 so Stripe retries when Firebase is back
             return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
               status: 500, headers: { 'Content-Type': 'application/json' }
@@ -646,13 +648,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // SECURITY: Validate payment amount matches Pro price (£10 = 1000 pence)
         const PRO_PRICE_PENCE = 1000; // £10.00
         if (session.payment_status !== 'paid') {
-          console.error('[Stripe Webhook] SECURITY: Plus subscription payment not completed. Status:', session.payment_status);
+          logger.error('[Stripe Webhook] SECURITY: Plus subscription payment not completed. Status:', session.payment_status);
           return new Response(JSON.stringify({ received: true, error: 'Payment not completed' }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
           });
         }
         if (session.amount_total != null && session.amount_total < PRO_PRICE_PENCE) {
-          console.error('[Stripe Webhook] SECURITY: Plus payment amount too low:', session.amount_total, 'expected >=', PRO_PRICE_PENCE);
+          logger.error('[Stripe Webhook] SECURITY: Plus payment amount too low:', session.amount_total, 'expected >=', PRO_PRICE_PENCE);
           return new Response(JSON.stringify({ received: true, error: 'Invalid payment amount' }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
           });
@@ -704,12 +706,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             );
 
             if (updateResponse.ok) {
-              console.log('[Stripe Webhook] User subscription updated:', userId);
+              logger.info('[Stripe Webhook] User subscription updated:', userId);
 
               // Send welcome email
               try {
                 const origin = new URL(request.url).origin;
-                await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+                const welcomeEmailRes = await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -721,7 +723,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     isRenewal: false
                   })
                 });
-                console.debug('[Stripe Webhook] Welcome email sent');
+                if (!welcomeEmailRes.ok) {
+                  logger.error(`[Stripe Webhook] Failed to send Plus welcome email: ${welcomeEmailRes.status}`);
+                } else {
+                  logger.debug('[Stripe Webhook] Welcome email sent');
+                }
 
                 // Mark referral code as redeemed if one was used
                 const referralCardId = metadata.referralCardId;
@@ -735,13 +741,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     if (kv) {
                       const result = await redeemReferralCode(kv, promoCodeUsed, userId);
                       if (result.success) {
-                        console.debug(`[Stripe Webhook] KV referral code ${promoCodeUsed} marked as redeemed by ${userId}`);
+                        logger.debug(`[Stripe Webhook] KV referral code ${promoCodeUsed} marked as redeemed by ${userId}`);
                       } else {
-                        console.error('[Stripe Webhook] KV referral redemption error:', result.error);
+                        logger.error('[Stripe Webhook] KV referral redemption error:', result.error);
                       }
                     }
                   } catch (referralError) {
-                    console.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
+                    logger.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
                   }
                 } else if (referralCardId) {
                   // Legacy Firebase giftCards system
@@ -754,7 +760,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       }
                     };
 
-                    await fetch(
+                    const redeemRes = await fetch(
                       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
                       {
                         method: 'PATCH',
@@ -762,9 +768,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         body: JSON.stringify(redeemData)
                       }
                     );
-                    console.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
+                    if (!redeemRes.ok) {
+                      logger.error(`[Stripe Webhook] Failed to redeem referral gift card in Firestore: ${redeemRes.status}`);
+                    } else {
+                      logger.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
+                    }
                   } catch (referralError) {
-                    console.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
+                    logger.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
                   }
                 }
 
@@ -773,23 +783,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   message: `Plus subscription activated for ${userId}`,
                   metadata: { userId, plusId, promoCode: promoCodeUsed || null },
                   processingTimeMs: Date.now() - startTime
-                }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+                }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
               } catch (emailError) {
-                console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
+                logger.error('[Stripe Webhook] Failed to send welcome email:', emailError);
               }
             } else {
-              console.error('[Stripe Webhook] Failed to update user subscription');
+              logger.error('[Stripe Webhook] Failed to update user subscription');
               logStripeEvent(event.type, event.id, false, {
                 message: 'Failed to update user subscription',
                 error: 'Firestore update failed'
-              }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+              }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
             }
           } catch (updateError) {
-            console.error('[Stripe Webhook] Error updating subscription:', updateError);
+            logger.error('[Stripe Webhook] Error updating subscription:', updateError);
             logStripeEvent(event.type, event.id, false, {
               message: 'Error updating subscription',
               error: updateError instanceof Error ? updateError.message : 'Unknown error'
-            }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+            }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
           }
         }
 
@@ -817,13 +827,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const userDoc = await getDocument('users', userId);
               const existingSub = userDoc?.subscription;
               if (existingSub && existingSub.subscriptionId === (session.payment_intent || session.id)) {
-                console.debug('[Stripe Webhook] Promo subscription already processed for user:', userId);
+                logger.debug('[Stripe Webhook] Promo subscription already processed for user:', userId);
                 return new Response(JSON.stringify({ received: true, message: 'Subscription already processed' }), {
                   status: 200, headers: { 'Content-Type': 'application/json' }
                 });
               }
             } catch (idempotencyErr) {
-              console.error('[Stripe Webhook] Promo subscription idempotency check failed:', idempotencyErr);
+              logger.error('[Stripe Webhook] Promo subscription idempotency check failed:', idempotencyErr);
               return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
                 status: 500, headers: { 'Content-Type': 'application/json' }
               });
@@ -874,12 +884,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
               );
 
               if (updateResponse.ok) {
-                console.log('[Stripe Webhook] User Plus subscription activated (promo):', userId);
+                logger.info('[Stripe Webhook] User Plus subscription activated (promo):', userId);
 
                 // Send welcome email
                 try {
                   const origin = new URL(request.url).origin;
-                  await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+                  const welcomeEmailRes = await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -891,9 +901,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       isRenewal: false
                     })
                   });
-                  console.debug('[Stripe Webhook] Welcome email sent');
+                  if (!welcomeEmailRes.ok) {
+                    logger.error(`[Stripe Webhook] Failed to send Plus welcome email (promo): ${welcomeEmailRes.status}`);
+                  } else {
+                    logger.debug('[Stripe Webhook] Welcome email sent');
+                  }
                 } catch (emailError) {
-                  console.error('[Stripe Webhook] Failed to send welcome email:', emailError);
+                  logger.error('[Stripe Webhook] Failed to send welcome email:', emailError);
                 }
 
                 // Mark referral code as redeemed
@@ -907,13 +921,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     if (kv) {
                       const result = await redeemReferralCode(kv, promoCode, userId);
                       if (result.success) {
-                        console.debug(`[Stripe Webhook] KV referral code ${promoCode} marked as redeemed by ${userId}`);
+                        logger.debug(`[Stripe Webhook] KV referral code ${promoCode} marked as redeemed by ${userId}`);
                       } else {
-                        console.error(`[Stripe Webhook] Failed to redeem KV code: ${result.error}`);
+                        logger.error(`[Stripe Webhook] Failed to redeem KV code: ${result.error}`);
                       }
                     }
                   } catch (referralError) {
-                    console.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
+                    logger.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
                   }
                 } else if (referralCardId) {
                   // Redeem Firebase-based referral code (legacy)
@@ -926,7 +940,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       }
                     };
 
-                    await fetch(
+                    const redeemRes = await fetch(
                       `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/giftCards/${referralCardId}?updateMask.fieldPaths=redeemedBy&updateMask.fieldPaths=redeemedAt&updateMask.fieldPaths=isActive&key=${FIREBASE_API_KEY}`,
                       {
                         method: 'PATCH',
@@ -934,9 +948,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         body: JSON.stringify(redeemData)
                       }
                     );
-                    console.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
+                    if (!redeemRes.ok) {
+                      logger.error(`[Stripe Webhook] Failed to redeem referral gift card in Firestore (promo): ${redeemRes.status}`);
+                    } else {
+                      logger.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
+                    }
                   } catch (referralError) {
-                    console.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
+                    logger.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
                   }
                 }
 
@@ -944,12 +962,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   message: `Plus subscription activated via promo for ${userId}`,
                   metadata: { userId, plusId, promoCode },
                   processingTimeMs: Date.now() - startTime
-                }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+                }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
               } else {
-                console.error('[Stripe Webhook] Failed to update user subscription (promo)');
+                logger.error('[Stripe Webhook] Failed to update user subscription (promo)');
               }
             } catch (updateError) {
-              console.error('[Stripe Webhook] Error updating subscription (promo):', updateError);
+              logger.error('[Stripe Webhook] Error updating subscription (promo):', updateError);
             }
           }
 
@@ -962,7 +980,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Extract order data from metadata
       const metadata = session.metadata || {};
-      console.debug('[Stripe Webhook] Metadata keys:', Object.keys(metadata).join(', '));
+      logger.debug('[Stripe Webhook] Metadata keys:', Object.keys(metadata).join(', '));
 
       // Handle gift card purchases
       if (metadata.type === 'giftcard') {
@@ -979,7 +997,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
 
             if (existingCards.length > 0) {
-              console.debug('[Stripe Webhook] Gift card already exists for this payment:', existingCards[0].code);
+              logger.debug('[Stripe Webhook] Gift card already exists for this payment:', existingCards[0].code);
               return new Response(JSON.stringify({
                 received: true,
                 message: 'Gift card already created',
@@ -987,7 +1005,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
           } catch (checkErr) {
-            console.error('[Stripe Webhook] Gift card idempotency check failed:', checkErr);
+            logger.error('[Stripe Webhook] Gift card idempotency check failed:', checkErr);
           }
         }
 
@@ -1010,10 +1028,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
         if (result.success) {
-          console.log('[Stripe Webhook] Gift card created:', result.giftCard?.code);
-          console.debug('[Stripe Webhook] Gift card email sent:', result.emailSent);
+          logger.info('[Stripe Webhook] Gift card created:', result.giftCard?.code);
+          logger.debug('[Stripe Webhook] Gift card email sent:', result.emailSent);
         } else {
-          console.error('[Stripe Webhook] ❌ Failed to create gift card:', result.error);
+          logger.error('[Stripe Webhook] ❌ Failed to create gift card:', result.error);
         }
 
         return new Response(JSON.stringify({
@@ -1025,8 +1043,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Skip if no customer email (not a valid order)
       if (!metadata.customer_email) {
-        console.debug('[Stripe Webhook] No customer email in metadata - skipping');
-        console.debug('[Stripe Webhook] Available metadata keys:', Object.keys(metadata).join(', '));
+        logger.debug('[Stripe Webhook] No customer email in metadata - skipping');
+        logger.debug('[Stripe Webhook] Available metadata keys:', Object.keys(metadata).join(', '));
         return new Response(JSON.stringify({ received: true }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
@@ -1057,7 +1075,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
           // No existing order - proceed with creation
         } catch (idempotencyErr) {
-          console.error('[Stripe Webhook] Idempotency check failed (Firebase unreachable):', idempotencyErr);
+          logger.error('[Stripe Webhook] Idempotency check failed (Firebase unreachable):', idempotencyErr);
           // Return 500 so Stripe retries later when Firebase is back up
           // This prevents duplicate orders when we can't verify idempotency
           return new Response(JSON.stringify({
@@ -1080,8 +1098,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           items = JSON.parse(metadata.items_json);
         } catch (e) {
-          console.error('[Stripe Webhook] ❌ Error parsing items_json:', e);
-          console.error('[Stripe Webhook] items_json value:', metadata.items_json?.substring(0, 200));
+          logger.error('[Stripe Webhook] ❌ Error parsing items_json:', e);
+          logger.error('[Stripe Webhook] items_json value:', metadata.items_json?.substring(0, 200));
         }
       }
 
@@ -1105,7 +1123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           }
         } catch (pendingErr) {
-          console.error('[Stripe Webhook] ❌ Error retrieving pending checkout:', pendingErr);
+          logger.error('[Stripe Webhook] ❌ Error retrieving pending checkout:', pendingErr);
         }
       }
 
@@ -1138,10 +1156,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }));
           } else {
             const errorText = await lineItemsResponse.text();
-            console.error('[Stripe Webhook] ❌ Line items fetch failed:', errorText);
+            logger.error('[Stripe Webhook] ❌ Line items fetch failed:', errorText);
           }
         } catch (e) {
-          console.error('[Stripe Webhook] ❌ Error fetching line items:', e);
+          logger.error('[Stripe Webhook] ❌ Error fetching line items:', e);
         }
       }
 
@@ -1166,11 +1184,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const stockCheck = await validateStock(items);
         if (!stockCheck.available) {
-          console.error('[Stripe Webhook] Stock unavailable after payment:', stockCheck.unavailableItems);
+          logger.error('[Stripe Webhook] Stock unavailable after payment:', stockCheck.unavailableItems);
           stockIssue = true;
         }
       } catch (stockErr) {
-        console.error('[Stripe Webhook] Stock validation error (Firebase may be unreachable):', stockErr);
+        logger.error('[Stripe Webhook] Stock validation error (Firebase may be unreachable):', stockErr);
         // Payment is already captured - we MUST create the order regardless
         // Flag it so admin can review manually
         stockIssue = true;
@@ -1194,7 +1212,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // D1 pending record created
         } catch (d1Err) {
           // D1 write failure must not block order creation — log and continue
-          console.error('[Stripe Webhook] D1 pending_orders insert failed (non-blocking):', d1Err);
+          logger.error('[Stripe Webhook] D1 pending_orders insert failed (non-blocking):', d1Err);
         }
       }
 
@@ -1229,14 +1247,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // createOrder returned
 
       if (!result.success) {
-        console.error('[Stripe Webhook] ❌ ORDER CREATION FAILED');
-        console.error('[Stripe Webhook] Error:', result.error);
+        logger.error('[Stripe Webhook] ❌ ORDER CREATION FAILED');
+        logger.error('[Stripe Webhook] Error:', result.error);
 
         logStripeEvent(event.type, event.id, false, {
           message: 'Order creation failed',
           error: result.error || 'Unknown error',
           processingTimeMs: Date.now() - startTime
-        }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+        }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
 
         return new Response(JSON.stringify({
           error: result.error || 'Failed to create order'
@@ -1246,7 +1264,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      console.log('[Stripe Webhook] Order created:', result.orderNumber, result.orderId);
+      logger.info('[Stripe Webhook] Order created:', result.orderNumber, result.orderId);
 
       // D1: Mark pending order as completed with Firebase order ID
       if (db) {
@@ -1258,7 +1276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           `).bind(result.orderId || '', session.id).run();
           // D1 pending record updated
         } catch (d1Err) {
-          console.error('[Stripe Webhook] D1 pending_orders update failed (non-blocking):', d1Err);
+          logger.error('[Stripe Webhook] D1 pending_orders update failed (non-blocking):', d1Err);
         }
       }
 
@@ -1270,7 +1288,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await convertReservation(reservationId);
           // Reservation converted
         } catch (err) {
-          console.error('[Stripe Webhook] Failed to convert reservation:', err);
+          logger.error('[Stripe Webhook] Failed to convert reservation:', err);
         }
       }
 
@@ -1303,7 +1321,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 // seller lookup done
               }
             } catch (lookupErr) {
-              console.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
+              logger.error(`[Stripe Webhook] Failed to lookup release ${releaseId}:`, lookupErr);
             }
           }
 
@@ -1337,7 +1355,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 // merch seller lookup done
               }
             } catch (lookupErr) {
-              console.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
+              logger.error(`[Stripe Webhook] Failed to lookup merch ${item.productId}:`, lookupErr);
             }
           }
 
@@ -1370,7 +1388,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         // Sale recorded to ledger
       } catch (ledgerErr) {
-        console.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
+        logger.error('[Stripe Webhook] ⚠️ Failed to record to ledger:', ledgerErr);
         // Don't fail the order, ledger is supplementary
       }
 
@@ -1460,10 +1478,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             // Credit deducted
           } else {
-            console.warn('[Stripe Webhook] Insufficient credit balance for deduction');
+            logger.warn('[Stripe Webhook] Insufficient credit balance for deduction');
           }
         } catch (creditErr) {
-          console.error('[Stripe Webhook] Failed to deduct credit:', creditErr);
+          logger.error('[Stripe Webhook] Failed to deduct credit:', creditErr);
           // Don't fail the order, just log the error
         }
       }
@@ -1473,7 +1491,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Order ${result.orderNumber} created successfully`,
         metadata: { orderId: result.orderId, orderNumber: result.orderNumber, amount: session.amount_total / 100 },
         processingTimeMs: Date.now() - startTime
-      }).catch(e => console.error('[Stripe Webhook] Log error:', e)); // Don't let logging failures affect response
+      }).catch(e => logger.error('[Stripe Webhook] Log error:', e)); // Don't let logging failures affect response
     }
 
     // Handle payment_intent.succeeded (backup for session complete)
@@ -1504,6 +1522,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 headers: { 'Authorization': `Bearer ${stripeSecretKey}` }
               }
             );
+            if (!subResponse.ok) {
+              logger.error(`[Stripe Webhook] Failed to fetch subscription from Stripe: ${subResponse.status}`);
+            }
             const subscription = await subResponse.json();
 
             if (subscription.metadata?.userId) {
@@ -1518,6 +1539,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const userResponse = await fetch(
                 `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/users/${userId}?key=${FIREBASE_API_KEY}`
               );
+              if (!userResponse.ok) {
+                logger.error(`[Stripe Webhook] Failed to fetch user from Firestore: ${userResponse.status}`);
+              }
               const userData = await userResponse.json();
 
               // IDEMPOTENCY CHECK: Skip if this exact invoice renewal was already applied
@@ -1578,12 +1602,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
               );
 
               if (updateResponse.ok) {
-                console.log('[Stripe Webhook] Subscription renewed:', userId, 'expires:', newExpiry.toISOString());
+                logger.info('[Stripe Webhook] Subscription renewed:', userId, 'expires:', newExpiry.toISOString());
 
                 // Send renewal confirmation email
                 try {
                   const origin = new URL(request.url).origin;
-                  await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
+                  const renewalEmailRes = await fetch(`${origin}/api/admin/send-plus-welcome-email/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1595,18 +1619,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
                       isRenewal: true
                     })
                   });
-                  // Renewal email sent
+                  if (!renewalEmailRes.ok) {
+                    logger.error(`[Stripe Webhook] Failed to send renewal email: ${renewalEmailRes.status}`);
+                  }
                 } catch (emailError) {
-                  console.error('[Stripe Webhook] Failed to send renewal email:', emailError);
+                  logger.error('[Stripe Webhook] Failed to send renewal email:', emailError);
                 }
               } else {
-                console.error('[Stripe Webhook] Failed to update subscription on renewal');
+                logger.error('[Stripe Webhook] Failed to update subscription on renewal');
               }
             } else {
               // No userId in subscription metadata
             }
           } catch (subError) {
-            console.error('[Stripe Webhook] Error processing renewal:', subError);
+            logger.error('[Stripe Webhook] Error processing renewal:', subError);
           }
         }
       }
@@ -1625,7 +1651,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle dispute created - reverse transfers to recover funds from artists
     if (event.type === 'charge.dispute.created') {
       const dispute = event.data.object;
-      console.log('[Stripe Webhook] Dispute created:', dispute.id, dispute.reason, dispute.amount / 100);
+      logger.info('[Stripe Webhook] Dispute created:', dispute.id, dispute.reason, dispute.amount / 100);
 
       // IDEMPOTENCY CHECK: Skip if dispute already recorded
       try {
@@ -1640,7 +1666,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         }
       } catch (idempotencyErr) {
-        console.error('[Stripe Webhook] Dispute idempotency check failed:', idempotencyErr);
+        logger.error('[Stripe Webhook] Dispute idempotency check failed:', idempotencyErr);
         // Return 500 so Stripe retries when Firebase is back
         return new Response(JSON.stringify({ error: 'Temporary error checking dispute status' }), {
           status: 500, headers: { 'Content-Type': 'application/json' }
@@ -1653,13 +1679,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Dispute created: ${dispute.reason}`,
         metadata: { disputeId: dispute.id, chargeId: dispute.charge, amount: dispute.amount / 100 },
         processingTimeMs: Date.now() - startTime
-      }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+      }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
     }
 
     // Handle dispute closed - track outcome
     if (event.type === 'charge.dispute.closed') {
       const dispute = event.data.object;
-      console.log('[Stripe Webhook] Dispute closed:', dispute.id, dispute.status);
+      logger.info('[Stripe Webhook] Dispute closed:', dispute.id, dispute.status);
 
       await handleDisputeClosed(dispute, stripeSecretKey);
 
@@ -1667,13 +1693,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Dispute closed: ${dispute.status}`,
         metadata: { disputeId: dispute.id, status: dispute.status },
         processingTimeMs: Date.now() - startTime
-      }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+      }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
     }
 
     // Handle checkout.session.expired - release reserved stock + send recovery email
     if (event.type === 'checkout.session.expired') {
       const session = event.data.object;
-      console.log('[Stripe Webhook] Checkout session expired:', session.id);
+      logger.info('[Stripe Webhook] Checkout session expired:', session.id);
 
       const reservationId = session.metadata?.reservation_id;
       if (reservationId) {
@@ -1682,7 +1708,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await releaseReservation(reservationId);
           // Reservation released
         } catch (err) {
-          console.error('[Stripe Webhook] Failed to release reservation:', err);
+          logger.error('[Stripe Webhook] Failed to release reservation:', err);
         }
       }
 
@@ -1734,16 +1760,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   sentAt: new Date().toISOString()
                 }, env);
 
-                console.debug('[Stripe Webhook] Abandoned cart email:', emailResult.success ? 'sent' : 'failed');
+                logger.debug('[Stripe Webhook] Abandoned cart email:', emailResult.success ? 'sent' : 'failed');
               } else {
-                console.debug('[Stripe Webhook] Abandoned cart email rate-limited');
+                logger.debug('[Stripe Webhook] Abandoned cart email rate-limited');
               }
             } else {
-              console.debug('[Stripe Webhook] Customer opted out of emails');
+              logger.debug('[Stripe Webhook] Customer opted out of emails');
             }
           }
         } catch (emailErr) {
-          console.error('[Stripe Webhook] Abandoned cart email error:', emailErr);
+          logger.error('[Stripe Webhook] Abandoned cart email error:', emailErr);
         }
       }
     }
@@ -1751,7 +1777,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Handle refund - reverse artist transfers proportionally
     if (event.type === 'charge.refunded') {
       const charge = event.data.object as any;
-      console.log('[Stripe Webhook] Refund processed:', charge.id, charge.amount_refunded / 100);
+      logger.info('[Stripe Webhook] Refund processed:', charge.id, charge.amount_refunded / 100);
 
       await handleRefund(charge, stripeSecretKey, env);
 
@@ -1759,7 +1785,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         message: `Refund processed: £${(charge.amount_refunded / 100).toFixed(2)}`,
         metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded / 100 },
         processingTimeMs: Date.now() - startTime
-      }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+      }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -1769,13 +1795,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Stripe Webhook] Error:', errorMessage);
+    logger.error('[Stripe Webhook] Error:', errorMessage);
 
     // Log error
     logStripeEvent('webhook_error', 'unknown', false, {
       message: 'Webhook processing error',
       error: errorMessage
-    }).catch(e => console.error('[Stripe Webhook] Log error:', e));
+    }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
     return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -1924,7 +1950,7 @@ async function processArtistPayments(params: {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Stripe Webhook] Error processing artist payments:', message);
+    logger.error('[Stripe Webhook] Error processing artist payments:', message);
     // Don't throw - order was created, payments can be retried
   }
 }
@@ -2066,7 +2092,7 @@ async function processSupplierPayments(params: {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Stripe Webhook] Error processing supplier payments:', message);
+    logger.error('[Stripe Webhook] Error processing supplier payments:', message);
     // Don't throw - order was created, payments can be retried
   }
 }
@@ -2218,7 +2244,7 @@ async function processVinylCrateSellerPayments(params: {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Stripe Webhook] Error processing vinyl crate seller payments:', message);
+    logger.error('[Stripe Webhook] Error processing vinyl crate seller payments:', message);
     // Don't throw - order was created, payments can be retried
   }
 }
@@ -2329,7 +2355,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
 
         } catch (reversalError: unknown) {
           const reversalMessage = reversalError instanceof Error ? reversalError.message : String(reversalError);
-          console.error('[Stripe Webhook] Failed to reverse transfer:', transfer.id, reversalMessage);
+          logger.error('[Stripe Webhook] Failed to reverse transfer:', transfer.id, reversalMessage);
         }
       }
     }
@@ -2358,7 +2384,7 @@ async function handleDisputeCreated(dispute: any, stripeSecretKey: string) {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Stripe Webhook] Error handling dispute:', message);
+    logger.error('[Stripe Webhook] Error handling dispute:', message);
     // Still record the dispute even if transfer reversal failed
     await addDocument('disputes', {
       stripeDisputeId: dispute.id,
@@ -2384,7 +2410,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
     });
 
     if (disputes.length === 0) {
-      console.error('[Stripe Webhook] Dispute record not found:', dispute.id);
+      logger.error('[Stripe Webhook] Dispute record not found:', dispute.id);
       return;
     }
 
@@ -2490,7 +2516,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
 
         } catch (retransferError: unknown) {
           const retransferMessage = retransferError instanceof Error ? retransferError.message : String(retransferError);
-          console.error('[Stripe Webhook] Failed to re-transfer to artist:', reversedTransfer.artistId, retransferMessage);
+          logger.error('[Stripe Webhook] Failed to re-transfer to artist:', reversedTransfer.artistId, retransferMessage);
 
           // Store as pending for retry
           await addDocument('pendingPayouts', {
@@ -2528,7 +2554,7 @@ async function handleDisputeClosed(dispute: any, stripeSecretKey: string) {
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Stripe Webhook] Error handling dispute closure:', message);
+    logger.error('[Stripe Webhook] Error handling dispute closure:', message);
   }
 }
 
@@ -2553,7 +2579,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
     });
 
     if (orders.length === 0) {
-      console.error('[Stripe Webhook] No order found for payment intent:', paymentIntentId);
+      logger.error('[Stripe Webhook] No order found for payment intent:', paymentIntentId);
       return;
     }
 
@@ -2725,7 +2751,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
 
       } catch (reversalError: unknown) {
         const reversalMessage = reversalError instanceof Error ? reversalError.message : String(reversalError);
-        console.error('[Stripe Webhook] Failed to reverse transfer:', payout.stripeTransferId, reversalMessage);
+        logger.error('[Stripe Webhook] Failed to reverse transfer:', payout.stripeTransferId, reversalMessage);
 
         // Record failed reversal for manual review
         transfersReversed.push({
@@ -2794,7 +2820,7 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
       updatedAt: new Date().toISOString()
     });
 
-    console.log('[Stripe Webhook] ✓ Refund processed. Reversed', totalReversed, 'GBP from', transfersReversed.filter((t: any) => !t.failed).length, 'transfers');
+    logger.info('[Stripe Webhook] ✓ Refund processed. Reversed', totalReversed, 'GBP from', transfersReversed.filter((t: any) => !t.failed).length, 'transfers');
 
     // Send email notifications to affected artists
     for (const reversal of transfersReversed) {
@@ -2815,12 +2841,12 @@ async function handleRefund(charge: any, stripeSecretKey: string, env: any) {
           order.orderNumber || orderId.slice(-6).toUpperCase(),
           isFullRefund,
           env
-        ).catch(err => console.error('[Stripe Webhook] Failed to send refund notification email:', err));
+        ).catch(err => logger.error('[Stripe Webhook] Failed to send refund notification email:', err));
       }
     }
 
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Stripe Webhook] Error handling refund:', message);
+    logger.error('[Stripe Webhook] Error handling refund:', message);
   }
 }

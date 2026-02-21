@@ -9,7 +9,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('restock-notifications');
 
 export const prerender = false;
 
@@ -17,7 +19,7 @@ const MAX_NOTIFICATIONS_PER_RUN = 50;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  console.log('[Restock Notifications] ========== CRON JOB STARTED ==========');
+  logger.info('[Restock Notifications] ========== CRON JOB STARTED ==========');
 
   const env = locals.runtime.env;
 
@@ -54,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       limit: 200
     });
 
-    console.log('[Restock Notifications] Found', subscriptions.length, 'active subscriptions');
+    logger.info('[Restock Notifications] Found', subscriptions.length, 'active subscriptions');
 
     const results = {
       checked: 0,
@@ -168,24 +170,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Remove subscription after sending
             await deleteDocument('restockNotifications', sub.id);
             results.notified++;
-            console.log('[Restock Notifications] Sent to', sub.email, 'for', productName);
+            logger.info('[Restock Notifications] Sent to', sub.email, 'for', productName);
 
           } catch (emailErr) {
-            console.error('[Restock Notifications] Email error:', emailErr);
+            logger.error('[Restock Notifications] Email error:', emailErr);
             results.errors++;
           }
         }
 
       } catch (productErr) {
-        console.error('[Restock Notifications] Product lookup error:', productErr);
+        logger.error('[Restock Notifications] Product lookup error:', productErr);
         results.errors++;
       }
     }
 
     const duration = Date.now() - startTime;
-    console.log('[Restock Notifications] ========== COMPLETED ==========');
-    console.log('[Restock Notifications] Duration:', duration, 'ms');
-    console.log('[Restock Notifications] Results:', results);
+    logger.info('[Restock Notifications] ========== COMPLETED ==========');
+    logger.info('[Restock Notifications] Duration:', duration, 'ms');
+    logger.info('[Restock Notifications] Results:', results);
 
     return new Response(JSON.stringify({
       success: true,
@@ -197,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));
+    logger.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

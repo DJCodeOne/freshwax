@@ -141,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate gifUrl if provided (must be from Giphy domain)
     if (gifUrl) {
       let validGif = false;
-      try { const u = new URL(gifUrl); validGif = u.hostname === 'giphy.com' || u.hostname.endsWith('.giphy.com'); } catch {}
+      try { const u = new URL(gifUrl); validGif = u.hostname === 'giphy.com' || u.hostname.endsWith('.giphy.com'); } catch (_e: unknown) { /* non-critical: invalid URL format */ }
       if (!validGif) {
         return ApiErrors.badRequest('Invalid GIF URL');
       }

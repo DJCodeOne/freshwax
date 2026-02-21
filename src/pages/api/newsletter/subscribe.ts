@@ -191,7 +191,7 @@ async function sendConfirmationEmail(
 
   if (!response.ok) {
     let errorBody: string | undefined;
-    try { errorBody = await response.text(); } catch {}
+    try { errorBody = await response.text(); } catch (_e: unknown) { /* non-critical: could not read error response body */ }
     console.error('[Newsletter] Resend API error:', response.status, errorBody);
     return;
   }

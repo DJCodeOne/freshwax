@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('giftcard-verify');
 
 // Zod schema for gift card verify-session query params
 const GiftCardVerifyParamsSchema = z.object({
@@ -22,7 +24,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  console.log('[giftcard-verify] ========== VERIFY SESSION REQUEST ==========');
+  logger.info('[giftcard-verify] ========== VERIFY SESSION REQUEST ==========');
 
   try {
     const rawParams = { session_id: url.searchParams.get('session_id') || '' };
@@ -40,7 +42,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Retrieve the session from Stripe
-    console.log('[giftcard-verify] Fetching session from Stripe:', sessionId);
+    logger.info('[giftcard-verify] Fetching session from Stripe:', sessionId);
     const sessionResponse = await fetchWithTimeout(
       `https://api.stripe.com/v1/checkout/sessions/${sessionId}`,
       {
@@ -56,7 +58,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     const session = await sessionResponse.json();
-    console.log('[giftcard-verify] Session payment_status:', session.payment_status);
+    logger.info('[giftcard-verify] Session payment_status:', session.payment_status);
 
     // Check if payment was successful
     if (session.payment_status !== 'paid') {
@@ -65,7 +67,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // Try to find gift card by payment intent ID
     const paymentIntentId = session.payment_intent;
-    console.log('[giftcard-verify] Looking for gift card with paymentIntentId:', paymentIntentId);
+    logger.info('[giftcard-verify] Looking for gift card with paymentIntentId:', paymentIntentId);
 
     if (paymentIntentId) {
       const existingCards = await queryCollection('giftCards', {
@@ -75,7 +77,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
       if (existingCards.length > 0) {
         const card = existingCards[0];
-        console.log('[giftcard-verify] Gift card found for session:', sessionId);
+        logger.info('[giftcard-verify] Gift card found for session:', sessionId);
         // Mask email: show first 2 chars + domain only
         const email = card.recipientEmail || '';
         const maskedEmail = email.includes('@')
@@ -93,7 +95,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Gift card not found yet - webhook may still be processing
-    console.log('[giftcard-verify] Gift card not found yet, webhook may be processing');
+    logger.info('[giftcard-verify] Gift card not found yet, webhook may be processing');
     return new Response(JSON.stringify({
       success: false,
       paymentStatus: 'paid',
@@ -102,7 +104,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[giftcard-verify] Error:', errorMessage);
+    logger.error('[giftcard-verify] Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');
   }
 };

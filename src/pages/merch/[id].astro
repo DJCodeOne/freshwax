@@ -5,6 +5,7 @@
 import Layout from '../../layouts/Layout.astro';
 import Header from '../../components/Header.astro';
 import { getDocument } from '../../lib/firebase-rest';
+import { SITE_URL } from '../../lib/constants';
 
 const { id } = Astro.params;
 
@@ -65,7 +66,6 @@ try {
 }
 
 // Build Product JSON-LD structured data (server-side, safe for SEO crawlers)
-const SITE_URL = 'https://freshwax.co.uk';
 const productJsonLd = product ? JSON.stringify({
   "@context": "https://schema.org",
   "@type": "Product",

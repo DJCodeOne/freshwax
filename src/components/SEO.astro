@@ -3,6 +3,8 @@
 // Enhanced Production-grade SEO for Fresh Wax music e-commerce
 // Based on analysis of high-ranking music and e-commerce sites
 
+import { SITE_URL } from '../lib/constants';
+
 interface Props {
   title: string;
   description: string;
@@ -132,12 +134,12 @@ const {
 } = Astro.props;
 
 const SITE = {
-  url: 'https://freshwax.co.uk',
+  url: SITE_URL,
   name: 'Fresh Wax',
   tagline: 'Jungle & Drum and Bass Releases, Tracks & DJ Mixes',
   locale: 'en_GB',
   twitter: '@freshwaxuk',
-  logo: 'https://freshwax.co.uk/logo.webp',
+  logo: `${SITE_URL}/logo.webp`,
   email: 'contact@freshwax.co.uk',
   foundingDate: '2024'
 };

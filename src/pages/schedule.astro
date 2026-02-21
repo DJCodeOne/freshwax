@@ -649,6 +649,7 @@ export const prerender = false;
 
     if (upcomingSlots.length === 0) return;
 
+    const siteUrl = window.location.origin;
     const events = upcomingSlots.map(slot => {
       return {
         "@context": "https://schema.org",
@@ -661,12 +662,12 @@ export const prerender = false;
         "eventStatus": "https://schema.org/EventScheduled",
         "location": {
           "@type": "VirtualLocation",
-          "url": "https://freshwax.co.uk/live"
+          "url": siteUrl + "/live"
         },
         "organizer": {
           "@type": "Organization",
           "name": "Fresh Wax",
-          "url": "https://freshwax.co.uk"
+          "url": siteUrl
         },
         ...(slot.djName && {
           "performer": {
@@ -680,7 +681,7 @@ export const prerender = false;
           "price": "0",
           "priceCurrency": "GBP",
           "availability": "https://schema.org/InStock",
-          "url": "https://freshwax.co.uk/live"
+          "url": siteUrl + "/live"
         }
       };
     });

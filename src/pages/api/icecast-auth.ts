@@ -4,6 +4,9 @@
 
 import type { APIContext } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
+import { createLogger } from '../../lib/api-utils';
+
+const logger = createLogger('icecast-auth');
 
 export const prerender = false;
 
@@ -19,7 +22,7 @@ export async function POST({ request, locals }: APIContext) {
     const ip = formData.get('ip') as string;
     const action = formData.get('action') as string; // 'source_auth' for source connections
 
-    console.log('[Icecast Auth] Request:', { mount, user, action, ip, hasPass: !!pass });
+    logger.info('[Icecast Auth] Request:', { mount, user, action, ip, hasPass: !!pass });
 
     // Only handle source authentication
     if (action !== 'source_auth') {
@@ -34,7 +37,7 @@ export async function POST({ request, locals }: APIContext) {
     const streamKey = pass;
 
     if (!streamKey || !streamKey.startsWith('fwx_')) {
-      console.log('[Icecast Auth] Invalid stream key format');
+      logger.info('[Icecast Auth] Invalid stream key format');
       return new Response('Invalid stream key', {
         status: 403,
         headers: { 'Content-Type': 'text/plain' }
@@ -52,7 +55,7 @@ export async function POST({ request, locals }: APIContext) {
     });
 
     if (slots.length === 0) {
-      console.log('[Icecast Auth] No slot found for stream key');
+      logger.info('[Icecast Auth] No slot found for stream key');
       return new Response('Stream key not found or expired', {
         status: 403,
         headers: { 'Content-Type': 'text/plain' }
@@ -63,7 +66,7 @@ export async function POST({ request, locals }: APIContext) {
 
     // Check slot status
     if (slot.status === 'cancelled' || slot.status === 'ended') {
-      console.log('[Icecast Auth] Slot is cancelled or ended');
+      logger.info('[Icecast Auth] Slot is cancelled or ended');
       return new Response('Slot has been cancelled or ended', {
         status: 403,
         headers: { 'Content-Type': 'text/plain' }
@@ -78,7 +81,7 @@ export async function POST({ request, locals }: APIContext) {
 
     if (now.getTime() < slotStart.getTime() - earlyWindow) {
       const minsUntil = Math.ceil((slotStart.getTime() - now.getTime()) / 60000);
-      console.log('[Icecast Auth] Too early, slot starts in', minsUntil, 'minutes');
+      logger.info('[Icecast Auth] Too early, slot starts in', minsUntil, 'minutes');
       return new Response(`Too early - slot starts in ${minsUntil} minutes`, {
         status: 403,
         headers: { 'Content-Type': 'text/plain' }
@@ -86,7 +89,7 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     if (now.getTime() > slotEnd.getTime() + graceWindow) {
-      console.log('[Icecast Auth] Slot has ended');
+      logger.info('[Icecast Auth] Slot has ended');
       return new Response('Slot has ended', {
         status: 403,
         headers: { 'Content-Type': 'text/plain' }
@@ -94,7 +97,7 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     // Authentication successful
-    console.log('[Icecast Auth] SUCCESS - DJ:', slot.djName, 'Slot:', slot.id);
+    logger.info('[Icecast Auth] SUCCESS - DJ:', slot.djName, 'Slot:', slot.id);
 
     // Return success with mount point info
     // Format: icecast-auth-user=1 means authenticated
@@ -108,7 +111,7 @@ export async function POST({ request, locals }: APIContext) {
     });
 
   } catch (error: unknown) {
-    console.error('[Icecast Auth] Error:', error instanceof Error ? error.message : String(error));
+    logger.error('[Icecast Auth] Error:', error instanceof Error ? error.message : String(error));
     return new Response('Authentication error', {
       status: 500,
       headers: { 'Content-Type': 'text/plain' }

@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const logger = createLogger('finalize-upload');
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 
@@ -114,24 +116,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // CRITICAL: Verify the audio file actually exists in R2 before saving metadata
     // This prevents orphaned mix entries when uploads fail or are cancelled
     try {
-      console.log(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
+      logger.info(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
       const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, 10000);
 
       if (!verifyResponse.ok) {
-        console.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
+        logger.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
         return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');
       }
 
       // Also check file has content (not empty)
       const contentLength = verifyResponse.headers.get('content-length');
       if (!contentLength || parseInt(contentLength) < 1000) {
-        console.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
+        logger.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
         return ApiErrors.badRequest('Audio file appears to be empty or incomplete. Please try uploading again.');
       }
 
-      console.log(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
+      logger.info(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
     } catch (verifyError) {
-      console.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
+      logger.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
       return ApiErrors.badRequest('Could not verify audio file. Please try uploading again.');
     }
 
@@ -147,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           displayName = userData.displayName;
         }
       } catch (e) {
-        console.log('[finalize-upload] Could not fetch user data, using provided name');
+        logger.info('[finalize-upload] Could not fetch user data, using provided name');
       }
     }
 
@@ -177,7 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }));
 
           finalArtworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
-          console.log(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
+          logger.info(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
 
           // Generate 400x400 thumbnail for listing pages
           try {
@@ -193,13 +195,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }));
 
             finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-            console.log(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
+            logger.info(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
           } catch (thumbErr) {
-            console.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
+            logger.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
           }
         }
       } catch (imgErr) {
-        console.error('[finalize-upload] WebP processing failed, using original:', imgErr);
+        logger.error('[finalize-upload] WebP processing failed, using original:', imgErr);
       }
     }
 
@@ -249,17 +251,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Write to Firebase first (primary)
     await setDocument('dj-mixes', mixId, mixData);
-    console.log(`[finalize-upload] Mix saved to Firebase: ${mixId}`);
+    logger.info(`[finalize-upload] Mix saved to Firebase: ${mixId}`);
 
     // Dual-write to D1 (secondary, non-blocking)
     const db = env?.DB;
     if (db) {
       try {
         await d1UpsertMix(db, mixId, mixData);
-        console.log(`[finalize-upload] Mix also written to D1: ${mixId}`);
+        logger.info(`[finalize-upload] Mix also written to D1: ${mixId}`);
       } catch (d1Error) {
         // Log D1 error but don't fail the request
-        console.error('[finalize-upload] D1 dual-write failed (non-critical):', d1Error);
+        logger.error('[finalize-upload] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -276,7 +278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[finalize-upload] Error:', error);
+    logger.error('[finalize-upload] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };
