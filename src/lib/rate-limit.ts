@@ -17,13 +17,19 @@ interface RateLimitEntry {
 // In-memory store (first tier — fast, per-isolate)
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
+// Minimal KV interface for rate limiting
+interface RateLimitKV {
+  get(key: string, options?: { type?: string }): Promise<unknown>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+}
+
 // KV store reference (second tier — persistent across deploys/isolates)
-let kvStore: any = null;
+let kvStore: RateLimitKV | null = null;
 
 /**
  * Initialize KV-backed rate limiting (call from middleware with env.CACHE or env.KV)
  */
-export function initRateLimitKV(kv: any): void {
+export function initRateLimitKV(kv: RateLimitKV | null | undefined): void {
   if (kv) kvStore = kv;
 }
 
@@ -67,10 +73,11 @@ export function checkRateLimit(
   // If no in-memory entry, trigger background KV sync for next request
   if (!entry && kvStore && !kvSyncPending.has(key)) {
     kvSyncPending.add(key);
-    kvStore.get(`rl:${key}`, { type: 'json' }).then((kvData: any) => {
+    kvStore.get(`rl:${key}`, { type: 'json' }).then((kvData: unknown) => {
       kvSyncPending.delete(key);
-      if (kvData && !rateLimitStore.has(key) && (now - kvData.firstRequest) < config.windowMs) {
-        rateLimitStore.set(key, kvData as RateLimitEntry);
+      const parsed = kvData as RateLimitEntry | null;
+      if (parsed && !rateLimitStore.has(key) && (now - parsed.firstRequest) < config.windowMs) {
+        rateLimitStore.set(key, parsed);
       }
     }).catch(() => { kvSyncPending.delete(key); });
   }

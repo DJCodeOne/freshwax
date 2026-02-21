@@ -13,7 +13,7 @@ export interface WebhookEvent {
   eventId?: string;
   level: LogLevel;
   message: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp: string;
   processingTimeMs?: number;
   success: boolean;
@@ -46,7 +46,7 @@ export async function logStripeEvent(
   options: {
     message?: string;
     level?: LogLevel;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     processingTimeMs?: number;
     error?: string;
   } = {}
@@ -80,7 +80,7 @@ export async function logConnectEvent(
   options: {
     message?: string;
     level?: LogLevel;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     processingTimeMs?: number;
     error?: string;
   } = {}
@@ -112,7 +112,7 @@ export async function getRecentWebhookEvents(
   source?: 'stripe' | 'stripe_connect' | 'other'
 ): Promise<WebhookEvent[]> {
   try {
-    const filters: any[] = [];
+    const filters: Array<{ field: string; op: string; value: unknown }> = [];
     if (source) {
       filters.push({ field: 'source', op: 'EQUAL', value: source });
     }

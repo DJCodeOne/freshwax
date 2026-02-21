@@ -169,7 +169,7 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 // Trigger Pusher event using Web Crypto API
-export async function triggerPusher(channel: string, event: string, data: any, env?: any): Promise<boolean> {
+export async function triggerPusher(channel: string, event: string, data: unknown, env?: { PUSHER_APP_ID?: string; PUBLIC_PUSHER_KEY?: string; PUSHER_SECRET?: string; PUBLIC_PUSHER_CLUSTER?: string }): Promise<boolean> {
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
   const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
@@ -229,6 +229,6 @@ export async function broadcastLiveStatus(event: 'stream-started' | 'stream-ende
   djName: string;
   slotId?: string;
   title?: string;
-}, env?: any): Promise<boolean> {
+}, env?: Parameters<typeof triggerPusher>[3]): Promise<boolean> {
   return triggerPusher('live-status', event, data, env);
 }

@@ -8,7 +8,7 @@ interface CacheOptions {
 }
 
 interface KVNamespace {
-  get(key: string, options?: { type?: 'text' | 'json' | 'arrayBuffer' | 'stream' }): Promise<any>;
+  get(key: string, options?: { type?: 'text' | 'json' | 'arrayBuffer' | 'stream' }): Promise<unknown>;
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
   delete(key: string): Promise<void>;
 }
@@ -18,7 +18,7 @@ let kvNamespace: KVNamespace | null = null;
 /**
  * Initialize KV cache with the binding from Cloudflare environment
  */
-export function initKVCache(env: any): void {
+export function initKVCache(env: { CACHE?: KVNamespace } | undefined): void {
   if (env?.CACHE) {
     kvNamespace = env.CACHE;
   }
@@ -51,7 +51,7 @@ export async function kvGet<T>(key: string, options: CacheOptions = {}): Promise
 /**
  * Set value in KV cache
  */
-export async function kvSet(key: string, value: any, options: CacheOptions = {}): Promise<void> {
+export async function kvSet(key: string, value: unknown, options: CacheOptions = {}): Promise<void> {
   if (!kvNamespace) {
     return;
   }

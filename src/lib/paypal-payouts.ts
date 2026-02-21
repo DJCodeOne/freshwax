@@ -107,7 +107,7 @@ export async function createBatchPayout(
   config: PayPalConfig,
   recipients: PayoutRecipient[],
   batchNote?: string
-): Promise<PayoutResult & { items?: any[] }> {
+): Promise<PayoutResult & { items?: Record<string, unknown>[] }> {
   try {
     const accessToken = await getAccessToken(config);
     const baseUrl = getPayPalBaseUrl(configToMode(config));
@@ -170,7 +170,7 @@ export async function createBatchPayout(
 export async function getPayoutStatus(
   config: PayPalConfig,
   batchId: string
-): Promise<{ success: boolean; status?: string; items?: any[]; error?: string }> {
+): Promise<{ success: boolean; status?: string; items?: Record<string, unknown>[]; error?: string }> {
   try {
     const accessToken = await getAccessToken(config);
     const baseUrl = getPayPalBaseUrl(configToMode(config));
@@ -218,7 +218,7 @@ export async function verifyPayPalEmail(
   return { valid: true };
 }
 
-export function getPayPalConfig(env: any): PayPalConfig | null {
+export function getPayPalConfig(env: { PAYPAL_CLIENT_ID?: string; PAYPAL_CLIENT_SECRET?: string; PAYPAL_SANDBOX?: string } | undefined): PayPalConfig | null {
   const clientId = env?.PAYPAL_CLIENT_ID || import.meta.env.PAYPAL_CLIENT_ID;
   const clientSecret = env?.PAYPAL_CLIENT_SECRET || import.meta.env.PAYPAL_CLIENT_SECRET;
   const sandbox = env?.PAYPAL_SANDBOX === 'true' || import.meta.env.PAYPAL_SANDBOX === 'true';

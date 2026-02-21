@@ -339,10 +339,10 @@ export interface CreateGiftCardResult {
 export async function createGiftCardAfterPayment(
   data: GiftCardPurchaseData,
   firebaseOps: {
-    queryCollection: (collection: string, options: any) => Promise<any[]>;
-    addDocument: (collection: string, data: any) => Promise<{ id: string }>;
-    updateDocument: (collection: string, id: string, data: any) => Promise<void>;
-    getDocument: (collection: string, id: string) => Promise<any>;
+    queryCollection: (collection: string, options: Record<string, unknown>) => Promise<Record<string, unknown>[]>;
+    addDocument: (collection: string, data: Record<string, unknown>) => Promise<{ id: string }>;
+    updateDocument: (collection: string, id: string, data: Record<string, unknown>) => Promise<void>;
+    getDocument: (collection: string, id: string) => Promise<Record<string, unknown> | null>;
   }
 ): Promise<CreateGiftCardResult> {
   const { queryCollection, addDocument, updateDocument, getDocument } = firebaseOps;

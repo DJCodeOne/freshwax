@@ -1,6 +1,11 @@
 // src/lib/error-logger.ts
 // Lightweight error logging to D1 for monitoring
 
+/** Subset of CloudflareEnv needed for error logging */
+interface ErrorLogEnv {
+  DB?: import('@cloudflare/workers-types').D1Database;
+}
+
 interface ErrorLogEntry {
   source: 'client' | 'server';
   level?: 'error' | 'warn' | 'fatal';
@@ -12,7 +17,7 @@ interface ErrorLogEntry {
   userAgent?: string;
   ip?: string;
   userId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // Simple hash for error deduplication (group identical errors)
@@ -29,7 +34,7 @@ function fingerprint(message: string, stack?: string): string {
 /**
  * Log an error to D1. Non-blocking — failures are silently ignored.
  */
-export async function logError(entry: ErrorLogEntry, env: any): Promise<void> {
+export async function logError(entry: ErrorLogEntry, env: ErrorLogEnv | undefined): Promise<void> {
   try {
     const db = env?.DB;
     if (!db) return;
@@ -64,7 +69,7 @@ export async function logError(entry: ErrorLogEntry, env: any): Promise<void> {
 export async function logServerError(
   error: unknown,
   request: Request,
-  env: any,
+  env: ErrorLogEnv | undefined,
   extra?: { endpoint?: string; statusCode?: number; userId?: string }
 ): Promise<void> {
   const message = error instanceof Error ? error.message : String(error);
@@ -87,7 +92,7 @@ export async function logServerError(
  * Cleanup old error logs (call from a cron or admin action).
  * Keeps last 30 days by default. Called automatically by /api/cron/cleanup-d1.
  */
-export async function cleanupErrorLogs(env: any, daysToKeep = 30): Promise<number> {
+export async function cleanupErrorLogs(env: ErrorLogEnv | undefined, daysToKeep = 30): Promise<number> {
   try {
     const db = env?.DB;
     if (!db) return 0;

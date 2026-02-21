@@ -14,7 +14,7 @@ export async function sendPayoutCompletedEmail(
   artistName: string,
   amount: number,
   orderNumber: string,
-  env: any
+  env: { RESEND_API_KEY?: string; DB?: import('@cloudflare/workers-types').D1Database } | undefined
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {
@@ -89,7 +89,7 @@ export async function sendRefundNotificationEmail(
   originalPayout: number,
   orderNumber: string,
   isFullRefund: boolean,
-  env: any
+  env: { RESEND_API_KEY?: string; DB?: import('@cloudflare/workers-types').D1Database } | undefined
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!artistEmail) {

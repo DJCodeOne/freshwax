@@ -64,7 +64,7 @@ export function verifyAdminKey(key: string, locals: App.Locals): boolean {
  * SECURITY: Query params are NOT supported to prevent keys appearing in logs
  * Returns error response if auth fails, null if auth succeeds
  */
-export async function requireAdminAuth(request: Request, locals: App.Locals, bodyData?: any): Promise<Response | null> {
+export async function requireAdminAuth(request: Request, locals: App.Locals, bodyData?: Record<string, unknown>): Promise<Response | null> {
   const expectedKey = getAdminKey(locals);
 
   // Check body (for POST requests) - timing-safe comparison

@@ -10,7 +10,7 @@ import { d1InsertLedgerEntry, d1GetLedgerEntries, d1GetLedgerTotals } from './d1
 const log = createLogger('[sales-ledger]');
 
 // D1 database type (from Cloudflare bindings)
-type D1Database = any;
+type D1Database = import('@cloudflare/workers-types').D1Database;
 
 export interface LedgerEntry {
   // Order reference
@@ -92,7 +92,19 @@ export async function recordSale(params: {
   paymentMethod: LedgerEntry['paymentMethod'];
   paymentId?: string | null;
   currency?: string;
-  items: any[];
+  items: Array<Record<string, unknown> & {
+    type?: string;
+    isPhysical?: boolean;
+    releaseId?: string;
+    productId?: string;
+    id?: string;
+    title?: string;
+    name?: string;
+    artist?: string;
+    artistName?: string;
+    quantity?: number;
+    price?: number;
+  }>;
   hasPhysical?: boolean;
   hasDigital?: boolean;
   // Artist/submitter info for payout tracking
@@ -227,7 +239,7 @@ export async function getLedgerEntries(options: {
       // Filter by date range if provided (D1 doesn't have this filter)
       let filtered = entries;
       if (options.startDate || options.endDate) {
-        filtered = entries.filter((e: any) => {
+        filtered = entries.filter((e: { timestamp?: string }) => {
           const timestamp = new Date(e.timestamp);
           if (options.startDate && timestamp < options.startDate) return false;
           if (options.endDate && timestamp > options.endDate) return false;
@@ -244,7 +256,7 @@ export async function getLedgerEntries(options: {
 
   // Fallback to Firebase
   try {
-    const filters: any[] = [];
+    const filters: Array<{ field: string; op: string; value: unknown }> = [];
 
     if (options.year) {
       filters.push({ field: 'year', op: 'EQUAL', value: options.year });
@@ -262,7 +274,7 @@ export async function getLedgerEntries(options: {
     // Filter by date range if provided
     let filtered = entries;
     if (options.startDate || options.endDate) {
-      filtered = entries.filter((e: any) => {
+      filtered = entries.filter((e: { timestamp?: string }) => {
         const timestamp = new Date(e.timestamp);
         if (options.startDate && timestamp < options.startDate) return false;
         if (options.endDate && timestamp > options.endDate) return false;

@@ -506,8 +506,8 @@ export async function cleanupExpiredReservations(): Promise<number> {
               variantStock[res.variantKey] = variant;
 
               let totalReserved = 0;
-              Object.values(variantStock).forEach((v: any) => {
-                if (typeof v === 'object') totalReserved += v.reserved || 0;
+              Object.values(variantStock).forEach((v: unknown) => {
+                if (typeof v === 'object' && v !== null) totalReserved += (v as VariantStockEntry).reserved || 0;
               });
 
               if (product._updateTime) {

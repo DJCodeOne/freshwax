@@ -191,7 +191,17 @@ export class R2FirebaseSync {
   /**
    * Sync release metadata to Firebase
    */
-  private async syncToFirebase(releaseId: string, metadata: any, coverFilename: string | null): Promise<void> {
+  private async syncToFirebase(releaseId: string, metadata: Record<string, unknown> & {
+    coverArtUrl?: string;
+    additionalArtwork?: string[];
+    tracks?: Array<Record<string, unknown> & { trackNumber: number; trackName: string }>;
+    status?: string;
+    published?: boolean;
+    publishedAt?: string;
+    syncedAt?: string;
+    artistName?: string;
+    releaseName?: string;
+  }, coverFilename: string | null): Promise<void> {
     // Ensure URLs use the public domain
     const publicDomain = this.config.r2.publicDomain;
 
@@ -213,7 +223,7 @@ export class R2FirebaseSync {
 
     // Update track URLs
     if (metadata.tracks && Array.isArray(metadata.tracks)) {
-      metadata.tracks = metadata.tracks.map((track: any) => {
+      metadata.tracks = metadata.tracks.map((track: Record<string, unknown> & { trackNumber: number; trackName: string }) => {
         const trackNum = String(track.trackNumber + 1).padStart(2, '0');
         const trackName = track.trackName;
 
@@ -240,7 +250,13 @@ export class R2FirebaseSync {
   /**
    * List releases from Firebase
    */
-  async listReleases(options: any = {}): Promise<any[]> {
+  async listReleases(options: {
+    status?: string;
+    featured?: boolean;
+    limit?: number;
+    orderBy?: string;
+    order?: string;
+  } = {}): Promise<Record<string, unknown>[]> {
     const filters = [];
 
     if (options.status) {
@@ -251,7 +267,11 @@ export class R2FirebaseSync {
       filters.push({ field: 'featured', op: 'EQUAL' as const, value: options.featured });
     }
 
-    const queryOptions: any = {
+    const queryOptions: {
+      filters?: Array<{ field: string; op: 'EQUAL'; value: unknown }>;
+      limit?: number;
+      orderBy?: { field: string; direction: 'ASCENDING' | 'DESCENDING' };
+    } = {
       filters: filters.length > 0 ? filters : undefined,
       limit: options.limit
     };
@@ -270,7 +290,7 @@ export class R2FirebaseSync {
   /**
    * Get a single release by ID
    */
-  async getRelease(releaseId: string): Promise<any | null> {
+  async getRelease(releaseId: string): Promise<Record<string, unknown> | null> {
     const data = await getDocument(this.config.collections.releases, releaseId);
 
     if (!data) {

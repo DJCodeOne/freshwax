@@ -20,7 +20,7 @@ export async function sendAbandonedCartEmail(
   name: string | null,
   items: CartItem[],
   total: number,
-  env: any
+  env: { RESEND_API_KEY?: string; DB?: import('@cloudflare/workers-types').D1Database } | undefined
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!email) {

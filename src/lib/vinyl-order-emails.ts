@@ -19,9 +19,17 @@ export async function sendVinylOrderSellerEmail(
     price: number;
     buyerName: string;
     buyerEmail: string;
-    shippingAddress: any;
+    shippingAddress: {
+      firstName?: string;
+      lastName?: string;
+      address1?: string;
+      address2?: string;
+      city?: string;
+      postcode?: string;
+      country?: string;
+    } | null;
   },
-  env: any
+  env: { RESEND_API_KEY?: string; DB?: import('@cloudflare/workers-types').D1Database } | undefined
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
     if (!sellerEmail) {
@@ -125,7 +133,7 @@ export async function sendVinylOrderAdminEmail(
     buyerName: string;
     buyerEmail: string;
   },
-  env: any
+  env: { RESEND_API_KEY?: string; ADMIN_EMAIL?: string; DB?: import('@cloudflare/workers-types').D1Database } | undefined
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
