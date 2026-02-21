@@ -134,7 +134,7 @@ export async function POST({ request, locals }: APIContext) {
     await kv.put(KV_HISTORY_KEY, JSON.stringify({
       items: history,
       lastUpdated: new Date().toISOString()
-    }));
+    }), { expirationTtl: 604800 });
 
     return new Response(JSON.stringify({
       success: true,
@@ -205,7 +205,7 @@ export async function DELETE({ request, locals }: APIContext) {
       await kv.put(KV_HISTORY_KEY, JSON.stringify({
         items: filteredItems,
         lastUpdated: new Date().toISOString()
-      }));
+      }), { expirationTtl: 604800 });
       console.log(`[PlaylistHistory] Removed ${totalRemoved} item(s)`);
     }
 

@@ -273,7 +273,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
 
         // Track time on page
         let timeOnPage = 0;
-        setInterval(function() {
+        var timeOnPageInterval = setInterval(function() {
           timeOnPage += 30;
           if (timeOnPage === 30 || timeOnPage === 60 || timeOnPage === 180 || timeOnPage === 300) {
             window.trackEvent('time_on_page', {
@@ -283,6 +283,23 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
             });
           }
         }, 30000);
+
+        // Reset scroll depth + time-on-page tracking on Astro View Transitions
+        document.addEventListener('astro:before-swap', function() {
+          scrollDepthTracked = {};
+          timeOnPage = 0;
+          clearInterval(timeOnPageInterval);
+          timeOnPageInterval = setInterval(function() {
+            timeOnPage += 30;
+            if (timeOnPage === 30 || timeOnPage === 60 || timeOnPage === 180 || timeOnPage === 300) {
+              window.trackEvent('time_on_page', {
+                'event_category': 'Engagement',
+                'event_label': timeOnPage + ' seconds',
+                'value': timeOnPage
+              });
+            }
+          }, 30000);
+        });
       }
 
       // No-op tracking helpers when analytics not consented

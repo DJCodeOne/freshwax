@@ -200,7 +200,7 @@ export async function POST({ request, locals }: APIContext) {
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    }));
+    }), { expirationTtl: 86400 });
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
@@ -311,7 +311,7 @@ export async function DELETE({ request, locals }: APIContext) {
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    }));
+    }), { expirationTtl: 86400 });
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
@@ -571,7 +571,7 @@ export async function PUT({ request, locals }: APIContext) {
       lastUpdated: playlist.lastUpdated,
       trackStartedAt: playlist.trackStartedAt || null,
       reactionCount: playlist.reactionCount || 0
-    }));
+    }), { expirationTtl: 86400 });
 
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
@@ -647,7 +647,7 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
     await kvCache.put(KV_HISTORY_KEY, JSON.stringify({
       items,
       lastUpdated: new Date().toISOString()
-    }));
+    }), { expirationTtl: 86400 });
     // Added to recently played
   } catch (error: unknown) {
     console.error('[GlobalPlaylist] Error adding to recently played:', error);

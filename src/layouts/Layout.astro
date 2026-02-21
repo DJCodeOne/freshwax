@@ -658,13 +658,13 @@ const csrfToken = Astro.locals.csrfToken || '';
                 try { localStorage.setItem('pwa-dismiss-until', String(Date.now() + 365 * 24 * 60 * 60 * 1000)); } catch(e) {}
               }
             });
-          });
+          }, { once: true });
 
           dismissBtn.addEventListener('click', function() {
             removeBanner();
             try { sessionStorage.setItem('pwa-dismiss-session', '1'); } catch(e) {}
             try { localStorage.setItem('pwa-dismiss-until', String(Date.now() + 30 * 24 * 60 * 60 * 1000)); } catch(e) {}
-          });
+          }, { once: true });
 
           // Trap focus within banner for a11y when tabbing
           banner.addEventListener('keydown', function(e) {
@@ -680,7 +680,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           banner.classList.remove('pwa-visible');
           banner.addEventListener('transitionend', function() {
             banner.remove();
-          });
+          }, { once: true });
           // Fallback removal if transition doesn't fire
           setTimeout(function() {
             if (document.getElementById('pwa-install-banner')) {
