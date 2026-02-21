@@ -131,7 +131,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     ) : product && (
       <div class="preview-container">
         <button class="back-link js-history-back">← Back to Item</button>
-        
+
+        <h1 class="product-title">{product.name}</h1>
+
         <div class="preview-box">
           <!-- Large Zoomable Image -->
           <div class="image-area" id="imageArea">
@@ -255,6 +257,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .back-link {
     margin-bottom: 0.75rem;
     align-self: flex-start;
+  }
+
+  .product-title {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.75rem;
   }
   
   .preview-box {
