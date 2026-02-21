@@ -142,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await refundOrderStock(orderId, order.items, order.orderNumber || orderId);
         log.info('[process-refund] Stock restored for full refund');
-      } catch (stockErr) {
+      } catch (stockErr: unknown) {
         log.error('[process-refund] Stock restore error:', stockErr);
       }
     } else if (refundItems && refundItems.length > 0) {
@@ -155,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await refundOrderStock(orderId, itemsToRefund, order.orderNumber || orderId);
           log.info('[process-refund] Stock restored for refunded items');
         }
-      } catch (stockErr) {
+      } catch (stockErr: unknown) {
         log.error('[process-refund] Partial stock restore error:', stockErr);
       }
     }

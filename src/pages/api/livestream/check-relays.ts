@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/check-relays');
 
 export const prerender = false;
 
@@ -178,7 +180,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           });
           
         } catch (error: unknown) {
-          console.error(`Error checking ${source.name}:`, error instanceof Error ? error.message : String(error));
+          log.error(`Error checking ${source.name}:`, error instanceof Error ? error.message : String(error));
         }
         
         return {
@@ -211,7 +213,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('Error checking relay sources:', error);
+    log.error('Error checking relay sources:', error);
     return ApiErrors.serverError('Internal error');
   }
 };

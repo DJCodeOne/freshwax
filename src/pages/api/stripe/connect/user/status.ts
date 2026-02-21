@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../../../lib/firebase-rest';
-import { ApiErrors } from '../../../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../../../lib/api-utils';
+
+const log = createLogger('stripe/connect/user/status');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
 
 export const prerender = false;
@@ -111,7 +113,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Stripe Connect] User status error:', error instanceof Error ? error.message : String(error));
+    log.error('[Stripe Connect] User status error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get status');
   }
 };

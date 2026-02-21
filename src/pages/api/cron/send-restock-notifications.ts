@@ -178,7 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-      } catch (productErr) {
+      } catch (productErr: unknown) {
         logger.error('[Restock Notifications] Product lookup error:', productErr);
         results.errors++;
       }

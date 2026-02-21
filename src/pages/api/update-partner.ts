@@ -5,7 +5,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { saUpdateDocument } from '../../lib/firebase-service-account';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('update-partner');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { z } from 'zod';
 
@@ -112,7 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      console.error('[update-partner] Service account not configured');
+      log.error('[update-partner] Service account not configured');
       return ApiErrors.serverError('Service account not configured');
     }
 
@@ -128,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('Error updating partner:', error);
+    log.error('Error updating partner:', error);
     return ApiErrors.serverError('Failed to update profile');
   }
 };

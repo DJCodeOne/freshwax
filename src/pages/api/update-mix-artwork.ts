@@ -6,7 +6,9 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('update-mix-artwork');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Get R2 configuration from Cloudflare runtime env
@@ -95,7 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artworkBody = Buffer.from(processed.buffer);
       artworkContentType = imageContentType(processed.format);
     } catch (imgErr: unknown) {
-      console.error('[update-mix-artwork] WebP processing failed, using original:', imgErr);
+      log.error('[update-mix-artwork] WebP processing failed, using original:', imgErr);
       artworkKey = `dj-mixes/${mixId}/artwork-${timestamp}.webp`;
       artworkBody = Buffer.from(rawBuffer);
       artworkContentType = artworkFile.type;
@@ -125,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }));
       thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
     } catch (thumbErr: unknown) {
-      console.error('[update-mix-artwork] Thumbnail generation failed (non-critical):', thumbErr);
+      log.error('[update-mix-artwork] Thumbnail generation failed (non-critical):', thumbErr);
     }
 
     // Update Firebase with new artwork URL (and backfill userId if missing)
@@ -161,7 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[update-mix-artwork] Error:', error);
+    log.error('[update-mix-artwork] Error:', error);
     return ApiErrors.serverError('Failed to update artwork');
   }
 };

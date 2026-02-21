@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('newsletter/unsubscribe');
 
 const UnsubscribeSchema = z.object({
   email: z.string().email('Invalid email format').max(320),
@@ -67,7 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Unsubscribe error:', error);
+    log.error('Unsubscribe error:', error);
     return ApiErrors.serverError('Failed to unsubscribe. Please try again.');
   }
 };

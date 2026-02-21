@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, verifyUserToken, getDocument } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('dj-lobby/broadcast-mode');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const BroadcastModeSchema = z.object({
@@ -65,7 +67,7 @@ export const POST: APIRoute = async ({ request }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/broadcast-mode] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update broadcast mode');
   }
 };

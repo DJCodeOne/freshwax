@@ -2,6 +2,10 @@
 // D1 database operations for releases, DJ mixes, merch, and livestream slots
 // Used for dual-write (Firebase + D1) and D1-first reads
 
+import { createLogger } from './api-utils';
+
+const log = createLogger('d1-catalog');
+
 // Shared type alias for Firebase/Firestore document shapes
 type FirestoreDoc = Record<string, unknown>;
 
@@ -89,7 +93,7 @@ export function d1RowToRelease(row: D1Release): FirestoreDoc | null {
     doc.id = row.id;
     return doc;
   } catch (error: unknown) {
-    console.error('[D1] Error parsing release data:', error);
+    log.error('[D1] Error parsing release data:', error);
     return null;
   }
 }
@@ -153,7 +157,7 @@ export function d1RowToMix(row: D1DjMix): FirestoreDoc | null {
     if (row.likes != null) doc.likes = row.likes;
     return doc;
   } catch (error: unknown) {
-    console.error('[D1] Error parsing mix data:', error);
+    log.error('[D1] Error parsing mix data:', error);
     return null;
   }
 }
@@ -212,7 +216,7 @@ export function d1RowToMerch(row: D1Merch): FirestoreDoc | null {
     doc.id = row.id;
     return doc;
   } catch (error: unknown) {
-    console.error('[D1] Error parsing merch data:', error);
+    log.error('[D1] Error parsing merch data:', error);
     return null;
   }
 }
@@ -233,7 +237,7 @@ export async function d1GetAllPublishedReleases(db: D1Database, limit: number = 
 
     return (results || []).map((row) => d1RowToRelease(row as D1Release)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting published releases:', error);
+    log.error('[D1] Error getting published releases:', error);
     return [];
   }
 }
@@ -251,7 +255,7 @@ export async function d1SearchPublishedReleases(db: D1Database, query: string, l
 
     return (results || []).map((row) => d1RowToRelease(row as D1Release)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error searching releases:', error);
+    log.error('[D1] Error searching releases:', error);
     return [];
   }
 }
@@ -269,7 +273,7 @@ export async function d1SearchPublishedMixes(db: D1Database, query: string, limi
 
     return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error searching mixes:', error);
+    log.error('[D1] Error searching mixes:', error);
     return [];
   }
 }
@@ -286,7 +290,7 @@ export async function d1SearchPublishedMerch(db: D1Database, query: string, limi
 
     return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error searching merch:', error);
+    log.error('[D1] Error searching merch:', error);
     return [];
   }
 }
@@ -299,7 +303,7 @@ export async function d1GetReleaseById(db: D1Database, id: string): Promise<Fire
 
     return row ? d1RowToRelease(row as D1Release) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting release:', error);
+    log.error('[D1] Error getting release:', error);
     return null;
   }
 }
@@ -312,7 +316,7 @@ export async function d1GetReleasesByArtist(db: D1Database, artist: string): Pro
 
     return (results || []).map((row) => d1RowToRelease(row as D1Release)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting releases by artist:', error);
+    log.error('[D1] Error getting releases by artist:', error);
     return [];
   }
 }
@@ -355,7 +359,7 @@ export async function d1UpsertRelease(db: D1Database, id: string, doc: Firestore
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error upserting release:', error);
+    log.error('[D1] Error upserting release:', error);
     return false;
   }
 }
@@ -370,7 +374,7 @@ export async function d1GetAllPublishedMixes(db: D1Database, limit: number = 500
 
     return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting published mixes:', error);
+    log.error('[D1] Error getting published mixes:', error);
     return [];
   }
 }
@@ -383,7 +387,7 @@ export async function d1GetAllMixes(db: D1Database, limit: number = 500): Promis
 
     return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting all mixes:', error);
+    log.error('[D1] Error getting all mixes:', error);
     return [];
   }
 }
@@ -396,7 +400,7 @@ export async function d1GetMixById(db: D1Database, id: string): Promise<Firestor
 
     return row ? d1RowToMix(row as D1DjMix) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting mix:', error);
+    log.error('[D1] Error getting mix:', error);
     return null;
   }
 }
@@ -409,7 +413,7 @@ export async function d1GetMixesByUser(db: D1Database, userId: string): Promise<
 
     return (results || []).map((row) => d1RowToMix(row as D1DjMix)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting mixes by user:', error);
+    log.error('[D1] Error getting mixes by user:', error);
     return [];
   }
 }
@@ -444,7 +448,7 @@ export async function d1UpsertMix(db: D1Database, id: string, doc: FirestoreDoc)
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error upserting mix:', error);
+    log.error('[D1] Error upserting mix:', error);
     return false;
   }
 }
@@ -454,7 +458,7 @@ export async function d1DeleteMix(db: D1Database, id: string): Promise<boolean> 
     await db.prepare(`DELETE FROM dj_mixes WHERE id = ?`).bind(id).run();
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error deleting mix:', error);
+    log.error('[D1] Error deleting mix:', error);
     return false;
   }
 }
@@ -469,7 +473,7 @@ export async function d1GetAllPublishedMerch(db: D1Database, limit: number = 500
 
     return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting published merch:', error);
+    log.error('[D1] Error getting published merch:', error);
     return [];
   }
 }
@@ -482,7 +486,7 @@ export async function d1GetMerchById(db: D1Database, id: string): Promise<Firest
 
     return row ? d1RowToMerch(row as D1Merch) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting merch:', error);
+    log.error('[D1] Error getting merch:', error);
     return null;
   }
 }
@@ -509,7 +513,7 @@ export async function d1UpsertMerch(db: D1Database, id: string, doc: FirestoreDo
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error upserting merch:', error);
+    log.error('[D1] Error upserting merch:', error);
     return false;
   }
 }
@@ -520,7 +524,7 @@ export async function d1DeleteMerch(db: D1Database, id: string): Promise<boolean
     await db.prepare('DELETE FROM merch WHERE id = ?').bind(id).run();
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error deleting merch:', error);
+    log.error('[D1] Error deleting merch:', error);
     return false;
   }
 }
@@ -537,7 +541,7 @@ export async function d1GetMerchBySupplierId(db: D1Database, supplierId: string)
 
     return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting merch by supplier:', error);
+    log.error('[D1] Error getting merch by supplier:', error);
     return [];
   }
 }
@@ -553,7 +557,7 @@ export async function d1GetMerchBySupplierName(db: D1Database, supplierName: str
 
     return (results || []).map((row) => d1RowToMerch(row as D1Merch)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting merch by supplier name:', error);
+    log.error('[D1] Error getting merch by supplier name:', error);
     return [];
   }
 }
@@ -597,7 +601,7 @@ export async function d1GetComments(db: D1Database, itemId: string, itemType: 'r
       };
     });
   } catch (error: unknown) {
-    console.error('[D1] Error getting comments:', error);
+    log.error('[D1] Error getting comments:', error);
     return [];
   }
 }
@@ -631,7 +635,7 @@ export async function d1AddComment(db: D1Database, comment: {
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error adding comment:', error);
+    log.error('[D1] Error adding comment:', error);
     return false;
   }
 }
@@ -645,7 +649,7 @@ export async function d1GetCommentCount(db: D1Database, itemId: string, itemType
 
     return (result as D1Row)?.count as number || 0;
   } catch (error: unknown) {
-    console.error('[D1] Error getting comment count:', error);
+    log.error('[D1] Error getting comment count:', error);
     return 0;
   }
 }
@@ -679,7 +683,7 @@ export async function d1GetRatings(db: D1Database, releaseId: string): Promise<{
       fiveStarCount: (r.five_star_count as number) || 0
     };
   } catch (error: unknown) {
-    console.error('[D1] Error getting ratings:', error);
+    log.error('[D1] Error getting ratings:', error);
     return null;
   }
 }
@@ -693,7 +697,7 @@ export async function d1GetUserRating(db: D1Database, releaseId: string, userId:
 
     return row ? (row as D1Row).rating as number : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting user rating:', error);
+    log.error('[D1] Error getting user rating:', error);
     return null;
   }
 }
@@ -768,7 +772,7 @@ export async function d1UpsertRating(db: D1Database, releaseId: string, userId: 
 
     return { average: newAverage, count: newCount, fiveStarCount: newFiveStarCount };
   } catch (error: unknown) {
-    console.error('[D1] Error upserting rating:', error);
+    log.error('[D1] Error upserting rating:', error);
     return null;
   }
 }
@@ -822,7 +826,7 @@ export function d1RowToSlot(row: D1LivestreamSlot): FirestoreDoc | null {
     doc.id = row.id;
     return doc;
   } catch (error: unknown) {
-    console.error('[D1] Error parsing slot data:', error);
+    log.error('[D1] Error parsing slot data:', error);
     return null;
   }
 }
@@ -836,7 +840,7 @@ export async function d1GetLiveSlots(db: D1Database): Promise<FirestoreDoc[]> {
 
     return (results || []).map((row) => d1RowToSlot(row as D1LivestreamSlot)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting live slots:', error);
+    log.error('[D1] Error getting live slots:', error);
     return [];
   }
 }
@@ -855,7 +859,7 @@ export async function d1GetScheduledSlots(db: D1Database, fromTime?: string): Pr
 
     return (results || []).map((row) => d1RowToSlot(row as D1LivestreamSlot)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting scheduled slots:', error);
+    log.error('[D1] Error getting scheduled slots:', error);
     return [];
   }
 }
@@ -869,7 +873,7 @@ export async function d1GetSlotById(db: D1Database, id: string): Promise<Firesto
 
     return row ? d1RowToSlot(row as D1LivestreamSlot) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting slot:', error);
+    log.error('[D1] Error getting slot:', error);
     return null;
   }
 }
@@ -883,7 +887,7 @@ export async function d1GetSlotsByDj(db: D1Database, djId: string): Promise<Fire
 
     return (results || []).map((row) => d1RowToSlot(row as D1LivestreamSlot)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting slots by DJ:', error);
+    log.error('[D1] Error getting slots by DJ:', error);
     return [];
   }
 }
@@ -918,7 +922,7 @@ export async function d1UpsertSlot(db: D1Database, id: string, doc: FirestoreDoc
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error upserting slot:', error);
+    log.error('[D1] Error upserting slot:', error);
     return false;
   }
 }
@@ -946,7 +950,7 @@ export async function d1UpdateSlotStatus(db: D1Database, id: string, status: str
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error updating slot status:', error);
+    log.error('[D1] Error updating slot status:', error);
     return false;
   }
 }
@@ -957,7 +961,7 @@ export async function d1DeleteSlot(db: D1Database, id: string): Promise<boolean>
     await db.prepare(`DELETE FROM livestream_slots WHERE id = ?`).bind(id).run();
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error deleting slot:', error);
+    log.error('[D1] Error deleting slot:', error);
     return false;
   }
 }
@@ -1051,7 +1055,7 @@ export function d1RowToLedger(row: D1LedgerEntry): FirestoreDoc | null {
     doc.artistPayout = row.artist_payout;
     return doc;
   } catch (error: unknown) {
-    console.error('[D1] Error parsing ledger data:', error);
+    log.error('[D1] Error parsing ledger data:', error);
     return null;
   }
 }
@@ -1083,7 +1087,7 @@ export async function d1InsertLedgerEntry(db: D1Database, id: string, entry: Fir
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error inserting ledger entry:', error);
+    log.error('[D1] Error inserting ledger entry:', error);
     return false;
   }
 }
@@ -1146,7 +1150,7 @@ export async function d1UpdateLedgerEntry(db: D1Database, id: string, updates: R
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error updating ledger entry:', error);
+    log.error('[D1] Error updating ledger entry:', error);
     return false;
   }
 }
@@ -1194,7 +1198,7 @@ export async function d1GetLedgerEntries(db: D1Database, options: {
 
     return (results || []).map((row) => d1RowToLedger(row as D1LedgerEntry)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting ledger entries:', error);
+    log.error('[D1] Error getting ledger entries:', error);
     return [];
   }
 }
@@ -1208,7 +1212,7 @@ export async function d1GetLedgerEntryById(db: D1Database, id: string): Promise<
 
     return row ? d1RowToLedger(row as D1LedgerEntry) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting ledger entry:', error);
+    log.error('[D1] Error getting ledger entry:', error);
     return null;
   }
 }
@@ -1222,7 +1226,7 @@ export async function d1GetLedgerEntriesByOrder(db: D1Database, orderId: string)
 
     return (results || []).map((row) => d1RowToLedger(row as D1LedgerEntry)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting ledger entries by order:', error);
+    log.error('[D1] Error getting ledger entries by order:', error);
     return [];
   }
 }
@@ -1236,7 +1240,7 @@ export async function d1GetLedgerEntriesByArtist(db: D1Database, artistId: strin
 
     return (results || []).map((row) => d1RowToLedger(row as D1LedgerEntry)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting ledger entries by artist:', error);
+    log.error('[D1] Error getting ledger entries by artist:', error);
     return [];
   }
 }
@@ -1295,7 +1299,7 @@ export async function d1GetLedgerTotals(db: D1Database, options: {
       paidPayouts: (r?.paid_payouts as number) || 0
     };
   } catch (error: unknown) {
-    console.error('[D1] Error getting ledger totals:', error);
+    log.error('[D1] Error getting ledger totals:', error);
     return { orders: 0, grossRevenue: 0, netRevenue: 0, totalFees: 0, pendingPayouts: 0, paidPayouts: 0 };
   }
 }
@@ -1306,7 +1310,7 @@ export async function d1DeleteLedgerEntry(db: D1Database, id: string): Promise<b
     await db.prepare('DELETE FROM sales_ledger WHERE id = ?').bind(id).run();
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error deleting ledger entry:', error);
+    log.error('[D1] Error deleting ledger entry:', error);
     return false;
   }
 }
@@ -1362,7 +1366,7 @@ export function d1RowToVinylSeller(row: D1VinylSeller): FirestoreDoc | null {
     doc.userId = row.id;
     return doc;
   } catch (error: unknown) {
-    console.error('[D1] Error parsing vinyl seller data:', error);
+    log.error('[D1] Error parsing vinyl seller data:', error);
     return null;
   }
 }
@@ -1376,7 +1380,7 @@ export async function d1GetVinylSeller(db: D1Database, userId: string): Promise<
 
     return row ? d1RowToVinylSeller(row as D1VinylSeller) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting vinyl seller:', error);
+    log.error('[D1] Error getting vinyl seller:', error);
     return null;
   }
 }
@@ -1419,7 +1423,7 @@ export async function d1UpsertVinylSeller(db: D1Database, userId: string, doc: F
 
     return true;
   } catch (error: unknown) {
-    console.error('[D1] Error upserting vinyl seller:', error);
+    log.error('[D1] Error upserting vinyl seller:', error);
     return false;
   }
 }
@@ -1433,7 +1437,7 @@ export async function d1GetAllVinylSellers(db: D1Database): Promise<FirestoreDoc
 
     return (results || []).map((row) => d1RowToVinylSeller(row as D1VinylSeller)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting all vinyl sellers:', error);
+    log.error('[D1] Error getting all vinyl sellers:', error);
     return [];
   }
 }
@@ -1448,7 +1452,7 @@ export async function d1GetNextCollectionNumber(db: D1Database): Promise<number>
     const maxNum = ((result as D1Row)?.max_num as number) || 0;
     return maxNum + 1;
   } catch (error: unknown) {
-    console.error('[D1] Error getting next collection number:', error);
+    log.error('[D1] Error getting next collection number:', error);
     return 1; // Default to 1 if error
   }
 }
@@ -1462,7 +1466,7 @@ export async function d1GetVinylSellerByCollection(db: D1Database, collectionNum
 
     return row ? d1RowToVinylSeller(row as D1VinylSeller) : null;
   } catch (error: unknown) {
-    console.error('[D1] Error getting vinyl seller by collection:', error);
+    log.error('[D1] Error getting vinyl seller by collection:', error);
     return null;
   }
 }
@@ -1478,7 +1482,7 @@ export async function d1GetAllCollections(db: D1Database): Promise<FirestoreDoc[
 
     return (results || []).map((row) => d1RowToVinylSeller(row as D1VinylSeller)).filter(Boolean) as FirestoreDoc[];
   } catch (error: unknown) {
-    console.error('[D1] Error getting all collections:', error);
+    log.error('[D1] Error getting all collections:', error);
     return [];
   }
 }

@@ -175,7 +175,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[check-duplicates] Error:', error);
+    logger.error('[check-duplicates] Error:', error);
     return ApiErrors.serverError('Failed to check duplicates');
   }
 };

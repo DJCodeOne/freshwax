@@ -5,7 +5,9 @@ import { z } from 'zod';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/add-artist');
 
 const addArtistSchema = z.object({
   userId: z.string().min(1),
@@ -139,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[add-artist] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to add artist');
   }
 };

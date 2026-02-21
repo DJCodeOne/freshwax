@@ -252,7 +252,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           atomicIncrement('users', verifiedUserId, { creditBalance: -appliedCredit })
         ]);
         creditDeducted = true;
-      } catch (creditErr) {
+      } catch (creditErr: unknown) {
         log.error('[FreeOrder] Failed to deduct credit before order:', creditErr);
         return ApiErrors.serverError('Failed to apply credit. Please try again.');
       }
@@ -293,7 +293,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         env,
         idToken: orderData.idToken
       });
-    } catch (orderErr) {
+    } catch (orderErr: unknown) {
       // If credit was deducted but order creation failed, refund the credit
       if (creditDeducted) {
         try {
@@ -386,7 +386,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           await updateDocument('users', verifiedUserId, { creditUpdatedAt: now });
 
-        } catch (txnErr) {
+        } catch (txnErr: unknown) {
           log.error('[FreeOrder] Failed to record credit transaction:', txnErr);
           // Credit already deducted, transaction record is non-critical
         }

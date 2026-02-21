@@ -7,7 +7,9 @@ import { d1UpsertMix } from '../../lib/d1-catalog';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('update-mix');
 
 const UpdateMixSchema = z.object({
   mixId: z.string().min(1).max(500),
@@ -110,7 +112,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       await updateDocument('dj-mixes', mixId, updateData);
     } catch (updateError: unknown) {
-      console.error('[update-mix] updateDocument error:', updateError);
+      log.error('[update-mix] updateDocument error:', updateError);
       return ApiErrors.serverError('Database update failed');
     }
 
@@ -125,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
-        console.error('[update-mix] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[update-mix] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -144,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('Error updating mix:', error);
+    log.error('Error updating mix:', error);
     return ApiErrors.serverError('Failed to update mix');
   }
 };

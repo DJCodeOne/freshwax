@@ -636,7 +636,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 status: 200, headers: { 'Content-Type': 'application/json' }
               });
             }
-          } catch (idempotencyErr) {
+          } catch (idempotencyErr: unknown) {
             logger.error('[Stripe Webhook] Subscription idempotency check failed:', idempotencyErr);
             // Return 500 so Stripe retries when Firebase is back
             return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
@@ -746,7 +746,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         logger.error('[Stripe Webhook] KV referral redemption error:', result.error);
                       }
                     }
-                  } catch (referralError) {
+                  } catch (referralError: unknown) {
                     logger.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
                   }
                 } else if (referralCardId) {
@@ -773,7 +773,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     } else {
                       logger.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
                     }
-                  } catch (referralError) {
+                  } catch (referralError: unknown) {
                     logger.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
                   }
                 }
@@ -794,7 +794,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 error: 'Firestore update failed'
               }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
             }
-          } catch (updateError) {
+          } catch (updateError: unknown) {
             logger.error('[Stripe Webhook] Error updating subscription:', updateError);
             logStripeEvent(event.type, event.id, false, {
               message: 'Error updating subscription',
@@ -832,7 +832,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   status: 200, headers: { 'Content-Type': 'application/json' }
                 });
               }
-            } catch (idempotencyErr) {
+            } catch (idempotencyErr: unknown) {
               logger.error('[Stripe Webhook] Promo subscription idempotency check failed:', idempotencyErr);
               return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
                 status: 500, headers: { 'Content-Type': 'application/json' }
@@ -926,7 +926,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                         logger.error(`[Stripe Webhook] Failed to redeem KV code: ${result.error}`);
                       }
                     }
-                  } catch (referralError) {
+                  } catch (referralError: unknown) {
                     logger.error('[Stripe Webhook] Failed to mark KV referral code as redeemed:', referralError);
                   }
                 } else if (referralCardId) {
@@ -953,7 +953,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     } else {
                       logger.debug(`[Stripe Webhook] Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
                     }
-                  } catch (referralError) {
+                  } catch (referralError: unknown) {
                     logger.error('[Stripe Webhook] Failed to mark Firebase referral code as redeemed:', referralError);
                   }
                 }
@@ -966,7 +966,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               } else {
                 logger.error('[Stripe Webhook] Failed to update user subscription (promo)');
               }
-            } catch (updateError) {
+            } catch (updateError: unknown) {
               logger.error('[Stripe Webhook] Error updating subscription (promo):', updateError);
             }
           }
@@ -1004,7 +1004,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 code: existingCards[0].code
               }), { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
-          } catch (checkErr) {
+          } catch (checkErr: unknown) {
             logger.error('[Stripe Webhook] Gift card idempotency check failed:', checkErr);
           }
         }
@@ -1074,7 +1074,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
           }
           // No existing order - proceed with creation
-        } catch (idempotencyErr) {
+        } catch (idempotencyErr: unknown) {
           logger.error('[Stripe Webhook] Idempotency check failed (Firebase unreachable):', idempotencyErr);
           // Return 500 so Stripe retries later when Firebase is back up
           // This prevents duplicate orders when we can't verify idempotency
@@ -1122,7 +1122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               // Non-fatal: cleanup can be retried
             }
           }
-        } catch (pendingErr) {
+        } catch (pendingErr: unknown) {
           logger.error('[Stripe Webhook] ❌ Error retrieving pending checkout:', pendingErr);
         }
       }
@@ -1190,7 +1190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           logger.error('[Stripe Webhook] Stock unavailable after payment:', stockCheck.unavailableItems);
           stockIssue = true;
         }
-      } catch (stockErr) {
+      } catch (stockErr: unknown) {
         logger.error('[Stripe Webhook] Stock validation error (Firebase may be unreachable):', stockErr);
         // Payment is already captured - we MUST create the order regardless
         // Flag it so admin can review manually
@@ -1483,7 +1483,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           } else {
             logger.warn('[Stripe Webhook] Insufficient credit balance for deduction');
           }
-        } catch (creditErr) {
+        } catch (creditErr: unknown) {
           logger.error('[Stripe Webhook] Failed to deduct credit:', creditErr);
           // Don't fail the order, just log the error
         }
@@ -1640,7 +1640,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             } else {
               // No userId in subscription metadata
             }
-          } catch (subError) {
+          } catch (subError: unknown) {
             logger.error('[Stripe Webhook] Error processing renewal:', subError);
           }
         }
@@ -1674,7 +1674,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             status: 200, headers: { 'Content-Type': 'application/json' }
           });
         }
-      } catch (idempotencyErr) {
+      } catch (idempotencyErr: unknown) {
         logger.error('[Stripe Webhook] Dispute idempotency check failed:', idempotencyErr);
         // Return 500 so Stripe retries when Firebase is back
         return new Response(JSON.stringify({ error: 'Temporary error checking dispute status' }), {

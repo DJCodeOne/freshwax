@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/server-status');
 
 export const prerender = false;
 
@@ -46,7 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-    } catch (fetchError) {
+    } catch (fetchError: unknown) {
       // Primary endpoint check failed
     }
 
@@ -79,7 +81,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[ServerStatus] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Server status check failed');
   }
 };

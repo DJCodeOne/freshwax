@@ -4,6 +4,9 @@
 import { SITE_URL } from './constants';
 import { emailWrapper, ctaButton, esc } from './email-wrapper';
 import { sendResendEmail } from './email';
+import { createLogger } from './api-utils';
+
+const log = createLogger('abandoned-cart-email');
 
 interface CartItem {
   name?: string;
@@ -122,7 +125,7 @@ export async function sendAbandonedCartEmail(
     return result;
 
   } catch (error: unknown) {
-    console.error('[Abandoned Cart] Error sending recovery email:', error);
+    log.error('[Abandoned Cart] Error sending recovery email:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

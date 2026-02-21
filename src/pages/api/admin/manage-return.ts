@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/manage-return');
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -138,8 +140,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
               returnRequest.items,
               returnRequest.orderNumber
             );
-          } catch (stockErr) {
-            console.error('[manage-return] Stock restore error:', stockErr);
+          } catch (stockErr: unknown) {
+            log.error('Stock restore error:', stockErr);
           }
         }
 
@@ -187,7 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })
         }, 10000);
       } catch (emailErr: unknown) {
-        console.error('[manage-return] Email error:', emailErr);
+        log.error('Email error:', emailErr);
       }
     }
 
@@ -200,7 +202,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[manage-return] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update return');
   }
 };
@@ -259,7 +261,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[manage-return] GET error:', error instanceof Error ? error.message : String(error));
+    log.error('GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to fetch returns');
   }
 };

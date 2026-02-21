@@ -6,6 +6,9 @@ import Stripe from 'stripe';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { getWebhookStats } from '../../../lib/webhook-logger';
 import { requireAdminAuth } from '../../../lib/admin';
+import { createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('health/payments');
 
 export const prerender = false;
 
@@ -124,7 +127,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       issues.push(`${failedPayouts.length} payouts have failed multiple times`);
     }
   } catch (error: unknown) {
-    console.error('[Health Check] Error checking payouts:', error);
+    log.error('[Health Check] Error checking payouts:', error);
   }
 
   // Check webhook health
@@ -143,7 +146,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       issues.push(`Webhook success rate is ${result.checks.webhookHealth.successRate}%`);
     }
   } catch (error: unknown) {
-    console.error('[Health Check] Error checking webhook stats:', error);
+    log.error('[Health Check] Error checking webhook stats:', error);
   }
 
   // Determine overall status

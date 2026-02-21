@@ -196,7 +196,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           } else {
             logger.error(`[PayPal Plus] Failed to redeem KV code: ${result.error}`);
           }
-        } catch (referralError) {
+        } catch (referralError: unknown) {
           logger.error('[PayPal Plus] Failed to mark KV referral code as redeemed:', referralError);
         }
       } else if (referralCardId) {
@@ -220,7 +220,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             10000
           );
           logger.info(`[PayPal Plus] ✓ Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
-        } catch (referralError) {
+        } catch (referralError: unknown) {
           logger.error('[PayPal Plus] Failed to mark Firebase referral code as redeemed:', referralError);
         }
       }

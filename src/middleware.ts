@@ -325,7 +325,7 @@ export const onRequest = defineMiddleware(async ({ locals, request }, next) => {
   let response: Response;
   try {
     response = await next();
-  } catch (err) {
+  } catch (err: unknown) {
     // Unhandled exception in API handler
     if (isApiRoute) {
       const env = locals.runtime?.env;

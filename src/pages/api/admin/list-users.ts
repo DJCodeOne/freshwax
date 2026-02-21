@@ -5,7 +5,9 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/list-users');
 import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
@@ -194,7 +196,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin/list-users] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to load users');
   }
 };

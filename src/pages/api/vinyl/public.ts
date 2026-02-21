@@ -7,7 +7,9 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { d1GetAllCollections } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('vinyl/public');
 
 export const prerender = false;
 
@@ -91,7 +93,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         try {
           collections = await d1GetAllCollections(db);
         } catch (e: unknown) {
-          console.error('[vinyl/public] D1 collections error:', e);
+          log.error('[vinyl/public] D1 collections error:', e);
         }
       }
 
@@ -197,7 +199,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/public GET] Error:', error);
+    log.error('[vinyl/public GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch data');
   }
 };

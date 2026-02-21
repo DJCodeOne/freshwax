@@ -2,7 +2,10 @@
 // Shared Firebase Admin SDK initialization
 // Uses dynamic imports and lazy initialization for Cloudflare Workers compatibility
 
+import { createLogger } from './api-utils';
 import type { App } from 'firebase-admin/app';
+
+const log = createLogger('firebase-admin');
 import type { Firestore, FieldValue as FVType, Timestamp as TSType } from 'firebase-admin/firestore';
 
 let _app: App | null = null;
@@ -37,7 +40,7 @@ async function ensureInitializedAsync(): Promise<void> {
 
   if (!projectId || !clientEmail || !privateKey) {
     _initError = 'Missing environment variables';
-    console.error('[firebase-admin] Missing required environment variables:', {
+    log.error('[firebase-admin] Missing required environment variables:', {
       hasProjectId: !!projectId,
       hasClientEmail: !!clientEmail,
       hasPrivateKey: !!privateKey
@@ -78,7 +81,7 @@ async function ensureInitializedAsync(): Promise<void> {
     _db = getFirestore();
   } catch (error: unknown) {
     _initError = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[firebase-admin] Failed to initialize:', {
+    log.error('[firebase-admin] Failed to initialize:', {
       message: error instanceof Error ? error.message : String(error),
       code: (error as any)?.code,
       name: error instanceof Error ? error.name : undefined,
@@ -124,7 +127,7 @@ export const adminDb = new Proxy({} as Firestore, {
     // This is a sync access - if not initialized, return null
     if (!_db) {
       if (!_initialized) {
-        console.warn('[firebase-admin] Sync access before initialization. Use getAdminDb() instead.');
+        log.warn('[firebase-admin] Sync access before initialization. Use getAdminDb() instead.');
       }
       return null;
     }
@@ -140,7 +143,7 @@ export const adminDb = new Proxy({} as Firestore, {
 export const FieldValue = new Proxy({} as typeof FVType, {
   get(_, prop) {
     if (!_FieldValue) {
-      console.warn('[firebase-admin] FieldValue accessed before initialization');
+      log.warn('[firebase-admin] FieldValue accessed before initialization');
       return undefined;
     }
     return (_FieldValue as any)[prop];

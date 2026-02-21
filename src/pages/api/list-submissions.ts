@@ -3,7 +3,9 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../lib/admin';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('list-submissions');
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Admin-only: lists R2 submission folders containing artist names
@@ -52,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[list-submissions] Error:', error);
+    log.error('[list-submissions] Error:', error);
     return ApiErrors.serverError('Failed to list submissions');
   }
 };

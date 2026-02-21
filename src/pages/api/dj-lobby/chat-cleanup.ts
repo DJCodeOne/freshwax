@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, setDocument, deleteDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('dj-lobby/chat-cleanup');
 
 export const prerender = false;
 
@@ -118,7 +120,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/chat-cleanup] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

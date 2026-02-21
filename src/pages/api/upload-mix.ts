@@ -375,7 +375,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }));
           logger.info(`[upload-mix] Cleaned up R2 object: ${key}`);
         }
-      } catch (cleanupError) {
+      } catch (cleanupError: unknown) {
         logger.error('[upload-mix] R2 cleanup error (original error preserved):', cleanupError);
       }
     }

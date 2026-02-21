@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { d1UpsertMix } from '../../../lib/d1-catalog';
-import { successResponse, errorResponse } from '../../../lib/api-utils';
+import { successResponse, errorResponse, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/sync-mix-stats');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const authResult = await requireAdminAuth(request, locals);
@@ -42,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       } catch (e: unknown) {
         failed++;
-        console.error('[sync-mix-stats] Failed to sync mix:', mix.id, e);
+        log.error('Failed to sync mix:', mix.id, e);
       }
     }
 
@@ -53,7 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       details
     });
   } catch (error: unknown) {
-    console.error('[sync-mix-stats] Error:', error);
+    log.error('Error:', error);
     return errorResponse('Migration failed', 500);
   }
 };

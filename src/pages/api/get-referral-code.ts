@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { verifyUserToken } from '../../lib/firebase-rest';
 import { getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('get-referral-code');
 
 export const prerender = false;
 
@@ -78,7 +80,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[get-referral-code] Error:', error);
+    log.error('[get-referral-code] Error:', error);
     return ApiErrors.serverError('Failed to get code');
   }
 };

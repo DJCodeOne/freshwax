@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/bulk-stock-upload');
 
 const bulkStockUploadSchema = z.object({
   adminKey: z.string().min(1),
@@ -279,7 +281,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[bulk-stock-upload] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to process CSV');
   }
 };

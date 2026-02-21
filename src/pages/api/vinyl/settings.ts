@@ -123,12 +123,12 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
             try {
               await d1UpsertVinylSeller(db, userId, settings);
               logger.info('[vinyl/settings GET] Backfilled to D1:', userId);
-            } catch (backfillError) {
+            } catch (backfillError: unknown) {
               logger.error('[vinyl/settings GET] D1 backfill failed:', backfillError);
             }
           }
         }
-      } catch (fbError) {
+      } catch (fbError: unknown) {
         logger.error('[vinyl/settings GET] Firebase error:', fbError);
       }
     }
@@ -263,7 +263,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
         firebaseSuccess = true;
         logger.info('[vinyl/settings POST] Saved to Firebase (client API):', userId);
       }
-    } catch (fbError) {
+    } catch (fbError: unknown) {
       logger.error('[vinyl/settings POST] Firebase backup failed (non-critical):', fbError);
     }
 

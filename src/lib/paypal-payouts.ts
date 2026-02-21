@@ -1,7 +1,9 @@
 // src/lib/paypal-payouts.ts
 // PayPal Payouts API integration
 
-import { fetchWithTimeout } from './api-utils';
+import { fetchWithTimeout, createLogger } from './api-utils';
+
+const log = createLogger('paypal-payouts');
 import { getPayPalBaseUrl, getPayPalAccessToken } from './paypal-auth';
 
 interface PayPalConfig {
@@ -80,7 +82,7 @@ export async function createPayout(
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('[PayPal] Payout error:', data);
+      log.error('[PayPal] Payout error:', data);
       return {
         success: false,
         error: data.message || data.details?.[0]?.issue || 'Payout failed',
@@ -94,7 +96,7 @@ export async function createPayout(
       status: data.batch_header?.batch_status,
     };
   } catch (error: unknown) {
-    console.error('[PayPal] Payout error:', error);
+    log.error('[PayPal] Payout error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'PayPal payout failed',
@@ -144,7 +146,7 @@ export async function createBatchPayout(
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('[PayPal] Batch payout error:', data);
+      log.error('[PayPal] Batch payout error:', data);
       return {
         success: false,
         error: data.message || data.details?.[0]?.issue || 'Batch payout failed',
@@ -158,7 +160,7 @@ export async function createBatchPayout(
       items: data.items,
     };
   } catch (error: unknown) {
-    console.error('[PayPal] Batch payout error:', error);
+    log.error('[PayPal] Batch payout error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'PayPal batch payout failed',

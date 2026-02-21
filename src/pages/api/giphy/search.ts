@@ -2,7 +2,9 @@
 // Server-side GIPHY proxy to keep API key secure
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('giphy/search');
 
 export const prerender = false;
 
@@ -115,7 +117,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[GIPHY Proxy] Error:', error);
+    log.error('[GIPHY Proxy] Error:', error);
     return ApiErrors.serverError('Failed to fetch from GIPHY');
   }
 };

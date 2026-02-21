@@ -115,7 +115,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));
+    logger.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));
 
     if (error instanceof Error && error.name === 'AbortError') {
       return errorResponse('Request timed out. Please try again.', 504);

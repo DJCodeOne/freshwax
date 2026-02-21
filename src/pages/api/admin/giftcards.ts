@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/giftcards');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 export const prerender = false;
@@ -61,7 +63,7 @@ function getAdminKey(locals: App.Locals): string {
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
   const RESEND_API_KEY = import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) {
-    console.error('[admin/giftcards] No Resend API key configured');
+    log.error('No Resend API key configured');
     return false;
   }
 
@@ -82,13 +84,13 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('[admin/giftcards] Resend error:', response.status, error);
+      log.error('Resend error:', response.status, error);
       return false;
     }
 
     return true;
   } catch (error: unknown) {
-    console.error('[admin/giftcards] Email send error:', error);
+    log.error('Email send error:', error);
     return false;
   }
 }
@@ -269,7 +271,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin/giftcards] GET Error:', error);
+    log.error('GET Error:', error);
     return ApiErrors.serverError('Failed to fetch gift card data');
   }
 };
@@ -400,7 +402,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           creditUpdatedAt: now
         });
       } catch (e: unknown) {
-        console.error('[admin/giftcards] Failed to sync credit balance to user doc:', e instanceof Error ? e.message : e);
+        log.error('Failed to sync credit balance to user doc:', e instanceof Error ? e.message : e);
       }
 
       return new Response(JSON.stringify({
@@ -568,7 +570,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
 
       } catch (emailError: unknown) {
-        console.error('[admin/giftcards] Email error:', emailError);
+        log.error('Email error:', emailError);
         return ApiErrors.serverError('Failed to send email');
       }
     }
@@ -576,7 +578,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('[admin/giftcards] POST Error:', error);
+    log.error('POST Error:', error);
     return ApiErrors.serverError('Failed to process request');
   }
 };

@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, addDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import type { EventRequest } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/event-requests');
 import { z } from 'zod';
 
 const EventRequestSchema = z.object({
@@ -95,7 +97,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[event-requests] GET error:', error);
+    log.error('GET error:', error);
     return ApiErrors.serverError('Failed to fetch event requests');
   }
 };
@@ -282,7 +284,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('[event-requests] POST error:', error);
+    log.error('POST error:', error);
     return ApiErrors.serverError('Failed to process request');
   }
 };

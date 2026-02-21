@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('user/export-data');
 
 const ExportDataSchema = z.object({
   userId: z.string().min(1, 'userId is required').max(200),
@@ -49,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         exportData.profile = userData;
       }
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch user profile:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch user profile:', e instanceof Error ? e.message : e);
     }
 
     // 2. Artist profile
@@ -57,7 +59,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const artist = await getDocument('artists', userId);
       if (artist) exportData.artistProfile = artist;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch artist profile:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch artist profile:', e instanceof Error ? e.message : e);
     }
 
     // 3. Orders
@@ -69,7 +71,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       if (orders.length) exportData.orders = orders;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch orders:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch orders:', e instanceof Error ? e.message : e);
     }
 
     // 4. Comments
@@ -81,7 +83,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       if (comments.length) exportData.comments = comments;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch comments:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch comments:', e instanceof Error ? e.message : e);
     }
 
     // 5. DJ Mixes
@@ -93,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       if (mixes.length) exportData.djMixes = mixes;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch DJ mixes:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch DJ mixes:', e instanceof Error ? e.message : e);
     }
 
     // 6. Vinyl listings
@@ -105,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       if (listings.length) exportData.vinylListings = listings;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch vinyl listings:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch vinyl listings:', e instanceof Error ? e.message : e);
     }
 
     // 7. Vinyl seller profile
@@ -113,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const seller = await getDocument('vinylSellers', userId);
       if (seller) exportData.vinylSellerProfile = seller;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch vinyl seller profile:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch vinyl seller profile:', e instanceof Error ? e.message : e);
     }
 
     // 8. Livestream bookings
@@ -125,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
       if (bookings.length) exportData.livestreamBookings = bookings;
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch livestream bookings:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch livestream bookings:', e instanceof Error ? e.message : e);
     }
 
     // 9. Newsletter subscription
@@ -137,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (sub) exportData.newsletterSubscription = sub;
       }
     } catch (e: unknown) {
-      console.error('[export-data] Failed to fetch newsletter subscription:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch newsletter subscription:', e instanceof Error ? e.message : e);
     }
 
     return new Response(JSON.stringify(exportData, null, 2), {
@@ -149,7 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[export-data] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to export data');
   }
 };

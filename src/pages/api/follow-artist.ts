@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('follow-artist');
 
 const FollowArtistSchema = z.object({
   artistName: z.string().min(1).max(200).optional(),
@@ -121,7 +123,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get followed artists');
   }
 };
@@ -238,7 +240,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action. Use: follow, unfollow, toggle, or check');
 
   } catch (error: unknown) {
-    console.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update follow status');
   }
 };

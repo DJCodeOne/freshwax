@@ -5,7 +5,9 @@ import { queryCollection, addDocument, updateDocument, atomicIncrement } from '.
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { escapeHtml, ApiErrors } from '../../../lib/api-utils';
+import { escapeHtml, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('newsletter/send');
 import { SITE_URL } from '../../../lib/constants';
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
@@ -24,7 +26,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     blockDurationMs: 60 * 60 * 1000
   });
   if (!rateCheck.allowed) {
-    console.warn(`[Newsletter] Rate limit exceeded for ${clientId}`);
+    log.warn(`Rate limit exceeded for ${clientId}`);
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
@@ -87,7 +89,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 
     // Limit subscribers per send to prevent massive operations
     if (subscribers.length > MAX_SUBSCRIBERS_PER_SEND) {
-      console.warn(`[Newsletter] Limiting send from ${subscribers.length} to ${MAX_SUBSCRIBERS_PER_SEND} subscribers`);
+      log.warn(`Limiting send from ${subscribers.length} to ${MAX_SUBSCRIBERS_PER_SEND} subscribers`);
       subscribers = subscribers.slice(0, MAX_SUBSCRIBERS_PER_SEND);
     }
 
@@ -111,7 +113,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
           headers: { 'Content-Type': 'application/json' }
         });
       } catch (emailError: unknown) {
-        console.error('[Newsletter] Preview email failed:', emailError);
+        log.error('Preview email failed:', emailError);
         return ApiErrors.serverError('Failed to send preview email');
       }
     }
@@ -155,8 +157,8 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
             await updateDocument('subscribers', subscriber.id, {
               lastEmailSentAt: new Date()
             });
-          } catch (updateError) {
-            console.error(`[Newsletter] Failed to update stats for ${subscriber.email}:`, updateError);
+          } catch (updateError: unknown) {
+            log.error(`Failed to update stats for ${subscriber.email}:`, updateError);
             // Don't fail the send if stats update fails
           }
 
@@ -164,7 +166,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
         } catch (err: unknown) {
           results.failed++;
           results.errors.push(`${subscriber.email}: ${err instanceof Error ? err.message : String(err)}`);
-          console.error(`[Newsletter] Failed to send to ${subscriber.email}:`, err);
+          log.error(`Failed to send to ${subscriber.email}:`, err);
         }
       }));
 
@@ -197,7 +199,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Send error:', error);
+    log.error('Send error:', error);
     return ApiErrors.serverError('Failed to send newsletter');
   }
 };

@@ -2,7 +2,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/partner-applications');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -140,7 +142,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('Error fetching partner applications:', error);
+    log.error('Error fetching partner applications:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Failed to fetch applications',
@@ -317,7 +319,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('Error processing application:', error);
+    log.error('Error processing application:', error);
     return ApiErrors.serverError('Failed to process application');
   }
 };

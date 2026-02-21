@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('vinyl/listing');
 
 const vinylListingPostSchema = z.object({
   action: z.enum(['create', 'update', 'publish', 'unpublish', 'delete']),
@@ -171,7 +173,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[vinyl/listing GET] Error:', error);
+    log.error('[vinyl/listing GET] Error:', error);
     return ApiErrors.serverError('Failed to fetch listings');
   }
 };
@@ -288,7 +290,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             });
           }
         } catch (e: unknown) {
-          console.warn('[vinyl/listing] Failed to update seller count:', e);
+          log.warn('[vinyl/listing] Failed to update seller count:', e);
         }
 
         return new Response(JSON.stringify({ success: true, listing, listingId: newId }), {
@@ -460,7 +462,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[vinyl/listing POST] Error:', error);
+    log.error('[vinyl/listing POST] Error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

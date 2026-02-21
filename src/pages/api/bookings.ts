@@ -2,7 +2,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('bookings');
 
 const BookingsGetSchema = z.object({
   action: z.enum(['getDailyInfo', 'getSchedule', 'getMyBookings']),
@@ -208,7 +210,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('Bookings API GET error:', error instanceof Error ? error.message : String(error));
+    log.error('Bookings API GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -371,7 +373,7 @@ export const POST: APIRoute = async ({ request }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('Bookings API POST error:', error instanceof Error ? error.message : String(error));
+    log.error('Bookings API POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

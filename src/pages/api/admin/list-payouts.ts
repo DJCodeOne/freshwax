@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saDeleteDocument } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/list-payouts');
 import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
@@ -61,7 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[list-payouts] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to list payouts');
   }
 };
@@ -98,7 +100,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[list-payouts] Delete error:', error);
+    log.error('Delete error:', error);
     return ApiErrors.serverError('Failed to delete payout');
   }
 };

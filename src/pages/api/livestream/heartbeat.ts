@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/heartbeat');
 import { z } from 'zod';
 
 const HeartbeatSchema = z.object({
@@ -170,7 +172,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
     });
   } catch (error: unknown) {
-    console.error('Heartbeat error:', error);
+    log.error('Heartbeat error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

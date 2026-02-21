@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/update');
 import type { UserPlaylist } from '../../../lib/types';
 
 const PlaylistUpdateSchema = z.object({
@@ -69,7 +71,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[playlist/update] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[playlist/update] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update playlist');
   }
 };

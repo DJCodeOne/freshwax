@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/user-details');
 
 export const prerender = false;
 
@@ -59,7 +61,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[user-details] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch user details');
   }
 };

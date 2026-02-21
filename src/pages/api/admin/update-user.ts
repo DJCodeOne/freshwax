@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/update-user');
 
 const updateUserSchema = z.object({
   userId: z.string().min(1),
@@ -97,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.customers = true;
       }
     } catch (e: unknown) {
-      console.error('[update-user] Error updating customers:', e);
+      log.error('Error updating customers:', e);
     }
 
     // Update users collection - only include provided fields
@@ -118,7 +120,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         results.users = true;
       }
     } catch (e: unknown) {
-      console.error('[update-user] Error updating users:', e);
+      log.error('Error updating users:', e);
     }
 
     // Update artists collection if user has artist/merch role OR source is artists
@@ -166,7 +168,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           results.artists = true;
         }
       } catch (e: unknown) {
-        console.error('[update-user] Error updating artists:', e);
+        log.error('Error updating artists:', e);
       }
     }
 
@@ -187,7 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin/update-user] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to update user');
   }
 };

@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, getDocumentsBatch, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('wishlist');
 
 const WishlistSchema = z.object({
   releaseId: z.string().min(1, 'Release ID required').max(200),
@@ -77,7 +79,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[WISHLIST API] Error:', error);
+    log.error('[WISHLIST API] Error:', error);
     return ApiErrors.serverError('Failed to get wishlist');
   }
 };
@@ -199,8 +201,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action. Use: add, remove, toggle, or check');
 
   } catch (error: unknown) {
-    console.error('[WISHLIST API] Error:', error);
-    console.error('[WISHLIST API] Error stack:', error instanceof Error ? error.stack : undefined);
+    log.error('[WISHLIST API] Error:', error);
+    log.error('[WISHLIST API] Error stack:', error instanceof Error ? error.stack : undefined);
     return ApiErrors.serverError('Failed to update wishlist');
   }
 };

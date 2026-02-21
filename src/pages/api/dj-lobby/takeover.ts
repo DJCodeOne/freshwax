@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('dj-lobby/takeover');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const TakeoverSchema = z.object({
@@ -27,7 +29,7 @@ const PUSHER_CLUSTER = import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
 async function triggerPusher(channel: string, event: string, data: any): Promise<boolean> {
   try {
     if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
-      console.warn('[Pusher] Not configured');
+      log.warn('Pusher not configured');
       return false;
     }
 
@@ -42,7 +44,7 @@ async function triggerPusher(channel: string, event: string, data: any): Promise
     // Stub — no-op until Pusher signing is wired up
     return true;
   } catch (error: unknown) {
-    console.error('[Pusher] Error:', error);
+    log.error('Pusher error:', error);
     return false;
   }
 }
@@ -132,7 +134,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/takeover] GET Error:', error);
+    log.error('GET Error:', error);
     return ApiErrors.serverError('Failed to get takeover status');
   }
 };
@@ -300,7 +302,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/takeover] POST Error:', error);
+    log.error('POST Error:', error);
     return ApiErrors.serverError('Failed to process takeover request');
   }
 };
@@ -333,7 +335,7 @@ export const DELETE: APIRoute = async ({ locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/takeover] DELETE Error:', error);
+    log.error('DELETE Error:', error);
     return ApiErrors.serverError('Cleanup failed');
   }
 };

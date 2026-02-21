@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { addDocument, queryCollection, deleteDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('notify-restock');
 
 const NotifyRestockSchema = z.object({
   email: z.string().email('Invalid email address').max(320),
@@ -76,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[notify-restock] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[notify-restock] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to subscribe to notifications');
   }
 };
@@ -115,7 +117,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[notify-restock] DELETE error:', error instanceof Error ? error.message : String(error));
+    log.error('[notify-restock] DELETE error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to unsubscribe');
   }
 };

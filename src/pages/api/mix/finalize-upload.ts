@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       logger.info(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
-    } catch (verifyError) {
+    } catch (verifyError: unknown) {
       logger.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
       return ApiErrors.badRequest('Could not verify audio file. Please try uploading again.');
     }

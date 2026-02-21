@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('get-mix-chart');
 
 export const GET: APIRoute = async ({ request }) => {
   // Rate limit: standard API - 60 per minute
@@ -67,7 +69,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[get-mix-chart] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[get-mix-chart] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get chart');
   }
 };

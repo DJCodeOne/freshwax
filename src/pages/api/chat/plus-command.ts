@@ -6,7 +6,9 @@ import type { APIContext } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('chat/plus-command');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { z } from 'zod';
 
@@ -279,7 +281,7 @@ export async function POST({ request, locals }: APIContext) {
     });
 
   } catch (error: unknown) {
-    console.error('[Plus Command API] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[Plus Command API] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }

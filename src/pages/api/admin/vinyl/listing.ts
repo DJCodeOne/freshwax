@@ -2,7 +2,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
-import { ApiErrors } from '../../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../../lib/api-utils';
+
+const log = createLogger('admin/vinyl/listing');
 
 export const prerender = false;
 
@@ -41,7 +43,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[API vinyl/listing] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch listing');
   }
 };
@@ -146,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('Invalid action');
     }
   } catch (error: unknown) {
-    console.error('[API vinyl/listing] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Server error');
   }
 };

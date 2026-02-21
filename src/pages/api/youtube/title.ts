@@ -3,7 +3,9 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('youtube/title');
 
 export const prerender = false;
 
@@ -53,7 +55,7 @@ export const GET: APIRoute = async ({ request, url }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[youtube/title] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[youtube/title] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to fetch title');
   }
 };

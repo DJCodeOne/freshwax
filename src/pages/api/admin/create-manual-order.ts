@@ -302,7 +302,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }, 10000);
               // Artist notification sent
             }
-          } catch (artistErr) {
+          } catch (artistErr: unknown) {
             log.error('[admin] Artist notification error:', artistErr);
           }
         }

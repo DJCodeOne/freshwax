@@ -6,7 +6,9 @@ import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { getEffectiveTier, canSkipTrack, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/skip');
 
 export const prerender = false;
 
@@ -111,7 +113,7 @@ export async function POST({ request, locals }: APIContext) {
     });
 
   } catch (error: unknown) {
-    console.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -185,7 +187,7 @@ export async function GET({ request, locals }: APIContext) {
     });
 
   } catch (error: unknown) {
-    console.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }

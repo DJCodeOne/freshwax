@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { saUpdateDocument, getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/update-slot-title');
 
 function timingSafeEqual(a: string, b: string): boolean {
   const maxLen = Math.max(a.length, b.length);
@@ -72,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[update-slot-title] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update title');
   }
 };

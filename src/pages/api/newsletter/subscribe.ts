@@ -186,7 +186,7 @@ async function sendConfirmationEmail(
         html: confirmHtml
       })
     }, 10000);
-  } catch (fetchError) {
+  } catch (fetchError: unknown) {
     log.error('[Newsletter] Resend fetch failed:', fetchError);
     return; // Subscription was created, email failure is non-blocking
   }

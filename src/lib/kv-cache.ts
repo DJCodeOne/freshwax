@@ -2,6 +2,10 @@
 // Cloudflare KV caching utility to reduce Firebase reads
 // This cache is shared across ALL worker instances globally
 
+import { createLogger } from './api-utils';
+
+const log = createLogger('kv-cache');
+
 interface CacheOptions {
   ttl?: number;  // Time to live in seconds (default: 60)
   prefix?: string;  // Key prefix for namespacing
@@ -43,7 +47,7 @@ export async function kvGet<T>(key: string, options: CacheOptions = {}): Promise
 
     return null;
   } catch (error: unknown) {
-    console.error('[KVCache] Get error:', error);
+    log.error('[KVCache] Get error:', error);
     return null;
   }
 }
@@ -59,13 +63,13 @@ export async function kvSet(key: string, value: unknown, options: CacheOptions =
   try {
     const fullKey = options.prefix ? `${options.prefix}:${key}` : key;
     const ttl = options.ttl || 60;
-    if (!options.ttl) console.warn('[kv-cache] No TTL provided, using default 60s for key:', key?.substring(0, 30));
+    if (!options.ttl) log.warn('[kv-cache] No TTL provided, using default 60s for key:', key?.substring(0, 30));
 
     await kvNamespace.put(fullKey, JSON.stringify(value), {
       expirationTtl: ttl
     });
   } catch (error: unknown) {
-    console.error('[KVCache] Set error:', error);
+    log.error('[KVCache] Set error:', error);
   }
 }
 
@@ -81,7 +85,7 @@ export async function kvDelete(key: string, options: CacheOptions = {}): Promise
     const fullKey = options.prefix ? `${options.prefix}:${key}` : key;
     await kvNamespace.delete(fullKey);
   } catch (error: unknown) {
-    console.error('[KVCache] Delete error:', error);
+    log.error('[KVCache] Delete error:', error);
   }
 }
 
@@ -104,7 +108,7 @@ export async function kvCacheThrough<T>(
   const freshData = await fetcher();
 
   // Cache the result (don't await to avoid blocking)
-  kvSet(key, freshData, options).catch((e) => console.error('[KVCache] Background set error:', e));
+  kvSet(key, freshData, options).catch((e) => log.error('[KVCache] Background set error:', e));
 
   return freshData;
 }

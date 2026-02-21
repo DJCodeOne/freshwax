@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('newsletter/subscribers');
 
 export const prerender = false;
 
@@ -55,7 +57,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
     });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Get subscribers error:', error);
+    log.error('Get subscribers error:', error);
     return ApiErrors.serverError('Failed to fetch subscribers');
   }
 };
@@ -103,7 +105,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
     });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Add subscriber error:', error);
+    log.error('Add subscriber error:', error);
     return ApiErrors.serverError('Failed to add subscriber');
   }
 };
@@ -131,7 +133,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
     });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Delete subscriber error:', error);
+    log.error('Delete subscriber error:', error);
     return ApiErrors.serverError('Failed to delete subscriber');
   }
 };
@@ -166,7 +168,7 @@ export const PATCH: APIRoute = async ({ request, cookies, locals }) => {  try {
     });
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Update subscriber error:', error);
+    log.error('Update subscriber error:', error);
     return ApiErrors.serverError('Failed to update subscriber');
   }
 };

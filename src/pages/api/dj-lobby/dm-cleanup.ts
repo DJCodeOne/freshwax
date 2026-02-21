@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { deleteDocument, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('dj-lobby/dm-cleanup');
 
 export const prerender = false;
 
@@ -55,7 +57,7 @@ async function deleteSubcollectionDoc(parentPath: string, docId: string, idToken
 
   if (!response.ok && response.status !== 404) {
     const error = await response.text();
-    console.error(`[dm-cleanup] Failed to delete ${parentPath}/${docId}:`, error);
+    log.error(`Failed to delete ${parentPath}/${docId}:`, error);
   }
 }
 
@@ -114,7 +116,7 @@ export const POST: APIRoute = async ({ request }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[dj-lobby/dm-cleanup] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to clean up DMs');
   }
 };

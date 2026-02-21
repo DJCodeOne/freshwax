@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('plus/validate-promo');
 
 // Zod schema for promo code validation
 const ValidatePromoSchema = z.object({
@@ -134,7 +136,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[validate-promo] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[validate-promo] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to validate code');
   }
 };

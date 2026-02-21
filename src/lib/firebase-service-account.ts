@@ -2,6 +2,10 @@
 // Firebase REST API operations using service account authentication
 // Works in Cloudflare Workers (no Node.js dependencies)
 
+import { createLogger } from './api-utils';
+
+const log = createLogger('firebase-service-account');
+
 interface ServiceAccount {
   type: string;
   project_id: string;
@@ -480,7 +484,7 @@ export async function saQueryCollection(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('[saQueryCollection] Structured query error:', error);
+      log.error('[saQueryCollection] Structured query error:', error);
       return [];
     }
 
@@ -521,7 +525,7 @@ export async function saQueryCollection(
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('[saQueryCollection] Error:', error);
+    log.error('[saQueryCollection] Error:', error);
     return [];
   }
 

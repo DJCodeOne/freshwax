@@ -7,7 +7,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('newsletter/confirm');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 const ConfirmSchema = z.object({
@@ -67,14 +69,14 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       try {
         await sendWelcomeEmail(RESEND_API_KEY, subscriber.email, subscriber.name);
       } catch (e: unknown) {
-        console.error('[Newsletter] Welcome email failed:', e);
+        log.error('Welcome email failed:', e);
       }
     }
 
     return redirect('/newsletter/?confirmed=success');
 
   } catch (error: unknown) {
-    console.error('[Newsletter] Confirm error:', error);
+    log.error('Confirm error:', error);
     return redirect('/newsletter/?error=server-error');
   }
 };

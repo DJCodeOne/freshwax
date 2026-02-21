@@ -387,7 +387,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
               }, env);
 
               invalidateCache();
-            } catch (autoEndError) {
+            } catch (autoEndError: unknown) {
               log.error('Failed to auto-end slot:', autoEndError);
             }
           }
@@ -538,7 +538,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             if (eventRequests.length > 0) {
               approvedEventHours = eventRequests[0].hoursRequested || 0;
             }
-          } catch (eventErr) {
+          } catch (eventErr: unknown) {
             log.warn('Could not check event requests:', eventErr);
           }
         }
@@ -557,7 +557,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             : (isPlus && approvedEventHours === 0 ? ' Request extended hours for events.' : '');
           return ApiErrors.badRequest(`You've used ${hoursUsed} of your ${hoursLimit} hour${hoursLimit > 1 ? 's' : ''} today.${upgradeMsg}`);
         }
-      } catch (limitError) {
+      } catch (limitError: unknown) {
         log.warn('Could not check streaming limits:', limitError);
         // Continue with booking if limit check fails
       }
@@ -923,7 +923,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           }
         }
-      } catch (usageError) {
+      } catch (usageError: unknown) {
         log.warn('Could not record streaming usage:', usageError);
       }
 

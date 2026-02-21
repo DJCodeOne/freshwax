@@ -8,7 +8,9 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
-import { ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/server-control');
 
 const serverControlSchema = z.object({
   action: z.enum([
@@ -102,7 +104,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[ServerControl] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Server control action failed');
   }
 };
@@ -190,7 +192,7 @@ async function forceEndStreams(env?: any): Promise<{ success: boolean; message?:
           slotId: slot.id,
           reason: 'admin_force_end'
         }, env);
-      } catch (pusherErr) {
+      } catch (pusherErr: unknown) {
         // Non-critical
       }
     }
@@ -223,7 +225,7 @@ async function clearChat(): Promise<{ success: boolean; message?: string; error?
         await deleteDocument('livestream-chat', msg.id);
         deleted++;
       } catch (e: unknown) {
-        console.error('[server-control] Failed to delete chat message:', e instanceof Error ? e.message : e);
+        log.error('Failed to delete chat message:', e instanceof Error ? e.message : e);
       }
     }
 
@@ -248,7 +250,7 @@ async function kickViewers(): Promise<{ success: boolean; message?: string; erro
         await deleteDocument('listeners', listener.id);
         deleted++;
       } catch (e: unknown) {
-        console.error('[server-control] Failed to delete listener:', e instanceof Error ? e.message : e);
+        log.error('Failed to delete listener:', e instanceof Error ? e.message : e);
       }
     }
 

@@ -8,7 +8,9 @@ import { BOT_USER, BOT_ANNOUNCEMENTS } from '../../../lib/chatbot';
 import { getAdminUids, initAdminEnv, requireAdminAuth } from '../../../lib/admin';
 import { triggerPusher } from '../../../lib/pusher';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/bot');
 
 // Send bot message to a stream
 async function sendBotMessage(streamId: string, message: string, env: any): Promise<{ success: boolean; messageId?: string }> {
@@ -112,7 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[bot] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to send bot message');
   }
 };
@@ -174,7 +176,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[bot] GET Error:', error instanceof Error ? error.message : String(error));
+    log.error('GET Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get bot info');
   }
 };

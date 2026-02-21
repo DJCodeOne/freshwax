@@ -5,7 +5,9 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('dj-lobby/pusher-auth');
 
 // Web Crypto API helper for HMAC-SHA256 (hex output)
 async function hmacSha256Hex(key: string, data: string): Promise<string> {
@@ -55,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!PUSHER_KEY || !PUSHER_SECRET) {
-      console.error('[pusher-auth] Missing Pusher configuration');
+      log.error('Missing Pusher configuration');
       return ApiErrors.serverError('Server configuration error');
     }
 
@@ -82,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[pusher-auth] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Authentication failed');
   }
 };

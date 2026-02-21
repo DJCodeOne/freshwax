@@ -107,7 +107,7 @@ export const POST = async ({ request, locals }: any) => {
           release = releaseDoc;
           logger.info('[sync-release] Fetched release data:', release.releaseName, 'by', release.artistName);
         }
-      } catch (fetchError) {
+      } catch (fetchError: unknown) {
         logger.warn('[sync-release] Could not fetch release data:', fetchError);
       }
     }

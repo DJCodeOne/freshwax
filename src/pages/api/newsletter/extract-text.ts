@@ -2,7 +2,9 @@
 // Extract text content from uploaded PDF or DOCX files for newsletter
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('newsletter/extract-text');
 
 export const prerender = false;
 
@@ -54,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[extract-text] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to process file. Try copy-pasting content manually.');
   }
 };
@@ -176,7 +178,7 @@ async function extractTextFromDOCX(data: Uint8Array): Promise<string> {
     return result;
     
   } catch (error: unknown) {
-    console.error('[extractTextFromDOCX] Error:', error);
+    log.error('extractTextFromDOCX Error:', error);
     return '';
   }
 }

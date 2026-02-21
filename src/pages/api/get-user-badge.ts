@@ -2,7 +2,9 @@
 // Get user's Plus badge from KV storage (no Firebase reads)
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('get-user-badge');
 
 export const prerender = false;
 
@@ -46,7 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[get-user-badge] Error:', error);
+    log.error('[get-user-badge] Error:', error);
     return new Response(JSON.stringify({
       success: true,
       badge: 'crown' // Default on error

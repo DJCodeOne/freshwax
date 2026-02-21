@@ -9,7 +9,9 @@ import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('upload-avatar');
 
 const DeleteAvatarSchema = z.object({
   userId: z.string().min(1, 'Missing user ID').max(200),
@@ -110,8 +112,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let processed;
     try {
       processed = await processImageToSquareWebP(arrayBuffer, AVATAR_SIZE, 60);
-    } catch (processError) {
-      console.error('[upload-avatar] Image processing failed:', processError);
+    } catch (processError: unknown) {
+      log.error('[upload-avatar] Image processing failed:', processError);
       return ApiErrors.serverError('Failed to process image. Try a different image format (JPG or PNG recommended).');
     }
 
@@ -144,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         CacheControl: 'public, max-age=3600', // 1 hour cache (mutable - avatar can be re-uploaded)
       }));
     } catch (r2Error: unknown) {
-      console.error('[upload-avatar] R2 upload failed:', r2Error);
+      log.error('[upload-avatar] R2 upload failed:', r2Error);
       return ApiErrors.serverError('Failed to upload to storage');
     }
 
@@ -156,8 +158,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         avatarUrl,
         avatarUpdatedAt: new Date().toISOString()
       }, finalIdToken);
-    } catch (firestoreError) {
-      console.error('[upload-avatar] Firestore update failed:', firestoreError);
+    } catch (firestoreError: unknown) {
+      log.error('[upload-avatar] Firestore update failed:', firestoreError);
       // Avatar was uploaded to R2, so return partial success
       return new Response(JSON.stringify({
         success: true,
@@ -179,7 +181,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[upload-avatar] Error:', error);
+    log.error('[upload-avatar] Error:', error);
     return ApiErrors.serverError('Failed to upload avatar');
   }
 };
@@ -240,7 +242,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[upload-avatar] DELETE Error:', error);
+    log.error('[upload-avatar] DELETE Error:', error);
     return ApiErrors.serverError('Failed to remove avatar');
   }
 };

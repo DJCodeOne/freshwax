@@ -229,7 +229,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               updatedAt: now
             });
             log.info('[vinyl/order refund] Listing restored to published:', order.listingId);
-          } catch (listingErr) {
+          } catch (listingErr: unknown) {
             log.error('[vinyl/order refund] Failed to restore listing:', listingErr);
           }
         }
@@ -255,7 +255,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             status: 'completed',
             createdAt: now
           });
-        } catch (refundDocErr) {
+        } catch (refundDocErr: unknown) {
           log.error('[vinyl/order refund] Failed to record refund doc:', refundDocErr);
         }
 
@@ -433,7 +433,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               }, 10000);
               log.info('[vinyl/order refund] Seller refund notification sent to:', sellerEmail);
             }
-          } catch (sellerEmailErr) {
+          } catch (sellerEmailErr: unknown) {
             log.error('[vinyl/order refund] Seller email error:', sellerEmailErr);
           }
         }

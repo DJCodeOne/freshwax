@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/remove');
 import type { UserPlaylist } from '../../../lib/types';
 
 const PlaylistRemoveSchema = z.object({
@@ -78,7 +80,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[playlist/remove] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[playlist/remove] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to remove from playlist');
   }
 };

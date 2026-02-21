@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
-import { ApiErrors } from '../../../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../../../lib/api-utils';
+
+const log = createLogger('stripe/connect/supplier/refresh-link');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';
 
 export const prerender = false;
@@ -70,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Stripe Connect] Supplier refresh link error:', error instanceof Error ? error.message : String(error));
+    log.error('[Stripe Connect] Supplier refresh link error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to create onboarding link');
   }
 };

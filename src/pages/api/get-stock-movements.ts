@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('get-stock-movements');
 
 export const prerender = false;
 
@@ -89,7 +91,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[get-stock-movements] Error:', error);
+    log.error('[get-stock-movements] Error:', error);
 
     return ApiErrors.serverError('Failed to fetch movements');
   }

@@ -5,7 +5,9 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('auth/session');
 
 export const prerender = false;
 
@@ -54,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[auth/session] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[auth/session] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Session verification failed');
   }
 };

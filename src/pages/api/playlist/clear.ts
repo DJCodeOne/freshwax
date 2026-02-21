@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import type { UserPlaylist } from '../../../lib/types';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/clear');
 
 export const prerender = false;
 
@@ -46,7 +48,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[playlist/clear] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[playlist/clear] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to clear playlist');
   }
 };

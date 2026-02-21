@@ -3,6 +3,9 @@
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('stream/list');
 
 export const prerender = false;
 
@@ -66,7 +69,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[stream/list] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[stream/list] Error:', error instanceof Error ? error.message : String(error));
     return new Response(JSON.stringify({
       success: true,
       streams: [],

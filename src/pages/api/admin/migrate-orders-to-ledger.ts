@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         orderBy: { field: 'createdAt', direction: 'ASCENDING' },
         limit: 5000
       });
-    } catch (orderErr) {
+    } catch (orderErr: unknown) {
       return ApiErrors.serverError('Failed to fetch orders: ');
     }
 
@@ -228,7 +228,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         results.migrated++;
 
-      } catch (orderErr) {
+      } catch (orderErr: unknown) {
         log.error(`[Migration] Error processing order ${order.id}:`, orderErr);
         results.errors++;
         results.details.push({

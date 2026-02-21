@@ -4,7 +4,9 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('check-ownership');
 
 export const prerender = false;
 
@@ -112,7 +114,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[check-ownership] Error:', error);
+    log.error('[check-ownership] Error:', error);
     return errorResponse('Failed to check ownership');
   }
 };

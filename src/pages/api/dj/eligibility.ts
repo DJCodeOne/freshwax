@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('dj/eligibility');
 import { z } from 'zod';
 
 const EligibilitySchema = z.object({
@@ -29,7 +31,7 @@ async function getSettings() {
       };
     }
   } catch (error: unknown) {
-    console.error('Error loading settings:', error);
+    log.error('Error loading settings:', error);
   }
   return DEFAULT_REQUIREMENTS;
 }
@@ -167,7 +169,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('DJ Eligibility API GET error:', error instanceof Error ? error.message : String(error));
+    log.error('DJ Eligibility API GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -332,7 +334,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('DJ Eligibility API POST error:', error instanceof Error ? error.message : String(error));
+    log.error('DJ Eligibility API POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

@@ -8,7 +8,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('checkout-data');
 
 // Zod schema for checkout data save
 const CheckoutDataSchema = z.object({
@@ -81,7 +83,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[checkout-data] GET error:', error);
+    log.error('[checkout-data] GET error:', error);
     return ApiErrors.serverError('Failed to load customer data');
   }
 };
@@ -131,7 +133,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[checkout-data] POST error:', error);
+    log.error('[checkout-data] POST error:', error);
     return ApiErrors.serverError('Failed to save customer data');
   }
 };

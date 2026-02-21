@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { initKVCache, kvGet, kvSet, kvDelete } from '../../../lib/kv-cache';
 import { triggerPusher } from '../../../lib/pusher';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/listeners');
 
 export const prerender = false;
 
@@ -47,7 +49,7 @@ async function getListenerCount(streamId: string): Promise<{ count: number; list
 
     return { count: activeListeners.length, listeners: activeListeners };
   } catch (e: unknown) {
-    console.error('[listeners] Error getting count:', e);
+    log.error('Error getting count:', e);
     return { count: 0, listeners: [] };
   }
 }
@@ -87,7 +89,7 @@ async function upsertListener(
     // Count active listeners
     return Object.keys(listenerMap).length;
   } catch (e: unknown) {
-    console.error('[listeners] Error upserting:', e);
+    log.error('Error upserting:', e);
     return 0;
   }
 }
@@ -120,7 +122,7 @@ async function removeListener(streamId: string, userId: string): Promise<number>
 
     return Object.keys(listenerMap).length;
   } catch (e: unknown) {
-    console.error('[listeners] Error removing:', e);
+    log.error('Error removing:', e);
     return 0;
   }
 }
@@ -156,7 +158,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('Error fetching listeners:', error);
+    log.error('Error fetching listeners:', error);
     return ApiErrors.serverError('Failed to fetch listeners');
   }
 };
@@ -253,7 +255,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
   } catch (error: unknown) {
-    console.error('Error updating listener:', error);
+    log.error('Error updating listener:', error);
     return ApiErrors.serverError('Failed to update listener status');
   }
 };

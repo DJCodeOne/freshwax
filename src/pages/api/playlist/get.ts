@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import type { UserPlaylist } from '../../../lib/types';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/get');
 
 export const prerender = false;
 
@@ -57,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[playlist/get] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[playlist/get] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get playlist');
   }
 };

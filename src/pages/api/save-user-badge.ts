@@ -3,7 +3,9 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('save-user-badge');
 
 export const prerender = false;
 
@@ -54,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.forbidden('User mismatch');
       }
     } catch (e: unknown) {
-      console.error('[save-user-badge] Token verification failed:', e);
+      log.error('[save-user-badge] Token verification failed:', e);
       return ApiErrors.unauthorized('Invalid authentication token');
     }
 
@@ -91,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[save-user-badge] Error:', error);
+    log.error('[save-user-badge] Error:', error);
     return ApiErrors.serverError('Failed to save badge');
   }
 };

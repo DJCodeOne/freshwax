@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (!hasPurchased) {
       return ApiErrors.forbidden('Purchase required');
     }
-  } catch (purchaseErr) {
+  } catch (purchaseErr: unknown) {
     logger.error('[download] Purchase verification error:', purchaseErr);
     return errorResponse('Could not verify purchase');
   }

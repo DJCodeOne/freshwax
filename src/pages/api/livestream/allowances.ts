@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/allowances');
 
 // Default limits
 export const DEFAULT_WEEKLY_SLOTS = 2;
@@ -75,7 +77,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[allowances] GET Error:', error);
+    log.error('GET Error:', error);
     return ApiErrors.serverError('Failed to fetch allowances');
   }
 };
@@ -153,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[allowances] POST Error:', error);
+    log.error('POST Error:', error);
     return ApiErrors.serverError('Failed to save allowance');
   }
 };
@@ -191,7 +193,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[allowances] DELETE Error:', error);
+    log.error('DELETE Error:', error);
     return ApiErrors.serverError('Failed to remove allowance');
   }
 };

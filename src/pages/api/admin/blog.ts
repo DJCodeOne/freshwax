@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/blog');
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -80,7 +82,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[blog API] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -139,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[blog API] Create error:', error);
+    log.error('Create error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -184,7 +186,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[blog API] Update error:', error);
+    log.error('Update error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -215,7 +217,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[blog API] Delete error:', error);
+    log.error('Delete error:', error);
     return ApiErrors.serverError('Internal error');
   }
 };

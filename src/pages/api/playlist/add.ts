@@ -4,7 +4,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
-import { parseJsonBody, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/add');
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -54,7 +56,7 @@ async function fetchVideoMetadata(url: string): Promise<{ title?: string; thumbn
       thumbnail: data.thumbnail_url || undefined
     };
   } catch (error: unknown) {
-    console.warn('[playlist/add] Failed to fetch metadata:', error);
+    log.warn('[playlist/add] Failed to fetch metadata:', error);
     return {};
   }
 }
@@ -147,7 +149,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[playlist/add] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[playlist/add] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to add to playlist');
   }
 };

@@ -2,7 +2,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection, addDocument, setDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('roles/manage');
 
 const rolesManagePostSchema = z.object({
   action: z.enum(['requestRole', 'approveRole', 'denyRole', 'revokeRole']),
@@ -93,7 +95,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('Roles API GET error:', error instanceof Error ? error.message : String(error));
+    log.error('Roles API GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };
@@ -251,7 +253,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Created customers entry during approval
         }
       } catch (e: unknown) {
-        console.error(`[roles/manage] Failed to update customers/${uid}:`, e);
+        log.error(`[roles/manage] Failed to update customers/${uid}:`, e);
       }
 
       // Delete from pendingRoleRequests collection
@@ -309,7 +311,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Created artists entry
           }
         } catch (artistError: unknown) {
-          console.error(`[roles/manage] Failed to create/update artists collection for ${uid}:`, artistError);
+          log.error(`[roles/manage] Failed to create/update artists collection for ${uid}:`, artistError);
           // Don't fail the whole approval - user role is still granted
         }
       }
@@ -361,7 +363,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Created vinylSellers entry
           }
         } catch (vinylError: unknown) {
-          console.error(`[roles/manage] Failed to create/update vinylSellers collection for ${uid}:`, vinylError);
+          log.error(`[roles/manage] Failed to create/update vinylSellers collection for ${uid}:`, vinylError);
         }
       }
 
@@ -463,7 +465,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await updateDocument('users', uid, customerUpdate);
         }
       } catch (e: unknown) {
-        console.error(`[roles/manage] Failed to update customers/${uid} during revoke:`, e);
+        log.error(`[roles/manage] Failed to update customers/${uid} during revoke:`, e);
       }
 
       // Update artists collection if revoking artist/merch role
@@ -482,7 +484,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Revoked role from artists
           }
         } catch (e: unknown) {
-          console.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
+          log.error(`[roles/manage] Failed to update artists/${uid} during revoke:`, e);
         }
       }
 
@@ -501,7 +503,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Revoked vinylSeller role
           }
         } catch (e: unknown) {
-          console.error(`[roles/manage] Failed to update vinylSellers/${uid} during revoke:`, e);
+          log.error(`[roles/manage] Failed to update vinylSellers/${uid} during revoke:`, e);
         }
       }
 
@@ -514,7 +516,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('Roles API POST error:', error instanceof Error ? error.message : String(error));
+    log.error('Roles API POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

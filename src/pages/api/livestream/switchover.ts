@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/switchover');
 
 // POST: Check and perform auto-switchover (admin/system only)
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -173,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[livestream/switchover] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Switchover check failed');
   }
 };
@@ -225,7 +227,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    console.error('[livestream/switchover] GET Error:', error);
+    log.error('GET Error:', error);
     return ApiErrors.serverError('Failed to get queue status');
   }
 };

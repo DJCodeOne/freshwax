@@ -10,7 +10,9 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/trigger-payout');
 
 const triggerPayoutSchema = z.object({
   orderId: z.string().min(1),
@@ -139,7 +141,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               });
             }
           } catch (updateErr: unknown) {
-            console.warn('[admin] Could not update pending payout record:', updateErr);
+            log.warn('Could not update pending payout record:', updateErr);
           }
 
           return new Response(JSON.stringify({
@@ -155,7 +157,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.serverError(payoutResult.error || 'PayPal payout failed');
         }
       } catch (err: unknown) {
-        console.error('[admin] PayPal payout error:', err);
+        log.error('PayPal payout error:', err);
         return ApiErrors.serverError('Payout error');
       }
     }
@@ -412,7 +414,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[admin] Trigger payout error:', error);
+    log.error('Trigger payout error:', error);
     return ApiErrors.serverError('Failed to trigger payout');
   }
 };

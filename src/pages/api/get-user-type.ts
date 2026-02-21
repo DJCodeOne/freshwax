@@ -5,7 +5,9 @@ import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-
 import { getAdminUids, getAdminEmails, initAdminEnv } from '../../lib/admin';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('get-user-type');
 
 export const prerender = false;
 
@@ -195,7 +197,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         referralCode = referralGiftCard.code;
       } catch (err: unknown) {
-        console.error('[get-user-type] Failed to generate referral code:', err);
+        log.error('[get-user-type] Failed to generate referral code:', err);
       }
     }
 
@@ -254,7 +256,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     });
   } catch (error: unknown) {
-    console.error('[get-user-type] Error:', error);
+    log.error('[get-user-type] Error:', error);
     return ApiErrors.serverError('Failed to fetch user type');
   }
 };

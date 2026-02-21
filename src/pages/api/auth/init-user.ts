@@ -6,7 +6,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument, setDocument, queryCollection } from '../../../lib/firebase-rest';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('auth/init-user');
 
 const InitUserSchema = z.object({
   action: z.enum(['login', 'register', 'google-login', 'google-register']),
@@ -314,7 +316,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Invalid action');
 
   } catch (error: unknown) {
-    console.error('[auth/init-user] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[auth/init-user] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to initialize user profile');
   }
 };

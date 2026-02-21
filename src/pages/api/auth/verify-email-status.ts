@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('auth/verify-email-status');
 
 export const prerender = false;
 
@@ -62,7 +64,7 @@ export const POST: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[verify-email-status] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[verify-email-status] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to update verification status');
   }
 };

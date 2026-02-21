@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Validate input with Zod
     const parseResult = StripeCheckoutSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      console.error('[Stripe] Validation errors:', JSON.stringify(parseResult.error.issues));
+      log.error('[Stripe] Validation errors:', JSON.stringify(parseResult.error.issues));
       return ApiErrors.badRequest('Invalid request');
     }
 
@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // SECURITY: Validate stock availability before allowing checkout
     const stockCheck = await validateStock(orderData.items);
     if (!stockCheck.available) {
-      console.warn('[Stripe] Stock validation failed:', stockCheck.unavailableItems);
+      log.warn('[Stripe] Stock validation failed:', stockCheck.unavailableItems);
       return ApiErrors.badRequest('Some items are no longer available');
     }
 
@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (hasPriceMismatch) {
-      console.warn('[Stripe] SECURITY: Price manipulation detected');
+      log.warn('[Stripe] SECURITY: Price manipulation detected');
       // Continue with server prices - don't reveal that we caught it
     }
 
@@ -259,7 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       (metadata as any).items_json = itemsJson;
     } else {
       // Items too large for metadata - store in Firestore pendingCheckouts collection
-      console.debug('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
+      log.info('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
 
       // Firebase already initialized above for price validation
 
@@ -291,9 +291,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         const docRef = await addDocument('pendingCheckouts', pendingCheckout);
         (metadata as any).pending_checkout_id = docRef.id;
-        console.debug('[Stripe] Stored pending checkout:', docRef.id);
-      } catch (pendingErr) {
-        console.error('[Stripe] Failed to store pending checkout:', pendingErr);
+        log.info('[Stripe] Stored pending checkout:', docRef.id);
+      } catch (pendingErr: unknown) {
+        log.error('[Stripe] Failed to store pending checkout:', pendingErr);
         // Continue anyway - webhook can fall back to line items
       }
     }
@@ -361,7 +361,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
-      console.error('[Stripe] Create session error:', errorData);
+      log.error('[Stripe] Create session error:', errorData);
       if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
       return ApiErrors.serverError('Failed to create checkout session');
     }
@@ -376,7 +376,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[Stripe] Error:', errorMessage);
+    log.error('[Stripe] Error:', errorMessage);
     // Release any reservation made before the error
     if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
     return ApiErrors.serverError('An internal error occurred');

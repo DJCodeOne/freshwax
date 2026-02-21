@@ -780,7 +780,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                     logger.info('[create-order] ✓ Attached seller email from artists:', artistData.email);
                   }
                 }
-              } catch (supplierErr) {
+              } catch (supplierErr: unknown) {
                 logger.info('[create-order] Could not update supplier stats:', supplierErr);
               }
             }
@@ -796,7 +796,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           } else if (!productData) {
             logger.info('[create-order] ⚠️ Product not found for stock update:', item.productId);
           }
-        } catch (stockErr) {
+        } catch (stockErr: unknown) {
           // Log but don't fail the order
           logger.error('[create-order] Stock update error:', stockErr);
         }
@@ -888,7 +888,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             logger.error('[create-order] ❌ Stockist email failed:', error);
           }
         }
-      } catch (stockistError) {
+      } catch (stockistError: unknown) {
         logger.error('[create-order] Stockist email error:', stockistError);
         // Don't fail the order if stockist email fails
       }
@@ -906,7 +906,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 orderNumber
               });
               logger.info('[create-order] Marked vinyl listing as sold:', listingId);
-            } catch (vinylErr) {
+            } catch (vinylErr: unknown) {
               logger.error('[create-order] Failed to mark vinyl as sold:', listingId, vinylErr);
             }
           }
@@ -962,7 +962,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           }
         }
-      } catch (digitalError) {
+      } catch (digitalError: unknown) {
         logger.error('[create-order] Digital sale email error:', digitalError);
       }
     }
@@ -1015,7 +1015,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           }
         }
-      } catch (merchError) {
+      } catch (merchError: unknown) {
         logger.error('[create-order] Merch sale email error:', merchError);
       }
     }

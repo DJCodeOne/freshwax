@@ -8,7 +8,9 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../lib/api-utils';
+
+const log = createLogger('user-profile');
 
 const UserProfileUpdateSchema = z.object({
   firstName: z.string().max(200).optional(),
@@ -75,7 +77,7 @@ export const GET: APIRoute = async ({ request }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[user-profile] GET error:', error);
+    log.error('[user-profile] GET error:', error);
     return ApiErrors.serverError('Failed to load user profile');
   }
 };
@@ -128,7 +130,7 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[user-profile] POST error:', error);
+    log.error('[user-profile] POST error:', error);
     return ApiErrors.serverError('Failed to save profile data');
   }
 };

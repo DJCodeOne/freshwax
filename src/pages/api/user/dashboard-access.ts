@@ -5,7 +5,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('user/dashboard-access');
 
 export const prerender = false;
 
@@ -30,7 +32,7 @@ export const GET: APIRoute = async ({ request }) => {
       const adminDoc = await getDocument('admins', userId);
       if (adminDoc) isAdmin = true;
     } catch (e: unknown) {
-      console.error('[dashboard-access] Failed to check admin status:', e instanceof Error ? e.message : e);
+      log.error('Failed to check admin status:', e instanceof Error ? e.message : e);
     }
 
     // Get user document
@@ -55,7 +57,7 @@ export const GET: APIRoute = async ({ request }) => {
           if (artistData.isVinylSeller) roles.vinylSeller = true;
         }
       } catch (e: unknown) {
-        console.error('[dashboard-access] Failed to fetch artist data:', e instanceof Error ? e.message : e);
+        log.error('Failed to fetch artist data:', e instanceof Error ? e.message : e);
       }
     }
 
@@ -73,7 +75,7 @@ export const GET: APIRoute = async ({ request }) => {
         isVinylSeller = sellerData.approved !== false;
       }
     } catch (e: unknown) {
-      console.error('[dashboard-access] Failed to fetch vinyl seller data:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch vinyl seller data:', e instanceof Error ? e.message : e);
     }
 
     // Check merch seller data
@@ -81,7 +83,7 @@ export const GET: APIRoute = async ({ request }) => {
     try {
       merchSellerData = await getDocument('merch-sellers', userId);
     } catch (e: unknown) {
-      console.error('[dashboard-access] Failed to fetch merch seller data:', e instanceof Error ? e.message : e);
+      log.error('Failed to fetch merch seller data:', e instanceof Error ? e.message : e);
     }
 
     // Admin override for roles
@@ -121,7 +123,7 @@ export const GET: APIRoute = async ({ request }) => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[dashboard-access] Error:', error instanceof Error ? error.message : String(error));
+    log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to check access');
   }
 };

@@ -6,7 +6,9 @@ import type { APIContext } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('playlist/global');
 import { z } from 'zod';
 
 const PlaylistItemSchema = z.object({
@@ -83,7 +85,7 @@ export async function GET({ request, locals }: APIContext) {
 
     const kv = getKV(locals);
     if (!kv) {
-      console.error('[GlobalPlaylist] KV not available');
+      log.error('[GlobalPlaylist] KV not available');
       return ApiErrors.notConfigured('KV storage');
     }
 
@@ -103,7 +105,7 @@ export async function GET({ request, locals }: APIContext) {
       playlist
     }), { headers });
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
+    log.error('[GlobalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -213,7 +215,7 @@ export async function POST({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
+    log.error('[GlobalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -323,7 +325,7 @@ export async function DELETE({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] DELETE error:', error instanceof Error ? error.message : String(error));
+    log.error('[GlobalPlaylist] DELETE error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -583,7 +585,7 @@ export async function PUT({ request, locals }: APIContext) {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] PUT error:', error instanceof Error ? error.message : String(error));
+    log.error('[GlobalPlaylist] PUT error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 }
@@ -604,7 +606,7 @@ async function getRecentlyPlayed(): Promise<any[]> {
       return data.items.slice(0, 10);
     }
   } catch (error: unknown) {
-    console.warn('[GlobalPlaylist] Could not fetch recently played:', error);
+    log.warn('[GlobalPlaylist] Could not fetch recently played:', error);
   }
   return [];
 }
@@ -650,7 +652,7 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
     }), { expirationTtl: 86400 });
     // Added to recently played
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] Error adding to recently played:', error);
+    log.error('[GlobalPlaylist] Error adding to recently played:', error);
   }
 }
 
@@ -700,7 +702,7 @@ async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null
       addedAt: new Date().toISOString()
     };
   } catch (error: unknown) {
-    console.warn('[GlobalPlaylist] Local server error:', error);
+    log.warn('[GlobalPlaylist] Local server error:', error);
     return null;
   }
 }
@@ -736,7 +738,7 @@ async function pickRandomFromServerHistory(env?: any): Promise<PlaylistItem | nu
       }
     }
   } catch (error: unknown) {
-    console.warn('[GlobalPlaylist] KV history fallback error:', error);
+    log.warn('[GlobalPlaylist] KV history fallback error:', error);
   }
 
   // No tracks available for autoplay
@@ -752,7 +754,7 @@ async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: an
     const PUSHER_CLUSTER = env?.PUSHER_CLUSTER || env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
 
     if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
-      console.warn('[GlobalPlaylist] Pusher not configured, skipping emoji broadcast');
+      log.warn('[GlobalPlaylist] Pusher not configured, skipping emoji broadcast');
       return;
     }
 
@@ -784,7 +786,7 @@ async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: an
 
     // Emoji broadcast sent
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] Emoji broadcast error:', error);
+    log.error('[GlobalPlaylist] Emoji broadcast error:', error);
   }
 }
 
@@ -811,7 +813,7 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
     const PUSHER_CLUSTER = env?.PUSHER_CLUSTER || env?.PUBLIC_PUSHER_CLUSTER || import.meta.env.PUSHER_CLUSTER || 'eu';
 
     if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
-      console.warn('[GlobalPlaylist] Pusher not configured, skipping broadcast');
+      log.warn('[GlobalPlaylist] Pusher not configured, skipping broadcast');
       return;
     }
 
@@ -841,7 +843,7 @@ async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
     const pusherResult = await pusherResponse.text();
     // Playlist broadcast sent
   } catch (error: unknown) {
-    console.error('[GlobalPlaylist] Broadcast error:', error);
+    log.error('[GlobalPlaylist] Broadcast error:', error);
   }
 }
 

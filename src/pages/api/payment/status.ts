@@ -7,7 +7,9 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../../lib/kv-cache';
-import { errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('payment/status');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 // Zod schema for payment status query params
@@ -103,7 +105,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           stripeConnectStatus = stripeConnected ? 'active' :
             (account.requirements?.disabled_reason ? 'restricted' : 'onboarding');
         } catch (e: unknown) {
-          console.error('[payment/status] Stripe error:', e);
+          log.error('[payment/status] Stripe error:', e);
           // Use cached status
           stripeConnected = stripeConnectStatus === 'active';
         }
@@ -226,7 +228,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     };
 
     // Cache the result (don't await to avoid blocking response)
-    kvSet(cacheKey, responseData, { prefix: CACHE_PREFIX, ttl: CACHE_TTL }).catch(e => console.error('[Payment Status] Cache error:', e));
+    kvSet(cacheKey, responseData, { prefix: CACHE_PREFIX, ttl: CACHE_TTL }).catch(e => log.error('[Payment Status] Cache error:', e));
 
     return new Response(JSON.stringify(responseData), {
       status: 200,
@@ -234,7 +236,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[payment/status] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[payment/status] Error:', error instanceof Error ? error.message : String(error));
     return errorResponse('Failed to get payment status');
   }
 };

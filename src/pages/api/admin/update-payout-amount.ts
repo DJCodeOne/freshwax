@@ -9,7 +9,9 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/update-payout-amount');
 
 const updatePayoutAmountSchema = z.object({
   orderNumber: z.string().min(1),
@@ -137,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[update-payout-amount] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

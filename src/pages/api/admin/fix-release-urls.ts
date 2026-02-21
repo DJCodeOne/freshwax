@@ -5,7 +5,9 @@ import type { APIRoute } from 'astro';
 import { saGetDocument, saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/fix-release-urls');
 
 export const prerender = false;
 
@@ -140,7 +142,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('Fix URLs error:', error);
+    log.error('Fix URLs error:', error);
     return ApiErrors.serverError('Failed');
   }
 };

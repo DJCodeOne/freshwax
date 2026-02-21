@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/manage');
 
 const livestreamManageSchema = z.object({
   action: z.enum(['start', 'stop', 'update', 'schedule', 'dj_ready', 'slot_expired', 'claim_slot']),
@@ -399,7 +401,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     
   } catch (error: unknown) {
-    console.error('[livestream/manage] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to manage stream');
   }
 };

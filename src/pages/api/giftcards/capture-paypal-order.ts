@@ -6,7 +6,9 @@ import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, deleteDocument, queryCollection, addDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('giftcards/capture-paypal-order');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
 // Zod schema for gift card PayPal capture
@@ -67,7 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       pendingOrder = await getDocument('pendingGiftCardOrders', paypalOrderId);
     } catch (fetchErr: unknown) {
-      console.error('[GiftCard PayPal] Error fetching pending order:', fetchErr);
+      log.error('Error fetching pending order:', fetchErr);
     }
 
     if (!pendingOrder) {
@@ -96,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!captureResponse.ok) {
       const error = await captureResponse.text();
-      console.error('[GiftCard PayPal] Capture error:', error);
+      log.error('Capture error:', error);
       return ApiErrors.serverError('Failed to capture PayPal payment');
     }
 
@@ -111,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
 
     if (Math.abs(capturedAmount - pendingOrder.amount) > 0.01) {
-      console.error('[GiftCard PayPal] Amount mismatch! Expected:', pendingOrder.amount, 'Got:', capturedAmount);
+      log.error('Amount mismatch! Expected:', pendingOrder.amount, 'Got:', capturedAmount);
       return ApiErrors.badRequest('Payment amount mismatch');
     }
 
@@ -134,15 +136,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!result.success) {
-      console.error('[GiftCard PayPal] Failed to create gift card:', result.error);
+      log.error('Failed to create gift card:', result.error);
       return ApiErrors.serverError(result.error || 'Failed to create gift card');
     }
 
     // Clean up pending order
     try {
       await deleteDocument('pendingGiftCardOrders', paypalOrderId);
-    } catch (delErr) {
-      console.warn('[GiftCard PayPal] Could not delete pending order:', delErr);
+    } catch (delErr: unknown) {
+      log.warn('Could not delete pending order:', delErr);
     }
 
     return new Response(JSON.stringify({
@@ -153,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('[GiftCard PayPal] Error:', errorMessage);
+    log.error('Error:', errorMessage);
     return ApiErrors.serverError('An internal error occurred');
   }
 };

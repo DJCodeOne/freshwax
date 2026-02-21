@@ -123,7 +123,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
     // Clean up pending order
     try {
       await deleteDocument('pendingPayPalOrders', paypalOrderId);
-    } catch (delErr) {
+    } catch (delErr: unknown) {
       log.warn('[PayPal Redirect] Could not delete pending order:', delErr);
     }
 
@@ -148,7 +148,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           stripeSecretKey,
           env
         });
-      } catch (paymentErr) {
+      } catch (paymentErr: unknown) {
         log.error('[PayPal Redirect] Artist payment processing error:', paymentErr);
       }
 
@@ -163,7 +163,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           stripeSecretKey,
           env
         });
-      } catch (supplierErr) {
+      } catch (supplierErr: unknown) {
         log.error('[PayPal Redirect] Supplier payment processing error:', supplierErr);
       }
 
@@ -178,7 +178,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
           stripeSecretKey,
           env
         });
-      } catch (sellerErr) {
+      } catch (sellerErr: unknown) {
         log.error('[PayPal Redirect] Crate seller payment processing error:', sellerErr);
       }
     }
@@ -218,7 +218,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 
           // Credit deducted atomically
         }
-      } catch (creditErr) {
+      } catch (creditErr: unknown) {
         log.error('[PayPal Redirect] Failed to deduct credit:', creditErr);
       }
     }

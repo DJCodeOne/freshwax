@@ -1,7 +1,9 @@
 // src/lib/admin.ts
 // Shared admin utilities for API routes
 import { getDocument } from './firebase-rest';
-import { ApiErrors, timingSafeCompare } from './api-utils';
+import { ApiErrors, timingSafeCompare, createLogger } from './api-utils';
+
+const log = createLogger('admin');
 import type { APIContext } from 'astro';
 
 // Use timingSafeCompare from api-utils (shared timing-safe string comparison)
@@ -110,7 +112,7 @@ export async function requireAdminAuth(request: Request, locals: App.Locals, bod
       }
     } catch (e: unknown) {
       // Token verification failed, try next candidate
-      console.error('[requireAdminAuth] Token verification failed:', e instanceof Error ? e.message : e);
+      log.error('[requireAdminAuth] Token verification failed:', e instanceof Error ? e.message : e);
     }
   }
 
@@ -134,7 +136,7 @@ export async function isAdmin(uid: string): Promise<boolean> {
     const userDoc = await getDocument('users', uid);
     if (userDoc?.isAdmin || userDoc?.roles?.admin) return true;
   } catch (e: unknown) {
-    console.error('[isAdmin] Failed to check admin status:', e instanceof Error ? e.message : e);
+    log.error('[isAdmin] Failed to check admin status:', e instanceof Error ? e.message : e);
   }
 
   return false;

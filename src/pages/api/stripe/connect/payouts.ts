@@ -4,7 +4,9 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
-import { ApiErrors } from '../../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../../lib/api-utils';
+
+const log = createLogger('stripe/connect/payouts');
 
 export const prerender = false;
 
@@ -91,7 +93,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error: unknown) {
-    console.error('[Stripe Connect] Payouts error:', error instanceof Error ? error.message : String(error));
+    log.error('[Stripe Connect] Payouts error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to fetch payouts');
   }
 };

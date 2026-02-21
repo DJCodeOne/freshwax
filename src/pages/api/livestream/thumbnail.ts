@@ -6,6 +6,9 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
+import { createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('livestream/thumbnail');
 
 // Cache for stream status
 let cachedStatus: { isLive: boolean; imageUrl: string; timestamp: number } | null = null;
@@ -58,7 +61,7 @@ export const GET: APIRoute = async ({ request }) => {
     return redirectToImage(imageUrl);
 
   } catch (error: unknown) {
-    console.error('[livestream/thumbnail] Error:', error);
+    log.error('Error:', error);
     // Return default image on error
     return redirectToImage('/og-image.webp');
   }

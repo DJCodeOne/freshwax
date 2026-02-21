@@ -7,7 +7,9 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, createLogger } from '../../../lib/api-utils';
+
+const log = createLogger('admin/fix-submitter-ids');
 
 export const prerender = false;
 
@@ -92,7 +94,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5000
       });
     } catch (e: unknown) {
-      console.error('[FixSubmitterIds] Error fetching releases:', e);
+      log.error('Error fetching releases:', e);
     }
 
     results.releases.total = releases.length;
@@ -155,7 +157,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       } catch (err: unknown) {
         results.releases.errors++;
-        console.error(`[FixSubmitterIds] Error fixing release ${release.id}:`, err);
+        log.error(`Error fixing release ${release.id}:`, err);
       }
     }
 
@@ -167,7 +169,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5000
       });
     } catch (e: unknown) {
-      console.error('[FixSubmitterIds] Error fetching ledger entries:', e);
+      log.error('Error fetching ledger entries:', e);
     }
 
     results.ledger.total = ledgerEntries.length;
@@ -236,7 +238,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       } catch (err: unknown) {
         results.ledger.errors++;
-        console.error(`[FixSubmitterIds] Error fixing ledger ${entry.id}:`, err);
+        log.error(`Error fixing ledger ${entry.id}:`, err);
       }
     }
 
@@ -257,7 +259,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    console.error('[FixSubmitterIds] Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Migration failed');
   }
 };

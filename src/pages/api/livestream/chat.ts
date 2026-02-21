@@ -515,7 +515,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.tooManyRequests('Slow down! Wait a moment before sending another message.');
         }
       }
-    } catch (rateLimitError) {
+    } catch (rateLimitError: unknown) {
       // Skip rate limiting if query fails (missing index)
       log.warn('[chat] Rate limit check failed:', rateLimitError);
     }
@@ -583,7 +583,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             ...botMessage
           };
         }
-      } catch (botError) {
+      } catch (botError: unknown) {
         log.error('[chat] Bot command error:', botError);
       }
     }
@@ -653,7 +653,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               ...tuneMessage
             }, env);
           }
-        } catch (interactiveError) {
+        } catch (interactiveError: unknown) {
           // Silent fail - don't break the chat for interactive features
           log.error('[chat] Interactive bot error:', interactiveError);
         }

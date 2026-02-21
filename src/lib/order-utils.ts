@@ -1041,7 +1041,7 @@ export async function updateVinylStock(items: CartItem[], orderNumber: string, o
         }, idToken);
 
         log.info('[order-utils] ✓ Vinyl stock updated atomically:', item.name, previousStock, '->', newStock);
-      } catch (stockErr) {
+      } catch (stockErr: unknown) {
         log.error('[order-utils] Vinyl stock update error:', stockErr);
       }
     }
@@ -1169,7 +1169,7 @@ export async function processVinylCratesOrders(
         const vinylOrderId = `vo_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
         await setDocument('vinylOrders', vinylOrderId, vinylOrder);
         log.info('[order-utils] ✓ Vinyl order created:', vinylOrderId);
-      } catch (orderErr) {
+      } catch (orderErr: unknown) {
         log.error('[order-utils] Failed to create vinyl order:', orderErr);
       }
 
@@ -1233,7 +1233,7 @@ export async function processVinylCratesOrders(
           env
         );
         log.info('[order-utils] ✓ Admin email sent');
-      } catch (adminEmailErr) {
+      } catch (adminEmailErr: unknown) {
         log.error('[order-utils] Admin email failed:', adminEmailErr);
       }
 
@@ -1411,7 +1411,7 @@ export async function refundOrderStock(orderId: string, items: CartItem[], order
             updatedAt: now
           });
           log.info('[order-utils] ✓ Vinyl crates listing restored:', listingId);
-        } catch (restoreErr) {
+        } catch (restoreErr: unknown) {
           log.error('[order-utils] Failed to restore vinyl crates listing:', restoreErr);
           failedRefunds.push({ item: item.name || listingId, type: 'vinyl-crates', error: restoreErr instanceof Error ? restoreErr.message : String(restoreErr) });
         }
@@ -1506,7 +1506,7 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
             }
             throw conflictErr;
           }
-        } catch (stockErr) {
+        } catch (stockErr: unknown) {
           if (attempt === MAX_RETRIES - 1) {
             log.error('[order-utils] Stock update error after', MAX_RETRIES, 'attempts:', stockErr);
           }
@@ -1539,7 +1539,7 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
             createdAt: now,
             createdBy: 'system'
           }, idToken);
-        } catch (movementErr) {
+        } catch (movementErr: unknown) {
           log.error('[order-utils] Stock movement log error:', movementErr);
         }
 
@@ -1569,7 +1569,7 @@ export async function updateMerchStock(items: CartItem[], orderNumber: string, o
               totalRevenue: supplierRevenue
             });
           }
-        } catch (supplierErr) {
+        } catch (supplierErr: unknown) {
           log.info('[order-utils] Could not update supplier stats');
         }
       }
@@ -1654,7 +1654,7 @@ export async function sendVinylFulfillmentEmail(
     } else {
       log.error('[order-utils] Stockist email failed:', result.error);
     }
-  } catch (stockistError) {
+  } catch (stockistError: unknown) {
     log.error('[order-utils] Stockist email error:', stockistError);
   }
 }
@@ -1698,7 +1698,7 @@ export async function sendDigitalSaleEmails(
         db: env?.DB,
       });
       log.info('[order-utils] Digital sale email sent to:', artistEmail);
-    } catch (digitalError) {
+    } catch (digitalError: unknown) {
       log.error('[order-utils] Digital sale email error:', digitalError);
     }
   }
@@ -1743,7 +1743,7 @@ export async function sendMerchSaleEmails(
         db: env?.DB,
       });
       log.info('[order-utils] Merch sale email sent to:', sellerEmail);
-    } catch (merchError) {
+    } catch (merchError: unknown) {
       log.error('[order-utils] Merch sale email error:', merchError);
     }
   }
