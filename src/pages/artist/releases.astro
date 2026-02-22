@@ -10,7 +10,7 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner = null;
-let releases: any[] = [];
+let releases: Record<string, unknown>[] = [];
 
 // Get service account credentials for salesLedger access
 const env = Astro.locals.runtime.env;
@@ -37,7 +37,7 @@ if (partnerId) {
     partner = await getDocument('artists', partnerId);
     if (partner) {
       // Query releases by user ID fields
-      const releaseMap = new Map<string, any>();
+      const releaseMap = new Map<string, Record<string, unknown>>();
 
       // Query by submitterId (primary - used for payouts)
       const bySubmitterId = await queryCollection('releases', {
@@ -78,8 +78,8 @@ if (partnerId) {
 
           // Build sales map from ledger
           const releaseSalesMap = new Map<string, number>();
-          allLedgerEntries.forEach((entry: any) => {
-            (entry.items || []).forEach((item: any) => {
+          allLedgerEntries.forEach((entry: Record<string, unknown>) => {
+            ((entry.items as Record<string, unknown>[]) || []).forEach((item: Record<string, unknown>) => {
               const itemId = item.id || item.releaseId || item.productId;
               if (releaseIds.includes(itemId)) {
                 const current = releaseSalesMap.get(itemId) || 0;

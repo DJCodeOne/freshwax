@@ -9,7 +9,7 @@ import Footer from '../components/Footer.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
 
 // Helper to convert date value to Date object
-function toDate(value: any): Date | null {
+function toDate(value: unknown): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
   if (typeof value === 'string' || typeof value === 'number') return new Date(value);
@@ -18,7 +18,7 @@ function toDate(value: any): Date | null {
 
 const now = new Date();
 
-let preorders: any[] = [];
+let preorders: Record<string, unknown>[] = [];
 
 try {
   // Get all live releases - D1 first, Firebase fallback
@@ -43,7 +43,7 @@ try {
 }
 
 // Format release date
-const formatDate = (dateValue: any) => {
+const formatDate = (dateValue: unknown) => {
   try {
     const date = toDate(dateValue);
     if (!date) return '';
@@ -59,10 +59,14 @@ const formatDate = (dateValue: any) => {
 };
 
 // Get label from release
-const getLabel = (release: any) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
+const getLabel = (release: Record<string, unknown>) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
 
 // Get digital price
-const getPrice = (release: any) => release.pricePerSale || release.pricing?.digital || (release.trackPrice || 1) * (release.tracks?.length || 4);
+const getPrice = (release: Record<string, unknown>) => {
+  const pricing = release.pricing as Record<string, unknown> | undefined;
+  const tracks = release.tracks as unknown[] | undefined;
+  return release.pricePerSale || pricing?.digital || ((release.trackPrice as number) || 1) * (tracks?.length || 4);
+};
 
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');

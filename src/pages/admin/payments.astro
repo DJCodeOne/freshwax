@@ -33,7 +33,7 @@ const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({
 console.debug('[payments] Service account configured:', !!serviceAccountKey);
 
 // Fetch disputes
-const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
+const saQuery = (c: string, o: Record<string, unknown>) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
 
 const disputes = await saQuery('disputes', {
   orderBy: { field: 'createdAt', direction: 'DESCENDING' },
@@ -57,7 +57,7 @@ const pendingPayouts = await queryCollection('pendingPayouts', {
 
 // Fetch all pending payouts with status 'pending' (for manual review)
 // Use service account auth to ensure we can read the pendingPayouts collection
-let manualPendingPayouts: Record<string, any>[] = [];
+let manualPendingPayouts: Record<string, unknown>[] = [];
 if (serviceAccountKey) {
   try {
     // Don't use orderBy - documents may have different timestamp fields (createdAt vs timestamp)
@@ -81,7 +81,7 @@ if (serviceAccountKey) {
 }
 
 // Fetch pending supplier payouts
-let pendingSupplierPayouts: Record<string, any>[] = [];
+let pendingSupplierPayouts: Record<string, unknown>[] = [];
 if (serviceAccountKey) {
   try {
     pendingSupplierPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSupplierPayouts', {
@@ -95,7 +95,7 @@ if (serviceAccountKey) {
 }
 
 // Fetch pending seller payouts (vinyl crate)
-let pendingSellerPayouts: Record<string, any>[] = [];
+let pendingSellerPayouts: Record<string, unknown>[] = [];
 if (serviceAccountKey) {
   try {
     pendingSellerPayouts = await saQueryCollection(serviceAccountKey, projectId || 'freshwax-store', 'pendingSellerPayouts', {
@@ -210,7 +210,7 @@ if (Object.keys(orderPayeesMap).length > 0) {
 }
 
 // Fetch completed payouts using service account auth (payouts collection requires auth)
-let completedPayouts: Record<string, any>[] = [];
+let completedPayouts: Record<string, unknown>[] = [];
 try {
   completedPayouts = await saQueryCollection(serviceAccountKey, projectId, 'payouts', {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
@@ -227,8 +227,8 @@ const recentOrders = await saQuery('orders', {
 });
 
 // Query salesLedger for accurate fee and payout data (D1 primary, Firebase backup)
-let ledgerEntries: Record<string, any>[] = [];
-const ledgerByOrderId: Record<string, any> = {};
+let ledgerEntries: Record<string, unknown>[] = [];
+const ledgerByOrderId: Record<string, unknown> = {};
 
 // Firebase primary (authoritative), D1 fallback
 const db = runtimeEnv?.DB;

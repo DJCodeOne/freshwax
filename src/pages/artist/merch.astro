@@ -15,8 +15,8 @@ const db = env?.DB;
 
 // Get partner from session - check partnerId first, then userId
 const partnerId = Astro.cookies.get('partnerId')?.value || Astro.cookies.get('userId')?.value || '';
-let partner: any = null;
-let products: any[] = [];
+let partner: Record<string, unknown> | null = null;
+let products: Record<string, unknown>[] = [];
 
 if (partnerId) {
   try {
@@ -85,7 +85,7 @@ const processedProducts = products.map(product => {
   const imageUrl = product.primaryImage || (product.images && product.images[0] ? (product.images[0].url || product.images[0]) : null);
   const variantEntries = product.variantStock ? Object.entries(product.variantStock) : [];
   const showVariants = variantEntries.length > 1;
-  const displayVariants = variantEntries.slice(0, 6).map(([key, v]: [string, any]) => {
+  const displayVariants = variantEntries.slice(0, 6).map(([key, v]: [string, Record<string, unknown>]) => {
     const vStock = v.stock || 0;
     let vClass = '';
     if (vStock === 0) vClass = 'out';

@@ -20,9 +20,9 @@ try {
     let allImages: string[] = [];
     if (item.images && Array.isArray(item.images)) {
       allImages = item.images
-        .map((img: any) => {
+        .map((img: unknown) => {
           if (typeof img === 'string') return img;
-          if (img && typeof img === 'object' && img.url) return img.url;
+          if (img && typeof img === 'object' && (img as Record<string, unknown>).url) return (img as Record<string, unknown>).url;
           return null;
         })
         .filter((url: string | null): url is string => url !== null && url !== '');

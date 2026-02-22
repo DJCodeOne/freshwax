@@ -15,7 +15,7 @@ export const prerender = false;
 const db = Astro.locals.runtime.env?.DB;
 
 // Fetch merch using D1 first, Firebase fallback
-let products: any[] = [];
+let products: Record<string, unknown>[] = [];
 // Hierarchical categories: { categorySlug: { label: string, names: string[] } }
 let categoryGroups: Record<string, { label: string; names: Set<string> }> = {};
 let productTypes: Record<string, string> = {};
@@ -63,7 +63,7 @@ try {
     }
     
     // Get images - keep full objects for color association
-    let imageObjects: any[] = [];
+    let imageObjects: Record<string, unknown>[] = [];
     let allImages: string[] = [];
     if (doc.images && Array.isArray(doc.images)) {
       imageObjects = doc.images.filter((img) => {

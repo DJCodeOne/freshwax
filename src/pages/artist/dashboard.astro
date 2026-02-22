@@ -80,7 +80,7 @@ if (partnerId) {
 
       // Query ledger for this artist's earnings - D1 primary, Firebase fallback
       const db = env?.DB;
-      let artistEntries: any[] = [];
+      let artistEntries: Record<string, unknown>[] = [];
 
       if (db) {
         try {
@@ -98,7 +98,7 @@ if (partnerId) {
           const ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
             limit: 500
           });
-          artistEntries = ledgerEntries.filter((e: any) =>
+          artistEntries = ledgerEntries.filter((e: Record<string, unknown>) =>
             e.artistId === partnerId ||
             e.submitterId === partnerId ||
             e.artistName === partnerDoc.artistName
@@ -112,7 +112,7 @@ if (partnerId) {
       // Calculate earnings from ledger
       let totalPaid = 0;
       let pendingAmount = 0;
-      artistEntries.forEach((entry: any) => {
+      artistEntries.forEach((entry: Record<string, unknown>) => {
         if (entry.artistPayoutStatus === 'paid') {
           totalPaid += entry.artistPayoutNet || entry.artistPayout || 0;
         } else if (entry.artistPayoutStatus === 'pending') {
@@ -197,7 +197,7 @@ if (partnerId) {
       // Fetch artist/label stats (only if approved)
       if (effectiveIsArtist && approved) {
         // Query releases by user ID fields (parallel batch)
-        const releaseMap = new Map<string, any>();
+        const releaseMap = new Map<string, Record<string, unknown>>();
 
         const releaseQueries = [
           queryCollection('releases', { filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }] }),
@@ -207,7 +207,7 @@ if (partnerId) {
         ];
 
         const releaseResults = await Promise.all(releaseQueries);
-        releaseResults.forEach(results => results.forEach((r: any) => releaseMap.set(r.id, r)));
+        releaseResults.forEach(results => results.forEach((r: Record<string, unknown>) => releaseMap.set(r.id as string, r)));
 
         const releases = Array.from(releaseMap.values());
         stats.releases = releases.length;
@@ -220,7 +220,7 @@ if (partnerId) {
       const db = env?.DB;
       if (effectiveIsMerchSupplier && approved && db) {
         // Try multiple strategies to find products linked to this supplier
-        let merchProducts: any[] = [];
+        let merchProducts: Record<string, unknown>[] = [];
 
         // Strategy 1: Query by supplierId (from D1)
         merchProducts = await d1GetMerchBySupplierId(db, partnerId);
@@ -252,13 +252,13 @@ if (partnerId) {
           let orderCount = 0;
 
           orders.filter(o => o.status !== 'cancelled').forEach(order => {
-            const supplierItems = (order.items || []).filter((item: any) =>
+            const supplierItems = (order.items || []).filter((item: Record<string, unknown>) =>
               productIds.includes(item.productId) || item.supplierId === partnerId
             );
 
             if (supplierItems.length > 0) {
               orderCount++;
-              unitsSold += supplierItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+              unitsSold += supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.quantity as number) || 1), 0);
             }
           });
 
@@ -297,7 +297,7 @@ if (partnerId) {
 
             let vinylOrderCount = 0;
             orders.filter(o => o.status !== 'cancelled').forEach(order => {
-              const vinylItems = (order.items || []).filter((item: any) =>
+              const vinylItems = (order.items || []).filter((item: Record<string, unknown>) =>
                 listingIds.includes(item.productId) || item.sellerId === partnerId || item.type === 'vinyl'
               );
               if (vinylItems.length > 0) {

@@ -11,8 +11,8 @@ import { queryCollection } from '../../../lib/firebase-rest';
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
-let vinylListings: any[] = [];
-let vinylSellers: any[] = [];
+let vinylListings: Record<string, unknown>[] = [];
+let vinylSellers: Record<string, unknown>[] = [];
 
 try {
   const results = await Promise.allSettled([
@@ -43,7 +43,7 @@ const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(amount || 0);
 };
 
-const formatDate = (date: any) => {
+const formatDate = (date: unknown) => {
   if (!date) return '-';
   return new Date(date).toLocaleDateString('en-GB', {
     day: 'numeric',

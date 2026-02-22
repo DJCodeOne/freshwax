@@ -53,7 +53,7 @@ const getShortOrderNumber = (orderNumber: string) => {
 };
 
 // For digital items, fetch download URLs directly from releases if not in order
-const enrichedItems = await Promise.all((order?.items || []).map(async (item: any) => {
+const enrichedItems = await Promise.all((order?.items || []).map(async (item: Record<string, unknown>) => {
   
   // Skip if not a digital item
   if (item.type !== 'digital' && item.type !== 'release' && item.type !== 'track') {
@@ -61,16 +61,18 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
   }
   
   // If already has download URLs, use them
-  if (item.downloads?.tracks?.length > 0 && item.downloads.tracks[0]?.mp3Url) {
+  const itemDownloads = item.downloads as Record<string, unknown> | undefined;
+  const itemTracks = itemDownloads?.tracks as Record<string, unknown>[] | undefined;
+  if ((itemTracks?.length ?? 0) > 0 && (itemTracks?.[0] as Record<string, unknown>)?.mp3Url) {
     return item;
   }
-  
+
   // Fetch from release document
-  const releaseId = item.releaseId || item.productId || item.id;
+  const releaseId = (item.releaseId || item.productId || item.id) as string;
   if (!releaseId) {
     return item;
   }
-  
+
   try {
     const releaseData = await getDocument('releases', releaseId);
 
@@ -78,46 +80,48 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
       
       
       // If single track purchase, only include that track
+      const relTracks = (releaseData?.tracks || []) as Record<string, unknown>[];
+      const relArtwork = releaseData?.artwork as Record<string, unknown> | undefined;
       if (item.type === 'track') {
         // Try to find the track by various methods
-        let track = null;
-        
+        let track: Record<string, unknown> | null = null;
+
         // Method 1: Match by trackId
         if (item.trackId) {
-          track = (releaseData?.tracks || []).find((t: any) => 
-            t.id === item.trackId || 
+          track = relTracks.find((t: Record<string, unknown>) =>
+            t.id === item.trackId ||
             t.trackId === item.trackId ||
             String(t.trackNumber) === String(item.trackId)
-          );
+          ) || null;
         }
-        
+
         // Method 2: Match by track name from item name (e.g., "Code One - Brain Melt" -> "Brain Melt")
         if (!track && item.name) {
-          const itemNameParts = item.name.split(' - ');
-          const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : item.name;
-          track = (releaseData?.tracks || []).find((t: any) => 
-            (t.trackName || t.name || '').toLowerCase() === trackNameFromItem.toLowerCase()
-          );
+          const itemNameParts = (item.name as string).split(' - ');
+          const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : (item.name as string);
+          track = relTracks.find((t: Record<string, unknown>) =>
+            ((t.trackName || t.name || '') as string).toLowerCase() === trackNameFromItem.toLowerCase()
+          ) || null;
         }
-        
+
         // Method 3: Match by title field
         if (!track && item.title) {
-          track = (releaseData?.tracks || []).find((t: any) => 
-            (t.trackName || t.name || '').toLowerCase() === item.title.toLowerCase()
-          );
+          track = relTracks.find((t: Record<string, unknown>) =>
+            ((t.trackName || t.name || '') as string).toLowerCase() === (item.title as string).toLowerCase()
+          ) || null;
         }
-        
+
         // Get artist and release name for filename
         const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
         const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
-        
+
         if (track) {
           return {
             ...item,
             downloads: {
               artistName,
               releaseName,
-              artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || null,
+              artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || relArtwork?.cover || null,
               tracks: [{
                 name: track.trackName || track.name || item.title,
                 mp3Url: track.mp3Url || null,
@@ -132,8 +136,8 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
             downloads: {
               artistName,
               releaseName,
-              artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || null,
-              tracks: (releaseData?.tracks || []).map((t: any) => ({
+              artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || relArtwork?.cover || null,
+              tracks: relTracks.map((t: Record<string, unknown>) => ({
                 name: t.trackName || t.name,
                 mp3Url: t.mp3Url || null,
                 wavUrl: t.wavUrl || null
@@ -142,18 +146,18 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
           };
         }
       }
-      
+
       // Full release - include all tracks
       const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
       const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
-      
+
       return {
         ...item,
         downloads: {
           artistName,
           releaseName,
-          artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || releaseData?.artwork?.cover || null,
-          tracks: (releaseData?.tracks || []).map((track: any) => ({
+          artworkUrl: releaseData?.artworkUrl || releaseData?.coverArtUrl || relArtwork?.cover || null,
+          tracks: relTracks.map((track: Record<string, unknown>) => ({
             name: track.trackName || track.name,
             mp3Url: track.mp3Url || null,
             wavUrl: track.wavUrl || null
@@ -169,42 +173,47 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: an
   return item;
 }));
 
-const digitalItems = enrichedItems.filter((item: any) => 
-  item.downloads?.tracks?.length > 0 || 
-  item.type === 'digital' || 
-  item.type === 'release' ||
-  item.type === 'track'
-) || [];
+const digitalItems = enrichedItems.filter((item: Record<string, unknown>) => {
+  const downloads = item.downloads as Record<string, unknown> | undefined;
+  const tracks = downloads?.tracks as unknown[] | undefined;
+  return (tracks?.length ?? 0) > 0 ||
+    item.type === 'digital' ||
+    item.type === 'release' ||
+    item.type === 'track';
+}) || [];
 
 // Group digital items by release to avoid duplicate artwork downloads
-const groupedDigitalItems: any[] = [];
-const releaseMap = new Map<string, any>();
+const groupedDigitalItems: Record<string, unknown>[] = [];
+const releaseMap = new Map<string, Record<string, unknown>>();
 
-digitalItems.forEach((item: any) => {
+digitalItems.forEach((item: Record<string, unknown>) => {
   const releaseId = item.releaseId || item.productId || item.id;
-  
+
   if (releaseMap.has(releaseId)) {
     // Add tracks to existing release group
-    const existing = releaseMap.get(releaseId);
-    if (item.downloads?.tracks) {
-      item.downloads.tracks.forEach((track: any) => {
+    const existing = releaseMap.get(releaseId) as Record<string, unknown>;
+    const existingDownloads = existing.downloads as Record<string, unknown>;
+    const itemDownloads = item.downloads as Record<string, unknown> | undefined;
+    if (itemDownloads?.tracks) {
+      (itemDownloads.tracks as Record<string, unknown>[]).forEach((track: Record<string, unknown>) => {
         // Avoid duplicate tracks
-        const trackExists = existing.downloads.tracks.some((t: any) => t.name === track.name);
+        const trackExists = (existingDownloads.tracks as Record<string, unknown>[]).some((t: Record<string, unknown>) => t.name === track.name);
         if (!trackExists) {
-          existing.downloads.tracks.push(track);
+          (existingDownloads.tracks as Record<string, unknown>[]).push(track);
         }
       });
     }
   } else {
     // Create new release group
-    releaseMap.set(releaseId, {
+    const itemDownloads = item.downloads as Record<string, unknown> | undefined;
+    releaseMap.set(releaseId as string, {
       ...item,
       releaseId,
       downloads: {
-        artistName: item.downloads?.artistName || item.artist || 'Unknown Artist',
-        releaseName: item.downloads?.releaseName || item.title || 'Release',
-        artworkUrl: item.downloads?.artworkUrl || item.image || null,
-        tracks: item.downloads?.tracks ? [...item.downloads.tracks] : []
+        artistName: itemDownloads?.artistName || item.artist || 'Unknown Artist',
+        releaseName: itemDownloads?.releaseName || item.title || 'Release',
+        artworkUrl: itemDownloads?.artworkUrl || item.image || null,
+        tracks: itemDownloads?.tracks ? [...(itemDownloads.tracks as unknown[])] : []
       }
     });
   }
@@ -212,7 +221,7 @@ digitalItems.forEach((item: any) => {
 
 releaseMap.forEach((item) => groupedDigitalItems.push(item));
 
-const physicalItems = enrichedItems.filter((item: any) =>
+const physicalItems = enrichedItems.filter((item: Record<string, unknown>) =>
   item.type === 'vinyl' ||
   item.type === 'merch'
 ) || [];
@@ -257,7 +266,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <span class="status ready">Ready</span>
               </div>
               <div class="card-body">
-                {groupedDigitalItems.map((item: any) => (
+                {groupedDigitalItems.map((item) => (
                   <div class="download-release">
                     <div class="release-header">
                       <img src={item.image || item.downloads?.artworkUrl || '/place-holder.webp'} alt={item.downloads?.releaseName || item.name} class="release-art" />
@@ -348,7 +357,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 <span class="status processing">Processing</span>
               </div>
               <div class="card-body">
-                {physicalItems.map((item: any) => (
+                {physicalItems.map((item) => (
                   <div class="order-item">
                     <img src={item.image || '/place-holder.webp'} alt={item.name} class="item-img" />
                     <div class="item-details">

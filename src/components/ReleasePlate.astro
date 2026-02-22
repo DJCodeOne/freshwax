@@ -22,7 +22,7 @@ interface Track {
     count: number;
     total: number;
   };
-  comments?: any[];
+  comments?: Record<string, unknown>[];
 }
 
 interface Comment {
@@ -83,7 +83,7 @@ interface Props {
     total: number;
   };
   comments?: Comment[];
-  socialLinks?: any;
+  socialLinks?: unknown;
   notes?: string;
   submittedBy?: string;
   status?: string;

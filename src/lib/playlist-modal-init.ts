@@ -4,9 +4,10 @@
 // and reduce initial JS payload on the live page (~78KB+ savings).
 // The modal HTML is injected on demand — only when the user opens the modal.
 
-import { PlaylistManager } from './playlist-manager';
-import { getPlatformName } from './url-parser';
-import { SITE_URL } from './constants';
+// PlaylistManager, url-parser, and constants are dynamically imported to enable
+// Vite code splitting. The modal HTML and event listeners load immediately (~15KB),
+// while the heavy playlist manager (~60KB) loads in the background during init.
+import type { PlaylistManager } from './playlist-manager';
 
 // Lightweight interface for playlist items used in the modal UI
 interface PlaylistItem {
@@ -308,6 +309,17 @@ export function initPlaylistModal() {
   // Inject the full modal HTML into the placeholder container
   injectModalHTML();
 
+  // Inline platform name helper (avoids importing url-parser.ts in synchronous render paths)
+  function platformName(platform: string): string {
+    switch (platform) {
+      case 'youtube': return 'YouTube';
+      case 'vimeo': return 'Vimeo';
+      case 'soundcloud': return 'SoundCloud';
+      case 'direct': return 'Direct';
+      default: return 'Unknown';
+    }
+  }
+
   // Global playlist manager instance
   let playlistManager: PlaylistManager | null = null;
   let isStopped = false;
@@ -458,7 +470,9 @@ export function initPlaylistModal() {
     currentUserId = userInfo?.id || null;
     isAuthenticated = userInfo?.loggedIn || false;
 
-    playlistManager = new PlaylistManager('playlistPlayer');
+    // Dynamic import: PlaylistManager (~60KB) loads as a separate chunk
+    const { PlaylistManager: PM } = await import('./playlist-manager');
+    playlistManager = new PM('playlistPlayer');
     await playlistManager.initialize(currentUserId || undefined, userInfo?.displayName || userInfo?.name);
 
     // Update UI based on auth state
@@ -838,7 +852,13 @@ export function initPlaylistModal() {
     // Confirm export button
     if (confirmExportBtn && !confirmExportBtn.dataset.listenerAttached) {
       confirmExportBtn.dataset.listenerAttached = 'true';
-      confirmExportBtn.addEventListener('click', () => {
+      confirmExportBtn.addEventListener('click', async () => {
+        // Dynamic import: url-parser and constants only needed for export
+        const [{ getPlatformName }, { SITE_URL }] = await Promise.all([
+          import('./url-parser'),
+          import('./constants')
+        ]);
+
         const format = (document.querySelector('input[name="exportFormat"]:checked') as HTMLInputElement)?.value || 'txt';
         const title = exportTitleInput?.value.trim() || 'My Fresh Wax Playlist';
         const now = new Date();
@@ -1820,7 +1840,7 @@ export function initPlaylistModal() {
         <div class="personal-item-info">
           <div class="personal-item-title">${item.title || 'Untitled'}</div>
           <div class="personal-item-meta">
-            <span class="personal-item-platform">${getPlatformName(item.platform)}</span>
+            <span class="personal-item-platform">${platformName(item.platform)}</span>
             ${item.addedAt ? `<span class="personal-item-date">${formatAddedDate(item.addedAt)}</span>` : ''}
           </div>
         </div>

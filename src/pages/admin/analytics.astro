@@ -41,8 +41,8 @@ const startOfYear = new Date(now.getFullYear(), 0, 1);
 // Fetch ledger, orders, and releases in parallel (independent queries)
 const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
   // Ledger entries (source of truth for revenue) - Firebase primary, D1 fallback
-  (async (): Promise<any[]> => {
-    let entries: any[] = [];
+  (async (): Promise<Record<string, unknown>[]> => {
+    let entries: Record<string, unknown>[] = [];
     try {
       const db = env?.DB;
       if (serviceAccountKey) {
@@ -70,7 +70,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
     return entries;
   })(),
   // Orders for top sellers (uses items data)
-  (async (): Promise<any[]> => {
+  (async (): Promise<Record<string, unknown>[]> => {
     try {
       const allOrders = serviceAccountKey
         ? await saQueryCollection(serviceAccountKey, projectId, 'orders', {
@@ -81,7 +81,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
             orderBy: { field: 'createdAt', direction: 'DESCENDING' },
             limit: 500
           });
-      return allOrders.filter((o: any) =>
+      return allOrders.filter((o: Record<string, unknown>) =>
         o.status !== 'cancelled' &&
         o.paymentMethod !== 'test_mode'
       );
@@ -95,7 +95,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
     const priceMap: Record<string, number> = {};
     try {
       const releases = await queryCollection('releases', { limit: 500 });
-      releases.forEach((r: any) => {
+      releases.forEach((r: Record<string, unknown>) => {
         if (r.id) {
           priceMap[r.id] = r.price ?? 0;
         }
@@ -116,7 +116,7 @@ function correctItemPrice(price: number): number {
 }
 
 // Calculate metrics from LEDGER (source of truth)
-function calculateMetricsFromLedger(entries: any[]) {
+function calculateMetricsFromLedger(entries: Record<string, unknown>[]) {
   let revenue = 0;
   let stripeFees = 0;
   let paypalFees = 0;

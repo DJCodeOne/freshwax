@@ -9,9 +9,9 @@ import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 // Get partner from session
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
-let partner: any = null;
-let orders: any[] = [];
-let products: any[] = [];
+let partner: Record<string, unknown> | null = null;
+let orders: Record<string, unknown>[] = [];
+let products: Record<string, unknown>[] = [];
 
 if (partnerId) {
   try {
@@ -20,7 +20,7 @@ if (partnerId) {
       partner = { id: partnerId, ...partnerDoc };
 
       // Try multiple strategies to find products linked to this supplier
-      let merchProducts: any[] = [];
+      let merchProducts: Record<string, unknown>[] = [];
 
       // Strategy 1: Query by supplierId
       merchProducts = await queryCollection('merch', {
@@ -62,7 +62,7 @@ if (partnerId) {
 
         // Filter orders to only include items from this supplier
         allOrders.forEach(order => {
-          const supplierItems = (order.items || []).filter((item: any) =>
+          const supplierItems = (order.items || []).filter((item: Record<string, unknown>) =>
             productIds.includes(item.productId) || item.supplierId === partnerId
           );
 
@@ -75,8 +75,8 @@ if (partnerId) {
               customerName: order.customerName || order.shippingAddress?.name || 'Customer',
               shippingAddress: order.shippingAddress || {},
               items: supplierItems,
-              itemCount: supplierItems.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0),
-              total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)
+              itemCount: supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.quantity as number) || 1), 0),
+              total: supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) || 0) * ((item.quantity as number) || 1), 0)
             });
           }
         });

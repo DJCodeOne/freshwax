@@ -11,9 +11,9 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 
 // Get partner from session
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
-let partner: any = null;
-let orders: any[] = [];
-let products: any[] = [];
+let partner: Record<string, unknown> | null = null;
+let orders: Record<string, unknown>[] = [];
+let products: Record<string, unknown>[] = [];
 
 // Get service account credentials
 const env = Astro.locals.runtime.env;
@@ -42,7 +42,7 @@ if (partnerId) {
       partner = { id: partnerId, ...partnerDoc };
 
       // Try multiple strategies to find products linked to this supplier
-      let merchProducts: any[] = [];
+      let merchProducts: Record<string, unknown>[] = [];
 
       // Strategy 1: Query by supplierId
       merchProducts = await queryCollection('merch', {
@@ -84,8 +84,8 @@ if (partnerId) {
           });
 
           // Filter entries that contain merch items from this supplier
-          allLedgerEntries.forEach((entry: any) => {
-            const merchItems = (entry.items || []).filter((item: any) =>
+          allLedgerEntries.forEach((entry: Record<string, unknown>) => {
+            const merchItems = ((entry.items as Record<string, unknown>[]) || []).filter((item: Record<string, unknown>) =>
               item.type === 'merch' && (productIds.includes(item.id) || item.supplierId === partnerId)
             );
 
@@ -95,7 +95,7 @@ if (partnerId) {
                 createdAt: new Date(entry.timestamp),
                 status: entry.orderStatus || 'completed',
                 items: merchItems,
-                total: merchItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice * item.quantity || 0), 0)
+                total: merchItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.lineTotal as number) || (item.unitPrice as number) * (item.quantity as number) || 0), 0)
               });
             }
           });
@@ -112,7 +112,7 @@ if (partnerId) {
         });
 
         allOrders.filter(order => order.status !== 'cancelled').forEach(order => {
-          const supplierItems = (order.items || []).filter((item: any) =>
+          const supplierItems = (order.items || []).filter((item: Record<string, unknown>) =>
             productIds.includes(item.productId) || item.supplierId === partnerId
           );
 
@@ -122,7 +122,7 @@ if (partnerId) {
               createdAt: order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt),
               status: order.status || 'pending',
               items: supplierItems,
-              total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)
+              total: supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) || 0) * ((item.quantity as number) || 1), 0)
             });
           }
         });
@@ -138,7 +138,7 @@ const isMerchSupplier = partner?.isMerchSupplier === true;
 
 // Calculate analytics
 const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-const totalUnits = orders.reduce((sum, o) => o.items.reduce((s: number, i: any) => s + (i.quantity || 1), s), 0);
+const totalUnits = orders.reduce((sum, o) => (o.items as Record<string, unknown>[]).reduce((s: number, i: Record<string, unknown>) => s + ((i.quantity as number) || 1), s), 0);
 const supplierCut = partner?.supplierCut || 70;
 const totalEarnings = totalRevenue * (supplierCut / 100);
 const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
@@ -146,7 +146,7 @@ const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 // Product performance
 const productSales: Record<string, { name: string; units: number; revenue: number }> = {};
 orders.forEach(order => {
-  order.items.forEach((item: any) => {
+  (order.items as Record<string, unknown>[]).forEach((item: Record<string, unknown>) => {
     const pid = item.productId || item.id;
     if (!productSales[pid]) {
       productSales[pid] = { name: item.name || item.productName || 'Unknown', units: 0, revenue: 0 };
@@ -176,7 +176,7 @@ orders.forEach(order => {
   if (monthlyData[key]) {
     monthlyData[key].orders++;
     monthlyData[key].revenue += order.total;
-    monthlyData[key].units += order.items.reduce((s: number, i: any) => s + (i.quantity || 1), 0);
+    monthlyData[key].units += (order.items as Record<string, unknown>[]).reduce((s: number, i: Record<string, unknown>) => s + ((i.quantity as number) || 1), 0);
   }
 });
 

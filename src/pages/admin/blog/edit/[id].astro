@@ -17,7 +17,7 @@ const { id } = Astro.params;
 const env = Astro.locals?.runtime?.env;
 
 // Fetch post
-let post: any = null;
+let post: Record<string, unknown> | null = null;
 try {
   post = await getDocument('blog-posts', id!);
 } catch (e: unknown){

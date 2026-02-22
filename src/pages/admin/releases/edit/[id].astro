@@ -518,7 +518,7 @@ if (!release) {
         </div>
 
         <div class="track-list" id="trackList">
-          {release.tracks && release.tracks.map((track: any, index: number) => (
+          {release.tracks && release.tracks.map((track: unknown, index: number) => (
             <div class="track-item" data-track-index={index} draggable="true">
               <div class="track-header">
                 <span class="track-drag-handle">⋮⋮</span>

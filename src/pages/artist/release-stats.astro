@@ -11,9 +11,9 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 import { d1GetLedgerEntries } from '../../lib/d1-catalog';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
-let partner: any = null;
-let releases: any[] = [];
-let ledgerEntries: any[] = [];
+let partner: Record<string, unknown> | null = null;
+let releases: Record<string, unknown>[] = [];
+let ledgerEntries: Record<string, unknown>[] = [];
 let totals = {
   releases: 0,
   liveReleases: 0,
@@ -51,7 +51,7 @@ if (partnerId) {
     partner = await getDocument('artists', partnerId);
     if (partner) {
       // Query releases by user ID fields (parallel batch)
-      const releaseMap = new Map<string, any>();
+      const releaseMap = new Map<string, Record<string, unknown>>();
 
       const releaseQueries = [
         queryCollection('releases', { filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }] }),
@@ -61,14 +61,14 @@ if (partnerId) {
       ];
 
       const releaseResults = await Promise.all(releaseQueries);
-      releaseResults.forEach(results => results.forEach((r: any) => releaseMap.set(r.id, r)));
+      releaseResults.forEach(results => results.forEach((r: Record<string, unknown>) => releaseMap.set(r.id as string, r)));
 
       releases = Array.from(releaseMap.values());
       const releaseIds = releases.map(r => r.id);
 
       // Query salesLedger for accurate sales data (D1 primary, Firebase backup)
       if (releaseIds.length > 0) {
-        let allLedgerEntries: any[] = [];
+        let allLedgerEntries: Record<string, unknown>[] = [];
 
         // Try D1 first (primary read source)
         const db = env?.DB;
@@ -93,8 +93,8 @@ if (partnerId) {
         }
 
         // Filter entries that contain this artist's releases
-        allLedgerEntries.forEach((entry: any) => {
-            const artistItems = (entry.items || []).filter((item: any) =>
+        allLedgerEntries.forEach((entry: Record<string, unknown>) => {
+            const artistItems = ((entry.items as Record<string, unknown>[]) || []).filter((item: Record<string, unknown>) =>
               (item.type === 'release' || item.type === 'track' || item.type === 'digital') && releaseIds.includes(item.id || item.releaseId || item.productId)
             );
 
@@ -102,7 +102,7 @@ if (partnerId) {
               ledgerEntries.push(entry);
 
               // Aggregate sales by release ID
-              artistItems.forEach((item: any) => {
+              artistItems.forEach((item: Record<string, unknown>) => {
                 const itemId = item.id || item.releaseId || item.productId;
                 const existing = releaseSalesMap.get(itemId) || { sales: 0, revenue: 0, earnings: 0 };
                 existing.sales += item.quantity || 1;

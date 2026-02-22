@@ -264,7 +264,7 @@ function toIsoDuration(timeStr: string | undefined | null): string | undefined {
 }
 
 // Build structured track data for JSON-LD
-const structuredTracks = tracksWithIds.map((t: any) => ({
+const structuredTracks = tracksWithIds.map((t: Record<string, unknown>) => ({
   name: t.title || t.trackName || 'Untitled',
   duration: toIsoDuration(t.duration),
   artist: t.artist || undefined,

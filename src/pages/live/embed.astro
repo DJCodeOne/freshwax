@@ -9,7 +9,7 @@ export const prerender = false;
 import { queryCollection } from '../../lib/firebase-rest';
 import { SITE_URL } from '../../lib/constants';
 
-let currentStream: any = null;
+let currentStream: Record<string, unknown> | null = null;
 let hlsUrl = '';
 let thumbnailUrl = `${SITE_URL}/og-image.webp`;
 let streamTitle = 'Fresh Wax Live';

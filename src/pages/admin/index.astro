@@ -16,18 +16,18 @@ if (authResult) return Astro.redirect('/login');
 const runtimeEnv = Astro.locals.runtime.env;
 
 // Fetch all data using REST API with error handling
-let ordersData: any[] = [];
-let releasesData: any[] = [];
-let artistsData: any[] = [];
-let merchData: any[] = [];
-let mixesData: any[] = [];
-let livestreamsData: any[] = [];
-let bypassRequestsData: any[] = [];
-let payoutsData: any[] = [];
-let disputesData: any[] = [];
-let refundsData: any[] = [];
-let ledgerData: any[] = [];
-let blogPostsData: any[] = [];
+let ordersData: Record<string, unknown>[] = [];
+let releasesData: Record<string, unknown>[] = [];
+let artistsData: Record<string, unknown>[] = [];
+let merchData: Record<string, unknown>[] = [];
+let mixesData: Record<string, unknown>[] = [];
+let livestreamsData: Record<string, unknown>[] = [];
+let bypassRequestsData: Record<string, unknown>[] = [];
+let payoutsData: Record<string, unknown>[] = [];
+let disputesData: Record<string, unknown>[] = [];
+let refundsData: Record<string, unknown>[] = [];
+let ledgerData: Record<string, unknown>[] = [];
+let blogPostsData: Record<string, unknown>[] = [];
 let r2SubmissionsCount = 0;
 let r2PendingFolders: string[] = [];
 
@@ -47,7 +47,7 @@ if (clientEmail && privateKey) {
 }
 
 // Helper: use service account for restricted collections, API key for public ones
-const saQuery = (collection: string, opts: any) =>
+const saQuery = (collection: string, opts: Record<string, unknown>) =>
   serviceAccountKey
     ? saQueryCollection(serviceAccountKey, projectId, collection, opts)
     : queryCollection(collection, opts);
@@ -74,7 +74,7 @@ try {
   merchData = results[3].status === 'fulfilled' ? results[3].value : [];
   mixesData = results[4].status === 'fulfilled' ? results[4].value : [];
   livestreamsData = results[5].status === 'fulfilled' ? results[5].value : [];
-  bypassRequestsData = results[6].status === 'fulfilled' ? results[6].value.filter((r: any) => r.status === 'pending') : [];
+  bypassRequestsData = results[6].status === 'fulfilled' ? results[6].value.filter((r: Record<string, unknown>) => r.status === 'pending') : [];
   payoutsData = results[7].status === 'fulfilled' ? results[7].value : [];
   disputesData = results[8].status === 'fulfilled' ? results[8].value : [];
   refundsData = results[9].status === 'fulfilled' ? results[9].value : [];

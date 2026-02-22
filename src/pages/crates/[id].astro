@@ -15,7 +15,7 @@ let pageTitle = 'Vinyl Details - Crates';
 let pageBreadcrumbName = 'Vinyl Details';
 let pageDescription = 'Browse vinyl records for sale on Fresh Wax Crates. Jungle, drum & bass, and breakbeat vinyl from independent sellers.';
 let pageImage: string | undefined;
-let productMeta: any = undefined;
+let productMeta: Record<string, unknown> | undefined = undefined;
 
 try {
   const res = await fetch(`https://vinyl-api.davidhagon.workers.dev/listings/${id}`, {

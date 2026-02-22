@@ -2,8 +2,10 @@
 // Global playlist manager - synced across all viewers via Pusher
 
 import type { GlobalPlaylistItem, GlobalPlaylist } from './types';
-import { EmbedPlayerManager } from './embed-player';
-import { parseMediaUrl } from './url-parser';
+// EmbedPlayerManager and parseMediaUrl are dynamically imported to split the bundle.
+// embed-player.ts (~30KB) is only needed when playback starts.
+// url-parser.ts is only needed when adding items to the queue.
+import type { EmbedPlayerManager } from './embed-player';
 
 const PLAYLIST_HISTORY_KEY = 'freshwax_playlist_history';
 const RECENTLY_PLAYED_KEY = 'freshwax_recently_played';
@@ -64,7 +66,8 @@ export class PlaylistManager {
   private userId: string | null = null;
   private userName: string | null = null;
   private playlist: GlobalPlaylist;
-  private player: EmbedPlayerManager;
+  private player: EmbedPlayerManager | null = null; // Lazy-loaded on first playback
+  private playerPromise: Promise<EmbedPlayerManager> | null = null; // Loading guard
   private isAuthenticated: boolean = false;
   public wasPausedForStream: boolean = false;
   private playHistory: PlaylistHistoryEntry[] = [];
@@ -94,18 +97,38 @@ export class PlaylistManager {
       lastUpdated: new Date().toISOString()
     };
 
-    this.player = new EmbedPlayerManager(containerId, {
-      onEnded: () => this.handleTrackEnded(),
-      onError: (error) => this.handlePlaybackError(error),
-      onReady: () => this.handlePlayerReady(),
-      onStateChange: (state) => this.handleStateChange(state),
-      onTitleUpdate: (title) => this.handleTitleUpdate(title)
-    });
+    // EmbedPlayerManager is lazy-loaded on first playback to reduce initial bundle size.
+    // The player is created by ensurePlayer() when playback is needed.
 
     // Load play history, recently played, and personal playlist
     this.loadPlayHistory();
     this.loadRecentlyPlayed();
     this.loadPersonalPlaylist();
+  }
+
+  /**
+   * Lazy-load and create the EmbedPlayerManager on first use.
+   * This defers ~30KB of embed-player.ts until playback actually starts.
+   */
+  private async ensurePlayer(): Promise<EmbedPlayerManager> {
+    if (this.player) return this.player;
+
+    // Prevent duplicate loading (multiple callers awaiting simultaneously)
+    if (this.playerPromise) return this.playerPromise;
+
+    this.playerPromise = (async () => {
+      const { EmbedPlayerManager: PlayerClass } = await import('./embed-player');
+      this.player = new PlayerClass(this.containerId, {
+        onEnded: () => this.handleTrackEnded(),
+        onError: (error) => this.handlePlaybackError(error),
+        onReady: () => this.handlePlayerReady(),
+        onStateChange: (state) => this.handleStateChange(state),
+        onTitleUpdate: (title) => this.handleTitleUpdate(title)
+      });
+      return this.player;
+    })();
+
+    return this.playerPromise;
   }
 
   /**
@@ -318,7 +341,7 @@ export class PlaylistManager {
     if (hadItems && !hasItems) {
       this.clearTrackTimer();
       this.stopCountdown();
-      await this.player.destroy();
+      if (this.player) await this.player.destroy();
       this.disableEmojis();
       this.updateNowPlayingDisplay(null);
       this.showOfflineOverlay();
@@ -347,7 +370,7 @@ export class PlaylistManager {
     } else if (!this.playlist.isPlaying && wasPlaying) {
       // Playlist was paused remotely
       this.stopCountdown();
-      await this.player.pause();
+      if (this.player) await this.player.pause();
       this.disableEmojis();
     }
     // If just adding items to queue while playing, do nothing - let current track continue
@@ -389,7 +412,8 @@ export class PlaylistManager {
     }
 
     try {
-      // Parse URL locally first
+      // Parse URL locally first (dynamically imported to reduce initial bundle)
+      const { parseMediaUrl } = await import('./url-parser');
       const parsed = parseMediaUrl(url.trim());
 
       if (!parsed.isValid) {
@@ -517,7 +541,7 @@ export class PlaylistManager {
 
         // If queue is empty, cleanup
         if (this.playlist.queue.length === 0) {
-          await this.player.destroy();
+          if (this.player) await this.player.destroy();
           this.disableEmojis();
           this.updateNowPlayingDisplay(null);
           this.showOfflineOverlay();
@@ -555,7 +579,7 @@ export class PlaylistManager {
     this.isPausedLocally = true; // Set local pause flag
     this.clearTrackTimer();
     this.stopCountdown();
-    await this.player.pause();
+    if (this.player) await this.player.pause();
     this.stopPlaylistMeters();
     this.disableEmojis();
   }
@@ -580,14 +604,15 @@ export class PlaylistManager {
     }
 
     // Resume and sync to current global position
-    await this.player.play();
+    const player = await this.ensurePlayer();
+    await player.play();
     this.enableEmojis();
     this.startPlaylistMeters();
 
     // Seek to current global position
     const syncPosition = this.calculateSyncPosition();
     if (syncPosition > 2) {
-      await this.player.seekTo(syncPosition);
+      await player.seekTo(syncPosition);
     }
 
     // Restart countdown display
@@ -688,7 +713,7 @@ export class PlaylistManager {
         if (action === 'play' || action === 'next') {
           await this.playCurrent();
         } else if (action === 'pause') {
-          await this.player.pause();
+          if (this.player) await this.player.pause();
           this.disableEmojis();
         }
 
@@ -708,7 +733,7 @@ export class PlaylistManager {
     this.playlist.currentIndex = 0;
     this.playlist.isPlaying = false;
 
-    await this.player.destroy();
+    if (this.player) await this.player.destroy();
     this.disableEmojis();
     this.updateNowPlayingDisplay(null);
     this.showOfflineOverlay();
@@ -783,19 +808,22 @@ export class PlaylistManager {
       // Update NOW PLAYING display
       this.updateNowPlayingDisplay(currentItem);
 
+      // Lazy-load embed player on first playback
+      const player = await this.ensurePlayer();
+
       // Calculate sync position BEFORE loading the item
       const syncPosition = this.calculateSyncPosition();
       if (syncPosition > 2) { // Only seek if more than 2 seconds in
-        this.player.setPendingSeek(syncPosition);
+        player.setPendingSeek(syncPosition);
       }
 
-      await this.player.loadItem(currentItem);
+      await player.loadItem(currentItem);
 
       // Check duration after loading - skip if exceeds 10 minute limit
       try {
         // Wait a moment for player to have duration info
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const duration = await this.player.getDuration();
+        const duration = await player.getDuration();
 
         if (duration > MAX_TRACK_DURATION_SECONDS) {
           this.clearTrackTimer();
@@ -1205,11 +1233,12 @@ export class PlaylistManager {
     this.isFetchingDuration = true;
     let duration = 0;
     try {
-      duration = await this.player.waitForMetadata(10000);
+      const player = await this.ensurePlayer();
+      duration = await player.waitForMetadata(10000);
 
       if (duration <= 0) {
         await new Promise(resolve => setTimeout(resolve, 500));
-        duration = await this.player.getDuration();
+        duration = await player.getDuration();
       }
 
       if (duration <= 0 && currentTrack?.duration) {
@@ -1694,7 +1723,8 @@ export class PlaylistManager {
     }
 
     try {
-      // Parse URL
+      // Parse URL (dynamically imported to reduce initial bundle)
+      const { parseMediaUrl } = await import('./url-parser');
       const parsed = parseMediaUrl(url.trim());
 
       if (!parsed.isValid) {
@@ -1886,7 +1916,7 @@ export class PlaylistManager {
           await this.playCurrent();
         } else {
           // No tracks - show offline state
-          await this.player.destroy();
+          if (this.player) await this.player.destroy();
           this.disableEmojis();
           this.updateNowPlayingDisplay(null);
           this.showOfflineOverlay();
@@ -1896,7 +1926,7 @@ export class PlaylistManager {
       console.error('[PlaylistManager] Error calling trackEnded:', error);
       // Fallback: just stop playback on error
       this.playlist.isPlaying = false;
-      await this.player.destroy();
+      if (this.player) await this.player.destroy();
       this.disableEmojis();
       this.updateNowPlayingDisplay(null);
       this.showOfflineOverlay();
@@ -2303,14 +2333,14 @@ export class PlaylistManager {
    * Check if audio is actually playing (not paused/blocked by browser)
    */
   get isActuallyPlaying(): boolean {
-    return this.player.isActuallyPlaying();
+    return this.player?.isActuallyPlaying() ?? false;
   }
 
   /**
    * Set volume (0-100)
    */
   setVolume(volume: number): void {
-    this.player.setVolume(volume);
+    this.player?.setVolume(volume);
   }
 
   /**
@@ -2366,7 +2396,7 @@ export class PlaylistManager {
       }
     }
     this.stopPlaylistMeters();
-    this.player.destroy();
+    this.player?.destroy();
   }
 }
 

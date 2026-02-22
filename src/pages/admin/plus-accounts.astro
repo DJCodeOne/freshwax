@@ -18,21 +18,21 @@ const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PR
 const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail }) : '';
-const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
+const saQuery = (c: string, o: Record<string, unknown>) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
 
 // Fetch users with Plus subscriptions
-let plusUsers: any[] = [];
-let allUsersWithSubs: any[] = [];
+let plusUsers: Record<string, unknown>[] = [];
+let allUsersWithSubs: Record<string, unknown>[] = [];
 
 try {
   // Query users collection for subscription data
   const usersData = await saQuery('users', { limit: 1000 });
 
   // Filter users who have subscription data
-  allUsersWithSubs = usersData.filter((user: any) => user.subscription);
+  allUsersWithSubs = usersData.filter((user: Record<string, unknown>) => user.subscription);
 
   // Filter for Plus members (active or expired)
-  plusUsers = allUsersWithSubs.filter((user: any) => {
+  plusUsers = allUsersWithSubs.filter((user: Record<string, unknown>) => {
     const sub = user.subscription;
     return sub && sub.tier === 'pro';
   });

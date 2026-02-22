@@ -10,9 +10,9 @@ import { saQueryCollection } from '../../lib/firebase-service-account';
 // Get partner from session
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner = null;
-let sales: any[] = [];
-let products: any[] = [];
-let ledgerEntries: any[] = [];
+let sales: Record<string, unknown>[] = [];
+let products: Record<string, unknown>[] = [];
+let ledgerEntries: Record<string, unknown>[] = [];
 
 // Get service account credentials
 const env = Astro.locals.runtime.env;
@@ -41,7 +41,7 @@ if (partnerId) {
       partner = { id: partnerId, ...partnerDoc };
 
       // Try multiple strategies to find products linked to this supplier
-      let merchProducts: any[] = [];
+      let merchProducts: Record<string, unknown>[] = [];
 
       // Strategy 1: Query by supplierId
       merchProducts = await queryCollection('merch', {
@@ -83,8 +83,8 @@ if (partnerId) {
           });
 
           // Filter entries that contain merch items from this supplier
-          allLedgerEntries.forEach((entry: any) => {
-            const merchItems = (entry.items || []).filter((item: any) =>
+          allLedgerEntries.forEach((entry: Record<string, unknown>) => {
+            const merchItems = ((entry.items as Record<string, unknown>[]) || []).filter((item: Record<string, unknown>) =>
               item.type === 'merch' && (productIds.includes(item.id) || item.supplierId === partnerId)
             );
 
@@ -95,7 +95,7 @@ if (partnerId) {
                 orderDate: new Date(entry.timestamp),
                 status: entry.orderStatus || 'completed',
                 items: merchItems,
-                total: merchItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice * item.quantity || 0), 0),
+                total: merchItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.lineTotal as number) || (item.unitPrice as number) * (item.quantity as number) || 0), 0),
                 artistPayout: entry.artistPayout || 0,
                 payoutStatus: entry.artistPayoutStatus || 'pending'
               });
@@ -115,7 +115,7 @@ if (partnerId) {
         });
 
         allOrders.filter(order => order.status !== 'cancelled').forEach(order => {
-          const supplierItems = (order.items || []).filter((item: any) =>
+          const supplierItems = (order.items || []).filter((item: Record<string, unknown>) =>
             productIds.includes(item.productId) || item.supplierId === partnerId
           );
 
@@ -125,7 +125,7 @@ if (partnerId) {
               orderDate: order.createdAt instanceof Date ? order.createdAt : new Date(order.createdAt),
               status: order.status,
               items: supplierItems,
-              total: supplierItems.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0)
+              total: supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) || 0) * ((item.quantity as number) || 1), 0)
             });
           }
         });

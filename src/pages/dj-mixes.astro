@@ -12,7 +12,7 @@ import '../styles/dj-mixes.css';
 const db = Astro.locals.runtime.env?.DB;
 
 // Fetch data via REST API
-let mixes: any[] = [];
+let mixes: Record<string, unknown>[] = [];
 let showMixCharts = false;
 
 try {
@@ -29,13 +29,13 @@ try {
 }
 
 // Calculate chart rankings if enabled
-let chartMixes: any[] = [];
+let chartMixes: Record<string, unknown>[] = [];
 if (showMixCharts && mixes.length > 0) {
   chartMixes = mixes.map(mix => {
-    const plays = mix.plays || mix.playCount || 0;
-    const likes = mix.likes || mix.likeCount || 0;
-    const downloads = mix.downloads || mix.downloadCount || 0;
-    const comments = mix.comments || mix.commentCount || 0;
+    const plays = (mix.plays || mix.playCount || 0) as number;
+    const likes = (mix.likes || mix.likeCount || 0) as number;
+    const downloads = (mix.downloads || mix.downloadCount || 0) as number;
+    const comments = (mix.comments || mix.commentCount || 0) as number;
     const rating = Math.round((plays * 0.3 + likes * 2 + downloads * 1.5 + comments * 3) / 10);
     return { ...mix, rating };
   }).sort((a, b) => b.rating - a.rating).slice(0, 10);
@@ -74,14 +74,14 @@ function formatDuration(seconds: number | string | null | undefined): string {
 }
 
 // Helper to get duration from mix object
-function getMixDuration(mix: any): number | null {
+function getMixDuration(mix: Record<string, unknown>): number | null {
   // Check durationSeconds first (should be a number)
   if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
     return mix.durationSeconds;
   }
   // Check if durationSeconds is stored as a string number
-  if (mix.durationSeconds && !isNaN(parseFloat(mix.durationSeconds))) {
-    return parseFloat(mix.durationSeconds);
+  if (mix.durationSeconds && !isNaN(parseFloat(mix.durationSeconds as string))) {
+    return parseFloat(mix.durationSeconds as string);
   }
   // Check duration_seconds
   if (mix.duration_seconds && typeof mix.duration_seconds === 'number') {
@@ -110,7 +110,7 @@ function getMixDuration(mix: any): number | null {
 // Extract unique genres from mixes for filter
 const genreCounts = new Map<string, number>();
 mixes.forEach(mix => {
-  const genre = mix.genre || 'Jungle & D&B';
+  const genre = (mix.genre || 'Jungle & D&B') as string;
   genreCounts.set(genre, (genreCounts.get(genre) || 0) + 1);
 });
 

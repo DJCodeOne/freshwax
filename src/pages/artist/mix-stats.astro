@@ -9,7 +9,7 @@ import { getDocument, queryCollection } from '../../lib/firebase-rest';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner = null;
-let mixes: any[] = [];
+let mixes: Record<string, unknown>[] = [];
 let totals = {
   mixes: 0,
   plays: 0,
@@ -20,7 +20,7 @@ let totals = {
 };
 
 // Rating calculation function
-const calculateRating = (mix: any): number => {
+const calculateRating = (mix: Record<string, unknown>): number => {
   const downloads = mix.downloads || 0;
   const likes = mix.likes || 0;
   const comments = mix.commentCount || mix.comments?.length || 0;
@@ -37,7 +37,7 @@ if (partnerId) {
       const partnerName = partner.artistName?.toLowerCase().trim();
 
       // Filter mixes belonging to this user
-      const userMixes = allMixes.filter((mix: any) => {
+      const userMixes = allMixes.filter((mix: Record<string, unknown>) => {
         const matchesUserId = mix.userId === partnerId;
         const matchesDjName = partnerName && (
           mix.djName?.toLowerCase().trim() === partnerName ||
@@ -47,7 +47,7 @@ if (partnerId) {
       });
 
       // Sort by engagement score descending (highest rated first)
-      userMixes.sort((a: any, b: any) => {
+      userMixes.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
         const scoreA = calculateRating(a);
         const scoreB = calculateRating(b);
         return scoreB - scoreA;

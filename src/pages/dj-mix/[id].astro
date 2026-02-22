@@ -54,14 +54,14 @@ const {
 } = mix || {};
 
 // Get duration from various possible field names (in order of preference)
-function getDurationSeconds(mix: any): number | null {
+function getDurationSeconds(mix: Record<string, unknown> | null): number | null {
   // Check durationSeconds first (should be a number)
   if (mix?.durationSeconds && typeof mix.durationSeconds === 'number') {
     return mix.durationSeconds;
   }
   // Check if it's stored as a string number
-  if (mix?.durationSeconds && !isNaN(parseFloat(mix.durationSeconds))) {
-    return parseFloat(mix.durationSeconds);
+  if (mix?.durationSeconds && !isNaN(parseFloat(mix.durationSeconds as string))) {
+    return parseFloat(mix.durationSeconds as string);
   }
   // Check duration_seconds
   if (mix?.duration_seconds && typeof mix.duration_seconds === 'number') {

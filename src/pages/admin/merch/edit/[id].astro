@@ -32,7 +32,7 @@ if (Astro.request.method === 'POST') {
   try {
     const formData = await Astro.request.formData();
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       name: formData.get('name') || '',
       sku: formData.get('sku') || '',
       description: formData.get('description') || '',
@@ -114,11 +114,11 @@ if (!product && !errorMessage) {
 // Calculate actual totalStock from variantStock (in case stored value is corrupted)
 let calculatedTotalStock = 0;
 if (product?.variantStock && typeof product.variantStock === 'object') {
-  Object.values(product.variantStock).forEach((v: any) => {
+  Object.values(product.variantStock).forEach((v: unknown) => {
     if (typeof v === 'number') {
       calculatedTotalStock += v;
-    } else if (v && typeof v === 'object' && typeof v.stock === 'number') {
-      calculatedTotalStock += v.stock;
+    } else if (v && typeof v === 'object' && typeof (v as Record<string, unknown>).stock === 'number') {
+      calculatedTotalStock += (v as Record<string, unknown>).stock as number;
     }
   });
 }

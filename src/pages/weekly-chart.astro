@@ -13,7 +13,7 @@ const now = new Date();
 const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
 // Helper to convert date value to Date object
-function toDate(value: any): Date | null {
+function toDate(value: unknown): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
   if (typeof value === 'string' || typeof value === 'number') return new Date(value);
@@ -21,18 +21,21 @@ function toDate(value: any): Date | null {
 }
 
 // Rating calculation function for releases
-function calculateScore(release: any): number {
-  const sales = release.salesCount || release.sales || 0;
-  const rating = release.ratings?.average || release.overallRating?.average || 0;
-  const ratingCount = release.ratings?.count || release.overallRating?.count || 0;
-  const views = release.views || release.stats?.views || 0;
+function calculateScore(release: Record<string, unknown>): number {
+  const sales = (release.salesCount || release.sales || 0) as number;
+  const ratings = release.ratings as Record<string, number> | undefined;
+  const overallRating = release.overallRating as Record<string, number> | undefined;
+  const stats = release.stats as Record<string, number> | undefined;
+  const rating = ratings?.average || overallRating?.average || 0;
+  const ratingCount = ratings?.count || overallRating?.count || 0;
+  const views = (release.views || stats?.views || 0) as number;
 
   // Weighted score: sales most valuable, then ratings, views
   const score = (sales * 10) + (rating * ratingCount * 2) + (views * 0.1);
   return score;
 }
 
-let releases: any[] = [];
+let releases: Record<string, unknown>[] = [];
 let chartWeekStart = oneWeekAgo.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 let chartWeekEnd = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -62,7 +65,7 @@ try {
 const formatNumber = (num: number) => new Intl.NumberFormat('en-GB').format(num || 0);
 
 // Format release date
-const formatDate = (dateValue: any) => {
+const formatDate = (dateValue: unknown) => {
   try {
     const date = toDate(dateValue);
     if (!date) return '';
@@ -73,7 +76,7 @@ const formatDate = (dateValue: any) => {
 };
 
 // Get label from release
-const getLabel = (release: any) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
+const getLabel = (release: Record<string, unknown>) => release.labelName || release.recordLabel || release.copyrightHolder || 'Unknown Label';
 
 export const prerender = false;
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');

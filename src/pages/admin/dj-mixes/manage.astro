@@ -16,7 +16,7 @@ const runtime = Astro.locals.runtime;
 const db = runtime?.env?.DB;
 
 // Fetch all DJ mixes - prefer D1, fallback to Firebase
-let allMixes: any[] = [];
+let allMixes: Record<string, unknown>[] = [];
 if (db) {
   allMixes = await d1GetAllMixes(db);
 }
@@ -26,7 +26,7 @@ if (allMixes.length === 0) {
   });
 }
 
-const mixes = allMixes.map((data: any) => ({
+const mixes = allMixes.map((data: Record<string, unknown>) => ({
   ...data,
   uploadedAt: data.uploadedAt instanceof Date ? data.uploadedAt : new Date(data.uploadedAt || Date.now())
 }));
@@ -59,7 +59,7 @@ const formatDate = (date) => {
 };
 
 // Get duration in seconds from mix object
-const getDurationSeconds = (mix: any): number => {
+const getDurationSeconds = (mix: Record<string, unknown>): number => {
   // Check durationSeconds first (number)
   if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
     return Math.floor(mix.durationSeconds);
@@ -106,7 +106,7 @@ const getDurationSeconds = (mix: any): number => {
 };
 
 // Format duration for display
-const formatDuration = (mix: any) => {
+const formatDuration = (mix: Record<string, unknown>) => {
   const seconds = getDurationSeconds(mix);
   if (!seconds) return '-';
   const hrs = Math.floor(seconds / 3600);

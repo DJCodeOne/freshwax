@@ -15,7 +15,7 @@ export const prerender = false;
 
 const { id } = Astro.params;
 
-let mix: any = null;
+let mix: Record<string, unknown> | null = null;
 let errorMessage = '';
 
 try {
@@ -36,7 +36,7 @@ if (!mix) {
 }
 
 // Format duration - check multiple possible field names and formats
-const getDuration = (mix: any): number => {
+const getDuration = (mix: Record<string, unknown>): number => {
   // Check durationSeconds first (number)
   if (mix.durationSeconds && typeof mix.durationSeconds === 'number') {
     return Math.floor(mix.durationSeconds);

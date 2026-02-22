@@ -43,7 +43,7 @@ const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
 const startOfYear = new Date(now.getFullYear(), 0, 1);
 
 // Fetch ledger entries
-let ledgerEntries: any[] = [];
+let ledgerEntries: Record<string, unknown>[] = [];
 let totals = {
   allTime: { orders: 0, gross: 0, net: 0, stripeFees: 0, ppProcFees: 0, ppPayoutFees: 0, fwFees: 0 },
   thisMonth: { orders: 0, gross: 0, net: 0, stripeFees: 0, ppProcFees: 0, ppPayoutFees: 0, fwFees: 0 },
@@ -85,7 +85,7 @@ try {
   }
 
   // Calculate totals
-  ledgerEntries.forEach((entry: any) => {
+  ledgerEntries.forEach((entry: Record<string, unknown>) => {
     const timestamp = new Date(entry.timestamp);
     const gross = entry.grossTotal || 0;
     const net = entry.netRevenue || 0;
@@ -311,7 +311,7 @@ const formatDate = (dateStr: string) => {
               </tr>
             </thead>
             <tbody>
-              {ledgerEntries.slice(0, 100).map((entry: any) => {
+              {ledgerEntries.slice(0, 100).map((entry) => {
                 const hasActual = entry.actualGrossTotal !== undefined;
                 const actualGross = hasActual ? entry.actualGrossTotal : entry.grossTotal;
                 const actualNet = hasActual ? entry.actualNetRevenue : entry.netRevenue;

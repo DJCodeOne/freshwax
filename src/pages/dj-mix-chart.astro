@@ -12,11 +12,12 @@ import { getLiveDJMixes } from '../lib/firebase-rest';
 const db = Astro.locals.runtime.env?.DB;
 
 // Rating calculation function
-function calculateRating(mix: any): number {
-  const downloads = mix.downloads || 0;
-  const likes = mix.likes || 0;
-  const comments = mix.commentCount || mix.comments?.length || 0;
-  const plays = mix.plays || 0;
+function calculateRating(mix: Record<string, unknown>): number {
+  const downloads = (mix.downloads || 0) as number;
+  const likes = (mix.likes || 0) as number;
+  const commentsArr = mix.comments as unknown[] | undefined;
+  const comments = (mix.commentCount || commentsArr?.length || 0) as number;
+  const plays = (mix.plays || 0) as number;
 
   // Weighted score: downloads most valuable, then likes, comments, plays
   const score = (downloads * 3) + (likes * 2) + (comments * 1) + (plays * 0.1);
@@ -33,7 +34,7 @@ function scoreToStars(score: number): number {
   return 0;
 }
 
-let mixes: any[] = [];
+let mixes: Record<string, unknown>[] = [];
 
 try {
   // Get all published mixes - D1 first, Firebase fallback
@@ -48,7 +49,7 @@ try {
     }));
 
   // Sort by engagement score descending
-  mixes.sort((a, b) => b.engagementScore - a.engagementScore);
+  mixes.sort((a, b) => (b.engagementScore as number) - (a.engagementScore as number));
 
 } catch (e: unknown) {
   console.error('Error fetching mixes:', e);

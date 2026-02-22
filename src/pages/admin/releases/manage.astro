@@ -13,7 +13,7 @@ if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
 
-let releases: any[] = [];
+let releases: Record<string, unknown>[] = [];
 let errorMessage = '';
 
 try {
@@ -149,7 +149,7 @@ const nonce = Astro.locals.nonce || '';
               // Detect audio processed: check flag OR if all tracks have mp3Url+wavUrl
               const hasProcessedFlag = !!release.audioProcessed;
               const tracks = release.tracks || [];
-              const allTracksProcessed = tracks.length > 0 && tracks.every((t: any) => t.mp3Url && t.wavUrl);
+              const allTracksProcessed = tracks.length > 0 && tracks.every((t: unknown) => t && typeof t === 'object' && 'mp3Url' in t && 'wavUrl' in t && t.mp3Url && t.wavUrl);
               const isAudioProcessed = hasProcessedFlag || allTracksProcessed;
               return (
               <tr

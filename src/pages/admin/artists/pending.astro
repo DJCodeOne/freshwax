@@ -14,16 +14,16 @@ const projectId = runtimeEnv?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PR
 const clientEmail = runtimeEnv?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
 const privateKey = runtimeEnv?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
 const serviceAccountKey = (clientEmail && privateKey) ? JSON.stringify({ type: 'service_account', project_id: projectId, private_key: privateKey.replace(/\\n/g, '\n'), client_email: clientEmail }) : '';
-const saQuery = (c: string, o: any) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
+const saQuery = (c: string, o: Record<string, unknown>) => serviceAccountKey ? saQueryCollection(serviceAccountKey, projectId, c, o) : queryCollection(c, o);
 
 const adminUids = getAdminUids();
 
 const allUsers = await saQuery('users', { skipCache: true, limit: 500 });
 
-const pendingPartners = allUsers.filter((user: any) => {
-  const pending = user.pendingRoles || {};
+const pendingPartners = allUsers.filter((user: Record<string, unknown>) => {
+  const pending = (user.pendingRoles || {}) as Record<string, Record<string, unknown>>;
   return pending.artist?.status === 'pending' || pending.merchSeller?.status === 'pending';
-}).map((user: any) => {
+}).map((user: Record<string, unknown>) => {
   const pending = user.pendingRoles || {};
   const artistReq = pending.artist?.status === 'pending' ? pending.artist : null;
   const merchReq = pending.merchSeller?.status === 'pending' ? pending.merchSeller : null;
@@ -37,9 +37,9 @@ const pendingPartners = allUsers.filter((user: any) => {
     isMerchSupplier: !!merchReq,
     registeredAt: new Date(artistReq?.requestedAt || merchReq?.requestedAt || user.createdAt || Date.now())
   };
-}).sort((a: any, b: any) => b.registeredAt.getTime() - a.registeredAt.getTime());
+}).sort((a: Record<string, unknown>, b: Record<string, unknown>) => (b.registeredAt as Date).getTime() - (a.registeredAt as Date).getTime());
 
-const counts = { all: pendingPartners.length, artists: pendingPartners.filter((p: any) => p.isArtist).length, merch: pendingPartners.filter((p: any) => p.isMerchSupplier).length };
+const counts = { all: pendingPartners.length, artists: pendingPartners.filter((p: Record<string, unknown>) => p.isArtist).length, merch: pendingPartners.filter((p: Record<string, unknown>) => p.isMerchSupplier).length };
 const stats = [{ label: 'Total Pending', value: counts.all, type: counts.all > 0 ? 'warning' : 'default' }, { label: 'Artists', value: counts.artists, type: 'info' }, { label: 'Merch', value: counts.merch, type: 'info' }];
 
 export const prerender = false;
