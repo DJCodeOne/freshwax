@@ -7,7 +7,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { createLogger, errorResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
+import { createLogger, errorResponse, successResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
 
 const log = createLogger('[mix-presign]');
 

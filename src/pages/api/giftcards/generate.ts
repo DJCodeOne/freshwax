@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { createWelcomeGiftCard, createPromotionalGiftCard } from '../../../lib/giftcard';
-import { createLogger, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[giftcards/generate]');
 

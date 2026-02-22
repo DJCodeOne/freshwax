@@ -14,6 +14,10 @@ interface RateLimitEntry {
   blockedUntil?: number;
 }
 
+export type RateLimitResult =
+  | { allowed: true; retryAfter?: undefined; remaining?: number }
+  | { allowed: false; retryAfter: number; remaining?: undefined };
+
 // In-memory store (first tier — fast, per-isolate)
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
@@ -64,7 +68,7 @@ const kvSyncPending = new Set<string>();
 export function checkRateLimit(
   key: string,
   config: RateLimitConfig
-): { allowed: boolean; retryAfter?: number; remaining?: number } {
+): RateLimitResult {
   cleanupOldEntries();
 
   const now = Date.now();

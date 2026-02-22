@@ -8,7 +8,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { createOrder, validateStock } from '../../../lib/order-utils';
 import { getDocument, deleteDocument, addDocument, updateDocument, atomicIncrement, arrayUnion, queryCollection } from '../../../lib/firebase-rest';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
-import { createLogger, fetchWithTimeout, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, errorResponse, successResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[paypal-capture]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';

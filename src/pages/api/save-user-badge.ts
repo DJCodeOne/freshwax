@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { errorResponse, successResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 
 const log = createLogger('save-user-badge');
 

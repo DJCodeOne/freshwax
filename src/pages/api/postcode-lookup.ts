@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
+import { errorResponse, successResponse, ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
 
 const PostcodeLookupSchema = z.object({
   postcode: z.string().min(1, 'Postcode is required').max(10).transform(val => val.trim().toUpperCase().replace(/\s+/g, '')),

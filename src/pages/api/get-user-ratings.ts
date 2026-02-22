@@ -7,6 +7,11 @@ import { getDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
+interface D1RatingRow {
+  release_id: string;
+  rating: number;
+}
+
 const logger = createLogger('get-user-ratings');
 
 export const prerender = false;
@@ -56,7 +61,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const result = await db.prepare(query).bind(...params).all();
 
         if (result?.results) {
-          for (const row of result.results as any[]) {
+          for (const row of (result.results as unknown as D1RatingRow[])) {
             userRatings[row.release_id] = row.rating;
           }
         }

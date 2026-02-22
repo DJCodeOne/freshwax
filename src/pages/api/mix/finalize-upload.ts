@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, errorResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
 
 const logger = createLogger('finalize-upload');
 import { d1UpsertMix } from '../../../lib/d1-catalog';

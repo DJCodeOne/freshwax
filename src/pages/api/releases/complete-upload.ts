@@ -9,7 +9,7 @@ import { processImageToSquareWebP, imageExtension, imageContentType } from '../.
 import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease } from '../../../lib/d1-catalog';
-import { errorResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
+import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { z } from 'zod';
 

@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
-import { createLogger, errorResponse, ApiErrors } from '../../lib/api-utils';
+import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
 
 const log = createLogger('[generate-referral-code]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';

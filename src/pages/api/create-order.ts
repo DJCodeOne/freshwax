@@ -8,7 +8,7 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
 import { SITE_URL } from '../../lib/constants';
-import { fetchWithTimeout, errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 
 // Zod schemas for order creation
 const OrderItemSchema = z.object({

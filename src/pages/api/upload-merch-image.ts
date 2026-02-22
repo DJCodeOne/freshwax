@@ -8,7 +8,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
-import { createLogger, errorResponse, ApiErrors, getR2Config } from '../../lib/api-utils';
+import { createLogger, errorResponse, successResponse, ApiErrors, getR2Config } from '../../lib/api-utils';
 
 const log = createLogger('[upload-merch-image]');
 
