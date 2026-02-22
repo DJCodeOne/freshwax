@@ -36,6 +36,7 @@ try {
 if (!release) {
   return Astro.redirect('/admin/releases/manage');
 }
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
 <!DOCTYPE html>

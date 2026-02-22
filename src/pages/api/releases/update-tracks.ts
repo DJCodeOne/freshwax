@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
-import { getAdminKey, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -24,7 +24,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const adminKey = getAdminKey(request);
   const expectedAdminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
 
-  if (!adminKey || adminKey !== expectedAdminKey) {
+  if (!adminKey || !expectedAdminKey || !timingSafeCompare(adminKey, expectedAdminKey)) {
     return ApiErrors.unauthorized('Admin authentication required');
   }
 

@@ -10,7 +10,7 @@
 
 import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
 
 const logger = createLogger('cleanup-d1');
 
@@ -31,9 +31,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const adminKey = env?.ADMIN_KEY || import.meta.env.ADMIN_KEY;
   const xAdminKey = request.headers.get('X-Admin-Key');
 
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
   const isAuthorized =
-    (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
-    (adminKey && xAdminKey === adminKey);
+    (cronSecret && token && timingSafeCompare(token, cronSecret)) ||
+    (adminKey && xAdminKey && timingSafeCompare(xAdminKey, adminKey));
 
   if (!isAuthorized) {
     return ApiErrors.unauthorized('Unauthorized');

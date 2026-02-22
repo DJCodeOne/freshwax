@@ -79,15 +79,23 @@ export async function createPayout(
       body: JSON.stringify(payload),
     }, 10000);
 
-    const data = await response.json();
-
     if (!response.ok) {
-      log.error('[PayPal] Payout error:', data);
+      const errorText = await response.text();
+      log.error('[PayPal] Payout error:', errorText);
+      let errorMessage = 'Payout failed';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.details?.[0]?.issue || errorMessage;
+      } catch {
+        errorMessage = `PayPal API error (${response.status}): ${errorText.slice(0, 200)}`;
+      }
       return {
         success: false,
-        error: data.message || data.details?.[0]?.issue || 'Payout failed',
+        error: errorMessage,
       };
     }
+
+    const data = await response.json();
 
     return {
       success: true,
@@ -143,15 +151,23 @@ export async function createBatchPayout(
       body: JSON.stringify(payload),
     }, 10000);
 
-    const data = await response.json();
-
     if (!response.ok) {
-      log.error('[PayPal] Batch payout error:', data);
+      const errorText = await response.text();
+      log.error('[PayPal] Batch payout error:', errorText);
+      let errorMessage = 'Batch payout failed';
+      try {
+        const errorData = JSON.parse(errorText);
+        errorMessage = errorData.message || errorData.details?.[0]?.issue || errorMessage;
+      } catch {
+        errorMessage = `PayPal API error (${response.status}): ${errorText.slice(0, 200)}`;
+      }
       return {
         success: false,
-        error: data.message || data.details?.[0]?.issue || 'Batch payout failed',
+        error: errorMessage,
       };
     }
+
+    const data = await response.json();
 
     return {
       success: true,

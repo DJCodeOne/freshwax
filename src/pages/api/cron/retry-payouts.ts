@@ -13,7 +13,7 @@ import { queryCollection, updateDocument, addDocument, getDocument, updateDocume
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, timingSafeCompare } from '../../../lib/api-utils';
 
 const log = createLogger('[retry-payouts]');
 
@@ -34,9 +34,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   // Allow if: bearer token matches cron secret, or x-admin-key matches admin key
   const xAdminKey = request.headers.get('X-Admin-Key');
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
   const isAuthorized =
-    (cronSecret && authHeader === `Bearer ${cronSecret}`) ||
+    (cronSecret && token && timingSafeCompare(token, cronSecret)) ||
     (xAdminKey ? verifyAdminKey(xAdminKey, locals) : false);
 
   if (!isAuthorized) {
