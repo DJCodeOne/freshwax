@@ -161,11 +161,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Stream has ended
         log.info('[red5-webhook] Stream unpublished:', slotData.djName, slotId);
 
-        const slotEndTime = new Date(slotData.endTime);
+        const slotEndTime = slotData.endTime ? new Date(slotData.endTime) : null;
         const nowDate = new Date();
 
         // Determine if this was a normal end or early disconnect
-        const isEarlyEnd = nowDate < slotEndTime;
+        const isEarlyEnd = slotEndTime ? nowDate < slotEndTime : true;
         const finalStatus = isEarlyEnd ? 'failed' : 'completed';
 
         await updateDocument('livestreamSlots', slotId, {

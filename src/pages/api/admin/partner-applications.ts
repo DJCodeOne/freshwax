@@ -35,7 +35,10 @@ async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string,
 
   const response = await fetchWithTimeout(url, options, 10000);
   
-  if (!response.ok && response.status !== 404) {
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
     const error = await response.text();
     throw new Error(`Firestore error: ${response.status} - ${error}`);
   }
