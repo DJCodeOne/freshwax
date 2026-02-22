@@ -20,7 +20,7 @@ const { title, description, lastUpdated, faqs, breadcrumbs } = Astro.props;
 <Layout title={title} description={description} faqs={faqs} breadcrumbs={breadcrumbs}>
   <Header />
   
-  <main class="bg-gray-50 min-h-screen">
+  <div class="bg-gray-50 min-h-screen">
     <!-- Hero -->
     <section class="bg-black text-white py-12">
       <div class="container mx-auto px-4 text-center">
@@ -41,7 +41,7 @@ const { title, description, lastUpdated, faqs, breadcrumbs } = Astro.props;
         <slot />
       </div>
     </article>
-  </main>
+  </div>
 
   <Footer />
 </Layout>
