@@ -1732,7 +1732,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         console.error('[Comments] API error:', data.error);
         alert(data.error || 'Failed to post comment');
       }
-    }).catch(function(error: unknown) {
+    }).catch(function(error) {
       console.error('[Comments] Fetch error:', error);
       alert('Failed to post comment. Please try again.');
     }).finally(function() {
@@ -1910,7 +1910,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       } else {
         alert(data.error || 'Failed to post GIF');
       }
-    }).catch(function(error: unknown) {
+    }).catch(function(error) {
       console.error('[Comments] GIF post error:', error);
       alert('Failed to post GIF. Please try again.');
     }).finally(function() {

@@ -1533,7 +1533,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       }
       return {};
     })
-    .catch(function(error: unknown) {
+    .catch(function(error) {
       pendingRatingsRequest = null;
       return {};
     });
@@ -1633,7 +1633,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             }
           }
         })
-        .catch(function(error: unknown) { console.error('[ReleasePlate] Rating submission error:', error); });
+        .catch(function(error) { console.error('[ReleasePlate] Rating submission error:', error); });
       };
     });
   }
