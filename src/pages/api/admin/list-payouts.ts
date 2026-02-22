@@ -12,7 +12,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 
 export const prerender = false;
 
-function getServiceAccountKey(env: any): string {
+function getServiceAccountKey(env: Record<string, unknown>): string {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;

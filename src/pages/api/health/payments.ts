@@ -108,7 +108,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit: 100
     });
 
-    const totalPending = pendingPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    const totalPending = pendingPayouts.reduce((sum: number, p: Record<string, unknown>) => sum + ((p.amount as number) || 0), 0);
     result.checks.pendingPayouts = {
       count: pendingPayouts.length,
       totalAmount: Math.round(totalPending * 100) / 100
@@ -120,7 +120,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Count failed payouts (retry_pending with multiple retries)
-    const failedPayouts = pendingPayouts.filter((p: any) => p.status === 'retry_pending' && (p.retryCount || 0) >= 3);
+    const failedPayouts = pendingPayouts.filter((p: Record<string, unknown>) => p.status === 'retry_pending' && ((p.retryCount as number) || 0) >= 3);
     result.checks.failedPayouts = { count: failedPayouts.length };
 
     if (failedPayouts.length > 0) {

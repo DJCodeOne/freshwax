@@ -19,7 +19,7 @@ const IMAGE_SIZE = 800; // 800x800 square
 const WEBP_QUALITY = 85; // Good balance of quality and size
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,

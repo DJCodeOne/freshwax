@@ -158,7 +158,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
         // Calculate total spent from transactions
         if (credit.transactions) {
-          credit.transactions.forEach((txn: any) => {
+          credit.transactions.forEach((txn: Record<string, unknown>) => {
             if (txn.type === 'purchase' && txn.amount < 0) {
               totalSpent += Math.abs(txn.amount);
             }

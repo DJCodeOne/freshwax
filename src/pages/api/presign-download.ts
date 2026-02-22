@@ -21,7 +21,7 @@ export const prerender = false;
 
 const logger = createLogger('presign-download');
 
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Find the item in the order that matches the releaseId
-    const item = (order.items || []).find((i: any) => {
+    const item = (order.items || []).find((i: Record<string, unknown>) => {
       const itemReleaseId = i.releaseId || i.productId || i.id;
       return itemReleaseId === releaseId;
     });
@@ -140,7 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (orderTracks.length > 0) {
         if (item.type === 'track' && item.trackId) {
           // Single track purchase - find by name or index
-          const orderTrack = orderTracks.find((t: any) =>
+          const orderTrack = orderTracks.find((t: Record<string, unknown>) =>
             t.name === item.name || t.trackId === item.trackId
           ) || orderTracks[0];
           if (orderTrack) {
@@ -175,7 +175,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // For single track purchases, match by trackId or name
         if (item.type === 'track' && item.trackId) {
-          const track = tracks.find((t: any) =>
+          const track = tracks.find((t: Record<string, unknown>) =>
             t.id === item.trackId ||
             t.trackId === item.trackId ||
             String(t.trackNumber) === String(item.trackId)

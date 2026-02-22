@@ -170,7 +170,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       10000
     );
 
-    let items: any[] = [];
+    let items: Record<string, unknown>[] = [];
 
     // First try to get items from session metadata
     if (session.metadata?.items_json) {
@@ -185,8 +185,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     if (items.length === 0 && lineItemsResponse.ok) {
       const lineItemsData = await lineItemsResponse.json();
       items = (lineItemsData.data || [])
-        .filter((item: any) => item.description !== 'Processing and platform fees' && item.description !== 'Service Fee')
-        .map((item: any, index: number) => ({
+        .filter((item: Record<string, unknown>) => item.description !== 'Processing and platform fees' && item.description !== 'Service Fee')
+        .map((item: Record<string, unknown>, index: number) => ({
           id: `stripe_item_${index}`,
           name: item.description || 'Item',
           price: (item.amount_total || item.price?.unit_amount || 0) / 100,

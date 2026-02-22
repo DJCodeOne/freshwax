@@ -61,7 +61,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Check cache first (unless refresh requested)
   const cacheKey = `status:${userId}`;
   if (!refresh) {
-    const cached = await kvGet<any>(cacheKey, { prefix: CACHE_PREFIX });
+    const cached = await kvGet<Record<string, unknown>>(cacheKey, { prefix: CACHE_PREFIX });
     if (cached) {
       return new Response(JSON.stringify({
         ...cached,
@@ -137,7 +137,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     ];
 
     // Get completed payouts
-    const allPayouts: any[] = [];
+    const allPayouts: Record<string, unknown>[] = [];
     for (const collection of payoutCollections) {
       try {
         const payouts = await queryCollection(collection, {
@@ -175,7 +175,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Get pending payouts
-    const allPendingPayouts: any[] = [];
+    const allPendingPayouts: Record<string, unknown>[] = [];
     for (const collection of pendingCollections) {
       try {
         const pending = await queryCollection(collection, {

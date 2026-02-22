@@ -16,7 +16,7 @@ import { emailWrapper, ctaButton, detailBox, esc as escWrap } from '../../../lib
 
 export const prerender = false;
 
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -35,7 +35,7 @@ function getServiceAccountKey(env: any): string | null {
   });
 }
 
-function buildDigitalSaleEmail(orderNumber: string, order: any, items: any[], artistName: string, artistPayout: number): string {
+function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknown>, items: Record<string, unknown>[], artistName: string, artistPayout: number): string {
   const shortOrderNumber = orderNumber.split('-').length >= 3
     ? `${orderNumber.split('-')[0]}-${orderNumber.split('-').pop()}`.toUpperCase()
     : orderNumber;
@@ -126,7 +126,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const order = orders[0];
     const orderId = order.id;
-    const digitalItems = (order.items || []).filter((item: any) =>
+    const digitalItems = (order.items || []).filter((item: Record<string, unknown>) =>
       item.type === 'digital' || item.type === 'release' || item.type === 'track'
     );
 
@@ -135,7 +135,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Get pending payouts for this order to get actual amounts
-    let pendingPayouts: any[] = [];
+    let pendingPayouts: Record<string, unknown>[] = [];
     if (serviceAccountKey) {
       try {
         pendingPayouts = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
@@ -148,7 +148,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Get artist info from releases and match with pending payouts
-    const artistEmails: { [email: string]: { items: any[], artistName: string, payout: number } } = {};
+    const artistEmails: { [email: string]: { items: Record<string, unknown>[], artistName: string, payout: number } } = {};
 
     for (const item of digitalItems) {
       const releaseId = item.releaseId || item.productId || item.id;
@@ -195,7 +195,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Could not find artist email for any items');
     }
 
-    const results: any = {
+    const results: Record<string, unknown> = {
       orderNumber,
       artists: Object.entries(artistEmails).map(([email, data]) => ({
         email,
@@ -218,7 +218,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Send emails
-    const sent: any[] = [];
+    const sent: Record<string, unknown>[] = [];
     for (const [artistEmail, data] of Object.entries(artistEmails)) {
       try {
         const emailHtml = buildDigitalSaleEmail(

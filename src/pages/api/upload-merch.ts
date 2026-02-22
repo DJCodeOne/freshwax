@@ -24,7 +24,7 @@ const logger = createLogger('upload-merch');
 export const prerender = false;
 
 // Get service account credentials
-function getServiceAccountKey(env: any): { key: string; projectId: string } {
+function getServiceAccountKey(env: Record<string, unknown>): { key: string; projectId: string } {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
   let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
@@ -56,7 +56,7 @@ function getServiceAccountKey(env: any): { key: string; projectId: string } {
 }
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,

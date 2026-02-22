@@ -134,7 +134,7 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
       const totalItemCount = (pendingOrder.items || []).length;
 
       // Calculate order subtotal for processing fee calculation
-      const orderSubtotal = (pendingOrder.items || []).reduce((sum: number, item: any) => {
+      const orderSubtotal = (pendingOrder.items || []).reduce((sum: number, item: Record<string, unknown>) => {
         return sum + ((item.price || 0) * (item.quantity || 1));
       }, 0);
 
@@ -238,11 +238,11 @@ export const GET: APIRoute = async ({ request, locals, redirect }) => {
 async function processArtistPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal } = params;
 
@@ -256,7 +256,7 @@ async function processArtistPayments(params: {
       items: string[];
     }> = {};
 
-    const releaseCache: Record<string, any> = {};
+    const releaseCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of items) {
       // Skip merch items - they go to suppliers
@@ -354,11 +354,11 @@ async function processArtistPayments(params: {
 async function processMerchSupplierPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -387,7 +387,7 @@ async function processMerchSupplierPayments(params: {
       items: string[];
     }> = {};
 
-    const merchCache: Record<string, any> = {};
+    const merchCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of merchItems) {
       const productId = item.productId || item.merchId || item.id;
@@ -608,11 +608,11 @@ async function processMerchSupplierPayments(params: {
 async function processVinylCrateSellerPayments(params: {
   orderId: string;
   orderNumber: string;
-  items: any[];
+  items: Record<string, unknown>[];
   totalItemCount: number;
   orderSubtotal: number;
   stripeSecretKey: string;
-  env: any;
+  env: Record<string, unknown>;
 }) {
   const { orderId, orderNumber, items, totalItemCount, orderSubtotal, stripeSecretKey, env } = params;
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
@@ -646,7 +646,7 @@ async function processVinylCrateSellerPayments(params: {
       items: string[];
     }> = {};
 
-    const listingCache: Record<string, any> = {};
+    const listingCache: Record<string, Record<string, unknown>> = {};
 
     for (const item of crateItems) {
       let sellerId = item.sellerId;

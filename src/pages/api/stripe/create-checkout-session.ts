@@ -118,13 +118,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Recalculate totals with validated prices
-    const validatedSubtotal = validatedItems.reduce((sum: number, item: any) =>
-      sum + (item.price * (item.quantity || 1)), 0);
-    const hasPhysicalItems = validatedItems.some((item: any) =>
+    const validatedSubtotal = validatedItems.reduce((sum: number, item: Record<string, unknown>) =>
+      sum + ((item.price as number) * ((item.quantity as number) || 1)), 0);
+    const hasPhysicalItems = validatedItems.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch'
     );
-    const hasMerchItems = validatedItems.some((item: any) => item.type === 'merch');
-    const hasVinylItems = validatedItems.some((item: any) => item.type === 'vinyl');
+    const hasMerchItems = validatedItems.some((item: Record<string, unknown>) => item.type === 'merch');
+    const hasVinylItems = validatedItems.some((item: Record<string, unknown>) => item.type === 'vinyl');
 
     // Determine customer's shipping region from their country
     const customerCountry = orderData.shipping?.country || 'GB';
@@ -139,8 +139,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Merch shipping (platform default £4.99, free over £50 merch subtotal)
     if (hasMerchItems) {
       const merchSubtotal = validatedItems
-        .filter((item: any) => item.type === 'merch')
-        .reduce((sum: number, item: any) => sum + (item.price * (item.quantity || 1)), 0);
+        .filter((item: Record<string, unknown>) => item.type === 'merch')
+        .reduce((sum: number, item: Record<string, unknown>) => sum + ((item.price as number) * ((item.quantity as number) || 1)), 0);
       merchShipping = merchSubtotal >= 50 ? 0 : 4.99;
     }
 
@@ -190,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Build line items for Stripe using VALIDATED prices
     const lineItems: string[][] = [];
-    validatedItems.forEach((item: any, index: number) => {
+    validatedItems.forEach((item: Record<string, unknown>, index: number) => {
       lineItems.push(
         [`line_items[${index}][price_data][currency]`, 'gbp'],
         [`line_items[${index}][price_data][unit_amount]`, String(Math.round(item.price * 100))], // Stripe uses cents
@@ -235,7 +235,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Store items data (compressed) - using VALIDATED prices
-    const compressedItems = validatedItems.map((item: any) => ({
+    const compressedItems = validatedItems.map((item: Record<string, unknown>) => ({
       id: item.id,
       productId: item.productId,
       releaseId: item.releaseId,
@@ -383,7 +383,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 };
 
-function getItemDescription(item: any): string {
+function getItemDescription(item: Record<string, unknown>): string {
   const parts = [];
   if (item.type) parts.push(formatType(item.type));
   if (item.size) parts.push(`Size: ${item.size}`);

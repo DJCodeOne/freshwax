@@ -27,7 +27,7 @@ const SIZE_THRESHOLDS: Record<string, number> = {
   'default': 100 * 1024,         // 100KB
 };
 
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,

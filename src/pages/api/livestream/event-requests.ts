@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const status = url.searchParams.get('status'); // pending, approved, rejected, all
     const adminView = url.searchParams.get('admin') === 'true';
 
-    let requests: any[];
+    let requests: Record<string, unknown>[];
 
     if (adminView) {
       // SECURITY: Require admin authentication for viewing all requests

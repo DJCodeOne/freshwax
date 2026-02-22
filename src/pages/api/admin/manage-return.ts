@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const now = new Date().toISOString();
-    let updateData: any = { updatedAt: now };
+    let updateData: Record<string, unknown> = { updatedAt: now };
     let emailSubject = '';
     let emailContent = '';
 
@@ -225,7 +225,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
 
   try {
-    const filters: any[] = [];
+    const filters: Record<string, unknown>[] = [];
     if (status && status !== 'all') {
       filters.push({ field: 'status', op: 'EQUAL', value: status });
     }

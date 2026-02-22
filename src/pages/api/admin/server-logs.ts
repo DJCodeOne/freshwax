@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (streams.length === 0) {
         logs.push('  No recent streams');
       } else {
-        streams.forEach((s: any) => {
+        streams.forEach((s: Record<string, unknown>) => {
           const status = s.status || 'unknown';
           const dj = s.djName || 'Unknown DJ';
           const started = s.startedAt ? new Date(s.startedAt).toISOString() : 'N/A';
@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (slots.length === 0) {
         logs.push('  No recent slots');
       } else {
-        slots.forEach((s: any) => {
+        slots.forEach((s: Record<string, unknown>) => {
           const status = s.status || 'unknown';
           const dj = s.djName || 'Unknown DJ';
           logs.push(`  [${status.toUpperCase()}] ${dj} - ${s.id}`);
@@ -82,7 +82,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (requests.length === 0) {
         logs.push('  No recent requests');
       } else {
-        requests.forEach((r: any) => {
+        requests.forEach((r: Record<string, unknown>) => {
           const status = r.status || 'pending';
           const user = r.userName || r.userEmail || 'Unknown';
           const created = r.createdAt ? new Date(r.createdAt).toISOString() : 'N/A';

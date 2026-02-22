@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       skipCache: true
     });
 
-    const bypasses = snapshot.map((doc: any) => ({
+    const bypasses = snapshot.map((doc: Record<string, unknown>) => ({
       id: doc.id,
       userId: doc.id,
       ...doc,

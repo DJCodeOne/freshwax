@@ -13,7 +13,7 @@ import { ApiErrors, createLogger } from '../../../lib/api-utils';
 const log = createLogger('livestream/bot');
 
 // Send bot message to a stream
-async function sendBotMessage(streamId: string, message: string, env: any): Promise<{ success: boolean; messageId?: string }> {
+async function sendBotMessage(streamId: string, message: string, env: Record<string, unknown>): Promise<{ success: boolean; messageId?: string }> {
   const now = new Date().toISOString();
 
   const botMessage = {

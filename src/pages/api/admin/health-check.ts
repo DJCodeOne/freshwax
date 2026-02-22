@@ -152,7 +152,7 @@ async function checkStreaming(): Promise<ServiceStatus> {
 
     if (response.ok) {
       const data = await response.json();
-      const activePaths = (data.items || []).filter((p: any) => p.ready);
+      const activePaths = (data.items || []).filter((p: Record<string, unknown>) => p.ready);
       const message = activePaths.length > 0
         ? `${activePaths.length} active stream(s)`
         : 'Online, no active streams';

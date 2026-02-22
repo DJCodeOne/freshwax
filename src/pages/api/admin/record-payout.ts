@@ -19,7 +19,7 @@ const recordPayoutSchema = z.object({
 export const prerender = false;
 
 // Build service account key from env vars
-function getServiceAccountKey(env: any): string {
+function getServiceAccountKey(env: Record<string, unknown>): string {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID;
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -106,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artistPayments[artistId].items.push(item.name || 'Item');
     }
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const payment of Object.values(artistPayments)) {
       // Skip payments with zero or negative amounts (fees exceed item price)

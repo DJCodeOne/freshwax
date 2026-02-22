@@ -591,14 +591,14 @@ export async function PUT({ request, locals }: APIContext) {
 }
 
 // Cache for KV binding (set during request handling for helper functions)
-let kvCache: any = null;
+let kvCache: KVNamespace | null = null;
 
-function setKVCache(kv: any) {
+function setKVCache(kv: KVNamespace) {
   kvCache = kv;
 }
 
 // Fetch recently played from history (top 10 items) - USES KV
-async function getRecentlyPlayed(): Promise<any[]> {
+async function getRecentlyPlayed(): Promise<Record<string, unknown>[]> {
   try {
     if (!kvCache) return [];
     const data = await kvCache.get(KV_HISTORY_KEY, 'json');
@@ -612,7 +612,7 @@ async function getRecentlyPlayed(): Promise<any[]> {
 }
 
 // Add a track to the recently played list (keeps only last 10) - USES KV
-async function addToRecentlyPlayed(track: any): Promise<void> {
+async function addToRecentlyPlayed(track: Record<string, unknown>): Promise<void> {
   try {
     if (!kvCache) {
       // KV not available for history
@@ -627,7 +627,7 @@ async function addToRecentlyPlayed(track: any): Promise<void> {
 
     // Get current history from KV
     const data = await kvCache.get(KV_HISTORY_KEY, 'json');
-    let items: any[] = data?.items || [];
+    let items: Record<string, unknown>[] = data?.items || [];
 
     // Create the history item
     const historyItem = {
@@ -663,7 +663,7 @@ const LOCAL_PLAYLIST_SERVER = 'https://playlist.freshwax.co.uk';
 // Fallback thumbnail for audio files without thumbnails
 const AUDIO_THUMBNAIL_FALLBACK = '/place-holder.webp';
 
-async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null> {
+async function pickRandomFromLocalServer(env?: Record<string, unknown>): Promise<PlaylistItem | null> {
   try {
     const playlistToken = env?.PLAYLIST_ACCESS_TOKEN || import.meta.env.PLAYLIST_ACCESS_TOKEN || '';
     // Trying local playlist server
@@ -707,7 +707,7 @@ async function pickRandomFromLocalServer(env?: any): Promise<PlaylistItem | null
   }
 }
 
-async function pickRandomFromServerHistory(env?: any): Promise<PlaylistItem | null> {
+async function pickRandomFromServerHistory(env?: Record<string, unknown>): Promise<PlaylistItem | null> {
   // Try local playlist server first (H: drive MP3s)
   const localTrack = await pickRandomFromLocalServer(env);
   if (localTrack) {
@@ -746,7 +746,7 @@ async function pickRandomFromServerHistory(env?: any): Promise<PlaylistItem | nu
 }
 
 // Broadcast emoji reaction to all viewers via Pusher
-async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: any) {
+async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: Record<string, unknown>) {
   try {
     const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
     const PUSHER_KEY = env?.PUSHER_KEY || env?.PUBLIC_PUSHER_KEY || import.meta.env.PUSHER_KEY;
@@ -791,10 +791,10 @@ async function broadcastEmojiReaction(emoji: string, sessionId: string, env?: an
 }
 
 // In-memory cache for recently played (reduces KV reads)
-let recentlyPlayedCache: { items: any[], timestamp: number } | null = null;
+let recentlyPlayedCache: { items: Record<string, unknown>[], timestamp: number } | null = null;
 const RECENTLY_PLAYED_CACHE_TTL = 10000; // 10 seconds
 
-async function getCachedRecentlyPlayed(): Promise<any[]> {
+async function getCachedRecentlyPlayed(): Promise<Record<string, unknown>[]> {
   const now = Date.now();
   if (recentlyPlayedCache && (now - recentlyPlayedCache.timestamp) < RECENTLY_PLAYED_CACHE_TTL) {
     return recentlyPlayedCache.items;
@@ -805,7 +805,7 @@ async function getCachedRecentlyPlayed(): Promise<any[]> {
 }
 
 // Broadcast playlist update via Pusher (includes recently played)
-async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: any) {
+async function broadcastPlaylistUpdate(playlist: GlobalPlaylist, env?: Record<string, unknown>) {
   try {
     const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
     const PUSHER_KEY = env?.PUSHER_KEY || env?.PUBLIC_PUSHER_KEY || import.meta.env.PUSHER_KEY;

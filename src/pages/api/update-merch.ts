@@ -19,7 +19,7 @@ export const prerender = false;
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.notFound('Product not found');
       }
 
-      const updates: any = {
+      const updates: Record<string, unknown> = {
         updatedAt: new Date().toISOString()
       };
 
@@ -215,7 +215,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Product not found');
     }
 
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       updatedAt: new Date().toISOString()
     };
 

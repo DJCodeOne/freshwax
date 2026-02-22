@@ -329,7 +329,7 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 // Trigger Pusher event using Web Crypto API
-async function triggerPusher(channel: string, event: string, data: any, env?: any): Promise<boolean> {
+async function triggerPusher(channel: string, event: string, data: Record<string, unknown>, env?: Record<string, unknown>): Promise<boolean> {
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
   const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
@@ -399,7 +399,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // This allows chat to persist between streams as a general chat area
     const isGlobalMode = streamId === 'playlist-global';
 
-    let messages: any[];
+    let messages: Record<string, unknown>[];
 
     if (isGlobalMode) {
       // For global mode, fetch recent messages without the composite filter
@@ -409,7 +409,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: limit * 2 // Fetch extra to account for filtering
       });
       messages = allMessages
-        .filter((msg: any) => !msg.isModerated)
+        .filter((msg: Record<string, unknown>) => !msg.isModerated)
         .slice(0, limit);
     } else {
       messages = await queryCollection('livestream-chat', {

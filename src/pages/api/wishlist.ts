@@ -39,7 +39,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Batch fetch all releases in one call instead of N+1 individual queries
       const releaseMap = await getDocumentsBatch('releases', itemsToFetch);
 
-      const releases: any[] = [];
+      const releases: Record<string, unknown>[] = [];
       for (const releaseId of itemsToFetch) {
         const releaseData = releaseMap.get(releaseId);
         if (releaseData) {

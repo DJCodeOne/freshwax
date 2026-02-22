@@ -55,14 +55,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     // Filter entries to update
-    let entriesToUpdate: any[] = [];
+    let entriesToUpdate: Record<string, unknown>[] = [];
 
     if (orderNumber) {
       // Update specific order
-      entriesToUpdate = allEntries.filter((e: any) => e.orderNumber === orderNumber);
+      entriesToUpdate = allEntries.filter((e: Record<string, unknown>) => e.orderNumber === orderNumber);
     } else if (oldOwnerId) {
       // Update all entries with oldOwnerId
-      entriesToUpdate = allEntries.filter((e: any) =>
+      entriesToUpdate = allEntries.filter((e: Record<string, unknown>) =>
         e.submitterId === oldOwnerId || e.artistId === oldOwnerId
       );
     }
@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (confirm !== 'yes') {
       return new Response(JSON.stringify({
         message: `Would update ${entriesToUpdate.length} ledger entries`,
-        entries: entriesToUpdate.map((e: any) => ({
+        entries: entriesToUpdate.map((e: Record<string, unknown>) => ({
           id: e.id,
           orderNumber: e.orderNumber,
           currentSubmitterId: e.submitterId,
@@ -89,7 +89,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Apply updates
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
     for (const entry of entriesToUpdate) {
       await saUpdateDocument(serviceAccountKey, projectId, 'salesLedger', entry.id, {
         submitterId: newOwnerId,

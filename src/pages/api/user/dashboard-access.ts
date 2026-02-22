@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request }) => {
       new Date(subscription.expiresAt) > new Date();
 
     // Check artist document if no roles found in users collection
-    let artistData: any = null;
+    let artistData: Record<string, unknown> | null = null;
     if (!roles.artist && !roles.merchSeller && !roles.vinylSeller) {
       try {
         artistData = await getDocument('artists', userId);
@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Check vinyl seller data
-    let sellerData: any = null;
+    let sellerData: Record<string, unknown> | null = null;
     let isVinylSeller = roles.vinylSeller === true || userData?.isVinylSeller === true;
 
     if (!isVinylSeller && artistData?.isVinylSeller) {
@@ -79,7 +79,7 @@ export const GET: APIRoute = async ({ request }) => {
     }
 
     // Check merch seller data
-    let merchSellerData: any = null;
+    let merchSellerData: Record<string, unknown> | null = null;
     try {
       merchSellerData = await getDocument('merch-sellers', userId);
     } catch (e: unknown) {

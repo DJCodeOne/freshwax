@@ -13,7 +13,7 @@ const log = createLogger('[fix-order-payout]');
 
 export const prerender = false;
 
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Get release info for each digital item
-    const digitalItems = (order.items || []).filter((item: any) =>
+    const digitalItems = (order.items || []).filter((item: Record<string, unknown>) =>
       item.type === 'digital' || item.type === 'release' || item.type === 'track'
     );
 
@@ -145,7 +145,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Create pending payouts
-    const created: any[] = [];
+    const created: Record<string, unknown>[] = [];
     const now = new Date().toISOString();
 
     for (const [artistId, payout] of Object.entries(artistPayouts)) {

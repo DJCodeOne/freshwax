@@ -12,7 +12,7 @@ const log = createLogger('[sync-vinyl-to-d1]');
 export const prerender = false;
 
 // Get service account key from environment
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
                           import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 

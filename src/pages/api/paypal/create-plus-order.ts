@@ -201,7 +201,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Find the approval URL
-    const approvalUrl = paypalOrder.links?.find((link: any) => link.rel === 'approve')?.href;
+    const approvalUrl = paypalOrder.links?.find((link: Record<string, unknown>) => link.rel === 'approve')?.href;
 
     return new Response(JSON.stringify({
       success: true,

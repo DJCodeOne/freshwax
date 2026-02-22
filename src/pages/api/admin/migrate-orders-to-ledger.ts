@@ -70,7 +70,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     // Fetch all orders using service account
-    let orders: any[] = [];
+    let orders: Record<string, unknown>[] = [];
     try {
       orders = await saQueryCollection(serviceAccountKey, projectId, 'orders', {
         orderBy: { field: 'createdAt', direction: 'ASCENDING' },
@@ -83,7 +83,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     log.info(`[Migration] Found ${orders.length} orders`);
 
     // Check existing ledger entries to avoid duplicates
-    let existingLedger: any[] = [];
+    let existingLedger: Record<string, unknown>[] = [];
     try {
       existingLedger = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
         limit: 5000
@@ -92,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Collection might not exist yet
       log.info('[Migration] No existing ledger entries found');
     }
-    const existingOrderIds = new Set(existingLedger.map((e: any) => e.orderId));
+    const existingOrderIds = new Set(existingLedger.map((e: Record<string, unknown>) => e.orderId));
     log.info(`[Migration] Found ${existingLedger.length} existing ledger entries`);
 
     const results = {
@@ -102,7 +102,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       errors: 0,
       cancelled: 0,
       testOrders: 0,
-      details: [] as any[]
+      details: [] as Record<string, unknown>[]
     };
 
     for (const order of orders) {
@@ -165,7 +165,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         const netRevenue = grossTotal - totalFees;
 
         // Process items
-        const items = (order.items || []).map((item: any) => {
+        const items = (order.items || []).map((item: Record<string, unknown>) => {
           const type = item.type === 'merch' || item.isPhysical ? 'merch' :
                        item.type === 'vinyl' ? 'vinyl' :
                        item.type === 'track' ? 'track' :
@@ -205,8 +205,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
           paymentId: order.paymentIntentId || order.paypalOrderId || null,
           currency: 'GBP',
           itemCount: items.length,
-          hasPhysical: order.hasPhysicalItems || items.some((i: any) => i.type === 'merch' || i.type === 'vinyl'),
-          hasDigital: items.some((i: any) => i.type === 'release' || i.type === 'track'),
+          hasPhysical: order.hasPhysicalItems || items.some((i: Record<string, unknown>) => i.type === 'merch' || i.type === 'vinyl'),
+          hasDigital: items.some((i: Record<string, unknown>) => i.type === 'release' || i.type === 'track'),
           items,
           // Mark as migrated
           migratedAt: new Date().toISOString(),

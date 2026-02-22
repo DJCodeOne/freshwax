@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
 // Handle account.updated - sync account status to Firestore
 // Supports artists, suppliers, and users (crate sellers)
-async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: string, env: any) {
+async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: string, env: Record<string, unknown>) {
   // Determine entity type from metadata
   const entityType = account.metadata?.type || account.metadata?.entityType;
   const artistId = account.metadata?.artistId;
@@ -181,7 +181,7 @@ async function handleAccountUpdated(account: Stripe.Account, stripeSecretKey: st
 
 }
 
-async function updateArtistConnectStatus(artistId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
+async function updateArtistConnectStatus(artistId: string, account: Stripe.Account, stripeSecretKey: string, env: Record<string, unknown>) {
   let status = 'onboarding';
   if (account.charges_enabled && account.payouts_enabled) {
     status = 'active';
@@ -205,7 +205,7 @@ async function updateArtistConnectStatus(artistId: string, account: Stripe.Accou
 }
 
 // Handle supplier account update
-async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
+async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.Account, stripeSecretKey: string, env: Record<string, unknown>) {
   if (!supplierId) {
     return;
   }
@@ -233,7 +233,7 @@ async function handleSupplierAccountUpdated(supplierId: string, account: Stripe.
 }
 
 // Handle user (crate seller) account update
-async function handleUserAccountUpdated(userId: string, account: Stripe.Account, stripeSecretKey: string, env: any) {
+async function handleUserAccountUpdated(userId: string, account: Stripe.Account, stripeSecretKey: string, env: Record<string, unknown>) {
   if (!userId) {
     return;
   }
@@ -262,7 +262,7 @@ async function handleUserAccountUpdated(userId: string, account: Stripe.Account,
 
 // Process pending payouts when entity completes onboarding
 // Supports artists, suppliers, and users (crate sellers)
-async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user', entityId: string, stripeConnectId: string, stripeSecretKey: string, env: any) {
+async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user', entityId: string, stripeConnectId: string, stripeSecretKey: string, env: Record<string, unknown>) {
   // Determine field name for query
   const idField = entityType === 'artist' ? 'artistId' :
                   entityType === 'supplier' ? 'supplierId' :
@@ -300,7 +300,7 @@ async function processPendingPayouts(entityType: 'artist' | 'supplier' | 'user',
   const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
   // Get entity for email and name
-  let entity: any = null;
+  let entity: Record<string, unknown> | null = null;
   let collection: string;
 
   switch (entityType) {

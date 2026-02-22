@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (authError) return authError;
 
   try {
-    const partners: any[] = [];
+    const partners: Record<string, unknown>[] = [];
 
     // Load users collection (contains all user data after migration)
     // Uses service account to bypass Firestore rules for blocked collections

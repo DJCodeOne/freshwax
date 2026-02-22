@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (action === 'list') {
       // List all ledger entries - try D1 first
-      let entries: any[] = [];
+      let entries: Record<string, unknown>[] = [];
 
       if (db) {
         try {

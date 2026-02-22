@@ -154,13 +154,13 @@ async function restartServer(): Promise<{ success: boolean; message?: string; er
 }
 
 // Force end all active streams
-async function forceEndStreams(env?: any): Promise<{ success: boolean; message?: string; error?: string }> {
+async function forceEndStreams(env?: Record<string, unknown>): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
     const now = new Date().toISOString();
 
     // Get active livestreams (legacy collection) with limit
     const streams = await queryCollection('livestreams', { limit: 100 });
-    const activeStreams = streams.filter((s: any) => s.status === 'live' || s.isLive === true);
+    const activeStreams = streams.filter((s: Record<string, unknown>) => s.status === 'live' || s.isLive === true);
 
     // Update each to offline
     for (const stream of activeStreams) {
@@ -174,7 +174,7 @@ async function forceEndStreams(env?: any): Promise<{ success: boolean; message?:
 
     // Also update livestreamSlots (current system) with limit
     const slots = await queryCollection('livestreamSlots', { limit: 200, skipCache: true });
-    const activeSlots = slots.filter((s: any) => s.status === 'live');
+    const activeSlots = slots.filter((s: Record<string, unknown>) => s.status === 'live');
 
     for (const slot of activeSlots) {
       await updateDocument('livestreamSlots', slot.id, {

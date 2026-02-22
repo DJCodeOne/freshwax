@@ -16,7 +16,7 @@ const logger = createLogger('sync-release');
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.aiff', '.aif', '.m4a'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'];
 
-export const POST = async ({ request, locals }: any) => {
+export const POST = async ({ request, locals }: { request: Request; locals: App.Locals }) => {
   try {
     // SECURITY: Require admin authentication
     const authError = await requireAdminAuth(request, locals);
@@ -65,7 +65,7 @@ export const POST = async ({ request, locals }: any) => {
     const hasReleasesFolder = zipEntries.some(e => e.entryName.startsWith('releases/'));
     const hasMetadata = zipEntries.some(e => e.entryName.includes('firebase-metadata.json'));
     
-    let release: any = null;
+    let release: Record<string, unknown> | null = null;
     let releaseId: string;
 
     if (hasReleasesFolder && hasMetadata) {
@@ -138,8 +138,8 @@ async function processRawZip(
   zip: AdmZip, 
   zipEntries: AdmZip.IZipEntry[], 
   filename: string,
-  config: any
-): Promise<{ releaseId: string; release: any }> {
+  config: { r2: Record<string, string>; firebase: Record<string, string> }
+): Promise<{ releaseId: string; release: Record<string, unknown> }> {
   
   // Parse artist and release name from filename
   // Expected format: "Artist Name - Release Name.zip"
@@ -282,7 +282,7 @@ async function processRawZip(
   }
   
   // Upload tracks and build track list
-  const tracks: any[] = [];
+  const tracks: Record<string, unknown>[] = [];
   
   for (const { entry, trackNumber, title } of audioEntries) {
     const ext = path.extname(entry.entryName).toLowerCase();

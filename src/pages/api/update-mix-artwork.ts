@@ -12,7 +12,7 @@ const log = createLogger('update-mix-artwork');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -131,7 +131,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Update Firebase with new artwork URL (and backfill userId if missing)
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       artwork_url: artworkUrl,
       artworkUrl: artworkUrl,
       imageUrl: artworkUrl,

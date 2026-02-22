@@ -20,7 +20,7 @@ interface UserData {
   fullName: string;
   email: string;
   phone: string;
-  address: any;
+  address: Record<string, unknown> | null;
   avatarUrl: string | null;
   roles: {
     customer: boolean;
@@ -30,7 +30,7 @@ interface UserData {
     vinylSeller: boolean;
   };
   isAdmin: boolean;
-  permissions: any;
+  permissions: Record<string, unknown>;
   approved: boolean;
   suspended: boolean;
   notes: string;

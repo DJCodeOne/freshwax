@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get entity
     let collection: string;
-    let entity: any = null;
+    let entity: Record<string, unknown> | null = null;
     let docId = entityId;
 
     switch (entityType) {
@@ -82,7 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         } else if (accessCode) {
           const { queryCollection } = await import('../../../lib/firebase-rest');
           const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
-          const found = suppliers.find((s: any) => s.accessCode === accessCode);
+          const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
           if (found) {
             entity = found;
             docId = found.id;

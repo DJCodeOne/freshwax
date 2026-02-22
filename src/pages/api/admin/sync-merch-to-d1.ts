@@ -40,11 +40,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get existing D1 merch IDs
     const d1Result = await db.prepare('SELECT id FROM merch').all();
-    const d1Ids = new Set((d1Result.results || []).map((r: any) => r.id));
+    const d1Ids = new Set((d1Result.results || []).map((r: Record<string, unknown>) => r.id));
     log.info(`[sync-merch-to-d1] Found ${d1Ids.size} items in D1`);
 
     // Firebase IDs
-    const firebaseIds = new Set(merchItems.map((item: any) => item.id));
+    const firebaseIds = new Set(merchItems.map((item: Record<string, unknown>) => item.id));
 
     // Delete items in D1 that are not in Firebase
     const toDelete = [...d1Ids].filter(id => !firebaseIds.has(id));

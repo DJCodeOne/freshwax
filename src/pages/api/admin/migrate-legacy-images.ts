@@ -57,7 +57,7 @@ const IMAGE_FIELDS: Record<CollectionName, string[]> = {
   'merch': ['imageUrl'],
 };
 
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -142,7 +142,7 @@ async function convertImageUnder100KB(
 }
 
 /** Extract all non-WebP image URLs from a document. */
-function extractNonWebPUrls(doc: any, collection: CollectionName): Map<string, string> {
+function extractNonWebPUrls(doc: Record<string, unknown>, collection: CollectionName): Map<string, string> {
   const result = new Map<string, string>();
   const fields = IMAGE_FIELDS[collection];
 
@@ -171,7 +171,7 @@ function extractNonWebPUrls(doc: any, collection: CollectionName): Map<string, s
  * Find the best original cover URL from a document to preserve for buyer downloads.
  * Returns the first non-WebP cover/artwork URL found.
  */
-function findOriginalCoverUrl(doc: any): string | null {
+function findOriginalCoverUrl(doc: Record<string, unknown>): string | null {
   for (const field of ['coverUrl', 'coverArtUrl', 'artworkUrl', 'imageUrl']) {
     const value = doc[field];
     if (typeof value === 'string' && value.startsWith('http') && !isOptimizedImage(value)) {
@@ -251,7 +251,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         // ---- LIVE MIGRATION ----
-        const fieldUpdates: Record<string, any> = {};
+        const fieldUpdates: Record<string, unknown> = {};
         let totalOldSize = 0;
         let totalNewSize = 0;
         const migratedFields: string[] = [];

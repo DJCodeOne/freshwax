@@ -141,12 +141,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     const sources = sourceId
-      ? allSources.filter((doc: any) => doc.id === sourceId)
+      ? allSources.filter((doc: Record<string, unknown>) => doc.id === sourceId)
       : allSources;
     
     // Check each source
     const results: RelayStatus[] = await Promise.all(
-      sources.map(async (source: any) => {
+      sources.map(async (source: Record<string, unknown>) => {
         let status = { isLive: false, nowPlaying: '', listeners: undefined as number | undefined };
         
         try {

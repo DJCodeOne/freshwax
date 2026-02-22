@@ -84,7 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({
       success: true,
-      payouts: payouts.map((p: any) => ({
+      payouts: payouts.map((p: Record<string, unknown>) => ({
         id: p.id,
         orderId: p.orderId,
         orderNumber: p.orderNumber,
@@ -94,7 +94,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         createdAt: p.createdAt,
         completedAt: p.completedAt
       })),
-      pendingPayouts: pendingPayouts.map((p: any) => ({
+      pendingPayouts: pendingPayouts.map((p: Record<string, unknown>) => ({
         id: p.id,
         orderId: p.orderId,
         orderNumber: p.orderNumber,

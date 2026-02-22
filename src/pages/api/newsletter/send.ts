@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
     }
 
     // Get subscribers
-    let subscribers: any[] = [];
+    let subscribers: Record<string, unknown>[] = [];
 
     if (subscriberIds === 'all') {
       // Get all active subscribers

@@ -22,7 +22,7 @@ const vinylOrderPostSchema = z.object({
 export const prerender = false;
 
 // Get service account key from environment
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
                           import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
 
     switch (action) {
       case 'mark-shipped': {
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           status: 'shipped',
           shippedAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
@@ -190,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       }
 
       case 'add-tracking': {
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           updatedAt: new Date().toISOString()
         };
 

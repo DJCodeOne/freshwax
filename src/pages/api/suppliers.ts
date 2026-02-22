@@ -167,31 +167,32 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Convert users with merchSupplier/merchSeller role to supplier format
-    // Firestore user documents have deeply nested dynamic shape — keep : any for property access
+    // Firestore user documents have deeply nested dynamic shape — cast partnerInfo for property access
     const userSuppliers = allUsers
-      .filter((u: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        const roles = u.roles || {};
+      .filter((u: Record<string, unknown>) => {
+        const roles = (u.roles || {}) as Record<string, unknown>;
         return (roles.merchSupplier === true || roles.merchSeller === true) && u.deleted !== true;
       })
-      .map((u: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-        const supplierName = u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || 'Unknown';
-        const stats = calcSupplierStats(u.id, supplierName);
+      .map((u: Record<string, unknown>) => {
+        const partnerInfo = u.partnerInfo as Record<string, unknown> | undefined;
+        const supplierName = partnerInfo?.storeName || partnerInfo?.displayName || u.displayName || 'Unknown';
+        const stats = calcSupplierStats(u.id as string, supplierName as string);
         return {
           id: u.id,
           name: supplierName,
           email: u.email,
           phone: u.phone || '',
-          type: u.partnerInfo?.type || 'other',
-          code: (u.displayName || 'USR').substring(0, 3).toUpperCase(),
-          defaultCut: u.partnerInfo?.defaultCut || 50,
+          type: partnerInfo?.type || 'other',
+          code: ((u.displayName as string) || 'USR').substring(0, 3).toUpperCase(),
+          defaultCut: partnerInfo?.defaultCut || 50,
           contactName: u.fullName || u.displayName || '',
-          notes: u.partnerInfo?.notes || '',
+          notes: partnerInfo?.notes || '',
           accessCode: null, // User-based suppliers use auth, not access codes
           totalProducts: stats.totalProducts,
           totalStock: stats.totalStock,
           totalSold: stats.totalSold,
           totalRevenue: u.totalEarnings || 0,
-          active: u.approved === true || u.partnerInfo?.approved === true,
+          active: u.approved === true || partnerInfo?.approved === true,
           createdAt: u.createdAt,
           updatedAt: u.updatedAt,
           source: 'users' // Track source for admin UI

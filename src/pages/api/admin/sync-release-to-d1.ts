@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    let releases: any[] = [];
+    let releases: Record<string, unknown>[] = [];
 
     if (all) {
       // Sync all live releases
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (confirm !== 'yes') {
       return new Response(JSON.stringify({
         message: `Would sync ${releases.length} releases to D1`,
-        releases: releases.map((r: any) => ({
+        releases: releases.map((r: Record<string, unknown>) => ({
           id: r.id,
           releaseName: r.releaseName,
           artistName: r.artistName,
@@ -71,7 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Sync to D1
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
     for (const release of releases) {
       try {
         // Check if release exists in D1

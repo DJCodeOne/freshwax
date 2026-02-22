@@ -203,7 +203,7 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 // Trigger Pusher event
-async function triggerPusher(channel: string, event: string, data: any, env?: any): Promise<boolean> {
+async function triggerPusher(channel: string, event: string, data: Record<string, unknown>, env?: Record<string, unknown>): Promise<boolean> {
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
   const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;
@@ -257,10 +257,10 @@ async function triggerPusher(channel: string, event: string, data: any, env?: an
 }
 
 // In-memory cache for online DJs (reduces Firebase reads)
-const onlineDjsCache = new Map<string, { data: any; expires: number }>();
+const onlineDjsCache = new Map<string, { data: Record<string, unknown>[]; expires: number }>();
 const CACHE_TTL = 30 * 1000; // 30 seconds
 
-function getCachedOnlineDjs(): any[] | null {
+function getCachedOnlineDjs(): Record<string, unknown>[] | null {
   const cached = onlineDjsCache.get('online-djs');
   if (cached && Date.now() < cached.expires) {
     return cached.data;
@@ -268,7 +268,7 @@ function getCachedOnlineDjs(): any[] | null {
   return null;
 }
 
-function setCachedOnlineDjs(djs: any[]): void {
+function setCachedOnlineDjs(djs: Record<string, unknown>[]): void {
   onlineDjsCache.set('online-djs', {
     data: djs,
     expires: Date.now() + CACHE_TTL
@@ -465,7 +465,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       case 'update': {
         // Update DJ info (name, avatar, ready state)
-        const updateData: any = { lastSeen: now };
+        const updateData: Record<string, unknown> = { lastSeen: now };
         if (name) updateData.name = name;
         if (avatar !== undefined) updateData.avatar = avatar;
         if (avatarLetter) updateData.avatarLetter = avatarLetter;

@@ -76,9 +76,9 @@ function buildFieldUpdates(
   newKey: string,
   thumbKey: string | undefined,
   publicDomain: string,
-  existingDoc: Record<string, any>,
-): Record<string, any> {
-  const updates: Record<string, any> = {};
+  existingDoc: Record<string, unknown>,
+): Record<string, unknown> {
+  const updates: Record<string, unknown> = {};
   const newUrl = buildUrl(publicDomain, newKey);
   const lowerFilename = parsed.filename.toLowerCase();
 
@@ -128,7 +128,7 @@ function buildFieldUpdates(
     // Update images[] array entries if the doc has one
     if (Array.isArray(existingDoc.images)) {
       const oldUrl = buildUrl(publicDomain, parsed.prefix + '/' + parsed.docId + '/' + parsed.filename);
-      const updatedImages = existingDoc.images.map((img: any) => {
+      const updatedImages = existingDoc.images.map((img: unknown) => {
         if (typeof img === 'string') {
           // Check if the old URL matches by comparing the path segment
           const imgPath = img.replace(/^https?:\/\/[^/]+\//, '');
@@ -158,7 +158,7 @@ function buildFieldUpdates(
   } else if (parsed.prefix === 'vinyl') {
     // Vinyl uses images[] array
     if (Array.isArray(existingDoc.images)) {
-      const updatedImages = existingDoc.images.map((img: any) => {
+      const updatedImages = existingDoc.images.map((img: unknown) => {
         if (typeof img === 'string') {
           const imgPath = img.replace(/^https?:\/\/[^/]+\//, '');
           const originalKeyBase = (parsed.prefix + '/' + parsed.docId + '/' + parsed.filename).replace(/\.[^.]+$/, '');

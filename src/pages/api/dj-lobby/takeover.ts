@@ -26,7 +26,7 @@ const PUSHER_SECRET = import.meta.env.PUSHER_SECRET;
 const PUSHER_CLUSTER = import.meta.env.PUBLIC_PUSHER_CLUSTER || 'eu';
 
 // Trigger Pusher event (simplified - may need crypto polyfill)
-async function triggerPusher(channel: string, event: string, data: any): Promise<boolean> {
+async function triggerPusher(channel: string, event: string, data: Record<string, unknown>): Promise<boolean> {
   try {
     if (!PUSHER_APP_ID || !PUSHER_KEY || !PUSHER_SECRET) {
       log.warn('Pusher not configured');

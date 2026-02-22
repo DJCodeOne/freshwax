@@ -15,7 +15,7 @@ export const prerender = false;
 const logger = createLogger('upload-mix');
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,

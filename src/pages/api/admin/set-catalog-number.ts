@@ -58,7 +58,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 100
       });
 
-      const found = releases.find((r: any) =>
+      const found = releases.find((r: Record<string, unknown>) =>
         r.releaseName?.toLowerCase().includes(releaseName.toLowerCase())
       );
 
@@ -77,7 +77,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const releases = await saQueryCollection(serviceAccountKey, projectId, 'releases', {
       limit: 100
     });
-    const release = releases.find((r: any) => r.id === targetReleaseId);
+    const release = releases.find((r: Record<string, unknown>) => r.id === targetReleaseId);
 
     if (!release) {
       return ApiErrors.notFound('Release not found');

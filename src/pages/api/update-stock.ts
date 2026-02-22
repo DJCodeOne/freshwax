@@ -24,7 +24,7 @@ const logger = createLogger('update-stock');
 export const prerender = false;
 
 // Get service account credentials
-function getServiceAccountKey(env: any): { key: string; projectId: string } {
+function getServiceAccountKey(env: Record<string, unknown>): { key: string; projectId: string } {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
   let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
@@ -195,14 +195,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let totalReserved = 0;
     let totalSold = 0;
 
-    Object.values(variantStock).forEach((v: any) => {
+    Object.values(variantStock).forEach((v: unknown) => {
       // Handle both old (number) and new (object) formats
       if (typeof v === 'number') {
         totalStock += v;
       } else {
-        totalStock += v.stock || 0;
-        totalReserved += v.reserved || 0;
-        totalSold += v.sold || 0;
+        const vObj = v as Record<string, unknown>;
+        totalStock += (vObj.stock as number) || 0;
+        totalReserved += (vObj.reserved as number) || 0;
+        totalSold += (vObj.sold as number) || 0;
       }
     });
 
@@ -243,7 +244,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const supplierData = await getDocument('merch-suppliers', product.supplierId);
         if (supplierData) {
-          const supplierUpdate: any = {
+          const supplierUpdate: Record<string, unknown> = {
             updatedAt: new Date().toISOString()
           };
 
@@ -362,16 +363,17 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
     const supplierByEmail = new Map<string, string>();
 
     // Add merch-suppliers
-    merchSuppliers.forEach((s: any) => {
+    merchSuppliers.forEach((s: Record<string, unknown>) => {
       if (s.id) supplierById.set(s.id, s.name || 'Unknown');
       if (s.email) supplierByEmail.set(s.email.toLowerCase(), s.name || 'Unknown');
     });
 
     // Add users with merchSupplier/merchSeller role
-    users.forEach((u: any) => {
-      const roles = u.roles || {};
+    users.forEach((u: Record<string, unknown>) => {
+      const roles = (u.roles || {}) as Record<string, unknown>;
       if (roles.merchSupplier === true || roles.merchSeller === true || u.isMerchSupplier === true) {
-        const name = u.partnerInfo?.storeName || u.partnerInfo?.displayName || u.displayName || u.artistName || 'Unknown';
+        const partnerInfo = u.partnerInfo as Record<string, unknown> | undefined;
+        const name = partnerInfo?.storeName || partnerInfo?.displayName || u.displayName || u.artistName || 'Unknown';
         if (u.id) supplierById.set(u.id, name);
         if (u.email) supplierByEmail.set(u.email.toLowerCase(), name);
       }
@@ -379,7 +381,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 
     // Helper to resolve supplier name
     // Note: categoryName is used as the supplier/brand name in this system
-    function resolveSupplierName(data: any): string {
+    function resolveSupplierName(data: Record<string, unknown>): string {
       // categoryName is the primary supplier identifier
       if (data.categoryName && data.categoryName !== data.category) {
         return data.categoryName;
@@ -407,8 +409,8 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
       return 'Fresh Wax';
     }
 
-    const stockReport: any[] = [];
-    products.forEach((data: any) => {
+    const stockReport: Record<string, unknown>[] = [];
+    products.forEach((data: Record<string, unknown>) => {
       const resolvedSupplier = resolveSupplierName(data);
       stockReport.push({
         productId: data.id,

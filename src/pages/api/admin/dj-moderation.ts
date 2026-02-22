@@ -78,14 +78,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })
     ]);
 
-    const banned = bannedSnap.map((doc: any) => ({
+    const banned = bannedSnap.map((doc: Record<string, unknown>) => ({
       id: doc.id,
       userId: doc.id,
       ...doc,
       bannedAt: doc.bannedAt instanceof Date ? doc.bannedAt.toISOString() : doc.bannedAt
     }));
 
-    const onhold = onholdSnap.map((doc: any) => ({
+    const onhold = onholdSnap.map((doc: Record<string, unknown>) => ({
       id: doc.id,
       userId: doc.id,
       ...doc,

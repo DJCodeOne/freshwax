@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const search = url.searchParams.get('q');
 
   let query = 'SELECT * FROM error_logs';
-  const params: any[] = [];
+  const params: unknown[] = [];
   const conditions: string[] = [];
 
   if (source) {
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Get total count
     let countQuery = 'SELECT COUNT(*) as total FROM error_logs';
-    const countParams: any[] = [];
+    const countParams: unknown[] = [];
     if (conditions.length > 0) {
       countQuery += ' WHERE ' + conditions.join(' AND ');
       countParams.push(...params.slice(0, -2)); // exclude limit/offset
@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return new Response(JSON.stringify({
       success: true,
       errors: result.results,
-      total: (countResult as any)?.total || 0,
+      total: (countResult as Record<string, unknown>)?.total || 0,
       topErrors: topErrors.results,
       limit,
       offset,

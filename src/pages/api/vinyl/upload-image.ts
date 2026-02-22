@@ -22,7 +22,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB input limit
 const MAX_IMAGES_PER_LISTING = 6;
 
 // Get R2 configuration
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,

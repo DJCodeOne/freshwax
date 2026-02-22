@@ -15,7 +15,7 @@ import type { Track } from '../../lib/types';
 const log = createLogger('process-release');
 
 // Build service account key from individual env vars
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -45,7 +45,7 @@ function createReleaseFolderName(artistName: string, releaseName: string): strin
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
     // Parse body first to get adminKey for auth
-    let bodyData: any;
+    let bodyData: Record<string, unknown>;
     try {
       bodyData = await request.json();
     } catch {
@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Try info.json first (new uploader format), then metadata.json (legacy)
     const submissionPrefix = isRootLevel ? submissionId : `submissions/${submissionId}`;
 
-    let metadata: any = null;
+    let metadata: Record<string, unknown> | null = null;
 
     // Try info.json first (new uploader format)
     const infoKey = `${submissionPrefix}/info.json`;
@@ -317,10 +317,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     audioFiles = newAudioFiles.map(f => f.newKey);
 
     // Build tracks - match metadata tracks to audio files by name
-    const tracks: any[] = [];
+    const tracks: Record<string, unknown>[] = [];
 
     // Parse tracks from metadata - try tracks array first, then trackListingJSON string
-    let metadataTracks: any[] = [];
+    let metadataTracks: Record<string, unknown>[] = [];
     if (metadata.tracks && Array.isArray(metadata.tracks)) {
       metadataTracks = metadata.tracks;
     } else if (metadata.trackListingJSON) {

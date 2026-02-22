@@ -20,7 +20,7 @@ export const prerender = false;
 const logger = createLogger('update-release');
 
 // Build service account key from individual env vars
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -39,7 +39,7 @@ function getServiceAccountKey(env: any): string | null {
   });
 }
 
-export async function POST({ request, locals }: any) {
+export async function POST({ request, locals }: { request: Request; locals: App.Locals }) {
   logger.info('[update-release] POST request received');
 
   // Rate limit: write operations - 30 per minute
@@ -49,7 +49,7 @@ export async function POST({ request, locals }: any) {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  let updates: any;
+  let updates: Record<string, unknown>;
   try {
     updates = await request.json();
     logger.info('[update-release] Request body:', JSON.stringify(updates, null, 2));
@@ -98,7 +98,7 @@ export async function POST({ request, locals }: any) {
     }
 
     // Clean up undefined values (Firestore doesn't like them)
-    const cleanedData: any = {};
+    const cleanedData: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updateData)) {
       if (value !== undefined) {
         cleanedData[key] = value;
@@ -137,8 +137,8 @@ export async function POST({ request, locals }: any) {
     // Handle per-track updates (Featured, Remixer, BPM, Key)
     if (cleanedData.trackUpdates && Array.isArray(cleanedData.trackUpdates)) {
       const existingTracks = releaseDoc.tracks || [];
-      const updatedTracks = existingTracks.map((track: any, idx: number) => {
-        const trackUpdate = cleanedData.trackUpdates.find((t: any) => t.index === idx);
+      const updatedTracks = existingTracks.map((track: Record<string, unknown>, idx: number) => {
+        const trackUpdate = (cleanedData.trackUpdates as Record<string, unknown>[]).find((t: Record<string, unknown>) => t.index === idx);
         if (trackUpdate) {
           return {
             ...track,
@@ -193,7 +193,7 @@ export async function POST({ request, locals }: any) {
         const releasesList = masterListDoc.releases || [];
 
         // Find and update the release in master list
-        const releaseIndex = releasesList.findIndex((r: any) => r.id === id);
+        const releaseIndex = releasesList.findIndex((r: Record<string, unknown>) => r.id === id);
         if (releaseIndex >= 0) {
           // Update summary fields in master list
           releasesList[releaseIndex] = {

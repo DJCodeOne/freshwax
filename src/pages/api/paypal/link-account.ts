@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Get the entity document
     let collection: string;
-    let entity: any = null;
+    let entity: Record<string, unknown> | null = null;
     let docId = entityId;
 
     switch (entityType) {
@@ -93,7 +93,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Look up by access code
           const { queryCollection } = await import('../../../lib/firebase-rest');
           const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
-          const found = suppliers.find((s: any) => s.accessCode === accessCode);
+          const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
           if (found) {
             entity = found;
             docId = found.id;
@@ -176,7 +176,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    let entity: any = null;
+    let entity: Record<string, unknown> | null = null;
 
     switch (entityType) {
       case 'artist':
@@ -189,7 +189,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         } else if (accessCode) {
           const { queryCollection } = await import('../../../lib/firebase-rest');
           const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
-          entity = suppliers.find((s: any) => s.accessCode === accessCode);
+          entity = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode) || null;
         }
         break;
 

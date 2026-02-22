@@ -233,7 +233,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artistPayments[itemArtistId].items.push(item.name || 'Item');
     }
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const payment of Object.values(artistPayments)) {
       if (payment.amount <= 0) continue;

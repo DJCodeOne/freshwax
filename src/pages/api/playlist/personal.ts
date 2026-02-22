@@ -73,7 +73,7 @@ export async function GET({ request, locals }: APIContext) {
       'SELECT playlist FROM user_playlists WHERE user_id = ?'
     ).bind(userId).first();
 
-    let playlist: any[] = [];
+    let playlist: unknown[] = [];
     if (result && result.playlist) {
       try {
         playlist = JSON.parse(result.playlist as string);
