@@ -186,6 +186,26 @@ export function getEnv(locals: App.Locals): CloudflareEnv {
 }
 
 // ============================================
+// R2 CONFIGURATION
+// ============================================
+
+/**
+ * Get R2 configuration from Cloudflare runtime env.
+ * Returns all possible R2 config fields — consumers use only what they need.
+ */
+export function getR2Config(env: Record<string, unknown>) {
+  return {
+    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
+    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID || '',
+    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY || '',
+    bucketName: env?.R2_BUCKET_NAME || env?.R2_RELEASES_BUCKET || import.meta.env.R2_BUCKET_NAME || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
+    uploadsBucket: env?.R2_UPLOADS_BUCKET || import.meta.env.R2_UPLOADS_BUCKET || 'freshwax-uploads',
+    publicUrl: env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev',
+    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
+  };
+}
+
+// ============================================
 // HTML ESCAPING
 // ============================================
 

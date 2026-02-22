@@ -47,6 +47,8 @@ const csrfToken = Astro.locals.csrfToken || '';
             <h2>Product Type</h2>
           </div>
           <div class="form-card-body">
+            <fieldset class="border-0 p-0 m-0">
+              <legend class="sr-only">Product type</legend>
             <div class="type-grid">
               <div class="type-option">
                 <input type="radio" name="productType" id="type-tshirt" value="tshirt" checked />
@@ -85,6 +87,7 @@ const csrfToken = Astro.locals.csrfToken || '';
                 <label for="type-other"><span class="type-emoji">📦</span>Other</label>
               </div>
             </div>
+            </fieldset>
           </div>
         </div>
 
@@ -181,6 +184,8 @@ const csrfToken = Astro.locals.csrfToken || '';
             <h2>Available Colours</h2>
           </div>
           <div class="form-card-body">
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="sr-only">Available colours</legend>
           <div class="color-grid" id="colorGrid">
             <label class="color-option">
               <input type="checkbox" value="Black" data-hex="#000000" />
@@ -223,6 +228,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               <span>Purple</span>
             </label>
           </div>
+          </fieldset>
           <div class="custom-color-row">
             <input type="color" id="customColorPicker" value="#000000" />
             <input type="text" class="form-input" id="customColorName" placeholder="Custom colour name" style="flex: 1;" />
@@ -237,6 +243,8 @@ const csrfToken = Astro.locals.csrfToken || '';
             <h2>Available Sizes</h2>
           </div>
           <div class="form-card-body">
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="sr-only">Available sizes</legend>
           <div class="size-grid">
             <div class="size-option">
               <input type="checkbox" id="size-xs" value="XS" />
@@ -267,6 +275,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               <label for="size-3xl">3XL</label>
             </div>
           </div>
+          </fieldset>
           </div>
         </div>
 
@@ -299,6 +308,8 @@ const csrfToken = Astro.locals.csrfToken || '';
             <h2>Supplier / Source</h2>
           </div>
           <div class="form-card-body">
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="sr-only">Supplier type</legend>
           <div class="supplier-toggle">
             <label>
               <input type="radio" name="supplierType" value="own" checked />
@@ -309,6 +320,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               Consignment (External Supplier)
             </label>
           </div>
+          </fieldset>
           
           <div class="supplier-fields" id="supplierFields">
             <div class="form-row">

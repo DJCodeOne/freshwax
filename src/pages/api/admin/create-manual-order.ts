@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
-import { saSetDocument, saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { saSetDocument, saGetDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-utils';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
@@ -57,25 +57,6 @@ const createManualOrderSchema = z.object({
 
 export const prerender = false;
 
-// Build service account key from individual env vars
-function getServiceAccountKey(env: Record<string, unknown>): string | null {
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-  if (!clientEmail || !privateKey) return null;
-
-  return JSON.stringify({
-    type: 'service_account',
-    project_id: projectId,
-    private_key_id: 'auto',
-    private_key: (privateKey as string).replace(/\\n/g, '\n'),
-    client_email: clientEmail,
-    client_id: '',
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token'
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {

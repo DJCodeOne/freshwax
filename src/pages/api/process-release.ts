@@ -3,7 +3,7 @@
 // Copies files from submissions/ to releases/ folder for organization
 
 import type { APIRoute } from 'astro';
-import { saSetDocument, saQueryCollection } from '../../lib/firebase-service-account';
+import { saSetDocument, saQueryCollection, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
@@ -13,26 +13,6 @@ import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
 import type { Track } from '../../lib/types';
 
 const log = createLogger('process-release');
-
-// Build service account key from individual env vars
-function getServiceAccountKey(env: Record<string, unknown>): string | null {
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-  if (!clientEmail || !privateKey) return null;
-
-  return JSON.stringify({
-    type: 'service_account',
-    project_id: projectId,
-    private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
-    client_email: clientEmail,
-    client_id: '',
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token'
-  });
-}
 
 // Create a clean folder name from artist and release name
 function createReleaseFolderName(artistName: string, releaseName: string): string {

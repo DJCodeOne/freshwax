@@ -87,6 +87,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                 id="samples-newsletter-email"
                 placeholder="Enter your email"
                 required
+                aria-required="true"
                 class="notify-input"
               />
               <button type="submit" id="samples-newsletter-btn" class="notify-btn">
@@ -97,7 +98,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               </button>
             </div>
             <label style="display:flex;align-items:flex-start;gap:0.5rem;margin-top:0.5rem;cursor:pointer;">
-              <input type="checkbox" id="samples-newsletter-consent" required style="margin-top:0.2rem;accent-color:#dc2626;" />
+              <input type="checkbox" id="samples-newsletter-consent" required aria-required="true" style="margin-top:0.2rem;accent-color:#dc2626;" />
               <span style="font-size:0.75rem;color:#d1d5db;">I agree to receive marketing emails. <a href="/privacy/" style="color:#dc2626;text-decoration:underline;">Privacy Policy</a></span>
             </label>
             <p id="samples-newsletter-message" class="notify-message hidden"></p>

@@ -133,6 +133,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <div class="recipient-section">
           <h3 class="recipient-title">Recipient Details</h3>
           
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="sr-only">Recipient type</legend>
           <div class="recipient-toggle">
             <label class="toggle-option">
               <input type="radio" name="recipientType" value="gift" checked />
@@ -143,6 +145,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               <span class="toggle-label">👤 For Myself</span>
             </label>
           </div>
+          </fieldset>
           
           <div id="giftFields" class="gift-fields">
             <div class="form-row">
@@ -153,7 +156,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               </div>
               <div class="form-group">
                 <label for="recipientEmail">Recipient's Email *</label>
-                <input type="email" id="recipientEmail" placeholder="their@email.com" required aria-describedby="recipientEmailError" />
+                <input type="email" id="recipientEmail" placeholder="their@email.com" required aria-required="true" aria-describedby="recipientEmailError" />
                 <span id="recipientEmailError" class="field-error" role="alert"></span>
               </div>
             </div>
@@ -185,6 +188,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <!-- Payment Method Selection -->
         <div id="paymentMethodSection" class="payment-method-section hidden">
           <h4>Payment Method</h4>
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="sr-only">Payment method</legend>
           <div class="payment-methods">
             <label class="payment-option">
               <input type="radio" name="paymentMethod" value="stripe" checked />
@@ -206,6 +211,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               </span>
             </label>
           </div>
+          </fieldset>
         </div>
 
         <div id="purchaseLoginPrompt" class="purchase-login-prompt">

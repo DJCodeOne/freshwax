@@ -9,7 +9,7 @@ import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 
 const logger = createLogger('update-merch');
 
@@ -18,16 +18,6 @@ export const prerender = false;
 // Firebase API key fallback (same as in firebase-rest.ts)
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-// Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 // Create S3 client with runtime env
 function createS3Client(config: ReturnType<typeof getR2Config>) {

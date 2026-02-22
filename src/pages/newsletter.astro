@@ -49,6 +49,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               id="signup-email"
               placeholder="your@email.com"
               required
+              aria-required="true"
               class="w-full px-4 py-3 bg-gray-800 border border-gray-600 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 transition-colors rounded-lg"
             />
           </div>
@@ -58,6 +59,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
                 type="checkbox"
                 id="signup-consent"
                 required
+                aria-required="true"
                 class="mt-1 w-4 h-4 accent-red-600"
               />
               <span class="text-sm text-gray-300">

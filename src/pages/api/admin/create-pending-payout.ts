@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 
-import { saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
+import { saSetDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
 const log = createLogger('[create-pending-payout]');
@@ -11,28 +11,6 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 export const prerender = false;
 
-// Build service account key from individual env vars
-function getServiceAccountKey(env: Record<string, unknown>): string | null {
-  const fullKey = env?.FIREBASE_SERVICE_ACCOUNT_KEY || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (fullKey) return fullKey;
-
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-  if (!clientEmail || !privateKey) return null;
-
-  return JSON.stringify({
-    type: 'service_account',
-    project_id: projectId,
-    private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
-    client_email: clientEmail,
-    client_id: '',
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token'
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);

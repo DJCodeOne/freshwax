@@ -11,6 +11,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 ---
 
 <Layout title="Checkout" noindex={true}>
+  <Fragment slot="head">
+    <link rel="dns-prefetch" href="https://js.stripe.com" />
+    <link rel="dns-prefetch" href="https://www.paypal.com" />
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    <link rel="preconnect" href="https://www.paypal.com" crossorigin />
+  </Fragment>
   <Header />
 
   <div class="checkout-main">
@@ -563,17 +569,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="firstName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">First Name *</label>
-                <input type="text" id="firstName" name="firstName" required placeholder="John" value="${firstName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="text" id="firstName" name="firstName" required aria-required="true" placeholder="John" value="${firstName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="lastName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Last Name *</label>
-                <input type="text" id="lastName" name="lastName" required placeholder="Doe" value="${lastName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="text" id="lastName" name="lastName" required aria-required="true" placeholder="Doe" value="${lastName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
               </div>
             </div>
             <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="email" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Email Address *</label>
-                <input type="email" id="email" name="email" required placeholder="you@example.com" value="${email}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="email" id="email" name="email" required aria-required="true" placeholder="you@example.com" value="${email}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="phone" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Phone Number</label>
@@ -608,7 +614,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address1" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 1 *</label>
-                  <input type="text" id="address1" name="address1" required placeholder="123 Music Street" value="${address1}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="address1" name="address1" required aria-required="true" placeholder="123 Music Street" value="${address1}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address2" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 2</label>
@@ -618,11 +624,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="city" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">City *</label>
-                  <input type="text" id="city" name="city" required placeholder="London" value="${city}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="city" name="city" required aria-required="true" placeholder="London" value="${city}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="postcode" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Postcode *</label>
-                  <input type="text" id="postcode" name="postcode" required placeholder="E1 6AN" value="${postcode}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                  <input type="text" id="postcode" name="postcode" required aria-required="true" placeholder="E1 6AN" value="${postcode}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
                 </div>
               </div>
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
@@ -632,7 +638,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="country" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Country *</label>
-                  <select id="country" name="country" required style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; cursor: pointer;">
+                  <select id="country" name="country" required aria-required="true" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; cursor: pointer;">
                     <option value="United Kingdom" ${country === 'United Kingdom' ? 'selected' : ''}>United Kingdom</option>
                     <option value="Ireland" ${country === 'Ireland' ? 'selected' : ''}>Ireland</option>
                     <option value="Germany" ${country === 'Germany' ? 'selected' : ''}>Germany</option>
@@ -685,6 +691,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             </button>
             ` : `
             <!-- Payment Options -->
+            <fieldset style="border: 0; padding: 0; margin: 0;">
+              <legend style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;">Payment method</legend>
             <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.25rem;">
               <label style="display: flex; align-items: center; gap: 1rem; padding: 1rem 1.25rem; background: #f9fafb; border: 2px solid #d1d5db; border-radius: 10px; cursor: pointer; transition: all 0.2s;" id="stripeOption">
                 <input type="radio" name="paymentMethod" value="stripe" checked style="width: 20px; height: 20px; accent-color: #dc2626;">
@@ -718,6 +726,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </svg>
               </label>
             </div>
+            </fieldset>
 
             <!-- Stripe Payment Button (shown by default) -->
             <div id="stripePaymentSection">

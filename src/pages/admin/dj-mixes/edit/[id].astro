@@ -185,6 +185,8 @@ const nonce = Astro.locals.nonce || '';
           <h2>⚙️ Settings</h2>
         </div>
         <div class="card-body settings-body">
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="sr-only">Mix settings</legend>
           <label class="checkbox-label">
             <input type="checkbox" name="published" checked={mix.published} />
             <span>🌐 Published (visible on site)</span>
@@ -197,6 +199,7 @@ const nonce = Astro.locals.nonce || '';
             <input type="checkbox" name="featured" checked={mix.featured} />
             <span>⭐ Featured Mix</span>
           </label>
+          </fieldset>
         </div>
       </div>
 

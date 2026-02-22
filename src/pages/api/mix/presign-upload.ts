@@ -7,7 +7,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { createLogger, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
 
 const log = createLogger('[mix-presign]');
 
@@ -24,15 +24,6 @@ const PresignUploadSchema = z.object({
 
 export const prerender = false;
 
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit

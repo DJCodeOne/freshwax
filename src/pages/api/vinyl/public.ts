@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 
-import { saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
+import { saQueryCollection, saGetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { d1GetAllCollections } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger } from '../../../lib/api-utils';
@@ -12,33 +12,6 @@ import { ApiErrors, createLogger } from '../../../lib/api-utils';
 const log = createLogger('vinyl/public');
 
 export const prerender = false;
-
-// Get service account key from environment
-function getServiceAccountKey(env: Record<string, unknown>): string | null {
-  let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
-                          import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-  if (!serviceAccountKey) {
-    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-    const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-    if (clientEmail && privateKey) {
-      serviceAccountKey = JSON.stringify({
-        type: 'service_account',
-        project_id: projectId,
-        private_key_id: 'auto',
-        private_key: privateKey.replace(/\\n/g, '\n'),
-        client_email: clientEmail,
-        client_id: 'auto',
-        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_uri: 'https://oauth2.googleapis.com/token'
-      });
-    }
-  }
-
-  return serviceAccountKey || null;
-}
 
 // GET - Fetch published vinyl listings, collections, and deals
 export const GET: APIRoute = async ({ request, locals }) => {  const env = locals.runtime.env || {};

@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { requireAdminAuth } from '../../../lib/admin';
-import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
+import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -44,15 +44,6 @@ interface ProcessingConfig {
   quality: number;
 }
 
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 function createS3Client(config: ReturnType<typeof getR2Config>) {
   return new S3Client({

@@ -12,7 +12,7 @@ import { processImageToSquareWebP, imageExtension, imageContentType } from '../.
 import { requireAdminAuth } from '../../../lib/admin';
 import { initFirebaseEnv, queryCollection, getDocument, updateDocument } from '../../../lib/firebase-rest';
 import { d1UpsertRelease, d1UpsertMix, d1UpsertMerch } from '../../../lib/d1-catalog';
-import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody } from '../../../lib/api-utils';
+import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -57,15 +57,6 @@ const IMAGE_FIELDS: Record<CollectionName, string[]> = {
   'merch': ['imageUrl'],
 };
 
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 function createS3Client(config: ReturnType<typeof getR2Config>) {
   return new S3Client({

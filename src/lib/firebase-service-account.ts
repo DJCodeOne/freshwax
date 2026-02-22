@@ -17,6 +17,64 @@ interface ServiceAccount {
   token_uri: string;
 }
 
+// Build service account key from environment variables
+// Checks for full FIREBASE_SERVICE_ACCOUNT_KEY first, then falls back to individual vars
+export function getServiceAccountKey(env: Record<string, unknown>): string | null {
+  const fullKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
+                  import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (fullKey) return fullKey;
+
+  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+  if (!clientEmail || !privateKey) return null;
+
+  return JSON.stringify({
+    type: 'service_account',
+    project_id: projectId,
+    private_key_id: 'auto',
+    private_key: (privateKey as string).replace(/\\n/g, '\n'),
+    client_email: clientEmail,
+    client_id: '',
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token'
+  });
+}
+
+// Build service account key + projectId from environment variables
+// Throws if no credentials are configured
+export function getServiceAccountKeyWithProject(env: Record<string, unknown>): { key: string; projectId: string } {
+  const projectId = (env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store') as string;
+
+  let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
+                          import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+
+  if (!serviceAccountKey) {
+    const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
+    const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
+
+    if (clientEmail && privateKey) {
+      serviceAccountKey = JSON.stringify({
+        type: 'service_account',
+        project_id: projectId,
+        private_key_id: 'auto',
+        private_key: (privateKey as string).replace(/\\n/g, '\n'),
+        client_email: clientEmail,
+        client_id: '',
+        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+        token_uri: 'https://oauth2.googleapis.com/token'
+      });
+    }
+  }
+
+  if (!serviceAccountKey) {
+    throw new Error('Firebase service account not configured');
+  }
+
+  return { key: serviceAccountKey as string, projectId };
+}
+
 // Cache for access tokens
 let cachedToken: { token: string; expires: number } | null = null;
 

@@ -595,7 +595,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div class="payment-content" id="payment-content">
 
             <!-- Preferred Payment Method Selector -->
-            <div class="payment-method-selector">
+            <fieldset class="payment-method-selector border-0 p-0 m-0">
+              <legend class="sr-only">Preferred payout method</legend>
               <h3>Preferred Payout Method</h3>
               <p class="selector-description">Choose how you'd like to receive your payouts</p>
               <div class="method-options">
@@ -633,7 +634,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               {(partner.stripeConnectStatus === 'active' || partner.paypalEmail) && (
                 <button id="save-artist-method-btn" class="btn btn-primary" style="margin-top: 1rem;">Save Preference</button>
               )}
-            </div>
+            </fieldset>
 
             <!-- Payout Method Tabs -->
             <div class="payout-tabs">

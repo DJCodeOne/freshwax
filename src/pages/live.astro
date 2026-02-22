@@ -619,7 +619,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <form id="bookingForm">
           <div class="form-group">
             <label>DJ Name <span class="required">*</span></label>
-            <input type="text" id="bookingDjName" placeholder="Your DJ name" maxlength="30" required />
+            <input type="text" id="bookingDjName" placeholder="Your DJ name" maxlength="30" required aria-required="true" />
           </div>
           
           <div class="form-group">
@@ -633,8 +633,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             <span class="char-count"><span id="bookingDescCount">0</span>/150</span>
           </div>
           
-          <div class="form-group">
-            <label>Duration <span class="required">*</span></label>
+          <fieldset class="border-0 p-0 m-0">
+            <legend class="form-group" style="display: block; width: 100%;">Duration <span class="required">*</span></legend>
             <div class="duration-options">
               <label class="duration-option">
                 <input type="radio" name="duration" value="30" />
@@ -661,7 +661,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
                 <span>4hr</span>
               </label>
             </div>
-          </div>
+          </fieldset>
           
           <div class="form-group">
             <label>When do you want to play?</label>
@@ -778,7 +778,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           
           <div class="form-group">
             <label>DJ Name <span class="required">*</span></label>
-            <input type="text" id="goLiveNowDjName" placeholder="Your DJ name" maxlength="30" required />
+            <input type="text" id="goLiveNowDjName" placeholder="Your DJ name" maxlength="30" required aria-required="true" />
           </div>
           
           <div class="form-group">

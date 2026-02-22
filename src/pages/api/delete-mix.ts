@@ -9,7 +9,7 @@ import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from 
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const DeleteMixSchema = z.object({
@@ -22,15 +22,6 @@ const logger = createLogger('delete-mix');
 // Max files to delete from R2 per mix (prevent runaway)
 const MAX_R2_FILES_TO_DELETE = 50;
 
-// Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_BUCKET_NAME || env?.R2_RELEASES_BUCKET || import.meta.env.R2_BUCKET_NAME || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-  };
-}
 
 // Create S3 client with runtime env
 function createS3Client(config: ReturnType<typeof getR2Config>) {

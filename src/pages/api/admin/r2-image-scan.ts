@@ -6,7 +6,7 @@ import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { requireAdminAuth } from '../../../lib/admin';
-import { createLogger, successResponse, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, successResponse, errorResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -27,14 +27,6 @@ const SIZE_THRESHOLDS: Record<string, number> = {
   'default': 100 * 1024,         // 100KB
 };
 
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-  };
-}
 
 function createS3Client(config: ReturnType<typeof getR2Config>) {
   return new S3Client({

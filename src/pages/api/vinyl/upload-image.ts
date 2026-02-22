@@ -8,7 +8,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, getR2Config } from '../../../lib/api-utils';
 
 const log = createLogger('[vinyl-upload-image]');
 
@@ -21,16 +21,6 @@ const WEBP_QUALITY = 85;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB input limit
 const MAX_IMAGES_PER_LISTING = 6;
 
-// Get R2 configuration
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 function createS3Client(config: ReturnType<typeof getR2Config>) {
   return new S3Client({

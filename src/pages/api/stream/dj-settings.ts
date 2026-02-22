@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
-import { saSetDocument, saUpdateDocument, saDeleteDocument } from '../../../lib/firebase-service-account';
+import { saSetDocument, saUpdateDocument, saDeleteDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { createLogger, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[dj-settings]');
@@ -19,26 +19,6 @@ const DjSettingsSchema = z.object({
 }).passthrough();
 
 export const prerender = false;
-
-// Build service account key from individual env vars
-function getServiceAccountKey(env: Record<string, unknown>): string | null {
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-  if (!clientEmail || !privateKey) return null;
-
-  return JSON.stringify({
-    type: 'service_account',
-    project_id: projectId,
-    private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
-    client_email: clientEmail,
-    client_id: '',
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token'
-  });
-}
 
 // Look up user by email across all collections
 async function findUserByEmail(email: string): Promise<{ userId: string; displayName: string; email: string } | null> {

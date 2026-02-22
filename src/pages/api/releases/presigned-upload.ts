@@ -6,7 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { getAdminKey, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
 import { z } from 'zod';
 
@@ -50,15 +50,6 @@ const ALLOWED_TYPES: Record<string, string> = {
   'application/x-zip-compressed': '.zip',
 };
 
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 function sanitize(str: string): string {
   return str.replace(/[^a-zA-Z0-9]/g, '').substring(0, 30);

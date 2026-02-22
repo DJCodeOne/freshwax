@@ -6,21 +6,11 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 
 const log = createLogger('update-mix-artwork');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-// Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicDomain: env?.R2_PUBLIC_DOMAIN || import.meta.env.R2_PUBLIC_DOMAIN || 'https://cdn.freshwax.co.uk',
-  };
-}
 
 // Create S3 client with runtime env
 function createS3Client(config: ReturnType<typeof getR2Config>) {

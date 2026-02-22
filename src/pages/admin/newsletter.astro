@@ -136,6 +136,8 @@ export const prerender = false;
       <!-- Step 1: Recipients -->
       <div class="step-content active" id="step1">
         <h3>Select Recipients</h3>
+        <fieldset class="border-0 p-0 m-0">
+          <legend class="sr-only">Recipient type</legend>
         <div class="recipient-options">
           <label class="recipient-option">
             <input type="radio" name="recipientType" value="selected" checked>
@@ -154,6 +156,7 @@ export const prerender = false;
             </div>
           </label>
         </div>
+        </fieldset>
         <div class="recipient-summary" id="recipientSummary">
           <p>You'll send to <strong id="finalRecipientCount">0</strong> subscribers</p>
         </div>

@@ -9,7 +9,7 @@ import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 
 const log = createLogger('upload-avatar');
 
@@ -23,15 +23,6 @@ const AVATAR_SIZE = 128;
 
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID || '',
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY || '',
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-    publicUrl: env?.R2_PUBLIC_URL || import.meta.env.R2_PUBLIC_URL || 'https://pub-5c0458d0721c4946884a203f2ca66ee0.r2.dev',
-  };
-}
 
 // Create S3 client with runtime env
 function createR2Client(config: ReturnType<typeof getR2Config>) {

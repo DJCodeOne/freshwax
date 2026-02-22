@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
-import { saDeleteDocument, saUpdateDocument } from '../../lib/firebase-service-account';
+import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
@@ -14,26 +14,6 @@ const deleteReleaseSchema = z.object({
 });
 
 const logger = createLogger('delete-release');
-
-// Build service account key from individual env vars
-function getServiceAccountKey(env: Record<string, unknown>): string | null {
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-  const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-  if (!clientEmail || !privateKey) return null;
-
-  return JSON.stringify({
-    type: 'service_account',
-    project_id: projectId,
-    private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
-    client_email: clientEmail,
-    client_id: '',
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token'
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required

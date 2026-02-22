@@ -6,11 +6,11 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
-import { saUpdateDocument, saDeleteDocument, saAddDocument } from '../../lib/firebase-service-account';
+import { saUpdateDocument, saDeleteDocument, saAddDocument, getServiceAccountKeyWithProject } from '../../lib/firebase-service-account';
 import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 
 const deleteMerchSchema = z.object({
   productId: z.string().min(1),
@@ -20,47 +20,6 @@ const logger = createLogger('delete-merch');
 
 export const prerender = false;
 
-// Get service account credentials
-function getServiceAccountKey(env: Record<string, unknown>): { key: string; projectId: string } {
-  const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-
-  let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
-                          import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-
-  if (!serviceAccountKey) {
-    const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
-
-    if (clientEmail && privateKey) {
-      serviceAccountKey = JSON.stringify({
-        type: 'service_account',
-        project_id: projectId,
-        private_key_id: 'auto',
-        private_key: privateKey.replace(/\\n/g, '\n'),
-        client_email: clientEmail,
-        client_id: '',
-        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_uri: 'https://oauth2.googleapis.com/token'
-      });
-    }
-  }
-
-  if (!serviceAccountKey) {
-    throw new Error('Firebase service account not configured');
-  }
-
-  return { key: serviceAccountKey, projectId };
-}
-
-// Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: Record<string, unknown>) {
-  return {
-    accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
-    accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
-    secretAccessKey: env?.R2_SECRET_ACCESS_KEY || import.meta.env.R2_SECRET_ACCESS_KEY,
-    bucketName: env?.R2_RELEASES_BUCKET || import.meta.env.R2_RELEASES_BUCKET || 'freshwax-releases',
-  };
-}
 
 // Create S3 client with runtime env
 function createS3Client(config: ReturnType<typeof getR2Config>) {
@@ -138,7 +97,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get service account credentials
-    const { key: serviceAccountKey, projectId } = getServiceAccountKey(env);
+    const { key: serviceAccountKey, projectId } = getServiceAccountKeyWithProject(env);
 
     // Update supplier stats if applicable
     if (product.supplierId) {
