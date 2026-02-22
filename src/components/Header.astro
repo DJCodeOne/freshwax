@@ -1360,7 +1360,11 @@ const firebaseConfig = {
   }
 
   // Update auth UI without re-subscribing to onAuthStateChanged
+  let _authUIUpdating = false;
   function updateAuthUI() {
+    if (_authUIUpdating) return;
+    _authUIUpdating = true;
+    setTimeout(() => { _authUIUpdating = false; }, 100);
     const user = auth.currentUser;
     const accountNames = document.querySelectorAll('.account-name');
     const loggedOutSections = document.querySelectorAll('.logged-out');
@@ -2369,12 +2373,14 @@ const firebaseConfig = {
     z-index: 10000;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: opacity 0.3s, visibility 0.3s;
   }
 
   .fwx-menu-overlay.open {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
   }
 
   /* Hide on desktop */

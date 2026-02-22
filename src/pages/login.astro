@@ -336,8 +336,8 @@ const csrfToken = Astro.locals.csrfToken || '';
 
       } catch (error: unknown) {
         console.error('[Login] Google sign-in error:', error);
-
-        if (error.code === 'auth/popup-closed-by-user') {
+        const code = error && typeof error === 'object' && 'code' in error ? (error as {code:string}).code : '';
+        if (code === 'auth/popup-closed-by-user') {
           googleBtn.disabled = false;
           googleBtn.innerHTML = originalText;
           return;
@@ -574,7 +574,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
           // If user doesn't exist in Firestore, create them via server API (handles orphaned Auth accounts)
           if (!profile.success || profile.error === 'User not found') {
-            await fetch('/api/auth/init-user/', {
+            const initRes = await fetch('/api/auth/init-user/', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -586,6 +586,9 @@ const csrfToken = Astro.locals.csrfToken || '';
                 displayName: user.displayName || user.email.split('@')[0]
               })
             });
+            if (!initRes.ok) {
+              console.error('[Login] Failed to initialize user profile');
+            }
           }
 
           // Cache the profile in sessionStorage for future use
@@ -626,14 +629,15 @@ const csrfToken = Astro.locals.csrfToken || '';
         }, 1000);
         
       } catch (error: unknown) {
+        const code = error && typeof error === 'object' && 'code' in error ? (error as {code:string}).code : '';
         let message = 'Login failed. Please try again.';
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-email') {
+        if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-email') {
           message = 'Invalid email or password.';
-        } else if (error.code === 'auth/too-many-requests') {
+        } else if (code === 'auth/too-many-requests') {
           message = 'Too many failed attempts. Please try again later.';
-        } else if (error.code === 'auth/user-disabled') {
+        } else if (code === 'auth/user-disabled') {
           message = 'This account has been disabled.';
-        } else if (error.code === 'auth/network-request-failed') {
+        } else if (code === 'auth/network-request-failed') {
           message = 'Network error. Please check your connection.';
         }
         

@@ -1418,7 +1418,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     if (!container) return;
 
     try {
-      const res = await fetch(`${VINYL_API_URL}?type=collections`);
+      const res = await fetch(`${VINYL_API_URL}?type=collections`, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       if (data.success && data.collections) {
@@ -1427,7 +1428,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       }
     } catch (err: unknown) {
       console.error('Error loading collections:', err);
-      container.innerHTML = '<div class="loading-text">No collections yet</div>';
+      container.innerHTML = '<p class="text-center text-gray-400 py-8">Failed to load collections. Please refresh the page.</p>';
     }
   }
 
@@ -1488,7 +1489,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         url = `${VINYL_API_URL}?type=listings&collection=${collection}`;
       }
 
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       if (data.success) {
@@ -1508,8 +1510,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       }
     } catch (err: unknown) {
       console.error('Error loading listings:', err);
-      grid.innerHTML = '';
-      empty.style.display = 'block';
+      grid.innerHTML = '<p class="text-center text-gray-400 py-8">Failed to load listings. Please refresh the page.</p>';
+      empty.style.display = 'none';
     }
   }
 
