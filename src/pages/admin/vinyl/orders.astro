@@ -74,14 +74,14 @@ export const prerender = false;
       <table class="data-table">
         <thead>
           <tr>
-            <th>Order ID</th>
-            <th>Date</th>
-            <th>Buyer</th>
-            <th>Seller</th>
-            <th>Items</th>
-            <th>Total</th>
-            <th>Status</th>
-            <th class="text-right">Actions</th>
+            <th scope="col">Order ID</th>
+            <th scope="col">Date</th>
+            <th scope="col">Buyer</th>
+            <th scope="col">Seller</th>
+            <th scope="col">Items</th>
+            <th scope="col">Total</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-right">Actions</th>
           </tr>
         </thead>
         <tbody id="ordersTableBody">
@@ -137,9 +137,9 @@ export const prerender = false;
               <table class="items-table">
                 <thead>
                   <tr>
-                    <th>Item</th>
-                    <th>Condition</th>
-                    <th class="text-right">Price</th>
+                    <th scope="col">Item</th>
+                    <th scope="col">Condition</th>
+                    <th scope="col" class="text-right">Price</th>
                   </tr>
                 </thead>
                 <tbody id="viewItemsBody">

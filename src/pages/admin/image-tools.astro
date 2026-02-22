@@ -80,14 +80,14 @@ export const prerender = false;
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width: 40px; text-align: center;">
+              <th scope="col" style="width: 40px; text-align: center;">
                 <input type="checkbox" id="headerCheckbox" />
               </th>
-              <th>Key</th>
-              <th>Issue</th>
-              <th class="text-right">Size</th>
-              <th>Type</th>
-              <th>Status</th>
+              <th scope="col">Key</th>
+              <th scope="col">Issue</th>
+              <th scope="col" class="text-right">Size</th>
+              <th scope="col">Type</th>
+              <th scope="col">Status</th>
             </tr>
           </thead>
           <tbody id="issuesBody"></tbody>
@@ -120,13 +120,13 @@ export const prerender = false;
         <table class="data-table">
           <thead>
             <tr>
-              <th>Key</th>
-              <th>Status</th>
-              <th class="text-right">Old Size</th>
-              <th class="text-right">New Size</th>
-              <th>New Key</th>
-              <th>Thumb</th>
-              <th>Details</th>
+              <th scope="col">Key</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-right">Old Size</th>
+              <th scope="col" class="text-right">New Size</th>
+              <th scope="col">New Key</th>
+              <th scope="col">Thumb</th>
+              <th scope="col">Details</th>
             </tr>
           </thead>
           <tbody id="resultsBody"></tbody>
@@ -196,10 +196,10 @@ export const prerender = false;
         <table class="data-table">
           <thead>
             <tr>
-              <th>Doc ID</th>
-              <th>Fields</th>
-              <th>Status</th>
-              <th>Savings</th>
+              <th scope="col">Doc ID</th>
+              <th scope="col">Fields</th>
+              <th scope="col">Status</th>
+              <th scope="col">Savings</th>
             </tr>
           </thead>
           <tbody id="migrateResultsBody"></tbody>

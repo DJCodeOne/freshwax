@@ -1769,6 +1769,28 @@ const totalDurationFormatted = totalDurationSeconds > 0
       }
     }
 
+    // Focus trap: Tab/Shift+Tab cycles within the modal
+    shareModal.addEventListener('keydown', function(e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      var focusableEls = shareModal.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusableEls.length === 0) return;
+      var firstEl = focusableEls[0];
+      var lastEl = focusableEls[focusableEls.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    });
+
     if (shareModalClose) shareModalClose.onclick = closeModal;
     if (shareModalBackdrop) shareModalBackdrop.onclick = closeModal;
 

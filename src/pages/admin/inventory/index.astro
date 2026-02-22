@@ -135,14 +135,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <table class="stock-table">
           <thead>
             <tr>
-              <th style="width:30px;"></th>
-              <th>Product</th>
-              <th style="text-align: center;">Category</th>
-              <th style="text-align: center;">Stock</th>
-              <th style="text-align: center;">Reserved</th>
-              <th style="text-align: center;">Sold</th>
-              <th style="text-align: center;">Status</th>
-              <th style="text-align: center;">Actions</th>
+              <th scope="col" style="width:30px;"></th>
+              <th scope="col">Product</th>
+              <th scope="col" style="text-align: center;">Category</th>
+              <th scope="col" style="text-align: center;">Stock</th>
+              <th scope="col" style="text-align: center;">Reserved</th>
+              <th scope="col" style="text-align: center;">Sold</th>
+              <th scope="col" style="text-align: center;">Status</th>
+              <th scope="col" style="text-align: center;">Actions</th>
             </tr>
           </thead>
           <tbody id="stockTableBody">
@@ -975,12 +975,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <table style="${tableStyle}">
               <thead style="${theadStyle}">
                 <tr style="${trStyle}">
-                  <th style="${thStyle} width: 200px;">Product / Size</th>
-                  <th style="${thStyle} width: 120px;">SKU</th>
-                  <th style="${thStyle} width: 70px; text-align: center;">System</th>
-                  <th style="${thStyle} width: 90px; text-align: center;">Counted</th>
-                  <th style="${thStyle} width: 70px; text-align: center;">Variance</th>
-                  <th style="${thStyle} width: 140px;">Reason</th>
+                  <th scope="col" style="${thStyle} width: 200px;">Product / Size</th>
+                  <th scope="col" style="${thStyle} width: 120px;">SKU</th>
+                  <th scope="col" style="${thStyle} width: 70px; text-align: center;">System</th>
+                  <th scope="col" style="${thStyle} width: 90px; text-align: center;">Counted</th>
+                  <th scope="col" style="${thStyle} width: 70px; text-align: center;">Variance</th>
+                  <th scope="col" style="${thStyle} width: 140px;">Reason</th>
                 </tr>
               </thead>
               <tbody style="${tbodyStyle}">

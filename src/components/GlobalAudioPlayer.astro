@@ -468,6 +468,12 @@ const { nonce = '' } = Astro.props;
           if (pauseIcon) pauseIcon.classList.remove('hidden');
           if (playBtn) playBtn.setAttribute('aria-pressed', 'true');
           startSpectrum();
+          // Announce play state to screen readers
+          var liveRegion = document.getElementById('mini-player-live');
+          var titleEl = document.getElementById('mini-title');
+          if (liveRegion && titleEl && titleEl.textContent !== 'No track loaded') {
+            liveRegion.textContent = 'Playing: ' + titleEl.textContent;
+          }
         });
 
         globalAudio.addEventListener('pause', function() {
@@ -478,6 +484,12 @@ const { nonce = '' } = Astro.props;
           if (pauseIcon) pauseIcon.classList.add('hidden');
           if (playBtn) playBtn.setAttribute('aria-pressed', 'false');
           stopSpectrum();
+          // Announce pause state to screen readers
+          var liveRegion = document.getElementById('mini-player-live');
+          var titleEl = document.getElementById('mini-title');
+          if (liveRegion && titleEl && titleEl.textContent !== 'No track loaded') {
+            liveRegion.textContent = 'Paused: ' + titleEl.textContent;
+          }
         });
 
         globalAudio.addEventListener('ended', function() {

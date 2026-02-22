@@ -56,7 +56,7 @@ const nonce = Astro.locals.nonce || '';
     <div class="card"><div class="card-body"><div class="empty-state"><div class="empty-state-title">No pending approvals</div></div></div></div>
   ) : (
     <div class="card"><div class="card-header"><h2>Pending Applications ({counts.all})</h2></div>
-      <div class="table-wrapper"><table class="data-table"><thead><tr><th>Applicant</th><th>Bio</th><th>Type</th><th>Date</th><th>Actions</th></tr></thead>
+      <div class="table-wrapper"><table class="data-table"><thead><tr><th scope="col">Applicant</th><th scope="col">Bio</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Actions</th></tr></thead>
         <tbody id="tbl">{pendingPartners.map((p: any) => (
           <tr data-id={p.id} data-email={p.email} data-name={p.artistName} data-roles={JSON.stringify({artist:p.isArtist,merch:p.isMerchSupplier})}>
             <td><h4>{p.artistName}</h4><small>{p.email}</small></td>

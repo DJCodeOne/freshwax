@@ -16,20 +16,20 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
   <!-- Header -->
   <div class="schedule-header">
     <div class="date-nav">
-      <button type="button" class="nav-btn prev-day">←</button>
+      <button type="button" class="nav-btn prev-day" aria-label="Previous day">←</button>
       <div class="date-display">
         <h2 class="date-label">Loading...</h2>
-        <button type="button" class="today-btn">Today</button>
+        <button type="button" class="today-btn" aria-label="Go to today">Today</button>
       </div>
-      <button type="button" class="nav-btn next-day">→</button>
+      <button type="button" class="nav-btn next-day" aria-label="Next day">→</button>
     </div>
 
     {mode === 'booking' && (
       <div class="header-booking-inline">
         <span class="selection-count">No slots selected</span>
         <div class="booking-actions">
-          <button type="button" class="clear-btn">Clear</button>
-          <button type="button" class="save-btn" disabled>Save Booking</button>
+          <button type="button" class="clear-btn" aria-label="Clear selection">Clear</button>
+          <button type="button" class="save-btn" disabled aria-label="Save booking">Save Booking</button>
         </div>
       </div>
     )}
@@ -37,8 +37,8 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     <div class="header-right">
       {mode === 'admin' && (
         <div class="admin-controls">
-          <button type="button" class="add-dj-btn">+ Add DJ</button>
-          <button type="button" class="allowances-btn">⚙️ DJ Limits</button>
+          <button type="button" class="add-dj-btn" aria-label="Add DJ to schedule">+ Add DJ</button>
+          <button type="button" class="allowances-btn" aria-label="Manage DJ time limits">⚙️ DJ Limits</button>
           <label class="disable-toggle">
             <input type="checkbox" class="disable-checkbox" />
             <span>Disable Bookings</span>

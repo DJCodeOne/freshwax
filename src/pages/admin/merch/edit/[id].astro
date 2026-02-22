@@ -783,8 +783,8 @@ const getStockBadgeClass = (stock) => {
     let html = `<table class="variant-table">
       <thead>
         <tr>
-          <th></th>
-          ${sizes.map(s => `<th>${s}</th>`).join('')}
+          <th scope="col"></th>
+          ${sizes.map(s => `<th scope="col">${s}</th>`).join('')}
         </tr>
       </thead>
       <tbody>`;
