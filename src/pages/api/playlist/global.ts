@@ -6,7 +6,7 @@ import type { APIContext } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { isAdmin as checkIsAdmin, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('playlist/global');
 import { z } from 'zod';

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getDocument, deleteDocument, queryCollection, addDocument, initFirebaseEnv, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit as checkGlobalRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { isAdmin, initAdminEnv } from '../../../lib/admin';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[dj-lobby/chat]');
 
 const LobbyChatSchema = z.object({

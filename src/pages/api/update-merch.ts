@@ -9,7 +9,7 @@ import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 
 const logger = createLogger('update-merch');
 

@@ -4,7 +4,7 @@
 
 import type { APIContext } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
-import { createLogger } from '../../lib/api-utils';
+import { createLogger, errorResponse, jsonResponse, successResponse } from '../../lib/api-utils';
 
 const logger = createLogger('icecast-auth');
 

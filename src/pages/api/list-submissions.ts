@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../lib/admin';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
 
 const log = createLogger('list-submissions');
 

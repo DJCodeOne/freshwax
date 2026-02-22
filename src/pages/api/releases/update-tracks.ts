@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
-import { getAdminKey, ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;

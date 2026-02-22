@@ -7,7 +7,7 @@ import { getDocument, updateDocument, clearCache } from '../../lib/firebase-rest
 import { d1UpsertRating } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const RateReleaseSchema = z.object({
   releaseId: z.string().min(1, 'Release ID is required').max(200),

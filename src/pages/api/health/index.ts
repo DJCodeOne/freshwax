@@ -2,6 +2,7 @@
 // General health check endpoint for monitoring
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
+import { jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 

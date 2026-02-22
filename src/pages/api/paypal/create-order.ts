@@ -7,7 +7,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { setDocument } from '../../../lib/firebase-rest';
 import { validateStock, validateAndGetPrices, reserveStock, releaseReservation } from '../../../lib/order-utils';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[paypal-create]');
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';

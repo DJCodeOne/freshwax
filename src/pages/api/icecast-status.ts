@@ -3,7 +3,7 @@
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { fetchWithTimeout } from '../../lib/api-utils';
+import { fetchWithTimeout, jsonResponse } from '../../lib/api-utils';
 
 export async function GET({ request, locals }: APIContext) {
   // Rate limit: standard API - 60 per minute

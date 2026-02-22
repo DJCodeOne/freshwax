@@ -2,7 +2,7 @@
 // Extract text content from uploaded PDF or DOCX files for newsletter
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('newsletter/extract-text');
 

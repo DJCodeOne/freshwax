@@ -7,7 +7,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { verifyRequestUser, getDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const PresignDownloadSchema = z.object({

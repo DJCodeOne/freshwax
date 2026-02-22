@@ -5,7 +5,7 @@ import { getDocument, clearCache, verifyRequestUser } from '../../lib/firebase-r
 import { normalizeRelease } from '../../lib/releases';
 import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const logger = createLogger('get-release');
 

@@ -13,7 +13,7 @@ import { queryCollection, updateDocument, addDocument, getDocument, updateDocume
 import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
-import { createLogger, ApiErrors, timingSafeCompare } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[retry-payouts]');
 

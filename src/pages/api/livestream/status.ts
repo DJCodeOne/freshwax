@@ -7,7 +7,7 @@ import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger } from '../../../lib/api-utils';
+import { createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[livestream/status]');
 

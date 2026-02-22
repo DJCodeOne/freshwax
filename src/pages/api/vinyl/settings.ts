@@ -8,7 +8,7 @@ import { getDocument, setDocument, verifyRequestUser } from '../../../lib/fireba
 import { d1GetVinylSeller, d1UpsertVinylSeller, d1GetNextCollectionNumber } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const logger = createLogger('vinyl-settings');
 

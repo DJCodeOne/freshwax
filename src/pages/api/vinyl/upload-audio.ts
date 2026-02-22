@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { createLogger, ApiErrors, getR2Config } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, getR2Config, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[vinyl-upload-audio]');
 

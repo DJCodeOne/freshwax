@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, verifyUserToken, getDocument } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('dj-lobby/broadcast-mode');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';

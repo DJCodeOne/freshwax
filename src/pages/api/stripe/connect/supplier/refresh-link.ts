@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import Stripe from 'stripe';
 import { getDocument, queryCollection } from '../../../../../lib/firebase-rest';
 import { SITE_URL } from '../../../../../lib/constants';
-import { ApiErrors, createLogger } from '../../../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../../../lib/api-utils';
 
 const log = createLogger('stripe/connect/supplier/refresh-link');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../../lib/rate-limit';

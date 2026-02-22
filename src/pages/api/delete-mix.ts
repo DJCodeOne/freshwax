@@ -9,7 +9,7 @@ import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from 
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const DeleteMixSchema = z.object({

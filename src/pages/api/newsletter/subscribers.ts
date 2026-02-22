@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('newsletter/subscribers');
 

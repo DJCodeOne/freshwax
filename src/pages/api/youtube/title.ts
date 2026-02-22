@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('youtube/title');
 

@@ -10,7 +10,7 @@
 
 import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
-import { ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 
 const logger = createLogger('cleanup-d1');
 

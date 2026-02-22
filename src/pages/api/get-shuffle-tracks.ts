@@ -2,7 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getLiveReleases, extractTracksFromReleases, shuffleArray } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse, successResponse } from '../../lib/api-utils';
 
 const logger = createLogger('get-shuffle-tracks');
 

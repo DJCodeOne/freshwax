@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, createDocumentIfNotExists, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[newsletter]');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';

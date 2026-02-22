@@ -8,7 +8,7 @@ import { queryCollection, updateDocument, addDocument, getDocument, atomicIncrem
 import { sendPayoutCompletedEmail } from '../../../../lib/payout-emails';
 import { logConnectEvent } from '../../../../lib/webhook-logger';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../../lib/paypal-payouts';
-import { createLogger } from '../../../../lib/api-utils';
+import { createLogger, jsonResponse } from '../../../../lib/api-utils';
 
 const log = createLogger('[connect-webhook]');
 

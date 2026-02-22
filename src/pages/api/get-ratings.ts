@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, initFirebaseEnv } from '../../lib/firebase-rest';
 import { d1GetRatings } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const logger = createLogger('get-ratings');
 

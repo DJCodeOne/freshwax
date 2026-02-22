@@ -10,7 +10,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { generateGiftCardCode } from '../../../lib/giftcard';
 import { getServiceAccountToken } from '../../../lib/firebase-service-account';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[purchase]');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';

@@ -3,7 +3,7 @@
 
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, fetchWithTimeout } from '../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, jsonResponse, successResponse } from '../../lib/api-utils';
 
 const STATION_CHECK_URLS: Record<string, string | null> = {
   'underground-lair': 'https://cressida.shoutca.st:2199/rpc/theundergroundlair/streaminfo.get',

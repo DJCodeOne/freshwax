@@ -9,6 +9,7 @@
 // and remove the early return below.
 
 import type { APIRoute } from 'astro';
+import { successResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 

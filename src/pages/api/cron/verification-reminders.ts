@@ -9,7 +9,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[verification-reminders]');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 

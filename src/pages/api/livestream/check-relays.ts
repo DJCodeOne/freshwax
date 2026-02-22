@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('livestream/check-relays');
 

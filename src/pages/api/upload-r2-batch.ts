@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('upload-r2-batch');
 

@@ -2,7 +2,7 @@
 // Get user's Plus badge from KV storage (no Firebase reads)
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('get-user-badge');
 

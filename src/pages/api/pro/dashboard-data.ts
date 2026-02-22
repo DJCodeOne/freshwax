@@ -4,7 +4,7 @@
 // GET ?type=releases|merch|orders|stock|analytics|account|overview
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('pro/dashboard-data');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -52,9 +52,6 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-function jsonResponse(data: Record<string, unknown>, status = 200) {
-  return jsonResponse(data);
-}
 
 async function handleReleases(userId: string) {
   const releases = await queryCollection('releases', {

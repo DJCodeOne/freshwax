@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saGetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { d1GetAllCollections } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('vinyl/public');
 

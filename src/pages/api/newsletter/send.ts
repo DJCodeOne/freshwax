@@ -5,7 +5,7 @@ import { queryCollection, addDocument, updateDocument, atomicIncrement } from '.
 import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { escapeHtml, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { escapeHtml, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('newsletter/send');
 import { SITE_URL } from '../../../lib/constants';

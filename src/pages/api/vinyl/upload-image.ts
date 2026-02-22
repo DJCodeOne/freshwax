@@ -8,7 +8,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
-import { createLogger, ApiErrors, getR2Config } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, getR2Config, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[vinyl-upload-image]');
 

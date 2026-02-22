@@ -7,7 +7,7 @@ import { getDocument, queryCollection, clearAllMerchCache, clearCache } from '..
 import { saUpdateDocument, saSetDocument, getServiceAccountKeyWithProject } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const updateStockSchema = z.object({
   productId: z.string().min(1),

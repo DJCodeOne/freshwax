@@ -7,7 +7,7 @@ import { saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth, isAdmin } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const deleteReleaseSchema = z.object({
   releaseId: z.string().min(1),

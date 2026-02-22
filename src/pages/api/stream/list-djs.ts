@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger } from '../../../lib/api-utils';
+import { createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('stream/list-djs');
 

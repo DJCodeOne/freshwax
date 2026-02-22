@@ -10,7 +10,7 @@ import { saUpdateDocument, saDeleteDocument, saAddDocument, getServiceAccountKey
 import { d1DeleteMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { requireAdminAuth } from '../../lib/admin';
-import { ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib/api-utils';
 
 const deleteMerchSchema = z.object({
   productId: z.string().min(1),

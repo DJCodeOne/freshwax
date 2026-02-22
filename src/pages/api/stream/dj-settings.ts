@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saDeleteDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[dj-settings]');
 import { verifyAdminKey } from '../../../lib/admin';

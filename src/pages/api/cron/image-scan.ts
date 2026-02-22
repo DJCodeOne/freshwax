@@ -7,7 +7,7 @@
 // Logs findings to D1 — does NOT auto-convert (admin triggers reprocess manually).
 
 import type { APIRoute } from 'astro';
-import { ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[image-scan]');
 

@@ -2,7 +2,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, addDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('[reports]');
 

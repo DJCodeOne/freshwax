@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocumentsBatch, CACHE_TTL } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('get-ratings-batch');
 import { z } from 'zod';

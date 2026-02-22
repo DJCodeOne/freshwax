@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { parseMediaUrl, sanitizeUrl } from '../../../lib/url-parser';
-import { parseJsonBody, ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, fetchWithTimeout, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('playlist/add');
 import type { UserPlaylist, PlaylistItem, MediaPlatform } from '../../../lib/types';

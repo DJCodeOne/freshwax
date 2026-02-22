@@ -8,7 +8,7 @@
 import type { APIRoute } from 'astro';
 
 import { cleanupExpiredReservations } from '../../../lib/order-utils';
-import { ApiErrors, createLogger, timingSafeCompare } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[cleanup-reservations]');
 

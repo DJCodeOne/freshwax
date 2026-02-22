@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, verifyRequestUser } from '../../../lib/firebase-rest';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('playlist/update');
 import type { UserPlaylist } from '../../../lib/types';

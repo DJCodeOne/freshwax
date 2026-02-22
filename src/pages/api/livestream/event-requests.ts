@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, addDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import type { EventRequest } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('livestream/event-requests');
 import { z } from 'zod';
