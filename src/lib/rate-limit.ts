@@ -186,6 +186,13 @@ export const RateLimiters = {
     blockDurationMs: 10 * 60 * 1000  // 10 minute block if exceeded
   },
 
+  // Upload dedup: 1 per 10 minutes per artist+title combo
+  uploadDedup: {
+    maxRequests: 1,
+    windowMs: 10 * 60 * 1000,
+    blockDurationMs: 10 * 60 * 1000
+  },
+
   // Admin read operations: 120 per minute (admin key protected)
   admin: {
     maxRequests: 120,

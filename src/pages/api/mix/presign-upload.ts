@@ -55,6 +55,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { fileName, contentType, fileSize, mixId, artworkFileName, artworkContentType } = parseResult.data;
 
+    // Dedup check: prevent same mix filename from being uploaded twice within 10 minutes
+    if (!mixId && fileName) {
+      const cleanName = fileName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 30).toLowerCase();
+      const dedupKey = `upload-dedup:mix:${cleanName}`;
+      const dedupCheck = checkRateLimit(dedupKey, RateLimiters.uploadDedup);
+      if (!dedupCheck.allowed) {
+        return ApiErrors.conflict(
+          'This mix was uploaded recently. Wait 10 minutes before retrying.'
+        );
+      }
+    }
+
     // Validate file size (500MB max for large file upload path)
     const MAX_LARGE_FILE_SIZE = 500 * 1024 * 1024; // 500MB
     if (fileSize && fileSize > MAX_LARGE_FILE_SIZE) {

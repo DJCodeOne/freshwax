@@ -1,0 +1,435 @@
+---
+// src/pages/admin/releases/duplicates.astro
+// Admin tool to find and clean up duplicate releases
+
+import { requireAdminAuth } from '../../../lib/admin';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { queryCollection } from '../../../lib/firebase-rest';
+
+const authResult = await requireAdminAuth(Astro.request, Astro.locals);
+if (authResult) return Astro.redirect('/login');
+
+export const prerender = false;
+
+let releases: Record<string, unknown>[] = [];
+let errorMessage = '';
+
+try {
+  releases = await queryCollection('releases', { skipCache: true, limit: 500 });
+} catch (error) {
+  errorMessage = error instanceof Error ? error.message : 'Failed to load releases';
+}
+
+const releasesJson = JSON.stringify(releases);
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+---
+
+<AdminLayout title="Duplicate Releases" activeNav="releases">
+  <Fragment slot="actions">
+    <a href="/admin/releases/manage/" class="btn btn-outline">Back to Releases</a>
+  </Fragment>
+
+  {errorMessage && (
+    <div class="card mb-3" style="border-color: var(--accent-red);">
+      <div class="card-body" style="background: #fef2f2; color: var(--accent-red);">
+        <strong>Error:</strong> {errorMessage}
+      </div>
+    </div>
+  )}
+
+  <!-- Stats -->
+  <div id="statsSection" class="mb-4" style="display: none;">
+    <div class="stats-grid cols-3">
+      <div class="stat-card">
+        <div class="stat-label">Total Releases</div>
+        <div class="stat-value" id="statTotal">0</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-label">Duplicate Groups</div>
+        <div class="stat-value" id="statGroups">0</div>
+      </div>
+      <div class="stat-card highlight">
+        <div class="stat-label">Excess Copies</div>
+        <div class="stat-value" id="statExcess">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Duplicates -->
+  <div id="noDuplicates" class="card mb-4" style="display: none;">
+    <div class="card-body" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+      No duplicate releases found.
+    </div>
+  </div>
+
+  <!-- Duplicate Groups Container -->
+  <div id="groupsContainer"></div>
+
+  <!-- Delete Button -->
+  <div id="deleteBar" style="display: none; position: sticky; bottom: 1rem; z-index: 100; margin-top: 1rem;">
+    <div style="background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+      <span id="deleteCount" style="color: #9ca3af; font-size: 0.9rem;">0 selected for deletion</span>
+      <button id="deleteBtn" class="btn btn-danger" disabled>Delete Selected</button>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div id="confirmModal" class="dedup-modal hidden">
+    <div class="dedup-modal-overlay"></div>
+    <div class="dedup-modal-content">
+      <div style="font-size: 3rem; text-align: center; margin-bottom: 1rem;">&#x26A0;&#xFE0F;</div>
+      <h3 style="text-align: center; color: #fff; margin: 0 0 0.5rem;">Delete Duplicates?</h3>
+      <p id="confirmText" style="text-align: center; color: #9ca3af; margin: 0 0 0.5rem;">This will delete 0 releases.</p>
+      <p style="text-align: center; color: #ef4444; font-size: 0.9rem; margin: 0 0 1.5rem;">This deletes Firestore docs, tracks, R2 files, and D1 entries. Cannot be undone.</p>
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <button id="cancelBtn" class="btn btn-outline">Cancel</button>
+        <button id="confirmBtn" class="btn btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress Modal -->
+  <div id="progressModal" class="dedup-modal hidden">
+    <div class="dedup-modal-overlay"></div>
+    <div class="dedup-modal-content">
+      <h3 style="text-align: center; color: #fff; margin: 0 0 1rem;">Deleting Duplicates...</h3>
+      <div style="height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin-bottom: 0.5rem;">
+        <div id="progressFill" style="height: 100%; background: linear-gradient(90deg, #f59e0b, #ef4444); border-radius: 4px; transition: width 0.3s; width: 0%;"></div>
+      </div>
+      <p id="progressText" style="text-align: center; color: #9ca3af; font-size: 0.9rem; margin: 0 0 1rem;">Processing...</p>
+      <div id="progressDone" style="display: none; text-align: center;">
+        <button id="doneBtn" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ releasesJson }}>
+    window.__RELEASES_JSON = releasesJson;
+  </script>
+
+  <Fragment slot="scripts">
+    <script>
+      interface Release {
+        id: string;
+        artistName?: string;
+        releaseName?: string;
+        status?: string;
+        createdAt?: string;
+        processedAt?: string;
+        coverArtUrl?: string;
+        r2FolderName?: string;
+        tracks?: unknown[];
+      }
+
+      function normalize(str: string): string {
+        return (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      }
+
+      function formatDate(dateStr?: string): string {
+        if (!dateStr) return '-';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+
+      // Parse releases from define:vars
+      const releases: Release[] = JSON.parse((window as Window & { __RELEASES_JSON?: string }).__RELEASES_JSON || '[]');
+
+      // Group by normalized artist+title
+      const groups = new Map<string, Release[]>();
+      for (const r of releases) {
+        const key = normalize(r.artistName || '') + '_' + normalize(r.releaseName || '');
+        if (!key || key === '_') continue;
+        const group = groups.get(key);
+        if (group) {
+          group.push(r);
+        } else {
+          groups.set(key, [r]);
+        }
+      }
+
+      // Filter to only groups with duplicates, sorted by group size desc
+      const dupGroups = Array.from(groups.entries())
+        .filter(([, items]) => items.length > 1)
+        .sort((a, b) => b[1].length - a[1].length);
+
+      // Stats
+      const statsSection = document.getElementById('statsSection');
+      const statTotal = document.getElementById('statTotal');
+      const statGroups = document.getElementById('statGroups');
+      const statExcess = document.getElementById('statExcess');
+
+      const totalExcess = dupGroups.reduce((sum, [, items]) => sum + items.length - 1, 0);
+
+      if (statTotal) statTotal.textContent = String(releases.length);
+      if (statGroups) statGroups.textContent = String(dupGroups.length);
+      if (statExcess) statExcess.textContent = String(totalExcess);
+      if (statsSection) statsSection.style.display = '';
+
+      const container = document.getElementById('groupsContainer');
+      const noDuplicates = document.getElementById('noDuplicates');
+      const deleteBar = document.getElementById('deleteBar');
+      const deleteBtn = document.getElementById('deleteBtn');
+      const deleteCountEl = document.getElementById('deleteCount');
+
+      if (dupGroups.length === 0) {
+        if (noDuplicates) noDuplicates.style.display = '';
+      } else {
+        if (deleteBar) deleteBar.style.display = '';
+
+        for (const [groupKey, items] of dupGroups) {
+          // Sort: live first, then by createdAt newest first
+          items.sort((a, b) => {
+            if (a.status === 'live' && b.status !== 'live') return -1;
+            if (b.status === 'live' && a.status !== 'live') return 1;
+            const da = new Date(a.createdAt || 0).getTime();
+            const db = new Date(b.createdAt || 0).getTime();
+            return db - da;
+          });
+
+          const card = document.createElement('div');
+          card.className = 'card mb-4';
+          card.innerHTML = `
+            <div class="card-header">
+              <h2 style="font-size: 1.1rem;">${escapeHtml(items[0].artistName || 'Unknown')} - ${escapeHtml(items[0].releaseName || 'Untitled')}</h2>
+              <span style="color: #9ca3af; font-size: 0.85rem;">${items.length} copies</span>
+            </div>
+            <div class="card-body" style="padding: 0;">
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="width: 60px; text-align: center;">Keep</th>
+                      <th scope="col" style="width: 60px; text-align: center;">Delete</th>
+                      <th scope="col" style="width: 56px;"></th>
+                      <th scope="col">Release ID</th>
+                      <th scope="col">Status</th>
+                      <th scope="col">Created</th>
+                      <th scope="col">Tracks</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${items.map((item, idx) => {
+                      const isDefaultKeep = item.status === 'live' || (idx === 0 && !items.some(i => i.status === 'live'));
+                      return `
+                        <tr data-id="${escapeHtml(item.id)}" data-group="${escapeHtml(groupKey)}">
+                          <td style="text-align: center;">
+                            <input type="radio" name="keep-${escapeHtml(groupKey)}" value="${escapeHtml(item.id)}" class="keep-radio" ${isDefaultKeep ? 'checked' : ''} />
+                          </td>
+                          <td style="text-align: center;">
+                            <input type="checkbox" class="delete-checkbox" data-id="${escapeHtml(item.id)}" ${!isDefaultKeep ? 'checked' : ''} />
+                          </td>
+                          <td>
+                            ${item.coverArtUrl ? `<img src="${escapeHtml(item.coverArtUrl as string)}" alt="" style="width: 40px; height: 40px; border-radius: 4px; object-fit: cover;" loading="lazy" />` : '<div style="width:40px;height:40px;background:#333;border-radius:4px;"></div>'}
+                          </td>
+                          <td style="font-family: monospace; font-size: 0.8rem; word-break: break-all;">${escapeHtml(item.id)}</td>
+                          <td><span class="badge badge-${escapeHtml(item.status || 'draft')}">${escapeHtml(item.status || 'draft')}</span></td>
+                          <td style="font-size: 0.85rem; color: #9ca3af;">${formatDate(item.createdAt)}</td>
+                          <td>${Array.isArray(item.tracks) ? item.tracks.length : 0}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+
+          container?.appendChild(card);
+        }
+
+        // Wire up keep radios: when "keep" changes, uncheck that item's delete box and check others
+        document.querySelectorAll<HTMLInputElement>('.keep-radio').forEach(radio => {
+          radio.addEventListener('change', () => {
+            const groupKey = radio.closest('tr')?.dataset.group;
+            if (!groupKey) return;
+            const rows = document.querySelectorAll<HTMLTableRowElement>(`tr[data-group="${groupKey}"]`);
+            rows.forEach(row => {
+              const cb = row.querySelector<HTMLInputElement>('.delete-checkbox');
+              if (!cb) return;
+              cb.checked = row.dataset.id !== radio.value;
+            });
+            updateDeleteCount();
+          });
+        });
+
+        // Wire up delete checkboxes
+        document.querySelectorAll<HTMLInputElement>('.delete-checkbox').forEach(cb => {
+          cb.addEventListener('change', () => {
+            // If unchecking, set this as the "keep" in its group
+            if (!cb.checked) {
+              const row = cb.closest('tr');
+              const groupKey = row?.dataset.group;
+              if (groupKey && row) {
+                const radio = row.querySelector<HTMLInputElement>('.keep-radio');
+                if (radio) radio.checked = true;
+                // Check all other delete boxes in this group
+                document.querySelectorAll<HTMLTableRowElement>(`tr[data-group="${groupKey}"]`).forEach(r => {
+                  if (r !== row) {
+                    const otherCb = r.querySelector<HTMLInputElement>('.delete-checkbox');
+                    if (otherCb) otherCb.checked = true;
+                  }
+                });
+              }
+            }
+            updateDeleteCount();
+          });
+        });
+
+        function updateDeleteCount(): void {
+          const checked = document.querySelectorAll<HTMLInputElement>('.delete-checkbox:checked');
+          const count = checked.length;
+          if (deleteCountEl) deleteCountEl.textContent = `${count} selected for deletion`;
+          if (deleteBtn) (deleteBtn as HTMLButtonElement).disabled = count === 0;
+        }
+
+        updateDeleteCount();
+
+        // Delete button handler
+        deleteBtn?.addEventListener('click', () => {
+          const checked = document.querySelectorAll<HTMLInputElement>('.delete-checkbox:checked');
+          const count = checked.length;
+          if (count === 0) return;
+
+          const confirmText = document.getElementById('confirmText');
+          if (confirmText) confirmText.textContent = `This will permanently delete ${count} release${count > 1 ? 's' : ''}.`;
+          document.getElementById('confirmModal')?.classList.remove('hidden');
+        });
+
+        // Cancel
+        document.getElementById('cancelBtn')?.addEventListener('click', () => {
+          document.getElementById('confirmModal')?.classList.add('hidden');
+        });
+        document.querySelector('#confirmModal .dedup-modal-overlay')?.addEventListener('click', () => {
+          document.getElementById('confirmModal')?.classList.add('hidden');
+        });
+
+        // Confirm delete
+        document.getElementById('confirmBtn')?.addEventListener('click', async () => {
+          document.getElementById('confirmModal')?.classList.add('hidden');
+          document.getElementById('progressModal')?.classList.remove('hidden');
+
+          const checked = document.querySelectorAll<HTMLInputElement>('.delete-checkbox:checked');
+          const ids = Array.from(checked).map(cb => cb.dataset.id).filter(Boolean) as string[];
+
+          const progressFill = document.getElementById('progressFill');
+          const progressText = document.getElementById('progressText');
+          const progressDone = document.getElementById('progressDone');
+
+          // Process in batches of 10
+          const batchSize = 10;
+          let processed = 0;
+          let succeeded = 0;
+          let failed = 0;
+
+          for (let i = 0; i < ids.length; i += batchSize) {
+            const batch = ids.slice(i, i + batchSize);
+            if (progressText) progressText.textContent = `Deleting batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(ids.length / batchSize)}...`;
+
+            try {
+              const response = await fetch('/api/admin/cleanup-duplicates/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Admin-Key': (window as Window & { ADMIN_KEY?: string }).ADMIN_KEY || ''
+                },
+                body: JSON.stringify({ releaseIds: batch })
+              });
+
+              if (!response.ok) {
+                failed += batch.length;
+              } else {
+                const data = await response.json();
+                if (data.results) {
+                  for (const r of data.results as Array<{ success: boolean }>) {
+                    if (r.success) succeeded++;
+                    else failed++;
+                  }
+                }
+              }
+            } catch {
+              failed += batch.length;
+            }
+
+            processed += batch.length;
+            const pct = Math.round((processed / ids.length) * 100);
+            if (progressFill) progressFill.style.width = `${pct}%`;
+          }
+
+          if (progressFill) progressFill.style.width = '100%';
+          if (progressText) progressText.textContent = `Done: ${succeeded} deleted, ${failed} failed`;
+          if (progressDone) progressDone.style.display = '';
+        });
+
+        // Done button
+        document.getElementById('doneBtn')?.addEventListener('click', () => {
+          location.reload();
+        });
+      }
+
+      function escapeHtml(str: string): string {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+    </script>
+  </Fragment>
+</AdminLayout>
+
+<style>
+  .dedup-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dedup-modal.hidden {
+    display: none;
+  }
+
+  .dedup-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .dedup-modal-content {
+    position: relative;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .dedup-modal-content .btn {
+    min-width: 100px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+  }
+
+  .dedup-modal-content .btn-danger {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+  }
+
+  .dedup-modal-content .btn-danger:hover {
+    background: #b91c1c;
+  }
+
+  .dedup-modal-content .btn-outline {
+    background: transparent;
+    border: 1px solid #555;
+    color: #fff;
+  }
+
+  .dedup-modal-content .btn-outline:hover {
+    background: #333;
+  }
+</style>

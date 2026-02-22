@@ -108,6 +108,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
       releaseId,
     } = parseResult.data;
 
+    // Dedup check: prevent same artist+title from being uploaded twice within 10 minutes
+    if (!isAdmin && !releaseId && artistName && releaseName) {
+      const dedupKey = `upload-dedup:${sanitize(artistName)}:${sanitize(releaseName)}`;
+      const dedupCheck = checkRateLimit(dedupKey, RateLimiters.uploadDedup);
+      if (!dedupCheck.allowed) {
+        return ApiErrors.conflict(
+          'This release was uploaded recently. Wait 10 minutes before retrying, or use a different title.'
+        );
+      }
+    }
+
     // Validate all file types
     for (const file of files) {
       if (!ALLOWED_TYPES[file.contentType]) {
