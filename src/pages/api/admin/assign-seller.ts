@@ -141,62 +141,70 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('No products to update. Provide productIds or searchTerm.');
     }
 
+    // Build update payload once (same for every product)
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date().toISOString()
+    };
+
+    // Only set seller fields if sellerId is provided
+    if (sellerId) {
+      updateData.sellerId = sellerId;
+
+      // For releases, also set artistId
+      if (collectionName === 'releases') {
+        updateData.artistId = sellerId;
+        updateData.submitterId = sellerId;
+      }
+
+      // For merch, also set supplierId (used by dashboard queries)
+      if (collectionName === 'merch') {
+        updateData.supplierId = sellerId;
+      }
+    }
+
+    // Add seller name if provided
+    if (sellerName) {
+      updateData.sellerName = sellerName;
+      if (collectionName === 'releases') {
+        updateData.artistName = sellerName;
+      }
+      if (collectionName === 'merch') {
+        updateData.supplierName = sellerName;
+      }
+    }
+
+    // Add category if provided (for fixing category grouping)
+    if (category) {
+      updateData.category = category;
+    }
+
+    // Add categoryName if provided (for fixing display name in dropdowns)
+    if (categoryName) {
+      updateData.categoryName = categoryName;
+    }
+
+    // Add productType if provided (for fixing filter dropdown)
+    if (productType) {
+      updateData.productType = productType;
+    }
+
+    // Batch update all products in parallel (fixes N+1 sequential awaits)
+    const settled = await Promise.allSettled(
+      idsToUpdate.map((productId) =>
+        saUpdateDocument(serviceAccountKey, projectId, collectionName, productId, updateData)
+          .then(() => productId)
+      )
+    );
+
     const results: string[] = [];
     const errors: string[] = [];
 
-    for (const productId of idsToUpdate) {
-      try {
-        const updateData: Record<string, unknown> = {
-          updatedAt: new Date().toISOString()
-        };
-
-        // Only set seller fields if sellerId is provided
-        if (sellerId) {
-          updateData.sellerId = sellerId;
-
-          // For releases, also set artistId
-          if (collectionName === 'releases') {
-            updateData.artistId = sellerId;
-            updateData.submitterId = sellerId;
-          }
-
-          // For merch, also set supplierId (used by dashboard queries)
-          if (collectionName === 'merch') {
-            updateData.supplierId = sellerId;
-          }
-        }
-
-        // Add seller name if provided
-        if (sellerName) {
-          updateData.sellerName = sellerName;
-          if (collectionName === 'releases') {
-            updateData.artistName = sellerName;
-          }
-          if (collectionName === 'merch') {
-            updateData.supplierName = sellerName;
-          }
-        }
-
-        // Add category if provided (for fixing category grouping)
-        if (category) {
-          updateData.category = category;
-        }
-
-        // Add categoryName if provided (for fixing display name in dropdowns)
-        if (categoryName) {
-          updateData.categoryName = categoryName;
-        }
-
-        // Add productType if provided (for fixing filter dropdown)
-        if (productType) {
-          updateData.productType = productType;
-        }
-
-        await saUpdateDocument(serviceAccountKey, projectId, collectionName, productId, updateData);
-        results.push(productId);
-        log.info(`[assign-seller] Updated ${collectionName}/${productId} -> sellerId: ${sellerId}`);
-      } catch (err: unknown) {
-        errors.push(`${productId}: ${err}`);
+    for (const result of settled) {
+      if (result.status === 'fulfilled') {
+        results.push(result.value);
+        log.info(`[assign-seller] Updated ${collectionName}/${result.value} -> sellerId: ${sellerId}`);
+      } else {
+        errors.push(String(result.reason));
       }
     }
 
