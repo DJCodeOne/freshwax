@@ -715,7 +715,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             currentIdToken = await user.getIdToken();
           }
         });
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('[Admin] Firebase init error:', err);
       }
     })();
@@ -737,7 +737,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         var mins = date.getMinutes().toString().padStart(2, '0');
         
         return day + ' ' + month + ' ' + year + ' at ' + hours + ':' + mins;
-      } catch (e: unknown) {
+      } catch (e) {
         return 'Unknown';
       }
     }
@@ -840,7 +840,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             btn.textContent = '🔄 Refresh';
           }
         })
-        .catch(function(error: unknown) {
+        .catch(function(error) {
           alert('❌ Error: ' + (error instanceof Error ? error.message : String(error)));
           btn.disabled = false;
           btn.textContent = '🔄 Refresh';
@@ -1147,7 +1147,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           saveBtn.disabled = false;
         }
       })
-      .catch(function(error: unknown) {
+      .catch(function(error) {
         alert('❌ Error: ' + (error instanceof Error ? error.message : String(error)));
         saveBtn.textContent = '✓ Save All Changes';
         saveBtn.disabled = false;

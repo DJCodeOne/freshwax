@@ -796,7 +796,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         };
       }
       return {};
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Error loading customer data:', e);
       return {};
     }
@@ -825,7 +825,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         console.error('[Dashboard] API error:', data.error);
         return [];
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Dashboard] Fetch error:', error);
       return [];
     }
@@ -986,7 +986,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         container.innerHTML = '<div class="empty-state"><p style="color: #fff;">Could not load mixes</p></div>';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Dashboard] Mixes fetch error:', error);
       container.innerHTML = '<div class="empty-state"><p style="color: #fff;">Error loading mixes</p></div>';
     }
@@ -1009,7 +1009,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         badge.textContent = count;
         badge.style.display = count > 0 ? 'inline-flex' : 'none';
       }
-    } catch (err: unknown) {
+    } catch (err) {
       // Silent fail
     }
   }
@@ -1136,7 +1136,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   card.style.opacity = '1';
                   card.style.pointerEvents = 'auto';
                 }
-              } catch (err: unknown) {
+              } catch (err) {
                 card.style.opacity = '1';
                 card.style.pointerEvents = 'auto';
               }
@@ -1200,7 +1200,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Could not load wishlist</p></div>';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Dashboard] Wishlist fetch error:', error);
       container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Error loading wishlist</p></div>';
     }
@@ -1223,7 +1223,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         badge.textContent = count;
         badge.style.display = count > 0 ? 'inline-flex' : 'none';
       }
-    } catch (err: unknown) {
+    } catch (err) {
       // Silent fail
     }
   }
@@ -1335,7 +1335,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   card.style.opacity = '1';
                   card.style.pointerEvents = 'auto';
                 }
-              } catch (err: unknown) {
+              } catch (err) {
                 card.style.opacity = '1';
                 card.style.pointerEvents = 'auto';
               }
@@ -1345,7 +1345,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Could not load artists</p></div>';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Dashboard] Following fetch error:', error);
       container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><p style="color: #fff;">Error loading artists</p></div>';
     }
@@ -1404,7 +1404,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           proDashboardBtn.title = 'Available for artists & merch sellers only';
         }
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Dashboard] Error checking partner status:', error);
     }
   }
@@ -1443,7 +1443,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         await sendEmailVerification(user);
         btn.textContent = 'Sent!';
         setTimeout(() => { btn.textContent = 'Resend Email'; btn.disabled = false; }, 3000);
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('[Dashboard] Resend verification error:', err);
         btn.textContent = 'Failed';
         setTimeout(() => { btn.textContent = 'Resend Email'; btn.disabled = false; }, 3000);
@@ -1742,7 +1742,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         button.classList.remove('downloading');
       }, 2000);
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Download error:', error);
       button.innerHTML = '✗ Error';
       setTimeout(() => {
@@ -1762,7 +1762,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     let tracks = [];
     try {
       tracks = JSON.parse(button.dataset.tracks || '[]');
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Failed to parse tracks:', e);
     }
 
@@ -2013,7 +2013,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         document.body.style.overflow = '';
       }, 2000);
 
-    } catch (error: unknown) {
+    } catch (error) {
       // Clean up animation state
       progressFill.classList.remove('creating');
 
@@ -2243,7 +2243,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       try {
         await signOut(auth);
         window.location.href = '/';
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Logout error:', error);
       }
     });
@@ -2284,7 +2284,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           } else {
             lookupError.textContent = data.error || 'Could not verify postcode';
           }
-        } catch (error: unknown) {
+        } catch (error) {
           lookupError.textContent = 'Failed to lookup postcode';
         }
         
@@ -2354,7 +2354,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           btn.textContent = 'Save Changes';
           btn.disabled = false;
         }, 2000);
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Save error:', error);
         btn.textContent = 'Error - Try Again';
         btn.disabled = false;
@@ -2425,7 +2425,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 data.timestamp = Date.now();
                 sessionStorage.setItem(cacheKey, JSON.stringify(data));
               }
-            } catch (e: unknown) {
+            } catch (e) {
               console.warn('Failed to update avatar cache:', e);
             }
             
@@ -2473,7 +2473,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             avatarStatus.textContent = result.error || 'Upload failed';
             avatarStatus.className = 'avatar-status error';
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('Avatar upload error:', error);
           avatarStatus.textContent = 'Upload failed. Please try again.';
           avatarStatus.className = 'avatar-status error';
@@ -2529,7 +2529,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 data.timestamp = Date.now();
                 sessionStorage.setItem(cacheKey, JSON.stringify(data));
               }
-            } catch (e: unknown) {
+            } catch (e) {
               console.warn('Failed to update avatar cache:', e);
             }
             
@@ -2581,7 +2581,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             avatarStatus.textContent = result.error || 'Failed to remove';
             avatarStatus.className = 'avatar-status error';
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('Remove avatar error:', error);
           avatarStatus.textContent = 'Failed to remove. Please try again.';
           avatarStatus.className = 'avatar-status error';
@@ -2632,7 +2632,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         a.remove();
         URL.revokeObjectURL(url);
         if (gdprStatus) gdprStatus.textContent = 'Downloaded!';
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('GDPR export error:', e);
         if (gdprStatus) gdprStatus.textContent = 'Export failed. Try again.';
       } finally {
@@ -2803,7 +2803,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           mixesSection.style.display = 'none';
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Error loading mixes:', e);
         mixesSection.style.display = 'none';
       }
@@ -2925,7 +2925,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           confirmBtn.disabled = false;
         }, 1500);
         
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Download error:', error);
         confirmBtn.textContent = 'Error - Try Again';
         setTimeout(() => {
@@ -3092,7 +3092,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           throw new Error(result.error || 'Failed to delete account');
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Delete account error:', error);
         confirmBtn.textContent = 'Error - Try Again';
         confirmBtn.classList.remove('deleting');
@@ -3154,7 +3154,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Render transactions
         renderTransactions(creditTransactions);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading credit balance:', error);
     }
   }
@@ -3303,7 +3303,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (streamTimeUsed) streamTimeUsed.textContent = Math.floor(result.usage.streamMinutesToday / 60);
       if (streamTimeLimit) streamTimeLimit.textContent = result.limits.streamHoursPerDay;
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading subscription:', error);
     }
   }
@@ -3434,14 +3434,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 referralCodeDisplay.textContent = 'Click to retry';
                 referralNote.textContent = result.error || 'Failed to generate code';
               }
-            } catch (err: unknown) {
+            } catch (err) {
               referralCodeDisplay.textContent = 'Click to retry';
               referralNote.textContent = 'Error generating code';
             }
           }
         });
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading referral code:', error);
       const referralCodeDisplay = document.getElementById('referralCodeDisplay');
       if (referralCodeDisplay) referralCodeDisplay.textContent = 'Error loading';
@@ -3479,7 +3479,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (skipsUsedEl) skipsUsedEl.textContent = skipData.used || 0;
         if (skipsLimitEl) skipsLimitEl.textContent = skipData.limit || 3;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Dashboard] Error loading Plus stats:', error);
     }
   }
@@ -3529,7 +3529,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           currentBadgePreview.textContent = BADGE_EMOJIS[data.badge] || '👑';
         }
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Error loading badge:', err);
     }
 
@@ -3596,7 +3596,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           badgeSaveStatus.classList.add('error');
           saveBadgeBtn.disabled = false;
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('Error saving badge:', err);
         badgeSaveStatus.textContent = 'Error saving badge';
         badgeSaveStatus.classList.add('error');
@@ -3662,7 +3662,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         promoMessage.className = 'promo-message error';
         discountedPriceEl?.classList.add('hidden');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Promo validation error:', error);
       promoMessage.textContent = 'Failed to validate code. Please try again.';
       promoMessage.className = 'promo-message error';
@@ -3756,7 +3756,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         throw new Error(result.error || 'Failed to create checkout session');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Stripe upgrade error:', error);
       alert('Failed to start upgrade process. Please try again.');
       resetPaymentButtons();
@@ -3837,7 +3837,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
       }, 500);
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('PayPal upgrade error:', error);
       alert(error instanceof Error ? error.message : 'Failed to start PayPal payment. Please try again.');
       resetPaymentButtons();
@@ -4057,7 +4057,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             errorEl.textContent = result.error || 'Failed to redeem gift card';
             errorEl.style.display = 'block';
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('Redeem error:', error);
           errorEl.textContent = 'Something went wrong. Please try again.';
           errorEl.style.display = 'block';
@@ -4177,7 +4177,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           initGoPlusModal();
           initZipModal();
 
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('[Dashboard] Error loading dashboard:', error);
           // Still show dashboard even on error
           const loadingScreen = document.getElementById('loadingScreen');

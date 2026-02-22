@@ -856,7 +856,7 @@ const getStockBadgeClass = (stock) => {
       if (!result.success) {
         console.error('Failed to save colors/sizes:', result.error);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error saving colors/sizes:', error);
     }
   }
@@ -1140,7 +1140,7 @@ const getStockBadgeClass = (stock) => {
         } else {
           alert('Failed to upload: ' + (result.error || result.details || 'Unknown error'));
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Upload error:', error);
         alert('Failed to upload cropped image: ' + (error instanceof Error ? error.message : String(error)));
       }
@@ -1198,7 +1198,7 @@ const getStockBadgeClass = (stock) => {
           console.error('Upload failed:', result);
           alert('Failed to upload: ' + (result.error || result.details || 'Unknown error'));
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Upload error:', error);
         alert('Failed to upload original image: ' + (error instanceof Error ? error.message : String(error)));
       }
@@ -1478,7 +1478,7 @@ const getStockBadgeClass = (stock) => {
       } else {
         alert(`Failed to upload ${file.name}: ${result.error}`);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Upload error:', error);
       alert(`Failed to upload ${file.name}`);
     }
@@ -1512,7 +1512,7 @@ const getStockBadgeClass = (stock) => {
         console.error('Failed to save images:', result.error, result.details);
         alert('Failed to save images: ' + (result.details || result.error));
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Save error:', error);
       alert('Save error: ' + error);
     }

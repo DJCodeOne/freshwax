@@ -176,7 +176,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       loadingState.style.display = 'none';
       errorState.style.display = 'block';
       errorMessage.textContent = error instanceof Error ? error.message : String(error);
@@ -260,7 +260,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btn.textContent = 'Link PayPal';
         btn.disabled = false;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       alert('Failed to link PayPal');
       btn.textContent = 'Link PayPal';
       btn.disabled = false;
@@ -283,7 +283,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to update');
-    } catch (e: unknown) {
+    } catch (e) {
       alert('Failed to update');
     }
   }
@@ -298,7 +298,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const data = await res.json();
       if (data.success) window.location.reload();
       else alert(data.error || 'Failed to set method');
-    } catch (e: unknown) {
+    } catch (e) {
       alert('Failed to set method');
     }
   }
@@ -381,7 +381,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         throw new Error(data.error || 'Failed to start Connect setup');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       alert(error instanceof Error ? error.message : String(error));
       btn.disabled = false;
       btn.textContent = 'Try Again';

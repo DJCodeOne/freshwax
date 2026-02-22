@@ -229,7 +229,7 @@ async function processZip(file) {
           releaseName = parsed.releaseName || parsed.title || parsed.album || "";
           debug(`Parsed JSON - Artist: ${artistName}, Release: ${releaseName}`);
           debug(`JSON keys: ${Object.keys(parsed).join(', ')}`);
-        } catch (e: unknown) {
+        } catch (e) {
           debug(`ERROR parsing JSON: ${e instanceof Error ? e.message : String(e)}`);
           console.error("Could not parse JSON:", name, e);
         }
@@ -326,7 +326,7 @@ async function processZip(file) {
       extractedData.releaseName = prompt("Enter release name:") || "Unknown Release";
     }
 
-  } catch (err: unknown) {
+  } catch (err) {
     console.error("ZIP processing error:", err);
     setStatus(`Failed to process ZIP: ${err instanceof Error ? err.message : String(err)}`, true);
   }
@@ -519,7 +519,7 @@ uploadBtn.onclick = async () => {
     extractedData = null;
     extractedSection.style.display = "none";
 
-  } catch (err: unknown) {
+  } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
     debug(`UPLOAD ERROR: ${errMsg}`);
     console.error("Upload error:", err);
@@ -544,7 +544,7 @@ async function checkAudioProcessor() {
     if (!response.ok) return false;
     const data = await response.json();
     return data.status === 'healthy' && data.r2Configured;
-  } catch (e: unknown) {
+  } catch (e) {
     debug(`Audio processor not available: ${e instanceof Error ? e.message : String(e)}`);
     return false;
   }
@@ -610,7 +610,7 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
         debug(`Track ${i + 1} processing failed: ${result.error}`);
         processedTracks.push({ ...track, error: result.error });
       }
-    } catch (err: unknown) {
+    } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       debug(`Track ${i + 1} processing error: ${errMsg}`);
       processedTracks.push({ ...track, error: errMsg });
@@ -639,7 +639,7 @@ async function processAudioTracks(releaseId, baseFolder, tracks) {
       if (!updateResult.success) {
         debug(`Failed to update release: ${updateResult.error}`);
       }
-    } catch (err: unknown) {
+    } catch (err) {
       debug(`Update error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
@@ -767,7 +767,7 @@ manualBtn.onclick = async () => {
     coverInput.value = "";
     tracksInput.value = "";
 
-  } catch (err: unknown) {
+  } catch (err) {
     console.error("Upload error:", err);
     setStatus(`Error: ${err instanceof Error ? err.message : String(err)}`, true);
     manualBtn.disabled = false;

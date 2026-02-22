@@ -1322,9 +1322,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           if (miniPlayIcon) miniPlayIcon.classList.remove('hidden');
           if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
         }
-      } catch (err: unknown) {
+      } catch (err) {
       }
-      
+
       // 2. Pause shuffle widget if it's playing
       try {
         if (window.shuffleWidgetAudio && !window.shuffleWidgetAudio.paused) {
@@ -1346,10 +1346,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           if (shuffleCtrlPlay) shuffleCtrlPlay.classList.remove('hidden');
           if (shuffleCtrlPause) shuffleCtrlPause.classList.add('hidden');
         }
-      } catch (err: unknown) {
+      } catch (err) {
       }
     }
-    
+
     function initItemPageAudioControl() {
       
       // Get all play buttons on the item page
@@ -1419,7 +1419,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           sessionStorage.removeItem('fw_auth_cache');
         }
       }
-    } catch (e: unknown) { /* Ignore cache errors */ }
+    } catch (e) { /* Ignore cache errors */ }
     return false;
   }
 
@@ -1495,7 +1495,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   avatarUrl: profile.avatarUrl || user.photoURL || null
                 };
               }
-            } catch (e: unknown) { /* ignore parse errors */ }
+            } catch (e) { /* ignore parse errors */ }
           }
           
           // Fetch from consolidated API endpoint
@@ -1508,7 +1508,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             if (profile.success) {
               // Cache the result
               profile.cachedAt = Date.now();
-              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e: unknown) {}
+              try { sessionStorage.setItem(cacheKey, JSON.stringify(profile)); } catch (e) {}
               // Firebase Auth displayName is the public name (same as Header.astro)
               const displayName = user.displayName || profile.partnerDisplayName || user.email?.split('@')[0] || 'User';
               return {
@@ -1518,7 +1518,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             }
           }
           return { name: user.displayName || user.email?.split('@')[0] || 'User', avatarUrl: user.photoURL || null };
-        } catch (err: unknown) {
+        } catch (err) {
           return { name: user.displayName || user.email?.split('@')[0] || 'User', avatarUrl: user.photoURL || null };
         }
       }
@@ -1542,7 +1542,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         }
       }
       
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('[Comments] Firebase init error:', err);
     }
   }
@@ -1790,7 +1790,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       const data = await response.json();
       if (data.gifs) renderGiphyResults(data.gifs);
       else giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Failed to load GIFs</p>';
-    } catch (err: unknown) {
+    } catch (err) {
       giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Failed to load GIFs</p>';
     }
   }
@@ -1818,7 +1818,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         } else {
           renderGiphyResults(data.gifs);
         }
-      } catch (err: unknown) {
+      } catch (err) {
         giphyResults.innerHTML = '<p class="col-span-full text-center text-red-400 py-4">Search failed</p>';
       }
     }, 300);
@@ -1984,7 +1984,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           followBtn.classList.add('following');
           followText.textContent = 'Following';
         }
-      } catch (err: unknown) {
+      } catch (err) {
         // Silent fail
       }
     }
@@ -2046,7 +2046,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             followText.textContent = 'Follow';
           }
         }
-      } catch (err: unknown) {
+      } catch (err) {
         // Revert on error
         if (isFollowing) {
           followBtn.classList.add('following');
@@ -2132,7 +2132,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           wishlistBtn.classList.add('active');
           wishlistBtn.title = 'Remove from wishlist';
         }
-      } catch (err: unknown) {
+      } catch (err) {
         // Silent fail
       }
     }
@@ -2202,7 +2202,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           }
           showToast('Failed to update wishlist', 'error');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         // Revert on error
         if (isInWishlist) {
           wishlistBtn.classList.add('active');

@@ -1091,7 +1091,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       // Inject JSON-LD structured data
       injectJsonLd(listing);
 
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Error loading listing:', err);
       loadingState.style.display = 'none';
       errorState.style.display = 'block';
@@ -1575,7 +1575,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
       // Add to localStorage bag
       let bagRaw = '[]';
-      try { bagRaw = localStorage.getItem('freshwax_bag') || bagRaw; } catch (e: unknown) {}
+      try { bagRaw = localStorage.getItem('freshwax_bag') || bagRaw; } catch (e) {}
       let bag = JSON.parse(bagRaw);
 
       // Check if already in bag
@@ -1590,7 +1590,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       }
 
       bag.push(item);
-      try { localStorage.setItem('freshwax_bag', JSON.stringify(bag)); } catch (e: unknown) {}
+      try { localStorage.setItem('freshwax_bag', JSON.stringify(bag)); } catch (e) {}
 
       // Update bag count in header if exists
       const bagCountEl = document.querySelector('.bag-count');
@@ -1609,7 +1609,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         btn.disabled = false;
       }, 2000);
 
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('Error adding to bag:', err);
       btn.innerHTML = 'Error - Try Again';
       setTimeout(() => {

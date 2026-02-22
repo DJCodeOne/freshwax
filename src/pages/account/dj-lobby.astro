@@ -1712,7 +1712,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const response = await fetch(url, { ...options, signal: controller.signal });
           clearTimeout(timeoutId);
           return response;
-        } catch (e: unknown) {
+        } catch (e) {
           clearTimeout(timeoutId);
           throw e;
         }
@@ -1727,7 +1727,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         response = await fetchWithTimeout(`/api/get-user-type/?uid=${userId}&email=${userEmail}`, {
           headers: _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {}
         });
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('[DJ Lobby] get-user-type fetch failed:', e);
         showAccessDenied();
         return;
@@ -1773,7 +1773,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         eligibilityResponse = await fetchWithTimeout(`/api/check-dj-eligibility/?userId=${userId}`, {
           headers: _idToken ? { 'Authorization': `Bearer ${_idToken}` } : {}
         });
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('[DJ Lobby] check-dj-eligibility fetch failed:', e);
         showNotEligible({ reason: 'error', message: 'Could not verify eligibility. Please try again.' });
         return;
@@ -1814,7 +1814,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       initLobby();
       updateProFeatures();
       lobbyInitialized = true;
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('[DJ Lobby] Access check failed:', e);
       showAccessDenied();
     }
@@ -1935,7 +1935,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         currentBypassStatus = { ...result, ...eligibility };
         updateBypassUI(result);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Error checking status:', error);
     }
   }
@@ -2022,7 +2022,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btn.disabled = false;
         btn.textContent = '🎫 Request Bypass Access';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Submit error:', error);
       alert('Failed to submit request. Please try again.');
       btn.disabled = false;
@@ -2051,7 +2051,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         alert(result.error || 'Failed to cancel request');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Cancel error:', error);
     }
   });
@@ -2074,7 +2074,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         })
       });
       await checkBypassStatus(currentBypassStatus || {});
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Bypass] Resubmit error:', error);
     }
   });
@@ -2136,7 +2136,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btnText?.classList.remove('hidden');
         btnSpinner?.classList.add('hidden');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[QuickAccess] Redeem error:', error);
       errorEl.textContent = 'Failed to redeem code. Please try again.';
       errorEl.classList.remove('hidden');
@@ -2215,7 +2215,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           source.nowPlaying = nowPlaying;
           source.listeners = result.listeners || 0;
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.warn('[Relay] Check failed for', source.name, err instanceof Error ? err.message : String(err));
         source.isCurrentlyLive = false;
       }
@@ -2854,7 +2854,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     window.addEventListener('beforeunload', async () => {
       try {
         await cleanupPusher();
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Cleanup error:', e);
       }
     });
@@ -2877,7 +2877,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
 
         await cleanupPusher();
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('View Transition cleanup error:', e);
       }
     });
@@ -2904,7 +2904,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.cleaned) {
         log('Chat cleanup complete via API:', result.messagesDeleted, 'messages deleted');
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.warn('Chat cleanup skipped:', e instanceof Error ? e.message : String(e));
     }
   }
@@ -2920,7 +2920,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ action: 'record-stream-end' })
       });
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Record stream end error:', e);
     }
   }
@@ -3156,7 +3156,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         const result = await response.json();
         if (!result.success) throw new Error(result.error);
         console.debug('[Broadcast] Updated via API:', { mode, hlsUrl });
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[Broadcast] Failed to update broadcast mode:', error);
       }
     }
@@ -3571,7 +3571,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       limiter.connect(icecastAudioContext.destination);
 
       console.debug('[Audio] Icecast analysers initialized with K-weighting, GainNode, and limiter');
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('[Audio] Icecast analyser setup error:', e);
     }
   }
@@ -3628,7 +3628,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         updateYoutubeIndicator('connected');
         updateTwitchIndicator('connected');
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.debug('[RelayHealth] Check failed:', e instanceof Error ? e.message : String(e));
       // On error, assume connected if stream is live
       if (currentStream) {
@@ -3679,7 +3679,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         handleObsPreviewFailure('HTTP ' + response.status);
       }
-    } catch (e: unknown) {
+    } catch (e) {
       handleObsPreviewFailure(e instanceof Error ? e.message : String(e));
     }
   }
@@ -4134,7 +4134,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           }, 1500);
         }
       }, 'image/jpeg', 0.9);
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Thumbnail capture failed:', e);
       alert('Failed to capture thumbnail');
     }
@@ -4265,7 +4265,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           }, 1500);
         }
       }, 'image/jpeg', 0.9);
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Share thumbnail capture failed:', e);
       alert('Failed to capture thumbnail');
     }
@@ -4370,7 +4370,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   try {
     calGainOffset = parseFloat(localStorage.getItem('calGainOffset') || '0');
     calRefLevel = parseInt(localStorage.getItem('calRefLevel') || '-14');
-  } catch (e: unknown) {
+  } catch (e) {
     // localStorage may throw in Safari private browsing
   }
 
@@ -4459,7 +4459,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       gainSlider.addEventListener('input', (e) => {
         calGainOffset = parseFloat(e.target.value);
         if (gainValue) gainValue.textContent = `${calGainOffset > 0 ? '+' : ''}${calGainOffset} dB`;
-        try { localStorage.setItem('calGainOffset', calGainOffset.toString()); } catch (e: unknown) {}
+        try { localStorage.setItem('calGainOffset', calGainOffset.toString()); } catch (e) {}
       });
     }
 
@@ -4469,7 +4469,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       refSelect.value = calRefLevel.toString();
       refSelect.addEventListener('change', (e) => {
         calRefLevel = parseInt(e.target.value);
-        try { localStorage.setItem('calRefLevel', calRefLevel.toString()); } catch (e: unknown) {}
+        try { localStorage.setItem('calRefLevel', calRefLevel.toString()); } catch (e) {}
         // Update LUFS target marker position
         const marker = document.querySelector('.lufs-target-marker');
         if (marker) {
@@ -4484,7 +4484,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     document.getElementById('calReset')?.addEventListener('click', () => {
       calGainOffset = 0;
       calRefLevel = -14;
-      try { localStorage.removeItem('calGainOffset'); localStorage.removeItem('calRefLevel'); } catch (e: unknown) {}
+      try { localStorage.removeItem('calGainOffset'); localStorage.removeItem('calRefLevel'); } catch (e) {}
       if (gainSlider) gainSlider.value = 0;
       if (gainValue) gainValue.textContent = '0 dB';
       if (refSelect) refSelect.value = '-23';
@@ -4670,7 +4670,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     }
 
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('[BroadcastMeters] ERROR:', err);
     }
     broadcastMeterAnimationId = requestAnimationFrame(animateBroadcastMeters);
@@ -5519,7 +5519,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Reset stream info panel to offline state
         updateStreamInfoPanel(false);
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Stream status error:', e);
     }
   }
@@ -5561,7 +5561,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (chatViewers) {
         chatViewers.textContent = isLive ? `${newCount} watching` : `${newCount} listening`;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Failed to load viewers:', e);
     }
   }
@@ -5930,7 +5930,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         mySlot = null;
         showKeyNotAvailable();
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Load slot error:', e);
     }
   }
@@ -5945,7 +5945,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success && result.slots) {
         allDjSlots = result.slots.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Load all slots error:', e);
     }
   }
@@ -6321,7 +6321,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         currentStreamKey = result.streamKey;
         updateButtPassword(result.streamKey); // Update BUTT password field
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Fetch key error:', e);
     }
   }
@@ -6423,7 +6423,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       chatView?.classList.add('hidden');
       populateDmDjList();
       console.debug('[DM] Modal opened successfully');
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('[DM] Error opening modal:', e);
     }
   }
@@ -6575,7 +6575,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       // Use Pusher module to send DM (handles API + Pusher broadcast)
       await sendDm(text);
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('DM send error:', e);
       input.value = text;
     }
@@ -6593,7 +6593,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ channelId })
       });
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('DM cleanup error:', e);
     }
   }
@@ -6802,7 +6802,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
         console.error('[GoLive] Failed to generate key:', result.error);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[GoLive] Error loading stream key:', error);
       const errMsg = error instanceof Error ? error.message : String(error);
       const errName = error instanceof Error ? error.name : '';
@@ -6996,7 +6996,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       // Use Pusher module's sendChatMessage (handles API + Pusher broadcast)
       await sendChatMessage(text);
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Send error:', e);
       input.value = text;
     }
@@ -7224,7 +7224,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         }
         await signOut(auth);
         window.location.href = '/live/';
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Sign out error:', e);
         window.location.href = '/live/';
       }
@@ -7297,7 +7297,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           status.classList.remove('ending');
           btn.disabled = false;
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('End stream error:', e);
         alert('Failed to end stream');
         btn.innerHTML = '<span class="end-icon">⏹</span><span class="end-text">End Stream</span>';
@@ -7590,7 +7590,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         console.debug(`[${prefix}] Audio meter with K-weighting and limiter initialized`);
         return { audioContext, analyserL, analyserR, kWeightedAnalyserL, kWeightedAnalyserR };
-      } catch (e: unknown) {
+      } catch (e) {
         console.error(`[${prefix}] Audio meter setup error:`, e);
         return null;
       }
@@ -8157,7 +8157,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         console.debug('[DJ Lobby] Spawned key:', mySlot.id);
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[DJ Lobby] Spawn key error:', error);
         streamKeyEl.innerHTML = '<span class="key-error">Failed - try again</span>';
         btn.textContent = 'Spawn';
@@ -8292,7 +8292,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Show initialization modal with connection checks
         showInitModal();
 
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Ready error:', e);
         alert(e instanceof Error ? e.message : 'Failed to set ready status. Please try again.');
         // Reset button
@@ -8328,7 +8328,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         readyBtn.style.background = '#dc2626';
         readyBtnText.textContent = '🔴 LIVE';
 
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Go Live error:', e);
         alert(e instanceof Error ? e.message : 'Failed to go live. Please check OBS is streaming and try again.');
         // Reset GO LIVE button
@@ -8415,7 +8415,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           }
         }, 1000);
         
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Takeover error:', e);
         alert('Failed to send takeover request');
         takeoverPending = false;
@@ -8458,7 +8458,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert('Failed to approve takeover. Please try again.');
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Accept error:', e);
         alert('Failed to approve takeover');
       }
@@ -8478,7 +8478,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert('Failed to decline takeover');
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Decline error:', e);
         alert('Failed to decline takeover');
       }
@@ -8503,7 +8503,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           alert(result.error || 'Failed');
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('End error:', e);
       }
     });
@@ -8543,7 +8543,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (result.success && result.messages) {
         renderLivestreamMessages(result.messages);
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.error('[LivestreamChat] Failed to load messages:', err);
     }
 
@@ -8823,7 +8823,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             }
           }
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('[LivestreamChat] Send error:', err);
       } finally {
         chatInput.disabled = false;
@@ -8970,7 +8970,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         isRelayLive = result.isLive || false;
         console.debug('[Relay] Live check:', selectedRelaySource.name, isRelayLive ? 'LIVE' : 'offline');
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.warn('[Relay] Live check failed:', err instanceof Error ? err.message : String(err));
       // If check fails, assume it might be live (let user try)
       isRelayLive = true;
@@ -9281,7 +9281,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
       if (readyBtnText) readyBtnText.textContent = '🔴 LIVE';
 
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Go Live error:', e);
       alert(e instanceof Error ? e.message : 'Failed to go live. Please check OBS is streaming and try again.');
       // Reset buttons

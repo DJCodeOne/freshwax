@@ -1406,7 +1406,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         window.location.href = '/account/dj-lobby/';
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Auth error:', e);
       window.location.href = '/account/dj-lobby/';
     }
@@ -1546,7 +1546,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         listEl.innerHTML = '<div class="loading-sources">No relay sources configured</div>';
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Error loading relay sources:', e);
       listEl.innerHTML = '<div class="loading-sources">Failed to load stations</div>';
     }
@@ -1577,7 +1577,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         
         downloadSpeeds.push(estimatedBandwidth);
         uploadSpeeds.push(estimatedBandwidth * 0.3);
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Speed test error:', e);
       }
       

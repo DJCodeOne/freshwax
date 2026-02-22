@@ -334,9 +334,9 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = redirectTo;
         }, 1000);
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('[Login] Google sign-in error:', error);
-        const code = error && typeof error === 'object' && 'code' in error ? (error as {code:string}).code : '';
+        const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
         if (code === 'auth/popup-closed-by-user') {
           googleBtn.disabled = false;
           googleBtn.innerHTML = originalText;
@@ -363,7 +363,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         const emailInput = document.getElementById('email');
         if (emailInput) emailInput.value = savedEmail;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       // localStorage may throw in Safari private browsing
     }
 
@@ -517,7 +517,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             localStorage.removeItem('fw_remember_me');
             localStorage.removeItem('fw_saved_email');
           }
-        } catch (e: unknown) {
+        } catch (e) {
           // localStorage may throw in Safari private browsing
         }
         
@@ -596,7 +596,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             try {
               profile.cachedAt = Date.now();
               sessionStorage.setItem(`fw_user_profile_${user.uid}`, JSON.stringify(profile));
-            } catch (e: unknown) { /* Ignore cache errors */ }
+            } catch (e) { /* Ignore cache errors */ }
           }
           
           // Set partnerId cookie if they have any partner role (needed for artist dashboard)
@@ -613,7 +613,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             finalRedirect = '/admin';
           }
           
-        } catch (err: unknown) {
+        } catch (err) {
           console.error('[Login] Error fetching user profile:', err);
           document.cookie = `userId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
           document.cookie = `customerId=${user.uid}; path=/; max-age=${cookieMaxAge}; SameSite=Strict; Secure`;
@@ -628,8 +628,8 @@ const csrfToken = Astro.locals.csrfToken || '';
           window.location.href = finalRedirect;
         }, 1000);
         
-      } catch (error: unknown) {
-        const code = error && typeof error === 'object' && 'code' in error ? (error as {code:string}).code : '';
+      } catch (error) {
+        const code = error && typeof error === 'object' && 'code' in error ? error.code : '';
         let message = 'Login failed. Please try again.';
         if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential' || code === 'auth/invalid-email') {
           message = 'Invalid email or password.';
