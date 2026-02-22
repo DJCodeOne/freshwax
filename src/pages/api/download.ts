@@ -65,11 +65,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       limit: 500
     });
 
-    const hasPurchased = userOrders.some((order: any) =>
-      (order.items || []).some((item: any) => {
-        const tracks = item.downloads?.tracks || [];
-        return tracks.some((t: any) => t.mp3Url === fileUrl || t.wavUrl === fileUrl) ||
-          item.downloads?.artworkUrl === fileUrl;
+    const hasPurchased = userOrders.some((order: Record<string, unknown>) =>
+      ((order.items || []) as Record<string, unknown>[]).some((item: Record<string, unknown>) => {
+        const downloads = item.downloads as Record<string, unknown> | undefined;
+        const tracks = (downloads?.tracks || []) as Record<string, unknown>[];
+        return tracks.some((t: Record<string, unknown>) => t.mp3Url === fileUrl || t.wavUrl === fileUrl) ||
+          downloads?.artworkUrl === fileUrl;
       })
     );
 

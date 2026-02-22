@@ -38,14 +38,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Get supplier - either by ID or access code
-    let supplier: any = null;
+    let supplier: Record<string, unknown> | null = null;
     let supplierDocId = supplierId;
 
     if (supplierId) {
       supplier = await getDocument('merch-suppliers', supplierId);
     } else if (accessCode) {
       const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
-      const found = suppliers.find((s: any) => s.accessCode === accessCode);
+      const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
       if (found) {
         supplier = found;
         supplierDocId = found.id;
@@ -71,7 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const account = await stripe.accounts.retrieve(supplier.stripeConnectId);
 
     // Update local cache if changed
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     let needsUpdate = false;
 
     if (supplier.stripeChargesEnabled !== account.charges_enabled) {

@@ -205,7 +205,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         // Update allowed fields
-        const updates: any = { updatedAt: nowISO };
+        const updates: Record<string, unknown> = { updatedAt: nowISO };
 
         if (streamData.title) updates.title = streamData.title;
         if (streamData.description !== undefined) updates.description = streamData.description;

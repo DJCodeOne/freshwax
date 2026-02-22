@@ -17,10 +17,10 @@ const GetRatingsBatchSchema = z.object({
 export const prerender = false;
 
 // Simple in-memory cache for API responses
-const responseCache = new Map<string, { data: any; expires: number }>();
+const responseCache = new Map<string, { data: Record<string, { average: number; count: number; fiveStarCount: number }>; expires: number }>();
 const RESPONSE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-function getCachedResponse(key: string): any | null {
+function getCachedResponse(key: string): Record<string, { average: number; count: number; fiveStarCount: number }> | null {
   const entry = responseCache.get(key);
   if (entry && Date.now() < entry.expires) {
     return entry.data;
@@ -31,7 +31,7 @@ function getCachedResponse(key: string): any | null {
   return null;
 }
 
-function setCachedResponse(key: string, data: any): void {
+function setCachedResponse(key: string, data: Record<string, { average: number; count: number; fiveStarCount: number }>): void {
   responseCache.set(key, {
     data,
     expires: Date.now() + RESPONSE_CACHE_TTL
@@ -163,5 +163,5 @@ export const GET: APIRoute = async ({ request }) => {
     body: JSON.stringify({ releaseIds })
   });
   
-  return POST({ request: syntheticRequest } as any);
+  return POST({ request: syntheticRequest } as Parameters<typeof POST>[0]);
 };

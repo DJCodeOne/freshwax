@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     // If has followed artists, fetch their info
     if (followedArtists.length > 0) {
-      const artistsData: any[] = [];
+      const artistsData: Record<string, unknown>[] = [];
 
       // Get artist info from releases (grouped by artistName)
       // Note: releases use status 'live' not 'approved'
@@ -52,9 +52,9 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
 
       // Build a map of artists and their release counts
-      const artistMap = new Map<string, any>();
+      const artistMap = new Map<string, Record<string, unknown>>();
 
-      releases.forEach((release: any) => {
+      releases.forEach((release: Record<string, unknown>) => {
         const artistName = release.artistName;
         const artistId = release.artistId || release.submittedBy;
 

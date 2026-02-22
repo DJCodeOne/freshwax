@@ -66,13 +66,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
 
       const requests = {
-        artist: [] as any[],
-        merchSeller: [] as any[],
-        vinylSeller: [] as any[],
-        djBypass: [] as any[]
+        artist: [] as Record<string, unknown>[],
+        merchSeller: [] as Record<string, unknown>[],
+        vinylSeller: [] as Record<string, unknown>[],
+        djBypass: [] as Record<string, unknown>[]
       };
 
-      pendingRequests.forEach((req: any) => {
+      pendingRequests.forEach((req: Record<string, unknown>) => {
         const roleType = req.roleType;
         if (roleType === 'artist') {
           requests.artist.push(req);
@@ -154,7 +154,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Build request data based on role type
-      const requestData: any = {
+      const requestData: Record<string, unknown> = {
         requestedAt: new Date().toISOString(),
         status: 'pending'
       };
@@ -455,7 +455,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const existingCustomer = await getDocument('users', uid);
         if (existingCustomer) {
-          const customerUpdate: any = {
+          const customerUpdate: Record<string, unknown> = {
             [`roles.${roleKey}`]: false,
             updatedAt: new Date().toISOString()
           };
@@ -473,7 +473,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           const existingArtist = await getDocument('artists', uid);
           if (existingArtist) {
-            const artistUpdate: any = {
+            const artistUpdate: Record<string, unknown> = {
               updatedAt: new Date().toISOString(),
               revokedAt: new Date().toISOString(),
               revokedBy: adminUid

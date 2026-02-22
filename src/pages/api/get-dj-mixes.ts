@@ -34,7 +34,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const skipCache = url.searchParams.get('fresh') === '1' || url.searchParams.get('t') !== null;
 
   try {
-    let mixes: any[] = [];
+    let mixes: Record<string, unknown>[] = [];
 
     // Only cache public listings (not user-specific)
     const cacheKey = `public:${limit}`;
@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
 
       // Filter by any userId field variation (handles schema inconsistency)
-      mixes = allMixes.filter((mix: any) =>
+      mixes = allMixes.filter((mix: Record<string, unknown>) =>
         mix.userId === userId ||
         mix.user_id === userId ||
         mix.uploaderId === userId
@@ -91,7 +91,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           if (displayName) {
             // Filter cached mixes by displayName variations
             const displayNameLower = displayName.toLowerCase();
-            mixes = allMixes.filter((mix: any) => {
+            mixes = allMixes.filter((mix: Record<string, unknown>) => {
               const djName = (mix.djName || mix.dj_name || mix.displayName || '').toLowerCase();
               return djName === displayNameLower;
             });

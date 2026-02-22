@@ -9,10 +9,10 @@ const log = createLogger('giphy/search');
 export const prerender = false;
 
 // Cache GIPHY responses for 5 minutes to reduce API calls
-const giphyCache = new Map<string, { data: any; expires: number }>();
+const giphyCache = new Map<string, { data: Record<string, unknown>; expires: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-function getCached(key: string): any | null {
+function getCached(key: string): Record<string, unknown> | null {
   const entry = giphyCache.get(key);
   if (entry && Date.now() < entry.expires) {
     return entry.data;
@@ -21,7 +21,7 @@ function getCached(key: string): any | null {
   return null;
 }
 
-function setCache(key: string, data: any): void {
+function setCache(key: string, data: Record<string, unknown>): void {
   giphyCache.set(key, { data, expires: Date.now() + CACHE_TTL });
   // Prune cache if too large
   if (giphyCache.size > 100) {
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const data = await response.json();
 
     // Transform response to only include necessary data
-    const gifs = data.data.map((gif: any) => ({
+    const gifs = data.data.map((gif: Record<string, unknown>) => ({
       id: gif.id,
       title: gif.title,
       url: gif.images.fixed_height.url,

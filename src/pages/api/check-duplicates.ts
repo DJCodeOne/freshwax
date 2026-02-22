@@ -26,7 +26,7 @@ const logger = createLogger('check-duplicates');
 export const prerender = false;
 
 // Server-side cache for ownership data - shared pattern with check-ownership
-const ownershipCache = new Map<string, { data: any; expires: number }>();
+const ownershipCache = new Map<string, { data: { ownedReleases: Set<string>; ownedTracks: Map<string, Set<string>> }; expires: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 async function getOwnershipData(userId: string): Promise<{ 
@@ -51,7 +51,7 @@ async function getOwnershipData(userId: string): Promise<{
 
   orders.forEach(order => {
     if (order.items && Array.isArray(order.items)) {
-      order.items.forEach((item: any) => {
+      order.items.forEach((item: Record<string, unknown>) => {
         const itemType = item.type || item.productType;
         const releaseId = item.releaseId || item.productId || item.id;
         
@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request }) => {
     const { ownedReleases, ownedTracks } = await getOwnershipData(userId);
     
     // Check cart items for duplicates
-    const duplicates: any[] = [];
+    const duplicates: { item: Record<string, unknown>; reason: string }[] = [];
     
     for (const item of cartItems) {
       const itemType = item.type || item.productType;

@@ -155,7 +155,7 @@ export async function POST({ request, locals }: APIContext) {
     // Check if user has Plus or is admin
     const isAdmin = getAdminUids().includes(userId);
     let isPlus = isAdmin;
-    let userDoc: any = null;
+    let userDoc: Record<string, unknown> | null = null;
 
     if (!isAdmin) {
       userDoc = await getDocument('users', userId);
@@ -194,7 +194,7 @@ export async function POST({ request, locals }: APIContext) {
       }
 
       // Record command usage
-      const newUsage: Record<string, any> = { date: today };
+      const newUsage: Record<string, unknown> = { date: today };
       // Preserve other command usage from today
       if (usage.date === today) {
         Object.keys(usage).forEach(key => {

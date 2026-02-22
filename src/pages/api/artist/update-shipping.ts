@@ -22,7 +22,7 @@ const UpdateShippingSchema = z.object({
 export const prerender = false;
 
 // Build service account key from individual env vars
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -72,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Validate shipping rates (must be non-negative if provided)
-    const validateRate = (rate: any, name: string) => {
+    const validateRate = (rate: string | number | null | undefined, name: string) => {
       if (rate !== null && rate !== undefined) {
         const num = parseFloat(rate);
         if (isNaN(num) || num < 0) {
@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Build update object (only include non-null values)
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date().toISOString()
     };
 

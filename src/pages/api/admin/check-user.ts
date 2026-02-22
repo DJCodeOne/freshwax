@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const saQuery = getSaQuery(locals);
 
   try {
-    let user: any = null;
+    let user: Record<string, unknown> | null = null;
 
     if (userId) {
       user = await getDocument('users', userId);

@@ -10,7 +10,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 export const prerender = false;
 
 // Helper to make Firestore REST API calls for writes
-async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: Record<string, any>) {
+async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string, data?: Record<string, unknown>) {
   const projectId = import.meta.env.FIREBASE_PROJECT_ID;
   const apiKey = import.meta.env.FIREBASE_API_KEY;
   
@@ -26,7 +26,7 @@ async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string,
   };
 
   if (data && method !== 'DELETE') {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(data)) {
       fields[key] = convertToFirestoreValue(value);
     }
@@ -47,7 +47,7 @@ async function firestoreWrite(method: 'POST' | 'PATCH' | 'DELETE', path: string,
   return response.json();
 }
 
-function convertToFirestoreValue(value: any): any {
+function convertToFirestoreValue(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'string') return { stringValue: value };
   if (typeof value === 'number') {
@@ -59,8 +59,8 @@ function convertToFirestoreValue(value: any): any {
     return { arrayValue: { values: value.map(v => convertToFirestoreValue(v)) } };
   }
   if (typeof value === 'object') {
-    const mapFields: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value)) {
+    const mapFields: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       mapFields[k] = convertToFirestoreValue(v);
     }
     return { mapValue: { fields: mapFields } };
@@ -99,7 +99,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     ]);
 
     // Normalize role requests to match expected format
-    const normalizedRoleRequests = roleRequests.map((req: any) => ({
+    const normalizedRoleRequests = roleRequests.map((req: Record<string, unknown>) => ({
       id: req.id,
       userId: req.userId || req.uid,
       email: req.email,
@@ -121,7 +121,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }));
 
     // Mark legacy applications with source
-    const normalizedLegacy = legacyApplications.map((app: any) => ({
+    const normalizedLegacy = legacyApplications.map((app: Record<string, unknown>) => ({
       ...app,
       source: 'partnerApplications'
     }));

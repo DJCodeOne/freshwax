@@ -13,7 +13,7 @@ const log = createLogger('[vinyl-listings]');
 export const prerender = false;
 
 // Get service account key from environment
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   let serviceAccountKey = env?.FIREBASE_SERVICE_ACCOUNT || env?.FIREBASE_SERVICE_ACCOUNT_KEY ||
                           import.meta.env.FIREBASE_SERVICE_ACCOUNT || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -135,7 +135,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
     }
 
     const now = new Date().toISOString();
-    let updateData: any;
+    let updateData: Record<string, unknown>;
 
     if (action === 'approve') {
       updateData = {

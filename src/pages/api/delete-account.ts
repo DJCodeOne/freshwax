@@ -235,7 +235,7 @@ async function anonymizeComments(userId: string): Promise<DeletionResult> {
 }
 
 /** Clean up D1 tables — anonymize financial records, delete user-specific data */
-async function cleanupD1(db: any, userId: string, userEmail: string): Promise<DeletionResult> {
+async function cleanupD1(db: Record<string, unknown>, userId: string, userEmail: string): Promise<DeletionResult> {
   try {
     let totalAffected = 0;
 
@@ -276,7 +276,7 @@ async function cleanupD1(db: any, userId: string, userEmail: string): Promise<De
 }
 
 /** Delete KV cache entries for this user */
-async function cleanupKV(cache: any, userId: string): Promise<DeletionResult> {
+async function cleanupKV(cache: Record<string, unknown>, userId: string): Promise<DeletionResult> {
   try {
     // Delete known user cache keys
     const keys = [

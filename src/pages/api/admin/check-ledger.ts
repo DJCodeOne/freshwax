@@ -49,14 +49,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     let userEntries = ledger;
     if (userId) {
-      userEntries = ledger.filter((e: any) =>
+      userEntries = ledger.filter((e: Record<string, unknown>) =>
         e.submitterId === userId ||
         e.artistId === userId ||
         e.artistName === userId
       );
     }
 
-    const summary = userEntries.map((e: any) => ({
+    const summary = userEntries.map((e: Record<string, unknown>) => ({
       orderId: e.orderId,
       orderNumber: e.orderNumber,
       timestamp: e.timestamp,
@@ -67,16 +67,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
       submitterId: e.submitterId || 'NOT SET',
       artistId: e.artistId || 'NOT SET',
       artistName: e.artistName || 'NOT SET',
-      items: (e.items || []).map((i: any) => ({ id: i.id, releaseId: i.releaseId, productId: i.productId, title: i.title, type: i.type }))
+      items: ((e.items || []) as Record<string, unknown>[]).map((i: Record<string, unknown>) => ({ id: i.id, releaseId: i.releaseId, productId: i.productId, title: i.title, type: i.type }))
     }));
 
     const totals = {
       entries: userEntries.length,
-      totalGross: userEntries.reduce((sum: number, e: any) => sum + (e.grossTotal || 0), 0),
-      totalNet: userEntries.reduce((sum: number, e: any) => sum + (e.netRevenue || 0), 0),
-      totalPayout: userEntries.reduce((sum: number, e: any) => sum + (e.artistPayout || 0), 0),
-      pendingPayout: userEntries.filter((e: any) => e.artistPayoutStatus === 'pending')
-        .reduce((sum: number, e: any) => sum + (e.artistPayout || 0), 0)
+      totalGross: userEntries.reduce((sum: number, e: Record<string, unknown>) => sum + ((e.grossTotal as number) || 0), 0),
+      totalNet: userEntries.reduce((sum: number, e: Record<string, unknown>) => sum + ((e.netRevenue as number) || 0), 0),
+      totalPayout: userEntries.reduce((sum: number, e: Record<string, unknown>) => sum + ((e.artistPayout as number) || 0), 0),
+      pendingPayout: userEntries.filter((e: Record<string, unknown>) => e.artistPayoutStatus === 'pending')
+        .reduce((sum: number, e: Record<string, unknown>) => sum + ((e.artistPayout as number) || 0), 0)
     };
 
     return new Response(JSON.stringify({

@@ -26,7 +26,7 @@ const updateOrderSchema = z.object({
 export const prerender = false;
 
 // Build service account key from individual env vars
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   // Try full key first
   const fullKey = env?.FIREBASE_SERVICE_ACCOUNT_KEY || import.meta.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (fullKey) return fullKey;
@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Build update object
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date().toISOString()
     };
 
@@ -127,21 +127,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/orders/${orderId}?${updateMask}`;
 
     // Convert to Firestore format
-    const toFirestoreValue = (v: any): any => {
+    const toFirestoreValue = (v: unknown): Record<string, unknown> => {
       if (v === null) return { nullValue: null };
       if (typeof v === 'boolean') return { booleanValue: v };
       if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
       if (typeof v === 'string') return { stringValue: v };
       if (Array.isArray(v)) return { arrayValue: { values: v.map(toFirestoreValue) } };
       if (typeof v === 'object') {
-        const fields: any = {};
-        for (const [k, val] of Object.entries(v)) fields[k] = toFirestoreValue(val);
+        const fields: Record<string, unknown> = {};
+        for (const [k, val] of Object.entries(v as Record<string, unknown>)) fields[k] = toFirestoreValue(val);
         return { mapValue: { fields } };
       }
       return { stringValue: String(v) };
     };
 
-    const fields: any = {};
+    const fields: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(updateData)) fields[k] = toFirestoreValue(v);
 
     const response = await fetchWithTimeout(url, {

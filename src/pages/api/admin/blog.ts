@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // List all posts
-    const filters: any[] = [];
+    const filters: { field: string; op: string; value: string }[] = [];
     if (status === 'published') {
       filters.push({ field: 'status', op: 'EQUAL', value: 'published' });
     } else if (status === 'draft') {

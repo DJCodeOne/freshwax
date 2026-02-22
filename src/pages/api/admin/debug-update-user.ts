@@ -50,8 +50,8 @@ async function getToken(serviceAccountKey: string): Promise<string> {
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
   }, 10000);
 
-  const tokenData = await tokenResponse.json() as any;
-  return tokenData.access_token;
+  const tokenData = await tokenResponse.json() as Record<string, unknown>;
+  return tokenData.access_token as string;
 }
 
 export const GET: APIRoute = async ({ request, locals }) => {
@@ -95,12 +95,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const getResponse = await fetchWithTimeout(docUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     }, 10000);
-    const currentDoc = await getResponse.json() as any;
+    const currentDoc = await getResponse.json() as Record<string, unknown>;
 
     // Extract current roles
-    const currentRoles: any = {};
-    const rolesField = currentDoc.fields?.roles?.mapValue?.fields || {};
-    for (const [k, v] of Object.entries(rolesField) as any) {
+    const currentRoles: Record<string, unknown> = {};
+    const rolesField = ((currentDoc.fields as Record<string, unknown>)?.roles as Record<string, unknown>)?.mapValue as Record<string, unknown>;
+    const rolesFields = (rolesField?.fields || {}) as Record<string, Record<string, unknown>>;
+    for (const [k, v] of Object.entries(rolesFields)) {
       currentRoles[k] = v.booleanValue;
     }
 
@@ -120,7 +121,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const newRoles = { ...currentRoles, artist: false };
 
     // Build Firestore value for roles map
-    const rolesMapFields: any = {};
+    const rolesMapFields: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(newRoles)) {
       rolesMapFields[k] = { booleanValue: v };
     }
@@ -156,11 +157,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const verifyResponse = await fetchWithTimeout(docUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     }, 10000);
-    const verifyDoc = await verifyResponse.json() as any;
+    const verifyDoc = await verifyResponse.json() as Record<string, unknown>;
 
-    const verifyRoles: any = {};
-    const verifyRolesField = verifyDoc.fields?.roles?.mapValue?.fields || {};
-    for (const [k, v] of Object.entries(verifyRolesField) as any) {
+    const verifyRoles: Record<string, unknown> = {};
+    const verifyRolesMap = ((verifyDoc.fields as Record<string, unknown>)?.roles as Record<string, unknown>)?.mapValue as Record<string, unknown>;
+    const verifyRolesField = (verifyRolesMap?.fields || {}) as Record<string, Record<string, unknown>>;
+    for (const [k, v] of Object.entries(verifyRolesField)) {
       verifyRoles[k] = v.booleanValue;
     }
 

@@ -22,7 +22,7 @@ function initKV(locals: App.Locals) {
 }
 
 // Get listener count from KV
-async function getListenerCount(streamId: string): Promise<{ count: number; listeners: any[] }> {
+async function getListenerCount(streamId: string): Promise<{ count: number; listeners: { id: string; name: string; avatarUrl: string | null }[] }> {
   try {
     // Get the listener list for this stream
     const listKey = `listeners:${streamId}`;
@@ -35,7 +35,7 @@ async function getListenerCount(streamId: string): Promise<{ count: number; list
     // Filter out expired listeners (older than 2 minutes)
     const now = Date.now();
     const twoMinutesAgo = now - (2 * 60 * 1000);
-    const activeListeners: any[] = [];
+    const activeListeners: { id: string; name: string; avatarUrl: string | null }[] = [];
 
     for (const [userId, data] of Object.entries(listenerMap)) {
       if (data.lastSeen > twoMinutesAgo) {

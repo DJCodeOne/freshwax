@@ -22,7 +22,7 @@ const CACHE_TTL = {
 // Cache API helpers (FREE and unlimited - replaces KV for reads)
 const CACHE_BASE_URL = `${SITE_URL}/__cache/status`;
 
-async function getCached(key: string): Promise<any | null> {
+async function getCached(key: string): Promise<Record<string, unknown> | null> {
   try {
     const cache = caches.default;
     const cacheUrl = `${CACHE_BASE_URL}/${key}`;
@@ -36,7 +36,7 @@ async function getCached(key: string): Promise<any | null> {
   return null;
 }
 
-async function setCached(key: string, data: any, ttlSeconds: number): Promise<void> {
+async function setCached(key: string, data: Record<string, unknown>, ttlSeconds: number): Promise<void> {
   try {
     const cache = caches.default;
     const cacheUrl = `${CACHE_BASE_URL}/${key}`;
@@ -64,7 +64,7 @@ export async function invalidateStatusCache(): Promise<void> {
   }
 }
 
-function jsonResponse(data: any, status: number, maxAge: number = 10): Response {
+function jsonResponse(data: Record<string, unknown>, status: number, maxAge: number = 10): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {

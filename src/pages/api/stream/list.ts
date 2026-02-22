@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request }) => {
     const status = url.searchParams.get('status'); // 'live', 'offline', 'all'
 
     // Build filters
-    const filters: any[] = [];
+    const filters: Array<{ field: string; op: string; value: string }> = [];
 
     if (status && status !== 'all') {
       filters.push({ field: 'status', op: 'EQUAL', value: status });

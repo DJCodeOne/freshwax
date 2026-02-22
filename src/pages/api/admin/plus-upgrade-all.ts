@@ -14,7 +14,7 @@ import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
 
 export const prerender = false;
 
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -25,7 +25,7 @@ function getServiceAccountKey(env: any): string | null {
     type: 'service_account',
     project_id: projectId,
     private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
+    private_key: (privateKey as string).replace(/\\n/g, '\n'),
     client_email: clientEmail,
     client_id: '',
     auth_uri: 'https://accounts.google.com/o/oauth2/auth',
@@ -152,14 +152,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     // Filter to non-Plus users with email
-    const usersToUpgrade = users.filter((user: any) => {
+    const usersToUpgrade = users.filter((user: Record<string, unknown>) => {
       const hasEmail = user.email && user.email.includes('@');
       const isAlreadyPlus = user.subscription?.tier === 'pro';
       return hasEmail && !isAlreadyPlus;
     });
 
     // Also get users who are Plus but might want the thank you email
-    const allUsersWithEmail = users.filter((user: any) => user.email && user.email.includes('@'));
+    const allUsersWithEmail = users.filter((user: Record<string, unknown>) => user.email && (user.email as string).includes('@'));
 
     if (!execute) {
       // Preview mode - show what would happen
@@ -169,7 +169,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         usersWithEmail: allUsersWithEmail.length,
         usersToUpgrade: usersToUpgrade.length,
         alreadyPlus: allUsersWithEmail.length - usersToUpgrade.length,
-        userList: allUsersWithEmail.map((u: any) => ({
+        userList: allUsersWithEmail.map((u: Record<string, unknown>) => ({
           email: u.email,
           name: u.displayName || u.name,
           currentTier: u.subscription?.tier || 'free',

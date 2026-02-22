@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     const items = order.items || [];
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const item of items) {
       const releaseId = item.releaseId || item.productId || item.id;
@@ -60,10 +60,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
 
       const tracks = release.tracks || [];
-      const trackResults: any[] = [];
+      const trackResults: Record<string, unknown>[] = [];
 
       for (const track of tracks) {
-        const trackInfo: any = {
+        const trackInfo: Record<string, unknown> = {
           name: track.trackName || track.name || 'Unknown',
           mp3Url: track.mp3Url || null,
           wavUrl: track.wavUrl || null,
@@ -113,8 +113,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
 
       // Calculate totals for this release
-      const totalMp3 = trackResults.reduce((sum: number, t: any) => sum + (t.mp3Size || 0), 0);
-      const totalWav = trackResults.reduce((sum: number, t: any) => sum + (t.wavSize || 0), 0);
+      const totalMp3 = trackResults.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.mp3Size as number) || 0), 0);
+      const totalWav = trackResults.reduce((sum: number, t: Record<string, unknown>) => sum + ((t.wavSize as number) || 0), 0);
 
       results.push({
         name: item.name || item.title || release.releaseName || 'Unknown',

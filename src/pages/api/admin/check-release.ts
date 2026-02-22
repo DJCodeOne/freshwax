@@ -34,12 +34,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const releases = await queryCollection('releases', { limit: 100, cacheTime: 60000 });
 
     // Find releases matching search
-    const matches = releases.filter((r: any) =>
+    const matches = releases.filter((r: Record<string, unknown>) =>
       (r.title || '').toLowerCase().includes(search.toLowerCase()) ||
       (r.artistName || '').toLowerCase().includes(search.toLowerCase())
     );
 
-    const details = matches.map((r: any) => ({
+    const details = matches.map((r: Record<string, unknown>) => ({
       id: r.id,
       title: r.title,
       artistName: r.artistName,
@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Also look up artists/users to find y2
     const artists = await saQuery('artists', { limit: 100, cacheTime: 60000 });
-    const y2Artist = artists.filter((a: any) =>
+    const y2Artist = artists.filter((a: Record<string, unknown>) =>
       (a.name || '').toLowerCase().includes('y2') ||
       (a.displayName || '').toLowerCase().includes('y2')
     );
@@ -71,7 +71,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       success: true,
       searchTerm: search,
       matchingReleases: details,
-      y2Artists: y2Artist.map((a: any) => ({
+      y2Artists: y2Artist.map((a: Record<string, unknown>) => ({
         id: a.id,
         name: a.name,
         displayName: a.displayName,

@@ -24,7 +24,7 @@ const addArtistSchema = z.object({
 export const prerender = false;
 
 // Convert value to Firestore format
-function toFirestoreValue(value: any): any {
+function toFirestoreValue(value: unknown): Record<string, unknown> {
   if (value === null || value === undefined) {
     return { nullValue: null };
   } else if (typeof value === 'string') {
@@ -38,8 +38,8 @@ function toFirestoreValue(value: any): any {
   } else if (Array.isArray(value)) {
     return { arrayValue: { values: value.map(v => toFirestoreValue(v)) } };
   } else if (typeof value === 'object') {
-    const mapFields: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value)) {
+    const mapFields: Record<string, Record<string, unknown>> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
       mapFields[k] = toFirestoreValue(v);
     }
     return { mapValue: { fields: mapFields } };
@@ -48,13 +48,13 @@ function toFirestoreValue(value: any): any {
 }
 
 // Direct Firestore write (bypasses SDK restrictions)
-async function writeToFirestore(collection: string, docId: string, data: Record<string, any>) {
+async function writeToFirestore(collection: string, docId: string, data: Record<string, unknown>) {
   const projectId = import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const apiKey = import.meta.env.PUBLIC_FIREBASE_API_KEY;
 
   const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/${collection}/${docId}?key=${apiKey}`;
 
-  const fields: Record<string, any> = {};
+  const fields: Record<string, Record<string, unknown>> = {};
   for (const [key, value] of Object.entries(data)) {
     fields[key] = toFirestoreValue(value);
   }

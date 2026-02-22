@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const { adminUid, partnerId, updates } = parsed.data;
-    const idToken = (body as any).idToken;
+    const idToken = (body as Record<string, unknown>).idToken as string | undefined;
 
     logger.info('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
 
@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Allowed fields: isArtist, isMerchSupplier, revokedAt, revokedBy, updatedAt,
     //                 artistName, name, displayName, email, phone, approved, suspended, adminNotes
     if (artistDoc) {
-      const artistUpdate: any = {
+      const artistUpdate: Record<string, unknown> = {
         updatedAt: now
       };
 
@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Update or create users collection document
     // This is the source of truth for list-partners API
-    const userUpdate: any = {
+    const userUpdate: Record<string, unknown> = {
       updatedAt: now
     };
 
@@ -150,7 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (customerDoc) {
         // Update existing customer record
-        const customerUpdate: any = {
+        const customerUpdate: Record<string, unknown> = {
           updatedAt: now
         };
 

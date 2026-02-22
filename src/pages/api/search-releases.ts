@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logger.info('[search] D1 search found', releases.length, 'releases,', mixes.length, 'mixes,', merch.length, 'merch');
 
-    const matchedReleases = releases.map((release: any) => ({
+    const matchedReleases = releases.map((release: Record<string, unknown>) => ({
       id: release.id,
       type: 'release',
       title: release.releaseName || release.title || 'Untitled',
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       artwork_url: release.thumbUrl || release.artwork?.cover || release.coverArtUrl || release.artworkUrl || '/place-holder.webp'
     }));
 
-    const matchedMixes = mixes.map((mix: any) => ({
+    const matchedMixes = mixes.map((mix: Record<string, unknown>) => ({
       id: mix.id,
       type: 'mix',
       title: mix.title || mix.name || 'Untitled Mix',
@@ -62,7 +62,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       artwork_url: mix.artwork || mix.artworkUrl || mix.artwork_url || mix.coverImage || '/place-holder.webp'
     }));
 
-    const matchedMerch = merch.map((item: any) => ({
+    const matchedMerch = merch.map((item: Record<string, unknown>) => ({
       id: item.id,
       type: 'merch',
       title: item.name || 'Untitled Product',

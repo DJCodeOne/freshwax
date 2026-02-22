@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   });
 
   // Parse value
-  let parsedValue: any = value;
+  let parsedValue: unknown = value;
   if (value === 'true') parsedValue = true;
   else if (value === 'false') parsedValue = false;
   else if (value === 'null') parsedValue = null;

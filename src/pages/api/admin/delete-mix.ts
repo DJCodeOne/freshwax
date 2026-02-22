@@ -23,7 +23,7 @@ const logger = createLogger('admin/delete-mix');
 const MAX_R2_FILES_TO_DELETE = 100; // Max files to delete from R2 in one operation
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,

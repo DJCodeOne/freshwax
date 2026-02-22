@@ -108,7 +108,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     log.error('[Stripe Connect] Status error:', error);
 
     // Handle deleted/invalid account
-    if ((error as any)?.code === 'account_invalid') {
+    if ((error as Record<string, unknown>)?.code === 'account_invalid') {
       return new Response(JSON.stringify({
         success: true,
         connected: false,

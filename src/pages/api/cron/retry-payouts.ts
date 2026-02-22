@@ -80,7 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       skipped: 0,
       stripePayouts: 0,
       paypalPayouts: 0,
-      details: [] as any[]
+      details: [] as Record<string, unknown>[]
     };
 
     for (const pending of pendingPayouts) {
@@ -101,7 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Determine entity type and get the entity
       const entityType = pending.entityType || 'artist'; // Default to artist for backwards compatibility
-      let entity: any = null;
+      let entity: Record<string, unknown> | null = null;
       let collection: string;
       let entityName: string;
       let entityEmail: string;
@@ -198,7 +198,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           throw lockErr;
         }
 
-        let payoutResult: any = {};
+        let payoutResult: Record<string, unknown> = {};
 
         if (usePayPal) {
           // PayPal payout

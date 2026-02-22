@@ -51,7 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         csv = 'Order Number,Date,Customer Email,Customer Name,Items,Subtotal,Shipping,Service Fees,Total,Status,Payment Method\n';
 
         for (const order of orders) {
-          const items = (order.items || []).map((i: any) => `${i.name} x${i.quantity || 1}`).join('; ');
+          const items = ((order.items || []) as Record<string, unknown>[]).map((i: Record<string, unknown>) => `${i.name} x${(i.quantity as number) || 1}`).join('; ');
           const customerName = `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim();
 
           csv += [
@@ -92,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           }
           dailySales[date].revenue += order.totals?.total || 0;
           dailySales[date].orders++;
-          dailySales[date].units += (order.items || []).reduce((sum: number, i: any) => sum + (i.quantity || 1), 0);
+          dailySales[date].units += ((order.items || []) as Record<string, unknown>[]).reduce((sum: number, i: Record<string, unknown>) => sum + ((i.quantity as number) || 1), 0);
         }
 
         csv = 'Date,Revenue,Orders,Units Sold,Average Order Value\n';

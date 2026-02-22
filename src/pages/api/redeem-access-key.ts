@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Check if user already redeemed this code
     const usedBy = keyDoc.usedBy || [];
-    const alreadyRedeemed = usedBy.some((u: any) => u.userId === userId);
+    const alreadyRedeemed = usedBy.some((u: Record<string, unknown>) => u.userId === userId);
 
     if (alreadyRedeemed) {
       return ApiErrors.badRequest('You have already redeemed this access code');

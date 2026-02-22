@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Build SKU lookup cache
     const allMerch = await queryCollection('merch', { limit: 500 });
-    const skuToProduct: Record<string, { productId: string; variantKey?: string; product: any }> = {};
+    const skuToProduct: Record<string, { productId: string; variantKey?: string; product: Record<string, unknown> }> = {};
 
     for (const product of allMerch) {
       // Main product SKU
@@ -137,7 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       // Variant SKUs
       if (product.variantStock) {
-        for (const [variantKey, variant] of Object.entries(product.variantStock as Record<string, any>)) {
+        for (const [variantKey, variant] of Object.entries(product.variantStock as Record<string, Record<string, unknown>>)) {
           if (variant.sku) {
             skuToProduct[variant.sku.toUpperCase()] = {
               productId: product.id,
@@ -226,7 +226,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           // Recalculate total stock
           const totalStock = Object.values(updatedVariantStock).reduce(
-            (sum: number, v: any) => sum + (v.stock || 0), 0
+            (sum: number, v: Record<string, unknown>) => sum + ((v.stock as number) || 0), 0
           );
 
           await updateDocument('merch', productId, {
@@ -321,7 +321,7 @@ SKU003,2,subtract`;
 
     for (const product of allMerch) {
       if (product.variantStock) {
-        for (const [variantKey, variant] of Object.entries(product.variantStock as Record<string, any>)) {
+        for (const [variantKey, variant] of Object.entries(product.variantStock as Record<string, Record<string, unknown>>)) {
           rows.push([
             variant.sku || `${product.sku || product.id}_${variantKey}`,
             `"${(product.name || product.productName || '').replace(/"/g, '""')}"`,

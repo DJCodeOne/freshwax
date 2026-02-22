@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.badRequest('Invalid status');
         }
 
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           status,
           updatedAt: new Date().toISOString()
         };
@@ -199,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         } catch (stripeErr: unknown) {
           log.error('[vinyl/order refund] Stripe refund failed:', stripeErr);
-          const stripeType = (stripeErr as any)?.type;
+          const stripeType = (stripeErr as Record<string, unknown>)?.type;
           if (stripeType === 'StripeCardError' || stripeType === 'StripeInvalidRequestError') {
             return ApiErrors.badRequest('Stripe refund request failed');
           }

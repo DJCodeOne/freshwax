@@ -37,7 +37,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const now = new Date().toISOString();
     let ended = false;
-    let streamData: any = null;
+    let streamData: Record<string, unknown> | null = null;
 
     // Try livestreamSlots first (current system)
     const slotDoc = await getDocument('livestreamSlots', streamId);

@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         alreadyOk: 0,
         noUserId: 0,
         errors: 0,
-        details: [] as any[]
+        details: [] as Record<string, unknown>[]
       },
       ledger: {
         total: 0,
@@ -82,13 +82,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
         alreadyOk: 0,
         noRelease: 0,
         errors: 0,
-        details: [] as any[]
+        details: [] as Record<string, unknown>[]
       }
     };
 
     // STEP 1: Fix releases - copy userId to submitterId where missing
 
-    let releases: any[] = [];
+    let releases: Record<string, unknown>[] = [];
     try {
       releases = await saQueryCollection(serviceAccountKey, projectId, 'releases', {
         limit: 5000
@@ -163,7 +163,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // STEP 2: Fix ledger entries - add submitterId by looking up release
 
-    let ledgerEntries: any[] = [];
+    let ledgerEntries: Record<string, unknown>[] = [];
     try {
       ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
         limit: 5000
@@ -211,7 +211,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             orderId: entry.orderId,
             orderNumber: entry.orderNumber,
             issue: 'Could not find release to lookup submitterId',
-            items: items.map((i: any) => ({ id: i.id, title: i.title }))
+            items: items.map((i: Record<string, unknown>) => ({ id: i.id, title: i.title }))
           });
           continue;
         }

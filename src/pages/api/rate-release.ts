@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     logger.info('[rate-release] Received:', releaseId, 'rating:', rating, 'user:', userId);
 
     // Get release from Firebase
-    const releaseData: any = await getDocument('releases', releaseId);
+    const releaseData = await getDocument('releases', releaseId);
 
     if (!releaseData) {
       logger.info('[rate-release] Release not found:', releaseId);

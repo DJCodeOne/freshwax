@@ -58,7 +58,7 @@ const createManualOrderSchema = z.object({
 export const prerender = false;
 
 // Build service account key from individual env vars
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -69,7 +69,7 @@ function getServiceAccountKey(env: any): string | null {
     type: 'service_account',
     project_id: projectId,
     private_key_id: 'auto',
-    private_key: privateKey.replace(/\\n/g, '\n'),
+    private_key: (privateKey as string).replace(/\\n/g, '\n'),
     client_email: clientEmail,
     client_id: '',
     auth_uri: 'https://accounts.google.com/o/oauth2/auth',
@@ -112,12 +112,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const orderNumber = generateOrderNumber();
 
     // Set defaults
-    const hasPhysicalItems = orderData.items.some((item: any) =>
+    const hasPhysicalItems = orderData.items.some((item: Record<string, unknown>) =>
       item.type === 'vinyl' || item.type === 'merch'
     );
 
-    const subtotal = orderData.totals?.subtotal || orderData.items.reduce((sum: number, item: any) =>
-      sum + ((item.price || 0) * (item.quantity || 1)), 0
+    const subtotal = orderData.totals?.subtotal || orderData.items.reduce((sum: number, item: Record<string, unknown>) =>
+      sum + (((item.price as number) || 0) * ((item.quantity as number) || 1)), 0
     );
 
     const shipping = orderData.totals?.shipping ?? (hasPhysicalItems ? (subtotal >= 50 ? 0 : 4.99) : 0);
@@ -127,7 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const serviceFees = orderData.totals?.serviceFees ?? (freshWaxFee + stripeFee);
 
     // Process items - fetch download URLs from releases
-    const processedItems = await Promise.all(orderData.items.map(async (item: any) => {
+    const processedItems = await Promise.all(orderData.items.map(async (item: Record<string, unknown>) => {
       const releaseId = item.releaseId || item.id;
       let downloads = null;
 
@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               artistName: release.artistName || release.artist || item.artist || 'Unknown',
               releaseName: release.releaseName || release.title || item.name,
               artworkUrl: release.coverArtUrl || release.artworkUrl || release.thumbUrl || item.artwork,
-              tracks: (release.tracks || []).map((t: any) => ({
+              tracks: ((release.tracks || []) as Record<string, unknown>[]).map((t: Record<string, unknown>) => ({
                 name: t.trackName || t.title || t.name,
                 mp3Url: t.mp3Url || null,
                 wavUrl: t.wavUrl || null
@@ -232,7 +232,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         paymentId: orderData.paymentIntentId || orderData.paypalOrderId || null,
         items: processedItems,
         hasPhysical: hasPhysicalItems,
-        hasDigital: processedItems.some((i: any) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
+        hasDigital: processedItems.some((i: Record<string, unknown>) => i.type === 'digital' || i.type === 'release' || i.type === 'track'),
         db: env?.DB,
       });
     } catch (ledgerErr: unknown) {
@@ -271,7 +271,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Send artist notification for digital sales
-    const digitalItems = processedItems.filter((item: any) =>
+    const digitalItems = processedItems.filter((item: Record<string, unknown>) =>
       item.type === 'digital' || item.type === 'release' || item.type === 'track'
     );
 
@@ -311,7 +311,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Process artist payouts automatically
     const paypalConfig = getPayPalConfig(env);
-    const payoutResults: any[] = [];
+    const payoutResults: Record<string, unknown>[] = [];
 
     if (paypalConfig && digitalItems.length > 0) {
       // Process auto-payouts for digital items
@@ -469,7 +469,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 // Simple order confirmation email
-function buildOrderEmail(orderId: string, orderNumber: string, order: any): string {
+function buildOrderEmail(orderId: string, orderNumber: string, order: Record<string, unknown>): string {
   let itemsHtml = '';
   for (const item of order.items) {
     itemsHtml += `<tr>

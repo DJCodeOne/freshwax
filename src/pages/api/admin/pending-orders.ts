@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     ).bind(status, limit).all();
 
     // Parse items JSON for each row
-    const orders = (results || []).map((row: any) => {
+    const orders = (results || []).map((row: Record<string, unknown>) => {
       let parsedItems = null;
       try {
         if (row.items) parsedItems = JSON.parse(row.items);

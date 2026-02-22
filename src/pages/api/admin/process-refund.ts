@@ -148,8 +148,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } else if (refundItems && refundItems.length > 0) {
       // Partial refund with specific items
       try {
-        const itemsToRefund = order.items.filter((item: any) =>
-          refundItems.some((ri: any) => ri.id === item.id || ri.id === item.releaseId)
+        const itemsToRefund = order.items.filter((item: Record<string, unknown>) =>
+          refundItems.some((ri: Record<string, unknown>) => ri.id === item.id || ri.id === item.releaseId)
         );
         if (itemsToRefund.length > 0) {
           await refundOrderStock(orderId, itemsToRefund, order.orderNumber || orderId);
@@ -211,7 +211,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('[process-refund] Error:', error);
 
     // Handle specific Stripe errors
-    const stripeType = (error as any)?.type;
+    const stripeType = (error as Record<string, unknown>)?.type;
     if (stripeType === 'StripeCardError' || stripeType === 'StripeInvalidRequestError') {
       return ApiErrors.badRequest('Refund request failed');
     }

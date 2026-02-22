@@ -52,7 +52,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit: 100
     });
 
-    const summary = releases.map((r: any) => ({
+    const summary = releases.map((r: Record<string, unknown>) => ({
       id: r.id,
       artistName: r.artistName || r.artist,
       releaseName: r.releaseName || r.title,
@@ -67,12 +67,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
     let matchesForUser = null;
     if (userId) {
       matchesForUser = {
-        bySubmitterId: releases.filter((r: any) => r.submitterId === userId).length,
-        byUploadedBy: releases.filter((r: any) => r.uploadedBy === userId).length,
-        byUserId: releases.filter((r: any) => r.userId === userId).length,
-        totalMatches: releases.filter((r: any) =>
+        bySubmitterId: releases.filter((r: Record<string, unknown>) => r.submitterId === userId).length,
+        byUploadedBy: releases.filter((r: Record<string, unknown>) => r.uploadedBy === userId).length,
+        byUserId: releases.filter((r: Record<string, unknown>) => r.userId === userId).length,
+        totalMatches: releases.filter((r: Record<string, unknown>) =>
           r.submitterId === userId || r.uploadedBy === userId || r.userId === userId
-        ).map((r: any) => r.releaseName || r.title)
+        ).map((r: Record<string, unknown>) => r.releaseName || r.title)
       };
     }
 

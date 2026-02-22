@@ -110,7 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Update artwork URLs
-    const updates: any = {
+    const updates: Record<string, unknown> = {
       ...release,
       thumbUrl: fixUrl(release.thumbUrl),
       coverArtUrl: fixUrl(release.coverArtUrl),
@@ -122,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Update track URLs
     if (release.tracks && Array.isArray(release.tracks)) {
-      updates.tracks = release.tracks.map((track: any) => ({
+      updates.tracks = release.tracks.map((track: Record<string, unknown>) => ({
         ...track,
         mp3Url: fixUrl(track.mp3Url),
         wavUrl: fixUrl(track.wavUrl),

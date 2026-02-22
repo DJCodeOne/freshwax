@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Get supplier - either by ID or access code
-    let supplier: any = null;
+    let supplier: Record<string, unknown> | null = null;
     let supplierDocId = supplierId;
 
     if (supplierId) {
@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Look up by access code
       const { queryCollection } = await import('../../../../../lib/firebase-rest');
       const suppliers = await queryCollection('merch-suppliers', { limit: 100 });
-      const found = suppliers.find((s: any) => s.accessCode === accessCode);
+      const found = suppliers.find((s: Record<string, unknown>) => s.accessCode === accessCode);
       if (found) {
         supplier = found;
         supplierDocId = found.id;

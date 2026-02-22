@@ -52,8 +52,8 @@ async function getToken(serviceAccountKey: string): Promise<string> {
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
   }, 10000);
 
-  const tokenData = await tokenResponse.json() as any;
-  return tokenData.access_token;
+  const tokenData = await tokenResponse.json() as Record<string, unknown>;
+  return tokenData.access_token as string;
 }
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Convert tracks array to Firestore format
-    const tracksFirestore = tracks.map((track: any) => ({
+    const tracksFirestore = tracks.map((track: Record<string, unknown>) => ({
       mapValue: {
         fields: Object.fromEntries(
           Object.entries(track).map(([k, v]) => {

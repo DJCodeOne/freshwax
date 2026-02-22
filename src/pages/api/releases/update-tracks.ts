@@ -12,7 +12,7 @@ export const prerender = false;
 const logger = createLogger('update-tracks');
 
 // Build service account key from individual env vars
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -72,10 +72,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Update existing tracks with processed URLs
     // Match by canonical trackNumber (displayTrackNumber - 1) since trackNumber field can be inconsistent
-    const updatedTracks = (existingRelease.tracks || []).map((existingTrack: any, index: number) => {
+    const updatedTracks = (existingRelease.tracks || []).map((existingTrack: Record<string, unknown>, index: number) => {
       // Use displayTrackNumber - 1 as canonical index, fallback to array index
       const canonicalIndex = existingTrack.displayTrackNumber ? existingTrack.displayTrackNumber - 1 : index;
-      const processedTrack = tracks.find((t: any) => t.trackNumber === canonicalIndex);
+      const processedTrack = tracks.find((t: Record<string, unknown>) => t.trackNumber === canonicalIndex);
 
       if (processedTrack) {
         return {

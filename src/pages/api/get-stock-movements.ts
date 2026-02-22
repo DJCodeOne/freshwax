@@ -31,7 +31,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const supplierId = params.get('supplierId');
 
     // Build filters
-    const filters: Array<{field: string, op: any, value: any}> = [];
+    const filters: Array<{field: string, op: string, value: string}> = [];
 
     if (productId) {
       filters.push({ field: 'productId', op: 'EQUAL', value: productId });

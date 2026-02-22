@@ -8,10 +8,10 @@ const logger = createLogger('get-shuffle-tracks');
 
 export const prerender = false;
 
-let pendingRequest: Promise<any> | null = null;
+let pendingRequest: Promise<Record<string, unknown>> | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 5 * 60 * 1000;
-let cachedResult: any = null;
+let cachedResult: { tracks: unknown[]; meta: Record<string, unknown> } | null = null;
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute

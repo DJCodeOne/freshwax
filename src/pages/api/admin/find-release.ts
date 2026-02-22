@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const releases = await queryCollection('releases', { limit: 500, cacheTime: 60000 });
     
     const searchTerm = name.toLowerCase();
-    const matches = releases.filter((r: any) => {
+    const matches = releases.filter((r: Record<string, unknown>) => {
       const releaseName = (r.releaseName || r.title || '').toLowerCase();
       const artistName = (r.artistName || '').toLowerCase();
       return releaseName.includes(searchTerm) || artistName.includes(searchTerm);
@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     return new Response(JSON.stringify({
       count: matches.length,
-      releases: matches.map((r: any) => ({
+      releases: matches.map((r: Record<string, unknown>) => ({
         id: r.id,
         releaseName: r.releaseName || r.title,
         artistName: r.artistName,

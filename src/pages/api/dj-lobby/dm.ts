@@ -183,7 +183,7 @@ async function hmacSha256Hex(key: string, data: string): Promise<string> {
 }
 
 // Trigger Pusher event using Web Crypto API
-async function triggerPusher(channel: string, event: string, data: any, env?: any): Promise<boolean> {
+async function triggerPusher(channel: string, event: string, data: Record<string, unknown>, env?: Record<string, unknown>): Promise<boolean> {
   // Get Pusher config from env (Cloudflare runtime) or import.meta.env
   const PUSHER_APP_ID = env?.PUSHER_APP_ID || import.meta.env.PUSHER_APP_ID;
   const PUSHER_KEY = env?.PUBLIC_PUSHER_KEY || import.meta.env.PUBLIC_PUSHER_KEY;

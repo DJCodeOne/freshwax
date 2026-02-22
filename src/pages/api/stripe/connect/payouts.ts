@@ -60,15 +60,15 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
 
     // Calculate totals
     const totalEarnings = artist.totalEarnings || 0;
-    const pendingBalance = pendingPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    const pendingBalance = pendingPayouts.reduce((sum: number, p: Record<string, unknown>) => sum + ((p.amount as number) || 0), 0);
 
     // Calculate this month's earnings
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const thisMonthPayouts = payouts.filter((p: any) =>
-      new Date(p.createdAt) >= monthStart && p.status === 'completed'
+    const thisMonthPayouts = payouts.filter((p: Record<string, unknown>) =>
+      new Date(p.createdAt as string) >= monthStart && p.status === 'completed'
     );
-    const thisMonthEarnings = thisMonthPayouts.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+    const thisMonthEarnings = thisMonthPayouts.reduce((sum: number, p: Record<string, unknown>) => sum + ((p.amount as number) || 0), 0);
 
     // Check for more results
     const hasMore = payouts.length > limit;

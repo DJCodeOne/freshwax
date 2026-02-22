@@ -45,8 +45,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Get all orders and ledger entries using service account
-    let ordersData: any[] = [];
-    let ledgerData: any[] = [];
+    let ordersData: Record<string, unknown>[] = [];
+    let ledgerData: Record<string, unknown>[] = [];
 
     try {
       ordersData = await saQueryCollection(serviceAccountKey, projectId, 'orders', { limit: 500 });
@@ -66,9 +66,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Find orders that already have ledger entries
-    const ordersWithLedger = new Set(ledgerData.map((e: any) => e.orderId));
+    const ordersWithLedger = new Set(ledgerData.map((e: Record<string, unknown>) => e.orderId));
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
     let totalCreated = 0;
     let totalSkipped = 0;
 

@@ -70,7 +70,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const comments = release.comments || [];
 
-    const sortedComments = [...comments].sort((a: any, b: any) => {
+    const sortedComments = [...comments].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
       const dateA = new Date(a.timestamp || a.createdAt || 0).getTime();
       const dateB = new Date(b.timestamp || b.createdAt || 0).getTime();
       return dateB - dateA;

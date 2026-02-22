@@ -78,9 +78,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
         });
 
         // Find the most recent pending, approved, or denied request
-        const pendingRequest = snapshot.find((r: any) => r.status === 'pending');
-        const approvedRequest = snapshot.find((r: any) => r.status === 'approved');
-        const deniedRequest = snapshot.find((r: any) => r.status === 'denied');
+        const pendingRequest = snapshot.find((r: Record<string, unknown>) => r.status === 'pending');
+        const approvedRequest = snapshot.find((r: Record<string, unknown>) => r.status === 'approved');
+        const deniedRequest = snapshot.find((r: Record<string, unknown>) => r.status === 'denied');
 
         // Determine the current active request (pending takes priority)
         const activeRequest = pendingRequest || approvedRequest || deniedRequest || null;
@@ -125,7 +125,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
 
       // Collect unique user IDs for batch fetching
-      const userIds = [...new Set(snapshot.map((r: any) => r.userId).filter(Boolean))];
+      const userIds = [...new Set(snapshot.map((r: Record<string, unknown>) => r.userId as string).filter(Boolean))];
 
       // Batch fetch all user data in parallel (not N+1!)
       const [usersData, artistsData, mixesData] = await Promise.all([
@@ -138,8 +138,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       ]);
 
       // Build lookup maps for O(1) access
-      const usersMap = new Map<string, any>();
-      const artistsMap = new Map<string, any>();
+      const usersMap = new Map<string, Record<string, unknown>>();
+      const artistsMap = new Map<string, Record<string, unknown>>();
       userIds.forEach((id, i) => {
         if (usersData[i]) usersMap.set(id, usersData[i]);
         if (artistsData[i]) artistsMap.set(id, artistsData[i]);
@@ -147,7 +147,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       // Build mix stats map
       const mixStatsMap = new Map<string, { count: number; bestLikes: number }>();
-      (mixesData as any[]).forEach((mix: any) => {
+      (mixesData as Record<string, unknown>[]).forEach((mix: Record<string, unknown>) => {
         const uid = mix.userId || mix.user_id || mix.uploaderId;
         if (!uid) return;
         const stats = mixStatsMap.get(uid) || { count: 0, bestLikes: 0 };
@@ -158,7 +158,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
 
       // Map requests with enriched data (no async, all data is in maps)
-      const requests = snapshot.map((data: any) => {
+      const requests = snapshot.map((data: Record<string, unknown>) => {
         const userId = data.userId;
         const userDoc = usersMap.get(userId);
         const artistDoc = artistsMap.get(userId);
@@ -274,7 +274,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (targetUserId) {
           try {
             // Update user with bypass permission
-            const updateData: any = {
+            const updateData: Record<string, unknown> = {
               [`${targetRequestType}Bypassed`]: true,
               bypassedAt: new Date().toISOString(),
               bypassedBy: 'admin'
@@ -300,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             logger.info('[bypass-requests] User document updated');
 
             // Also add to djLobbyBypass collection for the admin list
-            const bypassData: any = {
+            const bypassData: Record<string, unknown> = {
               email: userEmail,
               name: userName,
               reason: existingRequest.reason || 'Approved via bypass request',
@@ -374,7 +374,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const authenticatedUserId = verifiedUserId;
 
     // Check if user already has a pending request
-    let existingRequests: any[] = [];
+    let existingRequests: Record<string, unknown>[] = [];
     try {
       existingRequests = await saQuery('bypassRequests', {
         filters: [

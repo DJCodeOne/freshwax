@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Sort transactions by date (newest first)
     const transactions = (creditData.transactions || [])
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
     return new Response(JSON.stringify({
       success: true,

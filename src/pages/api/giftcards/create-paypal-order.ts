@@ -148,7 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('[GiftCard PayPal] Order created:', paypalResult.id);
 
     // Extract approval URL
-    const approvalLink = paypalResult.links?.find((link: any) => link.rel === 'approve');
+    const approvalLink = paypalResult.links?.find((link: Record<string, unknown>) => link.rel === 'approve');
     const approvalUrl = approvalLink?.href || null;
 
     // Store pending gift card order data for secure retrieval during capture

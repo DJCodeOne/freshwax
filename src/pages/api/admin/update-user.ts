@@ -73,7 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       const customerDoc = await getDocument('users', userId);
       if (customerDoc) {
-        const customerUpdate: any = { updatedAt: timestamp };
+        const customerUpdate: Record<string, unknown> = { updatedAt: timestamp };
 
         if (updates.displayName !== undefined) {
           customerUpdate.displayName = updates.displayName;
@@ -106,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       const userDoc = await getDocument('users', userId);
       if (userDoc) {
-        const userUpdate: any = { updatedAt: timestamp };
+        const userUpdate: Record<string, unknown> = { updatedAt: timestamp };
 
         if (updates.displayName !== undefined) userUpdate.displayName = updates.displayName;
         // Note: email is immutable in users collection - use customers collection as source of truth
@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const artistDoc = await getDocument('artists', userId);
         if (artistDoc) {
           // Only include fields that are explicitly provided
-          const artistUpdate: any = { updatedAt: timestamp };
+          const artistUpdate: Record<string, unknown> = { updatedAt: timestamp };
 
           if (updates.displayName !== undefined) {
             artistUpdate.artistName = updates.displayName;

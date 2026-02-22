@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Group by product to minimize lookups
-    const byProduct: Record<string, any[]> = {};
+    const byProduct: Record<string, Record<string, unknown>[]> = {};
     for (const sub of subscriptions) {
       const key = `${sub.productType}:${sub.productId}`;
       if (!byProduct[key]) byProduct[key] = [];
@@ -102,7 +102,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 }
               }
               // If no specific variant, check total
-              if (!subs.some((s: any) => s.variantKey)) {
+              if (!subs.some((s: Record<string, unknown>) => s.variantKey)) {
                 isInStock = (product.totalStock || product.stock || 0) > 0;
               }
             } else {

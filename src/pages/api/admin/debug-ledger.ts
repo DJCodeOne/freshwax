@@ -26,7 +26,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   try {
     // Get all ledger entries using service account
-    let ledgerData: any[] = [];
+    let ledgerData: Record<string, unknown>[] = [];
     let ledgerSource = 'service_account';
     try {
       ledgerData = await saQuery('salesLedger', { limit: 500 });
@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       paymentStatus: o.paymentStatus,
       total: o.totals?.total || o.total,
       artistEarnings: o.totals?.artistEarnings,
-      items: (o.items || []).map((i: any) => ({
+      items: ((o.items || []) as Record<string, unknown>[]).map((i: Record<string, unknown>) => ({
         title: i.title || i.name,
         artistId: i.artistId,
         artistName: i.artistName

@@ -79,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     switch (action) {
       case 'update': {
-        const updateData: any = { updatedAt: new Date().toISOString() };
+        const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
 
         const fields = [
           'artist', 'title', 'label', 'catalogNumber', 'format', 'releaseYear',

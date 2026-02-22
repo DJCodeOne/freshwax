@@ -49,7 +49,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Build filters
-    const filters: any[] = [];
+    const filters: Array<{ field: string; op: string; value: string }> = [];
     if (status !== 'all') filters.push({ field: 'status', op: 'EQUAL', value: status });
     if (type) filters.push({ field: 'type', op: 'EQUAL', value: type });
 
@@ -187,7 +187,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     const { reportId, status, resolution, adminNotes, adminId } = data;
     if (!reportId) return ApiErrors.badRequest('Report ID required');
 
-    const updates: any = { updatedAt: new Date() };
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (status) {
       updates.status = status;
       if (status === 'resolved' || status === 'dismissed') {

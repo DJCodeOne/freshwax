@@ -114,7 +114,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit: MAX_PENDING_JOBS
     });
 
-    const pending = allPending.filter((job: any) => {
+    const pending = allPending.filter((job: Record<string, unknown>) => {
       const cleanupAt = new Date(job.cleanupAt);
       return cleanupAt <= now;
     });
@@ -123,7 +123,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({
         success: true,
         pendingCleanups: pending.length,
-        jobs: pending.map((j: any) => ({
+        jobs: pending.map((j: Record<string, unknown>) => ({
           streamId: j.streamId,
           cleanupAt: j.cleanupAt
         }))
@@ -134,7 +134,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Execute all pending cleanups
     const results = await Promise.all(
-      pending.map(async (job: any) => {
+      pending.map(async (job: Record<string, unknown>) => {
         try {
           const deleted = await deleteStreamChat(job.streamId);
 

@@ -26,7 +26,7 @@ const assignSellerSchema = z.object({
 
 export const prerender = false;
 
-function getServiceAccountKey(env: any): string | null {
+function getServiceAccountKey(env: Record<string, unknown>): string | null {
   const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
   const clientEmail = env?.FIREBASE_CLIENT_EMAIL || import.meta.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = env?.FIREBASE_PRIVATE_KEY || import.meta.env.FIREBASE_PRIVATE_KEY;
@@ -90,7 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({
         success: true,
         message: `Found ${allProducts.length} products in ${collectionName}`,
-        products: allProducts.map((p: any) => ({
+        products: allProducts.map((p: Record<string, unknown>) => ({
           id: p.id,
           name: p.name || p.releaseName,
           category: p.category,
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const searchLower = searchTerm.toLowerCase();
       idsToUpdate = allProducts
-        .filter((p: any) => {
+        .filter((p: Record<string, unknown>) => {
           const name = (p.name || p.releaseName || '').toLowerCase();
           const artist = (p.artist || p.artistName || p.brand || '').toLowerCase();
           const label = (p.label || '').toLowerCase();
@@ -130,7 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const id = (p.id || '').toLowerCase();
           return name.includes(searchLower) || artist.includes(searchLower) || label.includes(searchLower) || category.includes(searchLower) || sku.includes(searchLower) || id.includes(searchLower);
         })
-        .map((p: any) => p.id);
+        .map((p: Record<string, unknown>) => p.id as string);
 
       log.info(`[assign-seller] Search "${searchTerm}" found ${idsToUpdate.length} products:`, idsToUpdate);
 
@@ -146,7 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     for (const productId of idsToUpdate) {
       try {
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           updatedAt: new Date().toISOString()
         };
 

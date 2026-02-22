@@ -23,7 +23,7 @@ const logger = createLogger('delete-mix');
 const MAX_R2_FILES_TO_DELETE = 50;
 
 // Get R2 configuration from Cloudflare runtime env
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -207,7 +207,7 @@ export const DELETE: APIRoute = async ({ request, url, locals }) => {
   });
 
   // Call the POST handler with full context including locals
-  return POST({ request: mockRequest, url, locals } as any);
+  return POST({ request: mockRequest, url, locals } as Parameters<typeof POST>[0]);
 };
 
 // Support GET method for simple browser/fetch calls

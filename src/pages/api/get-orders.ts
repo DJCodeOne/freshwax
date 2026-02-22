@@ -57,13 +57,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     // Batch fetch all releases at once (avoids N+1 queries)
     const releaseCache = releaseIds.size > 0
       ? await getDocumentsBatch('releases', Array.from(releaseIds))
-      : new Map<string, any>();
+      : new Map<string, Record<string, unknown>>();
 
     logger.info('[get-orders] Batch fetched', releaseCache.size, 'releases for', userOrders.length, 'orders');
 
-    const orders = userOrders.map((orderData: any) => {
+    const orders = userOrders.map((orderData: Record<string, unknown>) => {
       if (orderData.items && Array.isArray(orderData.items)) {
-        orderData.items = orderData.items.map((item: any) => {
+        orderData.items = (orderData.items as Record<string, unknown>[]).map((item: Record<string, unknown>) => {
           if (item.type !== 'digital' && item.type !== 'release' && item.type !== 'track') {
             return item;
           }
@@ -81,7 +81,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                 let track = null;
 
                 if (item.trackId) {
-                  track = (releaseData?.tracks || []).find((t: any) =>
+                  track = ((releaseData?.tracks || []) as Record<string, unknown>[]).find((t: Record<string, unknown>) =>
                     t.id === item.trackId ||
                     t.trackId === item.trackId ||
                     String(t.trackNumber) === String(item.trackId)
@@ -91,14 +91,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                 if (!track && item.name) {
                   const itemNameParts = item.name.split(' - ');
                   const trackNameFromItem = itemNameParts.length > 1 ? itemNameParts.slice(1).join(' - ') : item.name;
-                  track = (releaseData?.tracks || []).find((t: any) =>
-                    (t.trackName || t.name || '').toLowerCase() === trackNameFromItem.toLowerCase()
+                  track = ((releaseData?.tracks || []) as Record<string, unknown>[]).find((t: Record<string, unknown>) =>
+                    ((t.trackName || t.name || '') as string).toLowerCase() === trackNameFromItem.toLowerCase()
                   );
                 }
 
                 if (!track && item.title) {
-                  track = (releaseData?.tracks || []).find((t: any) =>
-                    (t.trackName || t.name || '').toLowerCase() === item.title.toLowerCase()
+                  track = ((releaseData?.tracks || []) as Record<string, unknown>[]).find((t: Record<string, unknown>) =>
+                    ((t.trackName || t.name || '') as string).toLowerCase() === (item.title as string).toLowerCase()
                   );
                 }
 
@@ -133,7 +133,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                       artistName,
                       releaseName,
                       artworkUrl,
-                      tracks: (releaseData?.tracks || []).map((t: any) => ({
+                      tracks: ((releaseData?.tracks || []) as Record<string, unknown>[]).map((t: Record<string, unknown>) => ({
                         name: t.trackName || t.name,
                         mp3Url: t.mp3Url || null,
                         wavUrl: t.wavUrl || null
@@ -156,7 +156,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
                   artistName,
                   releaseName,
                   artworkUrl,
-                  tracks: (releaseData?.tracks || []).map((track: any) => ({
+                  tracks: (releaseData?.tracks || []).map((track: Record<string, unknown>) => ({
                     name: track.trackName || track.name,
                     mp3Url: track.mp3Url || null,
                     wavUrl: track.wavUrl || null
@@ -175,7 +175,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return orderData;
     });
 
-    orders.sort((a: any, b: any) => {
+    orders.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;

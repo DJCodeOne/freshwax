@@ -14,7 +14,7 @@ export const prerender = false;
 // Fresh Wax YouTube channel ID
 const FRESHWAX_YOUTUBE_CHANNEL_ID = 'UCAMhFgnOL4RrYNersrqeUbQ';
 
-function getYouTubeApiKey(env: any): string {
+function getYouTubeApiKey(env: Record<string, unknown>): string {
   return env?.YOUTUBE_API_KEY || import.meta.env.YOUTUBE_API_KEY || '';
 }
 

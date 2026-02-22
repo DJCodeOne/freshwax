@@ -36,7 +36,7 @@ async function listSubcollectionDocs(parentPath: string, idToken: string): Promi
   const data = await response.json();
   if (!data.documents) return [];
 
-  return data.documents.map((doc: any) => {
+  return data.documents.map((doc: Record<string, unknown>) => {
     const parts = doc.name.split('/');
     return parts[parts.length - 1];
   });

@@ -106,7 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         if (collection === 'users') {
           // Update user document
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             updatedAt: new Date().toISOString(),
             'partnerInfo.storeName': storeName,
             'partnerInfo.description': description,
@@ -122,7 +122,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await updateDocument('users', sellerId, updateData);
         } else {
           // Update vinylSellers document (legacy)
-          const updateData: any = {
+          const updateData: Record<string, unknown> = {
             updatedAt: new Date().toISOString()
           };
 

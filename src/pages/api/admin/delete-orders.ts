@@ -23,7 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const env = locals.runtime.env;
 
   // Parse body first for admin key check
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
   } catch {

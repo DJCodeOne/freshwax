@@ -69,7 +69,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
 
       // Try to get user document (may fail if not authenticated)
-      let userData: any = null;
+      let userData: Record<string, unknown> | null = null;
       try {
         userData = await getDocument('users', uid);
       } catch (e: unknown) {
@@ -108,7 +108,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       let totalMixes = 0;
       let mixesWithEnoughLikes = 0;
       let highestLikes = 0;
-      let mixProgress: any[] = [];
+      let mixProgress: { id: string; title: unknown; likes: number; meetsThreshold: boolean }[] = [];
 
       mixes.forEach(mix => {
         totalMixes++;

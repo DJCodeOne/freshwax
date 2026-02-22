@@ -11,7 +11,7 @@ const log = createLogger('check-ownership');
 export const prerender = false;
 
 // Server-side cache for ownership data - keyed by userId
-const ownershipCache = new Map<string, { data: any; expires: number }>();
+const ownershipCache = new Map<string, { data: { ownedReleases: Set<string>; ownedTracks: Map<string, string[]> }; expires: number }>();
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes - ownership doesn't change often
 
 async function getOwnershipData(userId: string): Promise<{ 
@@ -35,7 +35,7 @@ async function getOwnershipData(userId: string): Promise<{
 
   orders.forEach(order => {
     if (order.items && Array.isArray(order.items)) {
-      order.items.forEach((item: any) => {
+      order.items.forEach((item: Record<string, unknown>) => {
         const itemReleaseId = item.releaseId || item.productId || item.id;
         const itemType = item.type || item.productType;
         

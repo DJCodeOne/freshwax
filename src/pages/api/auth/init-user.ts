@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.unauthorized('Authentication required');
   }
 
-  let rawBody: any;
+  let rawBody: unknown;
   try {
     rawBody = await request.json();
   } catch {
@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Create the user document
-      const userData: Record<string, any> = {
+      const userData: Record<string, unknown> = {
         uid: userId,
         email: email || authEmail || '',
         displayName: googleDisplayName,
@@ -161,7 +161,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // (orphaned Auth account - has Firebase Auth but no Firestore doc)
       const loginDisplayName = displayName || (email ? email.split('@')[0] : 'User');
 
-      const userData: Record<string, any> = {
+      const userData: Record<string, unknown> = {
         email: email || authEmail || '',
         displayName: loginDisplayName,
         fullName: displayName || '',
@@ -199,7 +199,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       // Build user document
-      const userData: Record<string, any> = {
+      const userData: Record<string, unknown> = {
         uid: userId,
         email: email || authEmail || '',
         displayName: displayName,
@@ -216,7 +216,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           vinylSeller: false,
           admin: false
         },
-        pendingRoles: {} as Record<string, any>
+        pendingRoles: {} as Record<string, unknown>
       };
 
       // Add pending role requests
@@ -253,7 +253,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await setDocument('users', userId, userData);
 
       // Write pending role requests to separate collection (for REST API access / admin)
-      const rolePromises: Promise<any>[] = [];
+      const rolePromises: Promise<unknown>[] = [];
 
       if (requestArtist) {
         rolePromises.push(setDocument('pendingRoleRequests', `${userId}_artist`, {

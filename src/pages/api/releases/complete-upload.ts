@@ -43,7 +43,7 @@ export const prerender = false;
 
 const logger = createLogger('complete-upload');
 
-function getR2Config(env: any) {
+function getR2Config(env: Record<string, unknown>) {
   return {
     accountId: env?.R2_ACCOUNT_ID || import.meta.env.R2_ACCOUNT_ID,
     accessKeyId: env?.R2_ACCESS_KEY_ID || import.meta.env.R2_ACCESS_KEY_ID,
@@ -71,7 +71,7 @@ function createS3Client(config: ReturnType<typeof getR2Config>) {
  */
 async function processReleaseArtwork(
   coverArtUrl: string,
-  env: any,
+  env: Record<string, unknown>,
   logger: typeof logger
 ): Promise<{ coverUrl: string; thumbUrl: string; originalArtworkUrl: string } | null> {
   if (!coverArtUrl || coverArtUrl === '') return null;
@@ -217,7 +217,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const finalOriginalArtworkUrl = processedArt?.originalArtworkUrl || coverArtUrl || '';
 
     // Build track documents with consistent structure
-    const processedTracks = tracks.map((track: any, index: number) => ({
+    const processedTracks = tracks.map((track: Record<string, unknown>, index: number) => ({
       id: `${releaseId}_track_${track.trackNumber || index + 1}`,
       trackNumber: track.trackNumber || index + 1,
       title: track.title || `Track ${index + 1}`,

@@ -157,7 +157,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const now = new Date();
     const nowISO = now.toISOString();
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const slot of liveSlots) {
       const startedAt = slot.startedAt || slot.liveStartTime || slot.startTime;

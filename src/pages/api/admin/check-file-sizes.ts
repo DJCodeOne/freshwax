@@ -33,10 +33,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     const tracks = release.tracks || [];
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const track of tracks) {
-      const trackResult: any = {
+      const trackResult: Record<string, unknown> = {
         name: track.trackName || track.name || 'Unknown',
         mp3Url: track.mp3Url || null,
         wavUrl: track.wavUrl || null,
