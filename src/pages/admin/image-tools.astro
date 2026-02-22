@@ -272,6 +272,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       'oversized': '<span class="badge badge-pending">OVERSIZED</span>',
       'not-webp,oversized': '<span class="badge badge-danger">NOT WEBP</span> <span class="badge badge-pending">OVERSIZED</span>',
       'missing-thumb': '<span class="badge badge-info">NO THUMB</span>',
+      'converted': '<span class="badge badge-completed">CONVERTED</span>',
       'ok': '<span class="badge badge-completed">OK</span>',
     };
     return badges[issue] || `<span class="badge">${escapeHtml(issue)}</span>`;
@@ -351,12 +352,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         return;
       }
 
-      // Accumulate results
+      // Accumulate results with deduplication by key
       totalScanned += data.scanned;
       cumulativeSummary.notWebp += data.summary.notWebp;
       cumulativeSummary.oversized += data.summary.oversized;
       cumulativeSummary.missingThumb += data.summary.missingThumb;
-      allIssues = allIssues.concat(data.issues);
+      const existingKeys = new Set(allIssues.map(i => i.key));
+      for (const issue of data.issues) {
+        if (!existingKeys.has(issue.key)) {
+          allIssues.push(issue);
+          existingKeys.add(issue.key);
+        }
+      }
       currentCursor = data.cursor;
 
       updateSummaryStats();

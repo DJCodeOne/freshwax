@@ -56,6 +56,44 @@ function getSizeThreshold(key: string): number {
   return SIZE_THRESHOLDS[type] || SIZE_THRESHOLDS['default'];
 }
 
+/**
+ * Check if a WebP version of a non-WebP file already exists.
+ * Matches the reprocessor naming: artwork.jpg → cover.webp, image.jpg → image.webp
+ */
+function checkWebpExists(
+  key: string,
+  allKeys: Set<string>,
+  folderContents: Map<string, { webpFiles: string[]; hasThumb: boolean; hasArtwork: boolean; hasCover: boolean }>
+): boolean {
+  const dir = key.substring(0, key.lastIndexOf('/') + 1);
+  const filename = key.substring(key.lastIndexOf('/') + 1);
+  const baseName = filename.replace(/\.[^.]+$/, '').toLowerCase();
+
+  // Direct match: same name with .webp extension
+  const directWebp = dir + baseName + '.webp';
+  if (allKeys.has(directWebp)) return true;
+
+  // For artwork files, the reprocessor outputs cover.webp
+  if (baseName.startsWith('artwork')) {
+    if (allKeys.has(dir + 'cover.webp')) return true;
+  }
+
+  // For release/mix folders, check if ANY webp file exists in the same folder
+  const parts = key.split('/');
+  if (parts.length >= 3 && (key.startsWith('releases/') || key.startsWith('dj-mixes/'))) {
+    const folder = parts.slice(0, 2).join('/');
+    const info = folderContents.get(folder);
+    if (info && info.webpFiles.length > 0) {
+      // If the folder has a cover.webp or a same-base-name.webp, consider it converted
+      if (info.webpFiles.some(f => f === 'cover.webp' || f === baseName + '.webp')) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 export const GET: APIRoute = async ({ request, locals }) => {
   const authError = await requireAdminAuth(request, locals);
   if (authError) return authError;
@@ -91,8 +129,31 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const issues: Array<{ key: string; size: number; issue: string; type: string }> = [];
     const summary = { total: objects.length, notWebp: 0, oversized: 0, missingThumb: 0 };
 
-    // Track release folders to check for missing thumbs
-    const releaseFolders = new Map<string, { hasCover: boolean; hasThumb: boolean; hasArtwork: boolean }>();
+    // Build a set of all keys in this page for WebP counterpart detection
+    const allKeysInPage = new Set<string>();
+    for (const obj of objects) {
+      if (obj.Key) allKeysInPage.add(obj.Key);
+    }
+
+    // Track release/mix folders for content analysis
+    const folderContents = new Map<string, { webpFiles: string[]; hasThumb: boolean; hasArtwork: boolean; hasCover: boolean }>();
+    for (const obj of objects) {
+      const key = obj.Key || '';
+      if (!IMAGE_EXTENSIONS.test(key)) continue;
+      const parts = key.split('/');
+      if (parts.length >= 3 && (key.startsWith('releases/') || key.startsWith('dj-mixes/'))) {
+        const folder = parts.slice(0, 2).join('/');
+        if (!folderContents.has(folder)) {
+          folderContents.set(folder, { webpFiles: [], hasThumb: false, hasArtwork: false, hasCover: false });
+        }
+        const info = folderContents.get(folder)!;
+        const filename = parts[parts.length - 1].toLowerCase();
+        if (filename.endsWith('.webp')) info.webpFiles.push(filename);
+        if (filename.startsWith('thumb')) info.hasThumb = true;
+        if (filename.startsWith('artwork')) info.hasArtwork = true;
+        if (filename.startsWith('cover')) info.hasCover = true;
+      }
+    }
 
     for (const obj of objects) {
       const key = obj.Key || '';
@@ -105,6 +166,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       // Check for non-WebP format
       if (NON_WEBP.test(key)) {
+        // Check if a WebP version already exists (skip converted originals)
+        const hasWebpVersion = checkWebpExists(key, allKeysInPage, folderContents);
+        if (hasWebpVersion) {
+          // Already converted — only show in showAll mode
+          if (showAll) {
+            issues.push({ key, size, issue: 'converted', type });
+          }
+          continue;
+        }
+
         issues.push({ key, size, issue: 'not-webp', type });
         summary.notWebp++;
       }
@@ -128,28 +199,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (showAll && !NON_WEBP.test(key) && !isOversize) {
         issues.push({ key, size, issue: 'ok', type });
       }
-
-      // Track release folder contents for missing-thumb detection
-      if (key.startsWith('releases/')) {
-        const parts = key.split('/');
-        if (parts.length >= 3) {
-          const folder = parts.slice(0, 2).join('/');
-          if (!releaseFolders.has(folder)) {
-            releaseFolders.set(folder, { hasCover: false, hasThumb: false, hasArtwork: false });
-          }
-          const info = releaseFolders.get(folder)!;
-          const filename = parts[parts.length - 1].toLowerCase();
-          if (filename.startsWith('cover')) info.hasCover = true;
-          if (filename.startsWith('thumb')) info.hasThumb = true;
-          if (filename.startsWith('artwork')) info.hasArtwork = true;
-        }
-      }
     }
 
-    // Flag release folders missing thumbs
-    for (const [folder, info] of releaseFolders) {
+    // Flag release/mix folders missing thumbs
+    for (const [folder, info] of folderContents) {
       if ((info.hasCover || info.hasArtwork) && !info.hasThumb) {
-        issues.push({ key: folder + '/', size: 0, issue: 'missing-thumb', type: 'release-thumb' });
+        const type = folder.startsWith('dj-mixes/') ? 'mix-artwork' : 'release-thumb';
+        issues.push({ key: folder + '/', size: 0, issue: 'missing-thumb', type });
         summary.missingThumb++;
       }
     }

@@ -117,26 +117,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Log results to D1
-    if (db && issues.length > 0) {
-      // Clear old results before inserting new ones (keep table lean)
-      await db.prepare(
-        `DELETE FROM image_scan_results WHERE scan_date < datetime('now', '-30 days')`
-      ).run();
+    if (db) {
+      // Clear old results (>30 days) and today's previous run to prevent accumulation
+      const today = scanDate.split('T')[0]; // YYYY-MM-DD
+      await db.batch([
+        db.prepare(`DELETE FROM image_scan_results WHERE scan_date < datetime('now', '-30 days')`),
+        db.prepare(`DELETE FROM image_scan_results WHERE scan_date >= ? AND scan_date < ?`).bind(today + 'T00:00:00', today + 'T23:59:59'),
+      ]);
 
-      // Batch insert — D1 supports batch operations
-      const insertStmt = db.prepare(
-        `INSERT INTO image_scan_results (scan_date, key, size, prefix, webp_exists) VALUES (?, ?, ?, ?, 0)`
-      );
-
-      const batchSize = 50;
-      for (let i = 0; i < issues.length; i += batchSize) {
-        const batch = issues.slice(i, i + batchSize);
-        await db.batch(
-          batch.map(issue => insertStmt.bind(scanDate, issue.key, issue.size, issue.prefix))
+      if (issues.length > 0) {
+        // Batch insert — D1 supports batch operations
+        const insertStmt = db.prepare(
+          `INSERT INTO image_scan_results (scan_date, key, size, prefix, webp_exists) VALUES (?, ?, ?, ?, 0)`
         );
-      }
 
-      log.info(`[Image Scan] Logged ${issues.length} issues to D1`);
+        const batchSize = 50;
+        for (let i = 0; i < issues.length; i += batchSize) {
+          const batch = issues.slice(i, i + batchSize);
+          await db.batch(
+            batch.map(issue => insertStmt.bind(scanDate, issue.key, issue.size, issue.prefix))
+          );
+        }
+
+        log.info(`[Image Scan] Logged ${issues.length} issues to D1`);
+      }
     }
 
     const duration = Date.now() - startTime;

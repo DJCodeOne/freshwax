@@ -90,10 +90,9 @@ function getOutputKey(originalKey: string, format: string = 'webp'): string {
   return `${dir}${baseName}${ext}`;
 }
 
-/** Check if URL points to an already-optimized image (WebP or JPEG from our pipeline). */
+/** Check if URL points to an already-optimized WebP image. */
 function isOptimizedImage(url: string): boolean {
-  const lower = url.toLowerCase();
-  return lower.endsWith('.webp') || lower.endsWith('.jpg') || lower.endsWith('.jpeg');
+  return url.toLowerCase().endsWith('.webp');
 }
 
 async function r2ObjectExists(s3: S3Client, bucket: string, key: string): Promise<boolean> {
