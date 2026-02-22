@@ -67,25 +67,26 @@ function checkWebpExists(
 ): boolean {
   const dir = key.substring(0, key.lastIndexOf('/') + 1);
   const filename = key.substring(key.lastIndexOf('/') + 1);
-  const baseName = filename.replace(/\.[^.]+$/, '').toLowerCase();
+  const baseName = filename.replace(/\.[^.]+$/, '');
+  const baseNameLower = baseName.toLowerCase();
 
-  // Direct match: same name with .webp extension
+  // Direct match: same name with .webp extension (preserve original case)
   const directWebp = dir + baseName + '.webp';
   if (allKeys.has(directWebp)) return true;
 
   // For artwork files, the reprocessor outputs cover.webp
-  if (baseName.startsWith('artwork')) {
+  if (baseNameLower.startsWith('artwork')) {
     if (allKeys.has(dir + 'cover.webp')) return true;
   }
 
-  // For release/mix folders, check if ANY webp file exists in the same folder
+  // For release/mix folders, check if a matching webp file exists in the same folder
   const parts = key.split('/');
   if (parts.length >= 3 && (key.startsWith('releases/') || key.startsWith('dj-mixes/'))) {
     const folder = parts.slice(0, 2).join('/');
     const info = folderContents.get(folder);
     if (info && info.webpFiles.length > 0) {
-      // If the folder has a cover.webp or a same-base-name.webp, consider it converted
-      if (info.webpFiles.some(f => f === 'cover.webp' || f === baseName + '.webp')) {
+      // Case-insensitive match: cover.webp or same-base-name.webp
+      if (info.webpFiles.some(f => f === 'cover.webp' || f.toLowerCase() === baseNameLower + '.webp')) {
         return true;
       }
     }
