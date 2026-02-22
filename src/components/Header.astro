@@ -955,12 +955,13 @@ const firebaseConfig = {
     }
   }
 
-  function setCachedUserType(userType, isAdmin, avatarUrl = null) {
+  function setCachedUserType(userType, isAdmin, avatarUrl = null, displayName = null) {
     try {
       sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify({
         userType,
         isAdmin,
         avatarUrl,
+        displayName,
         timestamp: Date.now()
       }));
     } catch {
@@ -1375,7 +1376,7 @@ const firebaseConfig = {
     
     if (user) {
       const cachedData = getCachedUserType() || { userType: 'customer', isAdmin: false };
-      const displayName = user.displayName || user.email?.split('@')[0] || 'Account';
+      const displayName = cachedData.displayName || user.displayName || user.email?.split('@')[0] || 'Account';
       
       accountNames.forEach(el => el.textContent = displayName);
       loggedOutSections.forEach(el => { el.classList.add('fwx-hidden'); el.style.display = 'none'; });
@@ -1470,7 +1471,7 @@ const firebaseConfig = {
           if (!response.ok) throw new Error('Failed to fetch user type');
           const data = await response.json();
           if (data.success) {
-            setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null);
+            setCachedUserType(data.isArtist ? 'artist' : 'customer', data.isAdmin, data.avatarUrl || null, data.displayName || data.name || null);
             // Set __session cookie with ID token for SSR admin page auth
             if (data.isAdmin) {
               document.cookie = `__session=${idToken}; path=/; max-age=3600; SameSite=Lax; Secure`;
