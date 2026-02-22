@@ -41,6 +41,8 @@ interface Props {
     isrc?: string;
     catalogNumber?: string;
     bpm?: number;
+    albumReleaseType?: 'SingleRelease' | 'EPRelease' | 'AlbumRelease';
+    albumProductionType?: 'StudioAlbum' | 'CompilationAlbum' | 'DJMixAlbum' | 'LiveAlbum' | 'RemixAlbum' | 'SoundtrackAlbum';
   };
   
   // DJ Mix / Audio content
@@ -351,33 +353,59 @@ const productSchema = product ? {
     "itemCondition": `https://schema.org/${product.condition || 'NewCondition'}`,
     "seller": { "@id": `${SITE.url}/#organization` },
     ...(product.priceValidUntil && { "priceValidUntil": product.priceValidUntil }),
-    "shippingDetails": {
-      "@type": "OfferShippingDetails",
-      "shippingRate": {
-        "@type": "MonetaryAmount",
-        "value": "0",
-        "currency": "GBP"
-      },
-      "shippingDestination": {
-        "@type": "DefinedRegion",
-        "addressCountry": "GB"
-      },
-      "deliveryTime": {
-        "@type": "ShippingDeliveryTime",
-        "handlingTime": { 
-          "@type": "QuantitativeValue", 
-          "minValue": 0, 
-          "maxValue": 2, 
-          "unitCode": "d" 
+    "shippingDetails": [
+      {
+        "@type": "OfferShippingDetails",
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "GB"
         },
-        "transitTime": { 
-          "@type": "QuantitativeValue", 
-          "minValue": 1, 
-          "maxValue": 5, 
-          "unitCode": "d" 
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "3.50",
+          "currency": "GBP"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 2, "unitCode": "d" },
+          "transitTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "d" }
+        }
+      },
+      {
+        "@type": "OfferShippingDetails",
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "EU"
+        },
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "8.95",
+          "currency": "GBP"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "d" },
+          "transitTime": { "@type": "QuantitativeValue", "minValue": 5, "maxValue": 10, "unitCode": "d" }
+        }
+      },
+      {
+        "@type": "OfferShippingDetails",
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "US"
+        },
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "12.95",
+          "currency": "GBP"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "d" },
+          "transitTime": { "@type": "QuantitativeValue", "minValue": 7, "maxValue": 14, "unitCode": "d" }
         }
       }
-    },
+    ],
     "hasMerchantReturnPolicy": {
       "@type": "MerchantReturnPolicy",
       "applicableCountry": "GB",
@@ -399,6 +427,14 @@ const productSchema = product ? {
 } : null;
 
 // MusicAlbum Schema (for releases)
+// Infer albumReleaseType from track count if not explicitly provided
+const inferredAlbumReleaseType = music?.albumReleaseType || (
+  music?.tracks && music.tracks.length > 0
+    ? (music.tracks.length === 1 ? 'SingleRelease'
+      : music.tracks.length <= 6 ? 'EPRelease'
+      : 'AlbumRelease')
+    : undefined
+);
 const musicAlbumSchema = music ? {
   "@context": "https://schema.org",
   "@type": "MusicAlbum",
@@ -419,8 +455,10 @@ const musicAlbumSchema = music ? {
   ...(music.releaseDate && { "datePublished": music.releaseDate }),
   ...(music.genre && { "genre": music.genre }),
   ...(music.catalogNumber && { "catalogNumber": music.catalogNumber }),
-  ...(music.format && { 
-    "musicReleaseFormat": music.format.map(f => 
+  ...(inferredAlbumReleaseType && { "albumReleaseType": `http://schema.org/${inferredAlbumReleaseType}` }),
+  ...(music.albumProductionType && { "albumProductionType": `http://schema.org/${music.albumProductionType}` }),
+  ...(music.format && {
+    "musicReleaseFormat": music.format.map(f =>
       f.toLowerCase().includes('vinyl') ? 'http://schema.org/VinylFormat' :
       f.toLowerCase().includes('digital') ? 'http://schema.org/DigitalFormat' :
       'http://schema.org/CDFormat'
@@ -708,6 +746,7 @@ const articleSchema = article ? {
 {!noindex && (
   <>
     <link rel="alternate" hreflang="en-GB" href={canonicalUrl} />
+    <link rel="alternate" hreflang="en" href={canonicalUrl} />
     <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
   </>
 )}

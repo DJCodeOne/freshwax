@@ -9,7 +9,7 @@ const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
-<Layout title="Record Bag" description="Review your shopping cart and proceed to checkout at Fresh Wax" noindex={true}>
+<Layout title="Record Bag" description="Review your Fresh Wax record bag. Add or remove vinyl, digital downloads, DJ mixes and merchandise before secure checkout." noindex={true}>
   <Header />
 
   <div class="cart-main">

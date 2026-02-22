@@ -52,6 +52,8 @@ interface Props {
     tracks?: { name: string; duration?: string; isrc?: string; artist?: string }[];
     catalogNumber?: string;
     bpm?: number;
+    albumReleaseType?: 'SingleRelease' | 'EPRelease' | 'AlbumRelease';
+    albumProductionType?: 'StudioAlbum' | 'CompilationAlbum' | 'DJMixAlbum' | 'LiveAlbum' | 'RemixAlbum' | 'SoundtrackAlbum';
   };
   
   // Audio content (DJ mixes)

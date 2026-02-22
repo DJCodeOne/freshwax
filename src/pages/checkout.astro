@@ -10,7 +10,7 @@ const nonce = Astro.locals.nonce || '';
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
-<Layout title="Checkout" noindex={true}>
+<Layout title="Checkout" description="Secure checkout for Fresh Wax vinyl records, digital downloads, DJ mixes and merchandise. Pay with Stripe or PayPal." noindex={true}>
   <Fragment slot="head">
     <link rel="dns-prefetch" href="https://js.stripe.com" />
     <link rel="dns-prefetch" href="https://www.paypal.com" />
