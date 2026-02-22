@@ -2,6 +2,7 @@
 // Merch Seller Products - Pro Dashboard
 // View-only - contact admin for changes
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 <ProDashboardLayout title="My Products" activeSection="/pro/merch">
   <div class="merch-page">

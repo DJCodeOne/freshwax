@@ -137,6 +137,7 @@ const getStockBadgeClass = (stock) => {
   if (stock <= 5) return 'warning';
   return 'success';
 };
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title={product ? `Edit: ${product.name}` : 'Edit Product'} activeNav="merch">

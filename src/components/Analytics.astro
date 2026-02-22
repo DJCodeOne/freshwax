@@ -60,13 +60,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
           'cookie_flags': 'SameSite=Lax;Secure',
           'send_page_view': true,
           'enhanced_measurement': true,
-          'debug_mode': debug,
-          'custom_map': {
-            'dimension1': 'user_type',
-            'dimension2': 'genre',
-            'dimension3': 'artist',
-            'dimension4': 'release_format'
-          }
+          'debug_mode': debug
         });
 
         // Enhanced E-commerce setup
@@ -338,23 +332,34 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
       }
 
       // Check consent (supports both old string and new granular JSON format)
+      // In-memory cache so localStorage is only read once per page load
+      var _consentCache = null;
       function hasAnalyticsConsent() {
-        var raw = null;
-        try { raw = localStorage.getItem('cookie-consent'); } catch (e) {}
-        if (!raw) return false;
-        if (raw === 'accepted') return true;
-        if (raw === 'rejected') return false;
-        try { return JSON.parse(raw).analytics === true; } catch (e) { return false; }
+        if (_consentCache !== null) return _consentCache;
+        try {
+          var raw = localStorage.getItem('cookie-consent');
+          if (!raw) { _consentCache = false; return false; }
+          if (raw === 'accepted') { _consentCache = true; return true; }
+          if (raw === 'rejected') { _consentCache = false; return false; }
+          _consentCache = JSON.parse(raw).analytics === true;
+        } catch (e) {
+          _consentCache = false;
+        }
+        return _consentCache;
       }
 
       if (hasAnalyticsConsent()) {
         initAnalytics();
       }
 
-      // Listen for consent events from cookie banner
-      window.addEventListener('cookie-consent-granted', function() {
-        initAnalytics();
-      });
+      // Listen for consent events from cookie banner (guard prevents duplicate listeners on View Transitions)
+      if (!window._cookieConsentSetup) {
+        window._cookieConsentSetup = true;
+        window.addEventListener('cookie-consent-granted', function() {
+          _consentCache = true; // Reset cache on consent
+          initAnalytics();
+        });
+      }
     </script>
 
     <!-- Core Web Vitals: LCP, CLS, INP (consent-gated via gtag check) -->

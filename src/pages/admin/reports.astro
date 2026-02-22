@@ -8,6 +8,7 @@ const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Reports" currentPage="reports">

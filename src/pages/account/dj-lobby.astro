@@ -2843,7 +2843,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Polling for non-realtime data (reduced frequency to minimize Firebase reads)
     lobbyStreamStatusInterval = setInterval(loadStreamStatus, 60000); // 60s instead of 10s - saves ~84% reads
-    lobbyTimeRemainingInterval = setInterval(updateTimeRemaining, 100); // Update every 100ms for tenths of a second
+    lobbyTimeRemainingInterval = setInterval(updateTimeRemaining, 500); // Update every 500ms — 2x/sec is smooth enough for countdown
     lobbyStreamKeyInterval = setInterval(checkStreamKeyAvailability, 60000); // 60s instead of 30s
     lobbyAllSlotsInterval = setInterval(loadAllSlots, 60000); // Refresh slots every minute for consecutive slot detection
   }
@@ -3989,7 +3989,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Start health monitoring
   function startHealthMonitoring() {
     if (healthInterval) clearInterval(healthInterval);
-    healthInterval = setInterval(updateStreamHealth, 1000);
+    healthInterval = setInterval(updateStreamHealth, 5000);
   }
 
   // Stop health monitoring

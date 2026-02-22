@@ -119,6 +119,7 @@ const formatDuration = (mix: Record<string, unknown>) => {
 };
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="DJ Mixes" activeNav="mixes" showStats={true} stats={stats}>

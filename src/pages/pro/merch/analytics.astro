@@ -2,6 +2,7 @@
 // Merch Analytics - Pro Dashboard
 // View sales and performance analytics
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 <ProDashboardLayout title="Analytics" activeSection="/pro/merch/analytics">
   <div class="analytics-page">

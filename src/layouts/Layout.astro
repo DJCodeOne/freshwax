@@ -406,13 +406,14 @@ const csrfToken = Astro.locals.csrfToken || '';
     <script is:inline nonce={nonce}>
       (function() {
         var originalFetch = window.fetch;
+        var selfOrigin = location.origin;
         window.fetch = function(input, init) {
           init = init || {};
           var method = (init.method || 'GET').toUpperCase();
           if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
             // Only add to same-origin requests
             var url = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
-            var isSameOrigin = !url || url.startsWith('/') || url.startsWith(location.origin);
+            var isSameOrigin = !url || url.startsWith('/') || url.startsWith(selfOrigin);
             if (isSameOrigin) {
               var meta = document.querySelector('meta[name="csrf-token"]');
               var token = meta ? meta.getAttribute('content') : '';
@@ -546,10 +547,11 @@ const csrfToken = Astro.locals.csrfToken || '';
 
     <!-- Service Worker Registration for PWA -->
     <script is:inline nonce={nonce}>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+      if (!window._swRegistered && 'serviceWorker' in navigator) {
+        window._swRegistered = true;
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
+        }, { once: true });
       }
     </script>
 

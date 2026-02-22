@@ -28,6 +28,7 @@ if (!post) {
   return Astro.redirect('/admin/blog');
 }
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title={`Edit: ${post.title}`}>

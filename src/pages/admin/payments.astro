@@ -387,6 +387,7 @@ const getStatusClass = (status) => {
 
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Payments" activeNav="payments" showStats={true} stats={stats}>

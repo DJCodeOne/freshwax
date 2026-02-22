@@ -180,6 +180,7 @@ const formatDate = (dateStr: string) => {
     minute: '2-digit'
   });
 };
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Sales Ledger" activeNav="analytics">

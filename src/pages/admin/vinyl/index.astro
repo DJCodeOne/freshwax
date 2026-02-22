@@ -128,6 +128,7 @@ const formatDate = (date: unknown) => {
 };
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Vinyl Sellers" activeNav="vinyl">

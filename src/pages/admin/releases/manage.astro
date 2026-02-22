@@ -65,6 +65,7 @@ const formatCurrency = (amount) => {
 
 const AUDIO_PROCESSOR_URL = import.meta.env.AUDIO_PROCESSOR_URL || 'http://localhost:8089';
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Releases" activeNav="releases" showStats={true} stats={stats}>

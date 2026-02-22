@@ -2,6 +2,7 @@
 // Pro Dashboard Index
 // Redirects to appropriate section based on user's roles
 import ProDashboardLayout from '../../layouts/ProDashboardLayout.astro';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 <ProDashboardLayout title="Dashboard" activeSection="/pro">
   <div class="dashboard-home">

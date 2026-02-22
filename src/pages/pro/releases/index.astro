@@ -2,6 +2,7 @@
 // Artist Releases - Pro Dashboard
 // View, edit, and manage releases
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 <ProDashboardLayout title="My Releases" activeSection="/pro/releases">
   <div class="releases-page">

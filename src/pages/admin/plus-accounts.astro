@@ -101,6 +101,7 @@ function formatDate(dateStr: string): string {
     year: 'numeric'
   });
 }
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Plus Accounts" activeNav="plus-accounts">

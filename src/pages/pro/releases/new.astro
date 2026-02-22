@@ -4,6 +4,7 @@
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 <ProDashboardLayout title="New Release" activeSection="/pro/releases/new">
   <div class="new-release-page">

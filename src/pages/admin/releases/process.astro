@@ -15,6 +15,7 @@ export const prerender = false;
 // Use local API endpoint instead of external worker
 const WORKER_URL = '/api';
 const nonce = Astro.locals.nonce || '';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Process Submissions" activeNav="releases">

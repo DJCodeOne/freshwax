@@ -277,6 +277,7 @@ const formatNumber = (num) => {
 };
 
 export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 
 <AdminLayout title="Analytics" activeNav="analytics">

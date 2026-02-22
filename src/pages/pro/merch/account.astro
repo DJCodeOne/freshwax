@@ -2,6 +2,7 @@
 // Merch Account - Pro Dashboard
 // View-only account information
 import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
+Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
 ---
 <ProDashboardLayout title="Account" activeSection="/pro/merch/account">
   <div class="account-page">
