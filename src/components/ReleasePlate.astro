@@ -309,7 +309,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           height="256"
           loading={priority ? "eager" : "lazy"}
           fetchpriority={priority ? "high" : undefined}
-          decoding={priority ? undefined : "async"}
+          decoding={priority ? "auto" : "async"}
         />
       </div>
       
