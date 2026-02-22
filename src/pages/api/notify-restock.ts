@@ -55,10 +55,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (existing.length > 0) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Already subscribed to notifications for this item'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ message: 'Already subscribed to notifications for this item' });
     }
 
     // Create subscription
@@ -72,10 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       createdAt: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'You will be notified when this item is back in stock'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'You will be notified when this item is back in stock' });
 
   } catch (error: unknown) {
     log.error('[notify-restock] Error:', error instanceof Error ? error.message : String(error));
@@ -111,10 +105,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       await deleteDocument('restockNotifications', sub.id);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Unsubscribed from notifications'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'Unsubscribed from notifications' });
 
   } catch (error: unknown) {
     log.error('[notify-restock] DELETE error:', error instanceof Error ? error.message : String(error));

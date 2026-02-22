@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saDeleteDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/list-payouts');
 import { getSaQuery } from '../../../lib/admin-query';
@@ -28,9 +28,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit: 50
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      count: payouts.length,
+    return successResponse({ count: payouts.length,
       payouts: payouts.map(p => ({
         id: p.id,
         orderId: p.orderId,
@@ -40,11 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         payoutMethod: p.payoutMethod,
         status: p.status,
         createdAt: p.createdAt
-      }))
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      })) });
   } catch (error: unknown) {
     log.error('Error:', error);
     return ApiErrors.serverError('Failed to list payouts');
@@ -78,13 +72,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
   try {
     await saDeleteDocument(serviceAccountKey, projectId, 'payouts', payoutId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Deleted payout ${payoutId}`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Deleted payout ${payoutId}` });
   } catch (error: unknown) {
     log.error('Delete error:', error);
     return ApiErrors.serverError('Failed to delete payout');

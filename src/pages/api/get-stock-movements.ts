@@ -80,15 +80,9 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       }
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      count: movements.length,
+    return successResponse({ count: movements.length,
       summary: summary,
-      movements: movements
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      movements: movements });
 
   } catch (error: unknown) {
     log.error('[get-stock-movements] Error:', error);

@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { addDocument } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, errorResponse } from '../../lib/api-utils';
 
 const log = createLogger('consent-log');
 
@@ -44,15 +44,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       timestamp: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
   } catch (error: unknown) {
     log.error('[consent-log] Error:', error);
-    return new Response(JSON.stringify({ success: false, error: 'Failed to log consent' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Failed to log consent', 500);
   }
 };

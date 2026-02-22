@@ -31,30 +31,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const userData = await getDocument('users', userId);
 
     if (!userData) {
-      return new Response(JSON.stringify({
-        success: true,
-        user: null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ user: null });
     }
 
     // Return relevant user data (excluding sensitive fields)
-    return new Response(JSON.stringify({
-      success: true,
-      user: {
+    return successResponse({ user: {
         displayName: userData.displayName || userData.name,
         email: userData.email,
         subscription: userData.subscription,
         approvedRelay: userData.approvedRelay || null,
         bypassedAt: userData.bypassedAt,
         'go-liveBypassed': userData['go-liveBypassed']
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

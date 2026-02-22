@@ -83,24 +83,21 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         const maskedEmail = email.includes('@')
           ? email.substring(0, 2) + '***@' + email.split('@')[1]
           : '***';
-        return new Response(JSON.stringify({
-          success: true,
-          paymentStatus: 'paid',
+        return successResponse({ paymentStatus: 'paid',
           giftCard: {
             amount: card.originalValue,
             recipientEmail: maskedEmail
-          }
-        }), { headers: { 'Content-Type': 'application/json' } });
+          } });
       }
     }
 
     // Gift card not found yet - webhook may still be processing
     logger.info('[giftcard-verify] Gift card not found yet, webhook may be processing');
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: false,
       paymentStatus: 'paid',
       error: 'Gift card not created yet'
-    }), { headers: { 'Content-Type': 'application/json' } });
+    });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

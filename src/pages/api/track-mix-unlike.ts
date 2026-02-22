@@ -88,16 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      likes: finalLikes
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
+    return successResponse({ likes: finalLikes }, 200, { headers: { 'Cache-Control': 'no-cache' } });
 
   } catch (error: unknown) {
     logger.error('[track-mix-unlike] Error:', error);

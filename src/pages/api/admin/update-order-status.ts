@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[update-order-status]');
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -159,10 +159,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true, status }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ status });
 
   } catch (error: unknown) {
     log.error('Error updating order status:', error);

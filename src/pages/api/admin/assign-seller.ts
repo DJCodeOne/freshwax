@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { saUpdateDocument, saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[assign-seller]');
 
@@ -69,9 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         limit: 100
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: `Found ${allProducts.length} products in ${collectionName}`,
+      return successResponse({ message: `Found ${allProducts.length} products in ${collectionName}`,
         products: allProducts.map((p: Record<string, unknown>) => ({
           id: p.id,
           name: p.name || p.releaseName,
@@ -87,9 +85,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           submitterId: p.submitterId,
           artistId: p.artistId
         }))
-      }, null, 2), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -190,17 +185,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Updated ${results.length} products in ${collectionName}`,
+    return successResponse({ message: `Updated ${results.length} products in ${collectionName}`,
       sellerId: sellerId || null,
       sellerName: sellerName || null,
       categoryName: categoryName || null,
       updated: results,
       errors: errors.length > 0 ? errors : undefined
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

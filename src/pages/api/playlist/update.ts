@@ -62,13 +62,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     // Update playlist
     await updateDocument('userPlaylists', userId, updates);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Playlist updated'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Playlist updated' });
 
   } catch (error: unknown) {
     log.error('[playlist/update] Error:', error instanceof Error ? error.message : String(error));

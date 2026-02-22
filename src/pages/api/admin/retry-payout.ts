@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[retry-payout]');
 
@@ -130,11 +130,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info('Successfully retried payout:', payoutId, 'Transfer:', transfer.id);
 
-      return new Response(JSON.stringify({
-        success: true,
-        transferId: transfer.id,
-        amount: pendingPayout.amount
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ transferId: transfer.id,
+        amount: pendingPayout.amount });
 
     } catch (transferError: unknown) {
       const transferMessage = transferError instanceof Error ? transferError.message : String(transferError);

@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('bookings');
 
@@ -128,12 +128,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       const date = new Date(dateStr);
       const usedHours = await getUserDailyHours(uid, date);
 
-      return new Response(JSON.stringify({
-        success: true,
-        usedHours,
-        remainingHours: MAX_DAILY_HOURS - usedHours,
-        maxHours: MAX_DAILY_HOURS
-      }), { headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ usedHours, remainingHours: MAX_DAILY_HOURS - usedHours, maxHours: MAX_DAILY_HOURS });
     }
 
     // Get schedule for a day (public — shows who's streaming when)
@@ -165,10 +160,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         }))
         .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-      return new Response(JSON.stringify({
-        success: true,
-        bookings
-      }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' } });
+      return successResponse({ bookings }, 200, { headers: { 'Cache-Control': 'public, max-age=60' } });
     }
 
     // Get user's upcoming bookings — requires auth
@@ -201,10 +193,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         }))
         .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
-      return new Response(JSON.stringify({
-        success: true,
-        bookings
-      }), { headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ bookings });
     }
 
     return ApiErrors.badRequest('Invalid action');
@@ -321,11 +310,7 @@ export const POST: APIRoute = async ({ request }) => {
         }
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        bookingIds: createdBookings,
-        message: 'Booking confirmed!'
-      }), { headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ bookingIds: createdBookings, message: 'Booking confirmed!' });
     }
 
     // Cancel booking
@@ -364,10 +349,7 @@ export const POST: APIRoute = async ({ request }) => {
         cancelledAt: new Date().toISOString()
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Booking cancelled. Slot is now available.'
-      }), { headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ message: 'Booking cancelled. Slot is now available.' });
     }
 
     return ApiErrors.badRequest('Invalid action');

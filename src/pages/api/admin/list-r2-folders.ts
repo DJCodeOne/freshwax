@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/list-r2-folders');
 
@@ -49,10 +49,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       folders.push({ name, location: 'releases/' });
     }
 
-    return new Response(JSON.stringify({ folders, count: folders.length }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ folders, count: folders.length });
 
   } catch (error: unknown) {
     log.error('Error:', error);

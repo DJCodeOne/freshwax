@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('admin/giftcards');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
@@ -166,9 +166,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        analytics: {
+      return successResponse({ analytics: {
           giftCards: {
             totalCards: giftCards.length,
             totalValueIssued: totalIssued,
@@ -182,11 +180,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
             totalCreditBalance,
             totalCreditSpent: totalSpent
           }
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        } });
     }
 
     if (type === 'cards') {
@@ -197,13 +191,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        cards
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ cards });
     }
 
     if (type === 'balances') {
@@ -238,13 +226,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         };
       }));
 
-      return new Response(JSON.stringify({
-        success: true,
-        balances: balances.filter(b => b.balance > 0 || b.transactionCount > 0)
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ balances: balances.filter(b => b.balance > 0 || b.transactionCount > 0) });
     }
 
     // Default: return everything
@@ -261,14 +243,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })
     ]);
 
-    return new Response(JSON.stringify({
-      success: true,
-      cards,
-      balances: credits
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ cards,
+      balances: credits });
 
   } catch (error: unknown) {
     log.error('GET Error:', error);
@@ -337,13 +313,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const result = await addDocument('giftCards', newCard);
 
-      return new Response(JSON.stringify({
-        success: true,
-        giftCard: { ...newCard, id: result.id }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ giftCard: { ...newCard, id: result.id } });
     }
 
     if (action === 'adjustBalance') {
@@ -405,14 +375,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         log.error('Failed to sync credit balance to user doc:', e instanceof Error ? e.message : e);
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        newBalance,
-        adjustment: adjustAmount
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ newBalance,
+        adjustment: adjustAmount });
     }
 
     if (action === 'deactivateCard') {
@@ -429,13 +393,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         deactivatedByAdmin: true
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Card deactivated'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Card deactivated' });
     }
 
     if (action === 'reactivateCard') {
@@ -464,13 +422,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         deactivatedByAdmin: null
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Card reactivated'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Card reactivated' });
     }
 
     if (action === 'resendEmail') {
@@ -561,13 +513,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           recipientName: recipientName || cardDoc.recipientName || null
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Email sent to ${recipientEmail}`
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: `Email sent to ${recipientEmail}` });
 
       } catch (emailError: unknown) {
         log.error('Email error:', emailError);

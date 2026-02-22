@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/server-status');
 
@@ -40,12 +40,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }, 5000);
 
       if (response.ok) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           online: true,
           status: 'running',
           url: streamServerUrl
-        }), {
-          headers: { 'Content-Type': 'application/json' }
         });
       }
     } catch (fetchError: unknown) {
@@ -59,25 +57,21 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }, 5000);
 
       if (altResponse.ok || altResponse.status === 404) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           online: true,
           status: 'running',
           url: streamServerUrl,
           note: 'API endpoint not available but server responding'
-        }), {
-          headers: { 'Content-Type': 'application/json' }
         });
       }
     } catch (_e: unknown) {
       /* non-critical: alternate server connectivity probe failed */
     }
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       online: false,
       status: 'offline',
       url: streamServerUrl
-    }), {
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

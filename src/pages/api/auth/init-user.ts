@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument, setDocument, queryCollection } from '../../../lib/firebase-rest';
-import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('auth/init-user');
 
@@ -93,18 +93,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (existingUser) {
         // User exists - for google-register, signal that they should redirect to dashboard
         if (action === 'google-register') {
-          return new Response(JSON.stringify({
-            success: true,
-            exists: true,
-            message: 'User already exists'
-          }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
-          });
+          return successResponse({ exists: true, message: 'User already exists' });
         }
         // google-login: user exists, nothing to do
-        return new Response(JSON.stringify({ success: true, exists: true }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ exists: true });
       }
 
       // New user via Google - need display name
@@ -146,13 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('users', userId, userData);
 
-      return new Response(JSON.stringify({
-        success: true,
-        exists: false,
-        created: true
-      }), {
-        status: 200, headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ exists: false, created: true });
     }
 
     // ==================== EMAIL LOGIN (orphan account creation) ====================
@@ -187,9 +173,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       await setDocument('users', userId, userData);
 
-      return new Response(JSON.stringify({ success: true, created: true }), {
-        status: 200, headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ created: true });
     }
 
     // ==================== EMAIL REGISTRATION ====================
@@ -308,9 +292,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await Promise.all(rolePromises);
       }
 
-      return new Response(JSON.stringify({ success: true, created: true }), {
-        status: 200, headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ created: true });
     }
 
     return ApiErrors.badRequest('Invalid action');

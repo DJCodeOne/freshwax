@@ -9,7 +9,7 @@ import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-s
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/test-order-email');
 
@@ -147,10 +147,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       };
     }
 
-    return new Response(JSON.stringify(results, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse(results);
 
   } catch (error: unknown) {
     log.error('Error:', error);

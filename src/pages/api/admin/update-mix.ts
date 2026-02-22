@@ -6,7 +6,7 @@ import { invalidateMixesCache } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-mix');
 
@@ -151,14 +151,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mix updated successfully',
-      updatedFields: Object.keys(updateData)
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Mix updated successfully',
+      updatedFields: Object.keys(updateData) });
 
   } catch (error: unknown) {
     log.error('Error:', error);

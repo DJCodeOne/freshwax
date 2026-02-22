@@ -50,22 +50,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const code = await getUserReferralCode(kv, userId);
 
     if (!code) {
-      return new Response(JSON.stringify({
-        success: true,
-        hasCode: false,
-        code: null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ hasCode: false,
+        code: null });
     }
 
     // Get full code data
     const codeData = await getReferralCode(kv, code);
 
-    return new Response(JSON.stringify({
-      success: true,
-      hasCode: true,
+    return successResponse({ hasCode: true,
       code: code,
       data: codeData ? {
         discountPercent: codeData.discountPercent,
@@ -73,11 +65,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         usedCount: codeData.usedCount,
         maxUses: codeData.maxUses,
         active: codeData.active
-      } : null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } : null });
 
   } catch (error: unknown) {
     log.error('[get-referral-code] Error:', error);

@@ -131,19 +131,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Generated URL for ${audioKey} (${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      uploadUrl,
+    return successResponse({ uploadUrl,
       key: audioKey,
       publicUrl,
       mixId: finalMixId,
       folderPath,
       artworkUploadUrl,
-      artworkPublicUrl
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      artworkPublicUrl });
 
   } catch (error: unknown) {
     log.error('Error:', error);

@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../lib/firebase-rest';
 import { initKVCache, kvGet, kvSet } from '../../lib/kv-cache';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -41,13 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (!userId && !skipCache) {
       const cached = await kvGet(cacheKey, MIXES_CACHE);
       if (cached) {
-        return new Response(JSON.stringify(cached), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=60, s-maxage=60'
-          }
-        });
+        return jsonResponse(cached, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
       }
     }
 
@@ -163,15 +157,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       kvSet(cacheKey, result, MIXES_CACHE);
     }
 
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        // Don't cache user-specific data, short cache for public listings
-        'Cache-Control': userId ? 'no-store, no-cache, must-revalidate' : 'public, max-age=60, s-maxage=60'
-      }
+    // Don't cache user-specific data, short cache for public listings
+    return jsonResponse(result, 200, {
+      headers: { 'Cache-Control': userId ? 'no-store, no-cache, must-revalidate' : 'public, max-age=60, s-maxage=60' }
     });
-    
+
   } catch (error: unknown) {
     // Only log errors in development
     logger.error('[get-dj-mixes] Error:', error);

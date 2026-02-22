@@ -59,12 +59,9 @@ export const POST: APIRoute = async ({ request }) => {
       updatedAt: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Broadcast mode updated',
+    return successResponse({ message: 'Broadcast mode updated',
       mode,
-      hlsUrl
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      hlsUrl });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

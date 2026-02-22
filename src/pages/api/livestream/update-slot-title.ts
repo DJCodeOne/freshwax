@@ -64,14 +64,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Update the slot
     await saUpdateDocument(serviceAccountKey, projectId, 'livestreamSlots', slotId, updateData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Slot updated successfully',
-      updated: updateData
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Slot updated successfully',
+      updated: updateData });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

@@ -368,11 +368,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const session = await stripeResponse.json();
 
-    return new Response(JSON.stringify({
-      success: true,
-      sessionId: session.id,
-      checkoutUrl: session.url
-    }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+    return successResponse({ sessionId: session.id,
+      checkoutUrl: session.url }, 200, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -82,17 +82,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('This referral code has expired');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      valid: true,
+    return successResponse({ valid: true,
       referrerFound: true,
       discount: giftCard.currentBalance,
       discountFormatted: formatGBP(giftCard.currentBalance),
       originalPrice: PRO_ANNUAL_PRICE,
       discountedPrice: PRO_ANNUAL_PRICE - giftCard.currentBalance,
       discountedPriceFormatted: formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance),
-      message: `Referral code valid! You'll pay ${formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance)} instead of ${formatGBP(PRO_ANNUAL_PRICE)}`
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      message: `Referral code valid! You'll pay ${formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance)} instead of ${formatGBP(PRO_ANNUAL_PRICE)}` });
 
   } catch (error: unknown) {
     log.error('Error:', error);
@@ -229,9 +226,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Notify the referrer (optional - could add email notification here)
     log.info('Referral code used:', normalizedCode, 'by user:', authenticatedUserId, 'referrer:', giftCard.createdByUserId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Pro subscription activated with referral discount!',
+    return successResponse({ message: 'Pro subscription activated with referral discount!',
       discount: giftCard.currentBalance,
       pricePaid: PRO_ANNUAL_PRICE - giftCard.currentBalance,
       subscription: {
@@ -240,8 +235,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         expiresAt: expiresAt.toISOString()
       },
       referralCode: newUserReferralCard.code,
-      referralMessage: 'You now have your own referral code! Share it with a friend for 50% off their Pro upgrade.'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      referralMessage: 'You now have your own referral code! Share it with a friend for 50% off their Pro upgrade.' });
 
   } catch (error: unknown) {
     log.error('Error:', error);

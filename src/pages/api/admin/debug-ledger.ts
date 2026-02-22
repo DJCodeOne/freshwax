@@ -6,7 +6,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[debug-ledger]');
 
@@ -84,9 +84,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       createdAt: o.createdAt
     }));
 
-    return new Response(JSON.stringify({
-      success: true,
-      ledger: {
+    return successResponse({ ledger: {
         source: ledgerSource,
         totalEntries: ledgerData.length,
         pendingCount: pendingEntries.length,
@@ -101,9 +99,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         total: releasesData.length,
         byStatus: releasesByStatus
       }
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

@@ -90,15 +90,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Credited £${creditAmount} to user ${userId}. New balance: £${newBalance}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      amountCredited: creditAmount,
+    return successResponse({ amountCredited: creditAmount,
       newBalance,
-      transactionId
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      transactionId });
 
   } catch (error: unknown) {
     log.error('Error:', error);

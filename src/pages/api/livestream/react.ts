@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, atomicIncrement, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { triggerPusher } from '../../../lib/pusher';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const logger = createLogger('livestream-react');
 import { z } from 'zod';
@@ -133,13 +133,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.serverError('Failed to broadcast reaction via Pusher');
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Reaction broadcast',
+        return successResponse({ message: 'Reaction broadcast',
           channel,
           pusherSuccess,
-          totalLikes
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          totalLikes });
       }
       
       case 'star': {
@@ -154,10 +151,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         }, env);
         
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Star reaction broadcast'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Star reaction broadcast' });
       }
       
       case 'like': {
@@ -198,12 +192,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, env);
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          liked: true,
+        return successResponse({ liked: true,
           totalLikes,
-          message: 'Stream liked!'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          message: 'Stream liked!' });
       }
       
       case 'rate': {
@@ -264,12 +255,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           ratingCount: newCount
         });
         
-        return new Response(JSON.stringify({
-          success: true,
-          rating,
+        return successResponse({ rating,
           averageRating: newAverage,
-          ratingCount: newCount
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          ratingCount: newCount });
       }
       
       case 'join': {
@@ -305,12 +293,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         }, env);
 
-        return new Response(JSON.stringify({
-          success: true,
-          sessionId: viewerSession.sessionId,
+        return successResponse({ sessionId: viewerSession.sessionId,
           currentViewers,
-          peakViewers
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          peakViewers });
       }
       
       case 'leave': {
@@ -344,9 +329,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        return new Response(JSON.stringify({
-          success: true
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({});
       }
       
       case 'heartbeat': {
@@ -371,11 +354,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Return current stats from correct collection
         const { doc: streamData } = await getStreamDocument(streamId);
         
-        return new Response(JSON.stringify({
-          success: true,
-          currentViewers: streamData?.currentViewers || 0,
-          totalLikes: streamData?.totalLikes || 0
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ currentViewers: streamData?.currentViewers || 0,
+          totalLikes: streamData?.totalLikes || 0 });
       }
       
       case 'shoutout': {
@@ -403,10 +383,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return ApiErrors.serverError('Failed to broadcast shoutout via Pusher');
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Shoutout broadcast'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Shoutout broadcast' });
       }
       
       default:
@@ -450,11 +427,8 @@ export const GET: APIRoute = async ({ request, locals }) => {  try {
       if (data.type === 'rating') userRating = data.rating;
     });
     
-    return new Response(JSON.stringify({
-      success: true,
-      hasLiked,
-      userRating
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ hasLiked,
+      userRating });
     
   } catch (error: unknown) {
     logger.error('[livestream/react] GET Error:', error);

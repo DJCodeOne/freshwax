@@ -6,6 +6,7 @@ import type { APIRoute } from 'astro';
 import { verifyUserToken, initFirebaseEnv } from '../../lib/firebase-rest';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
+import { jsonResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,30 +27,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
   if (!token) {
-    return new Response(JSON.stringify({ isAdmin: false }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-    });
+    return jsonResponse({ isAdmin: false }, 200, { headers: { 'Cache-Control': 'no-store' } });
   }
 
   try {
     const userId = await verifyUserToken(token);
     if (!userId) {
-      return new Response(JSON.stringify({ isAdmin: false }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-      });
+      return jsonResponse({ isAdmin: false }, 200, { headers: { 'Cache-Control': 'no-store' } });
     }
 
     const adminStatus = await isAdmin(userId);
-    return new Response(JSON.stringify({ isAdmin: adminStatus }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-    });
+    return jsonResponse({ isAdmin: adminStatus }, 200, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
-    return new Response(JSON.stringify({ isAdmin: false }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-    });
+    return jsonResponse({ isAdmin: false }, 200, { headers: { 'Cache-Control': 'no-store' } });
   }
 };

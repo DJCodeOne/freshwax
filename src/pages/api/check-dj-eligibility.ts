@@ -8,7 +8,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { isAdmin } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
 
 export const prerender = false;
 const REQUIRED_LIKES = 10;
@@ -49,30 +49,18 @@ export const GET: APIRoute = async ({ request }) => {
     if (moderation) {
       if (moderation.status === 'banned') {
         logger.info('[check-dj-eligibility] User is banned');
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: false,
+        return successResponse({ eligible: false,
           reason: 'banned',
           message: 'Your account has been suspended from streaming.',
-          bannedReason: moderation.reason || null
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          bannedReason: moderation.reason || null });
       }
       
       if (moderation.status === 'hold') {
         logger.info('[check-dj-eligibility] User is on hold');
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: false,
+        return successResponse({ eligible: false,
           reason: 'on_hold',
           message: 'Your streaming access is temporarily on hold.',
-          holdReason: moderation.reason || null
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          holdReason: moderation.reason || null });
       }
     }
     
@@ -81,16 +69,10 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (bypass) {
       logger.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
-      return new Response(JSON.stringify({
-        success: true,
-        eligible: true,
+      return successResponse({ eligible: true,
         bypassGranted: true,
         reason: bypass.reason || null,
-        message: 'Access granted by admin'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        message: 'Access granted by admin' });
     }
     
     // Check if user has go-liveBypassed flag on their user document
@@ -98,15 +80,9 @@ export const GET: APIRoute = async ({ request }) => {
     if (userData) {
       if (userData['go-liveBypassed'] === true) {
         logger.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
-        return new Response(JSON.stringify({ 
-          success: true,
-          eligible: true,
+        return successResponse({ eligible: true,
           bypassGranted: true,
-          message: 'Access granted by admin'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          message: 'Access granted by admin' });
       }
     }
     
@@ -137,19 +113,13 @@ export const GET: APIRoute = async ({ request }) => {
     
     // Check if they have any mixes
     if (mixes.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true,
-        eligible: false,
+      return successResponse({ eligible: false,
         reason: 'no_mixes',
         message: 'You need to upload at least one DJ mix to Fresh Wax before you can go live.',
         mixCount: 0,
         qualifyingMixes: 0,
         requiredLikes: REQUIRED_LIKES,
-        bypassRequest
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        bypassRequest });
     }
     
     // Check if any mix has 10+ likes
@@ -170,9 +140,7 @@ export const GET: APIRoute = async ({ request }) => {
       
       const bestLikes = bestMix.likeCount || bestMix.likes || 0;
       
-      return new Response(JSON.stringify({ 
-        success: true,
-        eligible: false,
+      return successResponse({ eligible: false,
         reason: 'insufficient_likes',
         message: `Your mixes need at least ${REQUIRED_LIKES} likes to go live. Your best mix has ${bestLikes} like${bestLikes === 1 ? '' : 's'}.`,
         mixCount: mixes.length,
@@ -180,24 +148,14 @@ export const GET: APIRoute = async ({ request }) => {
         bestMixLikes: bestLikes,
         requiredLikes: REQUIRED_LIKES,
         likesNeeded: REQUIRED_LIKES - bestLikes,
-        bypassRequest
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        bypassRequest });
     }
     
     // DJ is eligible!
-    return new Response(JSON.stringify({ 
-      success: true,
-      eligible: true,
+    return successResponse({ eligible: true,
       mixCount: mixes.length,
       qualifyingMixes: qualifyingMixes.length,
-      requiredLikes: REQUIRED_LIKES
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      requiredLikes: REQUIRED_LIKES });
     
   } catch (error: unknown) {
     logger.error('[check-dj-eligibility] Error:', error instanceof Error ? error.message : String(error));

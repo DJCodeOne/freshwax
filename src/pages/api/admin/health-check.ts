@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout } from '../../../lib/api-utils';
+import { fetchWithTimeout, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -279,11 +279,5 @@ export const GET: APIRoute = async ({ request, locals }) => {
     livestream
   };
 
-  return new Response(JSON.stringify(response), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store, max-age=0'
-    }
-  });
+  return jsonResponse(response);
 };

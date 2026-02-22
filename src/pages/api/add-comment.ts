@@ -8,7 +8,7 @@ import { containsProfanity } from '../../lib/validation';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -145,12 +145,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info('[add-comment] Added comment to:', releaseId);
 
-    return new Response(JSON.stringify({ success: true, comment: newComment }), { 
-      status: 200, 
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      } 
+    return successResponse({ comment: newComment }, 200, {
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
 
   } catch (error: unknown) {

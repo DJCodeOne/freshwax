@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/toggle-mix-publish');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -45,13 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Mix ${published ? 'published' : 'unpublished'} successfully`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Mix ${published ? 'published' : 'unpublished'} successfully` });
 
   } catch (error: unknown) {
     log.error('Error:', error);

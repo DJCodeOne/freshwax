@@ -203,9 +203,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Find the approval URL
     const approvalUrl = paypalOrder.links?.find((link: Record<string, unknown>) => link.rel === 'approve')?.href;
 
-    return new Response(JSON.stringify({
-      success: true,
-      paypalOrderId: paypalOrder.id,
+    return successResponse({ paypalOrderId: paypalOrder.id,
       approvalUrl,
       amount: finalPrice,
       // Include order data for fallback if Firebase storage failed
@@ -216,8 +214,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         isKvCode,
         referralCardId,
         referredBy
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('[PayPal Plus] Error:', error);

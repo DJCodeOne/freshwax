@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return releaseName.includes(searchTerm) || artistName.includes(searchTerm);
     });
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       count: matches.length,
       releases: matches.map((r: Record<string, unknown>) => ({
         id: r.id,
@@ -44,9 +44,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         submittedBy: r.submittedBy || '(not set)',
         artistId: r.artistId || '(not set)'
       }))
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

@@ -45,11 +45,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       if (!userData) {
         return ApiErrors.notFound('User not found');
       }
-      return new Response(JSON.stringify({
-        success: true,
-        roles: userData.roles || {},
-        pendingRoles: userData.pendingRoles || {}
-      }));
+      return successResponse({ roles: userData.roles || {},
+        pendingRoles: userData.pendingRoles || {} });
     }
 
     // Get pending requests (admin only)
@@ -85,11 +82,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         }
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        requests,
-        totalPending: pendingRequests.length
-      }));
+      return successResponse({ requests,
+        totalPending: pendingRequests.length });
     }
 
     return ApiErrors.badRequest('Invalid action');
@@ -197,10 +191,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await setDocument('pendingRoleRequests', `${uid}_${roleType}`, pendingRequestDoc);
       // Created pendingRoleRequests entry
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Request submitted'
-      }));
+      return successResponse({ message: 'Request submitted' });
     }
 
     // Approve role (admin action)
@@ -380,10 +371,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         createdAt: new Date()
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Role approved'
-      }));
+      return successResponse({ message: 'Role approved' });
     }
 
     // Deny role (admin action)
@@ -426,10 +414,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         createdAt: new Date()
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Role denied'
-      }));
+      return successResponse({ message: 'Role denied' });
     }
 
     // Revoke role (admin action)
@@ -507,10 +492,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Role revoked'
-      }));
+      return successResponse({ message: 'Role revoked' });
     }
 
     return ApiErrors.badRequest('Invalid action');

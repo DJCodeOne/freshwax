@@ -69,10 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (existingDoc) {
       if (existingDoc.status === 'active') {
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'You are already subscribed!'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'You are already subscribed!' });
       }
 
       if (existingDoc.status === 'unsubscribed' || existingDoc.status === 'pending_confirmation') {
@@ -91,10 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await sendConfirmationEmail(RESEND_API_KEY, normalizedEmail, subscriberId, token, name);
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Please check your email to confirm your subscription.'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Please check your email to confirm your subscription.' });
       }
     }
 
@@ -119,10 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const createResult = await createDocumentIfNotExists('subscribers', subscriberId, subscriberData);
 
     if (!createResult.success && createResult.exists) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Please check your email to confirm your subscription.'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ message: 'Please check your email to confirm your subscription.' });
     }
 
     // Send confirmation email
@@ -134,10 +125,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Please check your email to confirm your subscription.'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'Please check your email to confirm your subscription.' });
 
   } catch (error: unknown) {
     log.error('[Newsletter] Subscribe error:', error);

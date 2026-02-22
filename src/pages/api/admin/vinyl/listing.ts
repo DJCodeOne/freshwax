@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument } from '../../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../../lib/api-utils';
 
 const log = createLogger('admin/vinyl/listing');
 
@@ -38,10 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Listing not found');
     }
 
-    return new Response(JSON.stringify({ success: true, listing }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ listing });
   } catch (error: unknown) {
     log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch listing');
@@ -95,10 +92,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         await updateDocument('vinylListings', listingId, updateData);
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing updated' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing updated' });
       }
 
       case 'approve': {
@@ -108,10 +102,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing approved' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing approved' });
       }
 
       case 'remove': {
@@ -124,10 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing removed' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing removed' });
       }
 
       case 'delete': {
@@ -138,10 +126,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing deleted' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing deleted' });
       }
 
       default:

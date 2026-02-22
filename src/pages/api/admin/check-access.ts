@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/check-access');
 
@@ -59,13 +59,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      isAdmin
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ isAdmin });
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to check admin access');

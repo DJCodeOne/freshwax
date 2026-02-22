@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[delete-submission]');
 
@@ -69,16 +69,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await r2.delete(keys);
     log.info(`Deleted ${keys.length} files from ${prefix}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      submissionId,
+    return successResponse({ submissionId,
       prefix,
       deleted: keys.length,
-      total: keys.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      total: keys.length });
 
   } catch (error: unknown) {
     log.error('Error:', error);

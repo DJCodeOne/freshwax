@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { generateStreamKey, buildRtmpUrl, buildHlsUrl, RED5_CONFIG } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('livestream/manage');
 
@@ -133,18 +133,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         
         await setDocument('livestreams', streamId, newStream);
 
-        return new Response(JSON.stringify({
-          success: true,
-          streamId: streamId,
+        return successResponse({ streamId: streamId,
           streamKey,
           rtmpUrl,
           hlsUrl,
           serverUrl: RED5_CONFIG.server.rtmpUrl,
-          stream: { id: streamId, ...newStream }
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
+          stream: { id: streamId, ...newStream } });
       }
       
       case 'stop': {
@@ -184,13 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updateDocument('livestream-viewers', session.id, { isActive: false, leftAt: nowISO })
         ));
         
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Stream ended successfully'
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
+        return successResponse({ message: 'Stream ended successfully' });
       }
       
       case 'update': {
@@ -217,13 +205,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         await updateDocument('livestreams', streamId, updates);
         
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Stream updated'
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
+        return successResponse({ message: 'Stream updated' });
       }
       
       case 'schedule': {
@@ -256,14 +238,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         
         const { id: newStreamId } = await addDocument('livestreams', newStream);
 
-        return new Response(JSON.stringify({
-          success: true,
-          streamId: newStreamId,
-          message: 'Stream scheduled'
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
+        return successResponse({ streamId: newStreamId,
+          message: 'Stream scheduled' });
       }
       
       case 'dj_ready': {
@@ -291,13 +267,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: nowISO
         });
         
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'DJ marked as ready'
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
+        return successResponse({ message: 'DJ marked as ready' });
       }
       
       case 'slot_expired': {
@@ -331,13 +301,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: nowISO
         });
         
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Slot marked as available'
-        }), { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json' } 
-        });
+        return successResponse({ message: 'Slot marked as available' });
       }
       
       case 'claim_slot': {
@@ -385,15 +349,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: nowISO
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          slotId: slotId,
+        return successResponse({ slotId: slotId,
           streamKey: slotData.streamKey,
-          message: 'Slot claimed successfully'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          message: 'Slot claimed successfully' });
       }
       
       default:

@@ -130,15 +130,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Updated document response:`, JSON.stringify(updatedDoc));
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'PayPal account linked successfully',
+    return successResponse({ message: 'PayPal account linked successfully',
       paypalEmail: paypalEmail.toLowerCase(),
       savedData: {
         paypalEmail: updatedDoc.paypalEmail,
         payoutMethod: updatedDoc.payoutMethod
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('Link account error:', error);
@@ -202,14 +199,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('${entityType} not found');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      paypalEmail: entity.paypalEmail || null,
+    return successResponse({ paypalEmail: entity.paypalEmail || null,
       paypalLinked: !!entity.paypalEmail,
       paypalLinkedAt: entity.paypalLinkedAt || null,
       payoutMethod: entity.payoutMethod || null,
-      stripeConnected: !!entity.stripeConnectId && entity.stripeConnectStatus === 'active'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      stripeConnected: !!entity.stripeConnectId && entity.stripeConnectStatus === 'active' });
 
   } catch (error: unknown) {
     log.error('Get status error:', error);

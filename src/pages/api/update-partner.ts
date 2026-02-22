@@ -101,13 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Use service account for the write operation
     await saUpdateDocument(serviceAccountKey, projectId, 'artists', partnerId, cleanData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Profile updated successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Profile updated successfully' });
     
   } catch (error: unknown) {
     log.error('Error updating partner:', error);

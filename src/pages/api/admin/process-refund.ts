@@ -6,7 +6,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[process-refund]');
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -195,17 +195,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      refundId: refund.id,
+    return successResponse({ refundId: refund.id,
       amount: refundAmountPounds,
       totalRefunded,
       refundStatus: newRefundStatus,
-      isFullRefund
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      isFullRefund });
 
   } catch (error: unknown) {
     log.error('[process-refund] Error:', error);

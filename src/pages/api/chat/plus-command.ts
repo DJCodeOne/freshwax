@@ -6,7 +6,7 @@ import type { APIContext } from 'astro';
 import { getDocument, updateDocument, initFirebaseEnv } from '../../../lib/firebase-rest';
 import { getEffectiveTier, SUBSCRIPTION_TIERS, getTodayDate } from '../../../lib/subscription';
 import { getAdminUids, initAdminEnv } from '../../../lib/admin';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('chat/plus-command');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -166,12 +166,10 @@ export async function POST({ request, locals }: APIContext) {
     }
 
     if (!isPlus) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         allowed: false,
         error: 'Chat commands are a Plus feature. Upgrade to Plus for !ping, !vibe, !quote, and more!'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -184,12 +182,10 @@ export async function POST({ request, locals }: APIContext) {
 
       // Check if command was used today
       if (usage.date === today && usage[cmdLower]) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           success: true,
           allowed: false,
           error: `You've already used !${cmdLower} today. Each command can be used once per day.`
-        }), {
-          headers: { 'Content-Type': 'application/json' }
         });
       }
 
@@ -270,15 +266,7 @@ export async function POST({ request, locals }: APIContext) {
         return ApiErrors.badRequest('Unknown command: ${command}');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      allowed: true,
-      response,
-      type,
-      command
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ allowed: true, response, type, command });
 
   } catch (error: unknown) {
     log.error('[Plus Command API] Error:', error instanceof Error ? error.message : String(error));

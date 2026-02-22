@@ -343,14 +343,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const duration = Date.now() - startTime;
 
-    return new Response(JSON.stringify({
-      success: true,
-      duration: duration,
-      ...results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ duration: duration,
+      ...results });
 
   } catch (error: unknown) {
     log.error('Error:', error);

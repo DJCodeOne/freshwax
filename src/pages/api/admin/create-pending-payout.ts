@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 
 import { saSetDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[create-pending-payout]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -73,15 +73,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      payoutId: payoutId,
+    return successResponse({ payoutId: payoutId,
       amount: payoutData.amount,
-      artistName: payoutData.artistName
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      artistName: payoutData.artistName });
 
   } catch (error: unknown) {
     log.error('[create-pending-payout] Error:', error);

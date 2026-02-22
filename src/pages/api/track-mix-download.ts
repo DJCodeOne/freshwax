@@ -64,16 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      downloads
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
+    return successResponse({ downloads }, 200, { headers: { 'Cache-Control': 'no-cache' } });
 
   } catch (error: unknown) {
     logger.error('[track-mix-download] Error:', error);

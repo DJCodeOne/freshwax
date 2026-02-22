@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/manage-return');
 import { refundOrderStock } from '../../../lib/order-utils';
@@ -193,13 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      status: updateData.status
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ status: updateData.status });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));
@@ -252,12 +246,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       rejected: rejectedReturns.length
     };
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       returns,
       counts
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

@@ -175,12 +175,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Continue - capture will need to validate amount
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderId: paypalResult.id,
+    return successResponse({ orderId: paypalResult.id,
       status: paypalResult.status,
-      approvalUrl: approvalUrl
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      approvalUrl: approvalUrl });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

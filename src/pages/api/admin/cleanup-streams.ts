@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, fetchWithTimeout, successResponse } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;
@@ -98,9 +98,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const staleCount = slotsWithInfo.filter(s => s.isStale).length;
     const disconnectedCount = slotsWithInfo.filter(s => s.isDisconnected === true).length;
 
-    return new Response(JSON.stringify({
-      success: true,
-      totalLive: slotsWithInfo.length,
+    return successResponse({ totalLive: slotsWithInfo.length,
       staleCount,
       disconnectedCount: checkHealth ? disconnectedCount : null,
       slots: slotsWithInfo,
@@ -108,9 +106,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
       message: staleCount > 0 || disconnectedCount > 0
         ? `Found ${staleCount} stale and ${disconnectedCount} disconnected streams. POST to clean them up.`
         : 'All streams are healthy.'
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {
@@ -215,9 +210,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const disconnectedCleaned = results.filter(r => r.reason === 'stream_disconnected').length;
     const staleCleaned = results.filter(r => r.reason === 'stale_stream_cleanup').length;
 
-    return new Response(JSON.stringify({
-      success: true,
-      cleaned: cleanedCount,
+    return successResponse({ cleaned: cleanedCount,
       staleCleaned,
       disconnectedCleaned,
       errors: results.filter(r => r.status === 'error').length,
@@ -225,9 +218,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: cleanedCount > 0
         ? `Cleaned up ${staleCleaned} stale and ${disconnectedCleaned} disconnected streams`
         : 'No streams needed cleanup'
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

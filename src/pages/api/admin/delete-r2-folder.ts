@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/delete-r2-folder');
 
@@ -50,23 +50,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (keys.length === 0) {
-      return new Response(JSON.stringify({ message: 'Folder is empty or does not exist', deleted: 0 }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse({ message: 'Folder is empty or does not exist', deleted: 0 });
     }
 
     // Batch delete all objects (r2.delete accepts an array of keys)
     await r2.delete(keys);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Deleted ${keys.length} files from ${folder}`,
-      deleted: keys.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Deleted ${keys.length} files from ${folder}`,
+      deleted: keys.length });
 
   } catch (error: unknown) {
     log.error('Error:', error);

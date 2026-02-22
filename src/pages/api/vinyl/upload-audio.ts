@@ -123,18 +123,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Uploaded: ${(file.size/1024).toFixed(1)}KB, ~${Math.round(estimatedDuration)}s`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      url: publicUrl,
+    return successResponse({ url: publicUrl,
       key,
       size: file.size,
       duration: duration || Math.round(estimatedDuration),
       format: 'mp3',
-      bitrate: EXPECTED_BITRATE
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      bitrate: EXPECTED_BITRATE });
 
   } catch (error: unknown) {
     log.error('Error:', error);

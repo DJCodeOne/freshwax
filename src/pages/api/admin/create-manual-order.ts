@@ -11,7 +11,7 @@ import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-uti
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[create-manual-order]');
 
 const createManualOrderSchema = z.object({
@@ -432,16 +432,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderId,
+    return successResponse({ orderId,
       orderNumber,
       payouts: payoutResults,
-      message: `Order ${orderNumber} created successfully`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: `Order ${orderNumber} created successfully` });
 
   } catch (error: unknown) {
     log.error('[admin] Error creating manual order:', error);

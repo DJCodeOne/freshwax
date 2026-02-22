@@ -109,22 +109,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       // If specific section requested, return just that
       if (section && settings[section as keyof typeof settings]) {
-        return new Response(JSON.stringify({
-          success: true,
-          [section]: settings[section as keyof typeof settings]
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ [section]: settings[section as keyof typeof settings] });
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        settings
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ settings });
     }
 
     return ApiErrors.badRequest('Invalid action');

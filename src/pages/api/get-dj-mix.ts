@@ -63,17 +63,8 @@ export const GET: APIRoute = async ({ request }) => {
     
     logger.info('[get-dj-mix] Returning:', normalized.title);
     
-    return new Response(JSON.stringify({ 
-      success: true,
-      mix: normalized,
-      source: 'firebase-rest'
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=60, must-revalidate'
-      }
-    });
+    return successResponse({ mix: normalized,
+      source: 'firebase-rest' }, 200, { headers: { 'Cache-Control': 'private, max-age=60, must-revalidate' } });
     
   } catch (error: unknown) {
     logger.error('[get-dj-mix] Error:', error);

@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/list-users');
 import { getSaQuery } from '../../../lib/admin-query';
@@ -174,9 +174,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const paginatedUsers = allUsers.slice(startIndex, startIndex + limit);
     const totalPages = Math.ceil(totalCount / limit);
 
-    return new Response(JSON.stringify({
-      success: true,
-      users: paginatedUsers,
+    return successResponse({ users: paginatedUsers,
       pagination: {
         page,
         limit,
@@ -189,11 +187,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         customerCount,
         djCount,
         totalRevenue
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

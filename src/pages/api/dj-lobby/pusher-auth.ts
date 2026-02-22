@@ -78,10 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const auth = `${PUSHER_KEY}:${signature}`;
 
-    return new Response(JSON.stringify({ auth }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ auth });
 
   } catch (error: unknown) {
     log.error('Error:', error);

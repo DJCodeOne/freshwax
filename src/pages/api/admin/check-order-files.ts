@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -132,15 +132,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       orderId,
       orderNumber: order.orderNumber,
       customerEmail: order.customer?.email,
       itemCount: items.length,
       items: results
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');

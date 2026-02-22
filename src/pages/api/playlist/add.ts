@@ -138,15 +138,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('userPlaylists', userId, updatedPlaylist);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Added to queue',
+    return successResponse({ message: 'Added to queue',
       item: newItem,
-      queueSize: updatedQueue.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      queueSize: updatedQueue.length });
 
   } catch (error: unknown) {
     log.error('[playlist/add] Error:', error instanceof Error ? error.message : String(error));

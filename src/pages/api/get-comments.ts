@@ -43,18 +43,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
         const comments = await d1GetComments(db, releaseId, 'release');
         if (comments.length > 0) {
           logger.info('[get-comments] D1: Found', comments.length, 'comments');
-          return new Response(JSON.stringify({
-            success: true,
-            comments,
+          return successResponse({ comments,
             count: comments.length,
-            source: 'd1'
-          }), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'public, max-age=60, s-maxage=60'
-            }
-          });
+            source: 'd1' }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
         }
       } catch (d1Error: unknown) {
         logger.error('[get-comments] D1 error, falling back to Firebase:', d1Error);
@@ -78,18 +69,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logger.info('[get-comments] Firebase: Found', sortedComments.length, 'comments');
 
-    return new Response(JSON.stringify({
-      success: true,
-      comments: sortedComments,
+    return successResponse({ comments: sortedComments,
       count: sortedComments.length,
-      source: 'firebase'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=60'
-      }
-    });
+      source: 'firebase' }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
 
   } catch (error: unknown) {
     logger.error('[get-comments] Error:', error);

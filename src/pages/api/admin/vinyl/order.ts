@@ -4,7 +4,7 @@ import { getDocument, updateDocument, addDocument } from '../../../../lib/fireba
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
 import { escapeHtml } from '../../../../lib/escape-html';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../../lib/api-utils';
 
 const log = createLogger('[vinyl-order]');
 
@@ -40,10 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Order not found');
     }
 
-    return new Response(JSON.stringify({ success: true, order }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ order });
   } catch (error: unknown) {
     log.error('[API vinyl/order] Error:', error);
     return ApiErrors.serverError('Failed to fetch order');
@@ -101,10 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         await updateDocument('vinylOrders', orderId, updateData);
 
-        return new Response(JSON.stringify({ success: true, message: 'Order status updated' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Order status updated' });
       }
 
       case 'add-tracking': {
@@ -116,10 +110,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Tracking info updated' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Tracking info updated' });
       }
 
       case 'refund': {
@@ -438,18 +429,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Vinyl order refunded',
+        return successResponse({ message: 'Vinyl order refunded',
           refundId: refund.id,
           amount: refundAmountPounds,
           totalRefunded,
           isFullRefund,
-          listingRestored: isFullRefund && !!order.listingId
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          listingRestored: isFullRefund && !!order.listingId });
       }
 
       case 'add-note': {
@@ -467,10 +452,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Note added' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Note added' });
       }
 
       default:

@@ -6,7 +6,7 @@ import { getDocument, invalidateReleasesCache } from '../../../lib/firebase-rest
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -177,15 +177,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Track URLs updated and caches cleared',
+    return successResponse({ message: 'Track URLs updated and caches cleared',
       releaseId,
-      updatedTracks: trackFixes.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      updatedTracks: trackFixes.length });
 
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');

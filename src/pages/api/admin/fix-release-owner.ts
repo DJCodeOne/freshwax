@@ -6,7 +6,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/fix-release-owner');
 
@@ -69,20 +69,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Release owner updated',
+    return successResponse({ message: 'Release owner updated',
       release: {
         id: releaseId,
         title: release.releaseName || release.title,
         previousOwner: release.submittedBy || '(none)',
         newOwner: newOwnerId,
         artistName: artist.artistName || artist.name
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

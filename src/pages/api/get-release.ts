@@ -87,17 +87,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logger.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName, artistBio ? '(has bio)' : '(no bio)');
 
-    return new Response(JSON.stringify({
-      success: true,
-      release: { ...normalized, artistBio },
-      source: 'firebase-rest'
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=60, must-revalidate'
-      }
-    });
+    return successResponse({ release: { ...normalized, artistBio },
+      source: 'firebase-rest' }, 200, { headers: { 'Cache-Control': 'private, max-age=60, must-revalidate' } });
     
   } catch (error: unknown) {
     logger.error('[get-release] Error:', error);

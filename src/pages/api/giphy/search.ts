@@ -62,16 +62,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const cacheKey = `${endpoint}:${query}:${limit}:${offset}`;
   const cached = getCached(cacheKey);
   if (cached) {
-    return new Response(JSON.stringify({
-      success: true,
-      ...cached,
-      cached: true
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300'
-      }
-    });
+    return successResponse({ ...cached,
+      cached: true }, 200, { headers: { 'Cache-Control': 'public, max-age=300' } });
   }
 
   try {
@@ -106,15 +98,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Cache the result
     setCache(cacheKey, result);
 
-    return new Response(JSON.stringify({
-      success: true,
-      ...result
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300'
-      }
-    });
+    return successResponse({ ...result }, 200, { headers: { 'Cache-Control': 'public, max-age=300' } });
 
   } catch (error: unknown) {
     log.error('[GIPHY Proxy] Error:', error);

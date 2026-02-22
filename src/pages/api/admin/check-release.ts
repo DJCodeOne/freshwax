@@ -6,7 +6,7 @@ import { queryCollection, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -67,9 +67,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       (a.displayName || '').toLowerCase().includes('y2')
     );
 
-    return new Response(JSON.stringify({
-      success: true,
-      searchTerm: search,
+    return successResponse({ searchTerm: search,
       matchingReleases: details,
       y2Artists: y2Artist.map((a: Record<string, unknown>) => ({
         id: a.id,
@@ -78,9 +76,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         email: a.email,
         userId: a.userId
       }))
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -89,7 +89,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     const totalMp3 = results.reduce((sum, t) => sum + (t.mp3Size || 0), 0);
     const totalWav = results.reduce((sum, t) => sum + (t.wavSize || 0), 0);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       releaseId,
       releaseName: release.releaseName || release.title,
       artistName: release.artistName,
@@ -101,9 +101,6 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         wavMB: (totalWav / (1024 * 1024)).toFixed(2)
       },
       tracks: results
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');

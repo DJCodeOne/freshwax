@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, addDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, verifyAdminKey } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/bulk-stock-upload');
 
@@ -272,13 +272,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      result
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ result });
 
   } catch (error: unknown) {
     log.error('Error:', error);

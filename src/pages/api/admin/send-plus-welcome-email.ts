@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[send-plus-welcome-email]');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
@@ -45,10 +45,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!RESEND_API_KEY) {
       log.info('[send-plus-welcome-email] No Resend API key configured');
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         message: 'Email service not configured'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      });
     }
 
     // Format dates
@@ -193,10 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('[send-plus-welcome-email] Email sent successfully to:', email);
 
-    return new Response(JSON.stringify({
-      success: true,
-      messageId: result.id
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ messageId: result.id });
 
   } catch (error: unknown) {
     log.error('[send-plus-welcome-email] Error:', error);

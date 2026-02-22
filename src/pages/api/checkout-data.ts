@@ -8,7 +8,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('checkout-data');
 
@@ -52,19 +52,13 @@ export const GET: APIRoute = async ({ request }) => {
     const userDoc = await getDocument('users', userId);
 
     if (!userDoc) {
-      return new Response(JSON.stringify({
-        success: true,
-        customer: null,
-        email: email || null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
+      return successResponse({ customer: null, email: email || null }, 200, {
+        headers: { 'Cache-Control': 'private, no-store' }
       });
     }
 
     // Return only fields needed for checkout form pre-fill
-    return new Response(JSON.stringify({
-      success: true,
+    return successResponse({
       customer: {
         firstName: userDoc.firstName || userDoc.name?.split(' ')[0] || '',
         lastName: userDoc.lastName || userDoc.name?.split(' ').slice(1).join(' ') || '',
@@ -77,9 +71,8 @@ export const GET: APIRoute = async ({ request }) => {
         postcode: userDoc.postcode || '',
         country: userDoc.country || 'United Kingdom'
       }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
+    }, 200, {
+      headers: { 'Cache-Control': 'private, no-store' }
     });
 
   } catch (error: unknown) {
@@ -127,10 +120,7 @@ export const POST: APIRoute = async ({ request }) => {
       ...sanitized
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
 
   } catch (error: unknown) {
     log.error('[checkout-data] POST error:', error);

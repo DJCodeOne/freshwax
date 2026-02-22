@@ -41,20 +41,12 @@ export const GET: APIRoute = async ({ request }) => {
     const userDoc = await getDocument('users', userId);
 
     if (!userDoc) {
-      return new Response(JSON.stringify({
-        success: true,
-        profile: null,
-        email: email || null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ profile: null,
+        email: email || null });
     }
 
     // Return all profile-relevant fields (dashboard needs more than checkout)
-    return new Response(JSON.stringify({
-      success: true,
-      profile: {
+    return successResponse({ profile: {
         firstName: userDoc.firstName || '',
         lastName: userDoc.lastName || '',
         fullName: userDoc.fullName || '',
@@ -70,11 +62,7 @@ export const GET: APIRoute = async ({ request }) => {
         isPro: userDoc.isPro || userDoc.isArtist || userDoc.approved || false,
         avatarUrl: userDoc.avatarUrl || userDoc.photoURL || null,
         name: userDoc.name || ''
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('[user-profile] GET error:', error);
@@ -124,10 +112,7 @@ export const POST: APIRoute = async ({ request }) => {
       ...sanitized
     });
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
 
   } catch (error: unknown) {
     log.error('[user-profile] POST error:', error);

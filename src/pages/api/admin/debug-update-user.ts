@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -106,14 +106,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (confirm !== 'yes') {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: 'Current state (add &confirm=yes to update)',
         userId,
         currentRoles,
         willSetArtistTo: false
-      }, null, 2), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -166,16 +163,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       verifyRoles[k] = v.booleanValue;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Update complete',
+    return successResponse({ message: 'Update complete',
       before: currentRoles,
       requested: newRoles,
       after: verifyRoles,
       artistNowFalse: verifyRoles.artist === false
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

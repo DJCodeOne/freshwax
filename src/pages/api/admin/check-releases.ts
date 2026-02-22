@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -76,13 +76,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       };
     }
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       totalReleases: releases.length,
       releases: summary,
       matchesForUser
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
     return ApiErrors.serverError('Failed to check releases');

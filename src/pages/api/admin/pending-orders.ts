@@ -6,7 +6,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/pending-orders');
 
@@ -62,13 +62,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       };
     });
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       status,
       count: orders.length,
       orders
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (err: unknown) {
     log.error('Error querying pending_orders:', err);

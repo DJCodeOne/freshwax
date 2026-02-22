@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
 import { z } from 'zod';
 
 const CartItemSchema = z.object({
@@ -116,10 +116,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     const parseResult = CheckDuplicatesSchema.safeParse(rawBody);
     if (!parseResult.success) {
-      return new Response(JSON.stringify({ duplicates: [] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse({ duplicates: [] });
     }
     const { cartItems } = parseResult.data;
     
@@ -166,13 +163,7 @@ export const POST: APIRoute = async ({ request }) => {
     
     logger.info('[check-duplicates] User:', userId, 'Owned releases:', ownedReleases.size, 'Duplicates found:', duplicates.length);
     
-    return new Response(JSON.stringify({ 
-      duplicates,
-      ownedReleases: [...ownedReleases]
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ duplicates, ownedReleases: [...ownedReleases] });
     
   } catch (error: unknown) {
     logger.error('[check-duplicates] Error:', error);

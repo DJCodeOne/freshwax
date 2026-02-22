@@ -65,15 +65,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (existingOrders && existingOrders.length > 0) {
         const existingOrder = existingOrders[0];
         // Order already exists (idempotent)
-        return new Response(JSON.stringify({
-          success: true,
-          orderId: existingOrder.id,
+        return successResponse({ orderId: existingOrder.id,
           orderNumber: existingOrder.orderNumber,
-          message: 'Order already processed'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          message: 'Order already processed' });
       }
     } catch (idempotencyErr: unknown) {
       log.error('[PayPal] Idempotency check failed (Firebase unreachable):', idempotencyErr);
@@ -283,16 +277,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           )[0];
           log.warn('[PayPal] RACE CONDITION: Duplicate orders detected for paypalOrderId:', paypalOrderId,
             'Returning first order:', firstOrder.orderNumber);
-          return new Response(JSON.stringify({
-            success: true,
-            orderId: firstOrder.id,
+          return successResponse({ orderId: firstOrder.id,
             orderNumber: firstOrder.orderNumber,
             paypalOrderId: paypalOrderId,
-            message: 'Order already processed'
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
+            message: 'Order already processed' });
         }
       } catch (dupCheckErr: unknown) {
         log.warn('[PayPal] Post-creation duplicate check failed:', dupCheckErr);
@@ -324,16 +312,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (existingOrders && existingOrders.length > 0) {
           const existingOrder = existingOrders[0];
           // Order creation failed but existing order found (race condition)
-          return new Response(JSON.stringify({
-            success: true,
-            orderId: existingOrder.id,
+          return successResponse({ orderId: existingOrder.id,
             orderNumber: existingOrder.orderNumber,
             paypalOrderId: paypalOrderId,
-            message: 'Order already processed'
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
+            message: 'Order already processed' });
         }
       } catch (fallbackErr: unknown) {
         log.warn('[PayPal] Fallback duplicate check failed:', fallbackErr);
@@ -557,16 +539,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderId: result.orderId,
+    return successResponse({ orderId: result.orderId,
       orderNumber: result.orderNumber,
       paypalOrderId: paypalOrderId,
-      captureId: captureId
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-    });
+      captureId: captureId }, 200, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

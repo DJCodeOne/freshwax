@@ -9,7 +9,7 @@ import { initKVCache, kvDelete } from '../../../lib/kv-cache';
 import { d1UpsertSlot, d1UpdateSlotStatus, d1DeleteSlot, d1GetLiveSlots, d1GetScheduledSlots } from '../../../lib/d1-catalog';
 import { invalidateStatusCache } from './status';
 import { isAdmin } from '../../../lib/admin';
-import { createLogger, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, fetchWithTimeout, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('[livestream-slots]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -208,9 +208,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        keyAvailable,
+      return successResponse({ keyAvailable,
         streamKey: keyAvailable ? streamKey : null,
         slotInfo,
         timeUntilKey,
@@ -218,8 +216,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           streamKeyRevealMinutes: settings.streamKeyRevealMinutes,
           gracePeriodMinutes: settings.gracePeriodMinutes,
           sessionEndCountdown: settings.sessionEndCountdown
-        }
-      }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+        } }, 200, { headers: { 'Cache-Control': 'no-store' } });
     }
 
     // Current live stream - use D1 first (FREE reads)
@@ -237,9 +234,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       if (slots.length === 0) {
-        return new Response(JSON.stringify({ success: true, isLive: false, currentStream: null }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ isLive: false, currentStream: null });
       }
 
       const liveSlot = slots[0];
@@ -251,24 +246,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // SECURITY: Remove sensitive fields from public response
       const { streamKey, twitchStreamKey, rtmpUrl, ...safeLiveSlot } = liveSlot;
 
-      return new Response(JSON.stringify({
-        success: true,
-        isLive: true,
+      return successResponse({ isLive: true,
         currentStream: {
           ...safeLiveSlot,
           timeRemaining,
           showCountdown,
           countdownSeconds: showCountdown ? Math.ceil(timeRemaining / 1000) : null
-        }
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        } });
     }
 
     // Can go live after current DJ - use D1 first
     if (action === 'canGoLiveAfter' && djId) {
       if (!settings.allowGoLiveAfter) {
-        return new Response(JSON.stringify({ success: true, canGoLiveAfter: false, reason: 'Feature disabled' }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ canGoLiveAfter: false, reason: 'Feature disabled' });
       }
 
       // Try D1 first
@@ -284,18 +274,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       if (liveSlots.length === 0) {
-        return new Response(JSON.stringify({ success: true, canGoLiveAfter: false, reason: 'No active stream' }), {
-          status: 200, headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ canGoLiveAfter: false, reason: 'No active stream' });
       }
 
       const currentStream = liveSlots[0];
-      return new Response(JSON.stringify({
-        success: true,
-        canGoLiveAfter: true,
+      return successResponse({ canGoLiveAfter: true,
         currentStreamEndsAt: currentStream.endTime,
-        currentDjName: currentStream.djName
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        currentDjName: currentStream.djName });
     }
 
     // Stream history - completed/cancelled streams (limited to prevent runaway)
@@ -307,10 +292,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 100  // Max 100 history items to prevent runaway
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        slots: sanitizeSlots(historySlots)
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ slots: sanitizeSlots(historySlots) });
     }
 
     // Default: Get schedule - use D1 first (FREE reads)
@@ -405,9 +387,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const upcomingSlots = slots.filter((slot: Record<string, unknown>) => (slot.startTime as string) > nowISO && ['scheduled', 'in_lobby', 'queued'].includes(slot.status as string));
 
     // SECURITY: Sanitize all slots to remove stream keys from public response
-    return new Response(JSON.stringify({
-      success: true,
-      slots: sanitizeSlots(slots),
+    return successResponse({ slots: sanitizeSlots(slots),
       currentLive: sanitizeSlot(liveSlot) || null,
       upcoming: sanitizeSlots(upcomingSlots),
       total: slots.length,
@@ -415,8 +395,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         sessionEndCountdown: settings.sessionEndCountdown,
         allowGoLiveNow: settings.allowGoLiveNow,
         allowGoLiveAfter: settings.allowGoLiveAfter
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+      } }, 200, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: unknown) {
     log.error('GET Error:', error);
@@ -613,12 +592,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Sync to D1 (non-blocking)
       syncSlotToD1(db, slotId, { id: slotId, ...newSlot });
 
-      return new Response(JSON.stringify({
-        success: true,
-        slot: { id: slotId, ...newSlot },
+      return successResponse({ slot: { id: slotId, ...newSlot },
         streamKey,
-        message: 'Slot booked successfully'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        message: 'Slot booked successfully' });
     }
 
     // GO LIVE NOW
@@ -695,13 +671,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         title: newSlot.title
       }, env);
 
-      return new Response(JSON.stringify({
-        success: true,
-        slot: { id: slotId, ...newSlot },
+      return successResponse({ slot: { id: slotId, ...newSlot },
         streamKey,
         rtmpUrl: newSlot.rtmpUrl,
-        hlsUrl: newSlot.hlsUrl
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        hlsUrl: newSlot.hlsUrl });
     }
 
     // EARLY START - Extend an upcoming booking to start now
@@ -785,9 +758,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         earlyStart: true
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Booking extended to start now',
+      return successResponse({ message: 'Booking extended to start now',
         slot: {
           id: upcomingSlot.id,
           ...upcomingSlot,
@@ -800,8 +771,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         streamKey: newStreamKey,
         rtmpUrl: buildRtmpUrl(newStreamKey),
         hlsUrl: buildHlsUrl(newStreamKey),
-        originalStartTime: upcomingSlot.startTime
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        originalStartTime: upcomingSlot.startTime });
     }
 
     // CANCEL SLOT
@@ -841,9 +811,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Sync cancellation to D1 (non-blocking)
       syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt: nowISO });
 
-      return new Response(JSON.stringify({ success: true, message: 'Slot cancelled' }), {
-        status: 200, headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Slot cancelled' });
     }
 
     // END STREAM
@@ -945,9 +913,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         slotId: targetSlotId
       }, env);
 
-      return new Response(JSON.stringify({ success: true, message: 'Stream ended' }), {
-        status: 200, headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Stream ended' });
     }
 
     // GET STREAM KEY
@@ -980,9 +946,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return ApiErrors.badRequest('Grace period expired');
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        streamKey: slot.streamKey,
+      return successResponse({ streamKey: slot.streamKey,
         rtmpUrl: slot.rtmpUrl || buildRtmpUrl(slot.streamKey),
         hlsUrl: slot.hlsUrl || buildHlsUrl(slot.streamKey),
         serverUrl: 'rtmp://rtmp.freshwax.co.uk/live',
@@ -992,8 +956,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           startTime: slot.startTime,
           endTime: slot.endTime,
           status: slot.status
-        }
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        } });
     }
 
     // GENERATE KEY for Go Live - requires a booked slot
@@ -1017,13 +980,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // If slot already has a key, return it
         if (slot.streamKey) {
-          return new Response(JSON.stringify({
-            success: true,
-            streamKey: slot.streamKey,
+          return successResponse({ streamKey: slot.streamKey,
             serverUrl: 'rtmp://rtmp.freshwax.co.uk/live',
             validUntil: slot.endTime,
-            slotId
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+            slotId });
         }
 
         // Generate new key for this slot
@@ -1037,13 +997,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           keyGeneratedAt: now.toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          streamKey,
+        return successResponse({ streamKey,
           serverUrl: 'rtmp://rtmp.freshwax.co.uk/live',
           validUntil: slot.endTime,
-          slotId
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          slotId });
       }
 
       // No slotId - check if anyone is currently live (for auto-book scenario)
@@ -1070,13 +1027,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const tempSlotId = `temp_${generateId()}`;
       const streamKey = generateStreamKey(djId, tempSlotId, now, endTime);
 
-      return new Response(JSON.stringify({
-        success: true,
-        streamKey,
+      return successResponse({ streamKey,
         serverUrl: 'rtmp://rtmp.freshwax.co.uk/live',
         validUntil: endTime.toISOString(),
-        tempSlotId
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        tempSlotId });
     }
 
     // GO LIVE - Validate stream is active and mark as live
@@ -1195,14 +1149,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           title: newSlot.title
         }, env);
 
-        return new Response(JSON.stringify({
-          success: true,
-          slot: { id: slotId, ...newSlot },
+        return successResponse({ slot: { id: slotId, ...newSlot },
           streamKey,
           rtmpUrl: newSlot.rtmpUrl,
           hlsUrl: newSlot.hlsUrl,
-          message: 'You are now live!'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          message: 'You are now live!' });
       } catch (createError: unknown) {
         log.error('Failed to create slot:', createError);
         return ApiErrors.serverError('Failed to create live slot');
@@ -1278,11 +1229,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }, env);
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Slot updated successfully',
-        slot: { id: slotId, ...slot, ...updates }
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ message: 'Slot updated successfully',
+        slot: { id: slotId, ...slot, ...updates } });
     }
 
     // START RELAY - Start a relay stream from an external source
@@ -1395,13 +1343,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         title: newSlot.title
       }, env);
 
-      return new Response(JSON.stringify({
-        success: true,
-        slot: { id: relaySlotId, ...newSlot },
+      return successResponse({ slot: { id: relaySlotId, ...newSlot },
         streamKey: relayStreamKey,
         hlsUrl: newSlot.hlsUrl,
-        message: `Relay started from ${stationName || 'external station'}!`
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        message: `Relay started from ${stationName || 'external station'}!` });
     }
 
     return ApiErrors.badRequest('Invalid action');
@@ -1469,9 +1414,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const db = env?.DB;
     syncSlotStatusToD1(db, slotId, 'cancelled', { cancelledAt });
 
-    return new Response(JSON.stringify({ success: true, message: 'Slot cancelled' }), {
-      status: 200, headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Slot cancelled' });
 
   } catch (error: unknown) {
     const errMsg = error instanceof Error ? error.message : String(error);

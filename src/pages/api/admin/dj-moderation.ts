@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[dj-moderation]');
 
@@ -92,10 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       holdAt: doc.holdAt instanceof Date ? doc.holdAt.toISOString() : doc.holdAt
     }));
 
-    return new Response(JSON.stringify({ success: true, banned, onhold }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ banned, onhold });
   } catch (error: unknown) {
     log.error('[dj-moderation] Error listing:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -196,13 +193,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[dj-moderation] Banned ${email} (${user.userId})`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: `${email} has been banned`
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: `${email} has been banned` });
 
     } else if (action === 'unban') {
       if (!userId) {
@@ -213,13 +204,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[dj-moderation] Unbanned ${userId}`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'DJ has been unbanned'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'DJ has been unbanned' });
 
     } else if (action === 'hold') {
       if (!email) {
@@ -261,13 +246,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[dj-moderation] Put ${email} on hold (${user.userId})`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: `${email} has been put on hold`
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: `${email} has been put on hold` });
 
     } else if (action === 'release') {
       if (!userId) {
@@ -278,13 +257,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[dj-moderation] Released ${userId} from hold`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'DJ has been released from hold'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'DJ has been released from hold' });
 
     } else if (action === 'kick') {
       if (!userId) {
@@ -325,13 +298,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[dj-moderation] Kicked ${userId} from stream`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'DJ has been kicked from the stream'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'DJ has been kicked from the stream' });
 
     } else {
       return ApiErrors.badRequest('Invalid action');

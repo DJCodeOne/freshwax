@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getDocument } from '../../../lib/firebase-rest';
 import { getServiceAccountToken, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-order');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -130,15 +130,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       throw new Error(`Firestore update failed: ${response.status} - ${error}`);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Order updated',
+    return successResponse({ message: 'Order updated',
       orderId,
-      updates: updateData
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      updates: updateData });
 
   } catch (error: unknown) {
     log.error('Error:', error);

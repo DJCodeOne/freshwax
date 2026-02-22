@@ -6,7 +6,7 @@ import { Resend } from 'resend';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { escapeHtml } from '../../lib/escape-html';
 import { emailWrapper } from '../../lib/email-wrapper';
-import { createLogger, ApiErrors } from '../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../lib/api-utils';
 
 const log = createLogger('[contact]');
 
@@ -103,13 +103,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (import.meta.env.DEV) log.info('Email sent:', result);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Message sent successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Message sent successfully' });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-user');
 
@@ -179,14 +179,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Failed to update any collections');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'User updated successfully',
-      results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'User updated successfully',
+      results });
 
   } catch (error: unknown) {
     log.error('Error:', error);

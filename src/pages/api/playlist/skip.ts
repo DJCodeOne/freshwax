@@ -40,14 +40,9 @@ export async function POST({ request, locals }: APIContext) {
 
     // Admins can always skip
     if (getAdminUids().includes(userId)) {
-      return new Response(JSON.stringify({
-        success: true,
-        allowed: true,
+      return successResponse({ allowed: true,
         isAdmin: true,
-        message: 'Admin skip'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        message: 'Admin skip' });
     }
 
     // Get user data
@@ -61,14 +56,9 @@ export async function POST({ request, locals }: APIContext) {
 
     // Standard users cannot skip
     if (tier === SUBSCRIPTION_TIERS.FREE) {
-      return new Response(JSON.stringify({
-        success: true,
-        allowed: false,
+      return successResponse({ allowed: false,
         reason: '!skip is a Plus member feature. Upgrade to Plus for 3 skips per day!',
-        isPlus: false
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        isPlus: false });
     }
 
     // Plus user - check daily limit
@@ -82,16 +72,11 @@ export async function POST({ request, locals }: APIContext) {
     const skipCheck = canSkipTrack(tier, skipsUsedToday);
 
     if (!skipCheck.allowed) {
-      return new Response(JSON.stringify({
-        success: true,
-        allowed: false,
+      return successResponse({ allowed: false,
         reason: skipCheck.reason,
         limit: skipCheck.limit,
         remaining: skipCheck.remaining,
-        isPlus: true
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        isPlus: true });
     }
 
     // Increment skip count
@@ -101,16 +86,11 @@ export async function POST({ request, locals }: APIContext) {
       'usage.skipDate': today
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      allowed: true,
+    return successResponse({ allowed: true,
       remaining: skipCheck.remaining - 1,
       limit: skipCheck.limit,
       isPlus: true,
-      message: `Skip used! ${skipCheck.remaining - 1} remaining today.`
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: `Skip used! ${skipCheck.remaining - 1} remaining today.` });
 
   } catch (error: unknown) {
     log.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));
@@ -139,14 +119,9 @@ export async function GET({ request, locals }: APIContext) {
 
     // Admins have unlimited skips
     if (getAdminUids().includes(userId)) {
-      return new Response(JSON.stringify({
-        success: true,
-        canSkip: true,
+      return successResponse({ canSkip: true,
         isAdmin: true,
-        remaining: 'unlimited'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        remaining: 'unlimited' });
     }
 
     // Get user data
@@ -159,14 +134,9 @@ export async function GET({ request, locals }: APIContext) {
     const tier = getEffectiveTier(userDoc.subscription);
 
     if (tier === SUBSCRIPTION_TIERS.FREE) {
-      return new Response(JSON.stringify({
-        success: true,
-        canSkip: false,
+      return successResponse({ canSkip: false,
         isPlus: false,
-        reason: '!skip is a Plus feature'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        reason: '!skip is a Plus feature' });
     }
 
     // Plus user - check remaining skips
@@ -175,16 +145,11 @@ export async function GET({ request, locals }: APIContext) {
     const skipsUsedToday = usage.skipDate === today ? (usage.skipsUsedToday || 0) : 0;
     const skipCheck = canSkipTrack(tier, skipsUsedToday);
 
-    return new Response(JSON.stringify({
-      success: true,
-      canSkip: skipCheck.allowed,
+    return successResponse({ canSkip: skipCheck.allowed,
       isPlus: true,
       limit: skipCheck.limit,
       remaining: skipCheck.remaining,
-      used: skipsUsedToday
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      used: skipsUsedToday });
 
   } catch (error: unknown) {
     log.error('[Skip API] Error:', error instanceof Error ? error.message : String(error));

@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
-import { errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { errorResponse, ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
 
 const log = createLogger('check-ownership');
 
@@ -99,18 +99,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const ownedTrackIds = ownedTracks.get(releaseId) || [];
     const ownsTrack = trackId ? ownedTrackIds.includes(trackId) : null;
     
-    return new Response(JSON.stringify({
+    return jsonResponse({
       releaseId,
       trackId: trackId || null,
       ownsFullRelease,
       ownsTrack,
       ownedTrackIds
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=300' // 5 min browser cache
-      }
+    }, 200, {
+      headers: { 'Cache-Control': 'private, max-age=300' }
     });
     
   } catch (error: unknown) {

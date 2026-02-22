@@ -13,14 +13,8 @@ import type { APIRoute } from 'astro';
 export const prerender = false;
 
 export const POST: APIRoute = async () => {
-  return new Response(JSON.stringify({
-    success: true,
-    skipped: true,
-    reason: 'Stock alerts disabled'
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return successResponse({ skipped: true,
+    reason: 'Stock alerts disabled' });
 };
 
 export const GET: APIRoute = async (context) => POST(context);

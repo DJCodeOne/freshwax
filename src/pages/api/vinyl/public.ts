@@ -51,10 +51,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         return ApiErrors.notFound('Listing not found');
       }
 
-      return new Response(JSON.stringify({ success: true, listing }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ listing });
     }
 
     // Get collections (sellers with listings)
@@ -85,10 +82,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         }));
       }
 
-      return new Response(JSON.stringify({ success: true, collections }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ collections });
     }
 
     // Get deals (listings with discounts)
@@ -111,14 +105,8 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
         })
         .slice(0, limit);
 
-      return new Response(JSON.stringify({
-        success: true,
-        listings: deals,
-        count: deals.length
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ listings: deals,
+        count: deals.length });
     }
 
     // Default: Get published listings
@@ -161,15 +149,9 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
     // Get unique genres for filter
     const genres = [...new Set(listings.map((l: Record<string, unknown>) => l.genre as string).filter(Boolean))];
 
-    return new Response(JSON.stringify({
-      success: true,
-      listings: filteredListings,
+    return successResponse({ listings: filteredListings,
       count: filteredListings.length,
-      genres
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      genres });
 
   } catch (error: unknown) {
     log.error('[vinyl/public GET] Error:', error);

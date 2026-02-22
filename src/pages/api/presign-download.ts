@@ -232,14 +232,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info('[presign-download] Generated presigned URL for:', objectKey);
 
-    return new Response(JSON.stringify({
-      success: true,
-      downloadUrl,
-      expiresIn
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ downloadUrl,
+      expiresIn });
 
   } catch (error: unknown) {
     logger.error('[presign-download] Error:', error);

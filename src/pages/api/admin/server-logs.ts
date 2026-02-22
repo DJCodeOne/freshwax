@@ -5,7 +5,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/server-logs');
 
@@ -101,11 +101,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logs.push(`\n--- End of Logs ---`);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       logs: logs.join('\n'),
       timestamp: now.toISOString()
-    }), {
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

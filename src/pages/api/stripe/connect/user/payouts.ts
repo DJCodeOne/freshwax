@@ -82,9 +82,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       totalPending += pending.amount || 0;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      payouts: payouts.map((p: Record<string, unknown>) => ({
+    return successResponse({ payouts: payouts.map((p: Record<string, unknown>) => ({
         id: p.id,
         orderId: p.orderId,
         orderNumber: p.orderNumber,
@@ -109,8 +107,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         payoutCount: payouts.length,
         crateEarnings: user.crateEarnings || 0,
         pendingCrateBalance: user.pendingCrateBalance || 0
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('[Stripe Connect] User payouts error:', error instanceof Error ? error.message : String(error));

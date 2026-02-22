@@ -24,12 +24,9 @@ export async function GET({ request, locals }: APIContext) {
     }, 5000);
 
     if (!response.ok) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         online: false,
         error: 'Server not reachable'
-      }), {
-        status: 200, // Return 200 to avoid console errors
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -37,21 +34,16 @@ export async function GET({ request, locals }: APIContext) {
     const hasSource = data.icestats?.source != null;
     const title = hasSource ? (data.icestats.source.title || null) : null;
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       online: true,
       streaming: hasSource,
       title: title
-    }), {
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
     // Server not running or network error - return clean response
-    return new Response(JSON.stringify({
+    return jsonResponse({
       online: false,
       error: error instanceof Error && error.name === 'AbortError' ? 'Timeout' : 'Not connected'
-    }), {
-      status: 200, // Return 200 to avoid console errors
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

@@ -122,14 +122,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Account not found');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Account and all associated data have been permanently deleted.',
-      details: results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Account and all associated data have been permanently deleted.',
+      details: results });
 
   } catch (error: unknown) {
     logger.error('[delete-account] Error:', error);

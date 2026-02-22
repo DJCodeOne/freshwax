@@ -70,14 +70,8 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     await setDocument('userPlaylists', userId, updatedPlaylist);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Removed from queue',
-      queueSize: updatedQueue.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Removed from queue',
+      queueSize: updatedQueue.length });
 
   } catch (error: unknown) {
     log.error('[playlist/remove] Error:', error instanceof Error ? error.message : String(error));

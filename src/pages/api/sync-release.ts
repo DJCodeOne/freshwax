@@ -114,15 +114,9 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
 
     logger.info('[sync-release] Success:', releaseId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      releaseId,
+    return successResponse({ releaseId,
       release,
-      message: 'Release synced successfully',
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: 'Release synced successfully', });
 
   } catch (error: unknown) {
     logger.error('[sync-release] Sync failed:', error);

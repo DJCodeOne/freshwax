@@ -205,14 +205,8 @@ export async function POST({ request, locals }: { request: Request; locals: App.
 
     logger.info('[update-release] Success - Update complete');
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Release updated successfully',
-      id: id
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Release updated successfully',
+      id: id });
 
   } catch (error: unknown) {
     logger.error('[update-release] Critical error:', error instanceof Error ? error.message : String(error));

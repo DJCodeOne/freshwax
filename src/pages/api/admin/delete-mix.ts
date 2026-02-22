@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getDocument, deleteDocument, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, getR2Config, successResponse } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 const deleteMixSchema = z.object({
@@ -68,13 +68,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!mixData) {
       logger.info('[admin/delete-mix] Mix not found, may already be deleted');
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Mix not found (may already be deleted)'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Mix not found (may already be deleted)' });
     }
 
     const r2FolderPath = folderPath || mixData?.folder_path || 'dj-mixes/' + mixId;
@@ -123,15 +117,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mix deleted successfully',
+    return successResponse({ message: 'Mix deleted successfully',
       deletedId: mixId,
-      deletedFolder: r2FolderPath
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      deletedFolder: r2FolderPath });
 
   } catch (error: unknown) {
     logger.error('[admin/delete-mix] Error:', error);

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { saGetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const updateUserRoleParamsSchema = z.object({
   userId: z.string().min(1),
@@ -74,7 +74,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const newValue = value === 'true' || value === '1';
 
     if (confirm !== 'yes') {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: 'Preview of role change',
         userId,
         email: user.email,
@@ -86,9 +86,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
           to: newValue
         },
         usage: 'Add &confirm=yes to apply'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -98,17 +95,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       roles: updatedRoles
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Updated ${role} role to ${newValue}`,
+    return successResponse({ message: `Updated ${role} role to ${newValue}`,
       userId,
       email: user.email,
       previousValue: currentRoles[role],
-      newValue
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      newValue });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');
   }

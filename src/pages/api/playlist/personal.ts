@@ -58,15 +58,10 @@ export async function GET({ request, locals }: APIContext) {
     // Load from D1
     if (!db) {
       log.error('D1 database not available');
-      return new Response(JSON.stringify({
-        success: true,
-        playlist: [],
+      return successResponse({ playlist: [],
         isPlus,
         trackLimit,
-        error: 'Database not available'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        error: 'Database not available' });
     }
 
     const result = await db.prepare(
@@ -82,14 +77,9 @@ export async function GET({ request, locals }: APIContext) {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      playlist,
+    return successResponse({ playlist,
       isPlus,
-      trackLimit
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      trackLimit });
   } catch (error: unknown) {
     log.error('GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -161,14 +151,9 @@ export async function POST({ request, locals }: APIContext) {
 
     log.info('Saved to D1 for user:', userId, 'items:', items.length);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Playlist saved to cloud',
+    return successResponse({ message: 'Playlist saved to cloud',
       isPlus,
-      trackLimit
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      trackLimit });
   } catch (error: unknown) {
     log.error('POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');

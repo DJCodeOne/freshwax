@@ -61,11 +61,8 @@ export const POST: APIRoute = async ({ request }) => {
         const settings = await getDocument('djLobbySettings', 'chatCleanup');
 
         if (!settings) {
-          return new Response(JSON.stringify({
-            success: true,
-            cleaned: false,
-            reason: 'no-settings'
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return successResponse({ cleaned: false,
+            reason: 'no-settings' });
         }
 
         const lastStreamEndTime = settings.lastStreamEndTime
@@ -76,11 +73,8 @@ export const POST: APIRoute = async ({ request }) => {
         const isCurrentlyLive = data.isCurrentlyLive || false;
 
         if (isCurrentlyLive || lastStreamEndTime === 0 || (now - lastStreamEndTime) <= twoHoursMs) {
-          return new Response(JSON.stringify({
-            success: true,
-            cleaned: false,
-            reason: isCurrentlyLive ? 'currently-live' : 'too-recent'
-          }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          return successResponse({ cleaned: false,
+            reason: isCurrentlyLive ? 'currently-live' : 'too-recent' });
         }
 
         // Delete all DJ lobby chat messages
@@ -96,11 +90,8 @@ export const POST: APIRoute = async ({ request }) => {
           lastCleanup: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          cleaned: true,
-          messagesDeleted: chatMessages.length
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ cleaned: true,
+          messagesDeleted: chatMessages.length });
       }
 
       case 'record-stream-end': {
@@ -109,10 +100,7 @@ export const POST: APIRoute = async ({ request }) => {
           lastStreamEndTime: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Stream end recorded'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Stream end recorded' });
       }
 
       default:

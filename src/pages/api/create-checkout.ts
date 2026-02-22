@@ -168,11 +168,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const session = await stripeResponse.json();
 
-    return new Response(JSON.stringify({
-      success: true,
-      checkoutUrl: session.url,
-      sessionId: session.id
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ checkoutUrl: session.url,
+      sessionId: session.id });
 
   } catch (error: unknown) {
     log.error('[create-checkout] Error:', error);

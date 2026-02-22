@@ -143,14 +143,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
-    return new Response(JSON.stringify({
-      success: true,
-      artworkUrl,
-      message: 'Artwork updated successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ artworkUrl,
+      message: 'Artwork updated successfully' });
     
   } catch (error: unknown) {
     log.error('[update-mix-artwork] Error:', error);

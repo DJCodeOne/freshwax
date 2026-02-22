@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -73,16 +73,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
        LIMIT 10`
     ).all();
 
-    return new Response(JSON.stringify({
-      success: true,
-      errors: result.results,
+    return successResponse({ errors: result.results,
       total: (countResult as Record<string, unknown>)?.total || 0,
       topErrors: topErrors.results,
       limit,
-      offset,
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+      offset });
   } catch (error: unknown) {
     return ApiErrors.serverError('Failed to query error logs');
   }
@@ -103,11 +98,6 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
   const deleted = await cleanupErrorLogs(env, days);
 
-  return new Response(JSON.stringify({
-    success: true,
-    deleted,
-    message: `Cleaned up errors older than ${days} days`,
-  }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return successResponse({ deleted,
+    message: `Cleaned up errors older than ${days} days` });
 };

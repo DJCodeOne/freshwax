@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection } from '../../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../../lib/api-utils';
 
 const log = createLogger('admin/vinyl/seller');
 
@@ -55,10 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Seller not found');
     }
 
-    return new Response(JSON.stringify({ success: true, seller, source }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ seller, source });
   } catch (error: unknown) {
     log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch seller');
@@ -149,10 +146,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        return new Response(JSON.stringify({ success: true, message: 'Seller updated' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Seller updated' });
       }
 
       case 'suspend': {
@@ -200,10 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.error('Failed to update listings:', e);
         }
 
-        return new Response(JSON.stringify({ success: true, message: 'Seller suspended' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Seller suspended' });
       }
 
       case 'unsuspend': {
@@ -239,10 +230,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        return new Response(JSON.stringify({ success: true, message: 'Seller unsuspended' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Seller unsuspended' });
       }
 
       case 'delete': {
@@ -266,10 +254,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.error('Failed to update user roles:', e);
         }
 
-        return new Response(JSON.stringify({ success: true, message: 'Seller deleted' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Seller deleted' });
       }
 
       default:

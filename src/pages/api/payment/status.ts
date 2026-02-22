@@ -63,12 +63,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
   if (!refresh) {
     const cached = await kvGet<Record<string, unknown>>(cacheKey, { prefix: CACHE_PREFIX });
     if (cached) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         ...cached,
         cached: true
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
   }
@@ -230,10 +227,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Cache the result (don't await to avoid blocking response)
     kvSet(cacheKey, responseData, { prefix: CACHE_PREFIX, ttl: CACHE_TTL }).catch(e => log.error('[Payment Status] Cache error:', e));
 
-    return new Response(JSON.stringify(responseData), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse(responseData);
 
   } catch (error: unknown) {
     log.error('[payment/status] Error:', error instanceof Error ? error.message : String(error));

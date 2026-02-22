@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('auth/session');
 
@@ -26,21 +26,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const { userId, error } = await verifyRequestUser(request);
 
     if (error || !userId) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         authenticated: false,
         message: error || 'No valid session'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-      });
+      }, 200, { headers: { 'Cache-Control': 'no-store' } });
     }
 
     // Fetch user profile from Firestore
     const userDoc = await getDocument('users', userId);
 
-    return new Response(JSON.stringify({
-      success: true,
+    return successResponse({
       authenticated: true,
       userId,
       user: userDoc ? {
@@ -50,10 +46,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         isArtist: userDoc.isArtist || false,
         isPro: userDoc.isPro || false,
       } : null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-    });
+    }, 200, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: unknown) {
     log.error('[auth/session] Error:', error instanceof Error ? error.message : String(error));

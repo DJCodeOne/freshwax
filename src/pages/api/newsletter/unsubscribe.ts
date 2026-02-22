@@ -42,13 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (subscribers.length === 0) {
       // Email not found - still return success to avoid email enumeration
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'If this email was subscribed, it has been unsubscribed.'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'If this email was subscribed, it has been unsubscribed.' });
     }
 
     const subscriberDoc = subscribers[0];
@@ -60,13 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Successfully unsubscribed from newsletter'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Successfully unsubscribed from newsletter' });
 
   } catch (error: unknown) {
     log.error('Unsubscribe error:', error);

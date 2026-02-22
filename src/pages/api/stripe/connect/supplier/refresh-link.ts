@@ -66,10 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       type: 'account_onboarding',
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      onboardingUrl: accountLink.url
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ onboardingUrl: accountLink.url });
 
   } catch (error: unknown) {
     log.error('[Stripe Connect] Supplier refresh link error:', error instanceof Error ? error.message : String(error));

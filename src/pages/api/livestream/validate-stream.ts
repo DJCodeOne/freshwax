@@ -12,7 +12,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, validateStreamKeyTiming, buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger } from '../../../lib/api-utils';
+import { createLogger, jsonResponse, successResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('[validate-stream]');
 
@@ -41,26 +41,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
   log.info('[validate-stream] Validating stream key:', streamKey?.substring(0, 20) + '...');
   
   if (!streamKey) {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       valid: false,
       reason: 'No stream key provided',
-    }), { 
-      status: 400, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
+    }, 400);
   }
   
   try {
     // Check stream key format
     const keyParts = streamKey.split('_');
     if (keyParts.length < 3 || keyParts[0] !== RED5_CONFIG.security.keyPrefix) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'Invalid stream key format',
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 403);
     }
 
     // Find the slot with this stream key (skip cache for real-time validation)
@@ -75,21 +69,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (activeSlots.length === 0) {
       // Check if there was a cancelled slot with this key
       if (allSlots.length > 0) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           valid: false,
           reason: 'This stream key was cancelled. Please generate a new one.',
-        }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        }, 403);
       }
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'Stream key not found. Please book a slot first.',
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 403);
     }
 
     // Use the most recent active slot
@@ -101,14 +89,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Check slot status - must be scheduled, in_lobby, or live (for reconnection)
     const allowedStatuses = ['scheduled', 'in_lobby', 'live', 'queued'];
     if (!allowedStatuses.includes(slot.status)) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: `Slot is ${slot.status}. Cannot stream.`,
         slotStatus: slot.status,
-      }), { 
-        status: 403, 
-        headers: { 'Content-Type': 'application/json' } 
-      });
+      }, 403);
     }
     
     // Validate timing
@@ -117,41 +102,32 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const validation = validateStreamKeyTiming(streamKey, slotStart, slotEnd);
     
     if (!validation.valid) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: validation.reason,
         tooEarly: validation.tooEarly,
         expired: validation.expired,
         slotStart: slot.startTime,
         slotEnd: slot.endTime,
-      }), { 
-        status: 403, 
-        headers: { 'Content-Type': 'application/json' } 
-      });
+      }, 403);
     }
     
     // Check if slot is cancelled
     if (slot.cancelled) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'This slot has been cancelled',
-      }), { 
-        status: 403, 
-        headers: { 'Content-Type': 'application/json' } 
-      });
+      }, 403);
     }
     
     // Check if DJ is banned/suspended (optional)
     if (slot.djId) {
       const artist = await getDocument('artists', slot.djId);
       if (artist && (artist.suspended || artist.banned)) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           valid: false,
           reason: 'Your DJ account is suspended',
-        }), {
-          status: 403,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        }, 403);
       }
     }
 
@@ -168,7 +144,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       log.warn('[validate-stream] Non-critical: Failed to update slot:', updateErr);
     }
     
-    return new Response(JSON.stringify({
+    return jsonResponse({
       valid: true,
       slotId: slotId,
       djId: slot.djId,
@@ -182,22 +158,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
         genre: slot.genre,
         crew: slot.crew,
       },
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
     });
     
   } catch (error: unknown) {
     log.error('[validate-stream] Error:', error);
     
     // On error, deny the stream to be safe
-    return new Response(JSON.stringify({
+    return jsonResponse({
       valid: false,
       reason: 'Validation service error. Please try again.',
-    }), { 
-      status: 500, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
+    }, 500);
   }
 };
 
@@ -231,33 +201,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Allow read actions without authentication
     if (action === 'read' || action === 'playback') {
-      return new Response(JSON.stringify({ valid: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse({ valid: true });
     }
 
     // For publish actions, validate the stream key
     if (!streamKey) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'No stream key provided',
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 401);
     }
 
     // Check stream key format
     const keyParts = streamKey.split('_');
     if (keyParts.length < 3 || keyParts[0] !== RED5_CONFIG.security.keyPrefix) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'Invalid stream key format',
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 401);
     }
 
     // Find the slot with this stream key (skip cache for real-time validation)
@@ -272,21 +233,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (activeSlots.length === 0) {
       // Provide helpful message if key was cancelled
       if (allSlots.length > 0) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           valid: false,
           reason: 'Stream key cancelled - generate new',
-        }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        }, 401);
       }
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'Stream key not found',
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 401);
     }
 
     // Use the most recent active slot
@@ -301,37 +256,28 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const validation = validateStreamKeyTiming(streamKey, slotStart, slotEnd);
 
     if (!validation.valid) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: validation.reason,
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 401);
     }
 
     // Check if slot is cancelled
     if (slot.cancelled) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         valid: false,
         reason: 'Slot cancelled',
-      }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 401);
     }
 
     // Check if DJ is banned
     if (slot.djId) {
       const artist = await getDocument('artists', slot.djId);
       if (artist && (artist.suspended || artist.banned)) {
-        return new Response(JSON.stringify({
+        return jsonResponse({
           valid: false,
           reason: 'Account suspended',
-        }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        }, 401);
       }
     }
 
@@ -350,23 +296,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Return 200 to allow the stream
-    return new Response(JSON.stringify({
+    return jsonResponse({
       valid: true,
       slotId: slotId,
       djName: slot.djName,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {
     log.error('[validate-stream] Error:', error);
-    return new Response(JSON.stringify({
+    return jsonResponse({
       valid: false,
       reason: 'Validation error',
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }, 500);
   }
 };

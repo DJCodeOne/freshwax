@@ -105,12 +105,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const result = await sendBotMessage(streamId, messageText, env);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: result.success,
       messageId: result.messageId
-    }), {
-      status: result.success ? 200 : 500,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {
@@ -150,30 +147,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
         limit: 5
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        upcoming: upcomingSlots.map(slot => ({
+      return successResponse({ upcoming: upcomingSlots.map(slot => ({
           id: slot.id,
           djName: slot.djName,
           scheduledFor: slot.scheduledFor,
           title: slot.title
-        }))
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        })) });
     }
 
     // Default: return bot info
-    return new Response(JSON.stringify({
-      success: true,
-      bot: BOT_USER,
+    return successResponse({ bot: BOT_USER,
       commands: ['!help', '!dj', '!schedule', '!next', '!rules'],
-      announcements: Object.keys(BOT_ANNOUNCEMENTS)
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      announcements: Object.keys(BOT_ANNOUNCEMENTS) });
 
   } catch (error: unknown) {
     log.error('GET Error:', error instanceof Error ? error.message : String(error));

@@ -53,16 +53,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const allOk = Object.values(checks).every(c => c.ok);
   const status = allOk ? 'healthy' : 'degraded';
 
-  return new Response(JSON.stringify({
+  return jsonResponse({
     status,
     timestamp: new Date().toISOString(),
     latency: Date.now() - startTime,
     checks
-  }), {
-    status: allOk ? 200 : 503,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store'
-    }
-  });
+  }, 200, { headers: { 'Cache-Control': 'no-cache, no-store' } });
 };

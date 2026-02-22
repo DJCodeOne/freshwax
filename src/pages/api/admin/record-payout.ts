@@ -7,7 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[record-payout]');
 
@@ -188,16 +188,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Don't fail the request - the payout record was still created
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderId,
+    return successResponse({ orderId,
       orderNumber: order.orderNumber,
       payouts: results,
-      message: `Recorded ${results.length} payout(s)`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: `Recorded ${results.length} payout(s)` });
 
   } catch (error: unknown) {
     log.error('[admin] Record payout error:', error);

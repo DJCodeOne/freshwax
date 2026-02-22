@@ -84,13 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       expirationTtl: 365 * 24 * 60 * 60 // 1 year TTL
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      badge
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ badge });
 
   } catch (error: unknown) {
     log.error('[save-user-badge] Error:', error);

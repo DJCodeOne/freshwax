@@ -6,7 +6,7 @@ import { saQueryCollection } from '../../../lib/firebase-service-account';
 import { d1InsertLedgerEntry, d1GetLedgerEntryById } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[sync-ledger]');
 
@@ -79,9 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Sync complete`,
+    return successResponse({ message: `Sync complete`,
       stats: {
         total: firebaseEntries.length,
         synced,
@@ -89,9 +87,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
         errors
       },
       errorDetails: errorDetails.slice(0, 10) // First 10 errors
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

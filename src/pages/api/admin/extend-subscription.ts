@@ -7,7 +7,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[extend-subscription]');
 
@@ -125,11 +125,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`[extend-subscription] Extended ${userId} by ${days} days until ${newExpiry.toISOString()}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      newExpiry: newExpiry.toISOString(),
-      message: `Subscription extended by ${days} days`
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ newExpiry: newExpiry.toISOString(),
+      message: `Subscription extended by ${days} days` });
 
   } catch (error: unknown) {
     log.error('[extend-subscription] Error:', error);

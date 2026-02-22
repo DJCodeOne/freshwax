@@ -6,7 +6,7 @@ import { getDocument, queryCollection, invalidateReleasesCache } from '../../../
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -54,7 +54,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (confirm !== 'yes') {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: `Would sync ${releases.length} releases to D1`,
         releases: releases.map((r: Record<string, unknown>) => ({
           id: r.id,
@@ -64,9 +64,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
           labelCode: r.labelCode || '(none)'
         })),
         usage: 'Add &confirm=yes to apply'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -120,14 +117,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Synced ${results.length} releases to D1 and cleared caches`,
-      results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Synced ${results.length} releases to D1 and cleared caches`,
+      results });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');
   }

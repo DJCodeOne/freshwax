@@ -7,7 +7,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { saQueryCollection, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/plus-upgrade-all');
 import { emailWrapper, ctaButton, esc } from '../../../lib/email-wrapper';
@@ -105,14 +105,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       if (response.ok) {
         const result = await response.json();
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Test email sent to ${testEmail}`,
-          emailId: result.id
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: `Test email sent to ${testEmail}`,
+          emailId: result.id });
       } else {
         const error = await response.text();
         return ApiErrors.serverError('Failed to send test email: ${error}');
@@ -144,7 +138,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!execute) {
       // Preview mode - show what would happen
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: 'Preview mode - add execute: true to perform upgrade',
         totalUsers: users.length,
         usersWithEmail: allUsersWithEmail.length,
@@ -156,9 +150,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           currentTier: u.subscription?.tier || 'free',
           willUpgrade: !u.subscription?.tier || u.subscription?.tier !== 'pro'
         }))
-      }, null, 2), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -228,13 +219,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Upgraded ${results.upgraded.length} users, sent ${results.emailsSent.length} emails`,
+    return successResponse({ message: `Upgraded ${results.upgraded.length} users, sent ${results.emailsSent.length} emails`,
       results
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

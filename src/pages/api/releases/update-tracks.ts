@@ -97,15 +97,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, updatedRelease);
     logger.info(`Release updated: ${releaseId}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      releaseId,
+    return successResponse({ releaseId,
       tracksUpdated: tracks.length,
-      message: 'Tracks updated with processed audio URLs'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: 'Tracks updated with processed audio URLs' });
 
   } catch (error: unknown) {
     logger.error('Failed to update tracks:', error);

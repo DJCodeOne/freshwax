@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[backfill-ledger]');
 
@@ -276,9 +276,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      dryRun,
+    return successResponse({ dryRun,
       message: dryRun ? 'Dry run - add ?confirm=yes to execute' : `Created ${totalCreated} ledger entries`,
       summary: {
         totalOrders: ordersData.length,
@@ -286,9 +284,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         entriesCreated: totalCreated,
         results: results
       }
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

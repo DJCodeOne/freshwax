@@ -32,30 +32,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       
       const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
       
-      return new Response(JSON.stringify({
-        success: true,
-        tracks: reshuffled,
+      return successResponse({ tracks: reshuffled,
         meta: {
           ...cachedResult.meta,
           cached: true,
           reshuffled: true
-        }
-      }), {
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=60, s-maxage=300'
-        }
-      });
+        } }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' } });
     }
     
     if (pendingRequest) {
       logger.info('[get-shuffle-tracks] Waiting for pending request');
       const result = await pendingRequest;
-      return new Response(JSON.stringify(result), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse(result);
     }
     
     pendingRequest = (async () => {
@@ -92,13 +80,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     logger.info('[get-shuffle-tracks] Returning', result.tracks.length, 'tracks');
     
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=300'
-      }
-    });
+    return jsonResponse(result, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' } });
     
   } catch (error: unknown) {
     pendingRequest = null;
@@ -107,14 +89,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (cachedResult) {
       logger.info('[get-shuffle-tracks] Returning stale cache');
       const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
-      return new Response(JSON.stringify({
-        success: true,
-        tracks: reshuffled,
-        meta: { ...cachedResult.meta, stale: true }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ tracks: reshuffled,
+        meta: { ...cachedResult.meta, stale: true } });
     }
     
     return ApiErrors.serverError('Failed to fetch tracks');

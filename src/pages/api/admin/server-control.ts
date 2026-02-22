@@ -8,7 +8,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { broadcastLiveStatus } from '../../../lib/pusher';
 import { invalidateStatusCache } from '../livestream/status';
-import { ApiErrors, fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, fetchWithTimeout, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/server-control');
 
@@ -98,10 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         result = { success: false, error: `Unknown action: ${action}` };
     }
 
-    return new Response(JSON.stringify(result), {
-      status: result.success ? 200 : 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse(result);
 
   } catch (error: unknown) {
     log.error('Error:', error);

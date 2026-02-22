@@ -91,10 +91,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return ApiErrors.badRequest('userId required');
     }
 
-    return new Response(JSON.stringify({ success: true, requests }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ requests });
 
   } catch (error: unknown) {
     log.error('GET error:', error);
@@ -188,14 +185,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       const docRef = await addDocument('event-requests', newRequest);
 
-      return new Response(JSON.stringify({
-        success: true,
-        requestId: docRef.id,
-        message: 'Event request submitted successfully'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ requestId: docRef.id,
+        message: 'Event request submitted successfully' });
     }
 
     // Approve request (admin action)
@@ -230,13 +221,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         reviewedBy: adminId || 'admin'
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: `Approved ${existingRequest.hoursRequested} hours for ${existingRequest.userName} on ${existingRequest.eventDate}`
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: `Approved ${existingRequest.hoursRequested} hours for ${existingRequest.userName} on ${existingRequest.eventDate}` });
     }
 
     // Reject request (admin action)
@@ -272,13 +257,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         rejectionReason: reason || 'Request declined'
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Request rejected'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Request rejected' });
     }
 
     return ApiErrors.badRequest('Invalid action');

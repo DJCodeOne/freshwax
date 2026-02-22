@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/fix-submitter-ids');
 
@@ -33,14 +33,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // Require confirmation
   if (confirm !== 'yes') {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       message: 'Migration script to fix submitterId on releases and ledger entries',
       warning: 'This will update releases and ledger entries with missing submitterId',
       usage: 'Add ?confirm=yes to run the migration',
       dryRunUsage: 'Add ?confirm=yes&dryRun=yes to preview without writing'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -242,9 +239,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      dryRun,
+    return successResponse({ dryRun,
       results,
       summary: {
         releases: `${results.releases.fixed} fixed, ${results.releases.alreadyOk} already OK, ${results.releases.noUserId} missing userId`,
@@ -252,11 +247,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       },
       message: dryRun
         ? `Dry run complete. Would fix ${results.releases.fixed} releases and ${results.ledger.fixed} ledger entries.`
-        : `Migration complete. Fixed ${results.releases.fixed} releases and ${results.ledger.fixed} ledger entries.`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+        : `Migration complete. Fixed ${results.releases.fixed} releases and ${results.ledger.fixed} ledger entries.` });
 
   } catch (error: unknown) {
     log.error('Error:', error);

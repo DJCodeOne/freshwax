@@ -118,16 +118,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Release deleted successfully',
+    return successResponse({ message: 'Release deleted successfully',
       releaseId: releaseId,
       releaseName: releaseData?.releaseName,
-      artistName: releaseData?.artistName
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      artistName: releaseData?.artistName });
 
   } catch (error: unknown) {
     logger.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');

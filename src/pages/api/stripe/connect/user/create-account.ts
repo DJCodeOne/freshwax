@@ -71,12 +71,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         type: 'account_onboarding',
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        onboardingUrl: accountLink.url,
+      return successResponse({ onboardingUrl: accountLink.url,
         accountId: user.stripeConnectId,
-        message: 'Continue your Stripe onboarding'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        message: 'Continue your Stripe onboarding' });
     }
 
     // Create new Express account for user
@@ -122,12 +119,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('Created account for user:', userId, 'Account:', account.id);
 
-    return new Response(JSON.stringify({
-      success: true,
-      onboardingUrl: accountLink.url,
+    return successResponse({ onboardingUrl: accountLink.url,
       accountId: account.id,
-      message: 'Stripe Connect account created'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      message: 'Stripe Connect account created' });
 
   } catch (error: unknown) {
     log.error('User create account error:', error instanceof Error ? error.message : String(error));

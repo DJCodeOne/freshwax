@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { getSettings } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/get-settings');
 
@@ -19,24 +19,12 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (!settingsData) {
       // Return default settings
-      return new Response(JSON.stringify({
-        success: true,
-        settings: {
+      return successResponse({ settings: {
           showMixCharts: false
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
-      });
+        } });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      settings: settingsData
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
-    });
+    return successResponse({ settings: settingsData });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

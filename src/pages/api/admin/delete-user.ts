@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, invalidateUsersCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[delete-user]');
 
 const deleteUserSchema = z.object({
@@ -105,14 +105,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Invalidate users cache so the list refreshes immediately
     invalidateUsersCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'User deleted successfully',
-      results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'User deleted successfully',
+      results });
 
   } catch (error: unknown) {
     log.error('[admin/delete-user] Error:', error);

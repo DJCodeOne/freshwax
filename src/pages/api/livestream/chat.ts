@@ -425,16 +425,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Reverse to get chronological order
     messages.reverse();
     
-    return new Response(JSON.stringify({
-      success: true,
-      messages
-    }), { 
-      status: 200, 
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      } 
-    });
+    return successResponse({ messages }, 200, { headers: { 'Cache-Control': 'no-cache' } });
     
   } catch (error: unknown) {
     log.error('[livestream/chat] GET Error:', error);
@@ -666,18 +657,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      pusherSuccess,
+    return successResponse({ pusherSuccess,
       message: {
         id: messageId,
         ...chatMessage
       },
-      botResponse
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      botResponse });
 
   } catch (error: unknown) {
     log.error('[livestream/chat] POST Error:', error instanceof Error ? error.message : String(error));
@@ -716,13 +701,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       moderatedAt: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Message removed'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Message removed' });
 
   } catch (error: unknown) {
     log.error('[livestream/chat] DELETE Error:', error);

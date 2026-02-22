@@ -112,13 +112,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.warn('Could not update viewer sessions:', e);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Stream ended successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Stream ended successfully' });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

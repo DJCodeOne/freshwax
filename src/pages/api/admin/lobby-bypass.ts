@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[lobby-bypass]');
 
@@ -62,10 +62,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       grantedAt: doc.grantedAt instanceof Date ? doc.grantedAt.toISOString() : doc.grantedAt
     }));
 
-    return new Response(JSON.stringify({ success: true, bypasses }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ bypasses });
   } catch (error: unknown) {
     log.error('[lobby-bypass] Error listing:', error);
     return ApiErrors.serverError('Internal error');
@@ -162,14 +159,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[lobby-bypass] Granted bypass to ${email} (${targetUserId})`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: `Lobby access granted to ${email}`,
-        userId: targetUserId
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: `Lobby access granted to ${email}`,
+        userId: targetUserId });
 
     } else if (action === 'revoke') {
       if (!userId) {
@@ -191,13 +182,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[lobby-bypass] Revoked bypass for ${userId}`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bypass revoked'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Bypass revoked' });
 
     } else {
       return ApiErrors.badRequest('Invalid action');

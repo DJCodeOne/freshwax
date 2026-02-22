@@ -47,14 +47,8 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {  try {
       unsubscribed: subscribers.filter(s => s.status === 'unsubscribed').length
     };
 
-    return new Response(JSON.stringify({
-      success: true,
-      subscribers,
-      stats
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ subscribers,
+      stats });
 
   } catch (error: unknown) {
     log.error('Get subscribers error:', error);
@@ -95,14 +89,8 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {  try {
       emailsOpened: 0
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Subscriber added',
-      id: result.id
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Subscriber added',
+      id: result.id });
 
   } catch (error: unknown) {
     log.error('Add subscriber error:', error);
@@ -124,13 +112,7 @@ export const DELETE: APIRoute = async ({ request, cookies, locals }) => {  try {
 
     await deleteDocument('subscribers', subscriberId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Subscriber deleted'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Subscriber deleted' });
 
   } catch (error: unknown) {
     log.error('Delete subscriber error:', error);
@@ -159,13 +141,7 @@ export const PATCH: APIRoute = async ({ request, cookies, locals }) => {  try {
       updatedAt: new Date()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Subscriber ${status === 'active' ? 'reactivated' : 'unsubscribed'}`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Subscriber ${status === 'active' ? 'reactivated' : 'unsubscribed'}` });
 
   } catch (error: unknown) {
     log.error('Update subscriber error:', error);

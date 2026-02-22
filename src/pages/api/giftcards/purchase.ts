@@ -364,20 +364,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      giftCard: {
+    return successResponse({ giftCard: {
         code,
         amount: numAmount,
         recipientEmail: targetEmail,
         purchasedAt,
         expiresAt: displayExpiresAt
       },
-      emailSent: recipientEmailSent
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      emailSent: recipientEmailSent });
 
   } catch (error: unknown) {
     log.error('[giftcards/purchase] Error:', error);

@@ -103,16 +103,10 @@ export const GET: APIRoute = async ({ request }) => {
     
     logger.info('[postcode-lookup] Returning location data:', locationData);
     
-    return new Response(JSON.stringify({
-      success: true,
-      ...locationData,
+    return successResponse({ ...locationData,
       // Note to frontend: this API validates postcodes and returns location data
       // Individual street addresses are not available (requires paid Royal Mail PAF license)
-      message: 'Postcode validated. Please enter your street address below.'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: 'Postcode validated. Please enter your street address below.' });
     
   } catch (error: unknown) {
     logger.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));

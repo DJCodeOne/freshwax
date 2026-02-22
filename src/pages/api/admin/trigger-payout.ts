@@ -10,7 +10,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { getDocument, addDocument, updateDocument } from '../../../lib/firebase-rest';
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/trigger-payout');
 
@@ -144,15 +144,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             log.warn('Could not update pending payout record:', updateErr);
           }
 
-          return new Response(JSON.stringify({
-            success: true,
-            payee: payeeName,
+          return successResponse({ payee: payeeName,
             amount: paypalAmount,
-            batchId: payoutResult.batchId
-          }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
+            batchId: payoutResult.batchId });
         } else {
           return ApiErrors.serverError(payoutResult.error || 'PayPal payout failed');
         }
@@ -403,15 +397,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderId,
+    return successResponse({ orderId,
       orderNumber: order.orderNumber,
-      payouts: results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      payouts: results });
 
   } catch (error: unknown) {
     log.error('Trigger payout error:', error);

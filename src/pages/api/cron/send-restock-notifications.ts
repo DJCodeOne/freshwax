@@ -42,11 +42,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
 
   if (!RESEND_API_KEY) {
-    return new Response(JSON.stringify({
-      success: true,
-      skipped: true,
-      reason: 'Email not configured'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ skipped: true,
+      reason: 'Email not configured' });
   }
 
   try {
@@ -189,14 +186,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     logger.info('[Restock Notifications] Duration:', duration, 'ms');
     logger.info('[Restock Notifications] Results:', results);
 
-    return new Response(JSON.stringify({
-      success: true,
-      duration,
-      ...results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ duration,
+      ...results });
 
   } catch (error: unknown) {
     logger.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));

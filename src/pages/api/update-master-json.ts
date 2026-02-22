@@ -20,12 +20,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { release } = body as { release?: Record<string, unknown> };
 
     if (!release || !release.id) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         error: 'Missing release data or release ID'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      }, 400);
     }
 
     logger.info(`[Master JSON] Updating release: ${release.id}`);
@@ -93,29 +90,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info(`[Master JSON] Master list updated (${releasesList.length} total releases)`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      releaseId: release.id,
+    return successResponse({ releaseId: release.id,
       status: releaseData.status,
       published: releaseData.published,
       approved: releaseData.approved,
       totalReleases: releasesList.length,
-      message: 'Release added to Firebase - PENDING APPROVAL'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: 'Release added to Firebase - PENDING APPROVAL' });
 
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error('[Master JSON] Error:', message);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Internal error');
   }
 };
 
@@ -125,32 +110,23 @@ export const GET: APIRoute = async () => {
     const masterListDoc = await getDocument('system', 'releases-master') as Record<string, unknown> | null;
 
     if (!masterListDoc) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         releases: [],
         totalReleases: 0
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       releases: masterListDoc.releases || [],
       totalReleases: masterListDoc.totalReleases || 0,
       lastUpdated: masterListDoc.lastUpdated
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error('[Master JSON] GET Error:', message);
-    return new Response(JSON.stringify({
+    return jsonResponse({
       error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    }, 500);
   }
 };

@@ -183,17 +183,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     logger.info('[get-orders] Found', orders.length, 'orders');
 
-    return new Response(JSON.stringify({
-      success: true,
-      orders,
-      count: orders.length
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=60'
-      }
-    });
+    return successResponse({ orders,
+      count: orders.length }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
 
   } catch (error: unknown) {
     logger.error('[get-orders] Error:', error);

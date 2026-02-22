@@ -5,7 +5,7 @@ import { getDocument, updateDocument, invalidateReleasesCache } from '../../lib/
 import { d1UpsertRelease } from '../../lib/d1-catalog';
 import { requireAdminAuth } from '../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../lib/kv-cache';
-import { createLogger } from '../../lib/api-utils';
+import { createLogger, errorResponse, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -26,23 +26,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Validate input
     if (!releaseId || !action) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'releaseId and action are required'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('releaseId and action are required', 400);
     }
 
     if (!['approve', 'reject'].includes(action)) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'action must be "approve" or "reject"'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('action must be "approve" or "reject"', 400);
     }
 
     logger.info(`[approve-release] ${action} release ${releaseId}`);
@@ -51,14 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const releaseData = await getDocument('releases', releaseId) as Record<string, unknown> | null;
 
     if (!releaseData) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'Release not found',
-        releaseId: releaseId
-      }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('Release not found', 404);
     }
 
     // Update release status
@@ -120,28 +101,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Release ${action}d successfully`,
+    return successResponse({ message: `Release ${action}d successfully`,
       releaseId: releaseId,
       status: updateData.status,
       releaseName: releaseData.releaseName,
-      artistName: releaseData.artistName
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      artistName: releaseData.artistName });
 
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
     logger.error('[approve-release] Error:', message);
 
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal server error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Internal server error');
   }
 };

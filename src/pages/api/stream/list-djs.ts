@@ -82,23 +82,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       };
     }));
 
-    return new Response(JSON.stringify({
-      success: true,
-      djs
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ djs });
 
   } catch (error: unknown) {
     log.error('[list-djs] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: true,
-      djs: [],
-      error: 'Internal error'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ djs: [],
+      error: 'Internal error' });
   }
 };

@@ -90,20 +90,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('Created gift card:', giftCard.code, 'type:', type, 'value:', giftCard.originalValue);
 
-    return new Response(JSON.stringify({
-      success: true,
-      giftCard: {
+    return successResponse({ giftCard: {
         id: result.id,
         code: giftCard.code,
         value: giftCard.originalValue,
         type: giftCard.type,
         description: giftCard.description,
         expiresAt: giftCard.expiresAt
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

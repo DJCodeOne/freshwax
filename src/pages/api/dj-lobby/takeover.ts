@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('dj-lobby/takeover');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -84,41 +84,29 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const incomingDoc = await getDocument('djTakeoverRequests', userId);
 
       if (incomingDoc && incomingDoc.status === 'pending' && incomingDoc.targetDjId === userId) {
-        return new Response(JSON.stringify({
-          success: true,
-          hasRequest: true,
+        return successResponse({ hasRequest: true,
           request: {
             id: userId,
             ...incomingDoc,
             createdAt: incomingDoc.createdAt
-          }
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          } });
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        hasRequest: false
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ hasRequest: false });
     }
 
     if (type === 'outgoing') {
       const outgoingDoc = await getDocument('djTakeoverRequests', `request_${userId}`);
 
       if (outgoingDoc) {
-        return new Response(JSON.stringify({
-          success: true,
-          hasRequest: true,
+        return successResponse({ hasRequest: true,
           request: {
             id: `request_${userId}`,
             ...outgoingDoc
-          }
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          } });
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        hasRequest: false
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ hasRequest: false });
     }
 
     // Return both if no type specified
@@ -127,11 +115,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       getDocument('djTakeoverRequests', `request_${userId}`)
     ]);
 
-    return new Response(JSON.stringify({
-      success: true,
-      incoming: incomingDoc || null,
-      outgoing: outgoingDoc || null
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ incoming: incomingDoc || null,
+      outgoing: outgoingDoc || null });
 
   } catch (error: unknown) {
     log.error('GET Error:', error);
@@ -204,10 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Takeover request sent'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Takeover request sent' });
       }
 
       case 'approve': {
@@ -241,10 +223,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Takeover approved'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Takeover approved' });
       }
 
       case 'decline': {
@@ -270,10 +249,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Takeover declined'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Takeover declined' });
       }
 
       case 'cancel': {
@@ -291,10 +267,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Request cancelled'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Request cancelled' });
       }
 
       default:
@@ -329,10 +302,7 @@ export const DELETE: APIRoute = async ({ locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      expired: expiredRequests.length
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ expired: expiredRequests.length });
 
   } catch (error: unknown) {
     log.error('DELETE Error:', error);

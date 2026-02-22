@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[clear-chat]');
 import {
@@ -61,13 +61,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!chatMessages || chatMessages.length === 0) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'No messages to clear',
-        deleted: 0
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'No messages to clear',
+        deleted: 0 });
     }
 
     // Check batch limits
@@ -112,15 +107,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Cleared ${deleted} chat messages${streamId ? ` for stream ${streamId}` : ''}, ${failed} failed${hasMore ? ', more remaining' : ''}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Cleared ${deleted} chat messages${hasMore ? '. More messages may remain - run again to continue.' : ''}`,
+    return successResponse({ message: `Cleared ${deleted} chat messages${hasMore ? '. More messages may remain - run again to continue.' : ''}`,
       deleted,
       failed,
-      hasMore
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      hasMore });
   } catch (error: unknown) {
     log.error('Clear chat error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to clear chat');
@@ -149,14 +139,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const count = chatMessages?.length || 0;
     const hasMore = count === 1000;
 
-    return new Response(JSON.stringify({
-      success: true,
-      count,
+    return successResponse({ count,
       hasMore,
-      message: hasMore ? 'At least 1000 messages (count limited for performance)' : undefined
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: hasMore ? 'At least 1000 messages (count limited for performance)' : undefined });
   } catch (error: unknown) {
     log.error('Get chat count error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to get chat count');

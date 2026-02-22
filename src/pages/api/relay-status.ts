@@ -28,26 +28,19 @@ export const GET: APIRoute = async ({ request, url }) => {
 
   // Stations without check URL are assumed always live
   if (!checkUrl) {
-    return new Response(JSON.stringify({
-      success: true,
-      isLive: true,
+    return successResponse({ isLive: true,
       nowPlaying: '',
-      listeners: 0
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      listeners: 0 });
   }
 
   try {
     const response = await fetchWithTimeout(checkUrl, {}, 5000);
 
     if (!response.ok) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         isLive: false,
         error: 'Station unreachable'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -60,14 +53,9 @@ export const GET: APIRoute = async ({ request, url }) => {
         if (json.type === 'result' && json.data && json.data[0]) {
           const data = json.data[0];
           const isLive = data.server === 'Online' && data.sourcestate === true;
-          return new Response(JSON.stringify({
-            success: true,
-            isLive,
+          return successResponse({ isLive,
             nowPlaying: isLive ? data.song : '',
-            listeners: data.listeners || 0
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+            listeners: data.listeners || 0 });
         }
       } catch {
         // Not valid JSON
@@ -78,21 +66,14 @@ export const GET: APIRoute = async ({ request, url }) => {
     const nowPlaying = text.trim();
     const isLive = nowPlaying && nowPlaying !== 'Unknown - Track';
 
-    return new Response(JSON.stringify({
-      success: true,
-      isLive,
-      nowPlaying: isLive ? nowPlaying : ''
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ isLive,
+      nowPlaying: isLive ? nowPlaying : '' });
 
   } catch (err: unknown) {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: false,
       isLive: false,
       error: 'Check failed'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 };

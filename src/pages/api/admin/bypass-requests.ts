@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const logger = createLogger('bypass-requests');
 import { getSaQuery } from '../../../lib/admin-query';
@@ -85,30 +85,22 @@ export const GET: APIRoute = async ({ request, locals }) => {
         // Determine the current active request (pending takes priority)
         const activeRequest = pendingRequest || approvedRequest || deniedRequest || null;
 
-        return new Response(JSON.stringify({
-          success: true,
+        return successResponse({
           hasRequest: !!activeRequest,
           request: activeRequest,
           hasPending: !!pendingRequest,
           hasApproved: !!approvedRequest,
           hasDenied: !!deniedRequest
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       } catch (queryError: unknown) {
         logger.warn('[bypass-requests] Status check query error:', queryError instanceof Error ? queryError.message : String(queryError));
         // Return empty status on error
-        return new Response(JSON.stringify({
-          success: true,
+        return successResponse({
           hasRequest: false,
           request: null,
           hasPending: false,
           hasApproved: false,
           hasDenied: false
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       }
     }
@@ -186,22 +178,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         };
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        requests
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ requests });
     } catch (queryError: unknown) {
       logger.warn('[bypass-requests] List query error:', queryError instanceof Error ? queryError.message : String(queryError));
-      return new Response(JSON.stringify({
-        success: true,
-        requests: []
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ requests: [] as Record<string, unknown>[] });
     }
   } catch (error: unknown) {
     logger.error('Error fetching bypass requests:', error);
@@ -251,13 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           processedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Request expired'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Request expired' });
       }
 
       if (action === 'approve') {
@@ -332,13 +306,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         logger.info('[bypass-requests] Request approved successfully');
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Request approved'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Request approved' });
       } else {
         // Deny - just update status
         await updateDocument('bypassRequests', requestId, {
@@ -346,13 +314,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           processedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Request denied'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Request denied' });
       }
     }
 
@@ -412,14 +374,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('bypassRequests', newRequestId, newRequest);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Request submitted successfully',
-      requestId: newRequestId
-    }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Request submitted successfully', requestId: newRequestId }, 201);
 
   } catch (error: unknown) {
     logger.error('Error processing bypass request:', error);
@@ -450,13 +405,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     await deleteDocument('bypassRequests', requestId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Request deleted'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Request deleted' });
 
   } catch (error: unknown) {
     logger.error('Error deleting bypass request:', error);

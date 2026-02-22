@@ -55,13 +55,8 @@ export const GET: APIRoute = async ({ request, url }) => {
           if (duration) {
             const seconds = parseISO8601Duration(duration);
             if (seconds !== null) {
-              return new Response(JSON.stringify({
-                success: true,
-                duration: seconds,
-                source: 'youtube-api'
-              }), {
-                headers: { 'Content-Type': 'application/json' }
-              });
+              return successResponse({ duration: seconds,
+                source: 'youtube-api' });
             }
           }
         }
@@ -76,13 +71,8 @@ export const GET: APIRoute = async ({ request, url }) => {
       if (noembedResponse.ok) {
         const data = await noembedResponse.json();
         if (data.duration) {
-          return new Response(JSON.stringify({
-            success: true,
-            duration: data.duration,
-            source: 'noembed'
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return successResponse({ duration: data.duration,
+            source: 'noembed' });
         }
       }
     } catch (e: unknown) {
@@ -91,14 +81,9 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     // Method 3: Duration not available without API key
     // Return null to indicate we couldn't get the duration
-    return new Response(JSON.stringify({
-      success: true,
-      duration: null,
+    return successResponse({ duration: null,
       source: 'unavailable',
-      message: 'Duration check requires YouTube API key'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: 'Duration check requires YouTube API key' });
 
   } catch (error: unknown) {
     log.error('[youtube/duration] Error:', error instanceof Error ? error.message : String(error));

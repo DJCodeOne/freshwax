@@ -148,14 +148,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const { count, listeners } = await getListenerCount(streamId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      listeners,
-      count
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ listeners,
+      count });
 
   } catch (error: unknown) {
     log.error('Error fetching listeners:', error);
@@ -223,14 +217,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         timestamp: Date.now()
       }, env);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Left stream',
-        activeViewers: activeCount
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Left stream',
+        activeViewers: activeCount });
 
     } else {
       // Join or heartbeat - both upsert the listener
@@ -244,14 +232,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         timestamp: Date.now()
       }, env);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: action === 'join' ? 'Joined as listener' : 'Heartbeat received',
-        activeViewers: activeCount
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: action === 'join' ? 'Joined as listener' : 'Heartbeat received',
+        activeViewers: activeCount });
     }
 
   } catch (error: unknown) {

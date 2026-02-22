@@ -108,15 +108,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const publicUrl = `${R2_CONFIG.publicDomain}/${key}`;
 
-    return new Response(JSON.stringify({
-      success: true,
-      url: publicUrl,
+    return successResponse({ url: publicUrl,
       key: key,
-      size: buffer.length,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      size: buffer.length, });
 
   } catch (error: unknown) {
     log.error('[upload-r2-batch] Error:', error);

@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -72,7 +72,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (confirm !== 'yes') {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: `Would update ${entriesToUpdate.length} ledger entries`,
         entries: entriesToUpdate.map((e: Record<string, unknown>) => ({
           id: e.id,
@@ -82,9 +82,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
           wouldSetTo: newOwnerId
         })),
         usage: 'Add &confirm=yes to apply'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -98,14 +95,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       results.push({ id: entry.id, orderNumber: entry.orderNumber, updated: true });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Updated ${results.length} ledger entries`,
-      results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Updated ${results.length} ledger entries`,
+      results });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');
   }

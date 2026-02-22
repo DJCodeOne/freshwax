@@ -104,14 +104,8 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
           html: generateNewsletterHTML(subject, content, sendTestTo)
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Preview sent to ${sendTestTo}`,
-          previewSent: true
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: `Preview sent to ${sendTestTo}`,
+          previewSent: true });
       } catch (emailError: unknown) {
         log.error('Preview email failed:', emailError);
         return ApiErrors.serverError('Failed to send preview email');
@@ -184,19 +178,13 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
       completedAt: new Date()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Newsletter sent to ${results.sent} subscribers`,
+    return successResponse({ message: `Newsletter sent to ${results.sent} subscribers`,
       results: {
         sent: results.sent,
         failed: results.failed,
         total: subscribers.length
       },
-      newsletterId: newsletterResult.id
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      newsletterId: newsletterResult.id });
 
   } catch (error: unknown) {
     log.error('Send error:', error);

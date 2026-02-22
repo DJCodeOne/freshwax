@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
 
 const log = createLogger('follow-artist');
 
@@ -101,26 +101,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
 
       // Return actual found artists count (not stored artist names count)
-      return new Response(JSON.stringify({
-        success: true,
-        followedArtists: artistsData,
+      return successResponse({ followedArtists: artistsData,
         count: artistsData.length,
-        storedCount: followedArtists.length // For debugging - shows if some artists have no releases
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        storedCount: followedArtists.length }); // For debugging - shows if some artists have no releases
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      followedArtists: [],
+    return successResponse({ followedArtists: [],
       count: 0,
-      storedCount: 0
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      storedCount: 0 });
 
   } catch (error: unknown) {
     log.error('[FOLLOW API] Error:', error instanceof Error ? error.message : String(error));
@@ -167,14 +155,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         followedArtistsUpdatedAt: now
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Now following artist',
-        isFollowing: true
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Now following artist',
+        isFollowing: true });
 
     } else if (action === 'unfollow') {
       // Atomic arrayRemove prevents lost data under concurrent writes
@@ -182,14 +164,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         followedArtistsUpdatedAt: now
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Unfollowed artist',
-        isFollowing: false
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Unfollowed artist',
+        isFollowing: false });
 
     } else if (action === 'toggle') {
       // Read to determine current state, then use atomic operation for the mutation
@@ -201,26 +177,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await arrayRemove('users', userId, 'followedArtists', [artistIdentifier], {
           followedArtistsUpdatedAt: now
         });
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Unfollowed artist',
-          isFollowing: false
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Unfollowed artist',
+          isFollowing: false });
       } else {
         await arrayUnion('users', userId, 'followedArtists', [artistIdentifier], {
           followedArtistsUpdatedAt: now
         });
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Now following artist',
-          isFollowing: true
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Now following artist',
+          isFollowing: true });
       }
 
     } else if (action === 'check') {
@@ -228,13 +192,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const currentFollowed = customerDoc?.followedArtists || [];
       const isFollowing = currentFollowed.includes(artistIdentifier);
 
-      return new Response(JSON.stringify({
-        success: true,
-        isFollowing: isFollowing
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ isFollowing: isFollowing });
     }
 
     return ApiErrors.badRequest('Invalid action. Use: follow, unfollow, toggle, or check');

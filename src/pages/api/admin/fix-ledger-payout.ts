@@ -8,7 +8,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { saQueryCollection, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/fix-ledger-payout');
 
@@ -88,7 +88,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     };
 
     if (!confirm) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: 'Would update ledger entry',
         ledgerId: ledgerEntry.id,
         currentValues: {
@@ -97,23 +97,15 @@ export const GET: APIRoute = async ({ request, locals }) => {
         },
         newValues: updates,
         usage: 'Add &confirm=yes to apply'
-      }, null, 2), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
     // Apply updates
     await saUpdateDocument(serviceAccountKey, projectId, 'salesLedger', ledgerEntry.id, updates);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Ledger entry updated',
+    return successResponse({ message: 'Ledger entry updated',
       ledgerId: ledgerEntry.id,
       updates
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

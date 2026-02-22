@@ -433,16 +433,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Product uploaded successfully',
+    return successResponse({ message: 'Product uploaded successfully',
       productId: productId,
       sku: generatedSKU,
-      product: productData
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      product: productData });
 
   } catch (error: unknown) {
     logger.error('[upload-merch] Error:', error);

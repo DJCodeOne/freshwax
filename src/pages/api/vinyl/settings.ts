@@ -106,14 +106,8 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      settings: settings || null,
-      source
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ settings: settings || null,
+      source });
 
   } catch (error: unknown) {
     logger.error('[vinyl/settings GET] Error:', error);
@@ -245,16 +239,10 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
       return ApiErrors.serverError('Failed to save settings');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Settings saved',
+    return successResponse({ message: 'Settings saved',
       collectionNumber: collectionNumber,
       isNewSeller: isNewSeller,
-      storage: { d1: d1Success, firebase: firebaseSuccess }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      storage: { d1: d1Success, firebase: firebaseSuccess } });
 
   } catch (error: unknown) {
     logger.error('[vinyl/settings POST] Error:', error);

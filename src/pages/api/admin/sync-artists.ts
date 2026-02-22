@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { getDocument, queryCollection, setDocument } from '../../../lib/firebase-rest';
 import { getSaQuery } from '../../../lib/admin-query';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[sync-artists]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -90,9 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      synced,
+    return successResponse({ synced,
       syncedCount: synced.length,
       errors,
       errorCount: errors.length,
@@ -103,11 +101,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       },
       message: synced.length > 0
         ? `Synced ${synced.length} artist(s) to artists collection`
-        : 'All artists already synced'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+        : 'All artists already synced' });
 
   } catch (error: unknown) {
     log.error('[sync-artists] Error:', error);

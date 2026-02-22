@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saGetDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/sync-auth-user');
 
@@ -83,14 +83,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await saSetDocument(serviceAccountKey, projectId, 'users', uid, userData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'User synced to Firestore',
-      user: { id: uid, ...userData }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'User synced to Firestore',
+      user: { id: uid, ...userData } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

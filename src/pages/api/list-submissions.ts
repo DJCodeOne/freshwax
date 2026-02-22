@@ -48,10 +48,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({ submissions }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ submissions });
 
   } catch (error: unknown) {
     log.error('[list-submissions] Error:', error);

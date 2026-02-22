@@ -40,10 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info(`[Cleanup Reservations] Done. Cleaned: ${cleaned}, Duration: ${duration}ms`);
     log.info('[Cleanup Reservations] ========== COMPLETED ==========');
 
-    return new Response(JSON.stringify({ success: true, cleaned, duration }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ cleaned, duration });
   } catch (err: unknown) {
     log.error('[Cleanup Reservations] Error:', err instanceof Error ? err.message : String(err));
     return ApiErrors.serverError('Cleanup failed');

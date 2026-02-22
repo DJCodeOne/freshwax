@@ -63,10 +63,7 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 
     log.info('Refreshed onboarding link for artist:', artistId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      onboardingUrl: accountLink.url
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ onboardingUrl: accountLink.url });
 
   } catch (error: unknown) {
     log.error('Refresh link error:', error instanceof Error ? error.message : String(error));

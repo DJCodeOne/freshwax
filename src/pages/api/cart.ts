@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { verifyRequestUser } from '../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const logger = createLogger('cart');
@@ -67,12 +67,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (!kv) {
       logger.info('[Cart API] KV not available, returning empty cart');
-      return new Response(JSON.stringify({
-        success: true,
-        cart: { items: [], updatedAt: null },
-        source: 'fallback'
-      }), {
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
+      return successResponse({ cart: { items: [], updatedAt: null }, source: 'fallback' }, 200, {
+        headers: { 'Cache-Control': 'private, no-store' }
       });
     }
 
@@ -81,12 +77,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logger.info('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
 
-    return new Response(JSON.stringify({
-      success: true,
-      cart: cartData || { items: [], updatedAt: null },
-      source: 'kv'
-    }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store' }
+    return successResponse({ cart: cartData || { items: [], updatedAt: null }, source: 'kv' }, 200, {
+      headers: { 'Cache-Control': 'private, no-store' }
     });
 
   } catch (error: unknown) {
@@ -122,13 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!kv) {
       logger.info('[Cart API] KV not available, cart not persisted');
-      return new Response(JSON.stringify({
-        success: true,
-        persisted: false,
-        message: 'KV not available'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ persisted: false, message: 'KV not available' });
     }
 
     const cartKey = `cart:${userId}`;
@@ -144,13 +130,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info('[Cart API] POST', cartKey, 'saved', items.length, 'items');
 
-    return new Response(JSON.stringify({
-      success: true,
-      persisted: true,
-      itemCount: items.length
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ persisted: true, itemCount: items.length });
 
   } catch (error: unknown) {
     logger.error('[Cart API] POST error:', error);
@@ -177,12 +157,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'KV not available'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'KV not available' });
     }
 
     const cartKey = `cart:${userId}`;
@@ -190,11 +165,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     logger.info('[Cart API] DELETE', cartKey);
 
-    return new Response(JSON.stringify({
-      success: true
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
 
   } catch (error: unknown) {
     logger.error('[Cart API] DELETE error:', error);

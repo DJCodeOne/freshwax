@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/add-artist');
 
@@ -131,14 +131,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updatedAt: new Date().toISOString()
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Added ${artistName} to artists and users collections`,
-      artistId: userId
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Added ${artistName} to artists and users collections`,
+      artistId: userId });
 
   } catch (error: unknown) {
     log.error('Error:', error);

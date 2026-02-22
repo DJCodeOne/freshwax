@@ -102,10 +102,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         break;
     }
 
-    return new Response(JSON.stringify({ received: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ received: true });
 
   } catch (error: unknown) {
     log.error('Error:', error);

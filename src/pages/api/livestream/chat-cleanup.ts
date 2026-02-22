@@ -44,25 +44,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 'pending'
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Chat cleanup scheduled',
-        cleanupAt: cleanupTime.toISOString()
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Chat cleanup scheduled',
+        cleanupAt: cleanupTime.toISOString() });
     }
 
     if (action === 'cancel') {
       // Cancel scheduled cleanup (if DJ comes back)
       await deleteDocument('chatCleanupSchedule', streamId);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Chat cleanup cancelled'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Chat cleanup cancelled' });
     }
 
     if (action === 'execute') {
@@ -76,13 +66,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         messagesDeleted: deleted
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Chat cleared',
-        messagesDeleted: deleted
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Chat cleared',
+        messagesDeleted: deleted });
     }
     
     return ApiErrors.badRequest('Invalid action');
@@ -120,16 +105,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
     if (!executeNow) {
-      return new Response(JSON.stringify({
-        success: true,
-        pendingCleanups: pending.length,
+      return successResponse({ pendingCleanups: pending.length,
         jobs: pending.map((j: Record<string, unknown>) => ({
           streamId: j.streamId,
           cleanupAt: j.cleanupAt
-        }))
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        })) });
     }
 
     // Execute all pending cleanups
@@ -156,13 +136,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })
     );
     
-    return new Response(JSON.stringify({ 
-      success: true, 
-      executed: results.length,
-      results
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ executed: results.length,
+      results });
   } catch (error: unknown) {
     log.error('Chat cleanup check error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');

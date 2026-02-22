@@ -43,19 +43,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         const ratings = await d1GetRatings(db, releaseId);
         if (ratings) {
           logger.info('[get-ratings] D1:', ratings);
-          return new Response(JSON.stringify({
-            success: true,
-            average: ratings.average,
+          return successResponse({ average: ratings.average,
             count: ratings.count,
             fiveStarCount: ratings.fiveStarCount,
-            source: 'd1'
-          }), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'public, max-age=60, s-maxage=60'
-            }
-          });
+            source: 'd1' }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
         }
       } catch (d1Error: unknown) {
         logger.error('[get-ratings] D1 error, falling back to Firebase:', d1Error);
@@ -73,19 +64,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logger.info('[get-ratings] Firebase:', ratings);
 
-    return new Response(JSON.stringify({
-      success: true,
-      average: ratings.average || 0,
+    return successResponse({ average: ratings.average || 0,
       count: ratings.count || 0,
       fiveStarCount: ratings.fiveStarCount || 0,
-      source: 'firebase'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=60'
-      }
-    });
+      source: 'firebase' }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
 
   } catch (error: unknown) {
     logger.error('[get-ratings] Error:', error);

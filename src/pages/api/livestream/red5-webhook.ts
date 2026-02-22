@@ -13,7 +13,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, addDocument, queryCollection, atomicIncrement } from '../../../lib/firebase-rest';
 import { RED5_CONFIG, verifyWebhookSignature, initRed5Env, type Red5WebhookEvent } from '../../../lib/red5';
-import { errorResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { errorResponse, successResponse, jsonResponse, ApiErrors, createLogger } from '../../../lib/api-utils';
 
 const log = createLogger('[red5-webhook]');
 
@@ -79,10 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!keyParts || keyParts.length < 3 || keyParts[0] !== RED5_CONFIG.security.keyPrefix) {
       log.warn('[red5-webhook] Unknown stream key format:', event.streamKey);
       // Still return success - we don't want Red5 to retry
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Acknowledged (unknown key format)'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ message: 'Acknowledged (unknown key format)' });
     }
     
     // Find the slot by stream key
@@ -93,10 +90,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (slots.length === 0) {
       log.warn('[red5-webhook] No slot found for stream key:', event.streamKey);
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Acknowledged (slot not found)'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ message: 'Acknowledged (slot not found)' });
     }
 
     const slotData = slots[0];
@@ -251,33 +245,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
     
-    return new Response(JSON.stringify({
-      success: true,
-      event: event.event,
+    return successResponse({ event: event.event,
       slotId: slotId,
-      processed: true,
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
+      processed: true, });
     
   } catch (error: unknown) {
     log.error('[red5-webhook] Error processing webhook:', error);
     
     // Still return 200 to prevent Red5 from retrying
     // Log the error for investigation
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: false,
       error: 'Internal processing error',
       acknowledged: true,
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }, 200);
   }
 };
 
 // GET endpoint for testing/health check
 export const GET: APIRoute = async ({ locals }) => {
   initServices(locals);
-  return new Response(JSON.stringify({
+  return jsonResponse({
     status: 'ok',
     endpoint: 'Red5 Webhook Handler',
     timestamp: new Date().toISOString(),
@@ -286,8 +274,5 @@ export const GET: APIRoute = async ({ locals }) => {
       hlsBaseUrl: RED5_CONFIG.server.hlsBaseUrl,
       keyPrefix: RED5_CONFIG.security.keyPrefix,
     },
-  }), { 
-    status: 200, 
-    headers: { 'Content-Type': 'application/json' } 
   });
 };

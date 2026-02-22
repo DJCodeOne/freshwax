@@ -56,16 +56,11 @@ export const GET: APIRoute = async ({ request }) => {
       position: index + 1
     }));
 
-    return new Response(JSON.stringify({
-      success: true,
-      chart: chart.slice(0, 50), // Return top 50
+    return successResponse({
+      chart: chart.slice(0, 50),
       total: chart.length
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300' // 5 min cache
-      }
+    }, 200, {
+      headers: { 'Cache-Control': 'public, max-age=300' }
     });
 
   } catch (error: unknown) {

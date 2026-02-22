@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, clearCache } from '../../../lib/firebase-rest';
 import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const logger = createLogger('update-partner');
 
@@ -247,11 +247,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache('artists');
     clearCache('query:users');
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Partner updated successfully',
-      results
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'Partner updated successfully',
+      results });
 
   } catch (error: unknown) {
     logger.error('[update-partner] Error:', error);

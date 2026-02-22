@@ -35,24 +35,14 @@ export const GET: APIRoute = async ({ request, url }) => {
 
     if (response.ok) {
       const data = await response.json();
-      return new Response(JSON.stringify({
-        success: true,
-        title: data.title || null,
+      return successResponse({ title: data.title || null,
         author: data.author_name || null,
-        thumbnail: data.thumbnail_url || null
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        thumbnail: data.thumbnail_url || null });
     }
 
     // If oEmbed fails, return null title
-    return new Response(JSON.stringify({
-      success: true,
-      title: null,
-      error: 'Could not fetch video info'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ title: null,
+      error: 'Could not fetch video info' });
 
   } catch (error: unknown) {
     log.error('[youtube/title] Error:', error instanceof Error ? error.message : String(error));

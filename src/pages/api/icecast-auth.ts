@@ -124,13 +124,8 @@ export async function GET({ url, locals }: APIContext) {
   const streamKey = url.searchParams.get('key');
 
   if (!streamKey) {
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Icecast authentication endpoint active',
-      usage: 'POST with form data: mount, user, pass (stream key), action'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Icecast authentication endpoint active',
+      usage: 'POST with form data: mount, user, pass (stream key), action' });
   }
 
   // Test a stream key
@@ -144,12 +139,10 @@ export async function GET({ url, locals }: APIContext) {
     });
 
     if (slots.length === 0) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         valid: false,
         error: 'Stream key not found'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -158,25 +151,14 @@ export async function GET({ url, locals }: APIContext) {
     const slotStart = new Date(slot.startTime);
     const slotEnd = new Date(slot.endTime);
 
-    return new Response(JSON.stringify({
-      success: true,
-      valid: true,
+    return successResponse({ valid: true,
       djName: slot.djName,
       status: slot.status,
       startTime: slot.startTime,
       endTime: slot.endTime,
       canConnect: now >= new Date(slotStart.getTime() - 10 * 60 * 1000) &&
-                  now <= new Date(slotEnd.getTime() + 5 * 60 * 1000)
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+                  now <= new Date(slotEnd.getTime() + 5 * 60 * 1000) });
   } catch (error: unknown) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Internal error');
   }
 }

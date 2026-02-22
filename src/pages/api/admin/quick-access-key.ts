@@ -7,7 +7,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[quick-access-key]');
 
@@ -36,19 +36,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const keyDoc = await getDocument('system', 'quickAccessKey');
 
     if (!keyDoc) {
-      return new Response(JSON.stringify({
-        success: true,
-        hasKey: false,
-        key: null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ hasKey: false,
+        key: null });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      hasKey: true,
+    return successResponse({ hasKey: true,
       key: {
         code: keyDoc.code,
         active: keyDoc.active,
@@ -57,11 +49,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         expiresAt: keyDoc.expiresAt || null,
         usedBy: keyDoc.usedBy || [],
         usedCount: (keyDoc.usedBy || []).length
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
   } catch (error: unknown) {
     log.error('[quick-access-key] Error getting key:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -109,14 +97,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[quick-access-key] Generated new key: ${newCode}`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Quick access key generated',
-        key: newKeyData
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Quick access key generated',
+        key: newKeyData });
 
     } else if (action === 'revoke') {
       // Revoke the current key (prevents new redemptions, keeps existing user access)
@@ -134,13 +116,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info('[quick-access-key] Key revoked');
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Quick access key revoked. Users who already redeemed keep their access.'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Quick access key revoked. Users who already redeemed keep their access.' });
 
     } else if (action === 'setExpiry') {
       // Update expiry date on existing key
@@ -157,13 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       log.info(`[quick-access-key] Expiry updated to: ${expiresAt || 'none'}`);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: expiresAt ? `Expiry set to ${expiresAt}` : 'Expiry removed'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: expiresAt ? `Expiry set to ${expiresAt}` : 'Expiry removed' });
 
     } else {
       return ApiErrors.badRequest('Invalid action');

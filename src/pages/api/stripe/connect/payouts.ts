@@ -74,9 +74,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
     const hasMore = payouts.length > limit;
     const resultPayouts = hasMore ? payouts.slice(0, limit) : payouts;
 
-    return new Response(JSON.stringify({
-      success: true,
-      payouts: resultPayouts,
+    return successResponse({ payouts: resultPayouts,
       pendingPayouts: pendingPayouts,
       summary: {
         totalEarnings,
@@ -89,8 +87,7 @@ export const GET: APIRoute = async ({ request, cookies, locals }) => {
         limit,
         offset,
         hasMore
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('[Stripe Connect] Payouts error:', error instanceof Error ? error.message : String(error));

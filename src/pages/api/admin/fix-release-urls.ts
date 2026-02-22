@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { saGetDocument, saSetDocument, saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/fix-release-urls');
 
@@ -61,14 +61,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         ...updateData,
         updatedAt: new Date().toISOString()
       });
-      return new Response(JSON.stringify({
-        success: true,
-        collection,
+      return successResponse({ collection,
         docId,
-        message: 'Document updated'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        message: 'Document updated' });
     }
 
     if (!releaseId) {
@@ -85,13 +80,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updatedAt: now
       };
       await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, newRelease);
-      return new Response(JSON.stringify({
-        success: true,
-        releaseId,
-        message: 'Release created'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ releaseId,
+        message: 'Release created' });
     }
 
     const old = oldPrefix || 'submissions/Code_One-1765771210267';
@@ -133,13 +123,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Save with service account auth
     await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, updates);
 
-    return new Response(JSON.stringify({
-      success: true,
-      releaseId,
-      message: 'URLs updated from submissions/ to releases/'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ releaseId,
+      message: 'URLs updated from submissions/ to releases/' });
 
   } catch (error: unknown) {
     log.error('Fix URLs error:', error);

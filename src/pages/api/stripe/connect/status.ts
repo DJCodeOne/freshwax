@@ -47,14 +47,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // If no Connect account
     if (!artist.stripeConnectId) {
-      return new Response(JSON.stringify({
-        success: true,
-        connected: false,
+      return successResponse({ connected: false,
         status: 'not_started',
         chargesEnabled: false,
         payoutsEnabled: false,
-        detailsSubmitted: false
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        detailsSubmitted: false });
     }
 
     // Retrieve account from Stripe
@@ -86,9 +83,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      connected: true,
+    return successResponse({ connected: true,
       status,
       chargesEnabled: account.charges_enabled,
       payoutsEnabled: account.payouts_enabled,
@@ -101,23 +96,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
       } : null,
       // Express dashboard login link (artist can manage their own account)
       // Note: Use stripe.accounts.createLoginLink() if needed, but only for active accounts
-      canAccessDashboard: account.charges_enabled && account.payouts_enabled
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      canAccessDashboard: account.charges_enabled && account.payouts_enabled });
 
   } catch (error: unknown) {
     log.error('[Stripe Connect] Status error:', error);
 
     // Handle deleted/invalid account
     if ((error as Record<string, unknown>)?.code === 'account_invalid') {
-      return new Response(JSON.stringify({
-        success: true,
-        connected: false,
+      return successResponse({ connected: false,
         status: 'not_started',
         chargesEnabled: false,
         payoutsEnabled: false,
         detailsSubmitted: false,
-        error: 'Account no longer exists'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        error: 'Account no longer exists' });
     }
 
     return ApiErrors.serverError('Failed to get account status');

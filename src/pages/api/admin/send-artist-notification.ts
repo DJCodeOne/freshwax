@@ -9,7 +9,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, fetchWithTimeout, ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[send-artist-notification]');
 import { emailWrapper, ctaButton, detailBox, esc as escWrap } from '../../../lib/email-wrapper';
@@ -188,10 +188,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (!send) {
       results.message = 'Add &send=yes to send the notification emails';
-      return new Response(JSON.stringify(results, null, 2), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse(results);
     }
 
     if (!RESEND_API_KEY) {
@@ -239,10 +236,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     results.emailsSent = sent;
 
-    return new Response(JSON.stringify(results, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse(results);
 
   } catch (error: unknown) {
     log.error('Error:', error);

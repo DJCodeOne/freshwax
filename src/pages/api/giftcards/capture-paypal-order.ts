@@ -53,15 +53,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (existingCards.length > 0) {
-      return new Response(JSON.stringify({
-        success: true,
-        alreadyProcessed: true,
+      return successResponse({ alreadyProcessed: true,
         giftCard: {
           code: existingCards[0].code,
           amount: existingCards[0].originalValue,
           recipientEmail: existingCards[0].recipientEmail
-        }
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        } });
     }
 
     // Retrieve order data from Firebase
@@ -147,11 +144,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.warn('Could not delete pending order:', delErr);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      giftCard: result.giftCard,
-      emailSent: result.emailSent
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ giftCard: result.giftCard,
+      emailSent: result.emailSent });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

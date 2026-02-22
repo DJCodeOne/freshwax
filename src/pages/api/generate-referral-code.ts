@@ -63,15 +63,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (existingCode) {
       // Return existing code
       const existingData = await getReferralCode(kv, existingCode);
-      return new Response(JSON.stringify({
-        success: true,
-        code: existingCode,
+      return successResponse({ code: existingCode,
         message: 'You already have a referral code',
-        data: existingData
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        data: existingData });
     }
 
     // Get user document to verify Plus status (read-only, doesn't count much against quota)
@@ -107,19 +101,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await saveReferralCode(kv, referralCode);
     log.info('Saved to KV:', referralCode.code);
 
-    return new Response(JSON.stringify({
-      success: true,
-      code: referralCode.code,
+    return successResponse({ code: referralCode.code,
       message: 'Referral code generated! Share it with a friend for 50% off Plus.',
       data: {
         discountPercent: referralCode.discountPercent,
         expiresAt: referralCode.expiresAt,
         maxUses: referralCode.maxUses
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

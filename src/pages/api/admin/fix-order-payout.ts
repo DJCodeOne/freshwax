@@ -7,7 +7,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[fix-order-payout]');
 
@@ -52,12 +52,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     if (existingPayouts.length > 0) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: 'Payout already exists for this order',
         payout: existingPayouts[0]
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -115,13 +112,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     if (confirm !== 'yes') {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         message: 'Would create the following payouts',
         payouts: Object.values(artistPayouts),
         usage: 'Add &confirm=yes to create'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
@@ -187,14 +181,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       log.info('[fix-order-payout] Could not update ledger entry');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Created ${created.length} pending payout(s)`,
-      payouts: created
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Created ${created.length} pending payout(s)`,
+      payouts: created });
 
   } catch (error: unknown) {
     log.error('[fix-order-payout] Error:', error);

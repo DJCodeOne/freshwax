@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { queryCollection } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('auth/check-display-name');
 
@@ -42,16 +42,8 @@ export const GET: APIRoute = async ({ request }) => {
 
     const isTaken = results.length > 0;
 
-    return new Response(JSON.stringify({
-      success: true,
-      available: !isTaken,
-      name: name.trim()
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
+    return successResponse({ available: !isTaken, name: name.trim() }, 200, {
+      headers: { 'Cache-Control': 'no-cache' }
     });
   } catch (error: unknown) {
     log.error('[check-display-name] Error:', error instanceof Error ? error.message : String(error));

@@ -5,7 +5,7 @@
 
 import type { APIRoute } from 'astro';
 import { queryCollection } from '../../../lib/firebase-rest';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, errorResponse, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('livestream/dj-twitch-key');
 
@@ -45,36 +45,24 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
     if (slots.length === 0) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: 'Slot not found',
         djTwitchKey: null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
     const slot = slots[0];
 
-    return new Response(JSON.stringify({
-      success: true,
-      djTwitchKey: slot.twitchStreamKey || null,
-      djName: slot.djName || 'Unknown DJ'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ djTwitchKey: slot.twitchStreamKey || null,
+      djName: slot.djName || 'Unknown DJ' });
 
   } catch (error: unknown) {
     log.error('Error:', error);
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: false,
       error: 'Internal error',
       djTwitchKey: null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 };

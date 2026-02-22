@@ -39,22 +39,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      badge
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ badge });
 
   } catch (error: unknown) {
     log.error('[get-user-badge] Error:', error);
-    return new Response(JSON.stringify({
-      success: true,
-      badge: 'crown' // Default on error
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // Default to crown on error
+    return successResponse({ badge: 'crown' });
   }
 };

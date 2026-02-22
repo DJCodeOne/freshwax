@@ -143,20 +143,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info(`[Image Scan] Duration: ${duration}ms`);
     log.info(`[Image Scan] Scanned: ${totalScanned}, Non-WebP: ${totalNonWebp}, Skipped (WebP exists): ${totalSkipped}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      duration,
+    return successResponse({ duration,
       scanned: totalScanned,
       nonWebpFound: totalNonWebp,
       skippedWebpExists: totalSkipped,
       issues: issues.slice(0, 100), // Return first 100 in response
       totalIssues: issues.length,
       prefixesScanned: SCAN_PREFIXES,
-      scanDate,
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      scanDate, });
 
   } catch (error: unknown) {
     log.error('[Image Scan] Error:', error instanceof Error ? error.message : String(error));

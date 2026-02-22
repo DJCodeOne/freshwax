@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { updateDocument, getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/approve-partner');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -69,10 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({});
 
   } catch (error: unknown) {
     log.error('Error approving partner:', error);

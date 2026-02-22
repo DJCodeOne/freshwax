@@ -335,9 +335,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mix uploaded and published successfully',
+    return successResponse({ message: 'Mix uploaded and published successfully',
       mixId,
       mix: mixData,
       audioUrl,
@@ -346,11 +344,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       genre,
       durationSeconds,
       durationFormatted: formatDuration(durationSeconds),
-      trackCount: tracklistArray.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      trackCount: tracklistArray.length });
 
   } catch (error: unknown) {
     logger.error('[upload-mix] Error:', error);

@@ -6,7 +6,7 @@ import { queryCollection, clearCache } from '../../../lib/firebase-rest';
 import { d1UpsertMerch, d1DeleteMerch } from '../../../lib/d1-catalog';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[sync-merch-to-d1]');
 
@@ -76,16 +76,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache('merch');
     clearCache('live-merch');
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Synced ${synced} of ${merchItems.length} items to D1, deleted ${toDelete.length} stale items`,
+    return successResponse({ message: `Synced ${synced} of ${merchItems.length} items to D1, deleted ${toDelete.length} stale items`,
       synced,
       total: merchItems.length,
       failed: failed.length,
       failedItems: failed,
       deleted: toDelete.length,
-      deletedIds: toDelete
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      deletedIds: toDelete });
 
   } catch (error: unknown) {
     log.error('[sync-merch-to-d1] Error:', error);

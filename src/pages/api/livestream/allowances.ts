@@ -36,45 +36,27 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const doc = await getDocument('djAllowances', djId);
 
       if (doc) {
-        return new Response(JSON.stringify({
-          success: true,
-          allowance: { djId, ...doc }
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ allowance: { djId, ...doc } });
       }
 
       // Return defaults if no override
-      return new Response(JSON.stringify({
-        success: true,
-        allowance: {
+      return successResponse({ allowance: {
           djId,
           weeklySlots: DEFAULT_WEEKLY_SLOTS,
           maxHoursPerDay: DEFAULT_MAX_HOURS_PER_DAY,
           isDefault: true
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        } });
     }
 
     // Get all allowances (admin view) - limited to prevent runaway
     const allowances = await queryCollection('djAllowances', { limit: 200 });
 
-    return new Response(JSON.stringify({
-      success: true,
-      allowances,
+    return successResponse({ allowances,
       defaults: {
         weeklySlots: DEFAULT_WEEKLY_SLOTS,
         maxHoursPerDay: DEFAULT_MAX_HOURS_PER_DAY,
         maxBookingDays: MAX_BOOKING_DAYS_AHEAD
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('GET Error:', error);
@@ -145,14 +127,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('djAllowances', docId, allowanceData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Allowance saved',
-      allowance: { djId: docId, ...allowanceData }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Allowance saved',
+      allowance: { djId: docId, ...allowanceData } });
 
   } catch (error: unknown) {
     log.error('POST Error:', error);
@@ -184,13 +160,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const docId = djId.includes('@') ? djId.replace(/[.@]/g, '_') : djId;
     await deleteDocument('djAllowances', docId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Allowance removed, DJ will use default limits'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Allowance removed, DJ will use default limits' });
 
   } catch (error: unknown) {
     log.error('DELETE Error:', error);

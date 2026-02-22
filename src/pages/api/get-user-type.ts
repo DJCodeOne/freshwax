@@ -225,9 +225,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       isApproved = true;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      isCustomer,
+    return successResponse({ isCustomer,
       isArtist: isAdmin ? true : hasPartnerRole,
       isApproved: isAdmin ? true : isApproved,
       isPro: isAdmin ? true : isPro,
@@ -247,14 +245,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       avatarUrl,
       canBuy: isCustomer,
       canSell: isAdmin ? true : (hasPartnerRole && isApproved),
-      referralCode
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, stale-while-revalidate=1800'
-      }
-    });
+      referralCode }, 200, { headers: { 'Cache-Control': 'public, max-age=300, stale-while-revalidate=1800' } });
   } catch (error: unknown) {
     log.error('[get-user-type] Error:', error);
     return ApiErrors.serverError('Failed to fetch user type');

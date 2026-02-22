@@ -5,6 +5,7 @@ import type { APIRoute } from 'astro';
 import { clearCache, invalidateReleasesCache, invalidateMixesCache, getCacheStats } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
+import { successResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -39,13 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const afterStats = getCacheStats();
 
-  return new Response(JSON.stringify({
-    success: true,
-    message: `Cache invalidated: ${target}`,
+  return successResponse({ message: `Cache invalidated: ${target}`,
     before: { size: beforeStats.size, keys: beforeStats.keys.slice(0, 20) },
-    after: { size: afterStats.size, keys: afterStats.keys.slice(0, 20) }
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+    after: { size: afterStats.size, keys: afterStats.keys.slice(0, 20) } });
 };

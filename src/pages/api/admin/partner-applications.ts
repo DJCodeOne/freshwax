@@ -2,7 +2,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse, errorResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/partner-applications');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -134,23 +134,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
         return dateB - dateA;
       });
 
-    return new Response(JSON.stringify({
-      success: true,
-      applications: allApplications
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ applications: allApplications });
   } catch (error: unknown) {
     log.error('Error fetching partner applications:', error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Failed to fetch applications',
-      applications: []
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ success: false, error: 'Failed to fetch applications', applications: [] });
   }
 };
 
@@ -276,13 +263,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Application approved'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Application approved' });
 
     } else if (action === 'deny') {
       await firestoreWrite('PATCH', `${collectionName}/${applicationId}`, {
@@ -307,13 +288,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Application denied' 
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Application denied' });
     }
 
     return ApiErrors.badRequest('Invalid action');

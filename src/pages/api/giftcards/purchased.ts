@@ -27,13 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const purchasedCards = customerDoc?.purchasedGiftCards || [];
 
-    return new Response(JSON.stringify({
-      success: true,
-      purchasedCards
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ purchasedCards });
 
   } catch (error: unknown) {
     log.error('Error:', error);

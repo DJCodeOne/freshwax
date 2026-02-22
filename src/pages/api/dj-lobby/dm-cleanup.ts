@@ -109,11 +109,8 @@ export const POST: APIRoute = async ({ request }) => {
     // Delete the channel document itself
     await deleteDocument('djDirectMessages', channelId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'DM channel cleaned up',
-      messagesDeleted: messageIds.length
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'DM channel cleaned up',
+      messagesDeleted: messageIds.length });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

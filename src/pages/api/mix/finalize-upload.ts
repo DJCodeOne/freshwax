@@ -259,14 +259,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear cache so new mix appears immediately
     invalidateMixesCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      mixId,
-      message: 'Mix uploaded successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ mixId,
+      message: 'Mix uploaded successfully' });
 
   } catch (error: unknown) {
     logger.error('[finalize-upload] Error:', error);

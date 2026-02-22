@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { createLogger, parseJsonBody, fetchWithTimeout, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, parseJsonBody, fetchWithTimeout, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[send-verification-email]');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -131,14 +131,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('Email sent to:', email, 'ID:', resendResult.id);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Verification email sent to ${email}`,
-      emailId: resendResult.id
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Verification email sent to ${email}`,
+      emailId: resendResult.id });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

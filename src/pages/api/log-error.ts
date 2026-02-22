@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../lib/rate-limit';
 import { logError } from '../../lib/error-logger';
-import { ApiErrors } from '../../lib/api-utils';
+import { ApiErrors, successResponse, errorResponse } from '../../lib/api-utils';
 
 const LogErrorSchema = z.object({
   message: z.string().min(1, 'Missing message').max(2000),
@@ -48,13 +48,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       metadata: metadata && typeof metadata === 'object' ? metadata : undefined,
     }, env);
 
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return successResponse({} as Record<string, unknown>);
   } catch {
-    return new Response(JSON.stringify({ success: false }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return errorResponse('Failed to log error', 500);
   }
 };

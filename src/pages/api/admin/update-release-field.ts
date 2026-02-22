@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { saUpdateDocument } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const updateReleaseFieldParamsSchema = z.object({
   releaseId: z.string().min(1),
@@ -73,16 +73,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
   else if (!isNaN(Number(value))) parsedValue = Number(value);
 
   if (confirm !== 'yes') {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       message: 'Preview of field update',
       releaseId,
       field,
       newValue: parsedValue,
       valueType: typeof parsedValue,
       usage: 'Add &confirm=yes to apply'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -91,16 +88,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       [field]: parsedValue
     });
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Updated ${field} to ${parsedValue}`,
+    return successResponse({ message: `Updated ${field} to ${parsedValue}`,
       releaseId,
       field,
-      newValue: parsedValue
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      newValue: parsedValue });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');
   }

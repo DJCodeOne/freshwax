@@ -40,13 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const data = await response.json();
 
-    return new Response(JSON.stringify(data), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=300'
-      }
-    });
+    return jsonResponse(data, 200, { headers: { 'Cache-Control': 'private, max-age=300' } });
   } catch (error: unknown) {
     return errorResponse('Playlist server error', 502);
   }

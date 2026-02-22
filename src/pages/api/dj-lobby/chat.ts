@@ -284,16 +284,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : (msg.createdAt || new Date().toISOString())
     })).reverse();
 
-    return new Response(JSON.stringify({
-      success: true,
-      messages: formattedMessages
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
-    });
+    return successResponse({ messages: formattedMessages }, 200, { headers: { 'Cache-Control': 'no-cache' } });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/chat] GET Error:', error);
@@ -373,14 +364,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       createdAt: now.toISOString()
     }, env);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: {
+    return successResponse({ message: {
         id: docResult.id,
         ...chatMessage,
         createdAt: now.toISOString()
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/chat] POST Error:', error);
@@ -440,10 +428,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       timestamp: new Date().toISOString()
     }, env);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Message deleted'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'Message deleted' });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/chat] DELETE Error:', error);

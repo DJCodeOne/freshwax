@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('vinyl/listing');
 
@@ -97,10 +97,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (!listing) {
         return ApiErrors.notFound('Listing not found');
       }
-      return new Response(JSON.stringify({ success: true, listing }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ listing });
     }
 
     // Seller's listings - use direct Firestore REST query for efficiency
@@ -167,10 +164,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         return listing;
       });
 
-    return new Response(JSON.stringify({ success: true, listings, count: listings.length }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ listings, count: listings.length });
 
   } catch (error: unknown) {
     log.error('[vinyl/listing GET] Error:', error);
@@ -293,10 +287,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           log.warn('[vinyl/listing] Failed to update seller count:', e);
         }
 
-        return new Response(JSON.stringify({ success: true, listing, listingId: newId }), {
-          status: 201,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ listing, listingId: newId }, 201);
       }
 
       case 'update': {
@@ -378,10 +369,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         await updateDocument('vinylListings', listingId, updateData);
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing updated' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing updated' });
       }
 
       case 'publish': {
@@ -406,10 +394,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing is now live!' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing is now live!' });
       }
 
       case 'unpublish': {
@@ -427,10 +412,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing unpublished' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing unpublished' });
       }
 
       case 'delete': {
@@ -451,10 +433,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({ success: true, message: 'Listing deleted' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Listing deleted' });
       }
 
       default:

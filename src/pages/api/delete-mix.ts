@@ -80,13 +80,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!mixData) {
       logger.info('[delete-mix] Mix not found, may already be deleted');
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Mix not found (may already be deleted)'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Mix not found (may already be deleted)' });
     }
 
     // Verify the user owns this mix
@@ -161,15 +155,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mix deleted successfully',
+    return successResponse({ message: 'Mix deleted successfully',
       deletedId: mixId,
-      deletedFolder: r2FolderPath
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      deletedFolder: r2FolderPath });
 
   } catch (error: unknown) {
     logger.error('[delete-mix] Error:', error);

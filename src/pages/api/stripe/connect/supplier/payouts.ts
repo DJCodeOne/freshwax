@@ -85,9 +85,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       totalPending += pending.amount || 0;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      payouts: payouts.map((p: Record<string, unknown>) => ({
+    return successResponse({ payouts: payouts.map((p: Record<string, unknown>) => ({
         id: p.id,
         orderId: p.orderId,
         orderNumber: p.orderNumber,
@@ -110,8 +108,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         totalPending,
         thisMonthPaid,
         payoutCount: payouts.length
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('[Stripe Connect] Supplier payouts error:', error instanceof Error ? error.message : String(error));

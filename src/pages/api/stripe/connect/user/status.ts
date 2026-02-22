@@ -55,13 +55,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // No Connect account yet
     if (!user.stripeConnectId) {
-      return new Response(JSON.stringify({
-        success: true,
-        status: 'not_started',
+      return successResponse({ status: 'not_started',
         chargesEnabled: false,
         payoutsEnabled: false,
-        detailsSubmitted: false
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        detailsSubmitted: false });
     }
 
     // Get account from Stripe
@@ -102,15 +99,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
       await updateDocument('users', userId, updates);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      status,
+    return successResponse({ status,
       chargesEnabled: account.charges_enabled,
       payoutsEnabled: account.payouts_enabled,
       detailsSubmitted: account.details_submitted,
       requirements: account.requirements?.currently_due || [],
-      disabledReason: account.requirements?.disabled_reason || null
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      disabledReason: account.requirements?.disabled_reason || null });
 
   } catch (error: unknown) {
     log.error('[Stripe Connect] User status error:', error instanceof Error ? error.message : String(error));

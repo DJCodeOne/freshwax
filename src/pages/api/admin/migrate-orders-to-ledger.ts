@@ -7,7 +7,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[migrate-orders-to-ledger]');
 
@@ -33,14 +33,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   // Require confirmation
   if (confirm !== 'yes') {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       message: 'Migration script for orders to sales ledger',
       warning: 'This will create ledger entries for all existing orders',
       usage: 'Add ?confirm=yes to run the migration',
       dryRunUsage: 'Add ?confirm=yes&dryRun=yes to preview without writing'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -241,17 +238,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     log.info('[Migration] Complete:', results);
 
-    return new Response(JSON.stringify({
-      success: true,
-      dryRun,
+    return successResponse({ dryRun,
       results,
       message: dryRun
         ? `Dry run complete. Would migrate ${results.migrated} orders.`
-        : `Migration complete. Migrated ${results.migrated} orders to ledger.`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+        : `Migration complete. Migrated ${results.migrated} orders to ledger.` });
 
   } catch (error: unknown) {
     log.error('[Migration] Error:', error);

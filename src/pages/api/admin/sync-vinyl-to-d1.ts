@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[sync-vinyl-to-d1]');
 
@@ -140,16 +140,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Synced ${synced} listings to D1`,
+    return successResponse({ message: `Synced ${synced} listings to D1`,
       total: listings.length,
       synced,
-      errors
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      errors });
 
   } catch (error: unknown) {
     log.error('[sync-vinyl-to-d1] Error:', error);

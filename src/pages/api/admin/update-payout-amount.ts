@@ -9,7 +9,7 @@ import { queryCollection } from '../../../lib/firebase-rest';
 import { saQueryCollection, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-payout-amount');
 
@@ -107,16 +107,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       updates.push(`orders/${orderId}: paypalFee → £${actualPaypalFee}`);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      orderNumber,
+    return successResponse({ orderNumber,
       orderId,
       artistPayout,
       actualPaypalFee,
       updates
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

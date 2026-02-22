@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, errorResponse, successResponse, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[youtube-live-id]');
 
@@ -145,22 +145,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!apiKey) {
       log.warn('[youtube-live-id] No YouTube API key configured');
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: 'YouTube API key not configured',
         hint: 'Add YOUTUBE_API_KEY to your environment variables'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      });
     }
 
     // Fetch the live video ID from YouTube
     const youtubeLiveId = await fetchYouTubeLiveVideoId(apiKey, youtubeChannelId);
 
     if (!youtubeLiveId) {
-      return new Response(JSON.stringify({
+      return jsonResponse({
         success: false,
         error: 'No live stream found on YouTube',
         channelId: youtubeChannelId
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      });
     }
 
     // If streamKey provided, update the livestream slot
@@ -205,12 +205,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      youtubeLiveId,
+    return successResponse({ youtubeLiveId,
       chatUrl: `https://www.youtube.com/live_chat?v=${youtubeLiveId}&embed_domain=freshwax.co.uk`,
-      watchUrl: `https://www.youtube.com/watch?v=${youtubeLiveId}`
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      watchUrl: `https://www.youtube.com/watch?v=${youtubeLiveId}` });
 
   } catch (error: unknown) {
     log.error('[youtube-live-id] Error:', error);
@@ -236,22 +233,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
     FRESHWAX_YOUTUBE_CHANNEL_ID;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({
+    return jsonResponse({
       success: false,
       configured: false,
       error: 'YouTube API key not configured'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
   }
 
   const youtubeLiveId = await fetchYouTubeLiveVideoId(apiKey, youtubeChannelId);
 
-  return new Response(JSON.stringify({
-    success: true,
-    configured: true,
+  return successResponse({ configured: true,
     channelId: youtubeChannelId,
     isLive: !!youtubeLiveId,
     youtubeLiveId,
     chatUrl: youtubeLiveId ? `https://www.youtube.com/live_chat?v=${youtubeLiveId}&embed_domain=freshwax.co.uk` : null,
-    watchUrl: youtubeLiveId ? `https://www.youtube.com/watch?v=${youtubeLiveId}` : null
-  }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    watchUrl: youtubeLiveId ? `https://www.youtube.com/watch?v=${youtubeLiveId}` : null });
 };

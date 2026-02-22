@@ -65,17 +65,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // If D1 found all ratings, return immediately
         if (Object.keys(userRatings).length === limitedIds.length) {
-          return new Response(JSON.stringify({
-            success: true,
-            userRatings,
-            source: 'd1'
-          }), {
-            status: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Cache-Control': 'private, max-age=60'
-            }
-          });
+          return successResponse({ userRatings,
+            source: 'd1' }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
         }
 
         // D1 found some but not all - check Firebase for missing ones
@@ -108,17 +99,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const source = missingIds.length === limitedIds.length ? 'firebase' : 'mixed';
     logger.info('[get-user-ratings] Total found:', Object.keys(userRatings).length, 'ratings, source:', source);
 
-    return new Response(JSON.stringify({
-      success: true,
-      userRatings,
-      source
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=60'
-      }
-    });
+    return successResponse({ userRatings,
+      source }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
 
   } catch (error: unknown) {
     logger.error('[get-user-ratings] Error:', error);

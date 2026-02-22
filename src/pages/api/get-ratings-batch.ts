@@ -79,17 +79,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const cacheKey = `ratings:${limitedIds.sort().join(',')}`;
     const cached = getCachedResponse(cacheKey);
     if (cached) {
-      return new Response(JSON.stringify({
-        success: true,
-        ratings: cached,
-        source: 'cache'
-      }), {
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300'
-        }
-      });
+      return successResponse({ ratings: cached,
+        source: 'cache' }, 200, { headers: { 'Cache-Control': 'public, max-age=300' } });
     }
     
     // Fetch releases in batch (much more efficient than individual reads)
@@ -115,17 +106,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Cache the response
     setCachedResponse(cacheKey, ratings);
     
-    return new Response(JSON.stringify({
-      success: true,
-      ratings,
-      source: 'firestore'
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300'
-      }
-    });
+    return successResponse({ ratings,
+      source: 'firestore' }, 200, { headers: { 'Cache-Control': 'public, max-age=300' } });
     
   } catch (error: unknown) {
     log.error('[get-ratings-batch] Error:', error);

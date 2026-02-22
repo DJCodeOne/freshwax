@@ -179,13 +179,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Clear all merch caches to ensure fresh data on next page load
       clearAllMerchCache();
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Images updated successfully'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Images updated successfully' });
     }
 
     // Handle FormData for full updates
@@ -424,14 +418,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Product updated successfully',
-      product: updatedProduct
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Product updated successfully',
+      product: updatedProduct });
 
   } catch (error: unknown) {
     logger.error('[update-merch] Error:', error);

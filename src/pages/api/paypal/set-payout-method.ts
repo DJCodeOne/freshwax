@@ -123,11 +123,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Set ${entityType} ${docId} payout method to:`, payoutMethod);
 
-    return new Response(JSON.stringify({
-      success: true,
-      payoutMethod,
-      message: `Payout method set to ${payoutMethod === 'stripe' ? 'Stripe' : 'PayPal'}`
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ payoutMethod,
+      message: `Payout method set to ${payoutMethod === 'stripe' ? 'Stripe' : 'PayPal'}` });
 
   } catch (error: unknown) {
     log.error('Set method error:', error);

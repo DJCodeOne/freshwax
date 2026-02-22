@@ -33,17 +33,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const releases = await getLiveReleases(40);
     
     if (!releases || releases.length === 0) {
-      return new Response(JSON.stringify({ 
-        success: true, 
-        suggestions: [],
-        message: 'No releases available'
-      }), {
-        status: 200,
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300, s-maxage=600'
-        }
-      });
+      return successResponse({ suggestions: [],
+        message: 'No releases available' }, 200, { headers: { 'Cache-Control': 'public, max-age=300, s-maxage=600' } });
     }
     
     // Filter out current release and score the rest
@@ -104,16 +95,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     
     logger.info('Returning', suggestions.length, 'suggestions');
     
-    return new Response(JSON.stringify({ 
-      success: true,
+    return successResponse({
       suggestions,
       total: suggestions.length
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300, s-maxage=600' // 10 min edge cache
-      }
+    }, 200, {
+      headers: { 'Cache-Control': 'public, max-age=300, s-maxage=600' }
     });
     
   } catch (error: unknown) {

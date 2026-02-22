@@ -35,28 +35,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (!playlist) {
       // Return empty playlist if not found
-      return new Response(JSON.stringify({
-        success: true,
-        playlist: {
+      return successResponse({ playlist: {
           userId,
           queue: [],
           currentIndex: 0,
           isPlaying: false,
           lastUpdated: new Date().toISOString()
-        }
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        } });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      playlist
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ playlist });
 
   } catch (error: unknown) {
     log.error('[playlist/get] Error:', error instanceof Error ? error.message : String(error));

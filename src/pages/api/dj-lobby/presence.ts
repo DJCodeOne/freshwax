@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, setDocument, deleteDocument, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { fetchWithTimeout, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 const log = createLogger('[dj-lobby/presence]');
 import { z } from 'zod';
 
@@ -295,17 +295,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Check cache first
     const cached = getCachedOnlineDjs();
     if (cached) {
-      return new Response(JSON.stringify({
-        success: true,
-        djs: cached,
-        source: 'cache'
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=10'
-        }
-      });
+      return successResponse({ djs: cached,
+        source: 'cache' }, 200, { headers: { 'Cache-Control': 'public, max-age=10' } });
     }
 
     // Query all presence documents and filter client-side
@@ -335,18 +326,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Cache the result
     setCachedOnlineDjs(djsWithOdamiMa);
 
-    return new Response(JSON.stringify({
-      success: true,
-      djs: djsWithOdamiMa,
+    return successResponse({ djs: djsWithOdamiMa,
       source: 'firestore',
-      debug: { total: allDjs.length, active: activeDjs.length }
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=10'
-      }
-    });
+      debug: { total: allDjs.length, active: activeDjs.length } }, 200, { headers: { 'Cache-Control': 'public, max-age=10' } });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/presence] GET Error:', error instanceof Error ? error.message : String(error));
@@ -416,10 +398,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now.toISOString()
         }, env);
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Joined lobby'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Joined lobby' });
       }
 
       case 'leave': {
@@ -435,10 +414,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now.toISOString()
         }, env);
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Left lobby'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Left lobby' });
       }
 
       case 'heartbeat': {
@@ -457,10 +433,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }, env);
         }
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Heartbeat recorded'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Heartbeat recorded' });
       }
 
       case 'update': {
@@ -483,10 +456,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now.toISOString()
         }, env);
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Updated'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ message: 'Updated' });
       }
 
       default:
@@ -537,10 +507,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      cleaned: staleIds.length
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ cleaned: staleIds.length });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/presence] DELETE Error:', error);

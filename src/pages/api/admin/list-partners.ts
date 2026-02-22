@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/list-partners');
 import { getSaQuery } from '../../../lib/admin-query';
@@ -90,9 +90,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Sort by name
     partners.sort((a, b) => (a.displayName || a.name || '').localeCompare(b.displayName || b.name || ''));
 
-    return new Response(JSON.stringify({
-      success: true,
-      partners,
+    return successResponse({ partners,
       stats: {
         total: partners.length,
         artists: partners.filter(p => p.isArtist).length,
@@ -100,11 +98,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         vinyl: partners.filter(p => p.isVinylSeller).length,
         pending: partners.filter(p => !p.isApproved).length,
         approved: partners.filter(p => p.isApproved).length
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

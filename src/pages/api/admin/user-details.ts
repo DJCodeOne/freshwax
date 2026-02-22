@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/user-details');
 
@@ -46,9 +46,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     }
 
     // Return user data (sanitized)
-    return new Response(JSON.stringify({
-      success: true,
-      user: {
+    return successResponse({ user: {
         id: userId,
         email: user.email,
         displayName: user.displayName,
@@ -57,8 +55,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         subscription: user.subscription,
         roles: user.roles,
         usage: user.usage
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

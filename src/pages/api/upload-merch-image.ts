@@ -124,19 +124,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`Processed: → ${dimensions} ${format}, ${(originalSize/1024).toFixed(1)}KB → ${(compressedSize/1024).toFixed(1)}KB (${savings}% smaller)`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      url: publicUrl,
+    return successResponse({ url: publicUrl,
       key: key,
       size: compressedSize,
       originalSize: originalSize,
       dimensions: dimensions,
       contentType: imageContentType(format),
-      savings: `${savings}%`
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      savings: `${savings}%` });
 
   } catch (error: unknown) {
     log.error('Error:', error);

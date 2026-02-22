@@ -151,15 +151,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info('[delete-merch] Product deleted:', productId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Product deleted successfully',
+    return successResponse({ message: 'Product deleted successfully',
       deletedProductId: productId,
-      deletedProductName: product.name
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      deletedProductName: product.name });
 
   } catch (error: unknown) {
     logger.error('[delete-merch] Error:', error);

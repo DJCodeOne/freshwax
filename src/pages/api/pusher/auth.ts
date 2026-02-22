@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { createLogger, errorResponse, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, errorResponse, jsonResponse, ApiErrors } from '../../../lib/api-utils';
 
 const log = createLogger('[pusher-auth]');
 import { SITE_URL } from '../../../lib/constants';
@@ -117,19 +117,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.info('Success for user:', userId, 'channel:', channelName);
 
     // Return auth response in Pusher's expected format
-    return new Response(JSON.stringify({
+    const corsHeaders: Record<string, string> = {};
+    const allowedOrigin = getAllowedOrigin(request);
+    if (allowedOrigin) {
+      corsHeaders['Access-Control-Allow-Origin'] = allowedOrigin;
+      corsHeaders['Access-Control-Allow-Credentials'] = 'true';
+    }
+    return jsonResponse({
       auth: key + ':' + signatureHex,
       channel_data: JSON.stringify(presenceData)
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(getAllowedOrigin(request) ? {
-          'Access-Control-Allow-Origin': getAllowedOrigin(request)!,
-          'Access-Control-Allow-Credentials': 'true',
-        } : {}),
-      }
-    });
+    }, 200, { headers: corsHeaders });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

@@ -105,13 +105,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           const docPath = results[0].document.name;
           const orderId = docPath.split('/').pop();
 
-          return new Response(JSON.stringify({
-            success: true,
-            orderId,
-            paymentStatus: session.payment_status
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return successResponse({ orderId,
+            paymentStatus: session.payment_status });
         }
       }
     }
@@ -145,13 +140,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         if (retryResults && retryResults[0]?.document) {
           const docPath = retryResults[0].document.name;
           const orderId = docPath.split('/').pop();
-          return new Response(JSON.stringify({
-            success: true,
-            orderId,
-            paymentStatus: session.payment_status
-          }), {
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return successResponse({ orderId,
+            paymentStatus: session.payment_status });
         }
       }
     }
@@ -240,26 +230,16 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     if (result.success) {
       log.info('Fallback order created:', result.orderNumber, result.orderId);
-      return new Response(JSON.stringify({
-        success: true,
-        orderId: result.orderId,
+      return successResponse({ orderId: result.orderId,
         orderNumber: result.orderNumber,
-        paymentStatus: session.payment_status
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+        paymentStatus: session.payment_status });
     }
 
     // Order creation failed
     log.error('Fallback order creation failed:', result.error);
-    return new Response(JSON.stringify({
-      success: true,
-      orderId: null,
+    return successResponse({ orderId: null,
       paymentStatus: session.payment_status,
-      message: 'Payment successful, order being processed'
-    }), {
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-    });
+      message: 'Payment successful, order being processed' }, 200, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

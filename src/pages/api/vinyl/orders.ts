@@ -71,14 +71,8 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 
     log.info('Found', orders.length, 'orders for seller:', sellerId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      orders: orders || [],
-      count: orders.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ orders: orders || [],
+      count: orders.length });
 
   } catch (error: unknown) {
     log.error('Error:', error);
@@ -156,10 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
 
         log.info('Marked order as shipped:', orderId);
 
-        return new Response(JSON.stringify({ success: true, message: 'Order marked as shipped' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Order marked as shipped' });
       }
 
       case 'add-tracking': {
@@ -172,10 +163,7 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
 
         await saUpdateDocument(serviceAccountKey, projectId, 'vinylOrders', orderId, updateData);
 
-        return new Response(JSON.stringify({ success: true, message: 'Tracking info updated' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Tracking info updated' });
       }
 
       default:

@@ -4,7 +4,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, getDocumentsBatch, arrayUnion, arrayRemove } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
 
 const log = createLogger('wishlist');
 
@@ -57,26 +57,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       });
 
       // Return actual found releases count (not stored IDs count)
-      return new Response(JSON.stringify({
-        success: true,
-        wishlist: releases,
+      return successResponse({ wishlist: releases,
         count: releases.length,
-        storedCount: wishlist.length // For debugging - shows if some releases were deleted
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        storedCount: wishlist.length }); // For debugging - shows if some releases were deleted
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      wishlist: [],
+    return successResponse({ wishlist: [],
       count: 0,
-      storedCount: 0
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      storedCount: 0 });
 
   } catch (error: unknown) {
     log.error('[WISHLIST API] Error:', error);
@@ -127,14 +115,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         wishlistUpdatedAt: now
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Added to wishlist',
-        inWishlist: true
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Added to wishlist',
+        inWishlist: true });
 
     } else if (action === 'remove') {
       // Atomic arrayRemove prevents lost data under concurrent writes
@@ -142,14 +124,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         wishlistUpdatedAt: now
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Removed from wishlist',
-        inWishlist: false
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Removed from wishlist',
+        inWishlist: false });
 
     } else if (action === 'toggle') {
       // Read to determine current state, then use atomic operation for the mutation
@@ -161,26 +137,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await arrayRemove('users', userId, 'wishlist', [releaseId], {
           wishlistUpdatedAt: now
         });
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Removed from wishlist',
-          inWishlist: false
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Removed from wishlist',
+          inWishlist: false });
       } else {
         await arrayUnion('users', userId, 'wishlist', [releaseId], {
           wishlistUpdatedAt: now
         });
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Added to wishlist',
-          inWishlist: true
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return successResponse({ message: 'Added to wishlist',
+          inWishlist: true });
       }
 
     } else if (action === 'check') {
@@ -189,13 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const currentWishlist = Array.isArray(customerDoc?.wishlist) ? customerDoc.wishlist : [];
       const isInWishlist = currentWishlist.includes(releaseId);
 
-      return new Response(JSON.stringify({
-        success: true,
-        inWishlist: isInWishlist
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ inWishlist: isInWishlist });
     }
 
     return ApiErrors.badRequest('Invalid action. Use: add, remove, toggle, or check');

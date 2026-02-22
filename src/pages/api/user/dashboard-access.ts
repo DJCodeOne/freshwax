@@ -93,9 +93,7 @@ export const GET: APIRoute = async ({ request }) => {
       roles.vinylSeller = true;
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      isAdmin,
+    return successResponse({ isAdmin,
       roles: {
         artist: roles.artist || false,
         merchSeller: roles.merchSeller || false,
@@ -117,11 +115,7 @@ export const GET: APIRoute = async ({ request }) => {
       merchCommissionRate: merchSellerData?.commissionRate || 15,
       businessName: pendingRoles?.merchSeller?.businessName || userData?.displayName || '',
       createdAt: userData?.createdAt || null,
-      isApproved: userData?.approved || false
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      isApproved: userData?.approved || false });
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to check access');

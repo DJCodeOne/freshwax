@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { getDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, successResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -38,9 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const totalFees = freshWaxFee + paypalFee + stripeFee;
     const artistPayout = Math.round((subtotal - totalFees) * 100) / 100;
 
-    return new Response(JSON.stringify({
-      success: true,
-      order: {
+    return successResponse({ order: {
         id: order.id,
         orderNumber: order.orderNumber,
         status: order.status,
@@ -61,9 +59,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         customer: order.customer,
         createdAt: order.createdAt
       }
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {

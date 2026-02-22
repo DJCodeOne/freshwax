@@ -100,10 +100,7 @@ export async function GET({ request, locals }: APIContext) {
       trackStartedAt: null
     };
 
-    return new Response(JSON.stringify({
-      success: true,
-      playlist
-    }), { headers });
+    return successResponse({ playlist });
   } catch (error: unknown) {
     log.error('[GlobalPlaylist] GET error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -207,13 +204,8 @@ export async function POST({ request, locals }: APIContext) {
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
 
-    return new Response(JSON.stringify({
-      success: true,
-      playlist,
-      message: playlist.queue.length === 1 ? 'Now playing' : 'Added to queue'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ playlist,
+      message: playlist.queue.length === 1 ? 'Now playing' : 'Added to queue' });
   } catch (error: unknown) {
     log.error('[GlobalPlaylist] POST error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -318,12 +310,7 @@ export async function DELETE({ request, locals }: APIContext) {
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
 
-    return new Response(JSON.stringify({
-      success: true,
-      playlist
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ playlist });
   } catch (error: unknown) {
     log.error('[GlobalPlaylist] DELETE error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -451,13 +438,8 @@ export async function PUT({ request, locals }: APIContext) {
           // RACE PROTECTION 1: If trackId provided and doesn't match current track, already handled
           if (trackId && currentTrack && currentTrack.id !== trackId) {
             // trackEnded ignored - track already changed
-            return new Response(JSON.stringify({
-              success: true,
-              alreadyHandled: true,
-              playlist
-            }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
+            return successResponse({ alreadyHandled: true,
+              playlist });
           }
 
           // RACE PROTECTION 2: If a new track was started within last 5 seconds, don't pick another
@@ -466,13 +448,8 @@ export async function PUT({ request, locals }: APIContext) {
             (Date.now() - new Date(playlist.trackStartedAt).getTime()) < 5000;
           if (trackJustStarted && playlist.queue.length > 0) {
             // trackEnded ignored - race protection
-            return new Response(JSON.stringify({
-              success: true,
-              alreadyHandled: true,
-              playlist
-            }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
+            return successResponse({ alreadyHandled: true,
+              playlist });
           }
 
           // Save the finished track to recently played before removing
@@ -578,12 +555,7 @@ export async function PUT({ request, locals }: APIContext) {
     // Trigger Pusher broadcast
     await broadcastPlaylistUpdate(playlist, locals.runtime.env);
 
-    return new Response(JSON.stringify({
-      success: true,
-      playlist
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ playlist });
   } catch (error: unknown) {
     log.error('[GlobalPlaylist] PUT error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');

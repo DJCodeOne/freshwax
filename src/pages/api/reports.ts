@@ -43,9 +43,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       const pendingReports = await queryCollection('reports', {
         filters: [{ field: 'status', op: 'EQUAL', value: 'pending' }]
       });
-      return new Response(JSON.stringify({ success: true, pendingCount: pendingReports.length }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ pendingCount: pendingReports.length });
     }
 
     // Build filters
@@ -80,11 +78,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })
       .slice(0, limit);
 
-    return new Response(JSON.stringify({
-      success: true,
-      reports,
-      counts: { pending: pendingReports.length, reviewing: reviewingReports.length }
-    }), { headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ reports,
+      counts: { pending: pendingReports.length, reviewing: reviewingReports.length } });
   } catch (error: unknown) {
     return ApiErrors.serverError('Internal error');
   }
@@ -153,9 +148,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const result = await addDocument('reports', report);
     log.info('New report:', result.id, type, category);
 
-    return new Response(JSON.stringify({ success: true, reportId: result.id, message: 'Report submitted. Our team will review it shortly.' }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ reportId: result.id, message: 'Report submitted. Our team will review it shortly.' });
   } catch (error: unknown) {
     return ApiErrors.serverError('Internal error');
   }
@@ -199,7 +192,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     if (adminNotes !== undefined) updates.adminNotes = adminNotes;
 
     await updateDocument('reports', reportId, updates);
-    return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+    return successResponse({} as Record<string, unknown>);
   } catch (error: unknown) {
     return ApiErrors.serverError('Internal error');
   }
@@ -231,7 +224,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const reportId = url.searchParams.get('id');
     if (!reportId) return ApiErrors.badRequest('Report ID required');
     await deleteDocument('reports', reportId);
-    return new Response(JSON.stringify({ success: true }), { headers: { 'Content-Type': 'application/json' } });
+    return successResponse({} as Record<string, unknown>);
   } catch (error: unknown) {
     return ApiErrors.serverError('Internal error');
   }

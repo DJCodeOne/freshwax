@@ -46,14 +46,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Could not extract text from file. Try copy-pasting content manually.');
     }
     
-    return new Response(JSON.stringify({ 
-      success: true, 
-      text: text.trim(),
-      filename: file.name
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ text: text.trim(),
+      filename: file.name });
     
   } catch (error: unknown) {
     log.error('Error:', error);

@@ -4,7 +4,7 @@
 
 import type { APIContext } from 'astro';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse, jsonResponse, errorResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[playlist-history]');
 
@@ -47,15 +47,9 @@ export async function GET({ request, locals }: APIContext) {
 
     const items = data?.items || [];
 
-    return new Response(JSON.stringify({
-      success: true,
-      items,
-      count: items.length
-    }), {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=30, s-maxage=60' // History doesn't change often
-      }
+    // History doesn't change often
+    return successResponse({ items, count: items.length }, 200, {
+      headers: { 'Cache-Control': 'public, max-age=30, s-maxage=60' }
     });
   } catch (error: unknown) {
     log.error('GET error:', error instanceof Error ? error.message : String(error));
@@ -76,13 +70,7 @@ export async function POST({ request, locals }: APIContext) {
   try {
     const kv = getKV(locals);
     if (!kv) {
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'KV storage not available'
-      }), {
-        status: 200, // Non-critical
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return errorResponse('KV storage not available', 200);
     }
 
     const body = await request.json();
@@ -138,21 +126,10 @@ export async function POST({ request, locals }: APIContext) {
       lastUpdated: new Date().toISOString()
     }), { expirationTtl: 604800 });
 
-    return new Response(JSON.stringify({
-      success: true,
-      count: history.length
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ count: history.length });
   } catch (error: unknown) {
     log.error('POST error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'Internal error'
-    }), {
-      status: 200, // Non-critical operation
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return errorResponse('Internal error', 200);
   }
 }
 
@@ -185,14 +162,7 @@ export async function DELETE({ request, locals }: APIContext) {
     const data = await kv.get(KV_HISTORY_KEY, 'json');
 
     if (!data || !data.items) {
-      return new Response(JSON.stringify({
-        success: true,
-        removed: false,
-        count: 0,
-        message: 'Video not found in history'
-      }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ removed: false, count: 0, message: 'Video not found in history' });
     }
 
     const originalLength = data.items.length;
@@ -211,15 +181,12 @@ export async function DELETE({ request, locals }: APIContext) {
       log.info(`[PlaylistHistory] Removed ${totalRemoved} item(s)`);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
+    return successResponse({
       removed: totalRemoved > 0,
       count: totalRemoved,
       message: totalRemoved > 0
         ? `Removed ${totalRemoved} blocked video(s) from history`
         : 'Video not found in history'
-    }), {
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
     log.error('DELETE error:', error instanceof Error ? error.message : String(error));

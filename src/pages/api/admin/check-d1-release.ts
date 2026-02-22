@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       }
 
       const data = JSON.parse(result.data);
-      return new Response(JSON.stringify({
+      return jsonResponse({
         d1Row: {
           id: result.id,
           release_date: result.release_date,
@@ -54,9 +54,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
           catalogNumber: data.catalogNumber,
           labelCode: data.labelCode
         }
-      }, null, 2), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     } else {
       // List all releases
@@ -64,12 +61,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
         'SELECT id, release_date, status, published FROM releases_v2 ORDER BY release_date DESC'
       ).all();
 
-      return new Response(JSON.stringify({
+      return jsonResponse({
         count: results.length,
         releases: results
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
   } catch (error: unknown) {

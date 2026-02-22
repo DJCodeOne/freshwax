@@ -164,13 +164,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Always return the list of online users
     onlineUsers = getOnlineUsers(streamId);
 
-    return new Response(JSON.stringify({ count, onlineUsers }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store'
-      }
-    });
+    return jsonResponse({ count, onlineUsers }, 200, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: unknown) {
     log.error('Heartbeat error:', error);
     return ApiErrors.serverError('Server error');
@@ -194,11 +188,5 @@ export const GET: APIRoute = async ({ request, url }) => {
   const count = getViewerCount(streamId);
   const onlineUsers = getOnlineUsers(streamId);
 
-  return new Response(JSON.stringify({ count, onlineUsers }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store'
-    }
-  });
+  return jsonResponse({ count, onlineUsers }, 200, { headers: { 'Cache-Control': 'no-store' } });
 };

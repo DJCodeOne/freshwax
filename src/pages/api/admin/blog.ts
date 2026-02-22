@@ -5,7 +5,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('admin/blog');
 import { getSaQuery } from '../../../lib/admin-query';
@@ -56,10 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (!post) {
         return ApiErrors.notFound('Post not found');
       }
-      return new Response(JSON.stringify({ success: true, post: { id: postId, ...post } }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ post: { id: postId, ...post } });
     }
 
     // List all posts
@@ -76,10 +73,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit
     });
 
-    return new Response(JSON.stringify({ success: true, posts }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ posts });
 
   } catch (error: unknown) {
     log.error('Error:', error);
@@ -135,10 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('blog-posts', postId, postData);
 
-    return new Response(JSON.stringify({ success: true, postId, post: { id: postId, ...postData } }), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ postId, post: { id: postId, ...postData } }, 201);
 
   } catch (error: unknown) {
     log.error('Create error:', error);
@@ -180,10 +171,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     await updateDocument('blog-posts', id, updateData);
 
-    return new Response(JSON.stringify({ success: true, message: 'Post updated' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Post updated' });
 
   } catch (error: unknown) {
     log.error('Update error:', error);
@@ -211,10 +199,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     await deleteDocument('blog-posts', postId);
 
-    return new Response(JSON.stringify({ success: true, message: 'Post deleted' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Post deleted' });
 
   } catch (error: unknown) {
     log.error('Delete error:', error);

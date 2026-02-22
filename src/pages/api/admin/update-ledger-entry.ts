@@ -8,7 +8,7 @@ import { saUpdateDocument, saQueryCollection, saDeleteDocument } from '../../../
 import { d1GetLedgerEntries, d1UpdateLedgerEntry, d1DeleteLedgerEntry } from '../../../lib/d1-catalog';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[update-ledger-entry]');
 
 const updateLedgerEntrySchema = z.discriminatedUnion('action', [
@@ -82,10 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
 
-      return new Response(JSON.stringify({ success: true, entries }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ entries });
     }
 
     if (action === 'update' && ledgerId && updates) {
@@ -114,10 +111,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({ success: true, message: 'Entry updated (D1 + Firebase)' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Entry updated (D1 + Firebase)' });
     }
 
     if (action === 'delete' && ledgerId) {
@@ -135,10 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({ success: true, message: 'Entry deleted (D1 + Firebase)' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Entry deleted (D1 + Firebase)' });
     }
 
     return ApiErrors.badRequest('Invalid action');

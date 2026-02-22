@@ -259,9 +259,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Clear merch caches so stock changes reflect immediately
     clearAllMerchCache();
 
-    return new Response(JSON.stringify({
-      success: true,
-      operation: operation,
+    return successResponse({ operation: operation,
       productId: productId,
       variantKey: variantKey,
       previousStock: previousStock,
@@ -269,11 +267,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       stockDelta: stockDelta,
       totalProductStock: totalStock,
       isLowStock: updateData.isLowStock,
-      isOutOfStock: updateData.isOutOfStock
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      isOutOfStock: updateData.isOutOfStock });
 
   } catch (error: unknown) {
     logger.error('[update-stock] Error:', error);
@@ -299,9 +293,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
         return ApiErrors.notFound('Product not found');
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        productId: productId,
+      return successResponse({ productId: productId,
         name: data.name,
         sku: data.sku,
         totalStock: data.totalStock,
@@ -310,11 +302,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
         isLowStock: data.isLowStock,
         isOutOfStock: data.isOutOfStock,
         lowStockThreshold: data.lowStockThreshold,
-        variantStock: data.variantStock
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+        variantStock: data.variantStock });
     }
 
     // Fetch products and suppliers in parallel for name resolution
@@ -404,16 +392,10 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
 
     stockReport.sort((a, b) => a.totalStock - b.totalStock);
 
-    return new Response(JSON.stringify({
-      success: true,
-      count: stockReport.length,
+    return successResponse({ count: stockReport.length,
       lowStockCount: stockReport.filter(p => p.isLowStock).length,
       outOfStockCount: stockReport.filter(p => p.isOutOfStock).length,
-      products: stockReport
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      products: stockReport });
 
   } catch (error: unknown) {
     logger.error('[get-stock] Error:', error);

@@ -144,16 +144,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.info(`Revoked streaming access for ${displayName} (${userId})`);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: isApproved ? 'DJ added and approved' : 'DJ access revoked',
+    return successResponse({ message: isApproved ? 'DJ added and approved' : 'DJ access revoked',
       mountPoint: isApproved ? mountPoint : null,
       userId,
-      djName: displayName
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      djName: displayName });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

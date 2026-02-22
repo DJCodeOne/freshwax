@@ -39,13 +39,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
     await setDocument('userPlaylists', userId, emptyPlaylist);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Playlist cleared'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Playlist cleared' });
 
   } catch (error: unknown) {
     log.error('[playlist/clear] Error:', error instanceof Error ? error.message : String(error));

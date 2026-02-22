@@ -6,7 +6,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
-import { getAdminKey, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
+import { getAdminKey, ApiErrors, createLogger, getR2Config, successResponse } from '../../../lib/api-utils';
 import { verifyAdminKey } from '../../../lib/admin';
 import { z } from 'zod';
 
@@ -176,15 +176,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       logger.info(`Generated presigned URL for: ${key}`);
     }
 
-    return new Response(JSON.stringify({
-      success: true,
+    return successResponse({
       releaseId: finalReleaseId,
       baseFolder,
       uploads: uploadUrls,
-      expiresIn: 3600, // 1 hour
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      expiresIn: 3600,
     });
 
   } catch (error: unknown) {

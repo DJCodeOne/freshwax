@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { createLogger, ApiErrors } from '../../../lib/api-utils';
+import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[delete-orders]');
 
@@ -58,15 +58,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const deleted = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
 
-    return new Response(JSON.stringify({
-      success: true,
-      deleted,
+    return successResponse({ deleted,
       failed,
-      results
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      results });
 
   } catch (error: unknown) {
     log.error('Error:', error);

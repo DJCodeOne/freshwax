@@ -27,7 +27,7 @@ import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
-import { fetchWithTimeout, createLogger } from '../../../lib/api-utils';
+import { fetchWithTimeout, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const logger = createLogger('stripe-webhook');
 
@@ -570,10 +570,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!signature) {
       logger.error('[Stripe Webhook] ❌ Missing signature header - REJECTING REQUEST');
-      return new Response(JSON.stringify({ error: 'Missing signature' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse({ error: 'Missing signature' }, 401);
     }
 
     let event: Stripe.Event;
@@ -588,28 +585,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } catch (err: unknown) {
         const errMessage = err instanceof Error ? err.message : String(err);
         logger.error('[Stripe Webhook] ❌ Stripe signature verification failed:', errMessage);
-        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ error: 'Invalid signature' }, 401);
       }
     } else if (!isDevelopment) {
       // In production, REQUIRE webhook secret
       logger.error('[Stripe Webhook] ❌ SECURITY: Webhook secret not configured in production - REJECTING');
-      return new Response(JSON.stringify({ error: 'Webhook not configured' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return jsonResponse({ error: 'Webhook not configured' }, 500);
     } else {
       logger.debug('[Stripe Webhook] DEV MODE: Skipping signature verification');
       try {
         event = JSON.parse(payload);
       } catch (parseErr: unknown) {
         logger.error('[Stripe Webhook] ❌ Invalid JSON payload:', parseErr instanceof Error ? parseErr.message : String(parseErr));
-        return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ error: 'Invalid JSON payload' }, 400);
       }
     }
     logger.info('[Stripe Webhook] Event:', event.type, event.id || 'no-id');
@@ -632,16 +620,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const existingSub = userDoc?.subscription;
             if (existingSub && existingSub.subscriptionId === (session.subscription || session.id)) {
               logger.debug('[Stripe Webhook] Subscription already processed for user:', subUserId);
-              return new Response(JSON.stringify({ received: true, message: 'Subscription already processed' }), {
-                status: 200, headers: { 'Content-Type': 'application/json' }
-              });
+              return jsonResponse({ received: true, message: 'Subscription already processed' });
             }
           } catch (idempotencyErr: unknown) {
             logger.error('[Stripe Webhook] Subscription idempotency check failed:', idempotencyErr);
             // Return 500 so Stripe retries when Firebase is back
-            return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
-              status: 500, headers: { 'Content-Type': 'application/json' }
-            });
+            return jsonResponse({ error: 'Temporary error checking subscription status' }, 500);
           }
         }
 
@@ -649,15 +633,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const PRO_PRICE_PENCE = 1000; // £10.00
         if (session.payment_status !== 'paid') {
           logger.error('[Stripe Webhook] SECURITY: Plus subscription payment not completed. Status:', session.payment_status);
-          return new Response(JSON.stringify({ received: true, error: 'Payment not completed' }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
-          });
+          return jsonResponse({ received: true, error: 'Payment not completed' });
         }
         if (session.amount_total != null && session.amount_total < PRO_PRICE_PENCE) {
           logger.error('[Stripe Webhook] SECURITY: Plus payment amount too low:', session.amount_total, 'expected >=', PRO_PRICE_PENCE);
-          return new Response(JSON.stringify({ received: true, error: 'Invalid payment amount' }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
-          });
+          return jsonResponse({ received: true, error: 'Invalid payment amount' });
         }
 
         const userId = metadata.userId;
@@ -803,10 +783,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        return new Response(JSON.stringify({ received: true }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ received: true });
       }
 
       // Handle one-off Plus payment (promo code purchases)
@@ -828,15 +805,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const existingSub = userDoc?.subscription;
               if (existingSub && existingSub.subscriptionId === (session.payment_intent || session.id)) {
                 logger.debug('[Stripe Webhook] Promo subscription already processed for user:', userId);
-                return new Response(JSON.stringify({ received: true, message: 'Subscription already processed' }), {
-                  status: 200, headers: { 'Content-Type': 'application/json' }
-                });
+                return jsonResponse({ received: true, message: 'Subscription already processed' });
               }
             } catch (idempotencyErr: unknown) {
               logger.error('[Stripe Webhook] Promo subscription idempotency check failed:', idempotencyErr);
-              return new Response(JSON.stringify({ error: 'Temporary error checking subscription status' }), {
-                status: 500, headers: { 'Content-Type': 'application/json' }
-              });
+              return jsonResponse({ error: 'Temporary error checking subscription status' }, 500);
             }
           }
 
@@ -971,10 +944,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           }
 
-          return new Response(JSON.stringify({ received: true }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return jsonResponse({ received: true });
         }
       }
 
@@ -998,11 +968,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             if (existingCards.length > 0) {
               logger.debug('[Stripe Webhook] Gift card already exists for this payment:', existingCards[0].code);
-              return new Response(JSON.stringify({
+              return jsonResponse({
                 received: true,
                 message: 'Gift card already created',
                 code: existingCards[0].code
-              }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+              });
             }
           } catch (checkErr: unknown) {
             logger.error('[Stripe Webhook] Gift card idempotency check failed:', checkErr);
@@ -1034,21 +1004,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
           logger.error('[Stripe Webhook] ❌ Failed to create gift card:', result.error);
         }
 
-        return new Response(JSON.stringify({
+        return jsonResponse({
           received: true,
           giftCard: result.success,
           code: result.giftCard?.code
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        });
       }
 
       // Skip if no customer email (not a valid order)
       if (!metadata.customer_email) {
         logger.debug('[Stripe Webhook] No customer email in metadata - skipping');
         logger.debug('[Stripe Webhook] Available metadata keys:', Object.keys(metadata).join(', '));
-        return new Response(JSON.stringify({ received: true }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ received: true });
       }
 
       // IDEMPOTENCY CHECK: Check if order already exists for this payment intent
@@ -1064,13 +1031,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
           if (existingOrders && existingOrders.length > 0) {
             // Order already processed - skip duplicate
-            return new Response(JSON.stringify({
+            return jsonResponse({
               received: true,
               message: 'Order already exists',
               orderId: existingOrders[0].id
-            }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json' }
             });
           }
           // No existing order - proceed with creation
@@ -1078,12 +1042,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           logger.error('[Stripe Webhook] Idempotency check failed (Firebase unreachable):', idempotencyErr);
           // Return 500 so Stripe retries later when Firebase is back up
           // This prevents duplicate orders when we can't verify idempotency
-          return new Response(JSON.stringify({
+          return jsonResponse({
             error: 'Temporary error checking order status. Will retry.',
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          }, 500);
         }
       }
 
@@ -1259,12 +1220,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           processingTimeMs: Date.now() - startTime
         }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
 
-        return new Response(JSON.stringify({
+        return jsonResponse({
           error: result.error || 'Failed to create order'
-        }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        }, 500);
       }
 
       logger.info('[Stripe Webhook] Order created:', result.orderNumber, result.orderId);
@@ -1527,9 +1485,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             );
             if (!subResponse.ok) {
               logger.error(`[Stripe Webhook] Failed to fetch subscription: ${subResponse.status}`);
-              return new Response(JSON.stringify({ received: true, error: 'Failed to fetch subscription' }), {
-                status: 200, headers: { 'Content-Type': 'application/json' }
-              });
+              return jsonResponse({ received: true, error: 'Failed to fetch subscription' });
             }
             const subscription = await subResponse.json();
 
@@ -1547,9 +1503,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               );
               if (!userResponse.ok) {
                 logger.error(`[Stripe Webhook] Failed to fetch user: ${userResponse.status}`);
-                return new Response(JSON.stringify({ received: true, error: 'Failed to fetch user' }), {
-                  status: 200, headers: { 'Content-Type': 'application/json' }
-                });
+                return jsonResponse({ received: true, error: 'Failed to fetch user' });
               }
               const userData = await userResponse.json();
 
@@ -1557,9 +1511,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               const lastRenewalInvoice = userData.fields?.subscription?.mapValue?.fields?.lastRenewalInvoiceId?.stringValue;
               if (lastRenewalInvoice === invoice.id) {
                 // Renewal already processed for this invoice
-                return new Response(JSON.stringify({ received: true, message: 'Renewal already processed' }), {
-                  status: 200, headers: { 'Content-Type': 'application/json' }
-                });
+                return jsonResponse({ received: true, message: 'Renewal already processed' });
               }
 
               let baseDate = new Date();
@@ -1670,16 +1622,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
         if (existingDisputes && existingDisputes.length > 0) {
           // Dispute already recorded
-          return new Response(JSON.stringify({ received: true, message: 'Dispute already processed' }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
-          });
+          return jsonResponse({ received: true, message: 'Dispute already processed' });
         }
       } catch (idempotencyErr: unknown) {
         logger.error('[Stripe Webhook] Dispute idempotency check failed:', idempotencyErr);
         // Return 500 so Stripe retries when Firebase is back
-        return new Response(JSON.stringify({ error: 'Temporary error checking dispute status' }), {
-          status: 500, headers: { 'Content-Type': 'application/json' }
-        });
+        return jsonResponse({ error: 'Temporary error checking dispute status' }, 500);
       }
 
       await handleDisputeCreated(dispute, stripeSecretKey);
@@ -1797,10 +1745,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
     }
 
-    return new Response(JSON.stringify({ received: true }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ received: true });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1811,10 +1756,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Webhook processing error',
       error: errorMessage
     }).catch(e => logger.error('[Stripe Webhook] Log error:', e));
-    return new Response(JSON.stringify({ error: 'An internal error occurred' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ error: 'An internal error occurred' }, 500);
   }
 };
 

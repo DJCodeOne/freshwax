@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { queryCollection, getDocument, setDocument, updateDocument, deleteDocument } from '../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../lib/admin';
-import { parseJsonBody, ApiErrors, createLogger } from '../../lib/api-utils';
+import { parseJsonBody, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -63,17 +63,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           }));
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        supplier: supplier,
-        products: products
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'private, max-age=60'
-        }
-      });
+      return successResponse({ supplier: supplier,
+        products: products }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
     }
 
     // Supplier portal access via code
@@ -119,9 +110,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         totalEarnings += ((p.retailPrice as number) * (p.soldStock as number) * ((p.supplierCut as number) / 100));
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        supplier: {
+      return successResponse({ supplier: {
           id: supplier.id,
           name: supplier.name,
           email: supplier.email,
@@ -135,14 +124,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
           lowStockItems: products.filter((p: Record<string, unknown>) => p.isLowStock).length,
           outOfStockItems: products.filter((p: Record<string, unknown>) => p.isOutOfStock).length,
           totalEarnings: totalEarnings
-        }
-      }), {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'private, max-age=60'
-        }
-      });
+        } }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
     }
 
     // List all suppliers (admin only)
@@ -220,17 +202,8 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
     logger.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');
 
-    return new Response(JSON.stringify({
-      success: true,
-      count: combinedSuppliers.length,
-      suppliers: combinedSuppliers
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=60'
-      }
-    });
+    return successResponse({ count: combinedSuppliers.length,
+      suppliers: combinedSuppliers }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
 
   } catch (error: unknown) {
     logger.error('[suppliers] GET Error:', error);
@@ -296,15 +269,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info('[suppliers] Created supplier:', name, '(' + supplierId + ')');
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Supplier created successfully',
+    return successResponse({ message: 'Supplier created successfully',
       supplier: { id: supplierId, ...supplierData },
-      accessCode: accessCode
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      accessCode: accessCode });
 
   } catch (error: unknown) {
     logger.error('[suppliers] POST Error:', error);
@@ -345,13 +312,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     logger.info('[suppliers] Updated supplier:', supplierId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Supplier updated successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Supplier updated successfully' });
 
   } catch (error: unknown) {
     logger.error('[suppliers] PUT Error:', error);
@@ -382,13 +343,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
       logger.info('[suppliers] Permanently deleted supplier:', supplierId);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Supplier permanently deleted'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Supplier permanently deleted' });
     } else {
       await updateDocument('merch-suppliers', supplierId, {
         active: false,
@@ -397,13 +352,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
 
       logger.info('[suppliers] Deactivated supplier:', supplierId);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Supplier deactivated successfully'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ message: 'Supplier deactivated successfully' });
     }
 
   } catch (error: unknown) {

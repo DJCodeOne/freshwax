@@ -32,9 +32,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (!doc) {
         return ApiErrors.notFound('Source not found');
       }
-      return new Response(JSON.stringify({ success: true, source: doc }), {
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ source: doc });
     }
 
     // List all sources
@@ -42,9 +40,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       orderBy: { field: 'name', direction: 'ASCENDING' }
     });
     
-    return new Response(JSON.stringify({ success: true, sources }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ sources });
   } catch (error: unknown) {
     log.error('Error fetching relay sources:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -94,13 +90,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { id } = await addDocument('relaySources', sourceData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      id,
-      source: { id, ...sourceData }
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ id,
+      source: { id, ...sourceData } });
   } catch (error: unknown) {
     log.error('Error creating relay source:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -135,9 +126,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     await updateDocument('relaySources', id, updates);
     
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
   } catch (error: unknown) {
     log.error('Error updating relay source:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
@@ -168,9 +157,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     
     await deleteDocument('relaySources', id);
     
-    return new Response(JSON.stringify({ success: true }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
   } catch (error: unknown) {
     log.error('Error deleting relay source:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');

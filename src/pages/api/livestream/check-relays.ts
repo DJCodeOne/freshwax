@@ -204,14 +204,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return a.name.localeCompare(b.name);
     });
     
-    return new Response(JSON.stringify({ 
-      success: true, 
-      relays: results,
+    return successResponse({ relays: results,
       liveCount: results.filter(r => r.isLive).length,
-      checkedAt: new Date().toISOString()
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
+      checkedAt: new Date().toISOString() });
   } catch (error: unknown) {
     log.error('Error checking relay sources:', error);
     return ApiErrors.serverError('Internal error');

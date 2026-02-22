@@ -302,15 +302,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Failed to save release data');
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      releaseId,
+    return successResponse({ releaseId,
       release: releaseDoc,
-      message: existingRelease ? 'Release updated successfully' : 'Release created successfully',
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      message: existingRelease ? 'Release updated successfully' : 'Release created successfully', });
 
   } catch (error: unknown) {
     logger.error('Failed to complete upload:', error);

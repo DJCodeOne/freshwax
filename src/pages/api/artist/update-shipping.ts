@@ -105,16 +105,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('Updated shipping rates for:', artistId, updateData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Shipping rates updated',
+    return successResponse({ message: 'Shipping rates updated',
       data: {
         vinylShippingUK: shippingUK,
         vinylShippingEU: shippingEU,
         vinylShippingIntl: shippingIntl,
         vinylShipsFrom: vinylShipsFrom || null
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('Update shipping error:', error instanceof Error ? error.message : String(error));

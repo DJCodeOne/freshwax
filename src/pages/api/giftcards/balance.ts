@@ -35,29 +35,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     if (!creditData) {
       // No credit document yet - return zero balance
-      return new Response(JSON.stringify({
-        success: true,
-        balance: 0,
-        transactions: []
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ balance: 0,
+        transactions: [] });
     }
 
     // Sort transactions by date (newest first)
     const transactions = (creditData.transactions || [])
       .sort((a: Record<string, unknown>, b: Record<string, unknown>) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime());
 
-    return new Response(JSON.stringify({
-      success: true,
-      balance: creditData.balance || 0,
+    return successResponse({ balance: creditData.balance || 0,
       lastUpdated: creditData.lastUpdated,
-      transactions
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      transactions });
 
   } catch (error: unknown) {
     log.error('Error:', error);
@@ -139,15 +127,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         log.info('Applied credit:', amount, 'for user:', userId, 'order:', orderId);
 
-        return new Response(JSON.stringify({
-          success: true,
-          amountApplied: amount,
+        return successResponse({ amountApplied: amount,
           newBalance,
-          transactionId
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          transactionId });
       } catch (condError: unknown) {
         if (attempt < MAX_RETRIES - 1 && condError instanceof Error && condError.message.includes('condition')) {
           log.warn('Concurrent modification, retrying...', attempt + 1);

@@ -137,13 +137,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Mix updated successfully'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Mix updated successfully' });
 
   } catch (error: unknown) {
     log.error('Error updating mix:', error);

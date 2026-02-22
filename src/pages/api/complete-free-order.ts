@@ -228,12 +228,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return orderItemKeys === currentItemKeys;
       });
       if (duplicate) {
-        return new Response(JSON.stringify({
-          success: true,
-          orderId: duplicate.id,
+        return successResponse({ orderId: duplicate.id,
           orderNumber: duplicate.orderNumber,
-          duplicate: true
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          duplicate: true });
       }
     }
 
@@ -392,14 +389,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        orderId: result.orderId,
-        orderNumber: result.orderNumber
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return successResponse({ orderId: result.orderId,
+        orderNumber: result.orderNumber });
     } else {
       // Order creation returned failure - refund credit if it was deducted
       if (creditDeducted) {

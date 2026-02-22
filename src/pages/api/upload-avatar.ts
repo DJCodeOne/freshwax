@@ -152,24 +152,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     } catch (firestoreError: unknown) {
       log.error('[upload-avatar] Firestore update failed:', firestoreError);
       // Avatar was uploaded to R2, so return partial success
-      return new Response(JSON.stringify({
-        success: true,
-        avatarUrl,
+      return successResponse({ avatarUrl,
         warning: 'Avatar uploaded but profile update failed. Please try again.',
         originalSize,
-        compressedSize: processed.buffer.length
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        compressedSize: processed.buffer.length });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      avatarUrl,
+    return successResponse({ avatarUrl,
       originalSize,
-      compressedSize
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      compressedSize });
 
   } catch (error: unknown) {
     log.error('[upload-avatar] Error:', error);
@@ -225,12 +216,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       avatarUpdatedAt: new Date().toISOString()
     }, idToken);
 
-    return new Response(JSON.stringify({
-      success: true
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({} as Record<string, unknown>);
 
   } catch (error: unknown) {
     log.error('[upload-avatar] DELETE Error:', error);

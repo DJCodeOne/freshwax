@@ -18,7 +18,7 @@ import {
 } from '../../lib/subscription';
 import { createReferralGiftCard } from '../../lib/giftcard';
 import { isAdmin, initAdminEnv } from '../../lib/admin';
-import { fetchWithTimeout, errorResponse, ApiErrors, createLogger } from '../../lib/api-utils';
+import { fetchWithTimeout, errorResponse, ApiErrors, createLogger, successResponse, jsonResponse} from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 export const prerender = false;
@@ -111,24 +111,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Admin bypass - admins have unlimited uploads
       const userIsAdmin = await isAdmin(userId);
       if (userIsAdmin) {
-        return new Response(JSON.stringify({
-          success: true,
-          allowed: true,
+        return successResponse({ allowed: true,
           remaining: Infinity,
           tier: 'admin',
           uploadsThisWeek: usage.mixUploadsThisWeek,
-          weeklyLimit: 'unlimited'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          weeklyLimit: 'unlimited' });
       }
 
       const result = canUploadMix(effectiveTier, usage);
-      return new Response(JSON.stringify({
-        success: true,
-        ...result,
+      return successResponse({ ...result,
         tier: effectiveTier,
         uploadsThisWeek: usage.mixUploadsThisWeek,
-        weeklyLimit: limits.mixUploadsPerWeek
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        weeklyLimit: limits.mixUploadsPerWeek });
     }
 
     // Action: check if can book stream slot
@@ -136,24 +130,18 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Admin bypass - admins have unlimited streaming
       const userIsAdmin = await isAdmin(userId);
       if (userIsAdmin) {
-        return new Response(JSON.stringify({
-          success: true,
-          allowed: true,
+        return successResponse({ allowed: true,
           remainingMinutes: Infinity,
           tier: 'admin',
           minutesUsedToday: usage.streamMinutesToday,
-          dailyLimitMinutes: 'unlimited'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          dailyLimitMinutes: 'unlimited' });
       }
 
       const result = canBookStreamSlot(effectiveTier, usage);
-      return new Response(JSON.stringify({
-        success: true,
-        ...result,
+      return successResponse({ ...result,
         tier: effectiveTier,
         minutesUsedToday: usage.streamMinutesToday,
-        dailyLimitMinutes: limits.streamHoursPerDay * 60
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        dailyLimitMinutes: limits.streamHoursPerDay * 60 });
     }
 
     // Check if user was Plus but expired (for renewal prompts)
@@ -163,9 +151,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       new Date(subscription.expiresAt) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // Within 7 days
 
     // Default: return full status
-    return new Response(JSON.stringify({
-      success: true,
-      subscription: {
+    return successResponse({ subscription: {
         tier: effectiveTier,
         tierName: limits.name,
         isPro: effectiveTier === SUBSCRIPTION_TIERS.PRO,
@@ -194,8 +180,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         price: PRO_ANNUAL_PRICE,
         priceFormatted: `£${PRO_ANNUAL_PRICE}/year`,
         benefits: getTierBenefits(SUBSCRIPTION_TIERS.PRO),
-      } : null
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } : null });
 
   } catch (error: unknown) {
     logger.error('Error:', error);
@@ -263,10 +248,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       logger.info('Recorded mix upload for', userId, '- count:', uploadsThisWeek + 1);
 
-      return new Response(JSON.stringify({
-        success: true,
-        uploadsThisWeek: uploadsThisWeek + 1
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ uploadsThisWeek: uploadsThisWeek + 1 });
     }
 
     // Action: Record stream time
@@ -296,10 +278,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       logger.info('Recorded stream time for', userId, '- total minutes today:', minutesToday + (minutes || 60));
 
-      return new Response(JSON.stringify({
-        success: true,
-        minutesToday: minutesToday + (minutes || 60)
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ minutesToday: minutesToday + (minutes || 60) });
     }
 
     // Action: Activate Pro subscription (after payment)
@@ -441,17 +420,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       logger.info('Activated Pro for', userId, '- expires:', expiresAt.toISOString(), '- referral code:', referralGiftCard.code);
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Pro subscription activated!',
+      return successResponse({ message: 'Pro subscription activated!',
         subscription: {
           tier: SUBSCRIPTION_TIERS.PRO,
           tierName: 'Pro',
           expiresAt: expiresAt.toISOString()
         },
         referralCode: referralGiftCard.code,
-        referralMessage: 'Share this code with a friend - they get 50% off their Pro upgrade!'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        referralMessage: 'Share this code with a friend - they get 50% off their Pro upgrade!' });
     }
 
     return ApiErrors.badRequest('Unknown action');

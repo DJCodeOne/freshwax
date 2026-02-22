@@ -9,7 +9,7 @@ import { containsProfanity } from '../../lib/validation';
 import { d1AddComment } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { kvDelete } from '../../lib/kv-cache';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -217,16 +217,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     logger.info('[add-mix-comment] Comment saved');
 
-    return new Response(JSON.stringify({
-      success: true,
-      comment: newComment,
-      commentCount: currentCount + 1
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
+    return successResponse({ comment: newComment, commentCount: currentCount + 1 }, 200, {
+      headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
 
   } catch (error: unknown) {

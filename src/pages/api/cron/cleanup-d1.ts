@@ -90,14 +90,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   logger.info('[Cleanup D1] ========== COMPLETED ==========');
   logger.info('[Cleanup D1] Duration:', duration, 'ms');
 
-  return new Response(JSON.stringify({
-    success: true,
-    duration,
-    ...results
-  }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return successResponse({ duration,
+    ...results });
 };
 
 // Support GET for manual triggering from admin panel

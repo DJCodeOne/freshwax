@@ -39,10 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) {
-    return new Response(JSON.stringify({ success: true, skipped: true, reason: 'Email not configured' }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ skipped: true, reason: 'Email not configured' });
   }
 
   try {
@@ -123,15 +120,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`[VerifyReminders] Done. Sent: ${sent}, Skipped: ${skipped}`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      sent,
+    return successResponse({ sent,
       skipped,
-      totalUnverified: unverifiedUsers.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      totalUnverified: unverifiedUsers.length });
 
   } catch (error: unknown) {
     log.error('[VerifyReminders] Error:', error instanceof Error ? error.message : String(error));

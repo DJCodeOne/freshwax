@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { validateReferralCode } from '../../../lib/referral-codes';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('plus/validate-promo');
 
@@ -46,11 +46,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (userDoc?.subscription?.tier === 'pro') {
       const expiresAt = userDoc.subscription.expiresAt;
       if (expiresAt && new Date(expiresAt) > new Date()) {
-        return new Response(JSON.stringify({
-          success: true,
-          valid: false,
-          error: 'You already have an active Plus subscription'
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ valid: false,
+          error: 'You already have an active Plus subscription' });
       }
     }
 
@@ -58,22 +55,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (kv) {
       const kvResult = await validateReferralCode(kv, normalizedCode, userId, 'pro_upgrade');
       if (kvResult.valid && kvResult.referralCode) {
-        return new Response(JSON.stringify({
-          success: true,
-          valid: true,
+        return successResponse({ valid: true,
           discount: kvResult.referralCode.discountPercent,
           message: `${kvResult.referralCode.discountPercent}% off Plus membership - Pay only £5!`,
           finalPrice: 5,
           isKvCode: true, // Flag to indicate KV-based code
-          referredBy: kvResult.referralCode.creatorId
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+          referredBy: kvResult.referralCode.creatorId });
       } else if (kvResult.error && kvResult.error !== 'Invalid referral code') {
         // KV code exists but has an error (expired, used, etc.)
-        return new Response(JSON.stringify({
-          success: true,
-          valid: false,
-          error: kvResult.error
-        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        return successResponse({ valid: false,
+          error: kvResult.error });
       }
       // If not found in KV, fall through to check Firebase
     }
@@ -88,52 +79,37 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     if (!giftCards || giftCards.length === 0) {
-      return new Response(JSON.stringify({
-        success: true,
-        valid: false,
-        error: 'Invalid referral code'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ valid: false,
+        error: 'Invalid referral code' });
     }
 
     const referralCard = giftCards[0];
 
     // Check if code is still active (not already redeemed)
     if (!referralCard.isActive || referralCard.redeemedBy) {
-      return new Response(JSON.stringify({
-        success: true,
-        valid: false,
-        error: 'This referral code has already been used'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ valid: false,
+        error: 'This referral code has already been used' });
     }
 
     // Check if code is expired
     if (referralCard.expiresAt && new Date(referralCard.expiresAt) < new Date()) {
-      return new Response(JSON.stringify({
-        success: true,
-        valid: false,
-        error: 'This referral code has expired'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ valid: false,
+        error: 'This referral code has expired' });
     }
 
     // Prevent users from using their own referral code
     if (referralCard.createdByUserId === userId) {
-      return new Response(JSON.stringify({
-        success: true,
-        valid: false,
-        error: 'You cannot use your own referral code'
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ valid: false,
+        error: 'You cannot use your own referral code' });
     }
 
     // Code is valid!
-    return new Response(JSON.stringify({
-      success: true,
-      valid: true,
+    return successResponse({ valid: true,
       discount: 50,
       message: '50% off Plus membership - Pay only £5!',
       finalPrice: 5,
       referralCardId: referralCard.id,
-      referredBy: referralCard.createdByUserId
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      referredBy: referralCard.createdByUserId });
 
   } catch (error: unknown) {
     log.error('[validate-promo] Error:', error instanceof Error ? error.message : String(error));

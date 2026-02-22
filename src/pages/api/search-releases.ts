@@ -3,7 +3,7 @@
 import type { APIRoute } from 'astro';
 import { d1SearchPublishedReleases, d1SearchPublishedMixes, d1SearchPublishedMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
@@ -78,8 +78,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     logger.info('[search] Found', matchedReleases.length, 'releases,', matchedMixes.length, 'mixes,', matchedMerch.length, 'merch, returning', limitedResults.length);
 
-    return new Response(JSON.stringify({
-      success: true,
+    // Browser: 1 min, CDN: 3 min
+    return successResponse({
       results: limitedResults,
       total: allResults.length,
       returned: limitedResults.length,
@@ -87,12 +87,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       mixCount: matchedMixes.length,
       merchCount: matchedMerch.length,
       source: 'd1'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=180' // Browser: 1 min, CDN: 3 min
-      }
+    }, 200, {
+      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=180' }
     });
 
   } catch (error: unknown) {

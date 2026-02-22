@@ -161,20 +161,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Successfully redeemed ${formatGBP(amountToCredit)}!`,
+    return successResponse({ message: `Successfully redeemed ${formatGBP(amountToCredit)}!`,
       amountCredited: amountToCredit,
       newBalance,
       giftCard: {
         code: normalizedCode,
         type: giftCard.type,
         description: giftCard.description
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      } });
 
   } catch (error: unknown) {
     log.error('Error:', error);

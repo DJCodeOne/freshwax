@@ -119,10 +119,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`[Presign] Generated URL for ${bucketName}/${key}`);
 
-    return new Response(JSON.stringify({ uploadUrl, key }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return jsonResponse({ uploadUrl, key });
 
   } catch (error: unknown) {
     log.error('[Presign] Error:', error);

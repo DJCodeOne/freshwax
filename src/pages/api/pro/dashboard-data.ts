@@ -53,10 +53,7 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 function jsonResponse(data: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return jsonResponse(data);
 }
 
 async function handleReleases(userId: string) {

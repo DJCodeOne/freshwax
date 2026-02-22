@@ -161,18 +161,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       orderBy: { field: 'startTime', direction: 'ASCENDING' }
     });
     
-    return new Response(JSON.stringify({
-      success: true,
-      transitioned,
+    return successResponse({ transitioned,
       endedSlot,
       newLiveSlot,
       missedCount: missedSlots.length,
       queue,
-      timestamp: nowISO
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
+      timestamp: nowISO });
     
   } catch (error: unknown) {
     log.error('Error:', error);
@@ -215,16 +209,10 @@ export const GET: APIRoute = async ({ request, locals }) => {
       limit: 10
     });
     
-    return new Response(JSON.stringify({
-      success: true,
-      isLive: activeData?.isLive || false,
+    return successResponse({ isLive: activeData?.isLive || false,
       currentStream: activeData?.isLive ? activeData : null,
       queue,
-      upcoming: upcomingSlots
-    }), { 
-      status: 200, 
-      headers: { 'Content-Type': 'application/json' } 
-    });
+      upcoming: upcomingSlots });
     
   } catch (error: unknown) {
     log.error('GET Error:', error);

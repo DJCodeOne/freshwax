@@ -149,18 +149,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    return new Response(JSON.stringify({
-      success: true,
-      newRating: releaseData.ratings.average,
+    return successResponse({ newRating: releaseData.ratings.average,
       ratingsCount: releaseData.ratings.count,
-      fiveStarCount: releaseData.ratings.fiveStarCount
-    }), {
-      status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate'
-      }
-    });
+      fiveStarCount: releaseData.ratings.fiveStarCount }, 200, { headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' } });
 
   } catch (error: unknown) {
     logger.error('[rate-release] Error:', error);

@@ -292,10 +292,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         updatedAt: conv.updatedAt instanceof Date ? conv.updatedAt.toISOString() : conv.updatedAt
       }));
 
-      return new Response(JSON.stringify({
-        success: true,
-        conversations: formattedConversations
-      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return successResponse({ conversations: formattedConversations });
     }
 
     // Get messages for specific conversation
@@ -318,11 +315,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
       createdAt: msg.createdAt instanceof Date ? msg.createdAt.toISOString() : msg.createdAt
     }));
 
-    return new Response(JSON.stringify({
-      success: true,
-      messages: formattedMessages,
-      channelId
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ messages: formattedMessages,
+      channelId });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/dm] GET Error:', error);
@@ -414,14 +408,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       timestamp: now.toISOString()
     }, env);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: {
+    return successResponse({ message: {
         id: messageResult.id,
         ...messageData,
         createdAt: now.toISOString()
-      }
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      } });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/dm] POST Error:', error);
@@ -486,10 +477,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
       triggerPusher(`private-dj-${targetId}`, 'dm-cleared', { channelId, targetId: userId }, env)
     ]);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Conversation deleted'
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    return successResponse({ message: 'Conversation deleted' });
 
   } catch (error: unknown) {
     log.error('[dj-lobby/dm] DELETE Error:', error);

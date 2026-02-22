@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDocument, updateDocument, queryCollection, addDocument, verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('dj/eligibility');
 import { z } from 'zod';
@@ -58,14 +58,12 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       // Check for bypass in djLobbyBypass collection first (publicly readable)
       const bypassDoc = await getDocument('djLobbyBypass', uid);
       if (bypassDoc) {
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: true,
+        return successResponse({ eligible: true,
           reason: 'bypass_granted',
           canAccessLobby: true,
           canBook: true,
           canGoLive: true
-        }));
+        });
       }
 
       // Try to get user document (may fail if not authenticated)
@@ -78,26 +76,22 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
       // If already eligible via role, return true
       if (userData?.roles?.djEligible) {
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: true,
+        return successResponse({ eligible: true,
           reason: 'already_eligible',
           canAccessLobby: true,
           canBook: true,
           canGoLive: true
-        }));
+        });
       }
 
       // If has bypass flag in user doc, return true
       if (userData?.['go-liveBypassed'] === true) {
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: true,
+        return successResponse({ eligible: true,
           reason: 'bypass_granted',
           canAccessLobby: true,
           canBook: true,
           canGoLive: true
-        }));
+        });
       }
 
       // Check mix count and likes
@@ -134,9 +128,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       const hasPendingBypass = bypassStatus === 'pending';
       const bypassApproved = bypassStatus === 'approved';
 
-      return new Response(JSON.stringify({
-        success: true,
-        eligible: meetsRequirements || bypassApproved,
+      return successResponse({ eligible: meetsRequirements || bypassApproved,
         meetsRequirements,
         bypassApproved,
         hasPendingBypass,
@@ -154,16 +146,14 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
         canAccessLobby: meetsRequirements || bypassApproved,
         canBook: meetsRequirements || bypassApproved,
         canGoLive: meetsRequirements || bypassApproved
-      }));
+      });
     }
 
     // Get requirements only
     if (action === 'getRequirements') {
       const settings = await getSettings();
-      return new Response(JSON.stringify({
-        success: true,
-        requirements: settings
-      }));
+      return successResponse({ requirements: settings
+      });
     }
 
     return ApiErrors.badRequest('Invalid action');
@@ -223,12 +213,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       
       // If already eligible, no action needed
       if (userData?.roles?.djEligible) {
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: true,
+        return successResponse({ eligible: true,
           updated: false,
           message: 'Already eligible'
-        }));
+        });
       }
 
       // Check mix count and likes
@@ -263,23 +251,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
           createdAt: new Date()
         });
 
-        return new Response(JSON.stringify({
-          success: true,
-          eligible: true,
+        return successResponse({ eligible: true,
           updated: true,
           message: 'DJ eligibility granted!'
-        }));
+        });
       }
 
-      return new Response(JSON.stringify({
-        success: true,
-        eligible: false,
+      return successResponse({ eligible: false,
         updated: false,
         progress: {
           mixesWithEnoughLikes,
           required: settings.requiredMixes
         }
-      }));
+      });
     }
 
     // Request bypass
@@ -325,10 +309,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
         updatedAt: new Date()
       });
 
-      return new Response(JSON.stringify({
-        success: true,
-        message: 'Bypass request submitted'
-      }));
+      return successResponse({ message: 'Bypass request submitted'
+      });
     }
 
     return ApiErrors.badRequest('Invalid action');

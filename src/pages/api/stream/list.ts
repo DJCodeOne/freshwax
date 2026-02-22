@@ -59,24 +59,12 @@ export const GET: APIRoute = async ({ request }) => {
       coverImage: stream.coverImage || null
     }));
 
-    return new Response(JSON.stringify({
-      success: true,
-      streams: formattedStreams,
-      count: formattedStreams.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ streams: formattedStreams,
+      count: formattedStreams.length });
 
   } catch (error: unknown) {
     log.error('[stream/list] Error:', error instanceof Error ? error.message : String(error));
-    return new Response(JSON.stringify({
-      success: true,
-      streams: [],
-      error: 'Internal error'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ streams: [],
+      error: 'Internal error' });
   }
 };

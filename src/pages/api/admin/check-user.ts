@@ -6,7 +6,7 @@ import { getDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors } from '../../../lib/api-utils';
+import { ApiErrors, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -55,7 +55,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Also fetch usage data
     const usageDoc = await getDocument('userUsage', user.id);
 
-    return new Response(JSON.stringify({
+    return jsonResponse({
       user: {
         id: user.id,
         email: user.email,
@@ -72,9 +72,6 @@ export const GET: APIRoute = async ({ request, locals }) => {
         wouldBeInPartners,
         expectedLocation: wouldBeInPartners ? 'Partner Management' : 'User Management'
       }
-    }, null, 2), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (error: unknown) {
     return ApiErrors.serverError('Unknown error');

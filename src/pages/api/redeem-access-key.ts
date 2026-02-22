@@ -127,13 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info(`User ${userId} (${userEmail}) redeemed access key`);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Access granted! You can now enter the DJ lobby and go live.'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: 'Access granted! You can now enter the DJ lobby and go live.' });
 
   } catch (error: unknown) {
     log.error('Error:', error);

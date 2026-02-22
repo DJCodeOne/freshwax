@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { saQueryCollection, saUpdateDocument, saGetDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[vinyl-listings]');
 
@@ -49,14 +49,8 @@ export const GET: APIRoute = async ({ request, locals }) => {  const env = local
 
     log.info('[admin/vinyl-listings GET] Found', listings.length, 'pending listings');
 
-    return new Response(JSON.stringify({
-      success: true,
-      listings: listings || [],
-      count: listings.length
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ listings: listings || [],
+      count: listings.length });
 
   } catch (error: unknown) {
     log.error('[admin/vinyl-listings GET] Error:', error);
@@ -128,14 +122,8 @@ export const POST: APIRoute = async ({ request, locals }) => {  const env = loca
 
     await saUpdateDocument(serviceAccountKey, projectId, 'vinylListings', listingId, updateData);
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: `Listing ${action === 'approve' ? 'approved' : 'rejected'}`,
-      listingId
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return successResponse({ message: `Listing ${action === 'approve' ? 'approved' : 'rejected'}`,
+      listingId });
 
   } catch (error: unknown) {
     log.error('[admin/vinyl-listings POST] Error:', error);
