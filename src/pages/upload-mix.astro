@@ -1134,7 +1134,7 @@ Artist - Track Title
       if (result.success && result.settings?.djMixes) {
         uploadSettings = { ...uploadSettings, ...result.settings.djMixes };
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.warn('Could not load upload settings, using defaults');
     }
   }
@@ -1271,7 +1271,7 @@ Artist - Track Title
           quickDropGenre.addEventListener('change', autoUploadOnGenre);
           quickDropConfirm.disabled = true; // Keep disabled until genre selected
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('WAV conversion failed:', err);
         alert('Conversion failed. Please convert to MP3 using Audacity or an online converter.');
         quickDropModal.classList.add('hidden');
@@ -1422,7 +1422,7 @@ Artist - Track Title
         quickDropModal.classList.add('hidden');
         return;
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.warn('Could not check upload limits:', err);
     }
 
@@ -1589,14 +1589,14 @@ Artist - Track Title
             if (xhr.status >= 200 && xhr.status < 300) {
               try {
                 resolve(JSON.parse(xhr.responseText));
-              } catch (e: unknown) {
+              } catch (e) {
                 reject(new Error('Invalid server response'));
               }
             } else {
               try {
                 const errorResponse = JSON.parse(xhr.responseText);
                 reject(new Error(errorResponse.error || `Server error: ${xhr.status}`));
-              } catch (e: unknown) {
+              } catch (e) {
                 reject(new Error(`Server error: ${xhr.status}`));
               }
             }
@@ -1639,7 +1639,7 @@ Artist - Track Title
               userId: user.uid
             })
           });
-        } catch (err: unknown) {
+        } catch (err) {
           console.warn('Could not record usage:', err);
         }
 
@@ -1652,7 +1652,7 @@ Artist - Track Title
         throw new Error(result.error || 'Upload failed');
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Quick Drop upload error:', error);
       activeQuickDropXhr = null;
 
@@ -1703,7 +1703,7 @@ Artist - Track Title
         }
         return;
       }
-    } catch (err: unknown) {
+    } catch (err) {
       console.warn('Could not check upload limits:', err);
       // Continue with upload if limit check fails
     }
@@ -1931,14 +1931,14 @@ Artist - Track Title
               try {
                 const response = JSON.parse(xhr.responseText);
                 resolve(response);
-              } catch (e: unknown) {
+              } catch (e) {
                 reject(new Error('Invalid server response'));
               }
             } else {
               try {
                 const errorResponse = JSON.parse(xhr.responseText);
                 reject(new Error(errorResponse.error || errorResponse.details || `Server error: ${xhr.status}`));
-              } catch (e: unknown) {
+              } catch (e) {
                 reject(new Error(`Server error: ${xhr.status}`));
               }
             }
@@ -1986,7 +1986,7 @@ Artist - Track Title
               })
             });
           }
-        } catch (err: unknown) {
+        } catch (err) {
           console.warn('Could not record upload usage:', err);
         }
 
@@ -2007,7 +2007,7 @@ Your mix is now available on the DJ Mixes page!`);
         throw new Error(result.error || result.details || 'Upload failed');
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('✗ Upload error:', error);
       const uploadErrMsg = error instanceof Error ? error.message : 'Unknown error';
       statusText.textContent = 'Upload failed - ' + uploadErrMsg;

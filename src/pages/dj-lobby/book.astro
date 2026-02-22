@@ -769,7 +769,7 @@ const csrfToken = Astro.locals.csrfToken || '';
     async function waitForAuth() {
       // Check if we have cached auth info first (for faster initial check)
       let cachedUid = null;
-      try { cachedUid = localStorage.getItem('fw_uid'); } catch (e: unknown) {}
+      try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
 
       // Always wait for Firebase onAuthStateChanged to ensure proper sync
       // This is more reliable than window.authReady during View Transitions
@@ -831,13 +831,13 @@ const csrfToken = Astro.locals.csrfToken || '';
 
       if (!user) {
         // No user - redirect to login
-        try { localStorage.removeItem('fw_uid'); localStorage.removeItem('fw_displayName'); } catch (e: unknown) {}
+        try { localStorage.removeItem('fw_uid'); localStorage.removeItem('fw_displayName'); } catch (e) {}
         window.location.href = '/login/?redirect=/dj-lobby/book/';
         return;
       }
 
       // Cache auth info for faster subsequent loads
-      try { localStorage.setItem('fw_uid', user.uid); } catch (e: unknown) {}
+      try { localStorage.setItem('fw_uid', user.uid); } catch (e) {}
       currentUser = user;
 
       // Get user data via API (replaces client-side Firestore read)
@@ -855,13 +855,13 @@ const csrfToken = Astro.locals.csrfToken || '';
             subscription: accessData.subscription
           };
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('[Book] Error fetching user data:', e);
       }
 
       // Cache display name
       if (userData.displayName) {
-        try { localStorage.setItem('fw_displayName', userData.displayName); } catch (e: unknown) {}
+        try { localStorage.setItem('fw_displayName', userData.displayName); } catch (e) {}
       }
 
       // Check subscription tier for booking limits
@@ -890,7 +890,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
       // Set user info
       let cachedDisplayName = '';
-      try { cachedDisplayName = localStorage.getItem('fw_displayName') || ''; } catch (e: unknown) {}
+      try { cachedDisplayName = localStorage.getItem('fw_displayName') || ''; } catch (e) {}
       const displayName = userData.displayName || cachedDisplayName || user.email;
       const userNameEl = document.getElementById('userName');
       const djNameEl = document.getElementById('djName');
@@ -1025,7 +1025,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           } else {
             showMsg('Error: ' + result.error, 'error');
           }
-        } catch (err: unknown) {
+        } catch (err) {
           console.error('Edit error:', err);
           showMsg('Error updating slot', 'error');
         }
@@ -1095,7 +1095,7 @@ const csrfToken = Astro.locals.csrfToken || '';
 
         updateAllowance();
         renderGrid();
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('Load bookings error:', err);
       }
     }
@@ -1319,7 +1319,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         await loadDayBookings();
         await loadMyBookings();
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Booking error:', error);
         showMsg('Error: ' + (error instanceof Error ? error.message : String(error)), 'error');
       }
@@ -1433,7 +1433,7 @@ const csrfToken = Astro.locals.csrfToken || '';
                 } else {
                   showMsg('Error: ' + cancelResult.error, 'error');
                 }
-              } catch (err: unknown) {
+              } catch (err) {
                 console.error('Cancel error:', err);
                 showMsg('Error cancelling booking', 'error');
               }
@@ -1441,7 +1441,7 @@ const csrfToken = Astro.locals.csrfToken || '';
           });
         });
 
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Load bookings error:', error);
         container.innerHTML = '<p class="empty">Error loading bookings</p>';
       }

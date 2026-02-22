@@ -436,7 +436,7 @@ export const prerender = false;
   window._adminScheduleAC = _ac;
 
   document.addEventListener('astro:page-load', async () => {
-    if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e: unknown) { return; } }
+    if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { return; } }
     loadSchedule();
     loadAllowances();
     setupEventListeners();
@@ -515,7 +515,7 @@ export const prerender = false;
         renderCalendar();
         renderBookingsTable();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Failed to load schedule:', error);
     }
   }
@@ -762,7 +762,7 @@ export const prerender = false;
       } else {
         alert(data.error || 'Failed to cancel');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error cancelling slot');
     }
   }
@@ -776,7 +776,7 @@ export const prerender = false;
         allowances = data.allowances || [];
         renderAllowances();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Failed to load allowances:', error);
     }
   }
@@ -836,7 +836,7 @@ export const prerender = false;
       } else {
         alert(data.error || 'Failed to save');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error saving allowance');
     }
   }
@@ -855,7 +855,7 @@ export const prerender = false;
       if (data.success) {
         loadAllowances();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error removing allowance');
     }
   }

@@ -20,7 +20,7 @@ const env = Astro.locals?.runtime?.env;
 let post: Record<string, unknown> | null = null;
 try {
   post = await getDocument('blog-posts', id!);
-} catch (e: unknown){
+} catch (e){
   console.error('Failed to fetch post:', e);
 }
 

@@ -400,7 +400,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           errorEl.textContent = result.error || 'Failed to redeem gift card';
           errorEl.style.display = 'block';
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Redeem error:', error);
         errorEl.textContent = 'Something went wrong. Please try again.';
         errorEl.style.display = 'block';
@@ -434,7 +434,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           balanceDisplay.classList.remove('hidden');
         }
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading balance:', error);
     }
   }
@@ -453,7 +453,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       if (result.success && result.displayName) {
         currentUserName = result.displayName;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       // Could not fetch user name
     }
   }
@@ -504,7 +504,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         section.classList.add('hidden');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading purchased cards:', error);
       section.classList.add('hidden');
     }
@@ -816,7 +816,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           btnLoading.classList.add('hidden');
         }
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Purchase error:', error);
       errorEl.textContent = 'Something went wrong. Please try again.';
       errorEl.style.display = 'block';

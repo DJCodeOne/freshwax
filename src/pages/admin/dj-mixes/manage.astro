@@ -328,7 +328,7 @@ export const prerender = false;
             showToast(newStatus ? 'Mix published' : 'Mix unpublished');
             setTimeout(() => location.reload(), 1000);
             
-          } catch (error: unknown) {
+          } catch (error) {
             console.error(error);
             showToast('Failed to update mix', 'error');
             btn.disabled = false;
@@ -403,7 +403,7 @@ export const prerender = false;
 
           showToast('Mix deleted');
 
-        } catch (error: unknown) {
+        } catch (error) {
           console.error(error);
           showToast('Failed to delete mix', 'error');
           btn.disabled = false;

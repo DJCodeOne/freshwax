@@ -630,7 +630,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         // Inject Event structured data (JSON-LD) for SEO
         injectScheduleJsonLd(allSlots);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Failed to load schedule:', error);
     }
     renderGrid();

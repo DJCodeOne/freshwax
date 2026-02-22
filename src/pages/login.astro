@@ -236,7 +236,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         document.cookie = 'customerId=; path=/; max-age=0';
         document.cookie = 'partnerId=; path=/; max-age=0';
         
-      } catch (e: unknown) {
+      } catch (e) {
         console.warn('[Login] Cache clear error:', e);
       }
     })();

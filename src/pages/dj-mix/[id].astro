@@ -21,7 +21,7 @@ try {
   } else {
     error = 'Mix not found';
   }
-} catch (err: unknown) {
+} catch (err) {
   console.error('[DJ MIX PAGE] Fetch error:', err);
   error = 'Failed to load mix';
 }

@@ -174,7 +174,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           message.className = 'mt-4 text-center text-red-500';
           message.classList.remove('hidden');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         message.textContent = 'Something went wrong. Please try again.';
         message.className = 'mt-4 text-center text-red-500';
         message.classList.remove('hidden');

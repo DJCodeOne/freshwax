@@ -603,7 +603,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
         try {
           var tracksData = container.getAttribute('data-tracks');
           this.tracks = JSON.parse(tracksData || '[]');
-        } catch (e: unknown){
+        } catch (e){
           console.error('[ShufflePlayer] Failed to parse tracks:', e);
           this.tracks = [];
         }
@@ -918,7 +918,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
             if (miniPlayIcon) miniPlayIcon.classList.remove('hidden');
             if (miniPauseIcon) miniPauseIcon.classList.add('hidden');
           }
-        } catch (e: unknown){}
+        } catch (e){}
       },
       
       stopReleasePlateAudio: function() {

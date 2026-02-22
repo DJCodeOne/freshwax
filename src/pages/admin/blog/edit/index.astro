@@ -580,7 +580,7 @@ export const prerender = false;
 
       // Redirect to edit page
       window.location.href = `/admin/blog/edit/${result.postId}/`;
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Save failed:', error instanceof Error ? error.message : String(error));
       alert('Failed to save: ' + (error instanceof Error ? error.message : String(error)));
     } finally {

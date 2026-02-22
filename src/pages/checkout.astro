@@ -113,7 +113,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         cart = [];
       }
-    } catch (e: unknown){
+    } catch (e){
       console.error('[Checkout] Cart parse error:', e);
       cart = [];
     }
@@ -161,7 +161,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           }
         }
       }
-    } catch (e: unknown){
+    } catch (e){
       if (e.name === 'AbortError') {
         console.error('[Checkout] Credit balance request timed out');
       } else {
@@ -247,7 +247,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         try {
           const token = await currentUser.getIdToken();
           if (token) headers['Authorization'] = `Bearer ${token}`;
-        } catch (e: unknown){
+        } catch (e){
           console.warn('[Checkout] Could not get auth token for duplicate check');
         }
       }
@@ -267,7 +267,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       const data = await response.json();
       return data;
-    } catch (e: unknown){
+    } catch (e){
       if (e.name === 'AbortError') {
         console.error('[Checkout] Duplicate check timed out');
       } else {
@@ -301,7 +301,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     try {
       const cartKey = 'freshwax_cart_' + customerId;
       localStorage.setItem(cartKey, JSON.stringify({ items: cart, updatedAt: Date.now() }));
-    } catch (e: unknown){
+    } catch (e){
       // localStorage may throw in Safari private browsing
     }
 
@@ -348,7 +348,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       try {
         const idToken = await currentUser?.getIdToken();
         if (idToken) headers['Authorization'] = `Bearer ${idToken}`;
-      } catch (e: unknown){ /* token fetch failed, API will use cookie fallback */ }
+      } catch (e){ /* token fetch failed, API will use cookie fallback */ }
 
       // Add timeout protection
       const controller = new AbortController();
@@ -367,7 +367,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           return data.customer;
         }
       }
-    } catch (e: unknown){
+    } catch (e){
       if (e.name === 'AbortError') {
         console.error('[Checkout] Customer data request timed out');
       } else {
@@ -427,7 +427,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         document.getElementById('address1')?.focus();
       }, 100);
       
-    } catch (error: unknown) {
+    } catch (error) {
       lookupError.textContent = (error instanceof Error ? error.message : null) || 'Failed to lookup postcode';
       lookupError.style.color = '#ff6b6b';
       lookupError.style.display = 'block';
@@ -979,7 +979,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
 
       // Store order data for capture
-      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e: unknown){}
+      try { localStorage.setItem('pendingPayPalOrder', JSON.stringify(orderData)); } catch (e){}
 
       // Redirect to PayPal approval URL
       if (result.approvalUrl) {
@@ -988,7 +988,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         throw new Error('No PayPal approval URL returned');
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('PayPal error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'PayPal error. Please try again.';
       errorMsg.style.display = 'block';
@@ -1096,7 +1096,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           if (currentUser) {
             try {
               idToken = await currentUser.getIdToken();
-            } catch (e: unknown){
+            } catch (e){
               console.warn('Could not get ID token');
             }
           }
@@ -1122,7 +1122,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 localStorage.removeItem('freshwax_cart_' + customerId);
               }
               localStorage.removeItem('cart');
-            } catch (e: unknown){}
+            } catch (e){}
             window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
 
             // Redirect to confirmation
@@ -1130,7 +1130,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           } else {
             throw new Error(result.error || 'Payment failed');
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('PayPal capture error:', error);
           errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Payment failed. Please try again.';
           errorMsg.style.display = 'block';
@@ -1227,7 +1227,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             country: form.country?.value || 'United Kingdom'
           })
         });
-      } catch (e: unknown){
+      } catch (e){
         console.error('Error saving customer details:', e);
       }
     }
@@ -1335,7 +1335,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             if (customerId) {
               localStorage.removeItem('freshwax_cart_' + customerId);
             }
-          } catch (e: unknown){}
+          } catch (e){}
 
           // Redirect to success page
           window.location.href = '/checkout/success/?orderId=' + result.orderId;
@@ -1389,7 +1389,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           throw new Error(result.error || 'Failed to create checkout session');
         }
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Checkout error:', error);
       errorMsg.textContent = (error instanceof Error ? error.message : null) || 'Something went wrong. Please try again.';
       errorMsg.style.display = 'block';
@@ -1415,7 +1415,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       });
       const data = await response.json();
       return data;
-    } catch (e: unknown){
+    } catch (e){
       console.error('Error checking user type:', e);
       return { isCustomer: false, isArtist: false };
     }

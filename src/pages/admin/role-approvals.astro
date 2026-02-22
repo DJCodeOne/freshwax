@@ -587,7 +587,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         await loadRequests();
 
         alert('Request approved!');
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error approving request:', error);
         alert('Error approving request: ' + (error instanceof Error ? error.message : String(error)));
       }
@@ -622,7 +622,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         await loadRequests();
 
         alert('Request denied');
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error denying request:', error);
         alert('Error denying request: ' + (error instanceof Error ? error.message : String(error)));
       }

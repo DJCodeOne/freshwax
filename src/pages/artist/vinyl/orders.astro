@@ -148,7 +148,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         document.getElementById('ordersList').style.display = 'block';
       }
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading orders:', error);
       document.getElementById('ordersLoadingState').innerHTML = `
         <div class="empty-icon">❌</div>
@@ -329,7 +329,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       closeShipModal();
       loadOrders();
 
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }

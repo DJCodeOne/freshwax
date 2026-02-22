@@ -184,7 +184,7 @@ if (partnerId) {
             partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
           }
         }
-      } catch (e: unknown) {
+      } catch (e) {
         // Ignore errors fetching customer data
       }
 
@@ -312,7 +312,7 @@ if (partnerId) {
         }
       }
     }
-  } catch (e: unknown) {
+  } catch (e) {
     console.error('Error fetching partner:', e);
   }
 }

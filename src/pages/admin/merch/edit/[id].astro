@@ -87,7 +87,7 @@ if (Astro.request.method === 'POST') {
     clearCache();
     successMessage = 'Product updated successfully!';
 
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('[MERCH EDIT] Error updating:', error);
     errorMessage = error instanceof Error ? error.message : 'Failed to update product';
   }
@@ -102,7 +102,7 @@ try {
   } else {
     errorMessage = 'Product not found';
   }
-} catch (error: unknown) {
+} catch (error) {
   console.error('[MERCH EDIT] Error loading product:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }

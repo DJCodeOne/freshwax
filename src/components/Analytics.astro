@@ -340,11 +340,11 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
       // Check consent (supports both old string and new granular JSON format)
       function hasAnalyticsConsent() {
         var raw = null;
-        try { raw = localStorage.getItem('cookie-consent'); } catch (e: unknown) {}
+        try { raw = localStorage.getItem('cookie-consent'); } catch (e) {}
         if (!raw) return false;
         if (raw === 'accepted') return true;
         if (raw === 'rejected') return false;
-        try { return JSON.parse(raw).analytics === true; } catch (e: unknown) { return false; }
+        try { return JSON.parse(raw).analytics === true; } catch (e) { return false; }
       }
 
       if (hasAnalyticsConsent()) {
@@ -427,7 +427,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
           });
           // Safari fallback
           window.addEventListener('pagehide',reportAll);
-        }catch (e: unknown){}
+        }catch (e){}
       })();
     </script>
   </>

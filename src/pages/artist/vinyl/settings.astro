@@ -268,7 +268,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         updateExamples();
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading settings:', error);
     }
   }
@@ -334,7 +334,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         successMessage.style.display = 'none';
       }, 3000);
 
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error saving settings:', error);
       alert('Error saving settings: ' + (error instanceof Error ? error.message : String(error)));
     } finally {

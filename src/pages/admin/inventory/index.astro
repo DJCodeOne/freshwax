@@ -371,7 +371,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           
           renderStockTable();
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('Failed to load data:', err);
       }
       
@@ -387,7 +387,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         if (data.success && data.movements) {
           renderMovements(data.movements);
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('Failed to load movements');
       }
     }
@@ -540,7 +540,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           showToast(data.error || 'Failed to adjust', 'error');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         showToast('Error adjusting stock', 'error');
       }
     }
@@ -813,7 +813,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           showToast(data.error || 'Failed to update stock', 'error');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         showToast('Error updating stock', 'error');
       }
       
@@ -909,7 +909,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         } else {
           showToast(data.error || 'Failed to update stock', 'error');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         showToast('Error updating stock', 'error');
       }
     }
@@ -1190,7 +1190,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const data = await response.json();
           if (data.success) success++;
           else failed++;
-        } catch (err: unknown) {
+        } catch (err) {
           failed++;
         }
       }

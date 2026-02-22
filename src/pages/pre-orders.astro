@@ -38,7 +38,7 @@ try {
     .filter(release => release.releaseDateObj > now)
     .sort((a, b) => a.releaseDateObj.getTime() - b.releaseDateObj.getTime()); // Soonest first
 
-} catch (e: unknown) {
+} catch (e) {
   console.error('Error fetching pre-orders:', e);
 }
 
@@ -788,7 +788,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         
         // Check for customer login
         var customerId = null;
-        try { customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id'); } catch (e: unknown) {}
+        try { customerId = localStorage.getItem('fw_customer_id') || localStorage.getItem('fw_user_id'); } catch (e) {}
         if (!customerId) {
           window.location.href = '/login/?redirect=' + encodeURIComponent(window.location.pathname);
           return;
@@ -803,7 +803,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         
         // Get cart
         var cartRaw = '{"items":[]}';
-        try { cartRaw = localStorage.getItem('freshwax_cart') || cartRaw; } catch (e: unknown) {}
+        try { cartRaw = localStorage.getItem('freshwax_cart') || cartRaw; } catch (e) {}
         var cart = JSON.parse(cartRaw);
         var items = cart.items || [];
         
@@ -841,7 +841,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         
         // Save cart
         cart.items = items;
-        try { localStorage.setItem('freshwax_cart', JSON.stringify(cart)); } catch (e: unknown) {}
+        try { localStorage.setItem('freshwax_cart', JSON.stringify(cart)); } catch (e) {}
         
         // Update cart count in header
         var cartCountEl = document.querySelector('.cart-count');

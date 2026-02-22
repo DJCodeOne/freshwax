@@ -118,7 +118,7 @@ try {
     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
   
-} catch (e: unknown) {
+} catch (e) {
   console.error('[Merch] Error fetching:', e);
 }
 

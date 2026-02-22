@@ -64,7 +64,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
           console.error('[analytics] D1 also failed:', d1Err);
         }
       }
-    } catch (e: unknown){
+    } catch (e){
       console.error('Error fetching ledger:', e);
     }
     return entries;
@@ -85,7 +85,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
         o.status !== 'cancelled' &&
         o.paymentMethod !== 'test_mode'
       );
-    } catch (e: unknown){
+    } catch (e){
       console.error('Error fetching orders:', e);
       return [];
     }
@@ -100,7 +100,7 @@ const [ledgerEntries, orders, releasesPriceMap] = await Promise.all([
           priceMap[r.id] = r.price ?? 0;
         }
       });
-    } catch (e: unknown){
+    } catch (e){
       console.error('Error fetching releases:', e);
     }
     return priceMap;
@@ -262,7 +262,7 @@ try {
     totalDownloads += mix.downloads || 0;
     totalLikes += mix.likes || 0;
   });
-} catch (e: unknown){
+} catch (e){
   console.error('Error fetching mixes:', e);
 }
 

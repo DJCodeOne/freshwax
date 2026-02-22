@@ -161,7 +161,7 @@ export const prerender = false;
       } else {
         pag.innerHTML = '';
       }
-    } catch (err: unknown) {
+    } catch (err) {
       errorList.innerHTML = `<p style="color: #dc2626; text-align: center; padding: 2rem;">Failed to load errors</p>`;
     }
   }

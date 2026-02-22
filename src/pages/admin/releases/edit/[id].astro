@@ -28,7 +28,7 @@ try {
   } else {
     errorMessage = 'Release not found';
   }
-} catch (error: unknown) {
+} catch (error) {
   console.error('[EDIT] Error loading release:', error);
   errorMessage = error instanceof Error ? error.message : 'Unknown error';
 }

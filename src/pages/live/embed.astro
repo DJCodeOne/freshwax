@@ -28,7 +28,7 @@ try {
     djName = currentStream.djName || 'Fresh Wax DJ';
     thumbnailUrl = currentStream.coverImage || currentStream.djAvatar || `${SITE_URL}/og-image.webp`;
   }
-} catch (e: unknown) {
+} catch (e) {
   console.error('Error fetching stream:', e);
 }
 

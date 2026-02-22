@@ -272,7 +272,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     let newSupplierCode = '';
 
     document.addEventListener('astro:page-load', async () => {
-      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e: unknown) { return; } }
+      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { return; } }
       loadSuppliers();
     });
 
@@ -287,7 +287,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           suppliers = data.suppliers || [];
           renderSuppliers();
         }
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error loading suppliers:', error);
         document.getElementById('suppliersList').innerHTML = 
           '<div style="padding: 40px; text-align: center; color: #666;">Error loading suppliers</div>';
@@ -438,7 +438,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         showToast('Supplier added successfully!', 'success');
         loadSuppliers();
         
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     });
@@ -499,7 +499,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         showToast('Supplier updated', 'success');
         closeEditModal();
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     });
@@ -518,7 +518,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         
         showToast('Supplier deactivated', 'success');
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     }
@@ -535,7 +535,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         
         showToast('Supplier activated', 'success');
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     }
@@ -557,7 +557,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         
         showToast('Supplier permanently deleted', 'success');
         loadSuppliers();
-      } catch (error: unknown) {
+      } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), 'error');
       }
     }

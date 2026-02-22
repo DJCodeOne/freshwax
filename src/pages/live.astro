@@ -1104,7 +1104,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           body: testData,
           mode: 'cors'
         });
-      } catch (e: unknown) {
+      } catch (e) {
         // Fallback if httpbin fails - estimate from download
       }
       
@@ -1138,7 +1138,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       }
       
       text.textContent = 'Test Again';
-    } catch (e: unknown) {
+    } catch (e) {
       text.textContent = 'Test Failed';
       downloadEl.textContent = '-- Mbps';
       uploadEl.textContent = '-- Mbps';
@@ -1389,7 +1389,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         if (likeCountEl) likeCountEl.textContent = currentCount;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('[Reaction] API error:', error);
       // Revert optimistic update on error
       if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -1473,7 +1473,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           if (result.success && result.totalLikes > 0 && likeCountEl) {
             likeCountEl.textContent = result.totalLikes;
           }
-        } catch (error: unknown) {
+        } catch (error) {
           console.error('[Like] Error:', error);
           // Revert optimistic update on error
           if (likeCountEl) likeCountEl.textContent = currentCount;
@@ -2128,7 +2128,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           text: getShareText(),
           url: getShareUrl()
         });
-      } catch (e: unknown) {
+      } catch (e) {
         // Share cancelled
       }
     }
@@ -2239,7 +2239,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         console.error('Shoutout send failed:', response.status);
       }
       // Shoutout will come back via Pusher to handleIncomingShoutout
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Shoutout error:', e);
     }
     
@@ -2300,7 +2300,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         sessionStorage.removeItem('fw_auth_cache');
       }
     }
-  } catch (e: unknown) { /* Ignore cache errors */ }
+  } catch (e) { /* Ignore cache errors */ }
 
   window.currentUserInfo = cachedAuth || { loggedIn: false, name: 'Anonymous', displayName: 'Anonymous', id: null };
 
@@ -2323,7 +2323,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         const checkAuth = async () => {
           let user = null;
           let cachedUid = null;
-          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e: unknown) {}
+          try { cachedUid = localStorage.getItem('fw_uid'); } catch (e) {}
 
           try {
             // First check if we already have a current user
@@ -2355,7 +2355,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
                 });
               }
             }
-          } catch (err: unknown) {
+          } catch (err) {
             console.error('[Live] Auth check error:', err);
           }
 
@@ -2427,7 +2427,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
     // Check localStorage for saved preference
     let metersHidden = false;
-    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e: unknown) {}
+    try { metersHidden = localStorage.getItem('fw_meters_hidden') === 'true'; } catch (e) {}
     if (metersHidden) {
       stereoMeters.classList.add('meters-hidden');
       toggleBtn.classList.add('meters-off');
@@ -2446,7 +2446,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       toggleBtn.classList.toggle('meters-off', isHidden);
       if (visibleIcon) visibleIcon.classList.toggle('hidden', isHidden);
       if (hiddenIcon) hiddenIcon.classList.toggle('hidden', !isHidden);
-      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e: unknown) {}
+      try { localStorage.setItem('fw_meters_hidden', isHidden ? 'true' : 'false'); } catch (e) {}
     });
   }
 

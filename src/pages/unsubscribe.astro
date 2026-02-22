@@ -107,7 +107,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         btn.disabled = false;
         btn.textContent = 'Unsubscribe';
       }
-    } catch (err: unknown) {
+    } catch (err) {
       message.textContent = 'An error occurred. Please try again.';
       message.className = 'mt-4 text-center text-red-500';
       message.classList.remove('hidden');

@@ -234,7 +234,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               x.open('POST', '/api/log-error/', true);
               x.setRequestHeader('Content-Type', 'application/json');
               x.send(JSON.stringify(batch[i]));
-            } catch (e: unknown) { console.warn('[Layout] Error report failed'); }
+            } catch (e) { console.warn('[Layout] Error report failed'); }
           }
           sending = false;
         }
@@ -472,12 +472,12 @@ const csrfToken = Astro.locals.csrfToken || '';
         // Helper to read consent state
         function getConsent() {
           var raw = null;
-          try { raw = localStorage.getItem('cookie-consent'); } catch (e: unknown) {}
+          try { raw = localStorage.getItem('cookie-consent'); } catch (e) {}
           if (!raw) return null;
           // Backward compat: old string values
           if (raw === 'accepted') return { necessary: true, analytics: true, marketing: true };
           if (raw === 'rejected') return { necessary: true, analytics: false, marketing: false };
-          try { return JSON.parse(raw); } catch (e: unknown) { return null; }
+          try { return JSON.parse(raw); } catch (e) { return null; }
         }
         // Helper to delete GA4 cookies
         function deleteAnalyticsCookies() {
@@ -493,7 +493,7 @@ const csrfToken = Astro.locals.csrfToken || '';
         // Helper to save and close
         function saveConsent(analytics, marketing, action) {
           var consent = { necessary: true, analytics: !!analytics, marketing: !!marketing, timestamp: new Date().toISOString() };
-          try { localStorage.setItem('cookie-consent', JSON.stringify(consent)); } catch (e: unknown) {}
+          try { localStorage.setItem('cookie-consent', JSON.stringify(consent)); } catch (e) {}
           var el = document.getElementById('cookie-consent');
           if (el) el.remove();
           if (consent.analytics) {
@@ -508,7 +508,7 @@ const csrfToken = Astro.locals.csrfToken || '';
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ necessary: true, analytics: !!analytics, marketing: !!marketing, action: action || 'save' })
             });
-          } catch (e: unknown) {}
+          } catch (e) {}
         }
         if (getConsent()) return;
         window.addEventListener('load', function() {
@@ -575,19 +575,19 @@ const csrfToken = Astro.locals.csrfToken || '';
           if (!deferredPrompt) return;
 
           // Don't show if dismissed this session
-          try { if (sessionStorage.getItem('pwa-dismiss-session')) return; } catch (e: unknown) {}
+          try { if (sessionStorage.getItem('pwa-dismiss-session')) return; } catch (e) {}
 
           // Don't show if dismissed within last 30 days
           try {
             var dismissedAt = localStorage.getItem('pwa-dismiss-until');
             if (dismissedAt && Date.now() < parseInt(dismissedAt, 10)) return;
-          } catch (e: unknown) {}
+          } catch (e) {}
 
           // Engagement gate: wait for either 2+ page views or 30s on site
           var pageViews = 1;
           try {
             pageViews = parseInt(sessionStorage.getItem('pwa-pageviews') || '1', 10);
-          } catch (e: unknown) {}
+          } catch (e) {}
 
           if (pageViews >= 2) {
             showBanner();
@@ -595,11 +595,11 @@ const csrfToken = Astro.locals.csrfToken || '';
             // Fall back to 30-second timer
             setTimeout(function() {
               // Re-check dismissal (user may have navigated and dismissed)
-              try { if (sessionStorage.getItem('pwa-dismiss-session')) return; } catch (e: unknown) {}
+              try { if (sessionStorage.getItem('pwa-dismiss-session')) return; } catch (e) {}
               try {
                 var d = localStorage.getItem('pwa-dismiss-until');
                 if (d && Date.now() < parseInt(d, 10)) return;
-              } catch (e: unknown) {}
+              } catch (e) {}
               if (deferredPrompt) showBanner();
             }, 30000);
           }
@@ -611,7 +611,7 @@ const csrfToken = Astro.locals.csrfToken || '';
             var views = parseInt(sessionStorage.getItem('pwa-pageviews') || '0', 10) + 1;
             sessionStorage.setItem('pwa-pageviews', String(views));
             if (views >= 2) maybeShowBanner();
-          } catch (e: unknown) {}
+          } catch (e) {}
         }
         trackPageView();
         document.addEventListener('astro:page-load', trackPageView);
@@ -655,15 +655,15 @@ const csrfToken = Astro.locals.csrfToken || '';
               removeBanner();
               if (result.outcome === 'accepted') {
                 // Don't show again — user installed
-                try { localStorage.setItem('pwa-dismiss-until', String(Date.now() + 365 * 24 * 60 * 60 * 1000)); } catch (e: unknown) {}
+                try { localStorage.setItem('pwa-dismiss-until', String(Date.now() + 365 * 24 * 60 * 60 * 1000)); } catch (e) {}
               }
             });
           }, { once: true });
 
           dismissBtn.addEventListener('click', function() {
             removeBanner();
-            try { sessionStorage.setItem('pwa-dismiss-session', '1'); } catch (e: unknown) {}
-            try { localStorage.setItem('pwa-dismiss-until', String(Date.now() + 30 * 24 * 60 * 60 * 1000)); } catch (e: unknown) {}
+            try { sessionStorage.setItem('pwa-dismiss-session', '1'); } catch (e) {}
+            try { localStorage.setItem('pwa-dismiss-until', String(Date.now() + 30 * 24 * 60 * 60 * 1000)); } catch (e) {}
           }, { once: true });
 
           // Trap focus within banner for a11y when tabbing

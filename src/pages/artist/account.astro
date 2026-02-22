@@ -82,7 +82,7 @@ if (partnerId) {
           if (customerData) {
             partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
           }
-        } catch (e: unknown) {
+        } catch (e) {
           // Ignore errors fetching customer avatar
         }
       }
@@ -447,7 +447,7 @@ if (partnerId) {
         });
       }
     }
-  } catch (e: unknown) {
+  } catch (e) {
     console.error('Error fetching account data:', e);
   }
 }
@@ -2802,7 +2802,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       } else {
         alert(result.error || 'Failed to save');
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Error:', e);
       alert('Failed to save. Please try again.');
     }
@@ -2888,7 +2888,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         stripeConnectBtn.textContent = 'Connect with Stripe';
         stripeConnectBtn.disabled = false;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Stripe Connect error:', e);
       alert('Failed to connect with Stripe. Please try again.');
       stripeConnectBtn.textContent = 'Connect with Stripe';
@@ -2918,7 +2918,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         stripeContinueBtn.textContent = 'Continue Setup →';
         stripeContinueBtn.disabled = false;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Stripe Continue error:', e);
       alert('Failed to continue setup. Please try again.');
       stripeContinueBtn.textContent = 'Continue Setup →';
@@ -3006,7 +3006,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         paypalLinkBtn.textContent = 'Link PayPal';
         paypalLinkBtn.disabled = false;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('PayPal link error:', e);
       alert('Failed to link PayPal. Please try again.');
       paypalLinkBtn.textContent = 'Link PayPal';
@@ -3082,7 +3082,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           btn.textContent = 'Set as Preferred';
           btn.disabled = false;
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Set payout method error:', e);
         alert('Failed to update. Please try again.');
         btn.textContent = 'Set as Preferred';
@@ -3124,7 +3124,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         saveArtistMethodBtn.textContent = 'Save Preference';
         saveArtistMethodBtn.disabled = false;
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Set payout method error:', e);
       alert('Failed to update. Please try again.');
       saveArtistMethodBtn.textContent = 'Save Preference';
@@ -3160,7 +3160,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Error:', e);
       alert('Failed to download data. Please try again.');
     }
@@ -3211,7 +3211,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         shippingStatus.textContent = result.error || 'Failed to save';
         shippingStatus.className = 'save-status error';
       }
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Save shipping error:', e);
       shippingStatus.textContent = 'Failed to save';
       shippingStatus.className = 'save-status error';

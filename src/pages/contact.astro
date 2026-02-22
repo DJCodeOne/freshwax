@@ -565,7 +565,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
         } else {
           throw new Error(result.error || 'Failed to send message');
         }
-      } catch (err: unknown) {
+      } catch (err) {
         console.error('[Contact] Form error:', err);
         // Fallback: open mailto link
         const subjectLine = isReport

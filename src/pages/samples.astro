@@ -562,7 +562,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           message.textContent = data.error || 'Failed to subscribe. Please try again.';
           message.className = 'notify-message error';
         }
-      } catch (err: unknown) {
+      } catch (err) {
         message.textContent = 'An error occurred. Please try again.';
         message.className = 'notify-message error';
       } finally {

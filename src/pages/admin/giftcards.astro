@@ -287,7 +287,7 @@ export const prerender = false;
         document.getElementById('usersWithCredit').textContent = credits.totalUsersWithCredit;
         document.getElementById('totalSpent').textContent = `£${credits.totalCreditSpent.toFixed(2)}`;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading analytics:', error);
     }
   }
@@ -321,7 +321,7 @@ export const prerender = false;
       } else {
         tbody.innerHTML = '<tr><td colspan="6" class="loading">No user balances found</td></tr>';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading balances:', error);
       tbody.innerHTML = '<tr><td colspan="6" class="loading">Error loading data</td></tr>';
     }
@@ -345,7 +345,7 @@ export const prerender = false;
       } else {
         tbody.innerHTML = '<tr><td colspan="9" class="loading">No gift cards found</td></tr>';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error loading cards:', error);
       tbody.innerHTML = '<tr><td colspan="9" class="loading">Error loading data</td></tr>';
     }
@@ -501,7 +501,7 @@ export const prerender = false;
       } else {
         alert(result.error || 'Failed to create card');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       alert('Failed to create card');
     }
@@ -545,7 +545,7 @@ export const prerender = false;
       } else {
         alert(result.error || 'Failed to adjust balance');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       alert('Failed to adjust balance');
     }
@@ -588,7 +588,7 @@ export const prerender = false;
       } else {
         alert(result.error || 'Failed to cancel card');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       alert('Failed to cancel card');
     }
@@ -616,7 +616,7 @@ export const prerender = false;
       } else {
         alert(result.error || 'Failed to reactivate card');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       alert('Failed to reactivate card');
     }
@@ -771,7 +771,7 @@ export const prerender = false;
         resultEl.classList.remove('hidden');
         document.getElementById('resendResultText').innerHTML = `❌ ${result.error || 'Failed to send email'}`;
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       document.getElementById('resendResultText').innerHTML = '❌ Failed to send email';
       document.getElementById('resendResult').classList.remove('hidden');
@@ -826,7 +826,7 @@ export const prerender = false;
       } else {
         body.innerHTML = 'No data found for this user';
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Error:', error);
       body.innerHTML = 'Error loading data';
     }

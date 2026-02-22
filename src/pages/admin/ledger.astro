@@ -161,7 +161,7 @@ try {
 
   // Calculate current PayPal balance
   paypalBalance.currentBalance = paypalBalance.actualNet - paypalBalance.artistPayouts - paypalBalance.payoutFees;
-} catch (e: unknown){
+} catch (e){
   console.error('Error fetching ledger:', e);
 }
 
@@ -513,7 +513,7 @@ const formatDate = (dateStr: string) => {
         } else {
           alert('Migration failed: ' + (data.error || 'Unknown error'));
         }
-      } catch (err: unknown) {
+      } catch (err) {
         alert('Migration error: ' + (err instanceof Error ? err.message : 'Unknown'));
       } finally {
         btn.disabled = false;
@@ -550,7 +550,7 @@ const formatDate = (dateStr: string) => {
       });
       const data = await response.json();
       return data.success && data.isAdmin;
-    } catch (e: unknown){
+    } catch (e){
       console.error('Error checking admin:', e);
     }
     return false;

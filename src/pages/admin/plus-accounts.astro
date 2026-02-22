@@ -44,7 +44,7 @@ try {
     return dateB - dateA;
   });
 
-} catch (error: unknown) {
+} catch (error) {
   console.error('[Plus Accounts] Error fetching data:', error);
 }
 
@@ -693,7 +693,7 @@ function formatDate(dateStr: string): string {
       } else {
         alert('Failed to extend: ' + result.error);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       alert('Error extending subscription');
     } finally {
       btn.disabled = false;

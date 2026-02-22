@@ -129,7 +129,7 @@ if (partnerId) {
 
       summary.stripeConnected = !!partner.stripeConnectId && partner.stripeConnectStatus === 'active';
     }
-  } catch (e: unknown) {
+  } catch (e) {
     console.error('Error fetching payout data:', e);
   }
 }

@@ -436,7 +436,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Initialize
     document.addEventListener('astro:page-load', async () => {
-      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e: unknown) { return; } }
+      if (window.getAdminToken) { try { await window.getAdminToken(); } catch (e) { return; } }
       loadSuppliers();
       setupEventListeners();
       updateTypeVisibility();
@@ -1130,7 +1130,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             }
           });
         }
-      } catch (e: unknown) {
+      } catch (e) {
         console.error('Failed to load suppliers:', e);
       }
     }
@@ -1229,7 +1229,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           window.location.href = '/admin/inventory/';
         }, 1500);
         
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Upload error:', error);
         showToast(error instanceof Error ? error.message : String(error), 'error');
         submitBtn.disabled = false;

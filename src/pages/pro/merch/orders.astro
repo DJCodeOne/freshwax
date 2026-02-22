@@ -347,7 +347,7 @@ import ProDashboardLayout from '../../../layouts/ProDashboardLayout.astro';
         document.getElementById('totalRevenue').textContent = '£' + revenue.toFixed(2);
 
         renderOrders();
-      } catch (error: unknown) {
+      } catch (error) {
         console.error('Error loading orders:', error);
         ordersList.innerHTML = '<div class="loading">Error loading orders</div>';
       }

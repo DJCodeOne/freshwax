@@ -28,7 +28,7 @@ try {
       error = 'Order not found';
     }
   }
-} catch (e: unknown) {
+} catch (e) {
   console.error('Error fetching order:', e);
   error = 'Failed to load order';
 }
@@ -166,7 +166,7 @@ const enrichedItems = await Promise.all((order?.items || []).map(async (item: Re
       };
     } else {
     }
-  } catch (e: unknown) {
+  } catch (e) {
     console.error('[order-confirmation] Error fetching release:', releaseId, e);
   }
   
@@ -1424,7 +1424,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
       localStorage.removeItem('cart');
       window.dispatchEvent(new CustomEvent('cartUpdated', { detail: { items: [] } }));
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('[order-confirmation] Error clearing cart:', e);
     }
   })();
@@ -1464,7 +1464,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         button.classList.remove('downloading');
       }, 2000);
       
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Download error:', error);
       button.innerHTML = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Error`;
       
@@ -1497,7 +1497,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     let tracks: { name: string; mp3Url?: string; wavUrl?: string }[] = [];
     try {
       tracks = JSON.parse(button.dataset.tracks || '[]');
-    } catch (e: unknown) {
+    } catch (e) {
       console.error('Failed to parse tracks:', e);
     }
 
@@ -1621,7 +1621,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           listItem.textContent = `✓ ${file.label}`;
           listItem.className = 'zip-file-item success';
           successCount++;
-        } catch (err: unknown) {
+        } catch (err) {
           if (err instanceof Error && err.name === 'AbortError') throw new Error('Download cancelled');
           console.error(`Failed to download ${file.label}:`, err instanceof Error ? err.message : String(err));
           listItem.textContent = `✗ ${file.label} - Failed`;
@@ -1678,7 +1678,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         button.classList.remove('downloading');
       }, 2000);
 
-    } catch (error: unknown) {
+    } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       console.error('ZIP download error:', errorMsg);
 

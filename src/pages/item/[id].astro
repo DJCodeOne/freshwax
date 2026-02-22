@@ -34,7 +34,7 @@ try {
             artistBio = bio;
           }
         }
-      } catch (err: unknown) {
+      } catch (err) {
         // Could not fetch artist bio - non-fatal
       }
     }
@@ -43,7 +43,7 @@ try {
   } else {
     error = 'Release not found';
   }
-} catch (err: unknown) {
+} catch (err) {
   console.error('[ITEM PAGE] Fetch error:', err);
   error = 'Failed to load release';
 }

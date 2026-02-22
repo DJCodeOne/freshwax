@@ -273,7 +273,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         try {
           const processed = await processImage(file, mainSize, thumbSize, quality);
           processedImages.push(processed);
-        } catch (err: unknown) {
+        } catch (err) {
           processedImages.push({
             originalName: file.name,
             error: err instanceof Error ? err.message : String(err)
@@ -475,7 +475,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           } else {
             throw new Error(data.error || 'Upload failed');
           }
-        } catch (err: unknown) {
+        } catch (err) {
           badge.textContent = 'Error';
           badge.className = 'status-badge error';
           console.error('Upload error:', err);

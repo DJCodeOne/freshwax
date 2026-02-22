@@ -72,7 +72,7 @@ if (serviceAccountKey) {
     if (manualPendingPayouts.length > 0) {
       console.debug('[payments] Pending payout orderIds:', manualPendingPayouts.map(p => p.orderId).join(', '));
     }
-  } catch (err: unknown) {
+  } catch (err) {
     console.error('[payments] Error fetching manualPendingPayouts:', err);
   }
 } else {
@@ -88,7 +88,7 @@ if (serviceAccountKey) {
       limit: 100
     });
     console.debug('[payments] Found', pendingSupplierPayouts.length, 'pending supplier payouts');
-  } catch (err: unknown) {
+  } catch (err) {
     // Collection might not exist yet
     console.debug('[payments] No pending supplier payouts collection');
   }
@@ -102,7 +102,7 @@ if (serviceAccountKey) {
       limit: 100
     });
     console.debug('[payments] Found', pendingSellerPayouts.length, 'pending seller payouts');
-  } catch (err: unknown) {
+  } catch (err) {
     // Collection might not exist yet
     console.debug('[payments] No pending seller payouts collection');
   }
@@ -216,7 +216,7 @@ try {
     orderBy: { field: 'createdAt', direction: 'DESCENDING' },
     limit: 100
   });
-} catch (err: unknown) {
+} catch (err) {
   console.error('[payments] Error fetching payouts:', err);
 }
 

@@ -200,7 +200,7 @@ export const prerender = false;
       loading?.classList.add('hidden');
 
       filterAndRenderPosts();
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Failed to load posts:', error);
       if (loading) loading.innerHTML = '<p class="text-red-400">Failed to load posts</p>';
     }
@@ -352,7 +352,7 @@ export const prerender = false;
       filterAndRenderPosts();
 
       document.getElementById('delete-modal')?.classList.add('hidden');
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Delete failed:', error);
       alert('Failed to delete post');
     } finally {

@@ -51,7 +51,7 @@ try {
   // Sort by engagement score descending
   mixes.sort((a, b) => (b.engagementScore as number) - (a.engagementScore as number));
 
-} catch (e: unknown) {
+} catch (e) {
   console.error('Error fetching mixes:', e);
 }
 
