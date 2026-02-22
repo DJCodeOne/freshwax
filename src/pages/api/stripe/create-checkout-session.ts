@@ -216,7 +216,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Prepare metadata - store order data for webhook
     // Stripe metadata has 500 char limit per value, so we'll compress
     // IMPORTANT: Use validated values, not client-submitted values
-    const metadata = {
+    const metadata: Record<string, string> = {
       customer_email: orderData.customer.email,
       customer_firstName: orderData.customer.firstName,
       customer_lastName: orderData.customer.lastName,
@@ -256,7 +256,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // If items fit in metadata, store directly; otherwise store in Firestore
     if (itemsJson.length <= 500) {
-      (metadata as any).items_json = itemsJson;
+      metadata['items_json'] = itemsJson;
     } else {
       // Items too large for metadata - store in Firestore pendingCheckouts collection
       log.info('[Stripe] Items JSON too large (' + itemsJson.length + ' chars), storing in Firestore');
@@ -290,7 +290,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         };
 
         const docRef = await addDocument('pendingCheckouts', pendingCheckout);
-        (metadata as any).pending_checkout_id = docRef.id;
+        metadata['pending_checkout_id'] = docRef.id;
         log.info('[Stripe] Stored pending checkout:', docRef.id);
       } catch (pendingErr: unknown) {
         log.error('[Stripe] Failed to store pending checkout:', pendingErr);

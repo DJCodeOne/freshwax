@@ -1824,7 +1824,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         details.innerHTML = `
           <div class="detail-row">
             <span class="detail-label">DJ Name</span>
-            <span class="detail-value">${booking.djName}</span>
+            <span class="detail-value">${escapeHtml(booking.djName)}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Date</span>
@@ -1840,11 +1840,11 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
           </div>
           <div class="detail-row">
             <span class="detail-label">Status</span>
-            <span class="detail-value">${booking.status}</span>
+            <span class="detail-value">${escapeHtml(booking.status)}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">DJ ID</span>
-            <span class="detail-value" style="font-size: 0.75rem; font-family: monospace;">${booking.djId || 'N/A'}</span>
+            <span class="detail-value" style="font-size: 0.75rem; font-family: monospace;">${escapeHtml(booking.djId) || 'N/A'}</span>
           </div>
         `;
       }
@@ -1930,12 +1930,12 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       }
 
       list.innerHTML = currentAllowances.map(a => `
-        <div class="allowance-item" data-dj-id="${a.djId}">
+        <div class="allowance-item" data-dj-id="${escapeHtml(a.djId)}">
           <div class="allowance-info">
-            <div class="allowance-dj">${a.djName || a.djId}</div>
-            <div class="allowance-details">${a.maxHoursPerDay || 2}h/day • ${a.weeklySlots || 1} slots/week${a.reason ? ` • ${a.reason}` : ''}</div>
+            <div class="allowance-dj">${escapeHtml(a.djName) || escapeHtml(a.djId)}</div>
+            <div class="allowance-details">${a.maxHoursPerDay || 2}h/day • ${a.weeklySlots || 1} slots/week${a.reason ? ` • ${escapeHtml(a.reason)}` : ''}</div>
           </div>
-          <button type="button" class="remove-allowance" data-action="removeAllowance" data-dj-id="${a.djId}">×</button>
+          <button type="button" class="remove-allowance" data-action="removeAllowance" data-dj-id="${escapeHtml(a.djId)}">×</button>
         </div>
       `).join('');
     }

@@ -1733,7 +1733,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Handle refund - reverse artist transfers proportionally
     if (event.type === 'charge.refunded') {
-      const charge = event.data.object as any;
+      const charge = event.data.object as Stripe.Charge;
       logger.info('[Stripe Webhook] Refund processed:', charge.id, charge.amount_refunded / 100);
 
       await handleRefund(charge, stripeSecretKey, env);

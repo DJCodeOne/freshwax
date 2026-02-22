@@ -317,8 +317,8 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
 
         if (data.gifs?.length > 0) {
           gifResults.innerHTML = data.gifs.map(gif => `
-            <div class="gif-result-item" data-url="${gif.url}" data-id="${gif.id}">
-              <img src="${gif.preview}" alt="${gif.title}" loading="lazy" />
+            <div class="gif-result-item" data-url="${escapeHtml(gif.url)}" data-id="${escapeHtml(gif.id)}">
+              <img src="${escapeHtml(gif.preview)}" alt="${escapeHtml(gif.title)}" loading="lazy" />
             </div>
           `).join('');
 

@@ -9,7 +9,7 @@ import { setDocument } from '../../lib/firebase-rest';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
-import { errorResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
+import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../lib/api-utils';
 
 const log = createLogger('upload-avatar');
 

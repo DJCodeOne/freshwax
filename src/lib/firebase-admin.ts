@@ -131,7 +131,7 @@ export const adminDb = new Proxy({} as Firestore, {
       }
       return null;
     }
-    const value = (_db as any)[prop];
+    const value = (_db as Record<string, unknown>)[prop as string];
     if (typeof value === 'function') {
       return value.bind(_db);
     }
@@ -146,6 +146,6 @@ export const FieldValue = new Proxy({} as typeof FVType, {
       log.warn('[firebase-admin] FieldValue accessed before initialization');
       return undefined;
     }
-    return (_FieldValue as any)[prop];
+    return (_FieldValue as Record<string, unknown>)[prop as string];
   }
 });

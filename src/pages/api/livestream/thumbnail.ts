@@ -68,12 +68,24 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 function redirectToImage(imageUrl: string): Response {
-  // If it's a relative URL, make it absolute
-  const fullUrl = imageUrl.startsWith('http')
-    ? imageUrl
-    : `${SITE_URL}${imageUrl}`;
+  let fullUrl: string;
+  if (imageUrl.startsWith('http')) {
+    // Validate redirect target — prevent open redirect
+    try {
+      const parsed = new URL(imageUrl);
+      const allowed = ['freshwax.co.uk', 'cdn.freshwax.co.uk', 'storage.googleapis.com'];
+      if (allowed.some(d => parsed.hostname === d || parsed.hostname.endsWith('.' + d))) {
+        fullUrl = imageUrl;
+      } else {
+        fullUrl = `${SITE_URL}/og-image.webp`;
+      }
+    } catch {
+      fullUrl = `${SITE_URL}/og-image.webp`;
+    }
+  } else {
+    fullUrl = `${SITE_URL}${imageUrl}`;
+  }
 
-  // Use 302 redirect so crawlers always get fresh content
   return new Response(null, {
     status: 302,
     headers: {
