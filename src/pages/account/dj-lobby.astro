@@ -42,8 +42,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- HLS.js for video playback -->
-  <script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 
   <!-- Configuration - must be set before scripts load -->
   <script define:vars={{ pusherConfig, hlsBaseUrl, firebaseConfig }} nonce={nonce}>
@@ -9302,5 +9300,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   });
 </script>
+
+<!-- HLS.js for video playback - loaded at end to prevent render blocking -->
+<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
 </body>
 </html>

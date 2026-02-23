@@ -55,11 +55,9 @@
   @keyframes fadeInUp {
     from {
       opacity: 0;
-      transform: translateY(33px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
 
@@ -252,7 +250,7 @@
     letter-spacing: 0.05em;
     text-decoration: none;
     box-shadow: 0 11px 16.5px -3.3px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s;
+    transition: transform 0.3s, background 0.3s, box-shadow 0.3s;
     border: 2px solid rgba(255, 255, 255, 0.2);
     white-space: nowrap;
   }
@@ -376,7 +374,7 @@
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     text-align: left;
   }
 
@@ -478,7 +476,7 @@
     font-weight: 600;
     font-family: var(--font-body);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     white-space: nowrap;
   }
 
@@ -543,7 +541,7 @@
     border-radius: 0.75rem;
     overflow: hidden;
     border: 2px solid rgba(255, 255, 255, 0.15);
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
     animation: fadeInUp 0.6s ease-out backwards;
     position: relative;
     display: flex;
@@ -810,7 +808,7 @@
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     border: 1px solid #4b5563;
     cursor: pointer;
     text-decoration: none;
@@ -1072,7 +1070,7 @@
     z-index: 1000;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(245, 158, 11, 0.2);
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
   }
 
   .floating-chart.hidden {
@@ -1209,7 +1207,7 @@
     cursor: pointer;
     z-index: 999;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
   }
 
   .chart-toggle-btn:hover {
@@ -1265,7 +1263,7 @@
     cursor: pointer;
     z-index: 999;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, transform 0.3s ease, border-radius 0.3s ease;
   }
 
   /* Chart Toggle Button - Desktop (768px+) */
@@ -1293,7 +1291,7 @@
     font-size: 0.65rem;
     letter-spacing: 0.05em;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.3s ease, transform 0.3s ease, border-radius 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     writing-mode: vertical-rl;
     text-orientation: mixed;
@@ -1330,7 +1328,7 @@
     box-shadow: -5px 0 30px rgba(0, 0, 0, 0.5);
     transform: translateX(100%);
     opacity: 0;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
   }
   
@@ -1393,7 +1391,7 @@
     background: rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
     text-decoration: none;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease;
   }
   
   .chart-item:hover {

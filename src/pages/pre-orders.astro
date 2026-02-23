@@ -119,11 +119,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               
               <!-- Artwork -->
               <a href={`/item/${release.id}`} class="artwork-link">
-                <img 
-                  src={release.coverArtUrl || '/place-holder.webp'} 
+                <img
+                  src={release.coverArtUrl || '/place-holder.webp'}
                   alt={`${release.releaseName} by ${release.artistName}`}
                   class="artwork"
                   loading="lazy"
+                  decoding="async"
                 />
                 <div class="artwork-overlay">
                   <span class="view-text">View Details</span>

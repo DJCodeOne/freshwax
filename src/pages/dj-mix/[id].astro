@@ -311,10 +311,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             <!-- Artwork Column - Bottom Right -->
             <div class="order-2 lg:order-2 flex flex-col items-center lg:items-end lg:justify-end lg:self-end flex-shrink-0">
               <!-- Artwork -->
-              <img 
-                src={artwork_url} 
+              <img
+                src={artwork_url}
                 alt={`${title} by ${dj_name}`}
                 class="w-full max-w-[280px] sm:max-w-[320px] lg:w-72 xl:w-80 mx-auto lg:mx-0 border-2 sm:border-4 border-white shadow-2xl"
+                width="400"
+                height="400"
+                loading="eager"
+                decoding="async"
+                fetchpriority="high"
               />
             </div>
           </div>
@@ -439,7 +444,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                       <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">
                           {comment.avatarUrl ? (
-                            <img src={comment.avatarUrl} alt="" class="w-full h-full object-cover" data-fallback="show-next" data-fallback-display="block" />
+                            <img src={comment.avatarUrl} alt="" class="w-full h-full object-cover" width="40" height="40" loading="lazy" decoding="async" data-fallback="show-next" data-fallback-display="block" />
                             <span class="text-white font-bold text-base" style="display:none;">
                               {(comment.userName || 'A').charAt(0).toUpperCase()}
                             </span>
@@ -527,7 +532,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         <!-- Mix Preview Card -->
         <div class="p-4">
           <div class="flex gap-4 p-3 bg-white/5 rounded-xl border border-white/10 mb-5">
-            <img id="share-modal-artwork" src="/place-holder.webp" alt="Mix artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" />
+            <img id="share-modal-artwork" src="/place-holder.webp" alt="Mix artwork" class="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover border-2 border-white/20 shadow-lg" width="96" height="96" loading="lazy" decoding="async" />
             <div class="flex-1 min-w-0">
               <div class="text-base sm:text-lg font-bold text-white break-words line-clamp-2" id="share-modal-title"></div>
               <div class="text-sm text-gray-300 mt-1">by <span class="font-semibold text-red-400" id="share-modal-dj"></span></div>

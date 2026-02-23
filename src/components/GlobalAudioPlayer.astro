@@ -365,6 +365,10 @@ const { nonce = '' } = Astro.props;
     }
     
     function stopSpectrum() {
+      if (spectrumAnimationId) {
+        cancelAnimationFrame(spectrumAnimationId);
+        spectrumAnimationId = null;
+      }
       var miniPlayer = document.getElementById('mini-player');
       if (miniPlayer) miniPlayer.classList.remove('playing');
     }
