@@ -4,6 +4,7 @@
 // Architecture: D1 (primary read) + Firebase (backup)
 
 import { createLogger } from './api-utils';
+import { formatPrice } from './format-utils';
 import { addDocument, queryCollection } from './firebase-rest';
 import { d1InsertLedgerEntry, d1GetLedgerEntries, d1GetLedgerTotals } from './d1-catalog';
 
@@ -203,7 +204,7 @@ export async function recordSale(params: {
       log.info('D1 not available, Firebase-only write');
     }
 
-    log.info(`Recorded sale: ${params.orderNumber} - £${params.grossTotal.toFixed(2)}`);
+    log.info(`Recorded sale: ${params.orderNumber} - ${formatPrice(params.grossTotal)}`);
 
     return { success: true, ledgerId };
   } catch (error: unknown) {
@@ -471,14 +472,14 @@ export async function recordMultiSellerSale(params: {
         }
       }
 
-      log.info(`Recorded sale for seller ${sellerId}: ${params.orderNumber} - £${sellerSubtotal.toFixed(2)} (net: £${sellerNetRevenue.toFixed(2)})`);
+      log.info(`Recorded sale for seller ${sellerId}: ${params.orderNumber} - ${formatPrice(sellerSubtotal)} (net: ${formatPrice(sellerNetRevenue)})`);
     }
 
     // Handle items with unknown seller (platform keeps this revenue)
     if (unknownSellerItems.length > 0) {
       const unknownSubtotal = unknownSellerItems.reduce((sum, item) =>
         sum + (item.price * (item.quantity || 1)), 0);
-      log.info(`${unknownSellerItems.length} items with unknown seller (£${unknownSubtotal.toFixed(2)}) - platform revenue`);
+      log.info(`${unknownSellerItems.length} items with unknown seller (${formatPrice(unknownSubtotal)}) - platform revenue`);
     }
 
     return { success: true, ledgerIds };

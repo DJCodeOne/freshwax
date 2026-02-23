@@ -8,6 +8,7 @@ import { d1UpsertMerch } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { generateOrderNumber } from '../../lib/order-utils';
 import { SITE_URL } from '../../lib/constants';
+import { formatPrice } from '../../lib/format-utils';
 import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger } from '../../lib/api-utils';
 
 // Zod schemas for order creation
@@ -1139,13 +1140,13 @@ function buildOrderConfirmationEmail(orderId: string, orderNumber: string, order
 
     // Totals - red dividing line above
     '<tr><td style="padding-top: 16px; border-top: 2px solid #dc2626;"><table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Subtotal</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">£' + order.totals.subtotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Subtotal</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">' + formatPrice(order.totals.subtotal) + '</td></tr>' +
     '<tr><td style="color: #6b7280; padding: 8px 0; font-size: 14px;">Shipping</td><td style="color: #111; text-align: right; padding: 8px 0; font-size: 14px;">' +
-    (order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : '£' + order.totals.shipping.toFixed(2)) : 'Digital delivery') + '</td></tr>' +
-    (order.totals.serviceFees ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;">Service Fee</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">£' + order.totals.serviceFees.toFixed(2) + '</td></tr>' : '') +
+    (order.hasPhysicalItems ? (order.totals.shipping === 0 ? 'FREE' : formatPrice(order.totals.shipping)) : 'Digital delivery') + '</td></tr>' +
+    (order.totals.serviceFees ? '<tr><td style="color: #9ca3af; padding: 8px 0; font-size: 13px;">Service Fee</td><td style="color: #9ca3af; text-align: right; padding: 8px 0; font-size: 13px;">' + formatPrice(order.totals.serviceFees) + '</td></tr>' : '') +
     '<tr><td colspan="2" style="border-top: 2px solid #dc2626; padding-top: 12px;"></td></tr>' +
     '<tr><td style="color: #111; font-weight: 700; font-size: 16px; padding: 4px 0;">Total</td>' +
-    '<td style="color: #dc2626; font-weight: 700; font-size: 20px; text-align: right; padding: 4px 0;">£' + order.totals.total.toFixed(2) + '</td></tr>' +
+    '<td style="color: #dc2626; font-weight: 700; font-size: 20px; text-align: right; padding: 4px 0;">' + formatPrice(order.totals.total) + '</td></tr>' +
     '</table></td></tr>' +
 
     // Spacing
@@ -1221,11 +1222,11 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     '<div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid ' + paymentStatusColor + ';">' +
     '<div style="font-weight: 700; font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 4px 0; color: #111; font-size: 14px; font-weight: 700;">Your Payment:</td><td style="padding: 4px 0; text-align: right; color: #16a34a; font-size: 14px; font-weight: 700;">£' + artistPayment.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #111; font-size: 14px; font-weight: 700;">Your Payment:</td><td style="padding: 4px 0; text-align: right; color: #16a34a; font-size: 14px; font-weight: 700;">' + formatPrice(artistPayment) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 4px 0 4px 0; border-top: 1px dashed #ccc;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Stripe Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Fresh Wax 1% (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">£' + customerPaid.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Stripe Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">' + formatPrice(stripeFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #9ca3af; font-size: 12px;">Fresh Wax 1% (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #9ca3af; font-size: 12px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #666; font-size: 13px;">Customer Paid:</td><td style="padding: 4px 0; text-align: right; color: #111; font-size: 13px;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table></div>' +
 
     (isTestMode ? '<div style="margin-top: 12px; padding: 8px; background: #fef3c7; border-radius: 4px; font-size: 12px; color: #92400e;">⚠️ This is a test order - no real payment was processed</div>' : '') +
@@ -1287,7 +1288,7 @@ function buildStockistFulfillmentEmail(orderId: string, orderNumber: string, ord
     itemsHtml +
     '<tr style="background: #000;">' +
     '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Total Vinyl Value</td>' +
-    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + vinylTotal.toFixed(2) + '</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">' + formatPrice(vinylTotal) + '</td>' +
     '</tr>' +
     '</table>' +
     '</td></tr>' +
@@ -1377,7 +1378,7 @@ function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknow
     itemsHtml +
     '<tr style="background: #dc2626;">' +
     '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
-    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + digitalTotal.toFixed(2) + '</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">' + formatPrice(digitalTotal) + '</td>' +
     '</tr>' +
     '</table>' +
     '</td></tr>' +
@@ -1387,12 +1388,12 @@ function buildDigitalSaleEmail(orderNumber: string, order: Record<string, unknow
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + digitalTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(digitalTotal) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(stripeFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">£' + customerPaid.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table>' +
     '</div>' +
     '</td></tr>' +
@@ -1472,7 +1473,7 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
     itemsHtml +
     '<tr style="background: #dc2626;">' +
     '<td colspan="2" style="padding: 12px; color: #fff; font-weight: 700;">Your Earnings</td>' +
-    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">£' + merchTotal.toFixed(2) + '</td>' +
+    '<td style="padding: 12px; color: #fff; font-weight: 700; text-align: right;">' + formatPrice(merchTotal) + '</td>' +
     '</tr>' +
     '</table>' +
     '</td></tr>' +
@@ -1482,12 +1483,12 @@ function buildMerchSaleEmail(orderNumber: string, order: Record<string, unknown>
     '<div style="padding: 16px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">' +
     '<div style="font-weight: 700; font-size: 12px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Payment Breakdown</div>' +
     '<table cellpadding="0" cellspacing="0" border="0" width="100%">' +
-    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">£' + merchTotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #16a34a; font-size: 15px; font-weight: 700;">Your Payment:</td><td style="padding: 6px 0; text-align: right; color: #16a34a; font-size: 15px; font-weight: 700;">' + formatPrice(merchTotal) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + stripeFee.toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">£' + freshWaxFee.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;">Processing Fee (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(stripeFee) + '</td></tr>' +
+    '<tr><td style="padding: 4px 0; color: #6b7280; font-size: 13px;"><span style="color: #fff;">Fresh</span> <span style="color: #dc2626;">Wax</span> Tax (paid by customer):</td><td style="padding: 4px 0; text-align: right; color: #6b7280; font-size: 13px;">' + formatPrice(freshWaxFee) + '</td></tr>' +
     '<tr><td colspan="2" style="padding: 8px 0; border-top: 1px dashed #374151;"></td></tr>' +
-    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">£' + customerPaid.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding: 6px 0; color: #fff; font-size: 15px; font-weight: 700;">Customer Paid:</td><td style="padding: 6px 0; text-align: right; color: #fff; font-size: 15px; font-weight: 700;">' + formatPrice(customerPaid) + '</td></tr>' +
     '</table>' +
     '</div>' +
     '</td></tr>' +

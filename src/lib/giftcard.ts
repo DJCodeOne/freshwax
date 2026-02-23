@@ -2,6 +2,7 @@
 // Gift Card System - Generate, validate, and redeem gift cards
 
 import { escapeHtml, fetchWithTimeout, createLogger } from './api-utils';
+import { formatPrice } from './format-utils';
 
 const log = createLogger('[giftcard]');
 import { SITE_URL } from './constants';
@@ -57,10 +58,9 @@ export function isValidCodeFormat(code: string): boolean {
 
 /**
  * Format currency for UK display
+ * @deprecated Use formatPrice from '../lib/format-utils' directly
  */
-export function formatGBP(amount: number): string {
-  return `£${amount.toFixed(2)}`;
-}
+export const formatGBP = formatPrice;
 
 /**
  * Gift card types

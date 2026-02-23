@@ -11,6 +11,7 @@ import { generateOrderNumber, getShortOrderNumber } from '../../../lib/order-uti
 import { createPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
+import { formatPrice } from '../../../lib/format-utils';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 const log = createLogger('[create-manual-order]');
 
@@ -274,7 +275,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   subject: `🎵 Digital Sale! ${orderNumber}`,
                   html: `<h2>Someone bought your music!</h2>
                     <p><strong>${item.name}</strong></p>
-                    <p>Price: £${item.price.toFixed(2)}</p>
+                    <p>Price: ${formatPrice(item.price)}</p>
                     <p>Order: ${orderNumber}</p>
                     <p>Customer: ${order.customer.firstName} ${order.customer.lastName}</p>
                     <br><p>Payment will be processed to your configured payout method.</p>
@@ -449,7 +450,7 @@ function buildOrderEmail(orderId: string, orderNumber: string, order: Record<str
   for (const item of order.items) {
     itemsHtml += `<tr>
       <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.name}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">£${(item.price * item.quantity).toFixed(2)}</td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">${formatPrice(item.price * item.quantity)}</td>
     </tr>`;
   }
 
@@ -475,7 +476,7 @@ function buildOrderEmail(orderId: string, orderNumber: string, order: Record<str
         ${itemsHtml}
         <tr style="background: #000; color: white;">
           <td style="padding: 12px; font-weight: bold;">Total</td>
-          <td style="padding: 12px; text-align: right; font-weight: bold;">£${order.totals.total.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: right; font-weight: bold;">${formatPrice(order.totals.total)}</td>
         </tr>
       </table>
       <div style="margin-top: 24px; padding: 16px; background: #dcfce7; border-radius: 8px;">

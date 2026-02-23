@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, queryCollection } from '../../../lib/firebase-rest';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
+import { formatPrice } from '../../../lib/format-utils';
 
 const log = createLogger('admin/manage-return');
 import { refundOrderStock } from '../../../lib/order-utils';
@@ -149,7 +150,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         emailContent = `
           <p>Your refund has been processed!</p>
           <div style="background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Refund Amount:</strong> £${finalRefundAmount.toFixed(2)}</p>
+            <p style="margin: 0;"><strong>Refund Amount:</strong> ${formatPrice(finalRefundAmount)}</p>
           </div>
           <p>The funds will appear in your account within 5-10 business days depending on your bank.</p>
           <p>Thank you for your patience!</p>

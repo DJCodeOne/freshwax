@@ -7,6 +7,7 @@ import Stripe from 'stripe';
 import { getDocument, updateDocument, addDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { parseJsonBody, fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { formatPrice } from '../../../lib/format-utils';
 const log = createLogger('[process-refund]');
 import { refundOrderStock } from '../../../lib/order-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -83,7 +84,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // Partial refund
       refundAmountPence = Math.round(parseFloat(amount) * 100);
       if (refundAmountPence > maxRefundable) {
-        return ApiErrors.badRequest('Refund amount exceeds maximum refundable (£${(maxRefundable / 100).toFixed(2)})');
+        return ApiErrors.badRequest(`Refund amount exceeds maximum refundable (${formatPrice(maxRefundable / 100)})`);
       }
       isFullRefund = refundAmountPence === maxRefundable && previouslyRefunded === 0;
     }
@@ -180,8 +181,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
                 <p>Hi ${order.customer.firstName || 'there'},</p>
                 <p>We've processed a ${isFullRefund ? 'full' : 'partial'} refund for your order <strong>${order.orderNumber || orderId}</strong>.</p>
                 <div style="background-color: #1f1f1f; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <p style="margin: 0;"><strong>Refund Amount:</strong> £${refundAmountPounds.toFixed(2)}</p>
-                  ${!isFullRefund ? `<p style="margin: 10px 0 0;"><strong>Total Refunded:</strong> £${totalRefunded.toFixed(2)}</p>` : ''}
+                  <p style="margin: 0;"><strong>Refund Amount:</strong> ${formatPrice(refundAmountPounds)}</p>
+                  ${!isFullRefund ? `<p style="margin: 10px 0 0;"><strong>Total Refunded:</strong> ${formatPrice(totalRefunded)}</p>` : ''}
                 </div>
                 <p>The refund will appear in your account within 5-10 business days depending on your bank.</p>
                 <p style="color: #737373; font-size: 12px; margin-top: 30px;">Fresh Wax - Underground Music</p>

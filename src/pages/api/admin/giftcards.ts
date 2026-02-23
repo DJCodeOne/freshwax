@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, addDocument, arrayUnion } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
+import { formatPrice } from '../../../lib/format-utils';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
 const log = createLogger('admin/giftcards');
@@ -344,7 +345,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           id: transactionId,
           type: 'admin_adjustment',
           amount: adjustAmount,
-          description: reason || `Admin adjustment: ${adjustAmount >= 0 ? '+' : ''}£${adjustAmount.toFixed(2)}`,
+          description: reason || `Admin adjustment: ${adjustAmount >= 0 ? '+' : ''}${formatPrice(adjustAmount)}`,
           createdAt: now,
           balanceAfter: newBalance
         }]);
@@ -358,7 +359,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             id: transactionId,
             type: 'admin_adjustment',
             amount: adjustAmount,
-            description: reason || `Admin credit: £${adjustAmount.toFixed(2)}`,
+            description: reason || `Admin credit: ${formatPrice(adjustAmount)}`,
             createdAt: now,
             balanceAfter: newBalance
           }]

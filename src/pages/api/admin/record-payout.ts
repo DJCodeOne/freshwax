@@ -8,6 +8,7 @@ import { getDocument } from '../../../lib/firebase-rest';
 import { saSetDocument, saQueryCollection, saDeleteDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
+import { formatPrice } from '../../../lib/format-utils';
 
 const log = createLogger('[record-payout]');
 
@@ -128,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         status: 'recorded'
       });
 
-      log.info('[admin] ✓ Recorded manual payout for', payment.artistName, '£' + payment.amount.toFixed(2));
+      log.info('[admin] ✓ Recorded manual payout for', payment.artistName, formatPrice(payment.amount));
     }
 
     // If no artist payouts were created (e.g., all items are low-value/merch),

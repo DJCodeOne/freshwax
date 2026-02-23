@@ -27,6 +27,7 @@ import { redeemReferralCode } from '../../../lib/referral-codes';
 import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
+import { formatPrice } from '../../../lib/format-utils';
 import { fetchWithTimeout, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 import { escapeHtml } from '../../../lib/escape-html';
 
@@ -105,7 +106,7 @@ async function sendPendingEarningsEmail(
     }
 
     const connectUrl = `${SITE_URL}/artist/account?setup=stripe`;
-    const formattedAmount = `£${amount.toFixed(2)}`;
+    const formattedAmount = formatPrice(amount);
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -243,7 +244,7 @@ async function sendPayoutCompletedEmail(
     }
 
     const dashboardUrl = `${SITE_URL}/artist/payouts`;
-    const formattedAmount = `£${amount.toFixed(2)}`;
+    const formattedAmount = formatPrice(amount);
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -397,8 +398,8 @@ async function sendRefundNotificationEmail(
     }
 
     const dashboardUrl = `${SITE_URL}/artist/payouts`;
-    const formattedRefund = `£${refundAmount.toFixed(2)}`;
-    const formattedOriginal = `£${originalPayout.toFixed(2)}`;
+    const formattedRefund = formatPrice(refundAmount);
+    const formattedOriginal = formatPrice(originalPayout);
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -1740,7 +1741,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       await handleRefund(charge, stripeSecretKey, env);
 
       logStripeEvent(event.type, event.id, true, {
-        message: `Refund processed: £${(charge.amount_refunded / 100).toFixed(2)}`,
+        message: `Refund processed: ${formatPrice(charge.amount_refunded / 100)}`,
         metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded / 100 },
         processingTimeMs: Date.now() - startTime
       }).catch(e => log.error('[Stripe Webhook] Log error:', e));
