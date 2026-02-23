@@ -3,9 +3,9 @@
 // Converts all images to square WebP for consistency
 // Uses WASM-based image processing for Cloudflare Workers compatibility
 
-import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { requireAdminAuth } from '../../lib/admin';
 import { createLogger, errorResponse, successResponse, ApiErrors, getR2Config } from '../../lib/api-utils';
@@ -18,18 +18,6 @@ export const prerender = false;
 const IMAGE_SIZE = 800; // 800x800 square
 const WEBP_QUALITY = 85; // Good balance of quality and size
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 // Max request size for merch image upload: 50MB
 const MAX_MERCH_IMAGE_REQUEST_SIZE = 50 * 1024 * 1024;

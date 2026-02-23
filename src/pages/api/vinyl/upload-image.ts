@@ -2,9 +2,9 @@
 // Upload vinyl listing images to R2 CDN
 // Converts all images to WebP for optimal storage
 
-import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser, getDocument } from '../../../lib/firebase-rest';
@@ -21,17 +21,6 @@ const WEBP_QUALITY = 85;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB input limit
 const MAX_IMAGES_PER_LISTING = 6;
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: 20 image uploads per hour per user

@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     };
 
     // Update entire subscription object
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       subscription: subscriptionObj
     };
 

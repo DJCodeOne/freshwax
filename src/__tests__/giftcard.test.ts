@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { formatPrice } from '../lib/format-utils';
 import {
   generateGiftCardCode,
   isValidCodeFormat,
-  formatGBP,
   getDefaultExpiry,
   isExpired,
   createWelcomeGiftCard,
@@ -140,27 +140,27 @@ describe('isValidCodeFormat', () => {
 });
 
 // =============================================
-// formatGBP
+// formatPrice (formerly formatGBP)
 // =============================================
-describe('formatGBP', () => {
+describe('formatPrice', () => {
   it('formats integer amount', () => {
-    expect(formatGBP(50)).toBe('\u00a350.00');
+    expect(formatPrice(50)).toBe('\u00a350.00');
   });
 
   it('formats decimal amount', () => {
-    expect(formatGBP(9.99)).toBe('\u00a39.99');
+    expect(formatPrice(9.99)).toBe('\u00a39.99');
   });
 
   it('formats zero', () => {
-    expect(formatGBP(0)).toBe('\u00a30.00');
+    expect(formatPrice(0)).toBe('\u00a30.00');
   });
 
   it('rounds to 2 decimal places', () => {
-    expect(formatGBP(19.999)).toBe('\u00a320.00');
+    expect(formatPrice(19.999)).toBe('\u00a320.00');
   });
 
   it('formats large amounts', () => {
-    expect(formatGBP(1000)).toBe('\u00a31000.00');
+    expect(formatPrice(1000)).toBe('\u00a31000.00');
   });
 });
 

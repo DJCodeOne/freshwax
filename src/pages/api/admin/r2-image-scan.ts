@@ -2,9 +2,9 @@
 // Scan R2 bucket for problematic images (not WebP, oversized, missing thumbs)
 // GET /api/admin/r2-image-scan/?prefix=releases/&cursor=...
 
-import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { requireAdminAuth } from '../../../lib/admin';
 import { createLogger, successResponse, errorResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -27,17 +27,6 @@ const SIZE_THRESHOLDS: Record<string, number> = {
   'default': 100 * 1024,         // 100KB
 };
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 function classifyKey(key: string): string {
   if (key.startsWith('releases/')) {

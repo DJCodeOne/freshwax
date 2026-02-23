@@ -181,7 +181,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
 <script>
   let currentFilter = 'all';
-  let allPosts: any[] = [];
+  interface BlogPost {
+    id: string;
+    title: string;
+    excerpt?: string;
+    status: string;
+    category?: string;
+    views?: number;
+    featuredImage?: string;
+    publishedAt?: string;
+    createdAt?: string;
+  }
+
+  let allPosts: BlogPost[] = [];
   let deletePostId: string | null = null;
 
   async function loadPosts() {

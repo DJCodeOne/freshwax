@@ -276,6 +276,28 @@ interface PusherConstructor {
 }
 
 // ---------------------------------------------------------------------------
+// JSZip — minimal interface for CDN-loaded JSZip library
+// ---------------------------------------------------------------------------
+
+interface JSZipFile {
+  name: string;
+  dir: boolean;
+  async(type: string): Promise<unknown>;
+}
+
+interface JSZipFolder {
+  file(name: string, data: unknown, options?: Record<string, unknown>): JSZipFolder;
+}
+
+interface JSZipInstance {
+  file(name: string, data: unknown, options?: Record<string, unknown>): JSZipInstance;
+  folder(name: string): JSZipFolder | null;
+  generateAsync(options: Record<string, unknown>, onUpdate?: (metadata: unknown) => void): Promise<Blob>;
+  loadAsync(data: unknown): Promise<JSZipInstance>;
+  files: Record<string, JSZipFile>;
+}
+
+// ---------------------------------------------------------------------------
 // Window augmentation — eliminates `(window as any)` casts across the codebase
 // ---------------------------------------------------------------------------
 
@@ -316,8 +338,16 @@ declare global {
     goPage?: (page: number) => void;
 
     // ---- Third-party ----
-    JSZip?: new () => any;
+    JSZip?: new () => JSZipInstance;
     requestIdleCallback?: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number;
+
+    // ---- Schedule modal ----
+    _scheduleModalAC?: AbortController;
+    openPublicSchedule?: () => void;
+    openBookingSchedule?: (userId: string, displayName: string) => void;
+    closeScheduleModal?: () => void;
+    schedule_publicSchedule?: { refresh: () => void };
+    schedule_bookingSchedule?: { refresh: () => void; setUser: (userId: string, displayName: string) => void };
 
     // ---- Firebase auth (legacy) ----
     firebaseAuth?: { currentUser?: { getIdToken: () => Promise<string> } };

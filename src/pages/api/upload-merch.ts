@@ -3,9 +3,9 @@
 // Images auto-processed to 800x800 WebP
 // Uses WASM-based image processing for Cloudflare Workers compatibility
 
-import '../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saSetDocument, saUpdateDocument, getServiceAccountKeyWithProject } from '../../lib/firebase-service-account';
 import { d1UpsertMerch } from '../../lib/d1-catalog';
@@ -23,18 +23,6 @@ const log = createLogger('upload-merch');
 
 export const prerender = false;
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 const PRODUCT_TYPES: Record<string, { name: string; hasSizes: boolean; hasColors: boolean }> = {
   'tshirt': { name: 'T-Shirt', hasSizes: true, hasColors: true },

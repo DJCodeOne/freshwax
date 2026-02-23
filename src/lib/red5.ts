@@ -285,6 +285,6 @@ export interface Red5WebhookEvent {
   streamKey: string;
   timestamp: string;
   clientIp?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 

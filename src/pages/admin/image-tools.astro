@@ -224,7 +224,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
   // State
-  let allIssues: any[] = [];
+  interface ImageIssue {
+    key: string;
+    type: string;
+    size?: number;
+    contentType?: string;
+  }
+
+  let allIssues: ImageIssue[] = [];
   let currentCursor: string | null = null;
   let currentPrefix = '';
   let totalScanned = 0;
@@ -459,7 +466,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
               <td class="text-right" style="font-weight: 600; color: ${result.newSize < result.oldSize ? 'var(--accent-green)' : 'var(--text-primary)'};">${formatBytes(result.newSize || 0)} <span style="font-size: 0.75rem; color: var(--text-muted);">${savings !== '-' ? `(${savings})` : ''}</span></td>
               <td class="cell-mono" style="font-size: 0.8rem;">${escapeHtml(result.newKey || '')}</td>
               <td>${result.thumbCreated ? `<span class="badge badge-completed">YES</span> <span style="font-size: 0.75rem;">${formatBytes(result.thumbSize || 0)}</span>` : '-'}</td>
-              <td class="cell-secondary" style="font-size: 0.8rem;">${result.error ? `<span style="color: var(--accent-red);">${escapeHtml(result.error)}</span>` : ''}${result.dimensions ? `<span style="color: var(--text-muted);">${result.dimensions}</span>` : ''}${result.debug?.length ? `<br><span style="font-size: 0.7rem; color: var(--text-muted);">${result.debug.map((d: any) => `#${d.attempt}: ${d.dimensions} → ${formatBytes(d.size)}`).join(' | ')}</span>` : ''}</td>
+              <td class="cell-secondary" style="font-size: 0.8rem;">${result.error ? `<span style="color: var(--accent-red);">${escapeHtml(result.error)}</span>` : ''}${result.dimensions ? `<span style="color: var(--text-muted);">${result.dimensions}</span>` : ''}${result.debug?.length ? `<br><span style="font-size: 0.7rem; color: var(--text-muted);">${result.debug.map((d: { attempt: number; dimensions: string; size: number }) => `#${d.attempt}: ${d.dimensions} → ${formatBytes(d.size)}`).join(' | ')}</span>` : ''}</td>
             </tr>
           `;
 
@@ -677,7 +684,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       // Show results table if there are details
       if (data.details && data.details.length > 0) {
         migrateResultsSection.style.display = '';
-        migrateResultsBody.innerHTML = data.details.map((d: any) => `
+        migrateResultsBody.innerHTML = data.details.map((d: { docId: string; fields: string[]; status: string; savings?: string; error?: string }) => `
           <tr>
             <td class="cell-mono" style="font-size: 0.8rem; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(d.docId)}">${escapeHtml(d.docId)}</td>
             <td style="font-size: 0.8rem;">${d.fields.map((f: string) => escapeHtml(f)).join(', ')}</td>

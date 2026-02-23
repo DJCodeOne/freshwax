@@ -178,13 +178,6 @@ export async function parseJsonBody<T = unknown>(request: Request): Promise<T | 
   }
 }
 
-/**
- * Get runtime environment from Astro locals
- */
-export function getEnv(locals: App.Locals): CloudflareEnv {
-  return locals.runtime.env;
-}
-
 // ============================================
 // R2 CONFIGURATION
 // ============================================

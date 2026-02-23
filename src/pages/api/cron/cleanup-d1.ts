@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const results: Record<string, any> = {};
+    const results: Record<string, unknown> = {};
 
     // 1. Clean up error_logs older than 30 days
     try {

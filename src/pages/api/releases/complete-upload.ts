@@ -2,9 +2,9 @@
 // Called after files are uploaded to R2 - creates Firebase document with status: 'pending'
 // Uses Firebase Admin SDK to bypass security rules
 
-import '../../../lib/dom-polyfill'; // Required for AWS SDK XML parsing in Workers
 import type { APIRoute } from 'astro';
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { getAdminDb } from '../../../lib/firebase-admin';
 import { setDocument, getDocument } from '../../../lib/firebase-rest';
@@ -43,17 +43,6 @@ export const prerender = false;
 
 const log = createLogger('complete-upload');
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 /**
  * Process release cover art to WebP: 800x800 cover + 400x400 thumbnail.

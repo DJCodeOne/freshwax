@@ -165,11 +165,10 @@ import DailySchedule from './DailySchedule.astro';
     if (!publicModal && !bookingModal) return;
 
     // Abort previous listeners to prevent leak on View Transition re-runs
-    const key = '_scheduleModalAC';
-    if ((window as any)[key]) (window as any)[key].abort();
+    if (window._scheduleModalAC) window._scheduleModalAC.abort();
     const ac = new AbortController();
     const sig = { signal: ac.signal };
-    (window as any)[key] = ac;
+    window._scheduleModalAC = ac;
 
     // Track trigger elements for focus restoration
     let publicTrigger: HTMLElement | null = null;
@@ -215,17 +214,17 @@ import DailySchedule from './DailySchedule.astro';
     }
 
     // Open Public Schedule
-    (window as any).openPublicSchedule = function() {
+    window.openPublicSchedule = function() {
       publicTrigger = document.activeElement as HTMLElement;
       publicModal?.classList.remove('hidden');
-      (window as any).schedule_publicSchedule?.refresh();
+      window.schedule_publicSchedule?.refresh();
       // Move focus into the modal
       const closeBtn = document.getElementById('closePublicSchedule');
       if (closeBtn) closeBtn.focus();
     };
 
     // Open Booking Schedule
-    (window as any).openBookingSchedule = function(userId: string, displayName: string) {
+    window.openBookingSchedule = function(userId: string, displayName: string) {
       if (!userId) {
         console.error('[ScheduleModal] No userId provided!');
         alert('You must be logged in to book a slot.');
@@ -233,22 +232,22 @@ import DailySchedule from './DailySchedule.astro';
       }
 
       // Set user info on the schedule component
-      if ((window as any).schedule_bookingSchedule) {
-        (window as any).schedule_bookingSchedule.setUser(userId, displayName);
+      if (window.schedule_bookingSchedule) {
+        window.schedule_bookingSchedule.setUser(userId, displayName);
       } else {
         console.error('[ScheduleModal] schedule_bookingSchedule not found!');
       }
 
       bookingTrigger = document.activeElement as HTMLElement;
       bookingModal?.classList.remove('hidden');
-      (window as any).schedule_bookingSchedule?.refresh();
+      window.schedule_bookingSchedule?.refresh();
       // Move focus into the modal
       const closeBtn = document.getElementById('closeBookingSchedule');
       if (closeBtn) closeBtn.focus();
     };
 
     // Close function for booking schedule (called from DailySchedule)
-    (window as any).closeScheduleModal = function() {
+    window.closeScheduleModal = function() {
       closePublic();
       closeBooking();
     };

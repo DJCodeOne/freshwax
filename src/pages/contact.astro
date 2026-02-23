@@ -470,7 +470,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=600, s-maxage=3600,
       const formData = new FormData(form);
       const isReport = formData.get('subject') === 'report';
 
-      const data: any = {
+      const data: Record<string, FormDataEntryValue | null | string> = {
         name: formData.get('name'),
         email: formData.get('email'),
         subject: formData.get('subject'),

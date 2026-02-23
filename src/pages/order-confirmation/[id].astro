@@ -1659,7 +1659,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: { level: 6 }
-      }, (metadata: any) => {
+      }, (metadata: { percent: number }) => {
         const zipProgress = 80 + Math.round(metadata.percent * 0.2);
         progressFill.style.width = `${zipProgress}%`;
       });

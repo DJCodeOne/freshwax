@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { mixId } = parsed.data;
 
     // Build update object
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date().toISOString()
     };
 

@@ -4,7 +4,7 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, setDocument } from '../../../lib/firebase-rest';
-import { successResponse, errorResponse, ApiErrors, getEnv, parseJsonBody, createLogger } from '../../../lib/api-utils';
+import { successResponse, errorResponse, ApiErrors, parseJsonBody, createLogger } from '../../../lib/api-utils';
 
 const log = createLogger('admin/update-settings');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
@@ -129,7 +129,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const rateCheck = checkRateLimit(`update-settings-post:${clientId}`, RateLimiters.write);
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfter!);
 
-  const env = getEnv(locals);
+  const env = locals.runtime.env;
 
   try {
     const data = await parseJsonBody<Record<string, unknown>>(request);

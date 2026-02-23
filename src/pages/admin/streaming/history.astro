@@ -284,10 +284,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 </style>
 
 <script>
+  interface StreamSlot {
+    status: string;
+    djName: string;
+    title: string;
+    genre: string;
+    startTime: string;
+    endTime: string;
+    createdAt: string;
+    peakViewers?: number;
+  }
+
   const PAGE_SIZE = 20;
   let currentPage = 1;
-  let allStreams: any[] = [];
-  let filteredStreams: any[] = [];
+  let allStreams: StreamSlot[] = [];
+  let filteredStreams: StreamSlot[] = [];
 
   async function loadHistory() {
     try {
@@ -296,8 +307,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       if (data.success && data.slots) {
         allStreams = data.slots
-          .filter((s: any) => s.status === 'completed' || s.status === 'cancelled')
-          .sort((a: any, b: any) => new Date(b.startTime || b.createdAt).getTime() - new Date(a.startTime || a.createdAt).getTime());
+          .filter((s: StreamSlot) => s.status === 'completed' || s.status === 'cancelled')
+          .sort((a: StreamSlot, b: StreamSlot) => new Date(b.startTime || b.createdAt).getTime() - new Date(a.startTime || a.createdAt).getTime());
 
         populateDJFilter();
         populateMonthFilter();

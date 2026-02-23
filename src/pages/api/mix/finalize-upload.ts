@@ -4,7 +4,8 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
@@ -27,17 +28,6 @@ const FinalizeUploadSchema = z.object({
   userId: z.string().max(500).nullish(),
 }).passthrough();
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 export const prerender = false;
 

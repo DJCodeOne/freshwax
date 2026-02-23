@@ -5,9 +5,9 @@
 // Releases: preserves original URL in `originalArtworkUrl` for buyer hi-res downloads
 // DJ Mixes / Merch: just WebP for display, no original preservation needed
 
-import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
-import { S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { type S3Client, GetObjectCommand, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { requireAdminAuth } from '../../../lib/admin';
 import { initFirebaseEnv, queryCollection, getDocument, updateDocument } from '../../../lib/firebase-rest';
@@ -57,17 +57,6 @@ const IMAGE_FIELDS: Record<CollectionName, string[]> = {
   'merch': ['imageUrl'],
 };
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 /** Extract R2 key from a CDN URL. */
 function extractR2Key(url: string, publicDomain: string): string | null {

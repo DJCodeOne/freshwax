@@ -2,7 +2,8 @@
 // Upload new artwork for a DJ mix to R2
 
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { getDocument, updateDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
 import { kvDelete } from '../../lib/kv-cache';
@@ -11,18 +12,6 @@ import { ApiErrors, createLogger, getR2Config, successResponse } from '../../lib
 const log = createLogger('update-mix-artwork');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);

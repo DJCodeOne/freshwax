@@ -4,7 +4,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, arrayUnion, verifyRequestUser, updateDocumentConditional, atomicIncrement } from '../../../lib/firebase-rest';
-import { isValidCodeFormat, isExpired, formatGBP } from '../../../lib/giftcard';
+import { isValidCodeFormat, isExpired } from '../../../lib/giftcard';
+import { formatPrice } from '../../../lib/format-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
@@ -161,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     log.info('Redeemed:', normalizedCode, 'for user:', userId, 'amount:', amountToCredit);
 
-    return successResponse({ message: `Successfully redeemed ${formatGBP(amountToCredit)}!`,
+    return successResponse({ message: `Successfully redeemed ${formatPrice(amountToCredit)}!`,
       amountCredited: amountToCredit,
       newBalance,
       giftCard: {

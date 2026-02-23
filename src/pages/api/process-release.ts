@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { saSetDocument, saQueryCollection, getServiceAccountKey } from '../../lib/firebase-service-account';
 import { invalidateReleasesCache, clearCache } from '../../lib/firebase-rest';
-import { createLogger, errorResponse, successResponse, getEnv, ApiErrors } from '../../lib/api-utils';
+import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
 import { requireAdminAuth } from '../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../lib/image-processing';
@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return rateLimitResponse(rateLimit.retryAfter!);
   }
 
-  const env = getEnv(locals);
+  const env = locals.runtime.env;
 
   // Get service account key for Firestore writes
   const serviceAccountKey = getServiceAccountKey(env);

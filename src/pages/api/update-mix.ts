@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // Build update object
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updatedAt: new Date().toISOString()
     };
 

@@ -65,7 +65,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const account = await stripe.accounts.retrieve(user.stripeConnectId);
 
     // Update local cache if changed
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     let needsUpdate = false;
 
     if (user.stripeChargesEnabled !== account.charges_enabled) {

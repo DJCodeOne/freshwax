@@ -3,7 +3,8 @@
 // Expects pre-converted MP3 at 128kbps from client-side processing
 
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createLogger, ApiErrors, getR2Config, successResponse } from '../../../lib/api-utils';
@@ -17,17 +18,6 @@ const MAX_DURATION_SECONDS = 90; // 1 minute 30 seconds
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB max for 90s at 128kbps (~1.4MB expected)
 const EXPECTED_BITRATE = 128; // 128kbps
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 // Estimate duration from file size at 128kbps
 function estimateDuration(fileSize: number, bitrate: number = 128): number {

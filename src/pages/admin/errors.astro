@@ -91,7 +91,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
           <details style="background: #fffbeb; border: 2px solid #f59e0b; border-radius: 8px; padding: 1rem;">
             <summary style="cursor: pointer; font-weight: 700; color: #92400e;">Top Errors (24h) — ${data.topErrors.length} unique</summary>
             <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem;">
-              ${data.topErrors.map((e: any) => `
+              ${data.topErrors.map((e: { source: string; message?: string; count: number }) => `
                 <div style="background: white; padding: 0.75rem; border-radius: 6px; border: 1px solid #fde68a; display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
                   <div style="flex: 1; min-width: 0;">
                     <span style="display: inline-block; padding: 0.125rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; background: ${e.source === 'client' ? '#dbeafe' : '#fce7f3'}; color: ${e.source === 'client' ? '#1e40af' : '#9d174d'}; margin-right: 0.5rem;">${e.source}</span>
@@ -113,7 +113,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       if (!data.errors || data.errors.length === 0) {
         errorList.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 2rem;">No errors found</p>';
       } else {
-        errorList.innerHTML = data.errors.map((err: any) => {
+        errorList.innerHTML = data.errors.map((err: { created_at: string; source: string; level: string; message?: string; status_code?: number; url?: string; endpoint?: string; ip?: string; user_agent?: string; user_id?: string; stack?: string; metadata?: string }) => {
           const time = new Date(err.created_at + 'Z').toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
           const sourceBg = err.source === 'client' ? '#dbeafe' : '#fce7f3';
           const sourceColor = err.source === 'client' ? '#1e40af' : '#9d174d';
@@ -179,7 +179,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     loadErrors();
   });
 
-  let searchTimeout: any;
+  let searchTimeout: ReturnType<typeof setTimeout>;
   document.getElementById('searchInput')!.addEventListener('input', () => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {

@@ -2,9 +2,9 @@
 // Deletes DJ mix from Firebase and R2 storage
 
 // SECURITY: Requires authentication - user can only delete their own mixes
-import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
-import { S3Client, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { getDocument, deleteDocument, queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { d1DeleteMix } from '../../lib/d1-catalog';
@@ -22,18 +22,6 @@ const log = createLogger('delete-mix');
 // Max files to delete from R2 per mix (prevent runaway)
 const MAX_R2_FILES_TO_DELETE = 50;
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);

@@ -2,7 +2,8 @@
 // Uploads DJ mixes to R2 and Firebase with production-ready logging
 
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } from '../../lib/firebase-rest';
 import { d1UpsertMix } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
@@ -14,18 +15,6 @@ export const prerender = false;
 
 const log = createLogger('upload-mix');
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 // Helper to format duration for display
 function formatDuration(seconds: number): string {

@@ -2,7 +2,8 @@
 // Update existing merch product details
 
 import type { APIRoute } from 'astro';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearCache, clearAllMerchCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saGetDocument } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
@@ -18,18 +19,6 @@ export const prerender = false;
 // Firebase API key fallback (same as in firebase-rest.ts)
 const FIREBASE_API_KEY_FALLBACK = 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit

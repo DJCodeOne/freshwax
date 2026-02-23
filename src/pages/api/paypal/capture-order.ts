@@ -708,7 +708,7 @@ async function processMerchSupplierPayments(params: {
     }> = {};
 
     // Cache for merch product lookups
-    const merchCache: Record<string, any> = {};
+    const merchCache: Record<string, unknown> = {};
 
     for (const item of merchItems) {
       // Get merch product data to find supplier
@@ -1000,7 +1000,7 @@ async function processVinylCrateSellerPayments(params: {
     }> = {};
 
     // Cache for crate listing lookups
-    const listingCache: Record<string, any> = {};
+    const listingCache: Record<string, unknown> = {};
 
     for (const item of crateItems) {
       // Get the seller info

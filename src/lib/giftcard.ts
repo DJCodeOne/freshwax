@@ -57,12 +57,6 @@ export function isValidCodeFormat(code: string): boolean {
 }
 
 /**
- * Format currency for UK display
- * @deprecated Use formatPrice from '../lib/format-utils' directly
- */
-export const formatGBP = formatPrice;
-
-/**
  * Gift card types
  */
 export type GiftCardType = 'welcome' | 'promotional' | 'purchased' | 'refund' | 'referral';

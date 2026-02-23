@@ -953,7 +953,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                             const releaseId = item.id || item.releaseId;
                             return releaseId && artistReleaseIds.has(releaseId);
                           });
-                          const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.lineTotal || item.unitPrice || 0), 0);
+                          const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + ((item.lineTotal as number) || (item.unitPrice as number) || 0), 0);
                           artistAmount = itemsTotal * 0.7;
                         }
                       } else {
@@ -962,7 +962,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                           const releaseId = item.releaseId || item.productId || item.id;
                           return releaseId && artistReleaseIds.has(releaseId);
                         });
-                        const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + (item.price || item.lineTotal || 0), 0);
+                        const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + ((item.price as number) || (item.lineTotal as number) || 0), 0);
                         artistAmount = itemsTotal * 0.7;
                       }
 

@@ -1,10 +1,10 @@
 // src/pages/api/delete-merch.ts
 // Delete a merch product - removes from Firebase and R2
 
-import '../../lib/dom-polyfill'; // DOM polyfill for AWS SDK on Cloudflare Workers
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { S3Client, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../lib/s3-client';
 import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { saUpdateDocument, saDeleteDocument, saAddDocument, getServiceAccountKeyWithProject } from '../../lib/firebase-service-account';
 import { d1DeleteMerch } from '../../lib/d1-catalog';
@@ -20,18 +20,6 @@ const log = createLogger('delete-merch');
 
 export const prerender = false;
 
-
-// Create S3 client with runtime env
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required

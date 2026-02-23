@@ -37,7 +37,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.forbidden('You can only export your own data');
     }
 
-    const exportData: Record<string, any> = {
+    const exportData: Record<string, unknown> = {
       exportDate: new Date().toISOString(),
       userId,
     };

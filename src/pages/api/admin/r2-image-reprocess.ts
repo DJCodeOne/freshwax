@@ -2,9 +2,9 @@
 // Batch reprocess R2 images: fetch, convert to WebP, re-upload
 // POST /api/admin/r2-image-reprocess/
 
-import '../../../lib/dom-polyfill';
 import type { APIRoute } from 'astro';
-import { S3Client, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createS3Client } from '../../../lib/s3-client';
 import { processImageToSquareWebP, processImageToWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 import { requireAdminAuth } from '../../../lib/admin';
 import { createLogger, successResponse, errorResponse, ApiErrors, parseJsonBody, getR2Config } from '../../../lib/api-utils';
@@ -44,17 +44,6 @@ interface ProcessingConfig {
   quality: number;
 }
 
-
-function createS3Client(config: ReturnType<typeof getR2Config>) {
-  return new S3Client({
-    region: 'auto',
-    endpoint: `https://${config.accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId: config.accessKeyId,
-      secretAccessKey: config.secretAccessKey,
-    },
-  });
-}
 
 function getProcessingConfig(key: string): { cover: ProcessingConfig; thumb?: ProcessingConfig } {
   if (key.startsWith('releases/')) {

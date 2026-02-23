@@ -49,8 +49,8 @@ export class R2FirebaseSync {
 
     // Initialize Firebase REST API env (for write operations)
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      (import.meta.env as any).FIREBASE_PROJECT_ID = config.firebase.projectId;
-      (import.meta.env as any).FIREBASE_API_KEY = config.firebase.apiKey;
+      (import.meta.env as unknown as Record<string, string>).FIREBASE_PROJECT_ID = config.firebase.projectId;
+      (import.meta.env as unknown as Record<string, string>).FIREBASE_API_KEY = config.firebase.apiKey;
     }
   }
 

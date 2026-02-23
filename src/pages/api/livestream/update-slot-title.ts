@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     // Build update object with provided fields
-    const updateData: Record<string, any> = { updatedAt: new Date().toISOString() };
+    const updateData: Record<string, unknown> = { updatedAt: new Date().toISOString() };
     if (title) updateData.title = title;
     if (startTime) updateData.startTime = startTime;
     if (endTime) updateData.endTime = endTime;

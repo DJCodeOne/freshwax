@@ -4,7 +4,8 @@
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, updateDocument, setDocument, queryCollection, verifyRequestUser } from '../../../lib/firebase-rest';
-import { isValidCodeFormat, isExpired, formatGBP, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
+import { isValidCodeFormat, isExpired, REFERRAL_DISCOUNT_AMOUNT } from '../../../lib/giftcard';
+import { formatPrice } from '../../../lib/format-utils';
 import { SUBSCRIPTION_TIERS, PRO_ANNUAL_PRICE } from '../../../lib/subscription';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
@@ -85,11 +86,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return successResponse({ valid: true,
       referrerFound: true,
       discount: giftCard.currentBalance,
-      discountFormatted: formatGBP(giftCard.currentBalance),
+      discountFormatted: formatPrice(giftCard.currentBalance),
       originalPrice: PRO_ANNUAL_PRICE,
       discountedPrice: PRO_ANNUAL_PRICE - giftCard.currentBalance,
-      discountedPriceFormatted: formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance),
-      message: `Referral code valid! You'll pay ${formatGBP(PRO_ANNUAL_PRICE - giftCard.currentBalance)} instead of ${formatGBP(PRO_ANNUAL_PRICE)}` });
+      discountedPriceFormatted: formatPrice(PRO_ANNUAL_PRICE - giftCard.currentBalance),
+      message: `Referral code valid! You'll pay ${formatPrice(PRO_ANNUAL_PRICE - giftCard.currentBalance)} instead of ${formatPrice(PRO_ANNUAL_PRICE)}` });
 
   } catch (error: unknown) {
     log.error('Error:', error);

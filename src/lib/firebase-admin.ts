@@ -83,7 +83,7 @@ async function ensureInitializedAsync(): Promise<void> {
     _initError = error instanceof Error ? error.message : 'Unknown error';
     log.error('[firebase-admin] Failed to initialize:', {
       message: error instanceof Error ? error.message : String(error),
-      code: (error as any)?.code,
+      code: error instanceof Error && 'code' in error ? (error as { code: string }).code : undefined,
       name: error instanceof Error ? error.name : undefined,
       stack: error instanceof Error ? error.stack?.substring(0, 500) : undefined
     });
