@@ -403,7 +403,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <span class="text-muted">{ordersNeedingPayouts.length} orders</span>
       </div>
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="data-table" aria-label="Orders needing payouts">
           <thead>
             <tr>
               <th scope="col">Date</th>
@@ -592,7 +592,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <span class="text-muted">{completedPayouts.length} payouts - {formatCurrency(completedPayoutTotal)} total</span>
       </div>
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="data-table" aria-label="Completed payouts">
           <thead>
             <tr>
               <th scope="col">Date</th>
@@ -647,7 +647,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <span class="text-muted">{disputes.length} disputes</span>
       </div>
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="data-table" aria-label="Payment disputes">
           <thead>
             <tr>
               <th scope="col">Date</th>
@@ -714,7 +714,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <span class="text-muted">{refunds.length} refunds</span>
       </div>
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="data-table" aria-label="Refunds">
           <thead>
             <tr>
               <th scope="col">Date</th>
@@ -776,7 +776,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <span class="text-muted">{pendingPayouts.length} payouts waiting</span>
       </div>
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="data-table" aria-label="Pending and failed payouts">
           <thead>
             <tr>
               <th scope="col">Date</th>

@@ -166,19 +166,66 @@ import DailySchedule from './DailySchedule.astro';
 
     // Abort previous listeners to prevent leak on View Transition re-runs
     const key = '_scheduleModalAC';
-    if (window[key]) window[key].abort();
+    if ((window as any)[key]) (window as any)[key].abort();
     const ac = new AbortController();
     const sig = { signal: ac.signal };
-    window[key] = ac;
+    (window as any)[key] = ac;
+
+    // Track trigger elements for focus restoration
+    let publicTrigger: HTMLElement | null = null;
+    let bookingTrigger: HTMLElement | null = null;
+
+    // Focus trap helper: cycle Tab/Shift+Tab within a modal
+    function trapFocus(modal: HTMLElement, e: KeyboardEvent) {
+      if (e.key !== 'Tab') return;
+      const focusableEls = modal.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusableEls.length === 0) return;
+      const firstEl = focusableEls[0];
+      const lastEl = focusableEls[focusableEls.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    }
+
+    // Close a modal and restore focus to its trigger
+    function closePublic() {
+      publicModal?.classList.add('hidden');
+      if (publicTrigger && typeof publicTrigger.focus === 'function') {
+        publicTrigger.focus();
+        publicTrigger = null;
+      }
+    }
+
+    function closeBooking() {
+      bookingModal?.classList.add('hidden');
+      if (bookingTrigger && typeof bookingTrigger.focus === 'function') {
+        bookingTrigger.focus();
+        bookingTrigger = null;
+      }
+    }
 
     // Open Public Schedule
-    window.openPublicSchedule = function() {
+    (window as any).openPublicSchedule = function() {
+      publicTrigger = document.activeElement as HTMLElement;
       publicModal?.classList.remove('hidden');
-      window.schedule_publicSchedule?.refresh();
+      (window as any).schedule_publicSchedule?.refresh();
+      // Move focus into the modal
+      const closeBtn = document.getElementById('closePublicSchedule');
+      if (closeBtn) closeBtn.focus();
     };
 
     // Open Booking Schedule
-    window.openBookingSchedule = function(userId, displayName) {
+    (window as any).openBookingSchedule = function(userId: string, displayName: string) {
       if (!userId) {
         console.error('[ScheduleModal] No userId provided!');
         alert('You must be logged in to book a slot.');
@@ -186,44 +233,50 @@ import DailySchedule from './DailySchedule.astro';
       }
 
       // Set user info on the schedule component
-      if (window.schedule_bookingSchedule) {
-        window.schedule_bookingSchedule.setUser(userId, displayName);
+      if ((window as any).schedule_bookingSchedule) {
+        (window as any).schedule_bookingSchedule.setUser(userId, displayName);
       } else {
         console.error('[ScheduleModal] schedule_bookingSchedule not found!');
       }
 
+      bookingTrigger = document.activeElement as HTMLElement;
       bookingModal?.classList.remove('hidden');
-      window.schedule_bookingSchedule?.refresh();
+      (window as any).schedule_bookingSchedule?.refresh();
+      // Move focus into the modal
+      const closeBtn = document.getElementById('closeBookingSchedule');
+      if (closeBtn) closeBtn.focus();
     };
 
     // Close function for booking schedule (called from DailySchedule)
-    window.closeScheduleModal = function() {
-      publicModal?.classList.add('hidden');
-      bookingModal?.classList.add('hidden');
+    (window as any).closeScheduleModal = function() {
+      closePublic();
+      closeBooking();
     };
 
     // Close handlers
-    document.getElementById('closePublicSchedule')?.addEventListener('click', () => {
-      publicModal?.classList.add('hidden');
+    document.getElementById('closePublicSchedule')?.addEventListener('click', closePublic, sig);
+
+    document.getElementById('closeBookingSchedule')?.addEventListener('click', closeBooking, sig);
+
+    publicModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', closePublic, sig);
+
+    bookingModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', closeBooking, sig);
+
+    // Focus trap for public schedule modal
+    publicModal?.addEventListener('keydown', (e: KeyboardEvent) => {
+      trapFocus(publicModal!, e);
     }, sig);
 
-    document.getElementById('closeBookingSchedule')?.addEventListener('click', () => {
-      bookingModal?.classList.add('hidden');
+    // Focus trap for booking schedule modal
+    bookingModal?.addEventListener('keydown', (e: KeyboardEvent) => {
+      trapFocus(bookingModal!, e);
     }, sig);
 
-    publicModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', () => {
-      publicModal?.classList.add('hidden');
-    }, sig);
-
-    bookingModal?.querySelector('.schedule-modal-overlay')?.addEventListener('click', () => {
-      bookingModal?.classList.add('hidden');
-    }, sig);
-
-    // Keyboard close
+    // Keyboard close (Escape)
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        publicModal?.classList.add('hidden');
-        bookingModal?.classList.add('hidden');
+        if (publicModal && !publicModal.classList.contains('hidden')) closePublic();
+        if (bookingModal && !bookingModal.classList.contains('hidden')) closeBooking();
       }
     }, sig);
   })();

@@ -57,9 +57,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <span class="fs-live-dot"></span>
           <span id="fsLiveStatus">LOADING...</span>
         </div>
-        <h2 id="fsStreamTitle">No Live Streams</h2>
+        <p id="fsStreamTitle" class="text-2xl font-bold text-white">No Live Streams</p>
         <div class="fs-dj-info">
-          <img id="fsDjAvatar" src="/place-holder.webp" alt="DJ" width="40" height="40" loading="lazy" decoding="async" />
+          <img id="fsDjAvatar" src="/place-holder.webp" alt="DJ avatar" width="40" height="40" loading="lazy" decoding="async" />
           <span id="fsDjName">-</span>
         </div>
       </div>
@@ -107,7 +107,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           </div>
         </div>
         <div class="fs-video-container">
-          <video id="fsVideo" class="fs-video hidden" controls playsinline></video>
+          <video id="fsVideo" class="fs-video hidden" controls playsinline>
+            <track kind="captions" label="English" srclang="en" default src="" />
+          </video>
         </div>
         <!-- Fullscreen Audio Placeholder (BUTT mode) -->
         <div id="fsAudioPlaceholder" class="fs-audio-placeholder hidden">
@@ -127,7 +129,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             <div class="fs-vinyl-container fs-vinyl-left">
               <div class="fs-vinyl-record">
                 <div class="fs-vinyl-label">
-                  <img id="fsVinylDjAvatar" src="/place-holder.webp" alt="DJ" class="fs-vinyl-avatar" width="48" height="48" loading="lazy" decoding="async" />
+                  <img id="fsVinylDjAvatar" src="/place-holder.webp" alt="DJ avatar" class="fs-vinyl-avatar" width="48" height="48" loading="lazy" decoding="async" />
                 </div>
               </div>
               <div class="fs-tonearm fs-tonearm-left"></div>
@@ -457,7 +459,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
           <!-- Video Player (for both live stream and playlist) -->
           <div id="videoPlayer" class="video-player hidden" transition:persist="live-video-player">
-            <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto" autoplay muted></video>
+            <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto" autoplay muted>
+              <track kind="captions" label="English" srclang="en" default src="" />
+            </video>
             <!-- Playlist embeds will be injected here when active -->
             <div id="playlistPlayer" class="playlist-player hidden"></div>
           </div>

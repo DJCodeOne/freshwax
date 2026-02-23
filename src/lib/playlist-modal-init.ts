@@ -218,8 +218,8 @@ function injectModalHTML() {
                     <input type="text" id="exportTitle" placeholder="My Fresh Wax Playlist" />
                   </div>
 
-                  <div class="export-field">
-                    <label>Export Format</label>
+                  <fieldset class="export-field" style="border:0;padding:0;margin:0;">
+                    <legend>Export Format</legend>
                     <div class="export-formats">
                       <label class="format-option">
                         <input type="radio" name="exportFormat" value="txt" checked />
@@ -243,7 +243,7 @@ function injectModalHTML() {
                         </span>
                       </label>
                     </div>
-                  </div>
+                  </fieldset>
 
                   <div class="export-info">
                     <span id="exportTrackCount">0</span> tracks will be exported

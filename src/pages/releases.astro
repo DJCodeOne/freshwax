@@ -67,7 +67,7 @@ const releaseItemList = {
   <div class="flex min-h-screen" style="background: #000000;">
     
     <!-- Left Sidebar Navigation -->
-    <aside class="w-80 bg-gradient-to-b from-gray-800 to-gray-900 border-r-2 border-white sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden lg:block shadow-2xl">
+    <aside aria-label="Filter by label" class="w-80 bg-gradient-to-b from-gray-800 to-gray-900 border-r-2 border-white sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto flex-shrink-0 hidden lg:block shadow-2xl">
       <div class="p-6">
         <!-- Header -->
         <div class="mb-6 pt-6 pb-6 border-t-2 border-b-2 border-red-600">
@@ -80,7 +80,7 @@ const releaseItemList = {
         </div>
         
         <!-- Labels Navigation -->
-        <nav class="space-y-1">
+        <nav aria-label="Release labels" class="space-y-1">
           {sortedLabels.map((label) => (
             <a 
               href={`#label-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
@@ -125,7 +125,7 @@ const releaseItemList = {
         {totalReleases === 0 ? (
           <div class="text-center py-20 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-lg border-2 border-white">
             <div class="text-6xl mb-4">🎵</div>
-            <h3 class="text-2xl font-bold text-white mb-2">No Releases Yet</h3>
+            <h2 class="text-2xl font-bold text-white mb-2">No Releases Yet</h2>
             <p class="text-gray-300 mb-6">New releases coming soon!</p>
           </div>
         ) : (

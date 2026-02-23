@@ -39,8 +39,8 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         <div class="admin-controls">
           <button type="button" class="add-dj-btn" aria-label="Add DJ to schedule">+ Add DJ</button>
           <button type="button" class="allowances-btn" aria-label="Manage DJ time limits">⚙️ DJ Limits</button>
-          <label class="disable-toggle">
-            <input type="checkbox" class="disable-checkbox" />
+          <label class="disable-toggle" for="disableBookingsCheckbox">
+            <input type="checkbox" id="disableBookingsCheckbox" class="disable-checkbox" />
             <span>Disable Bookings</span>
           </label>
         </div>

@@ -63,7 +63,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <p class="selector-description">Choose how you'd like to receive your payouts</p>
             <div class="method-options">
               <label class="method-option" id="option-stripe">
-                <input type="radio" name="payoutMethod" value="stripe" disabled />
+                <input type="radio" name="payoutMethod" value="stripe" disabled aria-disabled="true" />
                 <div class="method-content">
                   <span class="method-icon">&#128179;</span>
                   <div class="method-info">
@@ -74,7 +74,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </div>
               </label>
               <label class="method-option" id="option-paypal">
-                <input type="radio" name="payoutMethod" value="paypal" disabled />
+                <input type="radio" name="payoutMethod" value="paypal" disabled aria-disabled="true" />
                 <div class="method-content">
                   <span class="method-icon">P</span>
                   <div class="method-info">
@@ -250,6 +250,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Enable/disable and update status for Stripe
         if (stripeData.status === 'active') {
           stripeRadio.disabled = false;
+          stripeRadio.setAttribute('aria-disabled', 'false');
           stripeStatusText.textContent = 'Connected';
           stripeStatusText.classList.add('connected');
           stripeOption.classList.remove('disabled');
@@ -260,6 +261,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         // Enable/disable and update status for PayPal
         if (paypalData.paypalLinked) {
           paypalRadio.disabled = false;
+          paypalRadio.setAttribute('aria-disabled', 'false');
           paypalStatusText.textContent = 'Connected';
           paypalStatusText.classList.add('connected');
           paypalOption.classList.remove('disabled');
