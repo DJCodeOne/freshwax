@@ -768,8 +768,14 @@ const firebaseConfig = {
 
     var isOpen = !panel.hidden;
     if (isOpen) {
+      // Remove focus trap when closing
+      if (panel._focusTrapHandler) {
+        panel.removeEventListener('keydown', panel._focusTrapHandler);
+        panel._focusTrapHandler = null;
+      }
       panel.hidden = true;
       btn.setAttribute('aria-expanded', 'false');
+      btn.focus();
       return;
     }
 
@@ -785,9 +791,39 @@ const firebaseConfig = {
     var firstOpt = panel.querySelector('.fwx-lang-opt[aria-pressed="true"]') || panel.querySelector('.fwx-lang-opt');
     if (firstOpt) firstOpt.focus();
 
+    // Focus trap: Tab/Shift+Tab cycles within the language panel
+    var focusTrapHandler = function(e) {
+      if (e.key !== 'Tab') return;
+      var focusableEls = panel.querySelectorAll('button:not([disabled]), [tabindex]:not([tabindex="-1"])');
+      if (focusableEls.length === 0) return;
+      var firstEl = focusableEls[0];
+      var lastEl = focusableEls[focusableEls.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+    // Remove old handler if present
+    if (panel._focusTrapHandler) {
+      panel.removeEventListener('keydown', panel._focusTrapHandler);
+    }
+    panel._focusTrapHandler = focusTrapHandler;
+    panel.addEventListener('keydown', focusTrapHandler);
+
     // Close on outside click
     function closeOnOutside(e) {
       if (!panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+        if (panel._focusTrapHandler) {
+          panel.removeEventListener('keydown', panel._focusTrapHandler);
+          panel._focusTrapHandler = null;
+        }
         panel.hidden = true;
         btn.setAttribute('aria-expanded', 'false');
         document.removeEventListener('click', closeOnOutside, true);
@@ -796,6 +832,10 @@ const firebaseConfig = {
     }
     function closeOnEsc(e) {
       if (e.key === 'Escape') {
+        if (panel._focusTrapHandler) {
+          panel.removeEventListener('keydown', panel._focusTrapHandler);
+          panel._focusTrapHandler = null;
+        }
         panel.hidden = true;
         btn.setAttribute('aria-expanded', 'false');
         btn.focus();
@@ -840,8 +880,13 @@ const firebaseConfig = {
         if (!opt) return;
         var lang = opt.getAttribute('data-lang');
         updatePanelSelection(lang);
+        if (newPanel._focusTrapHandler) {
+          newPanel.removeEventListener('keydown', newPanel._focusTrapHandler);
+          newPanel._focusTrapHandler = null;
+        }
         newPanel.hidden = true;
         newBtn.setAttribute('aria-expanded', 'false');
+        newBtn.focus();
         applyLanguage(lang);
       });
 

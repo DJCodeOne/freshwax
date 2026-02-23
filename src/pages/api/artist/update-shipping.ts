@@ -9,7 +9,7 @@ import { saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-se
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[update-shipping]');
+const log = createLogger('artist/update-shipping');
 
 const UpdateShippingSchema = z.object({
   artistId: z.string().min(1).max(500),

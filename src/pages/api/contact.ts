@@ -8,7 +8,7 @@ import { escapeHtml } from '../../lib/escape-html';
 import { emailWrapper } from '../../lib/email-wrapper';
 import { createLogger, ApiErrors, successResponse } from '../../lib/api-utils';
 
-const log = createLogger('[contact]');
+const log = createLogger('contact');
 
 const ContactSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),

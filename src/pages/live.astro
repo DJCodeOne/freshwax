@@ -102,13 +102,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <div class="fs-offline-overlay hidden" id="fsOfflineOverlay" style="display: none !important;">
           <div class="fs-offline-content">
             <div class="fs-offline-icon">OFFLINE</div>
-            <h2>No one is streaming right now</h2>
+            <p class="fs-offline-heading" role="status">No one is streaming right now</p>
             <p class="fs-offline-subtext" style="font-size: 0.875rem; color: #888; margin-top: 0.5rem;">The playlist will start in a moment</p>
           </div>
         </div>
         <div class="fs-video-container">
           <video id="fsVideo" class="fs-video hidden" controls playsinline>
-            <track kind="captions" label="English" srclang="en" default src="" />
+            <track kind="captions" label="Captions unavailable for live content" default />
           </video>
         </div>
         <!-- Fullscreen Audio Placeholder (BUTT mode) -->
@@ -183,7 +183,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <div id="fsFreshwaxChatContainer" class="fs-chat-container active">
           <div class="fs-chat-messages" id="fsChatMessages"></div>
           <div class="fs-chat-input">
-            <input type="text" id="fsChatInput" placeholder="Say something..." maxlength="500" />
+            <input type="text" id="fsChatInput" placeholder="Say something..." maxlength="500" aria-label="Chat message" />
             <button id="fsSendBtn">Send</button>
           </div>
         </div>
@@ -202,7 +202,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   </div>
   
   <!-- Mobile Tab Navigation -->
-  <nav class="mobile-tabs" id="mobileTabs">
+  <nav class="mobile-tabs" id="mobileTabs" aria-label="Live stream tabs">
     <button class="mobile-tab active" data-tab="player">
       <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M8 5v14l11-7z"/></svg>
       <span>Player</span>
@@ -460,7 +460,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <!-- Video Player (for both live stream and playlist) -->
           <div id="videoPlayer" class="video-player hidden" transition:persist="live-video-player">
             <video id="hlsVideoElement" class="hls-video" controls playsinline preload="auto" autoplay muted>
-              <track kind="captions" label="English" srclang="en" default src="" />
+              <track kind="captions" label="Captions unavailable for live content" default />
             </video>
             <!-- Playlist embeds will be injected here when active -->
             <div id="playlistPlayer" class="playlist-player hidden"></div>
@@ -622,17 +622,17 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       <div class="modal-body">
         <form id="bookingForm">
           <div class="form-group">
-            <label>DJ Name <span class="required">*</span></label>
+            <label for="bookingDjName">DJ Name <span class="required">*</span></label>
             <input type="text" id="bookingDjName" placeholder="Your DJ name" maxlength="30" required aria-required="true" />
           </div>
-          
+
           <div class="form-group">
-            <label>Crew / Label / Sound System / Representing</label>
+            <label for="bookingCrew">Crew / Label / Sound System / Representing</label>
             <input type="text" id="bookingCrew" placeholder="e.g. Ruffneck Ting, London UK" maxlength="30" />
           </div>
-          
+
           <div class="form-group">
-            <label>Description</label>
+            <label for="bookingDescription">Description</label>
             <textarea id="bookingDescription" placeholder="What will you be playing? (optional)" maxlength="150" rows="2"></textarea>
             <span class="char-count"><span id="bookingDescCount">0</span>/150</span>
           </div>
@@ -696,7 +696,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               <label>Select Start Time (24hr) <span class="required">*</span></label>
               <div class="time-dropdown-row">
                 <div class="time-dropdown-group">
-                  <label class="time-dropdown-label">Hour</label>
+                  <label class="time-dropdown-label" for="bookingHour">Hour</label>
                   <select id="bookingHour" class="time-dropdown">
                     <option value="">--</option>
                     <option value="00">00</option>
@@ -727,7 +727,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
                 </div>
                 <span class="time-separator">:</span>
                 <div class="time-dropdown-group">
-                  <label class="time-dropdown-label">Minutes</label>
+                  <label class="time-dropdown-label" for="bookingMinute">Minutes</label>
                   <select id="bookingMinute" class="time-dropdown">
                     <option value="">--</option>
                     <option value="00">00</option>
@@ -983,7 +983,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         </div>
         
         <div class="share-link-box">
-          <input type="text" id="shareLinkInput" readonly value={`${SITE_URL}/live`} />
+          <input type="text" id="shareLinkInput" readonly value={`${SITE_URL}/live`} aria-label="Share link URL" />
           <button id="copyShareLink" class="copy-share-btn">Copy</button>
         </div>
         
@@ -1024,7 +1024,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       <div class="modal-body">
         <p class="shoutout-hint">Birthdays 🎂 • Big ups 🙌 • Locations 📍 • Party vibes 🎉</p>
         <div class="shoutout-input-wrapper">
-          <input type="text" id="shoutoutInput" placeholder="Type your shoutout..." maxlength="30" autocomplete="off" />
+          <input type="text" id="shoutoutInput" placeholder="Type your shoutout..." maxlength="30" autocomplete="off" aria-label="Shoutout message" />
           <span class="shoutout-char-count"><span id="shoutoutCharCount">0</span>/30</span>
         </div>
         <div class="shoutout-emoji-row">
@@ -1052,7 +1052,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <PlaylistModal />
 </Layout>
 
-<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" crossorigin="anonymous"></script>
+<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
 
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
@@ -4160,7 +4160,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       if (controlsDjName && !window.currentStreamData) {
         if (currentLive.isRelay && currentLive.title) {
           const relayTitle = currentLive.title.length > 50 ? currentLive.title.substring(0, 50) + '...' : currentLive.title;
-          controlsDjName.innerHTML = `<span style="color: #ef4444;">${relayTitle}</span>`;
+          controlsDjName.innerHTML = `<span style="color: #ef4444;">${escapeHtml(relayTitle)}</span>`;
         } else {
           controlsDjName.textContent = currentLive.djName || 'DJ';
         }

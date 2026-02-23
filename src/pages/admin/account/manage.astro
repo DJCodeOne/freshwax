@@ -78,7 +78,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <span class="text-muted" id="userCount">0 partners</span>
     </div>
     <div class="table-wrapper">
-      <table class="data-table">
+      <table class="data-table" aria-label="Partner accounts">
         <thead>
           <tr>
             <th scope="col">Partner</th>
@@ -165,10 +165,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 1rem;
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
   
   .modal-overlay {

@@ -9,7 +9,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse, jsonResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[fix-order-payout]');
+const log = createLogger('admin/fix-order-payout');
 
 export const prerender = false;
 

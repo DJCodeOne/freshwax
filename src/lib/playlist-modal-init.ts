@@ -644,6 +644,41 @@ export function initPlaylistModal() {
     checkAuth();
   }
 
+  // Focus trap helper for modal dialogs
+  function trapFocus(modalEl: HTMLElement) {
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusableElements = modalEl.querySelectorAll<HTMLElement>(focusableSelector);
+    if (focusableElements.length === 0) return;
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === firstFocusable) {
+          e.preventDefault();
+          lastFocusable.focus();
+        }
+      } else {
+        if (document.activeElement === lastFocusable) {
+          e.preventDefault();
+          firstFocusable.focus();
+        }
+      }
+    };
+    (modalEl as any)._focusTrapHandler = handler;
+    modalEl.addEventListener('keydown', handler);
+    firstFocusable.focus();
+  }
+
+  function removeFocusTrap(modalEl: HTMLElement) {
+    const handler = (modalEl as any)._focusTrapHandler;
+    if (handler) {
+      modalEl.removeEventListener('keydown', handler);
+      delete (modalEl as any)._focusTrapHandler;
+    }
+  }
+
   // Setup all DOM event listeners - called on every page load including View Transitions
   function setupEventListeners() {
     // Open modal
@@ -651,21 +686,29 @@ export function initPlaylistModal() {
     const modal = document.getElementById('playlistModal');
     const closeBtn = document.getElementById('closePlaylistModal');
     const backdrop = modal?.querySelector('.playlist-modal-backdrop') as HTMLElement;
+    let previousFocus: Element | null = null;
 
     // Close modal function
     function closeModal() {
+      if (modal) removeFocusTrap(modal);
       modal?.classList.add('hidden');
       document.body.style.overflow = '';
+      if (previousFocus && typeof (previousFocus as HTMLElement).focus === 'function') {
+        (previousFocus as HTMLElement).focus();
+        previousFocus = null;
+      }
     }
 
     // Use data attributes to prevent duplicate listeners on same elements
     if (playlistBtn && !playlistBtn.dataset.listenerAttached) {
       playlistBtn.dataset.listenerAttached = 'true';
       playlistBtn.addEventListener('click', () => {
+        previousFocus = document.activeElement;
         modal?.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         // Update recently played when modal opens
         updateRecentlyPlayed();
+        if (modal) trapFocus(modal);
       });
     }
 

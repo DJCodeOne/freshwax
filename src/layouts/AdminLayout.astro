@@ -937,10 +937,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       animation: spin 0.8s linear infinite;
     }
     
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    
     /* =============================================
        QUICK STATS GRID
        ============================================= */
@@ -1530,7 +1526,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </script>
 
   <!-- Top Navigation Bar -->
-  <nav class="admin-topbar">
+  <nav class="admin-topbar" aria-label="Admin navigation">
     <div class="topbar-container">
       <div class="topbar-left">
         <a href="/" class="admin-logo">
@@ -1675,7 +1671,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const token = await user.getIdToken();
           window.ADMIN_KEY = token;
           // Refresh token before it expires (every 45 min)
-          setInterval(async () => {
+          if (window._adminTokenRefreshInterval) {
+            clearInterval(window._adminTokenRefreshInterval);
+          }
+          window._adminTokenRefreshInterval = setInterval(async () => {
             if (window._firebaseUser) {
               window.ADMIN_KEY = await window._firebaseUser.getIdToken();
             }
@@ -1728,6 +1727,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
       return fetch(url, { ...options, headers });
     };
+
+    // Clean up token refresh interval on View Transitions navigation
+    document.addEventListener('astro:before-swap', function() {
+      if (window._adminTokenRefreshInterval) {
+        clearInterval(window._adminTokenRefreshInterval);
+        window._adminTokenRefreshInterval = null;
+      }
+    }, { once: true });
   </script>
 
   <slot name="scripts" />

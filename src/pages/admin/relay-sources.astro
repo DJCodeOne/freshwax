@@ -477,10 +477,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         sources = result.sources;
         renderSources();
       } else {
-        sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p>' + result.error + '</p></div>';
+        sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p></p></div>';
+        const errP = sourcesGrid.querySelector('p');
+        if (errP) errP.textContent = result.error;
       }
     } catch (error) {
-      sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p>' + (error instanceof Error ? error.message : String(error)) + '</p></div>';
+      sourcesGrid.innerHTML = '<div class="empty-state"><h3>Error loading sources</h3><p></p></div>';
+      const errP = sourcesGrid.querySelector('p');
+      if (errP) errP.textContent = error instanceof Error ? error.message : String(error);
     }
   }
   

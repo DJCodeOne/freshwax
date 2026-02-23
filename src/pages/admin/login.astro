@@ -4,6 +4,8 @@
 
 export const prerender = false;
 
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate');
+
 // Redirect to main login page
 return Astro.redirect('/login');
 ---

@@ -51,7 +51,7 @@ const { nonce = '' } = Astro.props;
         <!-- Artwork + Track Info - FIXED WIDTH -->
         <div class="flex items-center gap-2 sm:gap-3 flex-shrink-0 w-[180px] sm:w-[280px]">
           <!-- Artwork -->
-          <a id="mini-artwork-link" href="#" class="flex-shrink-0 relative group" aria-label="View release details">
+          <a id="mini-artwork-link" href="javascript:void(0)" class="flex-shrink-0 relative group" role="link" aria-label="View release details">
             <div class="absolute inset-0 bg-red-600 blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300"></div>
             <img
               id="mini-artwork"
@@ -66,7 +66,7 @@ const { nonce = '' } = Astro.props;
           </a>
           
           <!-- Track Info - Fixed width container -->
-          <a id="mini-info-link" href="#" class="group flex-1 min-w-0 overflow-hidden">
+          <a id="mini-info-link" href="javascript:void(0)" class="group flex-1 min-w-0 overflow-hidden" role="link">
             <p id="mini-title" class="text-white font-black text-xs sm:text-sm uppercase truncate group-hover:text-red-500 transition-colors">No track loaded</p>
             <p id="mini-dj" class="text-gray-300 font-bold text-[10px] sm:text-xs uppercase truncate">--</p>
           </a>

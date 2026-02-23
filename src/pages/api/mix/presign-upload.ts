@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { createLogger, errorResponse, successResponse, ApiErrors, getR2Config } from '../../../lib/api-utils';
 
-const log = createLogger('[mix-presign]');
+const log = createLogger('mix/presign-upload');
 
 const ALLOWED_AUDIO_CONTENT_TYPES = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'] as const;
 

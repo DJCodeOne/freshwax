@@ -83,7 +83,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="badge">PRO</span>
         </div>
 
-        <nav class="sidebar-nav" id="sidebarNav">
+        <nav class="sidebar-nav" id="sidebarNav" aria-label="Artist dashboard">
           <!-- Navigation items populated by JS based on roles -->
         </nav>
 
@@ -160,10 +160,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-bottom: 1rem;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
     }
 
     .access-denied {

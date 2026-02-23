@@ -60,7 +60,7 @@ try {
   } else {
     error = 'Product not found';
   }
-} catch (err) {
+} catch (err: unknown) {
   console.error('[MERCH PAGE] Error:', err);
   error = 'Failed to load product';
 }
@@ -101,7 +101,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 ---
 
 <Layout
-  title={product ? `${product.name} | Fresh Wax` : 'Product Not Found'}
+  title={product ? product.name : 'Product Not Found'}
   description={pageDescription}
   image={product?.imageUrl || undefined}
   type={product ? 'product' : 'website'}

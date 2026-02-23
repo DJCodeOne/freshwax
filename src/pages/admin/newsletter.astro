@@ -77,7 +77,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       <span class="text-muted" id="subscriberCountLabel">0 subscribers</span>
     </div>
     <div class="table-responsive">
-      <table class="data-table">
+      <table class="data-table" aria-label="Newsletter subscribers">
         <thead>
           <tr>
             <th scope="col" style="width: 40px;">
@@ -499,8 +499,6 @@ Stay fresh! 🎵
   
   .loading-spinner { text-align: center; padding: 3rem; }
   .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #000; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  
   .empty-state { text-align: center; padding: 3rem; }
   .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
   

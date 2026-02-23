@@ -7,6 +7,9 @@ import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import { getLiveReleases } from '../lib/firebase-rest';
+import { createLogger } from '../lib/api-utils';
+
+const log = createLogger('pre-orders-page');
 
 // Helper to convert date value to Date object
 function toDate(value: unknown): Date | null {
@@ -38,8 +41,8 @@ try {
     .filter(release => release.releaseDateObj > now)
     .sort((a, b) => a.releaseDateObj.getTime() - b.releaseDateObj.getTime()); // Soonest first
 
-} catch (e) {
-  console.error('Error fetching pre-orders:', e);
+} catch (e: unknown) {
+  log.error('Error fetching pre-orders:', e);
 }
 
 // Format release date

@@ -38,6 +38,7 @@ GIPHY_API_KEY = "p0USqLUVxus8d82HAcPhQ2GqG6SfraYr"
 #   0 */6 * * *  /api/cron/retry-payouts           - Retry failed payouts (Stripe/PayPal)
 #   0 */6 * * *  /api/cron/send-restock-notifications - Email users when items restock
 #   0 3 * * *    /api/cron/cleanup-d1              - Purge old D1 rows (error_logs, pending_orders)
+#   0 2 * * *    /api/cron/backup-d1               - Back up D1 tables to R2 as JSON (daily at 02:00 UTC)
 #   0 4 * * *    /api/cron/image-scan              - Scan R2 for non-WebP images
 #   0 10 * * *   /api/cron/verification-reminders  - Remind unverified users to verify email
 #   DISABLED     /api/cron/stock-alerts            - Low stock admin alerts (disabled)

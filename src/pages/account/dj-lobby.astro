@@ -370,7 +370,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                   <div class="preview-branding"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
                 </div>
                 <div id="obsVideoPreview" class="video-preview hidden">
-                  <video id="obsVideo" playsinline autoplay muted crossorigin="anonymous"></video>
+                  <video id="obsVideo" playsinline autoplay muted crossorigin="anonymous">
+                  <track kind="captions" label="Captions unavailable for live content" />
+                </video>
                 </div>
                 <!-- BUTT Audio-Only Placeholder -->
                 <div id="buttAudioPreview" class="butt-audio-preview hidden">
@@ -557,7 +559,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                 </div>
 
                 <div id="videoPreview" class="video-preview hidden">
-                  <video id="hlsVideo" playsinline autoplay crossorigin="anonymous"></video>
+                  <video id="hlsVideo" playsinline autoplay crossorigin="anonymous">
+                    <track kind="captions" label="Captions unavailable for live content" />
+                  </video>
                 </div>
 
                 <div id="audioPreview" class="audio-preview hidden">
@@ -2392,7 +2396,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     // In relay mode: show the now playing track in green instead of DJ name
     if (djNameEl) {
       if (selectedRelaySource?.nowPlaying) {
-        djNameEl.innerHTML = `<span style="color: #ef4444;">${selectedRelaySource.nowPlaying}</span>`;
+        djNameEl.innerHTML = `<span style="color: #ef4444;">${escapeHtml(selectedRelaySource.nowPlaying)}</span>`;
       } else if (userInfo?.name) {
         djNameEl.textContent = userInfo.name;
         djNameEl.style.color = ''; // Reset to default
@@ -2405,7 +2409,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       if (savedTitle) {
         stationNameEl.innerHTML = savedTitle;
       } else {
-        stationNameEl.innerHTML = `Relayed from <span class="brand-fresh">${selectedRelaySource.name}</span>`;
+        stationNameEl.innerHTML = `Relayed from <span class="brand-fresh">${escapeHtml(selectedRelaySource.name)}</span>`;
       }
       // Keep dot disconnected until audio actually connects
       // The dot will turn green in startRelayAudioPreview when audio plays
@@ -2701,7 +2705,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (currentStreamMode === 'relay' && selectedRelaySource?.name) {
       const relayPreviewStationName = document.getElementById('relayPreviewStationName');
       if (relayPreviewStationName) {
-        relayPreviewStationName.innerHTML = `Relayed from <span class="brand-fresh">${selectedRelaySource.name}</span>`;
+        relayPreviewStationName.innerHTML = `Relayed from <span class="brand-fresh">${escapeHtml(selectedRelaySource.name)}</span>`;
       }
     }
     // Revert BUTT preview title to default
@@ -2864,10 +2868,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         clearInterval(lobbyTimeRemainingInterval);
         clearInterval(lobbyStreamKeyInterval);
         clearInterval(lobbyAllSlotsInterval);
+        if (typeof lobbyViewersInterval !== 'undefined') clearInterval(lobbyViewersInterval);
         lobbyStreamStatusInterval = null;
         lobbyTimeRemainingInterval = null;
         lobbyStreamKeyInterval = null;
         lobbyAllSlotsInterval = null;
+        lobbyViewersInterval = null;
 
         if (lobbyAudioPreviewObserver) {
           lobbyAudioPreviewObserver.disconnect();
@@ -5279,14 +5285,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
           // For relay streams, show now playing track (stored in title) in red; otherwise show DJ name
           if (currentStream.isRelay && currentStream.title) {
-            if (lobbyLiveDjName) lobbyLiveDjName.innerHTML = `<span style="color: #ef4444;">${currentStream.title}</span>`;
+            if (lobbyLiveDjName) lobbyLiveDjName.innerHTML = `<span style="color: #ef4444;">${escapeHtml(currentStream.title)}</span>`;
           } else {
             if (lobbyLiveDjName) lobbyLiveDjName.textContent = currentStream.djName || 'DJ';
           }
 
           // Update show title and badge for relay streams
           if (currentStream.isRelay && currentStream.relaySource?.stationName) {
-            if (lobbyLiveShowTitle) lobbyLiveShowTitle.innerHTML = `Relayed from <span class="brand-fresh">${currentStream.relaySource.stationName}</span>`;
+            if (lobbyLiveShowTitle) lobbyLiveShowTitle.innerHTML = `Relayed from <span class="brand-fresh">${escapeHtml(currentStream.relaySource.stationName)}</span>`;
             if (lobbyLiveBadgeText) lobbyLiveBadgeText.textContent = 'RELAY';
           } else {
             if (lobbyLiveShowTitle) lobbyLiveShowTitle.innerHTML = 'Live on <span class="brand-fresh">Fresh</span> <span class="brand-wax">Wax</span>';
@@ -5566,7 +5572,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   // Load viewers initially and on interval (reduced to 60s - Pusher handles real-time updates)
   loadStreamViewers();
-  setInterval(loadStreamViewers, 60000);
+  var lobbyViewersInterval = setInterval(loadStreamViewers, 60000);
 
   // Stream Info Panel - Update real-time stream information
   function updateStreamInfoPanel(isLive, stream = null) {
@@ -9302,6 +9308,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 </script>
 
 <!-- HLS.js for video playback - loaded at end to prevent render blocking -->
-<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" crossorigin="anonymous"></script>
+<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { queryCollection, verifyRequestUser } from '../../lib/firebase-rest';
 import { validateReferralCode } from '../../lib/referral-codes';
 import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger } from '../../lib/api-utils';
-const log = createLogger('[create-checkout]');
+const log = createLogger('create-checkout');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 // Zod schema for Plus subscription checkout

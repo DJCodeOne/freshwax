@@ -9,7 +9,6 @@ import {
   timingSafeCompare,
   getAdminKey,
   parseJsonBody,
-  getEnv,
 } from '../lib/api-utils';
 
 // =============================================
@@ -285,28 +284,6 @@ describe('parseJsonBody', () => {
     });
     const result = await parseJsonBody(request);
     expect(result).toBeNull();
-  });
-});
-
-// =============================================
-// getEnv
-// =============================================
-describe('getEnv', () => {
-  it('extracts env from locals.runtime.env', () => {
-    const locals = { runtime: { env: { API_KEY: 'abc' } } } as unknown as App.Locals;
-    expect(getEnv(locals)).toEqual({ API_KEY: 'abc' });
-  });
-
-  it('returns empty object when runtime is missing', () => {
-    expect(getEnv({} as unknown as App.Locals)).toEqual({});
-  });
-
-  it('returns empty object for null', () => {
-    expect(getEnv(null as unknown as App.Locals)).toEqual({});
-  });
-
-  it('returns empty object for undefined', () => {
-    expect(getEnv(undefined as unknown as App.Locals)).toEqual({});
   });
 });
 

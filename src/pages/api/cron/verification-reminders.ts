@@ -11,7 +11,7 @@ import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
-const log = createLogger('[verification-reminders]');
+const log = createLogger('cron/verification-reminders');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
 export const prerender = false;

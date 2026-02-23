@@ -72,7 +72,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   <!-- Orders Table -->
   <div id="ordersTable" class="card" style="display: none;">
     <div class="table-responsive">
-      <table class="data-table">
+      <table class="data-table" aria-label="Vinyl orders">
         <thead>
           <tr>
             <th scope="col">Order ID</th>
@@ -135,7 +135,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
             <div class="order-items">
               <h4>Items</h4>
-              <table class="items-table">
+              <table class="items-table" aria-label="Order items">
                 <thead>
                   <tr>
                     <th scope="col">Item</th>
@@ -584,8 +584,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
   .loading-spinner { text-align: center; padding: 3rem; }
   .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #dc2626; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
   .badge-purple { background: #7c3aed; color: #fff; }
   .modal-lg { max-width: 700px; }
 

@@ -10,7 +10,7 @@ import type { APIRoute } from 'astro';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
-const log = createLogger('[image-scan]');
+const log = createLogger('cron/image-scan');
 
 export const prerender = false;
 

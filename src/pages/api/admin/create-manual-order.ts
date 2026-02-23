@@ -13,7 +13,7 @@ import { recordSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
 import { formatPrice } from '../../../lib/format-utils';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-const log = createLogger('[create-manual-order]');
+const log = createLogger('admin/create-manual-order');
 
 const createManualOrderSchema = z.object({
   orderData: z.object({

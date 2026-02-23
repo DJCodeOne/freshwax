@@ -83,7 +83,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           <span class="badge">CRATES</span>
         </div>
 
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" aria-label="Vinyl dashboard">
           <div class="nav-section">
             <div class="nav-section-title">Vinyl Crates</div>
             <a href="/artist/vinyl/" class={`nav-link ${activeSection === '/artist/vinyl' || activeSection === 'listings' ? 'active' : ''}`}>
@@ -197,10 +197,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       border-radius: 50%;
       animation: spin 1s linear infinite;
       margin-bottom: 1rem;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
     }
 
     .access-denied {

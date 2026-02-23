@@ -308,9 +308,11 @@
     margin-bottom: 1rem;
   }
   
-  .fs-offline-overlay h2 {
+  .fs-offline-overlay h2,
+  .fs-offline-overlay .fs-offline-heading {
     font-family: 'Inter', sans-serif;
     font-size: 2rem;
+    font-weight: 700;
   }
   
   .fs-video {

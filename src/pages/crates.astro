@@ -60,7 +60,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           </div>
           <div class="sidebar-red-border"></div>
 
-          <nav class="collection-nav" id="collectionNav">
+          <nav class="collection-nav" id="collectionNav" aria-label="Vinyl collections">
             <button class="collection-nav-btn active" data-collection="all">
               <div class="collection-nav-content">
                 <span class="collection-name">All Vinyl</span>
@@ -727,10 +727,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 1rem;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 
   .empty-state {

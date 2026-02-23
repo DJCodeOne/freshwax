@@ -335,10 +335,9 @@ describe('validateStock', () => {
 // reserveStock
 // =============================================
 describe('reserveStock', () => {
-  it('returns success immediately for non-merch items', async () => {
+  it('returns success immediately for non-reservable items', async () => {
     const items = [
       { type: 'digital', name: 'Track', quantity: 1 },
-      { type: 'vinyl', name: 'Vinyl', releaseId: 'r1', quantity: 1 },
     ];
 
     const result = await reserveStock(items, 'session123');

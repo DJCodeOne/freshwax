@@ -21,6 +21,73 @@ const BACKUP_TABLES = [
   'error_logs',
 ];
 
+const PAGE_SIZE = 10000;
+const RETENTION_DAYS = 30;
+
+/**
+ * Paginated query — fetches all rows from a table in PAGE_SIZE chunks
+ * to avoid Worker memory limits on large tables.
+ */
+async function fetchAllRows(db: D1Database, table: string): Promise<Record<string, unknown>[]> {
+  const allRows: Record<string, unknown>[] = [];
+  let offset = 0;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const { results: rows } = await db
+      .prepare(`SELECT * FROM ${table} LIMIT ${PAGE_SIZE} OFFSET ?`)
+      .bind(offset)
+      .all();
+
+    const batch = (rows ?? []) as Record<string, unknown>[];
+    allRows.push(...batch);
+
+    if (batch.length < PAGE_SIZE) break; // last page
+    offset += PAGE_SIZE;
+  }
+
+  return allRows;
+}
+
+/**
+ * Delete R2 backup files older than RETENTION_DAYS for each table prefix.
+ * Returns total number of deleted objects.
+ */
+async function cleanupOldBackups(r2: R2Bucket): Promise<number> {
+  const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  let totalDeleted = 0;
+
+  for (const table of BACKUP_TABLES) {
+    const prefix = `backups/d1/${table}/`;
+    let cursor: string | undefined;
+
+    // Paginate through R2 listing (max 1000 per call)
+    do {
+      const listed = await r2.list({ prefix, cursor });
+
+      const keysToDelete: string[] = [];
+      for (const obj of listed.objects) {
+        // Filename is an ISO timestamp: e.g. "2026-01-15T02:00:00.000Z.json"
+        const filename = obj.key.slice(prefix.length); // "2026-01-15T02:00:00.000Z.json"
+        const isoStr = filename.replace(/\.json$/, '');
+        const fileDate = new Date(isoStr).getTime();
+        if (!isNaN(fileDate) && fileDate < cutoff) {
+          keysToDelete.push(obj.key);
+        }
+      }
+
+      if (keysToDelete.length > 0) {
+        await r2.delete(keysToDelete);
+        totalDeleted += keysToDelete.length;
+      }
+
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+  }
+
+  return totalDeleted;
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
   log.info('[Backup D1] ========== CRON JOB STARTED ==========');
@@ -66,8 +133,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     for (const table of BACKUP_TABLES) {
       try {
-        const { results: rows } = await db.prepare(`SELECT * FROM ${table}`).all();
-        const data = rows ?? [];
+        const data = await fetchAllRows(db, table);
         const key = `backups/d1/${table}/${timestamp}.json`;
 
         await r2.put(key, JSON.stringify(data, null, 2), {
@@ -83,11 +149,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
+    // Retention cleanup — delete backups older than 30 days
+    let deletedCount = 0;
+    try {
+      deletedCount = await cleanupOldBackups(r2);
+      if (deletedCount > 0) {
+        log.info(`[Backup D1] Retention cleanup: deleted ${deletedCount} old backup(s)`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      log.error('[Backup D1] Retention cleanup failed:', message);
+    }
+
     const duration = Date.now() - startTime;
     log.info('[Backup D1] ========== COMPLETED ==========');
     log.info(`[Backup D1] Duration: ${duration}ms`);
 
-    return successResponse({ duration, timestamp, tables: results });
+    return successResponse({ duration, timestamp, tables: results, retentionCleanup: { deletedCount } });
   } finally {
     await releaseCronLock(db, 'backup-d1');
   }

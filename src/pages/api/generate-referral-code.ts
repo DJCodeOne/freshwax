@@ -6,7 +6,7 @@ import { getDocument, verifyUserToken } from '../../lib/firebase-rest';
 import { createReferralCode, saveReferralCode, getUserReferralCode, getReferralCode } from '../../lib/referral-codes';
 import { createLogger, errorResponse, successResponse, ApiErrors } from '../../lib/api-utils';
 
-const log = createLogger('[generate-referral-code]');
+const log = createLogger('generate-referral-code');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
 const GenerateReferralSchema = z.object({

@@ -82,7 +82,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         <button id="refreshBalances" class="refresh-btn">🔄 Refresh</button>
       </div>
       <div class="table-container">
-        <table class="data-table">
+        <table class="data-table" aria-label="Gift card balances">
           <thead>
             <tr>
               <th scope="col">User</th>
@@ -116,7 +116,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
       </div>
       <div class="table-container">
-        <table class="data-table">
+        <table class="data-table" aria-label="Gift cards">
           <thead>
             <tr>
               <th scope="col">Code</th>
@@ -763,17 +763,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       
       if (result.success) {
         resultEl.classList.remove('hidden');
-        document.getElementById('resendResultText').innerHTML = `✅ Email sent successfully to ${email}`;
+        document.getElementById('resendResultText').textContent = `\u2705 Email sent successfully to ${email}`;
         
         // Update cards data
         loadCards();
       } else {
         resultEl.classList.remove('hidden');
-        document.getElementById('resendResultText').innerHTML = `❌ ${result.error || 'Failed to send email'}`;
+        document.getElementById('resendResultText').textContent = `\u274C ${result.error || 'Failed to send email'}`;
       }
     } catch (error) {
       console.error('Error:', error);
-      document.getElementById('resendResultText').innerHTML = '❌ Failed to send email';
+      document.getElementById('resendResultText').textContent = '\u274C Failed to send email';
       document.getElementById('resendResult').classList.remove('hidden');
     }
     

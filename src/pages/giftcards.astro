@@ -76,13 +76,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           
           <form id="redeemForm" class="redeem-form hidden">
             <div class="code-input-wrapper">
-              <input 
-                type="text" 
-                id="giftCardCode" 
-                placeholder="FWGC-XXXX-XXXX-XXXX" 
+              <input
+                type="text"
+                id="giftCardCode"
+                placeholder="FWGC-XXXX-XXXX-XXXX"
                 maxlength="19"
                 autocomplete="off"
                 spellcheck="false"
+                aria-label="Gift card code"
               />
               <button type="submit" id="redeemBtn">
                 <span class="btn-text">Redeem</span>

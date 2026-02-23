@@ -9,7 +9,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[extend-subscription]');
+const log = createLogger('admin/extend-subscription');
 
 const extendSubscriptionSchema = z.object({
   userId: z.string().min(1),

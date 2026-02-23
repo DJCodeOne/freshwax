@@ -480,12 +480,23 @@ export async function queryCollection(
       const authHeaders = await getAuthHeaders();
       const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...authHeaders };
 
-      const response = await fetchWithTimeout(url, {
+      let response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: fetchHeaders,
         body: JSON.stringify({ structuredQuery })
       }, 15000);
-      
+
+      // Single retry after 500ms delay for transient server errors
+      if (!response.ok && response.status >= 500 && response.status < 600) {
+        log.warn(`Query ${collection} got ${response.status}, retrying in 500ms...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        response = await fetchWithTimeout(url, {
+          method: 'POST',
+          headers: fetchHeaders,
+          body: JSON.stringify({ structuredQuery })
+        }, 15000);
+      }
+
       if (!response.ok) {
         const errorText = await response.text();
         log.error('Query failed:', errorText);
@@ -555,7 +566,14 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       // Add server auth for all Firestore operations
       const headers: Record<string, string> = await getAuthHeaders();
 
-      const response = await fetchWithTimeout(url, { headers }, 15000);
+      let response = await fetchWithTimeout(url, { headers }, 15000);
+
+      // Single retry after 500ms delay for transient server errors
+      if (!response.ok && response.status >= 500 && response.status < 600) {
+        log.warn(`Get document ${collection}/${docId} got ${response.status}, retrying in 500ms...`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+        response = await fetchWithTimeout(url, { headers }, 15000);
+      }
 
       if (!response.ok) {
         if (response.status === 404) return null;

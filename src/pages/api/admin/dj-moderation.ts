@@ -12,7 +12,7 @@ import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[dj-moderation]');
+const log = createLogger('admin/dj-moderation');
 
 export const prerender = false;
 

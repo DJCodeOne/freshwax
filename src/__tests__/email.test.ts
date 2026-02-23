@@ -3,6 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock api-utils to intercept fetchWithTimeout
 vi.mock('../lib/api-utils', () => ({
   fetchWithTimeout: vi.fn(),
+  createLogger: vi.fn(() => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  })),
 }));
 
 import { sendResendEmail, logEmailToD1 } from '../lib/email';

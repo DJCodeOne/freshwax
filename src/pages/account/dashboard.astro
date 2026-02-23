@@ -2443,7 +2443,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             // Update dashboard header avatar (if exists)
             const userAvatarContainer = document.getElementById('userAvatar');
             if (userAvatarContainer) {
-              userAvatarContainer.innerHTML = `<img src="${avatarUrl}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+              userAvatarContainer.innerHTML = `<img src="${escapeHtml(avatarUrl)}" alt="Profile" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
               userAvatarContainer.classList.remove('is-pro');
             }
             

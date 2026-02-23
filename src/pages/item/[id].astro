@@ -5,6 +5,9 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument } from '../../lib/firebase-rest';
 import { normalizeRelease } from '../../lib/releases';
+import { createLogger } from '../../lib/api-utils';
+
+const log = createLogger('item-page');
 
 const { id } = Astro.params;
 
@@ -43,8 +46,8 @@ try {
   } else {
     error = 'Release not found';
   }
-} catch (err) {
-  console.error('[ITEM PAGE] Fetch error:', err);
+} catch (err: unknown) {
+  log.error('[ITEM PAGE] Fetch error:', err);
   error = 'Failed to load release';
 }
 

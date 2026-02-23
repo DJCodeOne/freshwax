@@ -9,7 +9,7 @@ import { saUpdateDocument, saQueryCollection, getServiceAccountKey } from '../..
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[assign-seller]');
+const log = createLogger('admin/assign-seller');
 
 const assignSellerSchema = z.object({
   productIds: z.array(z.string().min(1)).optional(),

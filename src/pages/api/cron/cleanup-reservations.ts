@@ -11,7 +11,7 @@ import { cleanupExpiredReservations } from '../../../lib/order-utils';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
-const log = createLogger('[cleanup-reservations]');
+const log = createLogger('cron/cleanup-reservations');
 
 export const prerender = false;
 

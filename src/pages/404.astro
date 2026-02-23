@@ -99,11 +99,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800'
     animation: spin 8s linear infinite;
   }
 
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
   @media (prefers-reduced-motion: reduce) {
     .error-icon {
       animation: none;

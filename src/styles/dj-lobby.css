@@ -87,10 +87,6 @@
     margin: 0 auto 1rem;
   }
   
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
   /* Access Denied */
   .access-denied {
     position: fixed;

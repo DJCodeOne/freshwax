@@ -5,7 +5,7 @@ import { queryCollection, deleteDocument } from '../../../lib/firebase-rest';
 import { requireAdminAuth } from '../../../lib/admin';
 import { createLogger, ApiErrors, successResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[clear-chat]');
+const log = createLogger('admin/clear-chat');
 import {
   checkRateLimit,
   checkBatchLimit,

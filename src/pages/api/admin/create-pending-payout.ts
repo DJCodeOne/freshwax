@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { saSetDocument, saUpdateDocument, getServiceAccountKey } from '../../../lib/firebase-service-account';
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-const log = createLogger('[create-pending-payout]');
+const log = createLogger('admin/create-pending-payout');
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
 export const prerender = false;

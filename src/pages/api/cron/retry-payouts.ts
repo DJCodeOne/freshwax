@@ -16,7 +16,7 @@ import { verifyAdminKey } from '../../../lib/admin';
 import { createLogger, ApiErrors, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
-const log = createLogger('[retry-payouts]');
+const log = createLogger('cron/retry-payouts');
 
 export const prerender = false;
 

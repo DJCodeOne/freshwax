@@ -1,8 +1,8 @@
 // src/pages/api/health/index.ts
-// General health check endpoint for monitoring — verifies D1, R2, KV connectivity
+// General health check endpoint for monitoring — verifies D1, R2, KV, Firebase connectivity
 import type { APIRoute } from 'astro';
 import { requireAdminAuth } from '../../../lib/admin';
-import { jsonResponse } from '../../../lib/api-utils';
+import { jsonResponse, fetchWithTimeout } from '../../../lib/api-utils';
 
 export const prerender = false;
 
@@ -78,16 +78,41 @@ export const GET: APIRoute = async ({ request, locals }) => {
     };
   }
 
+  // Check Firebase/Firestore — hit the REST discovery endpoint with a 5s timeout
+  // Firebase failures mark status as degraded (not unhealthy) since it's an external dependency
+  try {
+    const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/releases?pageSize=1`;
+    const start = Date.now();
+    const res = await fetchWithTimeout(firestoreUrl, {}, 5000);
+    const latency = Date.now() - start;
+    if (res.ok || res.status === 401 || res.status === 403) {
+      // 401/403 means Firestore is reachable but auth required — connectivity is fine
+      checks.firebase = { ok: true, latency_ms: latency };
+    } else {
+      checks.firebase = { ok: false, latency_ms: latency, error: `HTTP ${res.status}` };
+    }
+  } catch (e: unknown) {
+    checks.firebase = {
+      ok: false,
+      latency_ms: 0,
+      error: e instanceof Error ? e.message : 'Firestore probe failed',
+    };
+  }
+
   // Derive overall status
+  // Firebase failure only degrades, doesn't make unhealthy on its own
   const allChecks = Object.values(checks);
-  const failCount = allChecks.filter(c => !c.ok).length;
+  const coreChecks = [checks.d1, checks.r2, checks.kv]; // infrastructure checks
+  const coreFailCount = coreChecks.filter(c => !c.ok).length;
+  const anyFailed = allChecks.some(c => !c.ok);
   let status: 'healthy' | 'degraded' | 'unhealthy';
-  if (failCount === 0) {
+  if (!anyFailed) {
     status = 'healthy';
-  } else if (failCount < allChecks.length) {
-    status = 'degraded';
-  } else {
+  } else if (coreFailCount === coreChecks.length) {
     status = 'unhealthy';
+  } else {
+    status = 'degraded';
   }
 
   const httpStatus = status === 'healthy' ? 200 : 503;

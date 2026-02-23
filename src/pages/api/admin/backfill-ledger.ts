@@ -9,7 +9,7 @@ import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
-const log = createLogger('[backfill-ledger]');
+const log = createLogger('admin/backfill-ledger');
 
 export const prerender = false;
 

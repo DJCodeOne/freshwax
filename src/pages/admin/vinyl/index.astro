@@ -237,7 +237,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
       ) : (
         <div class="table-wrapper">
-          <table class="data-table compact-table">
+          <table class="data-table compact-table" aria-label="Vinyl sellers">
             <thead>
               <tr>
                 <th scope="col">Seller</th>
@@ -306,7 +306,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
         </div>
       ) : (
         <div class="table-wrapper">
-          <table class="data-table">
+          <table class="data-table" aria-label="Recent vinyl listings">
             <thead>
               <tr>
                 <th scope="col">Record</th>
@@ -360,7 +360,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
       </div>
     ) : (
       <div class="table-wrapper">
-        <table class="data-table">
+        <table class="data-table" aria-label="Recent vinyl orders">
           <thead>
             <tr>
               <th scope="col">Order</th>

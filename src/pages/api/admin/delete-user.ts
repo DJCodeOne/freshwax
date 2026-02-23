@@ -8,7 +8,7 @@ import { getDocument, updateDocument, invalidateUsersCache } from '../../../lib/
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { requireAdminAuth } from '../../../lib/admin';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
-const log = createLogger('[delete-user]');
+const log = createLogger('admin/delete-user');
 
 const deleteUserSchema = z.object({
   userId: z.string().min(1),

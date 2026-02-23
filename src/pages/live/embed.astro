@@ -38,7 +38,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 ---
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -251,7 +251,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 </head>
 <body>
   <div class="embed-container">
-    <video id="videoPlayer" playsinline autoplay muted></video>
+    <video id="videoPlayer" playsinline autoplay muted>
+      <track kind="captions" label="Captions unavailable for live content" />
+    </video>
 
     <div id="overlay" class={isLive ? 'overlay' : 'overlay'}>
       {isLive ? (
@@ -282,7 +284,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   </div>
 
   {isLive && hlsUrl && (
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12" is:inline crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12" is:inline integrity="sha384-miJUhTuRucSoqFe3/VSB2sRghSMoev6wpPoEyj5fhF0PARehD+naPBsAkl5NqwPO" crossorigin="anonymous"></script>
   )}
 
   <script is:inline define:vars={{ hlsUrl, isLive }} nonce={nonce}>

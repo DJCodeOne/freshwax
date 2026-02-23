@@ -109,23 +109,23 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>DJ Email or User ID *</label>
-          <input type="text" class="dj-email-input" placeholder="email@example.com or user ID" />
+          <label for="addDjEmail">DJ Email or User ID *</label>
+          <input type="text" id="addDjEmail" class="dj-email-input" placeholder="email@example.com or user ID" />
           <p class="form-hint">Enter the DJ's registered email or Firebase User ID</p>
         </div>
         <div class="form-group">
-          <label>Display Name *</label>
-          <input type="text" class="dj-name-input" placeholder="DJ Name" />
+          <label for="addDjName">Display Name *</label>
+          <input type="text" id="addDjName" class="dj-name-input" placeholder="DJ Name" />
         </div>
         <div class="form-group">
-          <label>Start Hour *</label>
-          <select class="start-hour-select">
+          <label for="addDjStartHour">Start Hour *</label>
+          <select id="addDjStartHour" class="start-hour-select">
             <!-- Populated by JS -->
           </select>
         </div>
         <div class="form-group">
-          <label>Duration *</label>
-          <select class="duration-select">
+          <label for="addDjDuration">Duration *</label>
+          <select id="addDjDuration" class="duration-select">
             <option value="60">1 hour</option>
             <option value="120">2 hours</option>
             <option value="180">3 hours</option>
@@ -176,13 +176,13 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
         <p class="modal-desc">Set custom time limits for DJs. Default is 2 hours/day. Use higher limits for special events.</p>
         
         <div class="form-group">
-          <label>DJ Email or User ID *</label>
-          <input type="text" class="allowance-dj-input" placeholder="email@example.com or user ID" />
+          <label for="allowanceDjId">DJ Email or User ID *</label>
+          <input type="text" id="allowanceDjId" class="allowance-dj-input" placeholder="email@example.com or user ID" />
         </div>
-        
+
         <div class="form-group">
-          <label>Max Hours Per Day *</label>
-          <select class="allowance-hours-select">
+          <label for="allowanceMaxHours">Max Hours Per Day *</label>
+          <select id="allowanceMaxHours" class="allowance-hours-select">
             <option value="2">2 hours (default)</option>
             <option value="4">4 hours</option>
             <option value="6">6 hours</option>
@@ -191,10 +191,10 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             <option value="24">24 hours (full day - events)</option>
           </select>
         </div>
-        
+
         <div class="form-group">
-          <label>Weekly Slots Allowed</label>
-          <select class="allowance-slots-select">
+          <label for="allowanceWeeklySlots">Weekly Slots Allowed</label>
+          <select id="allowanceWeeklySlots" class="allowance-slots-select">
             <option value="2">2 slots/week (default)</option>
             <option value="1">1 slot/week</option>
             <option value="2">2 slots/week</option>
@@ -204,10 +204,10 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             <option value="unlimited">Unlimited</option>
           </select>
         </div>
-        
+
         <div class="form-group">
-          <label>Reason / Event Name</label>
-          <input type="text" class="allowance-reason-input" placeholder="e.g., New Year's Eve Marathon" />
+          <label for="allowanceReason">Reason / Event Name</label>
+          <input type="text" id="allowanceReason" class="allowance-reason-input" placeholder="e.g., New Year's Eve Marathon" />
         </div>
         
         <div class="modal-actions">

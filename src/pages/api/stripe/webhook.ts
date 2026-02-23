@@ -28,7 +28,7 @@ import { createGiftCardAfterPayment } from '../../../lib/giftcard';
 import { recordMultiSellerSale } from '../../../lib/sales-ledger';
 import { SITE_URL } from '../../../lib/constants';
 import { formatPrice } from '../../../lib/format-utils';
-import { fetchWithTimeout, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
+import { fetchWithTimeout, createLogger, successResponse, jsonResponse, errorResponse, timingSafeCompare} from '../../../lib/api-utils';
 import { escapeHtml } from '../../../lib/escape-html';
 
 const log = createLogger('stripe-webhook');
@@ -78,7 +78,7 @@ async function verifyStripeSignature(
       .map(b => b.toString(16).padStart(2, '0'))
       .join('');
 
-    return expectedSignature === v1Signature;
+    return timingSafeCompare(expectedSignature, v1Signature);
   } catch (error: unknown) {
     log.error('[Stripe Webhook] Signature verification error:', error);
     return false;

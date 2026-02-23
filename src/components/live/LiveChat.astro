@@ -90,7 +90,50 @@
 </div>
 
 <script>
-function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
+function escapeHtml(s: string){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
+
+// Focus trap helper for modal dialogs
+function trapFocusOnModal(modalEl: HTMLElement) {
+  const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const focusableElements = modalEl.querySelectorAll<HTMLElement>(focusableSelector);
+  if (focusableElements.length === 0) return;
+  const firstFocusable = focusableElements[0];
+  const lastFocusable = focusableElements[focusableElements.length - 1];
+
+  const handler = (e: KeyboardEvent) => {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === firstFocusable) {
+        e.preventDefault();
+        lastFocusable.focus();
+      }
+    } else {
+      if (document.activeElement === lastFocusable) {
+        e.preventDefault();
+        firstFocusable.focus();
+      }
+    }
+  };
+  (modalEl as any)._focusTrapHandler = handler;
+  modalEl.addEventListener('keydown', handler);
+  firstFocusable.focus();
+}
+
+function removeFocusTrapFromModal(modalEl: HTMLElement) {
+  const handler = (modalEl as any)._focusTrapHandler;
+  if (handler) {
+    modalEl.removeEventListener('keydown', handler);
+    delete (modalEl as any)._focusTrapHandler;
+  }
+}
+
+function restoreFocusFromModal(modalEl: any) {
+  removeFocusTrapFromModal(modalEl);
+  if (modalEl._previousFocus && typeof modalEl._previousFocus.focus === 'function') {
+    modalEl._previousFocus.focus();
+    modalEl._previousFocus = null;
+  }
+}
 
 // Simple self-contained emoji/GIF picker
 (function() {
@@ -226,9 +269,11 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
         console.error('[Picker] GIF modal element not found!');
         return;
       }
+      gifModal._previousFocus = document.activeElement;
       gifModal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
       loadGifs('trending');
+      trapFocusOnModal(gifModal);
     };
 
     // Bind toggle buttons via addEventListener (CSP-safe, replaces inline onclick)
@@ -254,6 +299,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
     closeGif?.addEventListener('click', () => {
       gifModal.style.display = 'none';
       document.body.style.overflow = '';
+      restoreFocusFromModal(gifModal);
     });
 
     // Click outside to close GIF modal
@@ -261,6 +307,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
       if (e.target === gifModal) {
         gifModal.style.display = 'none';
         document.body.style.overflow = '';
+        restoreFocusFromModal(gifModal);
       }
     });
 
@@ -328,6 +375,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
               sendGifToChat(item.dataset.url, item.dataset.id);
               gifModal.style.display = 'none';
               document.body.style.overflow = '';
+              restoreFocusFromModal(gifModal);
             });
           });
         } else {
@@ -368,6 +416,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
       dmModal.style.display = 'none';
       dmInput.value = '';
       currentDmRecipient = null;
+      restoreFocusFromModal(dmModal);
     });
 
     dmModal?.addEventListener('click', (e) => {
@@ -375,6 +424,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
         dmModal.style.display = 'none';
         dmInput.value = '';
         currentDmRecipient = null;
+        restoreFocusFromModal(dmModal);
       }
     });
 
@@ -408,6 +458,7 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
           dmModal.style.display = 'none';
           dmInput.value = '';
           currentDmRecipient = null;
+          restoreFocusFromModal(dmModal);
         }
       } catch (err) {
         console.error('[DM] Error sending:', err);
@@ -418,8 +469,9 @@ function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&
     window.openDmModal = function(userId, userName) {
       currentDmRecipient = { id: userId, name: userName };
       dmRecipientName.textContent = userName;
+      dmModal._previousFocus = document.activeElement;
       dmModal.style.display = 'flex';
-      dmInput.focus();
+      trapFocusOnModal(dmModal);
     };
   }
 
