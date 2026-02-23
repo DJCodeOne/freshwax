@@ -79,7 +79,7 @@ function redirectToImage(imageUrl: string): Response {
       } else {
         fullUrl = `${SITE_URL}/og-image.webp`;
       }
-    } catch {
+    } catch (e: unknown) {
       fullUrl = `${SITE_URL}/og-image.webp`;
     }
   } else {

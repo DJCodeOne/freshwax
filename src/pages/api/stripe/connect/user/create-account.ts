@@ -134,7 +134,7 @@ function isAllowedReturnUrl(url: string | undefined, baseUrl: string): boolean {
   try {
     const parsed = new URL(url);
     return parsed.origin === SITE_URL || parsed.origin === baseUrl;
-  } catch {
+  } catch (e: unknown) {
     return false;
   }
 }

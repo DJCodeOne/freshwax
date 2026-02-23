@@ -20,7 +20,7 @@ const AddCommentSchema = z.object({
   avatarUrl: z.string().url().max(2048).optional().nullable(),
 });
 
-const logger = createLogger('add-comment');
+const log = createLogger('add-comment');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: chat/comments - 30 per minute per IP
@@ -58,11 +58,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } else if (userDoc?.name) {
         userName = userDoc.name;
       }
-    } catch {
+    } catch (e: unknown) {
       // Fall back to body userName if user doc lookup fails
     }
 
-    logger.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
+    log.info('[add-comment] Received:', releaseId, userName, userId, 'hasGif:', !!gifUrl, 'hasAvatar:', !!avatarUrl);
 
     // Allow GIF-only comments (no text required if GIF present)
     if (!releaseId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
@@ -129,9 +129,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           comment: newComment.comment,
           gifUrl: newComment.gifUrl || undefined
         });
-        logger.info('[add-comment] Also written to D1');
+        log.info('[add-comment] Also written to D1');
       } catch (d1Error: unknown) {
-        logger.error('[add-comment] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[add-comment] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -143,14 +143,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    logger.info('[add-comment] Added comment to:', releaseId);
+    log.info('[add-comment] Added comment to:', releaseId);
 
     return successResponse({ comment: newComment }, 200, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
 
   } catch (error: unknown) {
-    logger.error('[add-comment] Error:', error);
+    log.error('[add-comment] Error:', error);
     return ApiErrors.serverError('Failed to add comment');
   }
 };

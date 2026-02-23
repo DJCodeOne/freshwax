@@ -2,7 +2,9 @@
 // Shared PayPal authentication utilities
 // Used by all PayPal API endpoints and paypal-payouts.ts
 
-import { fetchWithTimeout } from './api-utils';
+import { fetchWithTimeout, createLogger } from './api-utils';
+
+const log = createLogger('paypal-auth');
 
 /**
  * Get PayPal API base URL based on mode
@@ -35,7 +37,8 @@ export async function getPayPalAccessToken(
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to get PayPal access token: ${errorText}`);
+    log.error(`PayPal token request failed: ${response.status} - ${errorText}`);
+    throw new Error('Failed to get PayPal access token');
   }
 
   const data = await response.json();

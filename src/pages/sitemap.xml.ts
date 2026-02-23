@@ -41,9 +41,16 @@ const staticPages = [
   { url: '/cookies/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
 ];
 
-function escapeXml(str: string): string {
-  if (!str) return '';
-  return str
+/** Safely coerce unknown Firebase field values to string */
+function str(val: unknown): string {
+  if (val == null) return '';
+  return typeof val === 'string' ? val : String(val);
+}
+
+function escapeXml(val: unknown): string {
+  const s = str(val);
+  if (!s) return '';
+  return s
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -52,16 +59,16 @@ function escapeXml(str: string): string {
 }
 
 // Check if URL is valid for sitemap (absolute, not placeholder)
-function isValidImageUrl(url: string | undefined): boolean {
-  if (!url) return false;
+function isValidImageUrl(url: unknown): boolean {
+  if (!url || typeof url !== 'string') return false;
   if (url.includes('place-holder') || url.includes('placeholder')) return false;
   return url.startsWith('http://') || url.startsWith('https://');
 }
 
-function formatDate(date: any): string {
+function formatDate(date: unknown): string {
   if (!date) return new Date().toISOString().split('T')[0];
   try {
-    const d = new Date(date);
+    const d = new Date(date as string | number);
     return isNaN(d.getTime()) ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0];
   } catch {
     return new Date().toISOString().split('T')[0];
@@ -74,10 +81,10 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   // Get D1 binding for optimized reads
   const db = locals?.runtime?.env?.DB;
 
-  let releases: any[] = [];
-  let djMixes: any[] = [];
-  let merchItems: any[] = [];
-  let vinylListings: any[] = [];
+  let releases: Record<string, unknown>[] = [];
+  let djMixes: Record<string, unknown>[] = [];
+  let merchItems: Record<string, unknown>[] = [];
+  let vinylListings: Record<string, unknown>[] = [];
 
   // Fetch all dynamic content in parallel for performance
   const [releasesResult, djMixesResult, merchResult, vinylResult] = await Promise.allSettled([
@@ -98,12 +105,13 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   if (vinylResult.status === 'fulfilled') vinylListings = vinylResult.value;
 
   // Compute the most recent update date per content source for listing page lastmod
-  function getLatestDate(items: any[], fields: string[]): string {
+  function getLatestDate(items: Record<string, unknown>[], fields: string[]): string {
     let latest = 0;
     for (const item of items) {
       for (const field of fields) {
-        if (item[field]) {
-          const ts = new Date(item[field]).getTime();
+        const val = item[field];
+        if (val) {
+          const ts = new Date(val as string | number).getTime();
           if (!isNaN(ts) && ts > latest) latest = ts;
         }
       }
@@ -189,7 +197,8 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
     const title = escapeXml(release.releaseName || release.title || 'Release');
     const artist = escapeXml(release.artistName || release.artist || '');
     const label = escapeXml(release.label || 'Fresh Wax');
-    const genres = release.genres || release.genre || ['Jungle', 'Drum and Bass'];
+    const rawGenres = release.genres || release.genre || ['Jungle', 'Drum and Bass'];
+    const genresStr = Array.isArray(rawGenres) ? (rawGenres as string[]).join(', ') : String(rawGenres);
 
     xml += `  <url>
     <loc>${SITE_URL}/item/${release.id}/</loc>
@@ -203,7 +212,7 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
     <image:image>
       <image:loc>${escapeXml(imageUrl)}</image:loc>
       <image:title>${title}${artist ? ` by ${artist}` : ''}</image:title>
-      <image:caption>${title} - ${escapeXml(Array.isArray(genres) ? genres.join(', ') : String(genres))} release on ${label}</image:caption>
+      <image:caption>${title} - ${escapeXml(genresStr)} release on ${label}</image:caption>
     </image:image>`;
     }
 
@@ -271,7 +280,8 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   // ===========================================
   for (const item of merchItems) {
     const lastmod = formatDate(item.updatedAt || item.createdAt);
-    const primaryImage = item.primaryImage || item.images?.[0]?.url;
+    const images = item.images as Array<Record<string, unknown>> | undefined;
+    const primaryImage = item.primaryImage || images?.[0]?.url;
     const title = escapeXml(item.name || 'Merchandise');
     const description = escapeXml(item.description || `Fresh Wax official merchandise - ${title}`);
 
@@ -292,8 +302,9 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
     }
 
     // Additional images (only valid absolute URLs)
-    if (item.images && Array.isArray(item.images)) {
-      for (const img of item.images.slice(1, 5)) { // Max 5 images per URL
+    if (images && Array.isArray(images)) {
+      for (const rawImg of images.slice(1, 5)) { // Max 5 images per URL
+        const img = rawImg as Record<string, unknown>;
         if (isValidImageUrl(img.url) && img.url !== primaryImage) {
           xml += `
     <image:image>
@@ -314,9 +325,10 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   // ===========================================
   for (const listing of vinylListings) {
     const lastmod = formatDate(listing.updatedAt || listing.createdAt);
-    const imageUrl = listing.images?.[0]?.url || listing.imageUrl;
-    const title = escapeXml(listing.title || listing.artist ? `${listing.artist} - ${listing.title}` : 'Vinyl Record');
-    const condition = listing.mediaCondition || listing.condition || '';
+    const listingImages = listing.images as Array<Record<string, unknown>> | undefined;
+    const imageUrl = listingImages?.[0]?.url || listing.imageUrl;
+    const title = escapeXml(listing.title || listing.artist ? `${str(listing.artist)} - ${str(listing.title)}` : 'Vinyl Record');
+    const condition = str(listing.mediaCondition || listing.condition);
 
     xml += `  <url>
     <loc>${SITE_URL}/crates/${listing.id}/</loc>
@@ -345,7 +357,7 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   // Build a map of artist -> most recent release date for accurate lastmod
   const artistLatest = new Map<string, string>();
   for (const r of releases) {
-    const name = r.artistName || r.artist;
+    const name = str(r.artistName || r.artist);
     if (!name) continue;
     const date = formatDate(r.updatedAt || r.releaseDate || r.createdAt);
     const existing = artistLatest.get(name);

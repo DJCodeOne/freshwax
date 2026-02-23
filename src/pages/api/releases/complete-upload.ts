@@ -41,7 +41,7 @@ const CompleteUploadSchema = z.object({
 
 export const prerender = false;
 
-const logger = createLogger('complete-upload');
+const log = createLogger('complete-upload');
 
 
 function createS3Client(config: ReturnType<typeof getR2Config>) {
@@ -76,7 +76,7 @@ async function processReleaseArtwork(
 
   const r2Config = getR2Config(env);
   if (!r2Config.accessKeyId || !r2Config.secretAccessKey) {
-    logger.info('R2 not configured, skipping artwork processing');
+    log.info('R2 not configured, skipping artwork processing');
     return null;
   }
 
@@ -103,12 +103,12 @@ async function processReleaseArtwork(
     }));
 
     if (!getResponse.Body) {
-      logger.error('Cover art not found in R2:', r2Key);
+      log.error('Cover art not found in R2:', r2Key);
       return null;
     }
 
     const bodyBytes = await getResponse.Body.transformToByteArray();
-    logger.info(`Fetched cover art: ${r2Key} (${(bodyBytes.length / 1024).toFixed(1)}KB)`);
+    log.info(`Fetched cover art: ${r2Key} (${(bodyBytes.length / 1024).toFixed(1)}KB)`);
 
     // 2. Process to 800x800 WebP cover
     const coverResult = await processImageToSquareWebP(bodyBytes.buffer as ArrayBuffer, 800, 80);
@@ -139,19 +139,19 @@ async function processReleaseArtwork(
       })),
     ]);
 
-    logger.info(`Processed cover: ${coverKey} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
-    logger.info(`Processed thumb: ${thumbKey} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
+    log.info(`Processed cover: ${coverKey} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
+    log.info(`Processed thumb: ${thumbKey} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
 
     // 6. Keep original file for full-res download by buyers
     const originalArtworkUrl = `${cdnDomain}/${r2Key}`;
-    logger.info(`Kept original for downloads: ${r2Key}`);
+    log.info(`Kept original for downloads: ${r2Key}`);
 
     const coverUrl = `${cdnDomain}/${coverKey}`;
     const thumbUrl = `${cdnDomain}/${thumbKey}`;
 
     return { coverUrl, thumbUrl, originalArtworkUrl };
   } catch (err: unknown) {
-    logger.error('Artwork processing failed (using original URL):', err);
+    log.error('Artwork processing failed (using original URL):', err);
     return null;
   }
 }
@@ -178,7 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -275,14 +275,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const adminDb = await getAdminDb();
 
       if (adminDb) {
-        logger.info('Using Firebase Admin SDK for write...');
+        log.info('Using Firebase Admin SDK for write...');
         await adminDb.collection('releases').doc(releaseId).set(releaseDoc, { merge: true });
-        logger.info(`Release document created/updated via Admin SDK: ${releaseId}`);
+        log.info(`Release document created/updated via Admin SDK: ${releaseId}`);
       } else {
         // Fallback to REST API
-        logger.info('Admin SDK not available, using REST API...');
+        log.info('Admin SDK not available, using REST API...');
         await setDocument('releases', releaseId, releaseDoc);
-        logger.info(`Release document created/updated via REST API: ${releaseId}`);
+        log.info(`Release document created/updated via REST API: ${releaseId}`);
       }
 
       // Dual-write to D1 (secondary, non-blocking)
@@ -290,14 +290,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (db) {
         try {
           await d1UpsertRelease(db, releaseId, releaseDoc);
-          logger.info(`Release also written to D1: ${releaseId}`);
+          log.info(`Release also written to D1: ${releaseId}`);
         } catch (d1Error: unknown) {
           // Log D1 error but don't fail the request
-          logger.error('D1 dual-write failed (non-critical):', d1Error);
+          log.error('D1 dual-write failed (non-critical):', d1Error);
         }
       }
     } catch (setError: unknown) {
-      logger.error('Firebase write failed:', setError);
+      log.error('Firebase write failed:', setError);
       // Return more detailed error
       return ApiErrors.serverError('Failed to save release data');
     }
@@ -307,7 +307,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: existingRelease ? 'Release updated successfully' : 'Release created successfully', });
 
   } catch (error: unknown) {
-    logger.error('Failed to complete upload:', error);
+    log.error('Failed to complete upload:', error);
     return ApiErrors.serverError('Failed to complete upload');
   }
 };

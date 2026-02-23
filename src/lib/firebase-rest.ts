@@ -340,7 +340,10 @@ function toFirestoreValue(value: unknown): Record<string, unknown> {
   return { stringValue: String(value) };
 }
 
-function fromFirestoreValue(val: unknown): unknown {
+const MAX_FIRESTORE_DEPTH = 100;
+
+function fromFirestoreValue(val: unknown, depth: number = 0): unknown {
+  if (depth > MAX_FIRESTORE_DEPTH) return null;
   if (val === undefined || val === null) return null;
   const v = val as Record<string, unknown>;
   if ('nullValue' in v) return null;
@@ -351,13 +354,13 @@ function fromFirestoreValue(val: unknown): unknown {
   if ('timestampValue' in v) return new Date(v.timestampValue as string);
   if ('arrayValue' in v) {
     const av = v.arrayValue as Record<string, unknown>;
-    return ((av.values || []) as unknown[]).map(fromFirestoreValue);
+    return ((av.values || []) as unknown[]).map((item: unknown) => fromFirestoreValue(item, depth + 1));
   }
   if ('mapValue' in v) {
     const mv = v.mapValue as Record<string, unknown>;
     const obj: Record<string, unknown> = {};
     for (const [k, fv] of Object.entries((mv.fields || {}) as Record<string, unknown>)) {
-      obj[k] = fromFirestoreValue(fv);
+      obj[k] = fromFirestoreValue(fv, depth + 1);
     }
     return obj;
   }

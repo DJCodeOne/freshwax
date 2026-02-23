@@ -194,7 +194,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const { verifyRequestUser } = await import('../../../lib/firebase-rest');
         const { userId: verifiedId } = await verifyRequestUser(request);
         if (verifiedId) userId = verifiedId;
-      } catch { /* anonymous viewer */ }
+      } catch (e: unknown) { /* anonymous viewer */ }
     }
 
     // Require some form of userId for tracking

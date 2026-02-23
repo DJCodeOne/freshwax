@@ -6,7 +6,7 @@ import { getDocument, updateDocument, setDocument, queryCollection, deleteDocume
 import { requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { parseJsonBody, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
-const logger = createLogger('bypass-requests');
+const log = createLogger('bypass-requests');
 import { getSaQuery } from '../../../lib/admin-query';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
         if (!verifiedId || verifiedId !== userId) {
           return ApiErrors.forbidden('Unauthorized');
         }
-      } catch {
+      } catch (e: unknown) {
         return ApiErrors.unauthorized('Authentication required');
       }
     } else {
@@ -93,7 +93,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
           hasDenied: !!deniedRequest
         });
       } catch (queryError: unknown) {
-        logger.warn('[bypass-requests] Status check query error:', queryError instanceof Error ? queryError.message : String(queryError));
+        log.warn('[bypass-requests] Status check query error:', queryError instanceof Error ? queryError.message : String(queryError));
         // Return empty status on error
         return successResponse({
           hasRequest: false,
@@ -180,11 +180,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
       return successResponse({ requests });
     } catch (queryError: unknown) {
-      logger.warn('[bypass-requests] List query error:', queryError instanceof Error ? queryError.message : String(queryError));
+      log.warn('[bypass-requests] List query error:', queryError instanceof Error ? queryError.message : String(queryError));
       return successResponse({ requests: [] as Record<string, unknown>[] });
     }
   } catch (error: unknown) {
-    logger.error('Error fetching bypass requests:', error);
+    log.error('Error fetching bypass requests:', error);
     return ApiErrors.serverError('Failed to fetch requests');
   }
 };
@@ -243,7 +243,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const approvedStationName = existingRequest.stationName || '';
         const approvedRelayUrl = existingRequest.relayUrl || '';
 
-        logger.info('[bypass-requests] Approving request:', { requestId, targetUserId, targetRequestType });
+        log.info('[bypass-requests] Approving request:', { requestId, targetUserId, targetRequestType });
 
         if (targetUserId) {
           try {
@@ -264,14 +264,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
               };
             }
 
-            logger.info('[bypass-requests] Updating user document...');
+            log.info('[bypass-requests] Updating user document...');
             const existingUser = await getDocument('users', targetUserId);
             if (existingUser) {
               await updateDocument('users', targetUserId, updateData);
             } else {
               await setDocument('users', targetUserId, updateData);
             }
-            logger.info('[bypass-requests] User document updated');
+            log.info('[bypass-requests] User document updated');
 
             // Also add to djLobbyBypass collection for the admin list
             const bypassData: Record<string, unknown> = {
@@ -289,22 +289,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
               bypassData.relayApproved = true;
             }
 
-            logger.info('[bypass-requests] Adding to djLobbyBypass...');
+            log.info('[bypass-requests] Adding to djLobbyBypass...');
             await setDocument('djLobbyBypass', targetUserId, bypassData);
-            logger.info('[bypass-requests] Added to djLobbyBypass');
+            log.info('[bypass-requests] Added to djLobbyBypass');
           } catch (userUpdateError: unknown) {
-            logger.error('[bypass-requests] Error updating user:', userUpdateError);
+            log.error('[bypass-requests] Error updating user:', userUpdateError);
             throw userUpdateError;
           }
         }
 
         // Update request status
-        logger.info('[bypass-requests] Updating request status...');
+        log.info('[bypass-requests] Updating request status...');
         await updateDocument('bypassRequests', requestId, {
           status: 'approved',
           processedAt: new Date().toISOString()
         });
-        logger.info('[bypass-requests] Request approved successfully');
+        log.info('[bypass-requests] Request approved successfully');
 
         return successResponse({ message: 'Request approved' });
       } else {
@@ -324,7 +324,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const { verifyRequestUser } = await import('../../../lib/firebase-rest');
       const { userId: vId } = await verifyRequestUser(request);
       verifiedUserId = vId;
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.unauthorized('Authentication required');
     }
 
@@ -347,7 +347,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         skipCache: true
       });
     } catch (queryError: unknown) {
-      logger.warn('[bypass-requests] Check existing query error:', queryError instanceof Error ? queryError.message : String(queryError));
+      log.warn('[bypass-requests] Check existing query error:', queryError instanceof Error ? queryError.message : String(queryError));
       // Continue - allow request even if we can't check for duplicates
     }
 
@@ -377,7 +377,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return successResponse({ message: 'Request submitted successfully', requestId: newRequestId }, 201);
 
   } catch (error: unknown) {
-    logger.error('Error processing bypass request:', error);
+    log.error('Error processing bypass request:', error);
     return ApiErrors.serverError('Failed to process request');
   }
 };
@@ -408,7 +408,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     return successResponse({ message: 'Request deleted' });
 
   } catch (error: unknown) {
-    logger.error('Error deleting bypass request:', error);
+    log.error('Error deleting bypass request:', error);
     return ApiErrors.serverError('Failed to delete request');
   }
 };

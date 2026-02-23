@@ -99,7 +99,7 @@ async function r2ObjectExists(s3: S3Client, bucket: string, key: string): Promis
   try {
     await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
     return true;
-  } catch {
+  } catch (e: unknown) {
     return false;
   }
 }

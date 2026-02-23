@@ -5,7 +5,7 @@ import { getDocument, clearCache } from '../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
-const logger = createLogger('get-dj-mix');
+const log = createLogger('get-dj-mix');
 
 export const prerender = false;
 
@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ request }) => {
     return ApiErrors.badRequest('Mix ID required');
   }
   
-  logger.info('[get-dj-mix] Fetching mix:', mixId, noCache ? '(nocache)' : '');
+  log.info('[get-dj-mix] Fetching mix:', mixId, noCache ? '(nocache)' : '');
   
   // Clear cache for this mix if nocache requested
   if (noCache) {
@@ -36,7 +36,7 @@ export const GET: APIRoute = async ({ request }) => {
     const mix = await getDocument('dj-mixes', mixId);
     
     if (!mix) {
-      logger.info('[get-dj-mix] Not found:', mixId);
+      log.info('[get-dj-mix] Not found:', mixId);
       return ApiErrors.notFound('Mix not found');
     }
     
@@ -61,13 +61,13 @@ export const GET: APIRoute = async ({ request }) => {
       ...mix
     };
     
-    logger.info('[get-dj-mix] Returning:', normalized.title);
+    log.info('[get-dj-mix] Returning:', normalized.title);
     
     return successResponse({ mix: normalized,
       source: 'firebase-rest' }, 200, { headers: { 'Cache-Control': 'private, max-age=60, must-revalidate' } });
     
   } catch (error: unknown) {
-    logger.error('[get-dj-mix] Error:', error);
+    log.error('[get-dj-mix] Error:', error);
     return ApiErrors.serverError('Failed to fetch mix');
   }
 };

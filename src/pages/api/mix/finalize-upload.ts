@@ -9,7 +9,7 @@ import { getDocument, setDocument, verifyRequestUser, invalidateMixesCache } fro
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { fetchWithTimeout, errorResponse, successResponse, ApiErrors, createLogger, getR2Config } from '../../../lib/api-utils';
 
-const logger = createLogger('finalize-upload');
+const log = createLogger('finalize-upload');
 import { d1UpsertMix } from '../../../lib/d1-catalog';
 import { processImageToSquareWebP, imageExtension, imageContentType } from '../../../lib/image-processing';
 
@@ -107,24 +107,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // CRITICAL: Verify the audio file actually exists in R2 before saving metadata
     // This prevents orphaned mix entries when uploads fail or are cancelled
     try {
-      logger.info(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
+      log.info(`[finalize-upload] Verifying audio file exists: ${audioUrl}`);
       const verifyResponse = await fetchWithTimeout(audioUrl, { method: 'HEAD' }, 10000);
 
       if (!verifyResponse.ok) {
-        logger.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
+        log.error(`[finalize-upload] Audio file not found: ${audioUrl} (status: ${verifyResponse.status})`);
         return ApiErrors.badRequest('Audio file upload incomplete or failed. Please try uploading again.');
       }
 
       // Also check file has content (not empty)
       const contentLength = verifyResponse.headers.get('content-length');
       if (!contentLength || parseInt(contentLength) < 1000) {
-        logger.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
+        log.error(`[finalize-upload] Audio file too small or empty: ${contentLength} bytes`);
         return ApiErrors.badRequest('Audio file appears to be empty or incomplete. Please try uploading again.');
       }
 
-      logger.info(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
+      log.info(`[finalize-upload] Audio file verified: ${contentLength} bytes`);
     } catch (verifyError: unknown) {
-      logger.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
+      log.error(`[finalize-upload] Failed to verify audio file:`, verifyError);
       return ApiErrors.badRequest('Could not verify audio file. Please try uploading again.');
     }
 
@@ -140,7 +140,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           displayName = userData.displayName;
         }
       } catch (e: unknown) {
-        logger.info('[finalize-upload] Could not fetch user data, using provided name');
+        log.info('[finalize-upload] Could not fetch user data, using provided name');
       }
     }
 
@@ -170,7 +170,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }));
 
           finalArtworkUrl = `${R2_CONFIG.publicDomain}/${artworkKey}`;
-          logger.info(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
+          log.info(`[finalize-upload] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
 
           // Generate 400x400 thumbnail for listing pages
           try {
@@ -186,13 +186,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }));
 
             finalThumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-            logger.info(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
+            log.info(`[finalize-upload] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
           } catch (thumbErr: unknown) {
-            logger.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
+            log.error('[finalize-upload] Thumbnail generation failed (non-critical):', thumbErr);
           }
         }
       } catch (imgErr: unknown) {
-        logger.error('[finalize-upload] WebP processing failed, using original:', imgErr);
+        log.error('[finalize-upload] WebP processing failed, using original:', imgErr);
       }
     }
 
@@ -242,17 +242,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Write to Firebase first (primary)
     await setDocument('dj-mixes', mixId, mixData);
-    logger.info(`[finalize-upload] Mix saved to Firebase: ${mixId}`);
+    log.info(`[finalize-upload] Mix saved to Firebase: ${mixId}`);
 
     // Dual-write to D1 (secondary, non-blocking)
     const db = env?.DB;
     if (db) {
       try {
         await d1UpsertMix(db, mixId, mixData);
-        logger.info(`[finalize-upload] Mix also written to D1: ${mixId}`);
+        log.info(`[finalize-upload] Mix also written to D1: ${mixId}`);
       } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
-        logger.error('[finalize-upload] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[finalize-upload] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -263,7 +263,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Mix uploaded successfully' });
 
   } catch (error: unknown) {
-    logger.error('[finalize-upload] Error:', error);
+    log.error('[finalize-upload] Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
 };

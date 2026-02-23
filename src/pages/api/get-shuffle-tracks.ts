@@ -4,7 +4,7 @@ import { getLiveReleases, extractTracksFromReleases, shuffleArray } from '../../
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, jsonResponse, successResponse } from '../../lib/api-utils';
 
-const logger = createLogger('get-shuffle-tracks');
+const log = createLogger('get-shuffle-tracks');
 
 export const prerender = false;
 
@@ -28,7 +28,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   
   try {
     if (cachedResult && (Date.now() - lastFetchTime) < CACHE_DURATION) {
-      logger.info('[get-shuffle-tracks] Returning cached result');
+      log.info('[get-shuffle-tracks] Returning cached result');
       
       const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
       
@@ -41,13 +41,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
     
     if (pendingRequest) {
-      logger.info('[get-shuffle-tracks] Waiting for pending request');
+      log.info('[get-shuffle-tracks] Waiting for pending request');
       const result = await pendingRequest;
       return jsonResponse(result);
     }
     
     pendingRequest = (async () => {
-      logger.info('[get-shuffle-tracks] Fetching fresh data');
+      log.info('[get-shuffle-tracks] Fetching fresh data');
 
       const releases = await getLiveReleases(50);
       const allTracks = extractTracksFromReleases(releases);
@@ -78,16 +78,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const result = await pendingRequest;
     pendingRequest = null;
     
-    logger.info('[get-shuffle-tracks] Returning', result.tracks.length, 'tracks');
+    log.info('[get-shuffle-tracks] Returning', result.tracks.length, 'tracks');
     
     return jsonResponse(result, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' } });
     
   } catch (error: unknown) {
     pendingRequest = null;
-    logger.error('[get-shuffle-tracks] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[get-shuffle-tracks] Error:', error instanceof Error ? error.message : String(error));
     
     if (cachedResult) {
-      logger.info('[get-shuffle-tracks] Returning stale cache');
+      log.info('[get-shuffle-tracks] Returning stale cache');
       const reshuffled = shuffleArray([...cachedResult.tracks]).slice(0, 30);
       return successResponse({ tracks: reshuffled,
         meta: { ...cachedResult.meta, stale: true } });

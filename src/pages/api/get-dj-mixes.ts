@@ -9,7 +9,7 @@ import { ApiErrors, createLogger, jsonResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const logger = createLogger('get-dj-mixes');
+const log = createLogger('get-dj-mixes');
 
 // Cache config for DJ mixes (5 min)
 const MIXES_CACHE = { prefix: 'mixes', ttl: 300 };
@@ -162,7 +162,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   } catch (error: unknown) {
     // Only log errors in development
-    logger.error('[get-dj-mixes] Error:', error);
+    log.error('[get-dj-mixes] Error:', error);
     return ApiErrors.serverError('Failed to fetch DJ mixes');
   }
 };

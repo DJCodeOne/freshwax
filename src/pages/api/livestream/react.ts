@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rat
 import { triggerPusher } from '../../../lib/pusher';
 import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
-const logger = createLogger('livestream-react');
+const log = createLogger('livestream-react');
 import { z } from 'zod';
 
 const ReactSchema = z.object({
@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -102,9 +102,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           timestamp: now
         };
 
-        logger.info('[react.ts] Broadcasting emoji to channel:', channel, 'data:', reactionData);
+        log.info('[react.ts] Broadcasting emoji to channel:', channel, 'data:', reactionData);
         const pusherSuccess = await triggerPusher(channel, 'reaction', reactionData, env);
-        logger.info('[react.ts] Pusher broadcast result:', pusherSuccess);
+        log.info('[react.ts] Pusher broadcast result:', pusherSuccess);
 
         // Atomically increment total likes counter
         let totalLikes = 0;
@@ -117,7 +117,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2: unknown) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
-            logger.info('[react] Stream not found for reaction counter, skipping increment');
+            log.info('[react] Stream not found for reaction counter, skipping increment');
           }
         }
 
@@ -180,7 +180,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalLikes = result.newValues.totalLikes ?? 0;
           } catch (e2: unknown) {
             // Stream doesn't exist in either collection (playlist mode) - that's OK
-            logger.info('[react] Stream not found for like counter, skipping increment');
+            log.info('[react] Stream not found for like counter, skipping increment');
           }
         }
 
@@ -371,13 +371,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         const shoutoutChannel = `stream-${streamId}`;
-        logger.info('[react.ts] Broadcasting shoutout to channel:', shoutoutChannel);
+        log.info('[react.ts] Broadcasting shoutout to channel:', shoutoutChannel);
         const shoutoutSuccess = await triggerPusher(shoutoutChannel, 'shoutout', {
           name: userName || 'Someone',
           message: message,
           timestamp: now
         }, env);
-        logger.info('[react.ts] Shoutout broadcast result:', shoutoutSuccess);
+        log.info('[react.ts] Shoutout broadcast result:', shoutoutSuccess);
 
         if (!shoutoutSuccess) {
           return ApiErrors.serverError('Failed to broadcast shoutout via Pusher');
@@ -391,7 +391,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     
   } catch (error: unknown) {
-    logger.error('[livestream/react] Error:', error);
+    log.error('[livestream/react] Error:', error);
     return ApiErrors.serverError('Failed to process reaction');
   }
 };
@@ -431,7 +431,7 @@ export const GET: APIRoute = async ({ request, locals }) => {  try {
       userRating });
     
   } catch (error: unknown) {
-    logger.error('[livestream/react] GET Error:', error);
+    log.error('[livestream/react] GET Error:', error);
     return ApiErrors.serverError('Failed to get reactions');
   }
 };

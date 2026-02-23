@@ -10,7 +10,7 @@ import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const logger = createLogger('sync-release');
+const log = createLogger('sync-release');
 
 // Audio file extensions
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.aiff', '.aif', '.m4a'];
@@ -22,7 +22,7 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
     const authError = await requireAdminAuth(request, locals);
     if (authError) return authError;
 
-    logger.info('[sync-release] Sync release API called');
+    log.info('[sync-release] Sync release API called');
 
     const formData = await request.formData();
     const zipFile = formData.get('zipFile');
@@ -54,7 +54,7 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
       throw new Error('Firebase credentials not configured');
     }
 
-    logger.info('[sync-release] Configuration validated');
+    log.info('[sync-release] Configuration validated');
 
     // Read ZIP file
     const buffer = Buffer.from(await zipFile.arrayBuffer());
@@ -70,7 +70,7 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
 
     if (hasReleasesFolder && hasMetadata) {
       // Pre-processed package - use existing R2FirebaseSync
-      logger.info('[sync-release] Detected pre-processed package, using R2FirebaseSync');
+      log.info('[sync-release] Detected pre-processed package, using R2FirebaseSync');
       
       const tempDir = path.join(process.cwd(), 'temp');
       if (!fs.existsSync(tempDir)) {
@@ -89,7 +89,7 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
       
     } else {
       // Raw ZIP - process directly
-      logger.info('[sync-release] Detected raw ZIP, processing directly');
+      log.info('[sync-release] Detected raw ZIP, processing directly');
       
       const originalFilename = zipFile.name || 'Unknown - Untitled.zip';
       const result = await processRawZip(zip, zipEntries, originalFilename, config);
@@ -105,21 +105,21 @@ export const POST = async ({ request, locals }: { request: Request; locals: App.
 
         if (releaseDoc) {
           release = releaseDoc;
-          logger.info('[sync-release] Fetched release data:', release.releaseName, 'by', release.artistName);
+          log.info('[sync-release] Fetched release data:', release.releaseName, 'by', release.artistName);
         }
       } catch (fetchError: unknown) {
-        logger.warn('[sync-release] Could not fetch release data:', fetchError);
+        log.warn('[sync-release] Could not fetch release data:', fetchError);
       }
     }
 
-    logger.info('[sync-release] Success:', releaseId);
+    log.info('[sync-release] Success:', releaseId);
 
     return successResponse({ releaseId,
       release,
       message: 'Release synced successfully', });
 
   } catch (error: unknown) {
-    logger.error('[sync-release] Sync failed:', error);
+    log.error('[sync-release] Sync failed:', error);
     
     return ApiErrors.serverError('Sync failed');
   }
@@ -149,7 +149,7 @@ async function processRawZip(
     releaseName = baseName.trim();
   }
   
-  logger.info(`[sync-release] Parsed: "${artistName}" - "${releaseName}"`);
+  log.info(`[sync-release] Parsed: "${artistName}" - "${releaseName}"`);
   
   // Generate release ID
   const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
@@ -205,7 +205,7 @@ async function processRawZip(
   // Sort by track number
   audioEntries.sort((a, b) => a.trackNumber - b.trackNumber);
   
-  logger.info(`[sync-release] Found ${audioEntries.length} tracks, cover: ${coverEntry ? 'yes' : 'no'}`);
+  log.info(`[sync-release] Found ${audioEntries.length} tracks, cover: ${coverEntry ? 'yes' : 'no'}`);
   
   if (audioEntries.length === 0) {
     throw new Error('No audio files found in ZIP. Supported formats: MP3, WAV, FLAC, AIFF');
@@ -239,7 +239,7 @@ async function processRawZip(
       CacheControl: 'public, max-age=31536000',
     }));
     originalArtworkUrl = `${config.r2.publicDomain}/${originalKey}`;
-    logger.info(`[sync-release] Uploaded original: ${originalArtworkUrl}`);
+    log.info(`[sync-release] Uploaded original: ${originalArtworkUrl}`);
 
     try {
       const coverResult = await processImageToSquareWebP(coverBuffer.buffer as ArrayBuffer, 800, 80);
@@ -267,10 +267,10 @@ async function processRawZip(
 
       coverUrl = `${config.r2.publicDomain}/${coverKey}`;
       thumbUrl = `${config.r2.publicDomain}/${thumbKey}`;
-      logger.info(`[sync-release] Uploaded cover: ${coverUrl} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
-      logger.info(`[sync-release] Uploaded thumb: ${thumbUrl} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
+      log.info(`[sync-release] Uploaded cover: ${coverUrl} (${(coverResult.buffer.length / 1024).toFixed(1)}KB)`);
+      log.info(`[sync-release] Uploaded thumb: ${thumbUrl} (${(thumbResult.buffer.length / 1024).toFixed(1)}KB)`);
     } catch (imgErr: unknown) {
-      logger.warn('[sync-release] WebP conversion failed, using original as cover:', imgErr);
+      log.warn('[sync-release] WebP conversion failed, using original as cover:', imgErr);
       coverUrl = originalArtworkUrl;
     }
   }
@@ -312,7 +312,7 @@ async function processRawZip(
       fileSize: entry.getData().length,
     });
     
-    logger.info(`[sync-release] Uploaded track ${trackNumber}: ${title}`);
+    log.info(`[sync-release] Uploaded track ${trackNumber}: ${title}`);
   }
   
 
@@ -345,7 +345,7 @@ async function processRawZip(
   };
 
   await setDocument('releases', releaseId, releaseDoc);
-  logger.info(`[sync-release] Created release document: ${releaseId}`);
+  log.info(`[sync-release] Created release document: ${releaseId}`);
 
   return { releaseId, release: releaseDoc };
 }

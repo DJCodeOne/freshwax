@@ -12,7 +12,7 @@ import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 
-const logger = createLogger('cleanup-d1');
+const log = createLogger('cleanup-d1');
 
 export const prerender = false;
 
@@ -21,7 +21,7 @@ const PENDING_ORDERS_RETENTION_DAYS = 90;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  logger.info('[Cleanup D1] ========== CRON JOB STARTED ==========');
+  log.info('[Cleanup D1] ========== CRON JOB STARTED ==========');
 
   const env = locals.runtime.env;
 
@@ -42,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const db = env?.DB;
   if (!db) {
-    logger.error('[Cleanup D1] D1 binding not available');
+    log.error('[Cleanup D1] D1 binding not available');
     return ApiErrors.serverError('D1 not available');
   }
 
@@ -51,10 +51,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // 1. Clean up error_logs older than 30 days
   try {
     const deletedErrors = await cleanupErrorLogs(env, ERROR_LOGS_RETENTION_DAYS);
-    logger.info(`[Cleanup D1] error_logs: deleted ${deletedErrors} rows older than ${ERROR_LOGS_RETENTION_DAYS} days`);
+    log.info(`[Cleanup D1] error_logs: deleted ${deletedErrors} rows older than ${ERROR_LOGS_RETENTION_DAYS} days`);
     results.errorLogs = { deleted: deletedErrors, retentionDays: ERROR_LOGS_RETENTION_DAYS };
   } catch (err: unknown) {
-    logger.error('[Cleanup D1] error_logs cleanup failed:', err instanceof Error ? err.message : String(err));
+    log.error('[Cleanup D1] error_logs cleanup failed:', err instanceof Error ? err.message : String(err));
     results.errorLogs = { error: 'cleanup failed' };
   }
 
@@ -66,10 +66,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       `DELETE FROM pending_orders WHERE status = 'completed' AND created_at < ?`
     ).bind(cutoff).run();
     const deletedOrders = result?.meta?.changes || 0;
-    logger.info(`[Cleanup D1] pending_orders: deleted ${deletedOrders} completed rows older than ${PENDING_ORDERS_RETENTION_DAYS} days`);
+    log.info(`[Cleanup D1] pending_orders: deleted ${deletedOrders} completed rows older than ${PENDING_ORDERS_RETENTION_DAYS} days`);
     results.pendingOrders = { deleted: deletedOrders, retentionDays: PENDING_ORDERS_RETENTION_DAYS };
   } catch (err: unknown) {
-    logger.error('[Cleanup D1] pending_orders cleanup failed:', err instanceof Error ? err.message : String(err));
+    log.error('[Cleanup D1] pending_orders cleanup failed:', err instanceof Error ? err.message : String(err));
     results.pendingOrders = { error: 'cleanup failed' };
   }
 
@@ -80,16 +80,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
     ).run();
     const deletedScans = scanResult?.meta?.changes || 0;
     if (deletedScans > 0) {
-      logger.info(`[Cleanup D1] image_scan_results: deleted ${deletedScans} rows`);
+      log.info(`[Cleanup D1] image_scan_results: deleted ${deletedScans} rows`);
     }
     results.imageScanResults = { deleted: deletedScans };
-  } catch {
+  } catch (e: unknown) {
     // Table may not exist — that's fine, skip silently
   }
 
   const duration = Date.now() - startTime;
-  logger.info('[Cleanup D1] ========== COMPLETED ==========');
-  logger.info('[Cleanup D1] Duration:', duration, 'ms');
+  log.info('[Cleanup D1] ========== COMPLETED ==========');
+  log.info('[Cleanup D1] Duration:', duration, 'ms');
 
   return successResponse({ duration,
     ...results });

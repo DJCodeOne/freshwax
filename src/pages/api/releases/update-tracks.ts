@@ -9,7 +9,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 export const prerender = false;
 
-const logger = createLogger('update-tracks');
+const log = createLogger('update-tracks');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -47,8 +47,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.notFound('Release not found');
     }
 
-    logger.info(`Updating tracks for release: ${releaseId}`);
-    logger.info(`Tracks to update: ${tracks.length}`);
+    log.info(`Updating tracks for release: ${releaseId}`);
+    log.info(`Tracks to update: ${tracks.length}`);
 
     // Update existing tracks with processed URLs
     // Match by canonical trackNumber (displayTrackNumber - 1) since trackNumber field can be inconsistent
@@ -95,14 +95,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     await saSetDocument(serviceAccountKey, projectId, 'releases', releaseId, updatedRelease);
-    logger.info(`Release updated: ${releaseId}`);
+    log.info(`Release updated: ${releaseId}`);
 
     return successResponse({ releaseId,
       tracksUpdated: tracks.length,
       message: 'Tracks updated with processed audio URLs' });
 
   } catch (error: unknown) {
-    logger.error('Failed to update tracks:', error);
+    log.error('Failed to update tracks:', error);
     return ApiErrors.serverError('Failed to update tracks');
   }
 };

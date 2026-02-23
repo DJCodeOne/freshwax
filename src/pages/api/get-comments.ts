@@ -6,7 +6,7 @@ import { d1GetComments } from '../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
-const logger = createLogger('get-comments');
+const log = createLogger('get-comments');
 
 export const prerender = false;
 
@@ -35,20 +35,20 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Release ID required');
     }
 
-    logger.info('[get-comments] Fetching comments for:', releaseId);
+    log.info('[get-comments] Fetching comments for:', releaseId);
 
     // Try D1 first
     if (db) {
       try {
         const comments = await d1GetComments(db, releaseId, 'release');
         if (comments.length > 0) {
-          logger.info('[get-comments] D1: Found', comments.length, 'comments');
+          log.info('[get-comments] D1: Found', comments.length, 'comments');
           return successResponse({ comments,
             count: comments.length,
             source: 'd1' }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
         }
       } catch (d1Error: unknown) {
-        logger.error('[get-comments] D1 error, falling back to Firebase:', d1Error);
+        log.error('[get-comments] D1 error, falling back to Firebase:', d1Error);
       }
     }
 
@@ -67,14 +67,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return dateB - dateA;
     });
 
-    logger.info('[get-comments] Firebase: Found', sortedComments.length, 'comments');
+    log.info('[get-comments] Firebase: Found', sortedComments.length, 'comments');
 
     return successResponse({ comments: sortedComments,
       count: sortedComments.length,
       source: 'firebase' }, 200, { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=60' } });
 
   } catch (error: unknown) {
-    logger.error('[get-comments] Error:', error);
+    log.error('[get-comments] Error:', error);
     return ApiErrors.serverError('Failed to fetch comments');
   }
 };

@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ request }) => {
     try {
       const result = await verifyRequestUser(request);
       if (result.userId) { userId = result.userId; email = result.email; }
-    } catch { /* no auth token */ }
+    } catch (e: unknown) { /* no auth token */ }
 
     if (!userId) {
       const cookieHeader = request.headers.get('cookie') || '';

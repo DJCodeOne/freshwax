@@ -10,7 +10,7 @@ import { requireAdminAuth } from '../../../lib/admin';
 import { kvDelete, CACHE_CONFIG } from '../../../lib/kv-cache';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
-const logger = createLogger('cleanup-duplicates');
+const log = createLogger('cleanup-duplicates');
 
 export const prerender = false;
 
@@ -36,7 +36,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -81,7 +81,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             await saDeleteDocument(serviceAccountKey, projectId, 'tracks', track.id);
           }
         } catch (error: unknown) {
-          logger.warn(`Could not delete tracks for ${releaseId}:`, error);
+          log.warn(`Could not delete tracks for ${releaseId}:`, error);
         }
 
         // 4. Remove from master list
@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           }
         } catch (error: unknown) {
-          logger.warn(`Could not update master list for ${releaseId}:`, error);
+          log.warn(`Could not update master list for ${releaseId}:`, error);
         }
 
         // 5. Delete R2 folder
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             await r2.delete(keys);
           }
         } catch (error: unknown) {
-          logger.warn(`Could not delete R2 folder for ${releaseId}:`, error);
+          log.warn(`Could not delete R2 folder for ${releaseId}:`, error);
         }
 
         // 6. D1 cleanup
@@ -129,15 +129,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
           try {
             await db.prepare('DELETE FROM releases_v2 WHERE id = ?').bind(releaseId).run();
           } catch (error: unknown) {
-            logger.warn(`Could not delete D1 entry for ${releaseId}:`, error);
+            log.warn(`Could not delete D1 entry for ${releaseId}:`, error);
           }
         }
 
-        logger.info(`Deleted duplicate: ${releaseDoc.artistName} - ${releaseDoc.releaseName} (${releaseId})`);
+        log.info(`Deleted duplicate: ${releaseDoc.artistName} - ${releaseDoc.releaseName} (${releaseId})`);
         results.push({ id: releaseId, success: true });
 
       } catch (error: unknown) {
-        logger.error(`Failed to delete ${releaseId}:`, error);
+        log.error(`Failed to delete ${releaseId}:`, error);
         results.push({ id: releaseId, success: false, error: error instanceof Error ? error.message : 'Unknown error' });
       }
 
@@ -158,7 +158,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    logger.error('Cleanup error:', error);
+    log.error('Cleanup error:', error);
     return ApiErrors.serverError('Internal server error');
   }
 };

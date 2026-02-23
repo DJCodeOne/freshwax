@@ -12,7 +12,7 @@ import { errorResponse, successResponse, ApiErrors, createLogger, getR2Config } 
 
 export const prerender = false;
 
-const logger = createLogger('upload-mix');
+const log = createLogger('upload-mix');
 
 
 // Create S3 client with runtime env
@@ -156,17 +156,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         let userData = await getDocument('users', authenticatedUserId);
         if (userData?.displayName) {
           displayName = userData.displayName;
-          logger.info(`[upload-mix] Using displayName from customers: ${displayName}`);
+          log.info(`[upload-mix] Using displayName from customers: ${displayName}`);
         } else {
           // Fallback to users collection
           userData = await getDocument('users', authenticatedUserId);
           if (userData) {
             displayName = userData.displayName || userData.partnerInfo?.displayName || djNameFromForm;
-            logger.info(`[upload-mix] Using displayName from users: ${displayName}`);
+            log.info(`[upload-mix] Using displayName from users: ${displayName}`);
           }
         }
       } catch (e: unknown) {
-        logger.info(`[upload-mix] Could not fetch displayName, using form value: ${djNameFromForm}`);
+        log.info(`[upload-mix] Could not fetch displayName, using form value: ${djNameFromForm}`);
       }
     }
     
@@ -192,7 +192,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const audioExt = isWav ? 'wav' : 'mp3';
     const audioContentType = isWav ? 'audio/wav' : 'audio/mpeg';
 
-    logger.info(`[upload-mix] Uploading: ${djName} - ${mixTitle} (${(audioFile.size / 1024 / 1024).toFixed(2)} MB, ${audioExt.toUpperCase()})`);
+    log.info(`[upload-mix] Uploading: ${djName} - ${mixTitle} (${(audioFile.size / 1024 / 1024).toFixed(2)} MB, ${audioExt.toUpperCase()})`);
 
     // Upload audio to R2
     const audioBuffer = await audioFile.arrayBuffer();
@@ -226,9 +226,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         artworkKey = `${folderPath}/artwork${imageExtension(processed.format)}`;
         artworkContentType = imageContentType(processed.format);
         artworkBody = Buffer.from(processed.buffer);
-        logger.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
+        log.info(`[upload-mix] Artwork processed to ${processed.width}x${processed.height} ${processed.format}`);
       } catch (imgErr: unknown) {
-        logger.error('[upload-mix] WebP processing failed, using original:', imgErr);
+        log.error('[upload-mix] WebP processing failed, using original:', imgErr);
         const artworkExt = artworkFile.name.split('.').pop() || 'jpg';
         artworkKey = `${folderPath}/artwork.${artworkExt}`;
         artworkContentType = artworkFile.type;
@@ -263,9 +263,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         );
         uploadedR2Keys.push(thumbKey);
         thumbUrl = `${R2_CONFIG.publicDomain}/${thumbKey}`;
-        logger.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
+        log.info(`[upload-mix] Thumbnail generated: ${thumb.width}x${thumb.height} ${thumb.format}`);
       } catch (thumbErr: unknown) {
-        logger.error('[upload-mix] Thumbnail generation failed (non-critical):', thumbErr);
+        log.error('[upload-mix] Thumbnail generation failed (non-critical):', thumbErr);
       }
     } else {
       artworkUrl = '/place-holder.webp';
@@ -318,9 +318,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (db) {
       try {
         await d1UpsertMix(db, mixId, mixData);
-        logger.info('[upload-mix] Also written to D1');
+        log.info('[upload-mix] Also written to D1');
       } catch (d1Error: unknown) {
-        logger.error('[upload-mix] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[upload-mix] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -333,7 +333,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
-    logger.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
+    log.info(`[upload-mix] Success: ${mixId} (${genre}, ${formatDuration(durationSeconds)}, ${tracklistArray.length} tracks)`);
 
     return successResponse({ message: 'Mix uploaded and published successfully',
       mixId,
@@ -347,7 +347,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       trackCount: tracklistArray.length });
 
   } catch (error: unknown) {
-    logger.error('[upload-mix] Error:', error);
+    log.error('[upload-mix] Error:', error);
 
     // Clean up any R2 objects that were uploaded before the failure
     if (uploadedR2Keys.length > 0) {
@@ -357,10 +357,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
             Bucket: R2_CONFIG.bucketName,
             Key: key,
           }));
-          logger.info(`[upload-mix] Cleaned up R2 object: ${key}`);
+          log.info(`[upload-mix] Cleaned up R2 object: ${key}`);
         }
       } catch (cleanupError: unknown) {
-        logger.error('[upload-mix] R2 cleanup error (original error preserved):', cleanupError);
+        log.error('[upload-mix] R2 cleanup error (original error preserved):', cleanupError);
       }
     }
 

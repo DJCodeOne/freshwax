@@ -235,6 +235,47 @@ declare namespace App {
 }
 
 // ---------------------------------------------------------------------------
+// Pusher CDN global — loaded from <script src="https://js.pusher.com/...">
+// Minimal interface matching the Pusher.js constructor and channel API
+// ---------------------------------------------------------------------------
+
+interface PusherChannel {
+  bind(event: string, callback: (data: unknown) => void): this;
+  unbind(event: string, callback?: (data: unknown) => void): this;
+  unbind_all(): this;
+  readonly name: string;
+  readonly members?: {
+    count: number;
+    each(callback: (member: { id: string; info: Record<string, unknown> }) => void): void;
+    get(userId: string): { id: string; info: Record<string, unknown> } | null;
+    me: { id: string; info: Record<string, unknown> };
+  };
+}
+
+interface PusherInstance {
+  subscribe(channelName: string): PusherChannel;
+  unsubscribe(channelName: string): void;
+  disconnect(): void;
+}
+
+interface PusherConstructor {
+  new(key: string, options?: {
+    cluster?: string;
+    forceTLS?: boolean;
+    authEndpoint?: string;
+    auth?: {
+      headers?: Record<string, string>;
+    };
+    channelAuthorization?: {
+      endpoint?: string;
+      transport?: string;
+      headers?: Record<string, string>;
+    };
+    [key: string]: unknown;
+  }): PusherInstance;
+}
+
+// ---------------------------------------------------------------------------
 // Window augmentation — eliminates `(window as any)` casts across the codebase
 // ---------------------------------------------------------------------------
 
@@ -262,9 +303,9 @@ declare global {
 
     // ---- Pusher ----
     PUSHER_CONFIG?: { key: string; cluster: string };
-    pusherInstance?: InstanceType<typeof window.Pusher> | null;
-    livestreamPusher?: InstanceType<typeof window.Pusher> | null;
-    Pusher: any;
+    pusherInstance?: PusherInstance | null;
+    livestreamPusher?: PusherInstance | null;
+    Pusher: PusherConstructor;
 
     // ---- Chat ----
     setChatEnabled?: (enabled: boolean) => void;

@@ -13,7 +13,7 @@ function initServices(locals: App.Locals) {
   initAdminEnv({ ADMIN_UIDS: env?.ADMIN_UIDS, ADMIN_EMAILS: env?.ADMIN_EMAILS });
 }
 
-const logger = createLogger('suppliers');
+const log = createLogger('suppliers');
 
 // GET - List all suppliers or get specific supplier
 export const GET: APIRoute = async ({ request, url, locals }) => {
@@ -200,13 +200,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       ...userSuppliers.filter((u: Record<string, unknown>) => !u.email || !supplierEmails.has((u.email as string).toLowerCase()))
     ];
 
-    logger.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');
+    log.info('[suppliers] Listed', combinedSuppliers.length, 'suppliers (', merchSuppliers.length, 'legacy +', userSuppliers.length, 'users)');
 
     return successResponse({ count: combinedSuppliers.length,
       suppliers: combinedSuppliers }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
 
   } catch (error: unknown) {
-    logger.error('[suppliers] GET Error:', error);
+    log.error('[suppliers] GET Error:', error);
 
     return ApiErrors.serverError('Failed to fetch suppliers');
   }
@@ -267,14 +267,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     await setDocument('merch-suppliers', supplierId, supplierData);
 
-    logger.info('[suppliers] Created supplier:', name, '(' + supplierId + ')');
+    log.info('[suppliers] Created supplier:', name, '(' + supplierId + ')');
 
     return successResponse({ message: 'Supplier created successfully',
       supplier: { id: supplierId, ...supplierData },
       accessCode: accessCode });
 
   } catch (error: unknown) {
-    logger.error('[suppliers] POST Error:', error);
+    log.error('[suppliers] POST Error:', error);
 
     return ApiErrors.serverError('Failed to create supplier');
   }
@@ -310,12 +310,12 @@ export const PUT: APIRoute = async ({ request, locals }) => {
 
     await updateDocument('merch-suppliers', supplierId, updates);
 
-    logger.info('[suppliers] Updated supplier:', supplierId);
+    log.info('[suppliers] Updated supplier:', supplierId);
 
     return successResponse({ message: 'Supplier updated successfully' });
 
   } catch (error: unknown) {
-    logger.error('[suppliers] PUT Error:', error);
+    log.error('[suppliers] PUT Error:', error);
 
     return ApiErrors.serverError('Failed to update supplier');
   }
@@ -341,7 +341,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     if (hardDelete) {
       await deleteDocument('merch-suppliers', supplierId);
 
-      logger.info('[suppliers] Permanently deleted supplier:', supplierId);
+      log.info('[suppliers] Permanently deleted supplier:', supplierId);
 
       return successResponse({ message: 'Supplier permanently deleted' });
     } else {
@@ -350,13 +350,13 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
         deactivatedAt: new Date().toISOString()
       });
 
-      logger.info('[suppliers] Deactivated supplier:', supplierId);
+      log.info('[suppliers] Deactivated supplier:', supplierId);
 
       return successResponse({ message: 'Supplier deactivated successfully' });
     }
 
   } catch (error: unknown) {
-    logger.error('[suppliers] DELETE Error:', error);
+    log.error('[suppliers] DELETE Error:', error);
 
     return ApiErrors.serverError('Failed to delete supplier');
   }

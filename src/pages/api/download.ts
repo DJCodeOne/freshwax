@@ -6,7 +6,7 @@ import { verifyRequestUser, queryCollection } from '../../lib/firebase-rest';
 import { errorResponse, ApiErrors, fetchWithTimeout, createLogger } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-const logger = createLogger('download');
+const log = createLogger('download');
 
 export const prerender = false;
 
@@ -78,17 +78,17 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return ApiErrors.forbidden('Purchase required');
     }
   } catch (purchaseErr: unknown) {
-    logger.error('[download] Purchase verification error:', purchaseErr);
+    log.error('[download] Purchase verification error:', purchaseErr);
     return errorResponse('Could not verify purchase');
   }
 
   try {
-    logger.info('[download] Fetching:', fileUrl);
+    log.info('[download] Fetching:', fileUrl);
 
     const response = await fetchWithTimeout(fileUrl, {}, 30000);
 
     if (!response.ok) {
-      logger.error('[download] Fetch failed:', response.status);
+      log.error('[download] Fetch failed:', response.status);
       return errorResponse('Failed to fetch file', response.status);
     }
 
@@ -109,7 +109,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     // Stream the response instead of buffering to handle large files
     const contentLength = response.headers.get('content-length');
 
-    logger.info('[download] Streaming file, size:', contentLength || 'unknown');
+    log.info('[download] Streaming file, size:', contentLength || 'unknown');
 
     const headers: Record<string, string> = {
       'Content-Type': contentType,
@@ -128,7 +128,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
     });
 
   } catch (error: unknown) {
-    logger.error('[download] Error:', error);
+    log.error('[download] Error:', error);
     return errorResponse('Download failed');
   }
 };

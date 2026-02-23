@@ -19,7 +19,7 @@ const updateStockSchema = z.object({
   userId: z.string().optional().default('admin'),
 });
 
-const logger = createLogger('update-stock');
+const log = createLogger('update-stock');
 
 export const prerender = false;
 
@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       userId
     } = parsed.data;
 
-    logger.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
+    log.info('[update-stock]', operation.toUpperCase(), quantity, 'units for', productId);
 
     if (quantity < 0 && !['adjust', 'damaged', 'set'].includes(operation)) {
       return ApiErrors.badRequest('Quantity must be positive for this operation');
@@ -234,11 +234,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await saUpdateDocument(serviceAccountKey, projectId, 'merch-suppliers', product.supplierId, supplierUpdate);
         }
       } catch (e: unknown) {
-        logger.info('Note: Could not update supplier stats');
+        log.info('Note: Could not update supplier stats');
       }
     }
 
-    logger.info('[update-stock]', operation + ':', previousStock, '->', newStock);
+    log.info('[update-stock]', operation + ':', previousStock, '->', newStock);
 
     // Dual-write to D1 so stock changes reflect on merch page
     const db = env?.DB;
@@ -249,10 +249,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         const updatedProduct = await getDocument('merch', productId);
         if (updatedProduct) {
           await d1UpsertMerch(db, productId, updatedProduct);
-          logger.info('[update-stock] Also updated in D1');
+          log.info('[update-stock] Also updated in D1');
         }
       } catch (d1Error: unknown) {
-        logger.error('[update-stock] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[update-stock] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -270,7 +270,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       isOutOfStock: updateData.isOutOfStock });
 
   } catch (error: unknown) {
-    logger.error('[update-stock] Error:', error);
+    log.error('[update-stock] Error:', error);
 
     return ApiErrors.serverError('Failed to update stock');
   }
@@ -398,7 +398,7 @@ export const GET: APIRoute = async ({ url, request, locals }) => {
       products: stockReport });
 
   } catch (error: unknown) {
-    logger.error('[get-stock] Error:', error);
+    log.error('[get-stock] Error:', error);
 
     return ApiErrors.serverError('Failed to fetch stock');
   }

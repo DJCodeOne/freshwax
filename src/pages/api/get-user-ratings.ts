@@ -12,7 +12,7 @@ interface D1RatingRow {
   rating: number;
 }
 
-const logger = createLogger('get-user-ratings');
+const log = createLogger('get-user-ratings');
 
 export const prerender = false;
 
@@ -48,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const limitedIds = releaseIds.slice(0, 50);
     const userRatings: Record<string, number> = {};
 
-    logger.info('[get-user-ratings] Fetching ratings for user:', userId, 'releases:', limitedIds.length);
+    log.info('[get-user-ratings] Fetching ratings for user:', userId, 'releases:', limitedIds.length);
 
     // D1 is PRIMARY - use batch query for efficiency
     if (db) {
@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
 
-        logger.info('[get-user-ratings] D1 found:', Object.keys(userRatings).length, 'ratings');
+        log.info('[get-user-ratings] D1 found:', Object.keys(userRatings).length, 'ratings');
 
         // If D1 found all ratings, return immediately
         if (Object.keys(userRatings).length === limitedIds.length) {
@@ -75,9 +75,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
 
         // D1 found some but not all - check Firebase for missing ones
-        logger.info('[get-user-ratings] D1 missing some ratings, checking Firebase for remaining');
+        log.info('[get-user-ratings] D1 missing some ratings, checking Firebase for remaining');
       } catch (d1Error: unknown) {
-        logger.error('[get-user-ratings] D1 error:', d1Error);
+        log.error('[get-user-ratings] D1 error:', d1Error);
         // Fall through to Firebase
       }
     }
@@ -87,7 +87,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const missingIds = limitedIds.filter(id => !userRatings[id]);
 
     if (missingIds.length > 0) {
-      logger.info('[get-user-ratings] Checking Firebase for', missingIds.length, 'releases');
+      log.info('[get-user-ratings] Checking Firebase for', missingIds.length, 'releases');
 
       for (const releaseId of missingIds) {
         try {
@@ -102,13 +102,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const source = missingIds.length === limitedIds.length ? 'firebase' : 'mixed';
-    logger.info('[get-user-ratings] Total found:', Object.keys(userRatings).length, 'ratings, source:', source);
+    log.info('[get-user-ratings] Total found:', Object.keys(userRatings).length, 'ratings, source:', source);
 
     return successResponse({ userRatings,
       source }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
 
   } catch (error: unknown) {
-    logger.error('[get-user-ratings] Error:', error);
+    log.error('[get-user-ratings] Error:', error);
     return ApiErrors.serverError('Failed to fetch user ratings');
   }
 };

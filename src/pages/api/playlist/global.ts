@@ -130,7 +130,7 @@ export async function POST({ request, locals }: APIContext) {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -235,7 +235,7 @@ export async function DELETE({ request, locals }: APIContext) {
     let rawDeleteBody: unknown;
     try {
       rawDeleteBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -337,7 +337,7 @@ export async function PUT({ request, locals }: APIContext) {
     let rawPutBody: unknown;
     try {
       rawPutBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 

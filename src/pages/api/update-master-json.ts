@@ -7,7 +7,7 @@ import { createLogger, errorResponse, jsonResponse, successResponse } from '../.
 
 export const prerender = false;
 
-const logger = createLogger('update-master-json');
+const log = createLogger('update-master-json');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }, 400);
     }
 
-    logger.info(`[Master JSON] Updating release: ${release.id}`);
+    log.info(`[Master JSON] Updating release: ${release.id}`);
 
     // CRITICAL: Default to pending status unless explicitly set
     // Admin must manually approve and publish from the admin panel
@@ -39,12 +39,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       storage: 'r2' // Mark that this release uses R2 storage
     };
 
-    logger.info(`[Master JSON] Status: ${releaseData.status}, Published: ${releaseData.published}, Approved: ${releaseData.approved}`);
+    log.info(`[Master JSON] Status: ${releaseData.status}, Published: ${releaseData.published}, Approved: ${releaseData.approved}`);
 
     // Set the document (will create or update)
     await setDocument('releases', release.id as string, releaseData);
 
-    logger.info(`[Master JSON] Release stored in Firestore [STATUS: ${releaseData.status}]`);
+    log.info(`[Master JSON] Release stored in Firestore [STATUS: ${releaseData.status}]`);
 
     // Also maintain a master list document for quick access
     const masterListDoc = await getDocument('system', 'releases-master') as Record<string, unknown> | null;
@@ -74,11 +74,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (existingIndex >= 0) {
       // Update existing entry
       releasesList[existingIndex] = releaseSummary;
-      logger.info(`[Master JSON] Updated existing release in master list`);
+      log.info(`[Master JSON] Updated existing release in master list`);
     } else {
       // Add new entry
       releasesList.push(releaseSummary);
-      logger.info(`[Master JSON] Added new release to master list`);
+      log.info(`[Master JSON] Added new release to master list`);
     }
 
     // Update master list
@@ -88,7 +88,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       lastUpdated: new Date().toISOString()
     });
 
-    logger.info(`[Master JSON] Master list updated (${releasesList.length} total releases)`);
+    log.info(`[Master JSON] Master list updated (${releasesList.length} total releases)`);
 
     return successResponse({ releaseId: release.id,
       status: releaseData.status,
@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
-    logger.error('[Master JSON] Error:', message);
+    log.error('[Master JSON] Error:', message);
     return errorResponse('Internal error');
   }
 };
@@ -124,7 +124,7 @@ export const GET: APIRoute = async () => {
 
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
-    logger.error('[Master JSON] GET Error:', message);
+    log.error('[Master JSON] GET Error:', message);
     return jsonResponse({
       error: 'Internal error'
     }, 500);

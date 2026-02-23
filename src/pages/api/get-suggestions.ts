@@ -9,7 +9,7 @@ import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const logger = createLogger('get-suggestions');
+const log = createLogger('get-suggestions');
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
@@ -27,7 +27,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const genre = url.searchParams.get('genre') || '';
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '8'), 12);
 
-    logger.info('Fetching suggestions for:', { currentId, artist, label, genre });
+    log.info('Fetching suggestions for:', { currentId, artist, label, genre });
 
     // Use cached releases - this is very efficient due to firebase-rest caching
     const releases = await getLiveReleases(40);
@@ -93,7 +93,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       matchType
     }));
     
-    logger.info('Returning', suggestions.length, 'suggestions');
+    log.info('Returning', suggestions.length, 'suggestions');
     
     return successResponse({
       suggestions,
@@ -103,7 +103,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
     
   } catch (error: unknown) {
-    logger.error('Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to fetch suggestions');
   }
 };

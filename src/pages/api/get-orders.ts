@@ -7,7 +7,7 @@ import { queryCollection, getDocumentsBatch, verifyRequestUser } from '../../lib
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
-const logger = createLogger('get-orders');
+const log = createLogger('get-orders');
 
 export const prerender = false;
 
@@ -32,7 +32,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
   const userId = verifiedUserId;
 
   try {
-    logger.info('[get-orders] Fetching orders for user:', userId);
+    log.info('[get-orders] Fetching orders for user:', userId);
 
     // Query orders filtered by customer.userId (server-side Firestore filter)
     const userOrders = await queryCollection('orders', {
@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       ? await getDocumentsBatch('releases', Array.from(releaseIds))
       : new Map<string, Record<string, unknown>>();
 
-    logger.info('[get-orders] Batch fetched', releaseCache.size, 'releases for', userOrders.length, 'orders');
+    log.info('[get-orders] Batch fetched', releaseCache.size, 'releases for', userOrders.length, 'orders');
 
     const orders = userOrders.map((orderData: Record<string, unknown>) => {
       if (orderData.items && Array.isArray(orderData.items)) {
@@ -165,7 +165,7 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
               };
             }
           } catch (e: unknown) {
-            logger.error('[get-orders] Error fetching release:', releaseId, e);
+            log.error('[get-orders] Error fetching release:', releaseId, e);
           }
 
           return item;
@@ -181,13 +181,13 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
       return dateB - dateA;
     });
 
-    logger.info('[get-orders] Found', orders.length, 'orders');
+    log.info('[get-orders] Found', orders.length, 'orders');
 
     return successResponse({ orders,
       count: orders.length }, 200, { headers: { 'Cache-Control': 'private, max-age=60' } });
 
   } catch (error: unknown) {
-    logger.error('[get-orders] Error:', error);
+    log.error('[get-orders] Error:', error);
     return ApiErrors.serverError('Failed to fetch orders');
   }
 };

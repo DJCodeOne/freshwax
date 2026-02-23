@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Security audit
+        run: npm audit --production --audit-level=moderate
+
+      - name: Run tests
+        run: npm run test
+
       - name: Build
         run: npm run build
 

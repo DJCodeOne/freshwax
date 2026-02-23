@@ -17,7 +17,7 @@ const deleteMixSchema = z.object({
   folderPath: z.string().optional(),
 }).passthrough();
 
-const logger = createLogger('admin/delete-mix');
+const log = createLogger('admin/delete-mix');
 
 // Safety limit
 const MAX_R2_FILES_TO_DELETE = 100; // Max files to delete from R2 in one operation
@@ -62,18 +62,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { mixId, folderPath } = parsed.data;
 
-    logger.info('[admin/delete-mix] Deleting mix:', mixId);
+    log.info('[admin/delete-mix] Deleting mix:', mixId);
 
     const mixData = await getDocument('dj-mixes', mixId);
 
     if (!mixData) {
-      logger.info('[admin/delete-mix] Mix not found, may already be deleted');
+      log.info('[admin/delete-mix] Mix not found, may already be deleted');
       return successResponse({ message: 'Mix not found (may already be deleted)' });
     }
 
     const r2FolderPath = folderPath || mixData?.folder_path || 'dj-mixes/' + mixId;
 
-    logger.info('[admin/delete-mix] R2 folder:', r2FolderPath);
+    log.info('[admin/delete-mix] R2 folder:', r2FolderPath);
 
     // Delete files from R2 (with safety limit)
     try {
@@ -86,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       const listedObjects = await s3Client.send(listCommand);
 
       if (listedObjects.Contents && listedObjects.Contents.length > 0) {
-        logger.info('[admin/delete-mix] Found', listedObjects.Contents.length, 'files to delete');
+        log.info('[admin/delete-mix] Found', listedObjects.Contents.length, 'files to delete');
 
         // Only delete up to MAX_R2_FILES_TO_DELETE
         const filesToDelete = listedObjects.Contents.slice(0, MAX_R2_FILES_TO_DELETE);
@@ -100,19 +100,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
             );
           }
         }
-        logger.info('[admin/delete-mix] R2 files deleted:', filesToDelete.length);
+        log.info('[admin/delete-mix] R2 files deleted:', filesToDelete.length);
 
         if (listedObjects.IsTruncated) {
-          logger.info('[admin/delete-mix] Warning: More files exist in folder, may need another deletion');
+          log.info('[admin/delete-mix] Warning: More files exist in folder, may need another deletion');
         }
       }
     } catch (r2Error: unknown) {
-      logger.error('[admin/delete-mix] R2 deletion error:', r2Error);
+      log.error('[admin/delete-mix] R2 deletion error:', r2Error);
     }
 
     // Delete mix document
     await deleteDocument('dj-mixes', mixId);
-    logger.info('[admin/delete-mix] Mix deleted');
+    log.info('[admin/delete-mix] Mix deleted');
 
     // Clear mixes cache so changes appear immediately
     invalidateMixesCache();
@@ -122,8 +122,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       deletedFolder: r2FolderPath });
 
   } catch (error: unknown) {
-    logger.error('[admin/delete-mix] Error:', error);
-    logger.error('[admin/delete-mix] Stack:', error instanceof Error ? error.stack : 'No stack');
+    log.error('[admin/delete-mix] Error:', error);
+    log.error('[admin/delete-mix] Stack:', error instanceof Error ? error.stack : 'No stack');
 
     return ApiErrors.serverError('Failed to delete mix');
   }

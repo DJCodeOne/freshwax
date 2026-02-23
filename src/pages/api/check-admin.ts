@@ -38,7 +38,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     const adminStatus = await isAdmin(userId);
     return jsonResponse({ isAdmin: adminStatus }, 200, { headers: { 'Cache-Control': 'no-store' } });
-  } catch {
+  } catch (e: unknown) {
     return jsonResponse({ isAdmin: false }, 200, { headers: { 'Cache-Control': 'no-store' } });
   }
 };

@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   else if (value === 'false') parsedValue = false;
   else if (value === 'null') parsedValue = null;
   else if (value?.startsWith('{') || value?.startsWith('[')) {
-    try { parsedValue = JSON.parse(value); } catch { /* keep as string */ }
+    try { parsedValue = JSON.parse(value); } catch (e: unknown) { /* keep as string */ }
   }
   else if (!isNaN(Number(value))) parsedValue = Number(value);
 

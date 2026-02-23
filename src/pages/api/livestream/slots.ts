@@ -137,7 +137,7 @@ async function getSettings() {
   try {
     const doc = await getDocument('system', 'admin-settings');
     return { ...DEFAULT_SETTINGS, ...(doc?.livestream || {}) };
-  } catch {
+  } catch (e: unknown) {
     return DEFAULT_SETTINGS;
   }
 }
@@ -418,7 +418,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -1378,7 +1378,7 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     let rawDeleteBody: unknown;
     try {
       rawDeleteBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 

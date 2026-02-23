@@ -4,10 +4,7 @@
 name: Scheduled Jobs
 
 on:
-  schedule:
-    # Run every 6 hours
-    - cron: '0 */6 * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:  # Manual trigger only — schedule handled by Cloudflare cron
 
 jobs:
   retry-payouts:

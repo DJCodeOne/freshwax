@@ -9,7 +9,7 @@ import { createLogger, errorResponse, successResponse } from '../../lib/api-util
 
 export const prerender = false;
 
-const logger = createLogger('approve-release');
+const log = createLogger('approve-release');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Initialize Firebase env for write operations (Cloudflare runtime)
@@ -33,7 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return errorResponse('action must be "approve" or "reject"', 400);
     }
 
-    logger.info(`[approve-release] ${action} release ${releaseId}`);
+    log.info(`[approve-release] ${action} release ${releaseId}`);
 
     // Get release from Firestore
     const releaseData = await getDocument('releases', releaseId) as Record<string, unknown> | null;
@@ -77,7 +77,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
-      logger.error('[approve-release] Warning: Could not update master list:', message);
+      log.error('[approve-release] Warning: Could not update master list:', message);
     }
 
     // Sync to D1 for immediate visibility
@@ -86,10 +86,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         const updatedRelease = { ...releaseData, ...updateData };
         await d1UpsertRelease(db, releaseId, updatedRelease);
-        logger.info('[approve-release] D1 synced');
+        log.info('[approve-release] D1 synced');
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
-        logger.error('[approve-release] Warning: D1 sync failed:', message);
+        log.error('[approve-release] Warning: D1 sync failed:', message);
       }
     }
 
@@ -97,9 +97,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     invalidateReleasesCache();
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
-    logger.info('[approve-release] Cache invalidated');
+    log.info('[approve-release] Cache invalidated');
 
-    logger.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
+    log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);
 
     return successResponse({ message: `Release ${action}d successfully`,
       releaseId: releaseId,
@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);
-    logger.error('[approve-release] Error:', message);
+    log.error('[approve-release] Error:', message);
 
     return errorResponse('Internal server error');
   }

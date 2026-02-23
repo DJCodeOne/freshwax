@@ -13,7 +13,7 @@ import { ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} 
 export const prerender = false;
 const REQUIRED_LIKES = 10;
 
-const logger = createLogger('check-dj-eligibility');
+const log = createLogger('check-dj-eligibility');
 
 export const GET: APIRoute = async ({ request }) => {
   // Rate limit: standard API - 60 per minute
@@ -40,7 +40,7 @@ export const GET: APIRoute = async ({ request }) => {
     return ApiErrors.forbidden('You can only check your own eligibility');
   }
 
-  logger.info('[check-dj-eligibility] Checking eligibility for:', userId);
+  log.info('[check-dj-eligibility] Checking eligibility for:', userId);
   
   try {
     // First check if user is banned or on hold
@@ -48,7 +48,7 @@ export const GET: APIRoute = async ({ request }) => {
 
     if (moderation) {
       if (moderation.status === 'banned') {
-        logger.info('[check-dj-eligibility] User is banned');
+        log.info('[check-dj-eligibility] User is banned');
         return successResponse({ eligible: false,
           reason: 'banned',
           message: 'Your account has been suspended from streaming.',
@@ -56,7 +56,7 @@ export const GET: APIRoute = async ({ request }) => {
       }
       
       if (moderation.status === 'hold') {
-        logger.info('[check-dj-eligibility] User is on hold');
+        log.info('[check-dj-eligibility] User is on hold');
         return successResponse({ eligible: false,
           reason: 'on_hold',
           message: 'Your streaming access is temporarily on hold.',
@@ -68,7 +68,7 @@ export const GET: APIRoute = async ({ request }) => {
     const bypass = await getDocument('djLobbyBypass', userId);
 
     if (bypass) {
-      logger.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
+      log.info('[check-dj-eligibility] User has admin bypass (djLobbyBypass collection)');
       return successResponse({ eligible: true,
         bypassGranted: true,
         reason: bypass.reason || null,
@@ -79,7 +79,7 @@ export const GET: APIRoute = async ({ request }) => {
     const userData = await getDocument('users', userId);
     if (userData) {
       if (userData['go-liveBypassed'] === true) {
-        logger.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
+        log.info('[check-dj-eligibility] User has go-live bypass flag on user doc');
         return successResponse({ eligible: true,
           bypassGranted: true,
           message: 'Access granted by admin' });
@@ -109,7 +109,7 @@ export const GET: APIRoute = async ({ request }) => {
     const mixes = await queryCollection('dj-mixes', {
       filters: [{ field: 'userId', op: 'EQUAL', value: userId }]
     });
-    logger.info('[check-dj-eligibility] Found', mixes.length, 'mixes for user');
+    log.info('[check-dj-eligibility] Found', mixes.length, 'mixes for user');
     
     // Check if they have any mixes
     if (mixes.length === 0) {
@@ -128,7 +128,7 @@ export const GET: APIRoute = async ({ request }) => {
       return likes >= REQUIRED_LIKES;
     });
     
-    logger.info('[check-dj-eligibility] Qualifying mixes (10+ likes):', qualifyingMixes.length);
+    log.info('[check-dj-eligibility] Qualifying mixes (10+ likes):', qualifyingMixes.length);
     
     if (qualifyingMixes.length === 0) {
       // Find the mix with the most likes to show progress
@@ -158,7 +158,7 @@ export const GET: APIRoute = async ({ request }) => {
       requiredLikes: REQUIRED_LIKES });
     
   } catch (error: unknown) {
-    logger.error('[check-dj-eligibility] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[check-dj-eligibility] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Failed to check eligibility');
   }
 };

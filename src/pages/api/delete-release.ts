@@ -13,7 +13,7 @@ const deleteReleaseSchema = z.object({
   releaseId: z.string().min(1),
 });
 
-const logger = createLogger('delete-release');
+const log = createLogger('delete-release');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Admin authentication required
@@ -41,14 +41,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const { releaseId } = parsed.data;
 
-    logger.info(`[delete-release] Deleting: ${releaseId}`);
+    log.info(`[delete-release] Deleting: ${releaseId}`);
 
     // Get service account key for writes
     const serviceAccountKey = getServiceAccountKey(env);
     const projectId = env?.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
 
     if (!serviceAccountKey) {
-      logger.error('[delete-release] Service account not configured');
+      log.error('[delete-release] Service account not configured');
       return ApiErrors.serverError('Service account not configured');
     }
 
@@ -88,10 +88,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
         for (const track of tracks) {
           await saDeleteDocument(serviceAccountKey, projectId, 'tracks', track.id);
         }
-        logger.info(`[delete-release] Deleted ${tracks.length} associated tracks`);
+        log.info(`[delete-release] Deleted ${tracks.length} associated tracks`);
       }
     } catch (error: unknown) {
-      logger.warn('[delete-release] Could not delete tracks:', error);
+      log.warn('[delete-release] Could not delete tracks:', error);
     }
 
     // Remove from master list
@@ -109,14 +109,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         });
       }
     } catch (error: unknown) {
-      logger.warn('[delete-release] Could not update master list:', error);
+      log.warn('[delete-release] Could not update master list:', error);
     }
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
     await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
     await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
 
-    logger.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
+    log.info(`[delete-release] Deleted: ${releaseData?.artistName} - ${releaseData?.releaseName}`);
 
     return successResponse({ message: 'Release deleted successfully',
       releaseId: releaseId,
@@ -124,7 +124,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       artistName: releaseData?.artistName });
 
   } catch (error: unknown) {
-    logger.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
+    log.error('[delete-release] Error:', error instanceof Error ? error.message : 'Unknown error');
 
     return ApiErrors.serverError('Internal server error');
   }

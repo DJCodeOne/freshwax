@@ -57,7 +57,7 @@ export const GET: APIRoute = async ({ request, url }) => {
             nowPlaying: isLive ? data.song : '',
             listeners: data.listeners || 0 });
         }
-      } catch {
+      } catch (e: unknown) {
         // Not valid JSON
       }
     }

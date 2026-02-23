@@ -1683,15 +1683,23 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       });
     });
     
-    document.getElementById('statOrders').textContent = orderCount;
+    const statOrdersEl = document.getElementById('statOrders');
+    if (statOrdersEl) statOrdersEl.textContent = orderCount;
     const ordersBadge = document.getElementById('ordersBadge');
-    ordersBadge.textContent = orderCount;
-    ordersBadge.style.display = orderCount > 0 ? 'inline-flex' : 'none';
-    document.getElementById('statVinyl').textContent = vinylCount;
-    document.getElementById('statDigitalEPs').textContent = uniqueReleases.size;
-    document.getElementById('statTracks').textContent = uniqueTracks.size;
-    document.getElementById('statMerch').textContent = merchCount;
-    document.getElementById('statSpent').textContent = '£' + totalSpent.toFixed(2);
+    if (ordersBadge) {
+      ordersBadge.textContent = orderCount;
+      ordersBadge.style.display = orderCount > 0 ? 'inline-flex' : 'none';
+    }
+    const statVinylEl = document.getElementById('statVinyl');
+    if (statVinylEl) statVinylEl.textContent = vinylCount;
+    const statDigitalEPsEl = document.getElementById('statDigitalEPs');
+    if (statDigitalEPsEl) statDigitalEPsEl.textContent = uniqueReleases.size;
+    const statTracksEl = document.getElementById('statTracks');
+    if (statTracksEl) statTracksEl.textContent = uniqueTracks.size;
+    const statMerchEl = document.getElementById('statMerch');
+    if (statMerchEl) statMerchEl.textContent = merchCount;
+    const statSpentEl = document.getElementById('statSpent');
+    if (statSpentEl) statSpentEl.textContent = '£' + totalSpent.toFixed(2);
   }
 
   // Download via secure presigned URLs

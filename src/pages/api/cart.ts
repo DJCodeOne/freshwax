@@ -8,7 +8,7 @@ import { verifyRequestUser } from '../../lib/firebase-rest';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-const logger = createLogger('cart');
+const log = createLogger('cart');
 
 const CartItemSchema = z.object({
   id: z.string().min(1).max(200),
@@ -29,7 +29,7 @@ async function getUserId(request: Request, locals: App.Locals): Promise<string |
   try {
     const { userId: verifiedUserId } = await verifyRequestUser(request);
     if (verifiedUserId) return verifiedUserId;
-  } catch {
+  } catch (e: unknown) {
     // No auth token - fall through to cookie
   }
 
@@ -66,7 +66,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      logger.info('[Cart API] KV not available, returning empty cart');
+      log.info('[Cart API] KV not available, returning empty cart');
       return successResponse({ cart: { items: [], updatedAt: null }, source: 'fallback' }, 200, {
         headers: { 'Cache-Control': 'private, no-store' }
       });
@@ -75,14 +75,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const cartKey = `cart:${userId}`;
     const cartData = await kv.get(cartKey, 'json');
 
-    logger.info('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
+    log.info('[Cart API] GET', cartKey, cartData ? 'found' : 'empty');
 
     return successResponse({ cart: cartData || { items: [], updatedAt: null }, source: 'kv' }, 200, {
       headers: { 'Cache-Control': 'private, no-store' }
     });
 
   } catch (error: unknown) {
-    logger.error('[Cart API] GET error:', error);
+    log.error('[Cart API] GET error:', error);
     return ApiErrors.serverError('Failed to retrieve cart');
   }
 };
@@ -113,7 +113,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const kv = env?.CACHE;
 
     if (!kv) {
-      logger.info('[Cart API] KV not available, cart not persisted');
+      log.info('[Cart API] KV not available, cart not persisted');
       return successResponse({ persisted: false, message: 'KV not available' });
     }
 
@@ -128,12 +128,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       expirationTtl: 30 * 24 * 60 * 60
     });
 
-    logger.info('[Cart API] POST', cartKey, 'saved', items.length, 'items');
+    log.info('[Cart API] POST', cartKey, 'saved', items.length, 'items');
 
     return successResponse({ persisted: true, itemCount: items.length });
 
   } catch (error: unknown) {
-    logger.error('[Cart API] POST error:', error);
+    log.error('[Cart API] POST error:', error);
     return ApiErrors.serverError('Failed to save cart');
   }
 };
@@ -163,12 +163,12 @@ export const DELETE: APIRoute = async ({ request, locals }) => {
     const cartKey = `cart:${userId}`;
     await kv.delete(cartKey);
 
-    logger.info('[Cart API] DELETE', cartKey);
+    log.info('[Cart API] DELETE', cartKey);
 
     return successResponse({} as Record<string, unknown>);
 
   } catch (error: unknown) {
-    logger.error('[Cart API] DELETE error:', error);
+    log.error('[Cart API] DELETE error:', error);
     return ApiErrors.serverError('Failed to clear cart');
   }
 };

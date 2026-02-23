@@ -23,7 +23,7 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 export const prerender = false;
 
-const logger = createLogger('subscription');
+const log = createLogger('subscription');
 
 // Zod schemas for subscription endpoints
 const SubscriptionGetSchema = z.object({
@@ -183,7 +183,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       } : null });
 
   } catch (error: unknown) {
-    logger.error('Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to check subscription');
   }
 };
@@ -246,7 +246,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         lastMixUpload: new Date().toISOString()
       }, idToken);
 
-      logger.info('Recorded mix upload for', userId, '- count:', uploadsThisWeek + 1);
+      log.info('Recorded mix upload for', userId, '- count:', uploadsThisWeek + 1);
 
       return successResponse({ uploadsThisWeek: uploadsThisWeek + 1 });
     }
@@ -276,7 +276,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         lastStreamAt: new Date().toISOString()
       }, idToken);
 
-      logger.info('Recorded stream time for', userId, '- total minutes today:', minutesToday + (minutes || 60));
+      log.info('Recorded stream time for', userId, '- total minutes today:', minutesToday + (minutes || 60));
 
       return successResponse({ minutesToday: minutesToday + (minutes || 60) });
     }
@@ -309,7 +309,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
             // Verify payment amount matches Pro price (amount is in pence)
             if (pi.amount < PRO_ANNUAL_PRICE * 100) {
-              logger.error('Payment amount too low:', pi.amount, 'expected at least', PRO_ANNUAL_PRICE * 100);
+              log.error('Payment amount too low:', pi.amount, 'expected at least', PRO_ANNUAL_PRICE * 100);
               return errorResponse('Payment amount insufficient', 402);
             }
           } else if (paymentId.startsWith('cs_')) {
@@ -319,14 +319,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
             // Verify session amount matches Pro price (amount_total is in pence)
             if ((session.amount_total || 0) < PRO_ANNUAL_PRICE * 100) {
-              logger.error('Session amount too low:', session.amount_total, 'expected at least', PRO_ANNUAL_PRICE * 100);
+              log.error('Session amount too low:', session.amount_total, 'expected at least', PRO_ANNUAL_PRICE * 100);
               return errorResponse('Payment amount insufficient', 402);
             }
           } else {
             return ApiErrors.badRequest('Invalid payment ID format');
           }
         } catch (stripeErr: unknown) {
-          logger.error('Stripe verification failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr));
+          log.error('Stripe verification failed:', stripeErr instanceof Error ? stripeErr.message : String(stripeErr));
           return errorResponse('Payment verification failed', 402);
         }
       } else if (method === 'paypal') {
@@ -358,11 +358,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           // Verify PayPal amount matches Pro price
           const ppAmount = parseFloat(orderData.purchase_units?.[0]?.amount?.value || '0');
           if (ppAmount < PRO_ANNUAL_PRICE) {
-            logger.error('PayPal amount too low:', ppAmount, 'expected at least', PRO_ANNUAL_PRICE);
+            log.error('PayPal amount too low:', ppAmount, 'expected at least', PRO_ANNUAL_PRICE);
             return errorResponse('Payment amount insufficient', 402);
           }
         } catch (paypalErr: unknown) {
-          logger.error('PayPal verification failed:', paypalErr instanceof Error ? paypalErr.message : String(paypalErr));
+          log.error('PayPal verification failed:', paypalErr instanceof Error ? paypalErr.message : String(paypalErr));
           return errorResponse('Payment verification failed', 402);
         }
       } else {
@@ -375,11 +375,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         limit: 1
       });
       if (existingUsers.length > 0 && existingUsers[0].id !== userId) {
-        logger.error('Payment ID already used by another user:', paymentId);
+        log.error('Payment ID already used by another user:', paymentId);
         return ApiErrors.badRequest('Payment already used');
       }
 
-      logger.info('Payment verified for', userId, '- paymentId:', paymentId, '- method:', method);
+      log.info('Payment verified for', userId, '- paymentId:', paymentId, '- method:', method);
 
       const now = new Date();
       const expiresAt = new Date(now);
@@ -418,7 +418,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         referralCodeId: referralCardId
       }, idToken);
 
-      logger.info('Activated Pro for', userId, '- expires:', expiresAt.toISOString(), '- referral code:', referralGiftCard.code);
+      log.info('Activated Pro for', userId, '- expires:', expiresAt.toISOString(), '- referral code:', referralGiftCard.code);
 
       return successResponse({ message: 'Pro subscription activated!',
         subscription: {
@@ -433,7 +433,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Unknown action');
 
   } catch (error: unknown) {
-    logger.error('Error:', error);
+    log.error('Error:', error);
     return ApiErrors.serverError('Failed to process request');
   }
 };

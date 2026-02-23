@@ -11,7 +11,7 @@ import { queryCollection, getDocument, deleteDocument } from '../../../lib/fireb
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
 
-const logger = createLogger('restock-notifications');
+const log = createLogger('restock-notifications');
 
 export const prerender = false;
 
@@ -19,7 +19,7 @@ const MAX_NOTIFICATIONS_PER_RUN = 50;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const startTime = Date.now();
-  logger.info('[Restock Notifications] ========== CRON JOB STARTED ==========');
+  log.info('[Restock Notifications] ========== CRON JOB STARTED ==========');
 
   const env = locals.runtime.env;
 
@@ -54,7 +54,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       limit: 200
     });
 
-    logger.info('[Restock Notifications] Found', subscriptions.length, 'active subscriptions');
+    log.info('[Restock Notifications] Found', subscriptions.length, 'active subscriptions');
 
     const results = {
       checked: 0,
@@ -168,30 +168,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
             // Remove subscription after sending
             await deleteDocument('restockNotifications', sub.id);
             results.notified++;
-            logger.info('[Restock Notifications] Sent to', sub.email, 'for', productName);
+            log.info('[Restock Notifications] Sent to', sub.email, 'for', productName);
 
           } catch (emailErr: unknown) {
-            logger.error('[Restock Notifications] Email error:', emailErr);
+            log.error('[Restock Notifications] Email error:', emailErr);
             results.errors++;
           }
         }
 
       } catch (productErr: unknown) {
-        logger.error('[Restock Notifications] Product lookup error:', productErr);
+        log.error('[Restock Notifications] Product lookup error:', productErr);
         results.errors++;
       }
     }
 
     const duration = Date.now() - startTime;
-    logger.info('[Restock Notifications] ========== COMPLETED ==========');
-    logger.info('[Restock Notifications] Duration:', duration, 'ms');
-    logger.info('[Restock Notifications] Results:', results);
+    log.info('[Restock Notifications] ========== COMPLETED ==========');
+    log.info('[Restock Notifications] Duration:', duration, 'ms');
+    log.info('[Restock Notifications] Results:', results);
 
     return successResponse({ duration,
       ...results });
 
   } catch (error: unknown) {
-    logger.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[Restock Notifications] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
   }
 };

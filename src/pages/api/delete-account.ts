@@ -13,7 +13,7 @@ const DeleteAccountSchema = z.object({
   idToken: z.string().min(1, 'Authentication required').max(5000),
 });
 
-const logger = createLogger('delete-account');
+const log = createLogger('delete-account');
 
 export const prerender = false;
 
@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: destructive operation - 3 per hour
   const rateCheck = checkRateLimit(`delete-account:${clientId}`, RateLimiters.destructive);
   if (!rateCheck.allowed) {
-    logger.error(`[delete-account] Rate limit exceeded for ${clientId}`);
+    log.error(`[delete-account] Rate limit exceeded for ${clientId}`);
     return rateLimitResponse(rateCheck.retryAfter!);
   }
 
@@ -51,7 +51,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.forbidden('You can only delete your own account');
     }
 
-    logger.info('[delete-account] Starting GDPR deletion for user:', userId);
+    log.info('[delete-account] Starting GDPR deletion for user:', userId);
     const timestamp = new Date().toISOString();
     const results: Record<string, DeletionResult> = {};
 
@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         userEmail = (userDoc.email || '').toLowerCase().trim();
       }
     } catch (e: unknown) {
-      logger.info('[delete-account] Could not fetch user doc for email lookup');
+      log.info('[delete-account] Could not fetch user doc for email lookup');
     }
 
     // 2. Delete user document
@@ -115,7 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       results.kv = await cleanupKV(env.CACHE, userId);
     }
 
-    logger.info('[delete-account] Deletion complete:', JSON.stringify(results));
+    log.info('[delete-account] Deletion complete:', JSON.stringify(results));
 
     // Check if at least user doc existed
     if (!results.users?.success && !results.artists?.success) {
@@ -126,7 +126,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       details: results });
 
   } catch (error: unknown) {
-    logger.error('[delete-account] Error:', error);
+    log.error('[delete-account] Error:', error);
     return ApiErrors.serverError('Failed to delete account');
   }
 };
@@ -159,7 +159,7 @@ async function deleteByQuery(collection: string, field: string, value: string): 
         await deleteDocument(collection, docId);
         count++;
       } catch (e: unknown) {
-        logger.error(`[delete-account] Failed to delete ${collection}/${docId}`);
+        log.error(`[delete-account] Failed to delete ${collection}/${docId}`);
       }
     }
     return { success: true, count };
@@ -189,7 +189,7 @@ async function anonymizeOrders(userId: string, timestamp: string): Promise<Delet
         });
         count++;
       } catch (e: unknown) {
-        logger.error(`[delete-account] Failed to anonymize order ${orderId}`);
+        log.error(`[delete-account] Failed to anonymize order ${orderId}`);
       }
     }
     return { success: true, count };
@@ -219,7 +219,7 @@ async function anonymizeComments(userId: string): Promise<DeletionResult> {
         });
         count++;
       } catch (e: unknown) {
-        logger.error(`[delete-account] Failed to anonymize comment ${commentId}`);
+        log.error(`[delete-account] Failed to anonymize comment ${commentId}`);
       }
     }
     return { success: true, count };
@@ -279,7 +279,7 @@ async function cleanupKV(cache: Record<string, unknown>, userId: string): Promis
       `user:orders:${userId}`,
     ];
     for (const key of keys) {
-      try { await cache.delete(key); } catch (e: unknown) { logger.error('[delete-account] Failed to delete KV cache key:', key, e instanceof Error ? e.message : e); }
+      try { await cache.delete(key); } catch (e: unknown) { log.error('[delete-account] Failed to delete KV cache key:', key, e instanceof Error ? e.message : e); }
     }
     return { success: true, count: keys.length };
   } catch (e: unknown) {

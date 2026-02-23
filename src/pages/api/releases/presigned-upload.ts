@@ -26,7 +26,7 @@ const PresignedUploadSchema = z.object({
 
 export const prerender = false;
 
-const logger = createLogger('presigned-upload');
+const log = createLogger('presigned-upload');
 
 // Supported file types
 const ALLOWED_TYPES: Record<string, string> = {
@@ -85,14 +85,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const r2Config = getR2Config(env);
 
     if (!r2Config.accountId || !r2Config.accessKeyId || !r2Config.secretAccessKey) {
-      logger.error('R2 credentials not configured');
+      log.error('R2 credentials not configured');
       return ApiErrors.serverError('Storage not configured');
     }
 
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -184,7 +184,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         contentType: file.contentType,
       });
 
-      logger.info(`Generated presigned URL for: ${key}`);
+      log.info(`Generated presigned URL for: ${key}`);
     }
 
     return successResponse({
@@ -195,7 +195,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    logger.error('Failed to generate presigned URLs:', error);
+    log.error('Failed to generate presigned URLs:', error);
     return ApiErrors.serverError('Failed to generate upload URLs');
   }
 };

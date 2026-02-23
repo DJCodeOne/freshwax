@@ -11,7 +11,7 @@ const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
 });
 
-const logger = createLogger('track-mix-like');
+const log = createLogger('track-mix-like');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute (prevent like spam)
@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       last_liked_date: new Date().toISOString()
     });
 
-    logger.info('[track-mix-like] Mix', mixId, 'likes:', likes);
+    log.info('[track-mix-like] Mix', mixId, 'likes:', likes);
 
     // Invalidate caches for this mix and the listing
     clearCache(`doc:dj-mixes:${mixId}`);
@@ -58,17 +58,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await db.prepare('UPDATE dj_mixes SET data = ?, likes = ?, updated_at = ? WHERE id = ?')
             .bind(JSON.stringify(data), likes, new Date().toISOString(), mixId)
             .run();
-          logger.info('[track-mix-like] D1 synced for mix', mixId);
+          log.info('[track-mix-like] D1 synced for mix', mixId);
         }
       } catch (d1Error: unknown) {
-        logger.error('[track-mix-like] D1 sync error (non-fatal):', d1Error);
+        log.error('[track-mix-like] D1 sync error (non-fatal):', d1Error);
       }
     }
 
     return successResponse({ likes }, 200, { headers: { 'Cache-Control': 'no-cache' } });
 
   } catch (error: unknown) {
-    logger.error('[track-mix-like] Error:', error);
+    log.error('[track-mix-like] Error:', error);
     return ApiErrors.serverError('Failed to track like');
   }
 };

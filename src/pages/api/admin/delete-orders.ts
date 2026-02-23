@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   let body: Record<string, unknown>;
   try {
     body = await request.json();
-  } catch {
+  } catch (e: unknown) {
     return ApiErrors.badRequest('Invalid JSON body');
   }
 

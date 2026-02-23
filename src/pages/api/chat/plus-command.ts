@@ -128,7 +128,7 @@ export async function POST({ request, locals }: APIContext) {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 

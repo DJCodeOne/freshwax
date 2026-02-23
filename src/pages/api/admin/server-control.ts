@@ -401,7 +401,7 @@ async function checkMediaMTXStatus(): Promise<{ online: boolean }> {
       method: 'GET'
     }, 5000);
     return { online: response.ok };
-  } catch {
+  } catch (e: unknown) {
     return { online: false };
   }
 }

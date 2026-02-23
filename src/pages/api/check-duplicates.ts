@@ -21,7 +21,7 @@ const CheckDuplicatesSchema = z.object({
   cartItems: z.array(CartItemSchema).max(100),
 }).passthrough();
 
-const logger = createLogger('check-duplicates');
+const log = createLogger('check-duplicates');
 
 export const prerender = false;
 
@@ -36,7 +36,7 @@ async function getOwnershipData(userId: string): Promise<{
   // Check cache first
   const cached = ownershipCache.get(userId);
   if (cached && Date.now() < cached.expires) {
-    logger.info('[check-duplicates] Using cached ownership data for', userId);
+    log.info('[check-duplicates] Using cached ownership data for', userId);
     return cached.data;
   }
   
@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
     try {
       const { userId: verifiedUserId } = await verifyRequestUser(request);
       if (verifiedUserId) userId = verifiedUserId;
-    } catch { /* no auth token */ }
+    } catch (e: unknown) { /* no auth token */ }
 
     // Cookie fallback (checkout page may call before Firebase auth initializes)
     if (!userId) {
@@ -110,7 +110,7 @@ export const POST: APIRoute = async ({ request }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -161,12 +161,12 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
     
-    logger.info('[check-duplicates] User:', userId, 'Owned releases:', ownedReleases.size, 'Duplicates found:', duplicates.length);
+    log.info('[check-duplicates] User:', userId, 'Owned releases:', ownedReleases.size, 'Duplicates found:', duplicates.length);
     
     return jsonResponse({ duplicates, ownedReleases: [...ownedReleases] });
     
   } catch (error: unknown) {
-    logger.error('[check-duplicates] Error:', error);
+    log.error('[check-duplicates] Error:', error);
     return ApiErrors.serverError('Failed to check duplicates');
   }
 };

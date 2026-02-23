@@ -19,7 +19,7 @@ const IMAGE_SIZE = 800;
 const WEBP_QUALITY = 85;
 const MAX_IMAGES = 20; // Safety limit on number of images per product
 
-const logger = createLogger('upload-merch');
+const log = createLogger('upload-merch');
 
 export const prerender = false;
 
@@ -86,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const s3Client = createS3Client(r2Config);
 
   try {
-    logger.info('[upload-merch] Started');
+    log.info('[upload-merch] Started');
 
     const formData = await request.formData();
 
@@ -122,12 +122,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       colors = JSON.parse(colorsJson);
       variants = JSON.parse(variantsJson);
     } catch (e: unknown) {
-      logger.error('Error parsing variants JSON');
+      log.error('Error parsing variants JSON');
     }
 
     const imageCount = parseInt(formData.get('imageCount') as string || '0');
 
-    logger.info('[upload-merch] Product:', productName, productType);
+    log.info('[upload-merch] Product:', productName, productType);
 
     if (!productName) {
       return ApiErrors.badRequest('Product name is required');
@@ -155,7 +155,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const generatedSKU = sku || generateSKU(productType, supplierCode);
     const folderPath = 'merch/' + category + '/' + productId;
 
-    logger.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
+    log.info('[upload-merch] ID:', productId, 'SKU:', generatedSKU);
 
     // Parse image-color mappings
     let imageColorMap: Array<{index: number; color: string | null; colorHex: string | null; keepOriginal?: boolean}> = [];
@@ -165,7 +165,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         imageColorMap = JSON.parse(mapJson);
       }
     } catch (e: unknown) {
-      logger.info('[upload-merch] No image color map provided');
+      log.info('[upload-merch] No image color map provided');
     }
 
     const uploadedImages: Array<{
@@ -189,7 +189,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return errorResponse('Image ${i + 1} exceeds 10MB limit (${(imageFile.size / 1024 / 1024).toFixed(1)}MB). Please compress or resize the image.', 413);
       }
 
-      logger.info('[upload-merch] Processing image', i + 1);
+      log.info('[upload-merch] Processing image', i + 1);
 
       const inputBuffer = await imageFile.arrayBuffer();
       const originalSize = inputBuffer.byteLength;
@@ -203,7 +203,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       if (keepOriginal) {
         // Convert to WebP without cropping - maintains original aspect ratio
         processed = await processImageToWebP(inputBuffer, 4096, 4096, WEBP_QUALITY);
-        logger.info('[upload-merch] Keeping original dimensions:', processed.width, 'x', processed.height);
+        log.info('[upload-merch] Keeping original dimensions:', processed.width, 'x', processed.height);
       } else {
         // Crop to square, resize to 800x800, convert to WebP
         processed = await processImageToSquareWebP(inputBuffer, IMAGE_SIZE, WEBP_QUALITY);
@@ -234,7 +234,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         colorHex: colorMapping?.colorHex || null
       });
 
-      logger.info('[upload-merch] Image processed and uploaded:', imageUrl,
+      log.info('[upload-merch] Image processed and uploaded:', imageUrl,
         `(${(originalSize/1024).toFixed(1)}KB → ${(processed.buffer.length/1024).toFixed(1)}KB)`,
         colorMapping?.color ? `[Color: ${colorMapping.color}]` : '');
     }
@@ -370,24 +370,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
       revenue: 0,
     };
 
-    logger.info('[upload-merch] Saving to Firebase');
+    log.info('[upload-merch] Saving to Firebase');
 
     // Get service account credentials
     const { key: serviceAccountKey, projectId } = getServiceAccountKeyWithProject(env);
 
     // Write to Firebase first (primary)
     await saSetDocument(serviceAccountKey, projectId, 'merch', productId, productData);
-    logger.info('[upload-merch] Product saved to Firebase');
+    log.info('[upload-merch] Product saved to Firebase');
 
     // Dual-write to D1 (secondary, non-blocking)
     const db = env?.DB;
     if (db) {
       try {
         await d1UpsertMerch(db, productId, productData);
-        logger.info('[upload-merch] Product also written to D1');
+        log.info('[upload-merch] Product also written to D1');
       } catch (d1Error: unknown) {
         // Log D1 error but don't fail the request
-        logger.error('[upload-merch] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[upload-merch] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -409,7 +409,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         createdBy: 'admin'
       });
 
-      logger.info('[upload-merch] Stock movement logged');
+      log.info('[upload-merch] Stock movement logged');
     }
 
     if (supplierId) {
@@ -421,14 +421,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
             totalStock: (supplierData.totalStock || 0) + totalStock,
             updatedAt: new Date().toISOString()
           });
-          logger.info('[upload-merch] Supplier stats updated');
+          log.info('[upload-merch] Supplier stats updated');
         }
       } catch (e: unknown) {
-        logger.info('Note: Supplier document may not exist yet');
+        log.info('Note: Supplier document may not exist yet');
       }
     }
 
-    logger.info('[upload-merch] Complete:', productId);
+    log.info('[upload-merch] Complete:', productId);
 
     // Clear all merch caches to ensure fresh data on next page load
     clearAllMerchCache();
@@ -439,7 +439,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       product: productData });
 
   } catch (error: unknown) {
-    logger.error('[upload-merch] Error:', error);
+    log.error('[upload-merch] Error:', error);
 
     return ApiErrors.serverError('Failed to upload product');
   }

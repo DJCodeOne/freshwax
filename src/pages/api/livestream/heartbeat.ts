@@ -123,7 +123,7 @@ export const POST: APIRoute = async ({ request }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ request }) => {
           userName = body.userName; // Allow display name from body only when auth is verified
           userAvatar = body.userAvatar;
         }
-      } catch { /* no auth = anonymous viewer, still count them */ }
+      } catch (e: unknown) { /* no auth = anonymous viewer, still count them */ }
     }
 
     let count: number;

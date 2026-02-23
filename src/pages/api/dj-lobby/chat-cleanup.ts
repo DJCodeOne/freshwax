@@ -21,7 +21,7 @@ async function isDjOrAdmin(userId: string): Promise<boolean> {
     if (userDoc?.roles?.dj || userDoc?.roles?.djEligible || userDoc?.roles?.artist) return true;
 
     return false;
-  } catch {
+  } catch (e: unknown) {
     return false;
   }
 }

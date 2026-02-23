@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     } else {
       checks.d1 = { ok: false };
     }
-  } catch {
+  } catch (e: unknown) {
     checks.d1 = { ok: false };
   }
 
@@ -39,7 +39,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     } else {
       checks.kv = { ok: false };
     }
-  } catch {
+  } catch (e: unknown) {
     checks.kv = { ok: false };
   }
 
@@ -47,7 +47,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   try {
     const r2 = env?.R2 || env?.BUCKET;
     checks.r2 = { ok: !!r2 };
-  } catch {
+  } catch (e: unknown) {
     checks.r2 = { ok: false };
   }
 

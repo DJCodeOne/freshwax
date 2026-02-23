@@ -11,7 +11,7 @@ const MixIdSchema = z.object({
   mixId: z.string().min(1, 'Invalid mixId').max(200),
 });
 
-const logger = createLogger('track-mix-play');
+const log = createLogger('track-mix-play');
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       last_played_date: new Date().toISOString()
     });
 
-    logger.info('[track-mix-play] Mix', mixId, 'plays:', plays);
+    log.info('[track-mix-play] Mix', mixId, 'plays:', plays);
 
     // Invalidate caches for this mix and the listing
     clearCache(`doc:dj-mixes:${mixId}`);
@@ -64,17 +64,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await db.prepare('UPDATE dj_mixes SET data = ?, plays = ?, updated_at = ? WHERE id = ?')
             .bind(JSON.stringify(data), plays, new Date().toISOString(), mixId)
             .run();
-          logger.info('[track-mix-play] D1 synced for mix', mixId);
+          log.info('[track-mix-play] D1 synced for mix', mixId);
         }
       } catch (d1Error: unknown) {
-        logger.error('[track-mix-play] D1 sync error (non-fatal):', d1Error);
+        log.error('[track-mix-play] D1 sync error (non-fatal):', d1Error);
       }
     }
 
     return successResponse({ plays: plays }, 200, { headers: { 'Cache-Control': 'no-cache' } });
 
   } catch (error: unknown) {
-    logger.error('[track-mix-play] Error:', error);
+    log.error('[track-mix-play] Error:', error);
     return ApiErrors.serverError('Failed to track play');
   }
 };

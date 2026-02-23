@@ -52,6 +52,10 @@ async function getToken(serviceAccountKey: string): Promise<string> {
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
   }, 10000);
 
+  if (!tokenResponse.ok) {
+    throw new Error(`Token request failed: ${tokenResponse.status}`);
+  }
+
   const tokenData = await tokenResponse.json() as Record<string, unknown>;
   return tokenData.access_token as string;
 }

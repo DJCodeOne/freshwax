@@ -85,7 +85,7 @@ async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean;
           listeners: source.listeners || 0
         };
       }
-    } catch {
+    } catch (e: unknown) {
       // Not JSON, try parsing as XML or HTML
       if (text.includes('Mount Point') || text.includes('listeners')) {
         return { isLive: true, nowPlaying: 'Live stream', listeners: undefined };
@@ -93,7 +93,7 @@ async function checkIcecastStatus(statusUrl: string): Promise<{ isLive: boolean;
     }
 
     return { isLive: false, nowPlaying: '', listeners: undefined };
-  } catch {
+  } catch (e: unknown) {
     return { isLive: false, nowPlaying: '', listeners: undefined };
   }
 }
@@ -110,7 +110,7 @@ async function checkHttpStatus(url: string): Promise<{ isLive: boolean; nowPlayi
       nowPlaying: response.ok ? 'Stream available' : '',
       listeners: undefined
     };
-  } catch {
+  } catch (e: unknown) {
     return { isLive: false, nowPlaying: '', listeners: undefined };
   }
 }

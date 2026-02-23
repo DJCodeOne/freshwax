@@ -21,7 +21,7 @@ const AddMixCommentSchema = z.object({
   avatarUrl: z.string().url().max(2048).optional().nullable(),
 });
 
-const logger = createLogger('add-mix-comment');
+const log = createLogger('add-mix-comment');
 
 function containsLinks(text: string): boolean {
   const urlPatterns = [
@@ -124,11 +124,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
       } else if (userDoc?.name) {
         userName = userDoc.name;
       }
-    } catch {
+    } catch (e: unknown) {
       // Fall back to body userName if user doc lookup fails
     }
 
-    logger.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
+    log.info('[add-mix-comment] Received request:', { mixId, userName, userId, hasGif: !!gifUrl, hasAvatar: !!avatarUrl });
 
     if (!mixId || (!comment?.trim() && !gifUrl) || !userName?.trim()) {
       return ApiErrors.badRequest('Missing required fields');
@@ -178,7 +178,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       createdAt: new Date().toISOString()
     };
 
-    logger.info('[add-mix-comment] Adding comment:', newComment);
+    log.info('[add-mix-comment] Adding comment:', newComment);
 
     // Use atomic arrayUnion to prevent lost comments under concurrent writes
     const currentCount = Array.isArray(mixData.comments) ? mixData.comments.length : 0;
@@ -200,9 +200,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           comment: newComment.comment,
           gifUrl: newComment.gifUrl || undefined
         });
-        logger.info('[add-mix-comment] Also written to D1');
+        log.info('[add-mix-comment] Also written to D1');
       } catch (d1Error: unknown) {
-        logger.error('[add-mix-comment] D1 dual-write failed (non-critical):', d1Error);
+        log.error('[add-mix-comment] D1 dual-write failed (non-critical):', d1Error);
       }
     }
 
@@ -215,14 +215,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     await kvDelete('public:20', MIXES_CACHE).catch(() => {});
     await kvDelete('public:100', MIXES_CACHE).catch(() => {});
 
-    logger.info('[add-mix-comment] Comment saved');
+    log.info('[add-mix-comment] Comment saved');
 
     return successResponse({ comment: newComment, commentCount: currentCount + 1 }, 200, {
       headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
     });
 
   } catch (error: unknown) {
-    logger.error('[add-mix-comment] Error:', error);
+    log.error('[add-mix-comment] Error:', error);
     return ApiErrors.serverError('Failed to save comment');
   }
 };

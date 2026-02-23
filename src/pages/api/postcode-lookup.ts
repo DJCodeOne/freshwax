@@ -11,7 +11,7 @@ const PostcodeLookupSchema = z.object({
   postcode: z.string().min(1, 'Postcode is required').max(10).transform(val => val.trim().toUpperCase().replace(/\s+/g, '')),
 });
 
-const logger = createLogger('postcode-lookup');
+const log = createLogger('postcode-lookup');
 
 export const prerender = false;
 
@@ -30,7 +30,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
   const postcode = parsed.data.postcode;
 
-  logger.info('[postcode-lookup] Cleaned:', postcode);
+  log.info('[postcode-lookup] Cleaned:', postcode);
 
   // Validate UK postcode format (basic validation)
   const postcodeRegex = /^[A-Z]{1,2}[0-9][0-9A-Z]?[0-9][A-Z]{2}$/;
@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     // Call postcodes.io API (FREE, no authentication required!)
     const apiUrl = `https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`;
-    logger.info('[postcode-lookup] Calling postcodes.io:', apiUrl);
+    log.info('[postcode-lookup] Calling postcodes.io:', apiUrl);
     
     const response = await fetchWithTimeout(apiUrl, {
       method: 'GET',
@@ -50,13 +50,14 @@ export const GET: APIRoute = async ({ request }) => {
       }
     }, 8000);
     
-    logger.info('[postcode-lookup] API response status:', response.status);
+    log.info('[postcode-lookup] API response status:', response.status);
     
     if (!response.ok) {
       if (response.status === 404) {
         return ApiErrors.notFound('Postcode not found. Please check and try again.');
       }
-      throw new Error(`Postcodes.io error: ${response.status}`);
+      log.error(`Postcodes.io request failed: ${response.status}`);
+      throw new Error('Postcode lookup service unavailable');
     }
 
     const data = await response.json();
@@ -101,7 +102,7 @@ export const GET: APIRoute = async ({ request }) => {
       parliamentary_constituency: result.parliamentary_constituency || ''
     };
     
-    logger.info('[postcode-lookup] Returning location data:', locationData);
+    log.info('[postcode-lookup] Returning location data:', locationData);
     
     return successResponse({ ...locationData,
       // Note to frontend: this API validates postcodes and returns location data
@@ -109,7 +110,7 @@ export const GET: APIRoute = async ({ request }) => {
       message: 'Postcode validated. Please enter your street address below.' });
     
   } catch (error: unknown) {
-    logger.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));
+    log.error('[postcode-lookup] Error:', error instanceof Error ? error.message : String(error));
 
     if (error instanceof Error && error.name === 'AbortError') {
       return errorResponse('Request timed out. Please try again.', 504);

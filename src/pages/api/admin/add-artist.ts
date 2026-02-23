@@ -67,7 +67,8 @@ async function writeToFirestore(collection: string, docId: string, data: Record<
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Firestore error: ${response.status} - ${error}`);
+    log.error(`Firestore write failed: ${response.status} - ${error}`);
+    throw new Error('Failed to write to database');
   }
 
   return response.json();

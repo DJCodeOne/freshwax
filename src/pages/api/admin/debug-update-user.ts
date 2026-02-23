@@ -50,6 +50,10 @@ async function getToken(serviceAccountKey: string): Promise<string> {
     body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
   }, 10000);
 
+  if (!tokenResponse.ok) {
+    throw new Error(`Token request failed: ${tokenResponse.status}`);
+  }
+
   const tokenData = await tokenResponse.json() as Record<string, unknown>;
   return tokenData.access_token as string;
 }
@@ -95,6 +99,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const getResponse = await fetchWithTimeout(docUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     }, 10000);
+    if (!getResponse.ok) {
+      return ApiErrors.serverError(`Failed to fetch user document: ${getResponse.status}`);
+    }
     const currentDoc = await getResponse.json() as Record<string, unknown>;
 
     // Extract current roles
@@ -154,6 +161,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const verifyResponse = await fetchWithTimeout(docUrl, {
       headers: { 'Authorization': `Bearer ${token}` }
     }, 10000);
+    if (!verifyResponse.ok) {
+      return ApiErrors.serverError(`Failed to verify update: ${verifyResponse.status}`);
+    }
     const verifyDoc = await verifyResponse.json() as Record<string, unknown>;
 
     const verifyRoles: Record<string, unknown> = {};

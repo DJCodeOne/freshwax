@@ -49,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }, env);
 
     return successResponse({} as Record<string, unknown>);
-  } catch {
+  } catch (e: unknown) {
     return errorResponse('Failed to log error', 500);
   }
 };

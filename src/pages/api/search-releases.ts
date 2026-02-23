@@ -7,7 +7,7 @@ import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
 export const prerender = false;
 
-const logger = createLogger('search-releases');
+const log = createLogger('search-releases');
 
 export const GET: APIRoute = async ({ request, locals }) => {
   // Rate limit: standard API - 60 per minute
@@ -34,7 +34,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return ApiErrors.serverError('Database not available');
   }
 
-  logger.info('[search] Searching for:', query);
+  log.info('[search] Searching for:', query);
 
   try {
     // Use D1 SQL LIKE for server-side search - much faster than fetching all records
@@ -44,7 +44,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       d1SearchPublishedMerch(db, query, limit)
     ]);
 
-    logger.info('[search] D1 search found', releases.length, 'releases,', mixes.length, 'mixes,', merch.length, 'merch');
+    log.info('[search] D1 search found', releases.length, 'releases,', mixes.length, 'mixes,', merch.length, 'merch');
 
     const matchedReleases = releases.map((release: Record<string, unknown>) => ({
       id: release.id,
@@ -76,7 +76,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const allResults = [...matchedReleases, ...matchedMixes, ...matchedMerch];
     const limitedResults = allResults.slice(0, limit);
 
-    logger.info('[search] Found', matchedReleases.length, 'releases,', matchedMixes.length, 'mixes,', matchedMerch.length, 'merch, returning', limitedResults.length);
+    log.info('[search] Found', matchedReleases.length, 'releases,', matchedMixes.length, 'mixes,', matchedMerch.length, 'merch, returning', limitedResults.length);
 
     // Browser: 1 min, CDN: 3 min
     return successResponse({
@@ -92,7 +92,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    logger.error('[search] Error:', error);
+    log.error('[search] Error:', error);
     return ApiErrors.serverError('Search failed');
   }
 };

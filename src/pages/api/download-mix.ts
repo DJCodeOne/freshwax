@@ -4,7 +4,7 @@ import { verifyRequestUser } from '../../lib/firebase-rest';
 import { errorResponse, ApiErrors, createLogger, fetchWithTimeout } from '../../lib/api-utils';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 
-const logger = createLogger('download-mix');
+const log = createLogger('download-mix');
 
 // Only allow downloads from trusted domains
 const ALLOWED_DOMAINS = [
@@ -50,7 +50,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return ApiErrors.badRequest('Only HTTPS URLs allowed');
     }
     isAllowed = ALLOWED_DOMAINS.some(domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith('.' + domain));
-  } catch {
+  } catch (e: unknown) {
     return ApiErrors.badRequest('Invalid URL');
   }
 
@@ -59,7 +59,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    logger.info('[download-mix] Proxying download for:', audioUrl);
+    log.info('[download-mix] Proxying download for:', audioUrl);
 
     const response = await fetchWithTimeout(audioUrl, {}, 10000);
 
@@ -70,7 +70,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Stream the response instead of buffering to handle large files
     const contentLength = response.headers.get('content-length');
 
-    logger.info('[download-mix] Streaming file, size:', contentLength || 'unknown');
+    log.info('[download-mix] Streaming file, size:', contentLength || 'unknown');
 
     const headers: Record<string, string> = {
       'Content-Type': 'audio/mpeg',
@@ -89,7 +89,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     });
 
   } catch (error: unknown) {
-    logger.error('[download-mix] Error:', error);
+    log.error('[download-mix] Error:', error);
     return ApiErrors.serverError('Failed to download file');
   }
 };

@@ -7,7 +7,7 @@ import { isAdmin as checkIsAdmin, getAdminUids, initAdminEnv } from '../../lib/a
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../lib/api-utils';
 
-const logger = createLogger('get-release');
+const log = createLogger('get-release');
 
 export const prerender = false;
 
@@ -33,7 +33,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     if (verifiedUid) {
       isAdminUser = await checkIsAdmin(verifiedUid);
     }
-  } catch {
+  } catch (e: unknown) {
     // Not authenticated - that's OK for public release viewing
   }
 
@@ -41,7 +41,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     return ApiErrors.badRequest('Release ID required');
   }
 
-  logger.info('[get-release] Fetching:', releaseId, noCache ? '(nocache)' : '', isAdminUser ? '(admin)' : '');
+  log.info('[get-release] Fetching:', releaseId, noCache ? '(nocache)' : '', isAdminUser ? '(admin)' : '');
   
   // Clear cache for this release if nocache requested
   if (noCache) {
@@ -52,13 +52,13 @@ export const GET: APIRoute = async ({ request, locals }) => {
     const release = await getDocument('releases', releaseId);
     
     if (!release) {
-      logger.info('[get-release] Not found:', releaseId);
+      log.info('[get-release] Not found:', releaseId);
       return ApiErrors.notFound('Release not found');
     }
     
     // Only check status for public requests (non-admin)
     if (!isAdminUser && release.status !== 'live') {
-      logger.info('[get-release] Not live:', releaseId, release.status);
+      log.info('[get-release] Not live:', releaseId, release.status);
       return ApiErrors.notFound('Release not available');
     }
     
@@ -81,17 +81,17 @@ export const GET: APIRoute = async ({ request, locals }) => {
           }
         }
       } catch (err: unknown) {
-        logger.info('[get-release] Could not fetch artist bio:', err);
+        log.info('[get-release] Could not fetch artist bio:', err);
       }
     }
 
-    logger.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName, artistBio ? '(has bio)' : '(no bio)');
+    log.info('[get-release] Returning:', normalized.artistName, '-', normalized.releaseName, artistBio ? '(has bio)' : '(no bio)');
 
     return successResponse({ release: { ...normalized, artistBio },
       source: 'firebase-rest' }, 200, { headers: { 'Cache-Control': 'private, max-age=60, must-revalidate' } });
     
   } catch (error: unknown) {
-    logger.error('[get-release] Error:', error);
+    log.error('[get-release] Error:', error);
     return ApiErrors.serverError('Failed to fetch release');
   }
 };

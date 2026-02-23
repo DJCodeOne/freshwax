@@ -9,7 +9,7 @@ import { redeemReferralCode } from '../../../lib/referral-codes';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth';
 
-const logger = createLogger('paypal-plus');
+const log = createLogger('paypal-plus');
 
 // Zod schema for PayPal Plus capture
 const PayPalPlusCaptureSchema = z.object({
@@ -67,14 +67,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { paypalOrderId, orderData: clientOrderData, expectedAmount } = parseResult.data;
 
-    logger.info('[PayPal Plus] Capturing order:', paypalOrderId);
+    log.info('[PayPal Plus] Capturing order:', paypalOrderId);
 
     // Get pending order data from Firebase (same collection as regular orders)
     let pendingOrder = await getDocument('pendingPayPalOrders', paypalOrderId);
     if (!pendingOrder || pendingOrder.type !== 'plus_subscription') {
       // SECURITY: Reject if no server-side pending order exists.
       // Never trust client-provided order data for payment captures.
-      logger.error('[PayPal Plus] No valid pending order found for:', paypalOrderId);
+      log.error('[PayPal Plus] No valid pending order found for:', paypalOrderId);
       return ApiErrors.badRequest('Plus order not found or expired. Please try again.');
     }
 
@@ -95,25 +95,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!captureResponse.ok) {
       const errorData = await captureResponse.json();
-      logger.error('[PayPal Plus] Capture failed:', errorData);
+      log.error('[PayPal Plus] Capture failed:', errorData);
       return ApiErrors.serverError('Payment capture failed');
     }
 
     const captureData = await captureResponse.json();
 
     if (captureData.status !== 'COMPLETED') {
-      logger.error('[PayPal Plus] Capture not completed:', captureData.status);
+      log.error('[PayPal Plus] Capture not completed:', captureData.status);
       return ApiErrors.badRequest('Payment not completed');
     }
 
     // Get capture ID
     const captureId = captureData.purchase_units?.[0]?.payments?.captures?.[0]?.id || paypalOrderId;
-    logger.info('[PayPal Plus] ✓ Payment captured:', captureId);
+    log.info('[PayPal Plus] ✓ Payment captured:', captureId);
 
     // Validate captured amount
     const capturedAmount = parseFloat(captureData.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value || '0');
     if (Math.abs(capturedAmount - amount) > 0.01) {
-      logger.error('[PayPal Plus] Amount mismatch! Expected:', amount, 'Got:', capturedAmount);
+      log.error('[PayPal Plus] Amount mismatch! Expected:', amount, 'Got:', capturedAmount);
       return ApiErrors.badRequest('Payment amount mismatch');
     }
 
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     try {
       await deleteDocument('pendingPayPalOrders', paypalOrderId);
     } catch (e: unknown) {
-      logger.warn('[PayPal Plus] Failed to delete pending order:', e);
+      log.warn('[PayPal Plus] Failed to delete pending order:', e);
     }
 
     // Activate Plus subscription
@@ -159,11 +159,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!updateResponse.ok) {
       const errorText = await updateResponse.text();
-      logger.error('[PayPal Plus] Failed to update subscription:', errorText);
+      log.error('[PayPal Plus] Failed to update subscription:', errorText);
       return ApiErrors.serverError('Failed to activate subscription');
     }
 
-    logger.info('[PayPal Plus] ✓ Plus subscription activated for:', userId);
+    log.info('[PayPal Plus] ✓ Plus subscription activated for:', userId);
 
     // Send welcome email
     try {
@@ -180,9 +180,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
           isRenewal: false
         })
       }, 10000);
-      logger.info('[PayPal Plus] ✓ Welcome email sent to:', email);
+      log.info('[PayPal Plus] ✓ Welcome email sent to:', email);
     } catch (emailError: unknown) {
-      logger.error('[PayPal Plus] Failed to send welcome email:', emailError);
+      log.error('[PayPal Plus] Failed to send welcome email:', emailError);
     }
 
     // Redeem referral code if used
@@ -192,12 +192,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         try {
           const result = await redeemReferralCode(kv, promoCode, userId);
           if (result.success) {
-            logger.info(`[PayPal Plus] ✓ KV referral code ${promoCode} marked as redeemed by ${userId}`);
+            log.info(`[PayPal Plus] ✓ KV referral code ${promoCode} marked as redeemed by ${userId}`);
           } else {
-            logger.error(`[PayPal Plus] Failed to redeem KV code: ${result.error}`);
+            log.error(`[PayPal Plus] Failed to redeem KV code: ${result.error}`);
           }
         } catch (referralError: unknown) {
-          logger.error('[PayPal Plus] Failed to mark KV referral code as redeemed:', referralError);
+          log.error('[PayPal Plus] Failed to mark KV referral code as redeemed:', referralError);
         }
       } else if (referralCardId) {
         // Redeem Firebase-based referral code (legacy)
@@ -219,9 +219,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             },
             10000
           );
-          logger.info(`[PayPal Plus] ✓ Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
+          log.info(`[PayPal Plus] ✓ Firebase referral code ${referralCardId} marked as redeemed by ${userId}`);
         } catch (referralError: unknown) {
-          logger.error('[PayPal Plus] Failed to mark Firebase referral code as redeemed:', referralError);
+          log.error('[PayPal Plus] Failed to mark Firebase referral code as redeemed:', referralError);
         }
       }
     }
@@ -231,7 +231,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       message: 'Plus subscription activated successfully!' });
 
   } catch (error: unknown) {
-    logger.error('[PayPal Plus] Error:', error);
+    log.error('[PayPal Plus] Error:', error);
     return ApiErrors.serverError('Failed to process payment');
   }
 };

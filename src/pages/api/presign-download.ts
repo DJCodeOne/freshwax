@@ -19,7 +19,7 @@ const PresignDownloadSchema = z.object({
 
 export const prerender = false;
 
-const logger = createLogger('presign-download');
+const log = createLogger('presign-download');
 
 
 // Extract R2 object key from full URL
@@ -45,7 +45,7 @@ function extractKeyFromUrl(url: string, publicUrl: string): string | null {
     }
 
     return key;
-  } catch {
+  } catch (e: unknown) {
     return null;
   }
 }
@@ -69,7 +69,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let rawBody: unknown;
     try {
       rawBody = await request.json();
-    } catch {
+    } catch (e: unknown) {
       return ApiErrors.badRequest('Invalid JSON body');
     }
 
@@ -79,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
     const { orderId, releaseId, trackIndex, fileType } = parseResult.data;
 
-    logger.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
+    log.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
 
     // SECURITY: Fetch and verify order ownership
     const order = await getDocument('orders', orderId);
@@ -91,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Verify user owns this order
     const orderUserId = order.customer?.userId || order.userId || order.customerId;
     if (orderUserId !== userId) {
-      logger.error('[presign-download] Unauthorized access attempt:', { orderId, orderUserId, requestingUserId: userId });
+      log.error('[presign-download] Unauthorized access attempt:', { orderId, orderUserId, requestingUserId: userId });
       return ApiErrors.forbidden('Unauthorized');
     }
 
@@ -153,7 +153,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Fall back to current release data if order doesn't have URLs
     if (!fileUrl) {
-      logger.info('[presign-download] Order has no stored URL, fetching from release');
+      log.info('[presign-download] Order has no stored URL, fetching from release');
       const releaseData = await getDocument('releases', releaseId);
 
       if (!releaseData) {
@@ -190,7 +190,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (!fileUrl) {
-      logger.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
+      log.error('[presign-download] File URL not found:', { releaseId, trackIndex, fileType });
       return ApiErrors.notFound('${fileType} file not available for this item');
     }
 
@@ -201,13 +201,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!objectKey) {
       // If it's not a recognized R2 URL, reject the request
-      logger.error('[presign-download] Unrecognized URL format:', fileUrl);
+      log.error('[presign-download] Unrecognized URL format:', fileUrl);
       return ApiErrors.badRequest('Invalid file URL format');
     }
 
     // Validate R2 configuration
     if (!config.accountId || !config.accessKeyId || !config.secretAccessKey) {
-      logger.error('[presign-download] Missing R2 credentials');
+      log.error('[presign-download] Missing R2 credentials');
       return ApiErrors.serverError('Server configuration error');
     }
 
@@ -230,13 +230,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn });
 
-    logger.info('[presign-download] Generated presigned URL for:', objectKey);
+    log.info('[presign-download] Generated presigned URL for:', objectKey);
 
     return successResponse({ downloadUrl,
       expiresIn });
 
   } catch (error: unknown) {
-    logger.error('[presign-download] Error:', error);
+    log.error('[presign-download] Error:', error);
     return ApiErrors.serverError('Failed to generate download URL');
   }
 };

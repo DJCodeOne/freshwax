@@ -7,7 +7,7 @@ const DYNAMIC_CACHE = `freshwax-dynamic-v${CACHE_VERSION}`;
 const KNOWN_CACHES = [STATIC_CACHE, DYNAMIC_CACHE];
 
 // Max entries in the dynamic cache to prevent unbounded growth
-const DYNAMIC_CACHE_LIMIT = 80;
+const DYNAMIC_CACHE_LIMIT = 200;
 
 // Critical assets to pre-cache during install
 const PRECACHE_ASSETS = [
@@ -119,7 +119,7 @@ async function networkFirstHTML(request) {
     const response = await fetch(request);
     if (response.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone());
+      cache.put(stripCacheBustParams(request), response.clone());
     }
     return response;
   } catch {
@@ -131,14 +131,15 @@ async function networkFirstHTML(request) {
 
 // --- Strategy: cache-first with network fallback ---
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cacheKey = stripCacheBustParams(request);
+  const cached = await caches.match(cacheKey);
   if (cached) return cached;
 
   try {
     const response = await fetch(request);
     if (response.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
-      cache.put(request, response.clone());
+      cache.put(cacheKey, response.clone());
       trimCache(DYNAMIC_CACHE, DYNAMIC_CACHE_LIMIT);
     }
     return response;
@@ -149,6 +150,23 @@ async function cacheFirst(request) {
 }
 
 // --- Helpers ---
+
+// Strip cache-bust query params (?v=, ?t=) so assets cache under their canonical URL
+function stripCacheBustParams(request) {
+  const url = new URL(request.url);
+  let changed = false;
+  for (const key of ['v', 't']) {
+    if (url.searchParams.has(key)) {
+      url.searchParams.delete(key);
+      changed = true;
+    }
+  }
+  if (changed) {
+    return new Request(url.toString(), { headers: request.headers, mode: request.mode, credentials: request.credentials });
+  }
+  return request;
+}
+
 function isStaticAsset(pathname) {
   return /\.(js|css|png|jpg|jpeg|webp|gif|svg|ico|woff2?|ttf|eot|avif)$/i.test(pathname);
 }

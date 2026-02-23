@@ -9,7 +9,7 @@ import { isAdmin, requireAdminAuth, initAdminEnv } from '../../../lib/admin';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { ApiErrors, createLogger, successResponse } from '../../../lib/api-utils';
 
-const logger = createLogger('update-partner');
+const log = createLogger('update-partner');
 
 const updatePartnerSchema = z.object({
   adminUid: z.string().min(1),
@@ -46,7 +46,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { adminUid, partnerId, updates } = parsed.data;
     const idToken = (body as Record<string, unknown>).idToken as string | undefined;
 
-    logger.info('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
+    log.info('[update-partner] Request:', { adminUid, partnerId, hasToken: !!idToken, updates });
 
     const now = new Date().toISOString();
     const results: string[] = [];
@@ -57,7 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       getDocument('artists', partnerId)
     ]);
 
-    logger.info('[update-partner] Found docs - users:', !!userDoc, 'artists:', !!artistDoc);
+    log.info('[update-partner] Found docs - users:', !!userDoc, 'artists:', !!artistDoc);
 
     // Update artists collection - this is the main partner data store
     // Allowed fields: isArtist, isMerchSupplier, revokedAt, revokedBy, updatedAt,
@@ -89,9 +89,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       try {
         await updateDocument('artists', partnerId, artistUpdate, idToken);
         results.push('artists:updated');
-        logger.info('[update-partner] Updated artists:', artistUpdate);
+        log.info('[update-partner] Updated artists:', artistUpdate);
       } catch (e: unknown) {
-        logger.error('[update-partner] artists update failed:', e);
+        log.error('[update-partner] artists update failed:', e);
         return ApiErrors.serverError('Failed to update partner: ');
       }
     }
@@ -121,7 +121,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Update existing users document
         await updateDocument('users', partnerId, userUpdate, idToken);
         results.push('users:updated');
-        logger.info('[update-partner] Updated users:', userUpdate);
+        log.info('[update-partner] Updated users:', userUpdate);
       } else {
         // Create users document if it doesn't exist (required for list-partners)
         const { setDocument } = await import('../../../lib/firebase-rest');
@@ -136,10 +136,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: now
         }, idToken);
         results.push('users:created');
-        logger.info('[update-partner] Created users document:', partnerId);
+        log.info('[update-partner] Created users document:', partnerId);
       }
     } catch (e: unknown) {
-      logger.warn('[update-partner] users update failed:', e instanceof Error ? e.message : e);
+      log.warn('[update-partner] users update failed:', e instanceof Error ? e.message : e);
     }
 
     // Update or create customers collection record
@@ -195,10 +195,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: now
         }, idToken);
         results.push('customers:created');
-        logger.info('[update-partner] Created customers record for downgraded partner');
+        log.info('[update-partner] Created customers record for downgraded partner');
       }
     } catch (e: unknown) {
-      logger.warn('[update-partner] customers update failed:', e instanceof Error ? e.message : e);
+      log.warn('[update-partner] customers update failed:', e instanceof Error ? e.message : e);
     }
 
     // Update or create vinylSellers collection record
@@ -225,7 +225,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             updatedAt: now
           }, idToken);
           results.push('vinylSellers:created');
-          logger.info('[update-partner] Created vinylSellers record for promoted partner');
+          log.info('[update-partner] Created vinylSellers record for promoted partner');
         } else if (vinylSellerDoc) {
           // Update existing vinylSellers record
           await updateDocument('vinylSellers', partnerId, {
@@ -236,11 +236,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           results.push('vinylSellers:updated');
         }
       } catch (e: unknown) {
-        logger.warn('[update-partner] vinylSellers update failed:', e instanceof Error ? e.message : e);
+        log.warn('[update-partner] vinylSellers update failed:', e instanceof Error ? e.message : e);
       }
     }
 
-    logger.info('[update-partner] Completed:', results);
+    log.info('[update-partner] Completed:', results);
 
     // Invalidate caches so list-partners sees the update immediately
     clearCache('users');
@@ -251,7 +251,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       results });
 
   } catch (error: unknown) {
-    logger.error('[update-partner] Error:', error);
+    log.error('[update-partner] Error:', error);
     return ApiErrors.serverError('Failed to update partner');
   }
 };

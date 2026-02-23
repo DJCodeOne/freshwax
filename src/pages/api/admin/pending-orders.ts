@@ -45,7 +45,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
       let parsedItems = null;
       try {
         if (row.items) parsedItems = JSON.parse(row.items);
-      } catch { /* leave null */ }
+      } catch (e: unknown) { /* leave null */ }
 
       // Derive payment method from the stripe_session_id prefix
       const paymentMethod = row.stripe_session_id?.startsWith('paypal:') ? 'paypal' : 'stripe';
