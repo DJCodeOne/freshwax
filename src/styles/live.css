@@ -190,7 +190,7 @@
 
   .fs-live-badge.is-loading .fs-live-dot {
     background: #9ca3af;
-    animation: pulse 1s infinite;
+    animation: pulse-dot 1s infinite;
   }
   
   .fs-live-dot {
@@ -202,7 +202,7 @@
   
   .fs-live-badge.is-live .fs-live-dot {
     background: #fff;
-    animation: pulse 1.5s infinite;
+    animation: pulse-dot 1.5s infinite;
   }
 
   /* Fullscreen playlist active state */
@@ -215,7 +215,7 @@
 
   .fs-live-badge.is-playlist .fs-live-dot {
     background: #fff;
-    animation: pulse 1.5s infinite;
+    animation: pulse-dot 1.5s infinite;
   }
 
   .fullscreen-header h1 {
@@ -1137,10 +1137,10 @@
   
   .live-indicator.is-live .pulse-dot {
     background: #dc2626;
-    animation: pulse 1.5s infinite;
+    animation: pulse-indicator 1.5s infinite;
   }
-  
-  @keyframes pulse {
+
+  @keyframes pulse-indicator {
     0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
     50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
   }
@@ -1668,7 +1668,7 @@
     height: 6px;
     background: white;
     border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse-dot 1.5s ease-in-out infinite;
   }
 
   .schedule-title {
@@ -2230,7 +2230,7 @@
 
   .live-badge.is-loading .live-dot {
     background: #9ca3af;
-    animation: pulse 1s infinite;
+    animation: pulse-dot 1s infinite;
   }
 
   @keyframes loading-pulse {
@@ -2247,7 +2247,7 @@
   
   .live-badge.is-live .live-dot {
     background: #fff;
-    animation: pulse 1.5s infinite;
+    animation: pulse-dot 1.5s infinite;
   }
 
   /* Playlist active state - blue with glow */
@@ -2260,7 +2260,7 @@
 
   .live-badge.is-playlist .live-dot {
     background: #fff;
-    animation: pulse 1.5s infinite;
+    animation: pulse-dot 1.5s infinite;
   }
 
   @keyframes playlist-glow {
@@ -2848,7 +2848,7 @@
     height: 10px;
     background: #16a34a;
     border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse-dot 1.5s ease-in-out infinite;
   }
 
   .fs-turntables-row {
@@ -3258,10 +3258,10 @@
     height: 8px;
     background: #16a34a;
     border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse-dot 1.5s ease-in-out infinite;
   }
 
-  @keyframes pulse {
+  @keyframes pulse-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.5; transform: scale(0.8); }
   }
@@ -7019,7 +7019,7 @@
     height: 6px;
     background: #dc2626;
     border-radius: 50%;
-    animation: pulse 1.5s infinite;
+    animation: pulse-dot 1.5s infinite;
   }
   
   .mini-controls {

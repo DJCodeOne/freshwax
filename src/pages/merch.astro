@@ -335,12 +335,15 @@ const merchItemList = {
                   )}
                   
                   {product.colorList && product.colorList.length > 0 && (
-                    <div class="color-dots">
+                    <div class="color-dots" role="group" aria-label="Available colours">
                       {product.colorList.map((color: string, idx: number) => (
                         <span
                           class="dot"
                           style={`background:${color}`}
                           data-color={product.colorNames?.[idx] || color}
+                          role="button"
+                          tabindex="0"
+                          aria-label={`Preview colour ${product.colorNames?.[idx] || color}`}
                         ></span>
                       ))}
                     </div>
@@ -396,9 +399,9 @@ const merchItemList = {
           <div id="modalPriceBox" class="modal-price"></div>
           
           <!-- Size Selection -->
-          <div id="sizeSection" class="option-section">
+          <fieldset id="sizeSection" class="option-section">
             <div class="size-label-row">
-              <label>Select Size <span class="required">*</span></label>
+              <legend>Select Size <span class="required">*</span></legend>
               <button type="button" id="sizeGuideBtn" class="size-guide-btn">Size Guide</button>
             </div>
             <div id="sizeOptions" class="option-grid"></div>
@@ -410,7 +413,7 @@ const merchItemList = {
                   <button type="button" class="size-guide-close">&times;</button>
                 </div>
                 <table class="size-guide-table">
-                  <tr><th>Size</th><th>Chest</th></tr>
+                  <tr><th scope="col">Size</th><th scope="col">Chest</th></tr>
                   <tr><td>S</td><td>34-36"</td></tr>
                   <tr><td>M</td><td>38-40"</td></tr>
                   <tr><td>L</td><td>42-44"</td></tr>
@@ -420,13 +423,13 @@ const merchItemList = {
                 </table>
               </div>
             </div>
-          </div>
-          
+          </fieldset>
+
           <!-- Color Selection -->
-          <div id="colorSection" class="option-section">
-            <label>Select Colour <span class="required">*</span></label>
+          <fieldset id="colorSection" class="option-section">
+            <legend>Select Colour <span class="required">*</span></legend>
             <div id="colorOptions" class="option-grid"></div>
-          </div>
+          </fieldset>
           
           <!-- Stock Status -->
           <div id="modalStockStatus" class="stock-info"></div>
@@ -707,6 +710,34 @@ const merchItemList = {
           cardImg.src = cardImg.dataset.originalSrc;
         }
       }, true);
+
+      // Keyboard support for color dot swatches (Enter/Space triggers same as hover preview)
+      grid.addEventListener('keydown', function(e) {
+        var dot = e.target;
+        if (!dot.classList || !dot.classList.contains('dot')) return;
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+
+        e.preventDefault();
+        var card = dot.closest('.product-card');
+        if (!card) return;
+
+        var product = JSON.parse(card.dataset.product || '{}');
+        var cardImg = card.querySelector('.card-image img');
+        var colorName = dot.dataset.color;
+
+        if (!colorName || !cardImg || !product.imageObjects) return;
+
+        var matchingImage = product.imageObjects.find(function(img) {
+          if (typeof img === 'object' && img.color) {
+            return img.color.toLowerCase() === colorName.toLowerCase();
+          }
+          return false;
+        });
+
+        if (matchingImage && matchingImage.url) {
+          cardImg.src = matchingImage.url;
+        }
+      });
     }
 
     // Modal
@@ -849,7 +880,7 @@ const merchItemList = {
         if (sizesArray && Array.isArray(sizesArray) && sizesArray.length > 0) {
           sizeSection.style.display = 'block';
           sizeOptions.innerHTML = sizesArray.map(function(s, i) {
-            return '<button class="opt-btn size-btn ' + (sizesArray.length === 1 ? 'selected' : '') + '" data-size="' + s + '">' + s + '</button>';
+            return '<button class="opt-btn size-btn ' + (sizesArray.length === 1 ? 'selected' : '') + '" data-size="' + s + '" aria-label="Select size ' + escapeHtml(s) + '">' + s + '</button>';
           }).join('');
 
           // Auto-select if only one size
@@ -880,7 +911,7 @@ const merchItemList = {
           colorOptions.innerHTML = product.colorList.map(function(hex, i) {
             var name = product.colorNames?.[i] || hex;
             var isSelected = product.colorList.length === 1 ? 'selected' : '';
-            return '<button class="opt-btn color-opt ' + isSelected + '" data-color="' + name + '" data-hex="' + hex + '" style="background:' + hex + '" title="' + name + '"></button>';
+            return '<button class="opt-btn color-opt ' + isSelected + '" data-color="' + name + '" data-hex="' + hex + '" style="background:' + hex + '" title="' + escapeHtml(name) + '" aria-label="Select colour ' + escapeHtml(name) + '"></button>';
           }).join('');
 
           // Auto-select if only one color

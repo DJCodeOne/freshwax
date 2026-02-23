@@ -126,11 +126,6 @@
     animation: pulse 1.5s infinite;
   }
   
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-  
   :global(.live-stream-meta) {
     color: var(--text-secondary, #666);
     font-size: 0.875rem;

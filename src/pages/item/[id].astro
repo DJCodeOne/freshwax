@@ -37,8 +37,8 @@ try {
             artistBio = bio;
           }
         }
-      } catch (err) {
-        // Could not fetch artist bio - non-fatal
+      } catch (err: unknown) {
+        log.debug('[ITEM PAGE] Could not fetch artist bio:', err);
       }
     }
 

@@ -8,10 +8,12 @@ import Footer from '../../components/Footer.astro';
 import { getDocument, getDocumentsBatch, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 
+type AnyRecord = Record<string, unknown>;
+
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
-let partner: Record<string, unknown> | null = null;
-let orders: Record<string, unknown>[] = [];
-let ledgerEntries: Record<string, unknown>[] = [];
+let partner: AnyRecord | null = null;
+let orders: AnyRecord[] = [];
+let ledgerEntries: AnyRecord[] = [];
 let artistReleaseIds: Set<string> = new Set();
 let orderStats = {
   total: 0,
@@ -943,26 +945,26 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
                         'Customer';
 
                       // Find matching ledger entry to get actual artist earnings
-                      const ledgerEntry = ledgerEntries.find((e: any) => e.orderId === order.id);
+                      const ledgerEntry = ledgerEntries.find((e: AnyRecord) => e.orderId === order.id);
                       let artistAmount = 0;
                       if (ledgerEntry) {
                         artistAmount = ledgerEntry.artistPayout || ledgerEntry.actualArtistPayout || 0;
                         // If ledger has 0 but has paid evidence, calculate from items
                         if (artistAmount === 0 && ledgerEntry.artistPayoutStatus !== undefined) {
-                          const artistItems = (ledgerEntry.items || []).filter((item: any) => {
+                          const artistItems = (ledgerEntry.items as AnyRecord[] || []).filter((item: AnyRecord) => {
                             const releaseId = item.id || item.releaseId;
-                            return releaseId && artistReleaseIds.has(releaseId);
+                            return releaseId && artistReleaseIds.has(releaseId as string);
                           });
-                          const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + ((item.lineTotal as number) || (item.unitPrice as number) || 0), 0);
+                          const itemsTotal = artistItems.reduce((sum: number, item: AnyRecord) => sum + ((item.lineTotal as number) || (item.unitPrice as number) || 0), 0);
                           artistAmount = itemsTotal * 0.7;
                         }
                       } else {
                         // No ledger entry - calculate from order items for this artist
-                        const artistItems = (order.items || []).filter((item: any) => {
+                        const artistItems = (order.items as AnyRecord[] || []).filter((item: AnyRecord) => {
                           const releaseId = item.releaseId || item.productId || item.id;
-                          return releaseId && artistReleaseIds.has(releaseId);
+                          return releaseId && artistReleaseIds.has(releaseId as string);
                         });
-                        const itemsTotal = artistItems.reduce((sum: number, item: any) => sum + ((item.price as number) || (item.lineTotal as number) || 0), 0);
+                        const itemsTotal = artistItems.reduce((sum: number, item: AnyRecord) => sum + ((item.price as number) || (item.lineTotal as number) || 0), 0);
                         artistAmount = itemsTotal * 0.7;
                       }
 

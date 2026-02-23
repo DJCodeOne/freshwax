@@ -16,7 +16,7 @@ import { getPayPalBaseUrl, getPayPalAccessToken } from '../../../lib/paypal-auth
 // Zod schema for PayPal capture request
 const PayPalCaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID required'),
-  orderData: z.any().optional(),
+  orderData: z.record(z.unknown()).optional(),
   idToken: z.string().optional(),
 }).passthrough();
 

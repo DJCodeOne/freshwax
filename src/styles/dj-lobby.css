@@ -2813,7 +2813,7 @@
     height: 8px;
     background: #dc2626;
     border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse-scale 1.5s ease-in-out infinite;
   }
   
   /* Time Remaining */
@@ -3503,10 +3503,10 @@
     font-size: 0.75rem;
     color: #22c55e;
     margin-top: 0.25rem;
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn-slide 0.3s ease;
   }
 
-  @keyframes fadeIn {
+  @keyframes fadeIn-slide {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
   }
@@ -8688,7 +8688,7 @@
     height: 6px;
     background: #16a34a;
     border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse-scale 1.5s ease-in-out infinite;
   }
 
   .butt-audio-preview .audio-waveform {
@@ -8890,7 +8890,7 @@
     height: 6px;
     background: #16a34a;
     border-radius: 50%;
-    animation: pulse 1.5s ease-in-out infinite;
+    animation: pulse-scale 1.5s ease-in-out infinite;
   }
 
   #audioPreview .audio-waveform {
@@ -9487,11 +9487,6 @@
   animation: fadeIn 0.3s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
 .init-modal-container {
   position: relative;
   z-index: 1;
@@ -9542,10 +9537,10 @@
 
 .init-icon {
   font-size: 2rem;
-  animation: pulse 2s ease-in-out infinite;
+  animation: pulse-scale 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
+@keyframes pulse-scale {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); }
 }

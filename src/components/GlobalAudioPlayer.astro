@@ -292,13 +292,18 @@ const { nonce = '' } = Astro.props;
       _initialized: true,
       currentMix: null,
       hasTrackedPlay: false,
-      
+
       // Shuffle state
       shuffleTracks: null,
       shuffledQueue: [],
       shuffleIndex: 0,
       isShuffleMode: false
     };
+
+    // Timer IDs for cleanup on View Transitions
+    var _errorRetryTimer = 0;
+    var _stallRecoveryTimer = 0;
+    var _shuffleRetryTimer = 0;
 
     function formatTime(seconds) {
       if (!seconds || !isFinite(seconds)) return '0:00';
@@ -531,7 +536,7 @@ const { nonce = '' } = Astro.props;
           console.error('[MINI-PLAYER] Audio error:', e);
           if (window.FreshWaxPlayer.isShuffleMode) {
             // Wait a moment then try next track
-            setTimeout(function() {
+            _errorRetryTimer = setTimeout(function() {
               playNextShuffleTrack();
             }, 1000);
           }
@@ -541,7 +546,7 @@ const { nonce = '' } = Astro.props;
         globalAudio.addEventListener('stalled', function() {
           console.warn('[MINI-PLAYER] Audio stalled, attempting recovery...');
           // Try to resume playback after a brief pause
-          setTimeout(function() {
+          _stallRecoveryTimer = setTimeout(function() {
             if (globalAudio.paused && globalAudio.src) {
               globalAudio.play().catch(function(err) {
                 console.error('[MINI-PLAYER] Stall recovery failed:', err);
@@ -953,7 +958,7 @@ const { nonce = '' } = Astro.props;
             console.error('[MINI-PLAYER] Shuffle play error:', err);
             // Reset volume on error
             audio.volume = shuffleTargetVolume || 1.0;
-            setTimeout(function() {
+            _shuffleRetryTimer = setTimeout(function() {
               playNextShuffleTrack();
             }, 500);
           });
@@ -1094,6 +1099,13 @@ const { nonce = '' } = Astro.props;
       };
 
     }
+
+    // Clean up pending timers on View Transitions to prevent stale callbacks
+    document.addEventListener('astro:before-swap', function() {
+      clearTimeout(_errorRetryTimer);
+      clearTimeout(_stallRecoveryTimer);
+      clearTimeout(_shuffleRetryTimer);
+    });
 
     // Initialize — astro:page-load fires on both initial load and View Transitions
     document.addEventListener('astro:page-load', initMiniPlayer);

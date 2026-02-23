@@ -8,6 +8,7 @@
 // Vite code splitting. The modal HTML and event listeners load immediately (~15KB),
 // while the heavy playlist manager (~60KB) loads in the background during init.
 import type { PlaylistManager } from './playlist-manager';
+import { escapeHtml } from './escape-html';
 
 // Lightweight interface for playlist items used in the modal UI
 interface PlaylistItem {
@@ -1420,7 +1421,7 @@ export function initPlaylistModal() {
         <div class="recently-played-item">
           <span class="recently-played-number">${index + 1}</span>
           <div class="recently-played-info">
-            <span class="recently-played-title" data-track-index="${index}" title="${title}">${truncatedTitle}</span>
+            <span class="recently-played-title" data-track-index="${index}" title="${escapeHtml(title)}">${escapeHtml(truncatedTitle)}</span>
             <span class="recently-played-time" data-played-at="${track.playedAt || ''}">${timeAgo}</span>
           </div>
         </div>
@@ -1669,19 +1670,19 @@ export function initPlaylistModal() {
           <div class="dj-position-badge">${positionLabel}</div>
           <div class="playlist-grid-thumb">
             ${item.thumbnail
-              ? `<img src="${item.thumbnail}" alt="${item.title || 'Video'}" loading="lazy" />`
+              ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(item.title || 'Video')}" loading="lazy" />`
               : `<div class="playlist-grid-thumb-placeholder">
                   <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 </div>`
             }
           </div>
           <div class="playlist-grid-info">
-            <div class="playlist-grid-title">${item.title || 'Untitled'}</div>
-            <div class="dj-name-display">Selector: ${djName}${isUsersTrack ? ' (You)' : ''}</div>
+            <div class="playlist-grid-title">${escapeHtml(item.title || 'Untitled')}</div>
+            <div class="dj-name-display">Selector: ${escapeHtml(djName)}${isUsersTrack ? ' (You)' : ''}</div>
           </div>
           <div class="playlist-grid-actions">
             ${isAuthenticated ? `
-              <button class="playlist-action-btn playlist-save-btn" data-url="${item.url}" data-title="${(item.title || '').replace(/"/g, '&quot;')}" data-thumbnail="${(item.thumbnail || '').replace(/"/g, '&quot;')}" title="Save to My Playlist">
+              <button class="playlist-action-btn playlist-save-btn" data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(item.title || '')}" data-thumbnail="${escapeHtml(item.thumbnail || '')}" title="Save to My Playlist">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                 </svg>
@@ -1876,12 +1877,12 @@ export function initPlaylistModal() {
       <div class="personal-playlist-item" data-id="${item.id}">
         <div class="personal-item-thumb">
           ${item.thumbnail
-            ? `<img src="${item.thumbnail}" alt="${item.title || 'Track'}" loading="lazy" />`
+            ? `<img src="${escapeHtml(item.thumbnail)}" alt="${escapeHtml(item.title || 'Track')}" loading="lazy" />`
             : `<svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(139,92,246,0.5)"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>`
           }
         </div>
         <div class="personal-item-info">
-          <div class="personal-item-title">${item.title || 'Untitled'}</div>
+          <div class="personal-item-title">${escapeHtml(item.title || 'Untitled')}</div>
           <div class="personal-item-meta">
             <span class="personal-item-platform">${platformName(item.platform)}</span>
             ${item.addedAt ? `<span class="personal-item-date">${formatAddedDate(item.addedAt)}</span>` : ''}

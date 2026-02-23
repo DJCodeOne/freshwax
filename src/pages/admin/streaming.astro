@@ -628,7 +628,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    animation: pulse 2s infinite;
+    animation: pulse-status-dot 2s infinite;
   }
 
   .status-dot.online {
@@ -640,11 +640,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     background: #ef4444;
     box-shadow: 0 0 10px #ef4444;
     animation: none;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
   }
 
   .mediamtx-grid {
@@ -1068,7 +1063,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     width: 12px;
     height: 12px;
     border-radius: 50%;
-    animation: pulse 2s ease-in-out infinite;
+    animation: pulse-status-dot 2s ease-in-out infinite;
   }
 
   .status-dot.online {
@@ -1092,7 +1087,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
     animation: blink 1s ease-in-out infinite;
   }
 
-  @keyframes pulse {
+  @keyframes pulse-status-dot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.8; transform: scale(1.15); }
   }

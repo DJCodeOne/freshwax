@@ -7,7 +7,7 @@ import Footer from '../components/Footer.astro';
 Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
 ---
 
-<Layout title="Something Went Wrong" noindex={true}>
+<Layout title="Something Went Wrong" description="Server error - something went wrong on Freshwax" noindex={true}>
   <Header />
 
   <div class="error-page" role="region" aria-labelledby="error-heading">

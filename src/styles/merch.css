@@ -21,11 +21,6 @@
     }
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
   .merch-page {
     min-height: 100vh;
     background: linear-gradient(180deg, #0a0a0a 0%, #111 50%, #0a0a0a 100%);
@@ -607,17 +602,26 @@
   }
 
   /* Options */
+  fieldset.option-section {
+    border: none;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+
   .option-section {
     margin-bottom: 1.25rem;
   }
 
-  .option-section label {
+  .option-section label,
+  .option-section legend {
     display: block;
     font-size: 0.85rem;
     font-weight: 700;
     color: #ccc;
     margin-bottom: 0.5rem;
     text-transform: uppercase;
+    padding: 0;
   }
 
   .option-section .required { color: #dc2626; }
@@ -630,7 +634,8 @@
     margin-bottom: 0.5rem;
   }
 
-  .size-label-row label {
+  .size-label-row label,
+  .size-label-row legend {
     margin-bottom: 0;
   }
 
