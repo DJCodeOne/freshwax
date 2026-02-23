@@ -61,18 +61,14 @@ if (partnerId) {
         }
       }
 
-      // Fallback to Firebase if D1 failed or unavailable
+      // Fallback to Firebase if D1 failed or unavailable (use submitterId filter)
       if (ledgerEntries.length === 0 && serviceAccountKey) {
         try {
-          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+          ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }],
             orderBy: { field: 'timestamp', direction: 'DESCENDING' },
             limit: 500
           });
-          ledgerEntries = allLedgerEntries.filter((e: Record<string, unknown>) =>
-            e.submitterId === partnerId ||
-            e.artistId === partnerId ||
-            e.artistName === partnerDoc.artistName
-          );
         } catch (fbErr) {
           console.error('[Artist Payouts] Firebase error:', fbErr);
         }
@@ -111,21 +107,23 @@ if (partnerId) {
         summary.totalEarnings = partnerDoc.totalEarnings || 0;
       }
 
-      // Fetch payouts history (for display)
-      payouts = await queryCollection('payouts', {
-        filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
-        orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
-        limit: 50
-      });
-
-      // Fetch pending payouts (include 'pending' status for new payouts)
-      pendingPayouts = await queryCollection('pendingPayouts', {
-        filters: [
-          { field: 'artistId', op: 'EQUAL', value: partnerId },
-          { field: 'status', op: 'IN', value: ['pending', 'awaiting_connect', 'retry_pending', 'processing'] }
-        ],
-        orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
-      });
+      // Fetch payouts history and pending payouts in parallel
+      const [payoutsResult, pendingPayoutsResult] = await Promise.all([
+        queryCollection('payouts', {
+          filters: [{ field: 'artistId', op: 'EQUAL', value: partnerId }],
+          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }],
+          limit: 50
+        }),
+        queryCollection('pendingPayouts', {
+          filters: [
+            { field: 'artistId', op: 'EQUAL', value: partnerId },
+            { field: 'status', op: 'IN', value: ['pending', 'awaiting_connect', 'retry_pending', 'processing'] }
+          ],
+          orderBy: [{ field: 'createdAt', direction: 'DESCENDING' }]
+        })
+      ]);
+      payouts = payoutsResult;
+      pendingPayouts = pendingPayoutsResult;
 
       summary.stripeConnected = !!partner.stripeConnectId && partner.stripeConnectStatus === 'active';
     }

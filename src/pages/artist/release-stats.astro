@@ -8,7 +8,7 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
-import { d1GetLedgerEntries } from '../../lib/d1-catalog';
+import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
 
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
 let partner: Record<string, unknown> | null = null;
@@ -68,24 +68,25 @@ if (partnerId) {
 
       // Query salesLedger for accurate sales data (D1 primary, Firebase backup)
       if (releaseIds.length > 0) {
-        let allLedgerEntries: Record<string, unknown>[] = [];
+        let artistLedgerEntries: Record<string, unknown>[] = [];
 
-        // Try D1 first (primary read source)
+        // Try D1 first with artist filter (primary read source)
         const db = env?.DB;
         if (db) {
           try {
-            allLedgerEntries = await d1GetLedgerEntries(db, { limit: 1000 });
+            artistLedgerEntries = await d1GetLedgerEntriesByArtist(db, partnerId);
           } catch (d1Error) {
             console.error('[release-stats] D1 read failed:', d1Error);
           }
         }
 
-        // Fallback to Firebase if D1 empty or failed
-        if (allLedgerEntries.length === 0 && serviceAccountKey) {
+        // Fallback to Firebase with submitterId filter if D1 empty or failed
+        if (artistLedgerEntries.length === 0 && serviceAccountKey) {
           try {
-            allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            artistLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+              filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }],
               orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-              limit: 1000
+              limit: 500
             });
           } catch (fbError) {
             console.error('[release-stats] Firebase fallback failed:', fbError);
@@ -93,7 +94,7 @@ if (partnerId) {
         }
 
         // Filter entries that contain this artist's releases
-        allLedgerEntries.forEach((entry: Record<string, unknown>) => {
+        artistLedgerEntries.forEach((entry: Record<string, unknown>) => {
             const artistItems = ((entry.items as Record<string, unknown>[]) || []).filter((item: Record<string, unknown>) =>
               (item.type === 'release' || item.type === 'track' || item.type === 'digital') && releaseIds.includes(item.id || item.releaseId || item.productId)
             );

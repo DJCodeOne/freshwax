@@ -75,42 +75,70 @@ if (partnerId) {
     if (partnerDoc) {
       partner = { id: partnerId, ...partnerDoc };
 
-      // If no avatar in artists collection, try to get from customers collection
-      if (!partner.avatarUrl && !partner.imageUrl && !partner.photoURL) {
-        try {
-          const customerData = await getDocument('users', partnerId);
-          if (customerData) {
-            partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
-          }
-        } catch (e) {
-          // Ignore errors fetching customer avatar
-        }
+      const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
+
+      // Populate debug info
+      debugInfo.partnerId = partnerId;
+      debugInfo.artistName = artistName;
+
+      // Phase 1: Launch all independent queries in parallel
+      // - Users doc (for avatar fallback)
+      // - Releases (for artistReleaseIds matching)
+      // - SalesLedger + PendingPayouts (if service account available)
+      // - Orders
+      const userDataPromise = (!partner.avatarUrl && !partner.imageUrl && !partner.photoURL)
+        ? getDocument('users', partnerId).catch(() => null)
+        : Promise.resolve(null);
+
+      const releasesPromise = queryCollection('releases', { limit: 500 });
+
+      const ledgerPromise = serviceAccountKey
+        ? saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+            limit: 500
+          }).catch((err: unknown) => { console.error('Error fetching ledger entries:', err); return [] as Record<string, unknown>[]; })
+        : Promise.resolve([] as Record<string, unknown>[]);
+
+      const pendingPayoutsPromise = serviceAccountKey
+        ? saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
+            filters: [
+              { field: 'artistId', op: 'EQUAL', value: partnerId },
+              { field: 'status', op: 'EQUAL', value: 'pending' }
+            ],
+            limit: 100
+          }).catch((err: unknown) => { console.error('Error fetching pending payouts:', err); return [] as Record<string, unknown>[]; })
+        : Promise.resolve([] as Record<string, unknown>[]);
+
+      const ordersPromise = queryCollection('orders', {
+        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
+        limit: 200
+      });
+
+      // Await all queries in parallel
+      const [customerData, allReleases, allLedgerEntries, pendingPayoutsData, allRecentOrders] = await Promise.all([
+        userDataPromise,
+        releasesPromise,
+        ledgerPromise,
+        pendingPayoutsPromise,
+        ordersPromise
+      ]);
+
+      // Apply avatar from users doc
+      if (customerData) {
+        partner.avatarUrl = customerData?.avatarUrl || customerData?.photoURL || null;
       }
 
-      // Fetch this artist's releases first (needed for matching)
-      // Query all releases and filter client-side (more reliable than Firestore filters)
-      const allReleases = await queryCollection('releases', { limit: 500 });
+      // Filter releases for this artist
       const artistReleases = allReleases.filter((r: Record<string, unknown>) =>
         r.artistId === partnerId ||
         r.userId === partnerId ||
         r.submittedBy === partnerId
       );
       artistReleaseIds = new Set(artistReleases.map((r: Record<string, unknown>) => r.id));
-      const artistName = (partnerDoc.artistName || partnerDoc.name || '').toLowerCase();
-
-      // Populate debug info
-      debugInfo.partnerId = partnerId;
-      debugInfo.artistName = artistName;
       debugInfo.releaseIds = Array.from(artistReleaseIds) as string[];
 
-      // Fetch sales data from salesLedger (source of truth)
-      if (serviceAccountKey) {
-        try {
-          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-            limit: 500
-          });
-
+      // Phase 2: Process ledger entries (depends on artistReleaseIds)
+      if (allLedgerEntries.length > 0) {
           // Filter entries for this artist
           // Match by ID or by releaseId belonging to this artist
           ledgerEntries = allLedgerEntries.filter((e: Record<string, unknown>) => {
@@ -178,21 +206,10 @@ if (partnerId) {
           });
 
           salesStats.pendingBalance = salesStats.totalEarnings - salesStats.totalPaidOut;
-        } catch (ledgerErr) {
-          console.error('Error fetching ledger entries:', ledgerErr);
-        }
+      }
 
-        // Also check pendingPayouts collection for any pending payments
-        try {
-          const pendingPayoutsData = await saQueryCollection(serviceAccountKey, projectId, 'pendingPayouts', {
-            filters: [
-              { field: 'artistId', op: 'EQUAL', value: partnerId },
-              { field: 'status', op: 'EQUAL', value: 'pending' }
-            ],
-            limit: 100
-          });
-
-          // Update debug info
+      // Process pending payouts (depends on ledgerEntries for deduplication)
+      if (pendingPayoutsData.length > 0) {
           debugInfo.pendingPayoutsCount = pendingPayoutsData.length;
 
           // Add pending payouts to the balance
@@ -221,16 +238,7 @@ if (partnerId) {
               }
             }
           });
-        } catch (pendingErr) {
-          console.error('Error fetching pending payouts:', pendingErr);
-        }
       }
-
-      // Fetch orders - check both top-level artistId and items for this artist
-      const allRecentOrders = await queryCollection('orders', {
-        orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-        limit: 200
-      });
 
       // Filter orders that contain items from this artist
       orders = allRecentOrders.filter((order: Record<string, unknown>) => {

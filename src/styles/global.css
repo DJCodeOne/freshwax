@@ -444,64 +444,6 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 1.125rem;
 }
 
-/* KITT Scanner Animation */
-.kitt-scanner-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-}
-
-.kitt-scanner-line {
-  height: 2px;
-  width: 3rem;
-  border-radius: 1px;
-}
-
-.kitt-scanner-line-left {
-  background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8));
-}
-
-.kitt-scanner-line-right {
-  background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8));
-}
-
-.kitt-scanner {
-  position: relative;
-  height: 3px;
-  width: 4rem;
-  background: rgba(220, 38, 38, 0.2);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.kitt-scanner-bar {
-  position: absolute;
-  top: 0;
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(220, 38, 38, 0.4) 20%, 
-    #dc2626 50%, 
-    rgba(220, 38, 38, 0.4) 80%, 
-    transparent
-  );
-  border-radius: 2px;
-  animation: kittScanner 2.6s ease-in-out infinite;
-  box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6);
-}
-
-@keyframes kittScanner {
-  0% { left: -100%; opacity: 0; }
-  5% { opacity: 1; }
-  45% { opacity: 1; }
-  50% { left: 100%; opacity: 0; }
-  55% { opacity: 1; }
-  95% { opacity: 1; }
-  100% { left: -100%; opacity: 0; }
-}
-
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -1015,18 +957,6 @@ button,
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-/* Loading states for mobile */
-.loading-skeleton {
-  background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
-}
-
-@keyframes skeleton-loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
 }
 
 /* Mobile-friendly modals */

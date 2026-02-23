@@ -222,8 +222,15 @@ async function handleOverview(userId: string) {
     const releases = await queryCollection('releases', {
       filters: [{ field: 'artistId', op: 'EQUAL', value: userId }]
     });
+    // Query only this month's sales using date filter (avoids fetching all-time data)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const sales = await queryCollection('sales', {
-      filters: [{ field: 'artistId', op: 'EQUAL', value: userId }]
+      filters: [
+        { field: 'artistId', op: 'EQUAL', value: userId },
+        { field: 'createdAt', op: 'GREATER_THAN_OR_EQUAL', value: startOfMonth.toISOString() }
+      ],
+      orderBy: { field: 'createdAt', direction: 'DESCENDING' }
     });
 
     let pending = 0;
@@ -232,13 +239,8 @@ async function handleOverview(userId: string) {
     });
 
     let monthTotal = 0;
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     (sales || []).forEach((s: Record<string, unknown>) => {
-      const saleDate = s.createdAt ? new Date(s.createdAt) : new Date(0);
-      if (saleDate >= startOfMonth) {
-        monthTotal += s.amount || s.price || 0;
-      }
+      monthTotal += s.amount || s.price || 0;
     });
 
     result.artist = {

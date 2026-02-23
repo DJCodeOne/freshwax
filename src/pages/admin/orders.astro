@@ -25,7 +25,25 @@ const allOrders = await saQuery('orders', {
   limit: 100
 });
 
-const orders = await Promise.all(allOrders.map(async (data: Record<string, unknown>) => {
+// Batch-fetch user details for orders that need them (avoid N+1 queries)
+const ordersNeedingUserLookup = allOrders.filter((data: Record<string, unknown>) => {
+  // Check if order already has customer name from inline data
+  if (data.customer?.firstName || data.customer?.lastName) return false;
+  const userId = data.customerId || data.userId || data.customer?.userId;
+  return !!userId;
+});
+const userIdsToFetch = [...new Set(ordersNeedingUserLookup.map((data: Record<string, unknown>) =>
+  data.customerId || data.userId || data.customer?.userId
+).filter(Boolean))] as string[];
+
+// Fetch all needed users in parallel (single batch instead of N individual queries)
+const userResults = await Promise.all(userIdsToFetch.map(id => getDocument('users', id).catch(() => null)));
+const userMap: Record<string, Record<string, unknown>> = {};
+userIdsToFetch.forEach((id, i) => {
+  if (userResults[i]) userMap[id] = userResults[i]!;
+});
+
+const orders = allOrders.map((data: Record<string, unknown>) => {
   // Get customer info - check nested customer object first, then top-level fields
   let customerName = 'Guest';
   let customerEmail = data.email || data.customer?.email || '';
@@ -40,23 +58,21 @@ const orders = await Promise.all(allOrders.map(async (data: Record<string, unkno
     customerPhone = data.customer.phone || customerPhone;
   }
 
-  // Fallback: fetch from users collection if we have a userId
+  // Fallback: use pre-fetched user data from batch lookup
   const userId = data.customerId || data.userId || data.customer?.userId;
   if (customerName === 'Guest' && userId) {
-    try {
-      const customer = await getDocument('users', userId);
-      if (customer) {
-        customerName = customer.fullName || customer.name || customer.displayName || 'Customer';
-        customerEmail = customer.email || customerEmail;
-        customerPhone = customer.phone || customerPhone;
-        if (!customerAddress && customer.address) {
-          customerAddress = customer.address;
-        }
-        if (!customerAddress && customer.shippingAddress) {
-          customerAddress = customer.shippingAddress;
-        }
+    const customer = userMap[userId as string];
+    if (customer) {
+      customerName = (customer.fullName || customer.name || customer.displayName || 'Customer') as string;
+      customerEmail = customer.email || customerEmail;
+      customerPhone = customer.phone || customerPhone;
+      if (!customerAddress && customer.address) {
+        customerAddress = customer.address;
       }
-    } catch (e) { console.warn('[Orders] Customer lookup failed:', e); }
+      if (!customerAddress && customer.shippingAddress) {
+        customerAddress = customer.shippingAddress;
+      }
+    }
   }
 
   // Auto-deliver check: if shipped more than 14 days ago
@@ -90,7 +106,7 @@ const orders = await Promise.all(allOrders.map(async (data: Record<string, unkno
     shippedAt: data.shippedAt ? (data.shippedAt instanceof Date ? data.shippedAt : new Date(data.shippedAt)) : null,
     deliveredAt: data.deliveredAt ? (data.deliveredAt instanceof Date ? data.deliveredAt : new Date(data.deliveredAt)) : null
   };
-}));
+});
 
 // Order type detection
 function getOrderType(order) {

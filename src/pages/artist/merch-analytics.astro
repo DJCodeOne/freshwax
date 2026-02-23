@@ -8,6 +8,7 @@ export const prerender = false;
 
 import { getDocument, queryCollection } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
+import { d1GetLedgerEntriesByArtist } from '../../lib/d1-catalog';
 
 // Get partner from session
 const partnerId = Astro.cookies.get('partnerId')?.value || '';
@@ -75,33 +76,49 @@ if (partnerId) {
       const productIds = merchProducts.map(p => p.id);
       products = merchProducts;
 
-      // Query salesLedger for merch orders (source of truth)
-      if (serviceAccountKey && productIds.length > 0) {
-        try {
-          const allLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
-            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
-            limit: 500
-          });
+      // Query salesLedger for merch orders (source of truth) - D1 primary, Firebase fallback
+      if (productIds.length > 0) {
+        let artistLedgerEntries: Record<string, unknown>[] = [];
 
-          // Filter entries that contain merch items from this supplier
-          allLedgerEntries.forEach((entry: Record<string, unknown>) => {
-            const merchItems = ((entry.items as Record<string, unknown>[]) || []).filter((item: Record<string, unknown>) =>
-              item.type === 'merch' && (productIds.includes(item.id) || item.supplierId === partnerId)
-            );
-
-            if (merchItems.length > 0) {
-              orders.push({
-                id: entry.orderId || entry.id,
-                createdAt: new Date(entry.timestamp),
-                status: entry.orderStatus || 'completed',
-                items: merchItems,
-                total: merchItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.lineTotal as number) || (item.unitPrice as number) * (item.quantity as number) || 0), 0)
-              });
-            }
-          });
-        } catch (ledgerErr) {
-          console.error('Error fetching ledger entries:', ledgerErr);
+        // Try D1 first with artist filter
+        const db = env?.DB;
+        if (db) {
+          try {
+            artistLedgerEntries = await d1GetLedgerEntriesByArtist(db, partnerId);
+          } catch (d1Error) {
+            console.error('[merch-analytics] D1 read failed:', d1Error);
+          }
         }
+
+        // Fallback to Firebase with submitterId filter
+        if (artistLedgerEntries.length === 0 && serviceAccountKey) {
+          try {
+            artistLedgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+              filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }],
+              orderBy: { field: 'timestamp', direction: 'DESCENDING' },
+              limit: 500
+            });
+          } catch (fbError) {
+            console.error('[merch-analytics] Firebase fallback failed:', fbError);
+          }
+        }
+
+        // Filter entries that contain merch items from this supplier
+        artistLedgerEntries.forEach((entry: Record<string, unknown>) => {
+          const merchItems = ((entry.items as Record<string, unknown>[]) || []).filter((item: Record<string, unknown>) =>
+            item.type === 'merch' && (productIds.includes(item.id) || item.supplierId === partnerId)
+          );
+
+          if (merchItems.length > 0) {
+            orders.push({
+              id: entry.orderId || entry.id,
+              createdAt: new Date(entry.timestamp),
+              status: entry.orderStatus || 'completed',
+              items: merchItems,
+              total: merchItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.lineTotal as number) || (item.unitPrice as number) * (item.quantity as number) || 0), 0)
+            });
+          }
+        });
       }
 
       // Fallback: If no ledger data, use orders collection

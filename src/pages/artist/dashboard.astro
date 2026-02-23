@@ -66,6 +66,9 @@ let stats = {
 };
 
 if (partnerId) {
+  // Cache users doc to avoid redundant re-fetch later
+  let cachedUserData: Record<string, unknown> | null = null;
+
   try {
     // Try artists collection first
     const partnerDoc = await getDocument('artists', partnerId);
@@ -92,17 +95,14 @@ if (partnerId) {
         }
       }
 
-      // Fallback to Firebase if D1 failed or unavailable
+      // Fallback to Firebase if D1 failed or unavailable (use submitterId filter)
       if (artistEntries.length === 0 && serviceAccountKey) {
         try {
-          const ledgerEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+          artistEntries = await saQueryCollection(serviceAccountKey, projectId, 'salesLedger', {
+            filters: [{ field: 'submitterId', op: 'EQUAL', value: partnerId }],
+            orderBy: { field: 'timestamp', direction: 'DESCENDING' },
             limit: 500
           });
-          artistEntries = ledgerEntries.filter((e: Record<string, unknown>) =>
-            e.artistId === partnerId ||
-            e.submitterId === partnerId ||
-            e.artistName === partnerDoc.artistName
-          );
           console.debug('[Partner Dashboard] Firebase fallback entries:', artistEntries.length);
         } catch (fbErr) {
           console.error('[Partner Dashboard] Firebase error:', fbErr);
@@ -131,6 +131,7 @@ if (partnerId) {
     } else {
       // Fallback: check users collection for partner info
       const userData = await getDocument('users', partnerId);
+      cachedUserData = userData;
       console.debug('[Partner Dashboard] users doc exists:', !!userData);
 
       if (userData) {
@@ -171,9 +172,9 @@ if (partnerId) {
     }
 
     if (partner) {
-      // Fetch displayName and avatar from customers collection (user's preferred display name)
+      // Use cached users doc if available, otherwise fetch it (avoids redundant Firestore read)
       try {
-        const customerData = await getDocument('users', partnerId);
+        const customerData = cachedUserData ?? await getDocument('users', partnerId);
         if (customerData) {
           // Use customer's displayName if available (this is what they set in their profile)
           if (customerData?.displayName) {
@@ -215,88 +216,81 @@ if (partnerId) {
         stats.pendingReleases = releases.filter(r => r.status === 'pending').length;
       }
 
-      // Fetch merch stats (only if approved)
-      // Uses D1 for merch data to reduce Firebase read quota costs
+      // Fetch merch and vinyl stats in parallel where possible
       const db = env?.DB;
+      let merchProducts: Record<string, unknown>[] = [];
+      let vinylListings: Record<string, unknown>[] = [];
+
+      // Phase 1: Fetch merch products (D1) and vinyl listings (Firestore) in parallel
+      const phase1Promises: Promise<void>[] = [];
+
       if (effectiveIsMerchSupplier && approved && db) {
-        // Try multiple strategies to find products linked to this supplier
-        let merchProducts: Record<string, unknown>[] = [];
+        phase1Promises.push((async () => {
+          merchProducts = await d1GetMerchBySupplierId(db, partnerId);
+          if (merchProducts.length === 0 && partner.artistName) {
+            merchProducts = await d1GetMerchBySupplierName(db, partner.artistName);
+          }
+        })());
+      }
 
-        // Strategy 1: Query by supplierId (from D1)
-        merchProducts = await d1GetMerchBySupplierId(db, partnerId);
+      if (effectiveIsVinylSeller && approved) {
+        phase1Promises.push((async () => {
+          try {
+            vinylListings = await queryCollection('vinylListings', {
+              filters: [{ field: 'sellerId', op: 'EQUAL', value: partnerId }]
+            });
+          } catch (vinylError) {
+            console.error('[Partner Dashboard] Error fetching vinyl listings:', vinylError);
+          }
+        })());
+      }
 
-        // Strategy 2: If no results, try by supplier name (from D1)
-        if (merchProducts.length === 0 && partner.artistName) {
-          merchProducts = await d1GetMerchBySupplierName(db, partner.artistName);
-        }
+      await Promise.all(phase1Promises);
 
-        stats.merchProducts = merchProducts.length;
+      // Update merch stats from products
+      stats.merchProducts = merchProducts.length;
+      const productIds = merchProducts.map(p => p.id);
 
-        // Get product IDs for order matching
-        const productIds = merchProducts.map(p => p.id);
+      // Update vinyl listing stats
+      stats.vinylListings = vinylListings.length;
+      stats.vinylSold = vinylListings.filter(l => l.status === 'sold').length;
+      const listingIds = vinylListings.map(l => l.id);
 
-        // Calculate total stock from products
-        const totalProductStock = merchProducts.reduce((sum, p) => {
-          return sum + (p.totalStock || p.stock || 0);
-        }, 0);
+      // Phase 2: Fetch orders ONCE if needed by either merch or vinyl sections
+      const needsOrders = (productIds.length > 0) || (listingIds.length > 0);
 
-        // Fetch orders containing this supplier's products
-        if (productIds.length > 0) {
-          // Query orders (REST API doesn't support != so we'll filter client-side)
+      if (needsOrders) {
+        try {
           const orders = await queryCollection('orders', {
             orderBy: { field: 'createdAt', direction: 'DESCENDING' },
             limit: 100
           });
 
-          let unitsSold = 0;
-          let orderCount = 0;
+          const activeOrders = orders.filter(o => o.status !== 'cancelled');
 
-          orders.filter(o => o.status !== 'cancelled').forEach(order => {
-            const supplierItems = (order.items || []).filter((item: Record<string, unknown>) =>
-              productIds.includes(item.productId) || item.supplierId === partnerId
-            );
+          // Process merch order stats
+          if (productIds.length > 0) {
+            let unitsSold = 0;
+            let orderCount = 0;
 
-            if (supplierItems.length > 0) {
-              orderCount++;
-              unitsSold += supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.quantity as number) || 1), 0);
-            }
-          });
-
-          stats.merchSold = unitsSold;
-          stats.totalOrders = orderCount;
-        } else {
-          // Fall back to totalSold/soldStock from product docs
-          stats.merchSold = merchProducts.reduce((sum, p) => {
-            return sum + (p.totalSold || p.soldStock || p.sales || 0);
-          }, 0);
-        }
-      }
-
-      // Fetch vinyl seller stats (only if approved)
-      if (effectiveIsVinylSeller && approved) {
-        try {
-          // Query vinyl listings by seller
-          const vinylListings = await queryCollection('vinylListings', {
-            filters: [{ field: 'sellerId', op: 'EQUAL', value: partnerId }]
-          });
-
-          stats.vinylListings = vinylListings.length;
-
-          // Count sold listings
-          stats.vinylSold = vinylListings.filter(l => l.status === 'sold').length;
-
-          // Get vinyl listing IDs for order matching
-          const listingIds = vinylListings.map(l => l.id);
-
-          // Fetch orders containing vinyl items
-          if (listingIds.length > 0) {
-            const orders = await queryCollection('orders', {
-              orderBy: { field: 'createdAt', direction: 'DESCENDING' },
-              limit: 100
+            activeOrders.forEach(order => {
+              const supplierItems = (order.items || []).filter((item: Record<string, unknown>) =>
+                productIds.includes(item.productId) || item.supplierId === partnerId
+              );
+              if (supplierItems.length > 0) {
+                orderCount++;
+                unitsSold += supplierItems.reduce((sum: number, item: Record<string, unknown>) => sum + ((item.quantity as number) || 1), 0);
+              }
             });
 
+            stats.merchSold = unitsSold;
+            stats.totalOrders = orderCount;
+          }
+
+          // Process vinyl order stats
+          if (listingIds.length > 0) {
             let vinylOrderCount = 0;
-            orders.filter(o => o.status !== 'cancelled').forEach(order => {
+            activeOrders.forEach(order => {
               const vinylItems = (order.items || []).filter((item: Record<string, unknown>) =>
                 listingIds.includes(item.productId) || item.sellerId === partnerId || item.type === 'vinyl'
               );
@@ -307,9 +301,14 @@ if (partnerId) {
 
             stats.vinylOrders = vinylOrderCount;
           }
-        } catch (vinylError) {
-          console.error('[Partner Dashboard] Error fetching vinyl stats:', vinylError);
+        } catch (orderError) {
+          console.error('[Partner Dashboard] Error fetching orders:', orderError);
         }
+      } else if (merchProducts.length > 0) {
+        // Fall back to totalSold/soldStock from product docs when no productIds to match orders
+        stats.merchSold = merchProducts.reduce((sum, p) => {
+          return sum + (p.totalSold || p.soldStock || p.sales || 0);
+        }, 0);
       }
     }
   } catch (e) {

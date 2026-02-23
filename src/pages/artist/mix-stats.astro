@@ -32,19 +32,29 @@ if (partnerId) {
   try {
     partner = await getDocument('artists', partnerId);
     if (partner) {
-      // Get all mixes and filter (with limit to prevent runaway)
-      const allMixes = await queryCollection('dj-mixes', { limit: 500 });
+      // Query mixes by userId filter (primary), then fallback to djName if needed
       const partnerName = partner.artistName?.toLowerCase().trim();
 
-      // Filter mixes belonging to this user
-      const userMixes = allMixes.filter((mix: Record<string, unknown>) => {
-        const matchesUserId = mix.userId === partnerId;
-        const matchesDjName = partnerName && (
-          mix.djName?.toLowerCase().trim() === partnerName ||
-          mix.dj_name?.toLowerCase().trim() === partnerName
-        );
-        return matchesUserId || matchesDjName;
+      // Primary: query by userId (uses Firestore index)
+      let userMixes = await queryCollection('dj-mixes', {
+        filters: [{ field: 'userId', op: 'EQUAL', value: partnerId }],
+        limit: 200
       });
+
+      // Secondary: if artist has a name, also query by djName for mixes without userId
+      if (partnerName) {
+        const djNameMixes = await queryCollection('dj-mixes', {
+          filters: [{ field: 'djName', op: 'EQUAL', value: partner.artistName }],
+          limit: 200
+        });
+        // Merge, deduplicating by id
+        const existingIds = new Set(userMixes.map((m: Record<string, unknown>) => m.id));
+        for (const mix of djNameMixes) {
+          if (!existingIds.has(mix.id)) {
+            userMixes.push(mix);
+          }
+        }
+      }
 
       // Sort by engagement score descending (highest rated first)
       userMixes.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
