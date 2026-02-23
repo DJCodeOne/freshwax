@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 import { queryCollection } from '../../../lib/firebase-rest';
 import { getWebhookStats } from '../../../lib/webhook-logger';
 import { requireAdminAuth } from '../../../lib/admin';
-import { createLogger } from '../../../lib/api-utils';
+import { createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('health/payments');
 
@@ -168,12 +168,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
   // Set appropriate HTTP status
   const httpStatus = result.status === 'unhealthy' ? 503 : 200;
 
-  return new Response(JSON.stringify(result, null, 2), {
-    status: httpStatus,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate'
-    }
+  return jsonResponse(result, httpStatus, {
+    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
   });
 };
 

@@ -9,6 +9,7 @@ import type { APIRoute } from 'astro';
 
 import { cleanupExpiredReservations } from '../../../lib/order-utils';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
+import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
 const log = createLogger('[cleanup-reservations]');
 
@@ -35,6 +36,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.unauthorized('Unauthorized');
   }
 
+  const db = env?.DB;
+  if (db) {
+    const locked = await acquireCronLock(db, 'cleanup-reservations');
+    if (!locked) {
+      return ApiErrors.conflict('Job already running');
+    }
+  }
+
   try {
     const cleaned = await cleanupExpiredReservations();
     const duration = Date.now() - startTime;
@@ -45,6 +54,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (err: unknown) {
     log.error('[Cleanup Reservations] Error:', err instanceof Error ? err.message : String(err));
     return ApiErrors.serverError('Cleanup failed');
+  } finally {
+    if (db) await releaseCronLock(db, 'cleanup-reservations');
   }
 };
 

@@ -798,6 +798,7 @@ export class EmbedPlayerManager {
 
       const script = document.createElement('script');
       script.src = 'https://www.youtube.com/iframe_api';
+      script.crossOrigin = 'anonymous';
       script.onerror = () => reject(new Error('Failed to load YouTube SDK'));
       document.head.appendChild(script);
     });
@@ -822,6 +823,7 @@ export class EmbedPlayerManager {
 
       const script = document.createElement('script');
       script.src = 'https://player.vimeo.com/api/player.js';
+      script.crossOrigin = 'anonymous';
       script.onload = () => {
         this.isSDKLoaded.vimeo = true;
         resolve();
@@ -850,6 +852,7 @@ export class EmbedPlayerManager {
 
       const script = document.createElement('script');
       script.src = 'https://w.soundcloud.com/player/api.js';
+      script.crossOrigin = 'anonymous';
       script.onload = () => {
         this.isSDKLoaded.soundcloud = true;
         resolve();

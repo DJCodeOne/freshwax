@@ -697,6 +697,7 @@ const firebaseConfig = {
     var s = document.createElement('script');
     s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
     s.async = true;
+    s.crossOrigin = 'anonymous';
     s.onerror = function() { window._gtState.loading = false; };
     document.head.appendChild(s);
     // Safety timeout: reset loading flag after 10s so button can be retried

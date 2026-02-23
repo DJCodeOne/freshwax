@@ -11,6 +11,7 @@
 import type { APIRoute } from 'astro';
 import { cleanupErrorLogs } from '../../../lib/error-logger';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
+import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
 const log = createLogger('cleanup-d1');
 
@@ -46,53 +47,62 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.serverError('D1 not available');
   }
 
-  const results: Record<string, any> = {};
-
-  // 1. Clean up error_logs older than 30 days
-  try {
-    const deletedErrors = await cleanupErrorLogs(env, ERROR_LOGS_RETENTION_DAYS);
-    log.info(`[Cleanup D1] error_logs: deleted ${deletedErrors} rows older than ${ERROR_LOGS_RETENTION_DAYS} days`);
-    results.errorLogs = { deleted: deletedErrors, retentionDays: ERROR_LOGS_RETENTION_DAYS };
-  } catch (err: unknown) {
-    log.error('[Cleanup D1] error_logs cleanup failed:', err instanceof Error ? err.message : String(err));
-    results.errorLogs = { error: 'cleanup failed' };
+  const locked = await acquireCronLock(db, 'cleanup-d1');
+  if (!locked) {
+    return ApiErrors.conflict('Job already running');
   }
 
-  // 2. Clean up pending_orders — only completed/expired rows older than 90 days
-  //    Rows with status='pending' or 'failed' are kept regardless of age (they need admin attention)
   try {
-    const cutoff = new Date(Date.now() - PENDING_ORDERS_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
-    const result = await db.prepare(
-      `DELETE FROM pending_orders WHERE status = 'completed' AND created_at < ?`
-    ).bind(cutoff).run();
-    const deletedOrders = result?.meta?.changes || 0;
-    log.info(`[Cleanup D1] pending_orders: deleted ${deletedOrders} completed rows older than ${PENDING_ORDERS_RETENTION_DAYS} days`);
-    results.pendingOrders = { deleted: deletedOrders, retentionDays: PENDING_ORDERS_RETENTION_DAYS };
-  } catch (err: unknown) {
-    log.error('[Cleanup D1] pending_orders cleanup failed:', err instanceof Error ? err.message : String(err));
-    results.pendingOrders = { error: 'cleanup failed' };
-  }
+    const results: Record<string, any> = {};
 
-  // 3. Clean up image_scan_results older than 30 days (if table exists)
-  try {
-    const scanResult = await db.prepare(
-      `DELETE FROM image_scan_results WHERE created_at < datetime('now', '-30 days')`
-    ).run();
-    const deletedScans = scanResult?.meta?.changes || 0;
-    if (deletedScans > 0) {
-      log.info(`[Cleanup D1] image_scan_results: deleted ${deletedScans} rows`);
+    // 1. Clean up error_logs older than 30 days
+    try {
+      const deletedErrors = await cleanupErrorLogs(env, ERROR_LOGS_RETENTION_DAYS);
+      log.info(`[Cleanup D1] error_logs: deleted ${deletedErrors} rows older than ${ERROR_LOGS_RETENTION_DAYS} days`);
+      results.errorLogs = { deleted: deletedErrors, retentionDays: ERROR_LOGS_RETENTION_DAYS };
+    } catch (err: unknown) {
+      log.error('[Cleanup D1] error_logs cleanup failed:', err instanceof Error ? err.message : String(err));
+      results.errorLogs = { error: 'cleanup failed' };
     }
-    results.imageScanResults = { deleted: deletedScans };
-  } catch (e: unknown) {
-    // Table may not exist — that's fine, skip silently
+
+    // 2. Clean up pending_orders — only completed/expired rows older than 90 days
+    //    Rows with status='pending' or 'failed' are kept regardless of age (they need admin attention)
+    try {
+      const cutoff = new Date(Date.now() - PENDING_ORDERS_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+      const result = await db.prepare(
+        `DELETE FROM pending_orders WHERE status = 'completed' AND created_at < ?`
+      ).bind(cutoff).run();
+      const deletedOrders = result?.meta?.changes || 0;
+      log.info(`[Cleanup D1] pending_orders: deleted ${deletedOrders} completed rows older than ${PENDING_ORDERS_RETENTION_DAYS} days`);
+      results.pendingOrders = { deleted: deletedOrders, retentionDays: PENDING_ORDERS_RETENTION_DAYS };
+    } catch (err: unknown) {
+      log.error('[Cleanup D1] pending_orders cleanup failed:', err instanceof Error ? err.message : String(err));
+      results.pendingOrders = { error: 'cleanup failed' };
+    }
+
+    // 3. Clean up image_scan_results older than 30 days (if table exists)
+    try {
+      const scanResult = await db.prepare(
+        `DELETE FROM image_scan_results WHERE created_at < datetime('now', '-30 days')`
+      ).run();
+      const deletedScans = scanResult?.meta?.changes || 0;
+      if (deletedScans > 0) {
+        log.info(`[Cleanup D1] image_scan_results: deleted ${deletedScans} rows`);
+      }
+      results.imageScanResults = { deleted: deletedScans };
+    } catch (e: unknown) {
+      // Table may not exist — that's fine, skip silently
+    }
+
+    const duration = Date.now() - startTime;
+    log.info('[Cleanup D1] ========== COMPLETED ==========');
+    log.info('[Cleanup D1] Duration:', duration, 'ms');
+
+    return successResponse({ duration,
+      ...results });
+  } finally {
+    await releaseCronLock(db, 'cleanup-d1');
   }
-
-  const duration = Date.now() - startTime;
-  log.info('[Cleanup D1] ========== COMPLETED ==========');
-  log.info('[Cleanup D1] Duration:', duration, 'ms');
-
-  return successResponse({ duration,
-    ...results });
 };
 
 // Support GET for manual triggering from admin panel

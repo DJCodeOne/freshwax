@@ -896,6 +896,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const script = document.createElement('script');
       script.src = `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`;
       script.async = true;
+      script.crossOrigin = 'anonymous';
       script.onload = () => {
         grecaptcha.ready(() => {
           recaptchaReady = true;

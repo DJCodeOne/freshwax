@@ -300,7 +300,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         }
         try {
           const Stripe = (await import('stripe')).default;
-          const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' as any });
+          const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' });
 
           if (paymentId.startsWith('pi_')) {
             const pi = await stripe.paymentIntents.retrieve(paymentId);

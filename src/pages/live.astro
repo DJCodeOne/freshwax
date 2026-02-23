@@ -1052,7 +1052,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   <PlaylistModal />
 </Layout>
 
-<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js"></script>
+<script is:inline src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12/dist/hls.min.js" crossorigin="anonymous"></script>
 
 <script>
   function escapeHtml(s){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
@@ -1159,7 +1159,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   
   // Floating Reactions - Rise from button with JS animation
   let emojiAnimationsEnabled = true;
-  
+
+  // Respect prefers-reduced-motion: disable floating animations for users who prefer reduced motion
+  const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let prefersReducedMotion = reducedMotionQuery.matches;
+  reducedMotionQuery.addEventListener('change', function(e) { prefersReducedMotion = e.matches; });
+
   function createFloatingEmoji(startX, startY, emojiList) {
     // Only show emojis on live pages (ViewTransitions keeps scripts alive across pages)
     const path = window.location.pathname;
@@ -1169,23 +1174,46 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
     // Check if animations are enabled
     if (!emojiAnimationsEnabled) return;
-    
+
     const heart = document.createElement('div');
-    
+
     // Pick random emoji from the list
     const emojis = emojiList || ['❤️', '💖', '💗', '💓', '💕'];
     heart.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-    
+
+    // Reduced motion: show emoji briefly in place, then fade out (no floating/wiggling)
+    if (prefersReducedMotion) {
+      const fontSize = 28 + Math.floor(Math.random() * 20);
+      Object.assign(heart.style, {
+        position: 'fixed',
+        left: startX + 'px',
+        top: startY + 'px',
+        fontSize: fontSize + 'px',
+        lineHeight: '1',
+        pointerEvents: 'none',
+        zIndex: '99999',
+        opacity: '1',
+        transition: 'opacity 0.5s ease-out',
+        margin: '0',
+        padding: '0'
+      });
+      document.body.appendChild(heart);
+      // Fade out after a short delay, then remove
+      setTimeout(function() { heart.style.opacity = '0'; }, 400);
+      setTimeout(function() { heart.remove(); }, 900);
+      return;
+    }
+
     // Random spread and wiggle parameters
     const spreadX = (Math.random() - 0.5) * 60;
     const wiggleAmount = 20 + Math.random() * 30;
     const duration = 2000 + Math.random() * 1000;
     const fontSize = 28 + Math.floor(Math.random() * 20);
-    
+
     // Calculate position
     const posX = startX + spreadX;
     const posY = startY;
-    
+
     // Apply all styles inline
     Object.assign(heart.style, {
       position: 'fixed',
@@ -1200,23 +1228,23 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       margin: '0',
       padding: '0'
     });
-    
+
     document.body.appendChild(heart);
-    
+
     // Animate using requestAnimationFrame
     const startTime = performance.now();
-    
+
     function animate(time) {
       const elapsed = time - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Easing function
       const easeOut = 1 - Math.pow(1 - progress, 3);
-      
+
       // Calculate animation values
       const moveY = easeOut * 350;
       const wiggle = Math.sin(progress * Math.PI * 4) * wiggleAmount * (1 - progress);
-      
+
       // Scale animation
       let scale = 1;
       if (progress < 0.1) {
@@ -1226,23 +1254,23 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       } else {
         scale = 1 - (progress - 0.2) * 0.3;
       }
-      
+
       // Opacity
       const opacity = progress > 0.6 ? 1 - (progress - 0.6) / 0.4 : 1;
-      
+
       // Update position
       heart.style.left = (posX + wiggle) + 'px';
       heart.style.top = (posY - moveY) + 'px';
       heart.style.opacity = String(opacity);
       heart.style.transform = 'scale(' + scale + ')';
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         heart.remove();
       }
     }
-    
+
     requestAnimationFrame(animate);
   }
   

@@ -46,6 +46,7 @@ const shouldRender = !!ga4Id && (import.meta.env.PROD || debug);
         // Load gtag.js
         const script = document.createElement('script');
         script.async = true;
+        script.crossOrigin = 'anonymous';
         script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`;
         document.head.appendChild(script);
 

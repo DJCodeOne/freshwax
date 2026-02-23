@@ -1593,6 +1593,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         await new Promise<void>((resolve, reject) => {
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+          script.crossOrigin = 'anonymous';
           script.onload = () => resolve();
           script.onerror = () => reject(new Error('Failed to load ZIP library'));
           document.head.appendChild(script);

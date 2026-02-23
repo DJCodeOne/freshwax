@@ -10,6 +10,7 @@ import type { APIRoute } from 'astro';
 import { queryCollection, updateDocument } from '../../../lib/firebase-rest';
 import { SITE_URL } from '../../../lib/constants';
 import { fetchWithTimeout, ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
+import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 const log = createLogger('[verification-reminders]');
 import { emailWrapper, ctaButton } from '../../../lib/email-wrapper';
 
@@ -38,6 +39,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.unauthorized('Unauthorized');
   }
 
+  const db = env?.DB;
+  if (db) {
+    const locked = await acquireCronLock(db, 'verification-reminders');
+    if (!locked) {
+      return ApiErrors.conflict('Job already running');
+    }
+  }
+
+  try {
   const RESEND_API_KEY = env?.RESEND_API_KEY || import.meta.env.RESEND_API_KEY;
   if (!RESEND_API_KEY) {
     return successResponse({ skipped: true, reason: 'Email not configured' });
@@ -128,6 +138,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     log.error('[VerifyReminders] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
+  }
+  } finally {
+    if (db) await releaseCronLock(db, 'verification-reminders');
   }
 };
 

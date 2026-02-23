@@ -14,6 +14,7 @@ import { sendPayoutCompletedEmail } from '../../../lib/payout-emails';
 import { createPayout as createPayPalPayout, getPayPalConfig } from '../../../lib/paypal-payouts';
 import { verifyAdminKey } from '../../../lib/admin';
 import { createLogger, ApiErrors, timingSafeCompare, successResponse } from '../../../lib/api-utils';
+import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
 const log = createLogger('[retry-payouts]');
 
@@ -44,9 +45,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ApiErrors.unauthorized('Unauthorized');
   }
 
+  const db = env?.DB;
+  if (db) {
+    const locked = await acquireCronLock(db, 'retry-payouts');
+    if (!locked) {
+      return ApiErrors.conflict('Job already running');
+    }
+  }
+
   // Initialize Firebase
 
-
+  try {
   const stripeSecretKey = env?.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
 
   if (!stripeSecretKey) {
@@ -351,6 +360,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     log.error('Error:', error);
     return ApiErrors.serverError('Unknown error');
   }
+  } finally { if (db) await releaseCronLock(db, 'retry-payouts'); }
 };
 
 // Also support GET for manual triggering from admin panel

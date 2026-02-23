@@ -372,6 +372,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Load lamejs for MP3 encoding
   const lameScript = document.createElement('script');
   lameScript.src = 'https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';
+  lameScript.crossOrigin = 'anonymous';
   document.head.appendChild(lameScript);
 </script>
 

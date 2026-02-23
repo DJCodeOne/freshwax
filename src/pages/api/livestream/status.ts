@@ -7,7 +7,7 @@ import { buildHlsUrl, initRed5Env } from '../../../lib/red5';
 import { d1GetLiveSlots, d1GetScheduledSlots, d1GetSlotById } from '../../../lib/d1-catalog';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
 import { SITE_URL } from '../../../lib/constants';
-import { createLogger, successResponse } from '../../../lib/api-utils';
+import { createLogger, successResponse, jsonResponse as sharedJsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('[livestream/status]');
 
@@ -65,12 +65,8 @@ export async function invalidateStatusCache(): Promise<void> {
 }
 
 function jsonResponse(data: Record<string, unknown>, status: number, maxAge: number = 10): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': `public, max-age=${maxAge}, s-maxage=${maxAge * 2}`,
-    }
+  return sharedJsonResponse(data, status, {
+    headers: { 'Cache-Control': `public, max-age=${maxAge}, s-maxage=${maxAge * 2}` }
   });
 }
 

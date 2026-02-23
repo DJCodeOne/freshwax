@@ -8,6 +8,7 @@
 
 import type { APIRoute } from 'astro';
 import { ApiErrors, createLogger, timingSafeCompare, successResponse } from '../../../lib/api-utils';
+import { acquireCronLock, releaseCronLock } from '../../../lib/cron-lock';
 
 const log = createLogger('[image-scan]');
 
@@ -41,8 +42,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const r2: R2Bucket | undefined = env?.R2;
   const db: D1Database | undefined = env?.DB;
 
+  if (db) {
+    const locked = await acquireCronLock(db, 'image-scan');
+    if (!locked) {
+      return ApiErrors.conflict('Job already running');
+    }
+  }
+
   if (!r2) {
     log.error('[Image Scan] R2 binding not available');
+    if (db) await releaseCronLock(db, 'image-scan');
     return ApiErrors.serverError('R2 binding not configured');
   }
 
@@ -160,6 +169,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     log.error('[Image Scan] Error:', error instanceof Error ? error.message : String(error));
     return ApiErrors.serverError('Internal error');
+  } finally {
+    if (db) await releaseCronLock(db, 'image-scan');
   }
 };
 

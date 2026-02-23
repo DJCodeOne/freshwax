@@ -6,7 +6,7 @@ import type { APIRoute } from 'astro';
 import { z } from 'zod';
 import { getDocument, queryCollection, verifyUserToken } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { ApiErrors, createLogger } from '../../../lib/api-utils';
+import { ApiErrors, createLogger, jsonResponse } from '../../../lib/api-utils';
 
 const log = createLogger('user/export-data');
 
@@ -142,10 +142,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       log.error('Failed to fetch newsletter subscription:', e instanceof Error ? e.message : e);
     }
 
-    return new Response(JSON.stringify(exportData, null, 2), {
-      status: 200,
+    return jsonResponse(exportData, 200, {
       headers: {
-        'Content-Type': 'application/json',
         'Content-Disposition': `attachment; filename="freshwax-data-export-${userId.slice(0, 8)}.json"`,
       }
     });
