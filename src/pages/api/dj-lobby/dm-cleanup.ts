@@ -104,13 +104,17 @@ export const POST: APIRoute = async ({ request }) => {
     const deletePromises = messageIds.map(msgId =>
       deleteSubcollectionDoc(`djDirectMessages/${channelId}/messages`, msgId, idToken)
     );
-    await Promise.all(deletePromises);
+    const results = await Promise.allSettled(deletePromises);
+    const failures = results.filter(r => r.status === 'rejected');
+    if (failures.length > 0) {
+      log.error('Some DM deletes failed', { count: failures.length });
+    }
 
     // Delete the channel document itself
     await deleteDocument('djDirectMessages', channelId);
 
     return successResponse({ message: 'DM channel cleaned up',
-      messagesDeleted: messageIds.length });
+      messagesDeleted: messageIds.length - failures.length });
 
   } catch (error: unknown) {
     log.error('Error:', error instanceof Error ? error.message : String(error));

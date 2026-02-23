@@ -14,7 +14,7 @@ const log = createLogger('paypal-plus');
 // Zod schema for PayPal Plus capture
 const PayPalPlusCaptureSchema = z.object({
   paypalOrderId: z.string().min(1, 'PayPal order ID required'),
-  orderData: z.any().optional(),
+  orderData: z.record(z.string(), z.unknown()).optional(),
   expectedAmount: z.number().positive().optional(),
 }).passthrough();
 

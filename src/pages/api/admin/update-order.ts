@@ -14,10 +14,10 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 const updateOrderSchema = z.object({
   orderId: z.string().min(1),
   updates: z.object({
-    totals: z.record(z.any()).optional(),
+    totals: z.record(z.string(), z.unknown()).optional(),
     status: z.string().optional(),
     paymentMethod: z.string().optional(),
-    items: z.array(z.any()).optional(),
+    items: z.array(z.unknown()).optional(),
     notes: z.string().optional(),
   }).passthrough().optional(),
   adminKey: z.string().optional(),

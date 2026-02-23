@@ -27,15 +27,15 @@ const staticPages = [
   { url: '/schedule/', priority: '0.7', changefreq: 'daily', lastmod: 'dynamic:all' },
 
   // Medium priority - informational/conversion (fixed lastmod dates)
-  { url: '/giftcards/', priority: '0.7', changefreq: 'monthly', lastmod: '2025-06-01' },
-  { url: '/upload-mix/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
-  { url: '/newsletter/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
-  { url: '/about/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
-  { url: '/contact/', priority: '0.6', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/giftcards/', priority: '0.7', changefreq: 'monthly', lastmod: 'dynamic:today' },
+  { url: '/upload-mix/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
+  { url: '/newsletter/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
+  { url: '/about/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
+  { url: '/contact/', priority: '0.6', changefreq: 'monthly', lastmod: 'dynamic:today' },
 
   // Lower priority - policy pages (fixed lastmod - updated during GDPR work Feb 2026)
-  { url: '/shipping/', priority: '0.5', changefreq: 'monthly', lastmod: '2025-06-01' },
-  { url: '/returns/', priority: '0.5', changefreq: 'monthly', lastmod: '2025-06-01' },
+  { url: '/shipping/', priority: '0.5', changefreq: 'monthly', lastmod: 'dynamic:today' },
+  { url: '/returns/', priority: '0.5', changefreq: 'monthly', lastmod: 'dynamic:today' },
   { url: '/privacy/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
   { url: '/terms/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
   { url: '/cookies/', priority: '0.3', changefreq: 'yearly', lastmod: '2026-02-15' },
@@ -133,6 +133,8 @@ export const GET = async ({ locals }: { locals: App.Locals }) => {
   };
   // 'all' = the most recent across every source
   dynamicLastmod.all = Object.values(dynamicLastmod).reduce((a, b) => a > b ? a : b);
+  // 'today' = current date for pages without a specific content source
+  dynamicLastmod.today = today;
 
   // Resolve a page's lastmod: dynamic sources are looked up, fixed dates pass through
   function resolveLastmod(raw: string): string {

@@ -120,6 +120,15 @@ All cron endpoints require `Authorization: Bearer $CRON_SECRET`.
 - **E2E tests**: `npx playwright test` (Playwright, in `e2e/`)
 - **Lighthouse CI**: GitHub Actions workflow with performance budgets
 
+## Backup Strategy
+
+- **Firestore**: Uses Firebase's built-in Point-in-Time Recovery (PITR), enabled via Google Cloud Console. No custom backup cron needed.
+- **D1**: Backed up nightly to R2 as JSON by the `backup-d1` cron job (see Cron Jobs table above).
+
+## Branch Protection
+
+It is recommended to enable GitHub branch protection rules on the `main` branch: require at least one PR review and passing status checks (build + tests) before merging. This can be configured in the repository settings under Branches > Branch protection rules.
+
 ## Notable Architecture Decisions
 
 - **Firebase REST API** -- No Firebase client SDK; all Firestore access goes through `firebase-rest.ts` using service account JWT + OAuth2 (RS256 via Web Crypto API)

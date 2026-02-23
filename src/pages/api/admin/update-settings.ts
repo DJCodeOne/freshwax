@@ -11,9 +11,9 @@ import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '..
 
 const updateSettingsSchema = z.object({
   action: z.enum(['save', 'reset']),
-  settings: z.record(z.any()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
   section: z.string().optional(),
-  sectionData: z.record(z.any()).optional(),
+  sectionData: z.record(z.string(), z.unknown()).optional(),
   adminKey: z.string().optional(),
 });
 

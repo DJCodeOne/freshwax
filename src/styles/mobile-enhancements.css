@@ -178,16 +178,14 @@ select,
    FOCUS STATES (Accessibility)
    ============================================ */
 
-@media (hover: none) {
-  :focus-visible {
-    outline: 3px solid #3b82f6;
-    outline-offset: 2px;
-  }
+:focus-visible {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
 
-  /* Remove outline for touch interactions */
-  :focus:not(:focus-visible) {
-    outline: none;
-  }
+/* Remove outline for touch interactions */
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* ============================================

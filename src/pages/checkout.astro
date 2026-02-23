@@ -76,6 +76,46 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     }
   }
 
+  // Field-level validation for accessibility
+  function validateField(input) {
+    if (!input) return true;
+    var errorSpan = document.getElementById(input.id + '-error');
+    if (!input.checkValidity()) {
+      input.setAttribute('aria-invalid', 'true');
+      if (errorSpan) errorSpan.style.display = 'block';
+      return false;
+    } else {
+      input.removeAttribute('aria-invalid');
+      if (errorSpan) errorSpan.style.display = 'none';
+      return true;
+    }
+  }
+
+  function validateAllFields() {
+    var fieldIds = ['firstName', 'lastName', 'email', 'address1', 'city', 'postcode'];
+    var allValid = true;
+    for (var i = 0; i < fieldIds.length; i++) {
+      var el = document.getElementById(fieldIds[i]);
+      if (el && !validateField(el)) allValid = false;
+    }
+    return allValid;
+  }
+
+  function setupFieldValidation() {
+    var fieldIds = ['firstName', 'lastName', 'email', 'address1', 'city', 'postcode'];
+    for (var i = 0; i < fieldIds.length; i++) {
+      var el = document.getElementById(fieldIds[i]);
+      if (el) {
+        el.addEventListener('blur', function() { validateField(this); });
+        el.addEventListener('input', function() {
+          if (this.getAttribute('aria-invalid') === 'true') {
+            validateField(this);
+          }
+        });
+      }
+    }
+  }
+
   let currentUser = null;
   let customerData = null;
   let cart = [];
@@ -569,17 +609,20 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="firstName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">First Name *</label>
-                <input type="text" id="firstName" name="firstName" required aria-required="true" placeholder="John" value="${firstName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="text" id="firstName" name="firstName" required aria-required="true" aria-describedby="firstName-error" placeholder="John" value="${firstName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <span id="firstName-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">First name is required</span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="lastName" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Last Name *</label>
-                <input type="text" id="lastName" name="lastName" required aria-required="true" placeholder="Doe" value="${lastName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="text" id="lastName" name="lastName" required aria-required="true" aria-describedby="lastName-error" placeholder="Doe" value="${lastName}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <span id="lastName-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Last name is required</span>
               </div>
             </div>
             <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="email" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Email Address *</label>
-                <input type="email" id="email" name="email" required aria-required="true" placeholder="you@example.com" value="${email}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <input type="email" id="email" name="email" required aria-required="true" aria-describedby="email-error" placeholder="you@example.com" value="${email}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                <span id="email-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Valid email address is required</span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                 <label for="phone" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Phone Number</label>
@@ -614,7 +657,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address1" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 1 *</label>
-                  <input type="text" id="address1" name="address1" required aria-required="true" placeholder="123 Music Street" value="${address1}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="address1" name="address1" required aria-required="true" aria-describedby="address1-error" placeholder="123 Music Street" value="${address1}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <span id="address1-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Address is required</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="address2" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Address Line 2</label>
@@ -624,11 +668,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="city" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">City *</label>
-                  <input type="text" id="city" name="city" required aria-required="true" placeholder="London" value="${city}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <input type="text" id="city" name="city" required aria-required="true" aria-describedby="city-error" placeholder="London" value="${city}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit;">
+                  <span id="city-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">City is required</span>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 0.375rem;">
                   <label for="postcode" style="font-size: 0.8125rem; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.04em;">Postcode *</label>
-                  <input type="text" id="postcode" name="postcode" required aria-required="true" placeholder="E1 6AN" value="${postcode}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                  <input type="text" id="postcode" name="postcode" required aria-required="true" aria-describedby="postcode-error" placeholder="E1 6AN" value="${postcode}" style="width: 100%; padding: 0.875rem 1rem; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 8px; color: #111827; font-size: 1rem; font-family: inherit; text-transform: uppercase;">
+                  <span id="postcode-error" class="field-error" role="alert" style="display:none; color:#dc2626; font-size:0.75rem; margin-top:0.25rem;">Postcode is required</span>
                 </div>
               </div>
               <div class="checkout-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">

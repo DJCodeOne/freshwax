@@ -1540,6 +1540,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       fs.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
       syncFullscreenState();
+      startFullscreenStats();
       // Sync volume slider
       const fsVol = document.getElementById('fsVolumeSlider');
       const mainVol = document.getElementById('volumeSlider');
@@ -1553,6 +1554,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       fs.classList.add('hidden');
       document.body.style.overflow = '';
     }
+    stopFullscreenStats();
   }
   
   function syncFullscreenState() {
@@ -1678,10 +1680,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     }
   });
 
-  // Sync fullscreen stats
-  var fullscreenStatsInterval = setInterval(() => {
-    const fs = document.getElementById('fullscreenMode');
-    if (fs && !fs.classList.contains('hidden')) {
+  // Sync fullscreen stats (only runs while fullscreen is active)
+  var fullscreenStatsInterval = null;
+
+  function startFullscreenStats() {
+    if (fullscreenStatsInterval) return;
+    fullscreenStatsInterval = setInterval(() => {
       const fsViewers = document.getElementById('fsViewers');
       const fsLikes = document.getElementById('fsLikes');
       const fsDuration = document.getElementById('fsDuration');
@@ -1699,8 +1703,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         fsChat.innerHTML = mainChat.innerHTML;
         fsChat.scrollTop = fsChat.scrollHeight;
       }
+    }, 1000);
+  }
+
+  function stopFullscreenStats() {
+    if (fullscreenStatsInterval) {
+      clearInterval(fullscreenStatsInterval);
+      fullscreenStatsInterval = null;
     }
-  }, 1000);
+  }
 
   // Fullscreen Twitch Chat Integration
   let fsTwitchChannel = null;

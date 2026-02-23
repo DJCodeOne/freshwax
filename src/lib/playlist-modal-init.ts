@@ -645,6 +645,9 @@ export function initPlaylistModal() {
     checkAuth();
   }
 
+  // Map to store focus trap handlers per element (avoids `as any` casts)
+  const focusTrapHandlers = new WeakMap<HTMLElement, (e: KeyboardEvent) => void>();
+
   // Focus trap helper for modal dialogs
   function trapFocus(modalEl: HTMLElement) {
     const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -667,16 +670,16 @@ export function initPlaylistModal() {
         }
       }
     };
-    (modalEl as any)._focusTrapHandler = handler;
+    focusTrapHandlers.set(modalEl, handler);
     modalEl.addEventListener('keydown', handler);
     firstFocusable.focus();
   }
 
   function removeFocusTrap(modalEl: HTMLElement) {
-    const handler = (modalEl as any)._focusTrapHandler;
+    const handler = focusTrapHandlers.get(modalEl);
     if (handler) {
       modalEl.removeEventListener('keydown', handler);
-      delete (modalEl as any)._focusTrapHandler;
+      focusTrapHandlers.delete(modalEl);
     }
   }
 

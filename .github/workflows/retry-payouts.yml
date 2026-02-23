@@ -4,7 +4,10 @@
 name: Scheduled Jobs
 
 on:
-  workflow_dispatch:  # Manual trigger only — schedule handled by Cloudflare cron
+  # Manual fallback only — the primary schedule is handled by Cloudflare Pages cron
+  # triggers (every 6 hours). Use this workflow_dispatch if the cron fails or needs
+  # an ad-hoc re-run.
+  workflow_dispatch:
 
 jobs:
   retry-payouts:

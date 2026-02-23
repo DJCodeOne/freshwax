@@ -82,7 +82,11 @@ export const POST: APIRoute = async ({ request }) => {
         const deletePromises = chatMessages.map(msg =>
           deleteDocument('djLobbyChat', msg.id)
         );
-        await Promise.all(deletePromises);
+        const results = await Promise.allSettled(deletePromises);
+        const failures = results.filter(r => r.status === 'rejected');
+        if (failures.length > 0) {
+          log.error('Some operations failed', { failures: failures.map(f => f.reason?.message || String(f.reason)) });
+        }
 
         // Reset the lastStreamEndTime so we don't keep deleting
         await setDocument('djLobbySettings', 'chatCleanup', {
@@ -91,7 +95,7 @@ export const POST: APIRoute = async ({ request }) => {
         });
 
         return successResponse({ cleaned: true,
-          messagesDeleted: chatMessages.length });
+          messagesDeleted: chatMessages.length - failures.length });
       }
 
       case 'record-stream-end': {

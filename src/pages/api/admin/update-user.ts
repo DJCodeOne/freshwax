@@ -19,7 +19,7 @@ const updateUserSchema = z.object({
     fullName: z.string().optional(),
     email: z.string().email().optional(),
     phone: z.string().optional(),
-    address: z.any().optional(),
+    address: z.record(z.string(), z.unknown()).optional(),
     roles: z.object({
       customer: z.boolean().optional(),
       dj: z.boolean().optional(),
@@ -27,7 +27,7 @@ const updateUserSchema = z.object({
       merchSupplier: z.boolean().optional(),
     }).passthrough().optional(),
     isAdmin: z.boolean().optional(),
-    permissions: z.any().optional(),
+    permissions: z.record(z.string(), z.unknown()).optional(),
     approved: z.boolean().optional(),
     suspended: z.boolean().optional(),
     adminNotes: z.string().optional(),

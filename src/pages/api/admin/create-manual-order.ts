@@ -48,7 +48,7 @@ const createManualOrderSchema = z.object({
       stripeFee: z.number().optional(),
       serviceFees: z.number().optional(),
     }).optional(),
-    shipping: z.any().optional(),
+    shipping: z.record(z.string(), z.unknown()).optional(),
     paymentMethod: z.string().optional(),
     paymentIntentId: z.string().optional(),
     paypalOrderId: z.string().optional(),

@@ -1397,7 +1397,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           proDashboardBtn.title = 'Access your releases and merch';
 
           // Set partnerId cookie for partner dashboard (30 days)
-          document.cookie = `partnerId=${userId}; path=/; max-age=2592000; SameSite=Lax`;
+          document.cookie = `partnerId=${userId}; path=/; max-age=2592000; SameSite=Lax; Secure`;
         } else if (isArtistOrMerchSeller) {
           // They have artist/merch roles but not approved yet
           proDashboardBtn.title = 'Pending approval - available for artists & merch sellers';

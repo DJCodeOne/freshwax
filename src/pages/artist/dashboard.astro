@@ -1435,7 +1435,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         return;
       }
       // No server dashboard and no client auth - show login prompt
-      document.cookie = 'partnerId=; path=/; max-age=0';
+      document.cookie = 'partnerId=; path=/; max-age=0; Secure';
       showLogin();
       return;
     }
@@ -1444,7 +1444,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Always ensure userId cookie is set
     if (!hasCookie('userId')) {
-      document.cookie = `userId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
+      document.cookie = `userId=${user.uid}; path=/; max-age=2592000; SameSite=Lax; Secure`;
     }
 
     // Check if partnerId cookie exists and is valid
@@ -1453,7 +1453,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (!hasPartnerCookie) {
       // If server already rendered the dashboard, just set the cookie silently
       if (serverRenderedDashboard) {
-        document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
+        document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax; Secure`;
         hideAll();
         return;
       }
@@ -1470,7 +1470,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         // If they have any partner role, set the cookie and reload
         if (profile.success && (profile.isPro || profile.roles?.artist || profile.roles?.dj || profile.roles?.merchSupplier || profile.roles?.vinylSeller)) {
-          document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax`;
+          document.cookie = `partnerId=${user.uid}; path=/; max-age=2592000; SameSite=Lax; Secure`;
           window.location.reload();
         } else {
           // They're logged in but not a partner - show login prompt with message

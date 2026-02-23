@@ -113,7 +113,7 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Execute all pending cleanups
-    const results = await Promise.all(
+    const settled = await Promise.allSettled(
       pending.map(async (job: Record<string, unknown>) => {
         try {
           const deleted = await deleteStreamChat(job.streamId);
@@ -135,7 +135,16 @@ export const GET: APIRoute = async ({ request, locals }) => {
         }
       })
     );
-    
+
+    const failures = settled.filter(r => r.status === 'rejected');
+    if (failures.length > 0) {
+      log.error('Some operations failed', { failures: failures.map(f => f.reason?.message || String(f.reason)) });
+    }
+
+    const results = settled
+      .filter((r): r is PromiseFulfilledResult<{ streamId: string; success: boolean; deleted?: number; error?: string }> => r.status === 'fulfilled')
+      .map(r => r.value);
+
     return successResponse({ executed: results.length,
       results });
   } catch (error: unknown) {
@@ -162,11 +171,15 @@ async function deleteStreamChat(streamId: string): Promise<number> {
     }
 
     // Delete batch (note: REST API doesn't support batch operations)
-    await Promise.all(chatMessages.map(msg =>
+    const deleteResults = await Promise.allSettled(chatMessages.map(msg =>
       deleteDocument('livestream-chat', msg.id)
     ));
+    const deleteFailures = deleteResults.filter(r => r.status === 'rejected');
+    if (deleteFailures.length > 0) {
+      log.error('Some message deletes failed', { failures: deleteFailures.map(f => f.reason?.message || String(f.reason)) });
+    }
 
-    totalDeleted += chatMessages.length;
+    totalDeleted += chatMessages.length - deleteFailures.length;
     log.info(`Deleted batch of ${chatMessages.length} messages for stream ${streamId}`);
 
     // If we got less than the limit, we're done
