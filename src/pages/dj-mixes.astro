@@ -691,26 +691,21 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
 <script>
   // ============================================
-  // GENRE FILTER SYSTEM
+  // GENRE FILTER SYSTEM - INP Optimized
   // ============================================
   (function() {
-    // Get both mobile and sidebar filter buttons
-    var mobileFilterBtns = document.querySelectorAll('.genre-filter-btn');
-    var sidebarFilterBtns = document.querySelectorAll('.genre-nav-btn');
-    var allFilterBtns = document.querySelectorAll('.genre-filter-btn, .genre-nav-btn');
     var mixesList = document.getElementById('mixes-list');
     var mixCountEl = document.getElementById('mix-count');
     var allMixCards = mixesList ? mixesList.querySelectorAll('.mix-card') : [];
-    var totalMixes = allMixCards.length;
-    
-    if (!allFilterBtns.length || !mixesList) return;
-    
+
+    if (!mixesList) return;
+
     // Remove any existing no-results message
     function removeNoResultsMessage() {
       var existing = mixesList.querySelector('.no-results-message');
       if (existing) existing.remove();
     }
-    
+
     // Show no results message
     function showNoResultsMessage(genre) {
       removeNoResultsMessage();
@@ -726,62 +721,69 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       }
       mixesList.appendChild(msg);
     }
-    
-    // Filter mixes by genre
+
+    // Filter mixes by genre - wrapped in rAF to prevent blocking
     function filterMixes(genre) {
       removeNoResultsMessage();
-      var visibleCount = 0;
-      
-      allMixCards.forEach(function(card) {
-        var cardGenre = card.getAttribute('data-genre') || '';
-        
-        if (genre === 'all') {
-          card.classList.remove('filtered-out');
-          visibleCount++;
-        } else {
-          // Check if card genre matches (case-insensitive, partial match)
-          var matches = cardGenre.toLowerCase().indexOf(genre.toLowerCase()) !== -1;
-          
-          // Also match "Drum and Bass" with "D&B" and variations
-          if (!matches && genre === 'Drum and Bass') {
-            matches = cardGenre.toLowerCase().indexOf('d&b') !== -1 || 
-                      cardGenre.toLowerCase().indexOf('dnb') !== -1 ||
-                      cardGenre.toLowerCase().indexOf('drum') !== -1;
-          }
-          
-          if (matches) {
+
+      // Defer heavy DOM manipulation to next frame
+      requestAnimationFrame(function() {
+        var visibleCount = 0;
+
+        allMixCards.forEach(function(card) {
+          var cardGenre = card.getAttribute('data-genre') || '';
+
+          if (genre === 'all') {
             card.classList.remove('filtered-out');
             visibleCount++;
           } else {
-            card.classList.add('filtered-out');
+            // Check if card genre matches (case-insensitive, partial match)
+            var matches = cardGenre.toLowerCase().indexOf(genre.toLowerCase()) !== -1;
+
+            // Also match "Drum and Bass" with "D&B" and variations
+            if (!matches && genre === 'Drum and Bass') {
+              matches = cardGenre.toLowerCase().indexOf('d&b') !== -1 ||
+                        cardGenre.toLowerCase().indexOf('dnb') !== -1 ||
+                        cardGenre.toLowerCase().indexOf('drum') !== -1;
+            }
+
+            if (matches) {
+              card.classList.remove('filtered-out');
+              visibleCount++;
+            } else {
+              card.classList.add('filtered-out');
+            }
           }
+        });
+
+        // Update count display
+        if (mixCountEl) {
+          mixCountEl.textContent = visibleCount;
+        }
+
+        // Show no results if nothing visible
+        if (visibleCount === 0 && genre !== 'all') {
+          showNoResultsMessage(genre);
         }
       });
-      
-      // Update count display
-      if (mixCountEl) {
-        mixCountEl.textContent = visibleCount;
-      }
-      
-      // Show no results if nothing visible
-      if (visibleCount === 0 && genre !== 'all') {
-        showNoResultsMessage(genre);
-      }
     }
-    
-    // Sync active state across both mobile and sidebar buttons
+
+    // Sync active state across both mobile and sidebar buttons - immediate UI feedback
     function syncActiveState(genre) {
+      var mobileFilterBtns = document.querySelectorAll('.genre-filter-btn');
+      var sidebarFilterBtns = document.querySelectorAll('.genre-nav-btn');
+
       // Update mobile buttons
-      mobileFilterBtns.forEach(function(b) { 
+      mobileFilterBtns.forEach(function(b) {
         if (b.getAttribute('data-genre') === genre) {
           b.classList.add('active');
         } else {
           b.classList.remove('active');
         }
       });
-      
+
       // Update sidebar buttons
-      sidebarFilterBtns.forEach(function(b) { 
+      sidebarFilterBtns.forEach(function(b) {
         if (b.getAttribute('data-genre') === genre) {
           b.classList.add('active');
         } else {
@@ -789,19 +791,32 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         }
       });
     }
-    
-    // Attach click handlers to all filter buttons
-    allFilterBtns.forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var genre = this.getAttribute('data-genre');
-        
-        // Sync active state across all buttons
-        syncActiveState(genre);
-        
-        // Filter mixes
-        filterMixes(genre);
-      });
-    });
+
+    // Event delegation on parent containers for better performance
+    var mobileFilterContainer = document.querySelector('.genre-filter-mobile');
+    var sidebarFilterContainer = document.querySelector('.genre-nav');
+
+    function handleFilterClick(e) {
+      var btn = e.target.closest('.genre-filter-btn, .genre-nav-btn');
+      if (!btn) return;
+
+      var genre = btn.getAttribute('data-genre');
+      if (!genre) return;
+
+      // Immediate UI feedback - sync button states instantly
+      syncActiveState(genre);
+
+      // Defer filtering to next frame to prevent blocking click response
+      filterMixes(genre);
+    }
+
+    if (mobileFilterContainer) {
+      mobileFilterContainer.addEventListener('click', handleFilterClick);
+    }
+
+    if (sidebarFilterContainer) {
+      sidebarFilterContainer.addEventListener('click', handleFilterClick);
+    }
   })();
   
   // ============================================

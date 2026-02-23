@@ -355,8 +355,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       // Check status on page load
       updateServerStatus();
-      // Re-check every 10 seconds
-      setInterval(updateServerStatus, 10000);
+      // Re-check every 10 seconds, cleanup on navigation
+      var serverStatusInterval = setInterval(updateServerStatus, 10000);
+      document.addEventListener('astro:before-swap', function() {
+        clearInterval(serverStatusInterval);
+      }, { once: true });
 
       // Start server button - copies command to clipboard
       startAudioServerBtn?.addEventListener('click', async () => {

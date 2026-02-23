@@ -6,5 +6,7 @@ import { requireAdminAuth } from '../../lib/admin';
 const authResult = await requireAdminAuth(Astro.request, Astro.locals);
 if (authResult) return Astro.redirect('/login');
 
+Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
+
 return Astro.redirect('/admin/releases/upload');
 ---

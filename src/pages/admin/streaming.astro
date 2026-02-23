@@ -3431,4 +3431,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
   } else {
     init();
   }
+
+  // Cleanup on View Transitions navigation
+  document.addEventListener('astro:before-swap', function() {
+    if (serverCheckInterval) {
+      clearInterval(serverCheckInterval);
+      serverCheckInterval = null;
+    }
+  }, { once: true });
 </script>

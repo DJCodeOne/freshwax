@@ -658,44 +658,56 @@ const merchItemList = {
       });
     }
 
-    // Color dot hover - show corresponding image
-    document.querySelectorAll('.product-card').forEach(function(card) {
-      var product = JSON.parse(card.dataset.product || '{}');
-      var cardImg = card.querySelector('.card-image img');
-      var originalSrc = cardImg?.src || '';
-
-      // Store original image for mouseout
-      if (cardImg) {
-        cardImg.dataset.originalSrc = originalSrc;
-      }
-
-      // Add hover listeners to color dots
-      card.querySelectorAll('.color-dots .dot').forEach(function(dot) {
-        dot.addEventListener('mouseenter', function() {
-          var colorName = dot.dataset.color;
-          if (!colorName || !cardImg || !product.imageObjects) return;
-
-          // Find image matching this color
-          var matchingImage = product.imageObjects.find(function(img) {
-            if (typeof img === 'object' && img.color) {
-              return img.color.toLowerCase() === colorName.toLowerCase();
-            }
-            return false;
-          });
-
-          if (matchingImage?.url) {
-            cardImg.src = matchingImage.url;
-          }
-        });
-
-        dot.addEventListener('mouseleave', function() {
-          // Restore original image
-          if (cardImg && cardImg.dataset.originalSrc) {
-            cardImg.src = cardImg.dataset.originalSrc;
-          }
-        });
+    // Color dot hover - show corresponding image (using event delegation)
+    if (grid) {
+      // Store original images on initial load
+      grid.querySelectorAll('.product-card').forEach(function(card) {
+        var cardImg = card.querySelector('.card-image img');
+        if (cardImg && cardImg.src) {
+          cardImg.dataset.originalSrc = cardImg.src;
+        }
       });
-    });
+
+      // Use event delegation for hover events
+      grid.addEventListener('mouseenter', function(e) {
+        var dot = e.target;
+        if (!dot.classList || !dot.classList.contains('dot')) return;
+
+        var card = dot.closest('.product-card');
+        if (!card) return;
+
+        var product = JSON.parse(card.dataset.product || '{}');
+        var cardImg = card.querySelector('.card-image img');
+        var colorName = dot.dataset.color;
+
+        if (!colorName || !cardImg || !product.imageObjects) return;
+
+        // Find image matching this color
+        var matchingImage = product.imageObjects.find(function(img) {
+          if (typeof img === 'object' && img.color) {
+            return img.color.toLowerCase() === colorName.toLowerCase();
+          }
+          return false;
+        });
+
+        if (matchingImage && matchingImage.url) {
+          cardImg.src = matchingImage.url;
+        }
+      }, true);
+
+      grid.addEventListener('mouseleave', function(e) {
+        var dot = e.target;
+        if (!dot.classList || !dot.classList.contains('dot')) return;
+
+        var card = dot.closest('.product-card');
+        if (!card) return;
+
+        var cardImg = card.querySelector('.card-image img');
+        if (cardImg && cardImg.dataset.originalSrc) {
+          cardImg.src = cardImg.dataset.originalSrc;
+        }
+      }, true);
+    }
 
     // Modal
     var modal = document.getElementById('buyModal');
@@ -733,27 +745,26 @@ const merchItemList = {
       }
     });
 
-    // Open modal when clicking on card image, info, or buy button
-    document.querySelectorAll('.product-card').forEach(function(card) {
-      var product = JSON.parse(card.dataset.product || '{}');
+    // Open modal when clicking on card image, info, or buy button (using event delegation)
+    if (grid) {
+      grid.addEventListener('click', function(e) {
+        var target = e.target;
 
-      // Click on image or info opens modal
-      card.querySelectorAll('.card-clickable').forEach(function(el) {
-        el.addEventListener('click', function(e) {
-          e.preventDefault();
-          openModal(product);
-        });
+        // Find if click was on a clickable element or buy button
+        var clickableEl = target.closest('.card-clickable');
+        var buyBtn = target.closest('.buy-btn');
+
+        if (!clickableEl && !buyBtn) return;
+
+        // Find the card
+        var card = target.closest('.product-card');
+        if (!card) return;
+
+        var product = JSON.parse(card.dataset.product || '{}');
+        e.preventDefault();
+        openModal(product);
       });
-
-      // Buy button also opens modal
-      var buyBtn = card.querySelector('.buy-btn');
-      if (buyBtn) {
-        buyBtn.addEventListener('click', function(e) {
-          e.preventDefault();
-          openModal(product);
-        });
-      }
-    });
+    }
 
     if (modalClose) {
       modalClose.addEventListener('click', closeModal);

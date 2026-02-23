@@ -1483,7 +1483,15 @@ Astro.response.headers.set('Pragma', 'no-cache');
   
   // Initial update and set interval
   updateRequestTimes();
-  setInterval(updateRequestTimes, 1000); // Update every second
+  var requestTimesInterval = setInterval(updateRequestTimes, 1000); // Update every second
+
+  // Cleanup on View Transitions navigation
+  document.addEventListener('astro:before-swap', function() {
+    if (requestTimesInterval) {
+      clearInterval(requestTimesInterval);
+      requestTimesInterval = null;
+    }
+  }, { once: true });
 </script>
 
 <script>
@@ -1781,9 +1789,17 @@ The tunnel connects playlist.freshwax.co.uk to your local playlist server.`;
     fetchPlaylistState();
 
     // Auto-refresh every 30 seconds
-    setInterval(function() {
+    var playlistRefreshInterval = setInterval(function() {
       checkPlaylistServer();
       fetchPlaylistState();
     }, 30000);
+
+    // Cleanup on View Transitions navigation
+    document.addEventListener('astro:before-swap', function() {
+      if (playlistRefreshInterval) {
+        clearInterval(playlistRefreshInterval);
+        playlistRefreshInterval = null;
+      }
+    }, { once: true });
   });
 </script>

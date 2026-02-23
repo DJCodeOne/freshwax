@@ -1645,9 +1645,9 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       fsVolumeSlider.value = mainVolumeSlider.value;
     }
   });
-  
+
   // Sync fullscreen stats
-  setInterval(() => {
+  var fullscreenStatsInterval = setInterval(() => {
     const fs = document.getElementById('fullscreenMode');
     if (fs && !fs.classList.contains('hidden')) {
       const fsViewers = document.getElementById('fsViewers');
@@ -1656,11 +1656,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       const mainViewers = document.getElementById('viewerCount');
       const mainLikes = document.getElementById('likeCount');
       const mainDuration = document.getElementById('streamDuration');
-      
+
       if (fsViewers && mainViewers) fsViewers.textContent = mainViewers.textContent;
       if (fsLikes && mainLikes) fsLikes.textContent = mainLikes.textContent;
       if (fsDuration && mainDuration) fsDuration.textContent = mainDuration.textContent;
-      
+
       const mainChat = document.getElementById('chatMessages');
       const fsChat = document.getElementById('fsChatMessages');
       if (mainChat && fsChat) {
@@ -2968,11 +2968,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     });
     
     await waitForPusher();
-    
+
     if (!window.Pusher) {
       console.warn('[Takeover] Pusher not available, falling back to polling');
       // Fallback: poll API every 10 seconds
-      setInterval(async () => {
+      var takeoverFallbackInterval = setInterval(async () => {
         try {
           const response = await fetch(`/api/dj-lobby/takeover/?userId=${currentUser.uid}`);
           if (!response.ok) return;
@@ -5335,5 +5335,14 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     document.body.classList.remove('header-hidden');
     var hz = document.querySelector('.header-hover-zone');
     if (hz) hz.remove();
+    // Clean up intervals
+    if (typeof fullscreenStatsInterval !== 'undefined' && fullscreenStatsInterval) {
+      clearInterval(fullscreenStatsInterval);
+      fullscreenStatsInterval = null;
+    }
+    if (typeof takeoverFallbackInterval !== 'undefined' && takeoverFallbackInterval) {
+      clearInterval(takeoverFallbackInterval);
+      takeoverFallbackInterval = null;
+    }
   });
 </script>
