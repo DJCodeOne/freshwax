@@ -29,7 +29,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     .header h1 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.05em; }
     .header h1 span { color: #dc2626; }
     .header-nav { display: flex; gap: 1rem; }
-    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #333; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #333; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: border-color 0.2s, color 0.2s; }
     .header-nav a:hover { border-color: #dc2626; color: #dc2626; }
     
     .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
@@ -44,7 +44,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     .setting-input:focus, .setting-select:focus { outline: none; border-color: #dc2626; }
     .setting-input:focus-visible, .setting-select:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
 
-    .drop-zone { border: 3px dashed #333; padding: 4rem 2rem; text-align: center; cursor: pointer; transition: all 0.3s; background: #111; border-radius: 12px; margin-bottom: 2rem; }
+    .drop-zone { border: 3px dashed #333; padding: 4rem 2rem; text-align: center; cursor: pointer; transition: border-color 0.3s, background-color 0.3s; background: #111; border-radius: 12px; margin-bottom: 2rem; }
     .drop-zone:hover, .drop-zone.dragover { border-color: #dc2626; background: #1a1a1a; }
     .drop-zone-icon { font-size: 4rem; margin-bottom: 1rem; }
     .drop-zone-text { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
@@ -66,7 +66,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     
     .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
     
-    .image-card { background: #111; border: 2px solid #333; border-radius: 8px; overflow: hidden; transition: all 0.2s; }
+    .image-card { background: #111; border: 2px solid #333; border-radius: 8px; overflow: hidden; transition: border-color 0.2s, transform 0.2s; }
     .image-card:hover { border-color: #dc2626; transform: translateY(-2px); }
     .image-card.error { border-color: #dc2626; opacity: 0.6; }
     .image-card.success { border-color: #22c55e; }
@@ -88,12 +88,12 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     .image-url input:focus { outline: none; border-color: #dc2626; }
     .image-url input:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
 
-    .copy-btn { width: 100%; padding: 0.5rem; margin-top: 0.5rem; background: #dc2626; border: none; color: #fff; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: all 0.2s; }
+    .copy-btn { width: 100%; padding: 0.5rem; margin-top: 0.5rem; background: #dc2626; border: none; color: #fff; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; cursor: pointer; transition: background-color 0.2s; }
     .copy-btn:hover { background: #b91c1c; }
     .copy-btn.copied { background: #22c55e; }
     
     .actions-bar { display: flex; gap: 1rem; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #333; }
-    .btn { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: 2px solid; transition: all 0.2s; }
+    .btn { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: 2px solid; transition: background-color 0.2s, border-color 0.2s; }
     .btn-primary { background: #dc2626; color: #fff; border-color: #dc2626; }
     .btn-primary:hover { background: #b91c1c; border-color: #b91c1c; }
     .btn-primary:disabled { background: #333; border-color: #333; cursor: not-allowed; }
@@ -107,7 +107,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     .all-urls-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
     .all-urls-label { font-weight: 700; font-size: 0.875rem; text-transform: uppercase; }
     
-    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #22c55e; color: #fff; font-weight: 600; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 2000; border-radius: 8px; }
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #22c55e; color: #fff; font-weight: 600; transform: translateY(100px); opacity: 0; transition: transform 0.3s, opacity 0.3s; z-index: 2000; border-radius: 8px; }
     .toast.show { transform: translateY(0); opacity: 1; }
     
     .info-box { background: #1a1a1a; border: 2px solid #333; padding: 1rem; margin-bottom: 2rem; border-radius: 8px; }

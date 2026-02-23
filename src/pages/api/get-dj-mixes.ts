@@ -68,16 +68,14 @@ export const GET: APIRoute = async ({ request, locals }) => {
       if (mixes.length === 0) {
         try {
           const { getDocument } = await import('../../lib/firebase-rest');
-          // Fetch from all collections in parallel
-          const [customerProfile, userProfile, artistProfile] = await Promise.all([
-            getDocument('users', userId),
+          // Fetch user and artist profiles in parallel (single user call covers both customer/user)
+          const [userProfile, artistProfile] = await Promise.all([
             getDocument('users', userId),
             getDocument('artists', userId)
           ]);
 
           // Extract displayName from whichever profile has it
-          const displayName = customerProfile?.displayName ||
-                             userProfile?.displayName ||
+          const displayName = userProfile?.displayName ||
                              userProfile?.partnerInfo?.displayName ||
                              artistProfile?.artistName ||
                              artistProfile?.name;

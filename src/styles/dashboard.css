@@ -25,10 +25,6 @@
     margin-bottom: 1rem;
   }
   
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
   /* Dashboard-scoped hidden class - won't affect Tailwind responsive utilities like 'hidden lg:flex' */
   .dashboard-main .hidden,
   #loadingScreen.hidden,
@@ -115,7 +111,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, color 0.2s;
   }
   
   .logout-btn:hover {
@@ -229,7 +225,7 @@
     font-weight: 600;
     color: #d1d5db;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
     white-space: nowrap;
     display: flex;
     align-items: center;
@@ -375,7 +371,7 @@
     font-weight: 700;
     cursor: pointer;
     min-width: 110px;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
   
   .redeem-btn:hover {
@@ -489,7 +485,7 @@
     text-decoration: none;
     font-weight: 600;
     border-radius: 10px;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
   }
   
   .cta-link:hover {
@@ -617,7 +613,7 @@
     background: linear-gradient(to bottom, #1f2937, #111827);
     border: 2px solid #374151;
     border-radius: 12px;
-    transition: all 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     text-decoration: none;
     color: inherit;
   }
@@ -873,7 +869,7 @@
     font-size: 1.0625rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
   
   .btn-upload:hover {
@@ -889,7 +885,7 @@
     font-size: 1.0625rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
   }
   
   .btn-remove:hover {
@@ -1133,7 +1129,7 @@
     border-radius: 10px;
     text-decoration: none;
     color: #fff;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s;
   }
 
   .selling-link:hover {
@@ -1348,7 +1344,7 @@
     font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
   
   .toggle-all-btn:hover {
@@ -1385,7 +1381,7 @@
     border-radius: 8px;
     margin-bottom: 0.75rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
   }
   
@@ -1412,7 +1408,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
     margin-top: 2px;
   }
   
@@ -1490,7 +1486,7 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
   
   .cancel-btn:hover {
@@ -1647,7 +1643,7 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   
   .modal-btn.cancel {
@@ -1714,7 +1710,7 @@
     font-weight: 600;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s;
     text-decoration: none;
   }
   
@@ -1735,7 +1731,7 @@
     border: 2px solid #374151;
     border-radius: 12px;
     overflow: hidden;
-    transition: all 0.2s;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
     text-align: center;
     padding: 1.5rem;
   }
@@ -1807,7 +1803,7 @@
     font-weight: 600;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s;
     text-decoration: none;
     text-align: center;
   }
@@ -1826,7 +1822,7 @@
     font-weight: 600;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
   }
   
   .following-btn-unfollow:hover {
@@ -1919,7 +1915,7 @@
     font-weight: 700;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s;
     border: none;
   }
   
@@ -2458,7 +2454,7 @@
     border: 2px solid #374151;
     border-radius: 12px;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   }
   
   .mix-card:hover {
@@ -2616,7 +2612,7 @@
     background: linear-gradient(to bottom, #1f2937, #111827);
     border: 2px solid #374151;
     border-radius: 12px;
-    transition: all 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
   
   .mix-item:hover {
@@ -2761,7 +2757,7 @@
     font-size: 0.8rem;
     border: none;
     border-radius: 6px;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
   }
   
   .pro-dashboard-btn:hover {
@@ -2982,7 +2978,7 @@
     background: linear-gradient(to bottom, #1f2937, #111827);
     border: 2px solid #374151;
     border-radius: 12px;
-    transition: all 0.2s;
+    transition: border-color 0.2s, box-shadow 0.2s;
     text-decoration: none;
     color: inherit;
     margin-bottom: 1rem;
@@ -3352,7 +3348,7 @@
     font-weight: 700;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s;
     border: none;
   }
   

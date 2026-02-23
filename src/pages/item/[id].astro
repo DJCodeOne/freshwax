@@ -1142,7 +1142,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   .rating-star {
     color: #4b5563;
     opacity: 0.5;
-    transition: all 0.2s;
+    transition: color 0.2s, opacity 0.2s, transform 0.2s;
     cursor: pointer;
   }
 
@@ -1181,7 +1181,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   
   /* Follow Artist Button */
   .follow-artist-btn {
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
     white-space: nowrap;
   }
   
@@ -1204,7 +1204,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
   /* Wishlist Button */
   .wishlist-btn {
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   
   .wishlist-btn:hover {
@@ -1227,7 +1227,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     padding: 4px;
     line-height: 1;
     border-radius: 4px;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
   }
 
   .emoji-btn:hover {
@@ -1240,7 +1240,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   }
 
   .track-waveform {
-    transition: all 0.2s;
+    transition: transform 0.2s;
   }
 
   .track-waveform:hover {
@@ -2059,22 +2059,13 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     });
     
     // Check status when auth is ready
-    function initFollowCheck() {
-      if (window.firebaseAuth) {
+    if (window.authReady) {
+      window.authReady.then(function() {
         checkFollowStatus();
-      } else {
-        const interval = setInterval(function() {
-          if (window.firebaseAuth) {
-            clearInterval(interval);
-            checkFollowStatus();
-          }
-        }, 500);
-        setTimeout(function() { clearInterval(interval); }, 10000);
-      }
+      });
+    } else if (window.firebaseAuth) {
+      checkFollowStatus();
     }
-    
-    // Run on load
-    initFollowCheck();
   }
   
   // astro:page-load fires on both initial load and View Transitions
@@ -2216,38 +2207,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     });
     
     // Check status when auth is ready
-    function initWishlistCheck() {
-      // Wait for both firebaseAuth and currentUser to be ready
-      if (window.firebaseAuth?.currentUser) {
-        checkWishlistStatus();
-      } else if (window.firebaseAuth) {
-        // Auth exists but user not loaded yet - use onAuthStateChanged
-        window.firebaseAuth.onAuthStateChanged(function(user) {
-          if (user) {
-            checkWishlistStatus();
-          }
-        });
-      } else {
-        // Wait for firebaseAuth to be available
-        const interval = setInterval(function() {
-          if (window.firebaseAuth?.currentUser) {
-            clearInterval(interval);
-            checkWishlistStatus();
-          } else if (window.firebaseAuth) {
-            clearInterval(interval);
-            window.firebaseAuth.onAuthStateChanged(function(user) {
-              if (user) {
-                checkWishlistStatus();
-              }
-            });
-          }
-        }, 500);
-        setTimeout(function() { clearInterval(interval); }, 10000);
-      }
+    if (window.authReady) {
+      window.authReady.then(function() {
+        if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+          checkWishlistStatus();
+        }
+      });
+    } else if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+      checkWishlistStatus();
     }
-
-    // Run on load
-    initWishlistCheck();
   }
   
   // astro:page-load fires on both initial load and View Transitions

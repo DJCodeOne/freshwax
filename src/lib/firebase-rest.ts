@@ -2,7 +2,7 @@
 // Firebase REST API client - OPTIMIZED for 50k read quota
 // Features: Extended caching, request deduplication, batch operations, smart invalidation
 
-import { createLogger } from './api-utils';
+import { createLogger, fetchWithTimeout } from './api-utils';
 const log = createLogger('[firebase-rest]');
 
 import { kvCacheThrough, CACHE_CONFIG } from './kv-cache';
@@ -100,11 +100,11 @@ async function getServiceAccountToken(): Promise<string | null> {
     const jwt = `${unsignedToken}.${signature}`;
 
     // Exchange JWT for OAuth2 access token
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    const tokenResponse = await fetchWithTimeout('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `grant_type=${encodeURIComponent('urn:ietf:params:oauth:grant-type:jwt-bearer')}&assertion=${encodeURIComponent(jwt)}`,
-    });
+    }, 10000);
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
@@ -140,13 +140,14 @@ async function getLegacyAuthToken(): Promise<string | null> {
   if (!email || !password || !apiKey) return null;
 
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, returnSecureToken: true })
-      }
+      },
+      15000
     );
 
     if (!response.ok) {
@@ -476,11 +477,11 @@ export async function queryCollection(
       const authHeaders = await getAuthHeaders();
       const fetchHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...authHeaders };
 
-      const response = await fetch(url, {
+      const response = await fetchWithTimeout(url, {
         method: 'POST',
         headers: fetchHeaders,
         body: JSON.stringify({ structuredQuery })
-      });
+      }, 15000);
       
       if (!response.ok) {
         const errorText = await response.text();
@@ -551,7 +552,7 @@ export async function getDocument(collection: string, docId: string, ttl?: numbe
       // Add server auth for all Firestore operations
       const headers: Record<string, string> = await getAuthHeaders();
 
-      const response = await fetch(url, { headers });
+      const response = await fetchWithTimeout(url, { headers }, 15000);
 
       if (!response.ok) {
         if (response.status === 404) return null;
@@ -644,11 +645,11 @@ export async function getDocumentsBatch(
       );
       
       const batchAuthHeaders = await getAuthHeaders();
-      const response = await fetch(`${FIRESTORE_BASE}:batchGet`, {
+      const response = await fetchWithTimeout(`${FIRESTORE_BASE}:batchGet`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...batchAuthHeaders },
         body: JSON.stringify({ documents })
-      });
+      }, 15000);
       
       if (!response.ok) {
         log.error('Batch get failed:', response.status);
@@ -772,118 +773,138 @@ export async function getLiveReleases(limit?: number, db?: D1Database): Promise<
 
 // Get DJ mixes with extended cache
 // Now supports D1 as primary source with Firebase fallback
+// Cache tiers: 1) in-memory (~0ms) → 2) KV (~30ms) → 3) D1/Firebase (~300-900ms)
 export async function getLiveDJMixes(limit?: number, db?: D1Database): Promise<Record<string, unknown>[]> {
-  const cacheKey = `live-mixes:${limit || 'all'}`;
+  const cacheKey = `live-dj-mixes-v2:${limit || 'all'}`;
+
+  // Tier 1: in-memory cache (same worker process, ~0ms)
   const cached = getCached(cacheKey);
   if (cached) return cached;
 
-  // Try D1 first if database is provided
-  if (db) {
-    try {
-      const query = limit
-        ? `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
-        : `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC`;
+  // Tier 2: KV cache (cross-edge, ~30ms) → Tier 3: D1/Firebase
+  const result = await kvCacheThrough(
+    cacheKey,
+    async () => {
+      // Try D1 first if database is provided
+      if (db) {
+        try {
+          const query = limit
+            ? `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC LIMIT ?`
+            : `SELECT data FROM dj_mixes WHERE published = 1 ORDER BY upload_date DESC`;
 
-      const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
-      const { results } = await stmt.all();
+          const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
+          const { results } = await stmt.all();
 
-      if (results && results.length > 0) {
-        const mixes = results.map((row) => {
-          try {
-            const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
-            doc.id = doc.id || (row as Record<string, unknown>).id;
-            return doc;
-          } catch (e: unknown) {
-            log.error('[firebase-rest] Failed to parse D1 mix row:', e instanceof Error ? e.message : e);
-            return null;
+          if (results && results.length > 0) {
+            const mixes = results.map((row) => {
+              try {
+                const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+                doc.id = doc.id || (row as Record<string, unknown>).id;
+                return doc;
+              } catch (e: unknown) {
+                log.error('[firebase-rest] Failed to parse D1 mix row:', e instanceof Error ? e.message : e);
+                return null;
+              }
+            }).filter(Boolean) as Record<string, unknown>[];
+
+            log.info(`[firebase-rest] D1: ${mixes.length} mixes loaded`);
+            return mixes;
           }
-        }).filter(Boolean) as Record<string, unknown>[];
-
-        log.info(`[firebase-rest] D1: ${mixes.length} mixes loaded`);
-        setCache(cacheKey, mixes, CACHE_TTL.DJ_MIXES_LIST);
-        return mixes;
+        } catch (e: unknown) {
+          log.error('[firebase-rest] D1 mixes error, falling back to Firebase:', e);
+        }
       }
-    } catch (e: unknown) {
-      log.error('[firebase-rest] D1 mixes error, falling back to Firebase:', e);
-    }
-  }
 
-  // Fallback to Firebase
-  const mixes = await queryCollection('dj-mixes', {
-    filters: [{ field: 'published', op: 'EQUAL', value: true }],
-    cacheTTL: CACHE_TTL.DJ_MIXES_LIST
-  });
+      // Fallback to Firebase
+      const mixes = await queryCollection('dj-mixes', {
+        filters: [{ field: 'published', op: 'EQUAL', value: true }],
+        cacheTTL: CACHE_TTL.DJ_MIXES_LIST
+      });
 
-  // Sort by uploadedAt descending (newest first) - done client-side to avoid needing composite index
-  mixes.sort((a, b) => {
-    const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
-    const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
-    return dateB - dateA;
-  });
+      // Sort by uploadedAt descending (newest first) - done client-side to avoid needing composite index
+      mixes.sort((a, b) => {
+        const dateA = new Date(a.uploadedAt || a.createdAt || 0).getTime();
+        const dateB = new Date(b.uploadedAt || b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
 
-  // Apply limit after sorting
-  const result = limit ? mixes.slice(0, limit) : mixes;
+      // Apply limit after sorting
+      return limit ? mixes.slice(0, limit) : mixes;
+    },
+    CACHE_CONFIG.DJ_MIXES
+  );
 
+  // Backfill in-memory cache
   setCache(cacheKey, result, CACHE_TTL.DJ_MIXES_LIST);
   return result;
 }
 
 // Get published merch with D1 support
+// Cache tiers: 1) in-memory (~0ms) → 2) KV (~30ms) → 3) D1/Firebase (~300-900ms)
 export async function getLiveMerch(limit?: number, db?: D1Database, skipCache?: boolean): Promise<Record<string, unknown>[]> {
-  const cacheKey = `live-merch:${limit || 'all'}`;
+  const cacheKey = `live-merch-v2:${limit || 'all'}`;
 
   // Skip cache if requested (for ensuring fresh data)
   if (!skipCache) {
+    // Tier 1: in-memory cache (same worker process, ~0ms)
     const cached = getCached(cacheKey);
     if (cached) return cached;
   }
 
-  // Try D1 first if database is provided
-  if (db) {
-    try {
-      const query = limit
-        ? `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC LIMIT ?`
-        : `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC`;
+  // Tier 2: KV cache (cross-edge, ~30ms) → Tier 3: D1/Firebase
+  const result = await kvCacheThrough(
+    cacheKey,
+    async () => {
+      // Try D1 first if database is provided
+      if (db) {
+        try {
+          const query = limit
+            ? `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC LIMIT ?`
+            : `SELECT data FROM merch WHERE published = 1 ORDER BY created_at DESC`;
 
-      const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
-      const { results } = await stmt.all();
+          const stmt = limit ? db.prepare(query).bind(limit) : db.prepare(query);
+          const { results } = await stmt.all();
 
-      if (results && results.length > 0) {
-        const items = results.map((row) => {
-          try {
-            const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
-            doc.id = doc.id || (row as Record<string, unknown>).id;
-            return doc;
-          } catch (e: unknown) {
-            log.error('[firebase-rest] Failed to parse D1 merch row:', e instanceof Error ? e.message : e);
-            return null;
+          if (results && results.length > 0) {
+            const items = results.map((row) => {
+              try {
+                const doc = JSON.parse((row as Record<string, unknown>).data as string) as Record<string, unknown>;
+                doc.id = doc.id || (row as Record<string, unknown>).id;
+                return doc;
+              } catch (e: unknown) {
+                log.error('[firebase-rest] Failed to parse D1 merch row:', e instanceof Error ? e.message : e);
+                return null;
+              }
+            }).filter(Boolean) as Record<string, unknown>[];
+
+            log.info(`[firebase-rest] D1: ${items.length} merch items loaded`);
+            return items;
           }
-        }).filter(Boolean) as Record<string, unknown>[];
-
-        log.info(`[firebase-rest] D1: ${items.length} merch items loaded`);
-        setCache(cacheKey, items, 10 * 60 * 1000);
-        return items;
+        } catch (e: unknown) {
+          log.error('[firebase-rest] D1 merch error, falling back to Firebase:', e);
+        }
       }
-    } catch (e: unknown) {
-      log.error('[firebase-rest] D1 merch error, falling back to Firebase:', e);
-    }
-  }
 
-  // Fallback to Firebase
-  let merchData = await queryCollection('merch', {
-    cacheKey: 'merch-firebase',
-    cacheTTL: 10 * 60 * 1000
-  });
+      // Fallback to Firebase
+      let merchData = await queryCollection('merch', {
+        cacheKey: 'merch-firebase',
+        cacheTTL: CACHE_TTL.MERCH_LIST
+      });
 
-  // Filter to only published/active items locally
-  merchData = merchData.filter(item => {
-    const isPublished = item.published !== false;
-    const isActive = !item.status || item.status === 'active';
-    return isPublished && isActive;
-  });
+      // Filter to only published/active items locally
+      merchData = merchData.filter(item => {
+        const isPublished = item.published !== false;
+        const isActive = !item.status || item.status === 'active';
+        return isPublished && isActive;
+      });
 
-  const result = limit ? merchData.slice(0, limit) : merchData;
-  setCache(cacheKey, result, 10 * 60 * 1000);
+      return limit ? merchData.slice(0, limit) : merchData;
+    },
+    CACHE_CONFIG.MERCH
+  );
+
+  // Backfill in-memory cache
+  setCache(cacheKey, result, CACHE_TTL.MERCH_LIST);
   return result;
 }
 
@@ -1006,11 +1027,11 @@ export async function setDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -1055,11 +1076,11 @@ export async function createDocumentIfNotExists(
   }
 
   const cdinHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers: cdinHeaders,
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -1123,11 +1144,11 @@ export async function updateDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers,
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -1166,10 +1187,10 @@ export async function deleteDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'DELETE',
     headers
-  });
+  }, 15000);
 
   if (!response.ok && response.status !== 404) {
     const error = await response.text();
@@ -1215,7 +1236,7 @@ export async function atomicIncrement(
   }));
 
   const atomicHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetch(commitUrl, {
+  const response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: atomicHeaders,
     body: JSON.stringify({
@@ -1226,7 +1247,7 @@ export async function atomicIncrement(
         }
       }]
     })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -1280,7 +1301,7 @@ export async function updateDocumentConditional(
   }
 
   const conditionalHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetch(commitUrl, {
+  const response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: conditionalHeaders,
     body: JSON.stringify({
@@ -1297,7 +1318,7 @@ export async function updateDocumentConditional(
         }
       }]
     })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -1378,11 +1399,11 @@ export async function arrayUnion(
   }
 
   const arrayUnionHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetch(commitUrl, {
+  const response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: arrayUnionHeaders,
     body: JSON.stringify({ writes })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -1456,11 +1477,11 @@ export async function arrayRemove(
   }
 
   const arrayRemoveHeaders: Record<string, string> = { 'Content-Type': 'application/json', ...(await getAuthHeaders()) };
-  const response = await fetch(commitUrl, {
+  const response = await fetchWithTimeout(commitUrl, {
     method: 'POST',
     headers: arrayRemoveHeaders,
     body: JSON.stringify({ writes })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -1504,11 +1525,11 @@ export async function addDocument(
     Object.assign(headers, await getAuthHeaders());
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers,
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -1550,13 +1571,14 @@ export async function verifyUserToken(idToken: string): Promise<string | null> {
 
   try {
     // Use Firebase Auth REST API to get user data from token
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
-      }
+      },
+      15000
     );
 
     if (!response.ok) {
@@ -1601,13 +1623,14 @@ export async function verifyRequestUser(request: Request): Promise<{ userId: str
   }
 
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
-      }
+      },
+      15000
     );
 
     if (!response.ok) {

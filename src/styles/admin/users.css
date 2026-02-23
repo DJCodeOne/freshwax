@@ -18,18 +18,18 @@
   .role-cards { display: flex; flex-direction: column; gap: 0.75rem; }
   .role-card-select { cursor: pointer; }
   .role-card-select input { display: none; }
-  .role-card-content { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e5e5; background: #fafafa; transition: all 0.2s; }
+  .role-card-content { display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e5e5; background: #fafafa; transition: border-color 0.2s, background 0.2s; }
   .role-card-select:hover .role-card-content { border-color: #ccc; }
   .role-card-select input:checked + .role-card-content { border-color: #000; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   .role-card-content .role-icon { font-size: 1.5rem; }
   .role-card-content .role-info { flex: 1; }
   .role-card-content .role-info strong { display: block; font-size: 0.95rem; }
   .role-card-content .role-info span { font-size: 0.8rem; color: #666; }
-  .role-card-content .role-check { width: 24px; height: 24px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: transparent; transition: all 0.2s; }
+  .role-card-content .role-check { width: 24px; height: 24px; border: 2px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; color: transparent; transition: border-color 0.2s, background 0.2s; }
   .role-card-select input:checked + .role-card-content .role-check { background: #000; border-color: #000; color: #fff; }
   
   .permissions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-  .permission-toggle { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #fafafa; border: 2px solid #e5e5e5; cursor: pointer; transition: all 0.2s; }
+  .permission-toggle { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: #fafafa; border: 2px solid #e5e5e5; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
   .permission-toggle:hover { border-color: #ccc; }
   .permission-toggle input { width: 18px; height: 18px; accent-color: #000; }
   .permission-toggle input:checked + .permission-label { font-weight: 600; }
@@ -38,7 +38,7 @@
   .status-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
   .status-option { cursor: pointer; }
   .status-option input { display: none; }
-  .status-card { padding: 1rem; border: 2px solid #e5e5e5; text-align: center; transition: all 0.2s; }
+  .status-card { padding: 1rem; border: 2px solid #e5e5e5; text-align: center; transition: border-color 0.2s, background 0.2s; }
   .status-card .status-icon { font-size: 1.5rem; display: block; margin-bottom: 0.5rem; }
   .status-card strong { display: block; font-size: 0.9rem; }
   .status-card span { font-size: 0.75rem; color: #666; }
@@ -53,8 +53,6 @@
   
   .loading-spinner { text-align: center; padding: 3rem; }
   .spinner { width: 40px; height: 40px; border: 3px solid #e5e5e5; border-top-color: #dc2626; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  
   .badge-purple { background: #7c3aed; color: #fff; }
   .badge-pending { background: #d97706; color: #fff; }
   .btn-group { display: flex; gap: 0.5rem; justify-content: flex-end; }

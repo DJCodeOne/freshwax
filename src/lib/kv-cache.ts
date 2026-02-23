@@ -115,11 +115,7 @@ export async function kvCacheThrough<T>(
 
 // Pre-defined cache prefixes and TTLs for common use cases
 export const CACHE_CONFIG = {
-  LIVE_STATUS: { prefix: 'status', ttl: 60 },        // 1 minute
-  LIVE_STATUS_OFFLINE: { prefix: 'status', ttl: 120 }, // 2 minutes when offline
-  PLAYLIST: { prefix: 'playlist', ttl: 30 },         // 30 seconds for playlist
-  USER_DATA: { prefix: 'user', ttl: 300 },           // 5 minutes for user data
   RELEASES: { prefix: 'releases', ttl: 600 },        // 10 minutes for releases
-  ARTISTS: { prefix: 'artists', ttl: 600 },          // 10 minutes for artists
   MERCH: { prefix: 'merch', ttl: 300 },              // 5 minutes for merch
+  DJ_MIXES: { prefix: 'dj-mixes', ttl: 120 },       // 2 minutes for DJ mixes
 } as const;

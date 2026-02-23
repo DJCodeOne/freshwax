@@ -887,10 +887,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 </div>
 
 <style>
-  /* Google Fonts - Modern Bold Combo */
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
-
-  /* Custom Font Classes */
+  /* Custom Font Classes (fonts loaded globally in Layout.astro) */
   .release-title {
     font-family: 'Bebas Neue', sans-serif;
     font-weight: 400;
@@ -966,7 +963,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
   .release-plate-container {
     position: relative;
     overflow: hidden;
-    transition: all 0.2s ease;
+    transition: box-shadow 0.2s ease;
     min-height: 420px;
   }
   
@@ -1007,7 +1004,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
   .rating-star {
     color: #4b5563;
     opacity: 0.5;
-    transition: all 0.2s;
+    transition: color 0.2s, opacity 0.2s, transform 0.2s;
     cursor: pointer;
   }
 
@@ -1121,11 +1118,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
   }
 
   .track-row {
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease;
   }
 
   .play-button {
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
     position: relative;
   }
 
@@ -2156,7 +2153,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           }
 
           if (cachedOwnership.ownsFullRelease) {
-            alert('You already own this release! Check your order history for download links.');
+            showToast('You already own this release! Check your order history for download links.');
             return;
           }
         }
@@ -2256,17 +2253,17 @@ const totalDurationFormatted = totalDurationSeconds > 0
       });
       
       if (hasFullRelease) {
-        alert('You already have the full release in your cart! No need to buy individual tracks.');
+        showToast('You already have the full release in your cart! No need to buy individual tracks.');
         return;
       }
-      
+
       // Check if track already in cart
       var hasTrack = items.some(function(item) {
         return item.id === releaseId && item.trackId === trackId;
       });
-      
+
       if (hasTrack) {
-        alert('This track is already in your cart!');
+        showToast('This track is already in your cart!');
         return;
       }
       

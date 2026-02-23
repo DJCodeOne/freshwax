@@ -404,7 +404,7 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.05em;
   text-decoration: none;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s;
+  transition: background-color 0.3s, color 0.3s, box-shadow 0.3s, transform 0.3s;
   position: relative;
   overflow: hidden;
   border: 2px solid rgba(255, 255, 255, 0.2);
@@ -442,6 +442,10 @@ h1, h2, h3, h4, h5, h6 {
   color: #cbd5e1;
   margin-bottom: 1.5rem;
   font-size: 1.125rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @keyframes fadeInUp {
@@ -489,7 +493,7 @@ h1, h2, h3, h4, h5, h6 {
     rgba(220, 38, 38, 0.7) 100%);
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -529,7 +533,7 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 1rem;
   overflow: hidden;
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 

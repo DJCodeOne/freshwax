@@ -14,7 +14,7 @@
     border: 2px solid var(--border-light);
     text-decoration: none;
     color: var(--text-primary);
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, transform 0.15s ease;
   }
   
   .alert-item:hover {
@@ -63,7 +63,7 @@
     border: 1px solid var(--border-light);
     text-decoration: none;
     color: var(--text-primary);
-    transition: all 0.15s ease;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
   }
   
   .quick-link:hover {
@@ -248,7 +248,7 @@
     border-radius: 8px;
     text-decoration: none;
     color: var(--text-primary);
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   }
   
   .livestream-action-btn:hover {
@@ -374,7 +374,7 @@
     background: #fffbeb;
     border: 2px solid #fbbf24;
     border-radius: 8px;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   }
   
   .bypass-request-item.expired {
@@ -468,7 +468,7 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   
   .request-actions button:disabled {
@@ -650,7 +650,7 @@
     border-radius: 8px;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
   }
 
   .btn-danger:hover {
@@ -750,7 +750,7 @@
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
 
   .btn-secondary:hover {

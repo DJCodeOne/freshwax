@@ -208,7 +208,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       font-weight: 500;
       border-radius: var(--radius-md);
       white-space: nowrap;
-      transition: all var(--transition-fast);
+      transition: color var(--transition-fast), background var(--transition-fast);
     }
     
     .nav-link:hover {
@@ -509,7 +509,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       letter-spacing: 0.03em;
       border: 2px solid transparent;
       cursor: pointer;
-      transition: all var(--transition-fast);
+      transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
       text-decoration: none;
       white-space: nowrap;
     }
@@ -629,7 +629,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       background: var(--bg-secondary);
       border: 2px solid var(--border-dark);
       color: var(--text-primary);
-      transition: all var(--transition-fast);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
     }
     
     .form-input:focus,
@@ -771,7 +771,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       font-size: 0.75rem;
       font-weight: 600;
       cursor: pointer;
-      transition: all var(--transition-fast);
+      transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
     }
     
     .filter-tab:hover {
@@ -870,7 +870,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       border-left: 4px solid var(--accent-green);
       transform: translateY(100px);
       opacity: 0;
-      transition: all 0.3s ease;
+      transition: transform 0.3s ease, opacity 0.3s ease;
       z-index: 1001;
       max-width: 400px;
     }
@@ -979,7 +979,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       background: var(--bg-secondary);
       border: 2px solid var(--border-light);
       padding: 1rem 1.25rem;
-      transition: all var(--transition-fast);
+      transition: border-color var(--transition-fast);
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -1059,7 +1059,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       border: 2px solid var(--border-light);
       text-decoration: none;
       color: var(--text-primary);
-      transition: all var(--transition-fast);
+      transition: border-color var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
     }
     
     .action-card:hover {

@@ -138,7 +138,7 @@
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
     min-width: 120px;
   }
   
@@ -160,10 +160,6 @@
   .spinner circle {
     stroke-dasharray: 50;
     stroke-dashoffset: 20;
-  }
-  
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
   
   .error-message {
@@ -243,7 +239,7 @@
     border-radius: 12px;
     padding: 2rem;
     text-align: center;
-    transition: all 0.2s;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
     box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   }
   
@@ -315,7 +311,7 @@
     font-size: 1.25rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s;
     min-width: 80px;
   }
   
@@ -437,7 +433,7 @@
     border-radius: 8px;
     color: #888;
     font-size: 1rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s;
   }
   
   .toggle-option input:checked + .toggle-label {
@@ -593,7 +589,7 @@
     font-size: 1.25rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
     min-width: 280px;
   }
   
@@ -904,7 +900,7 @@
     font-weight: 700;
     font-size: 1.125rem;
     border-radius: 10px;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
   }
   
   .cta-btn:hover {
@@ -1004,7 +1000,7 @@
     color: #fff;
     font-size: 0.9rem;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s;
   }
 
   .gc-payment-option:hover .gc-payment-label,

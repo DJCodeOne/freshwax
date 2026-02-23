@@ -5,7 +5,7 @@
     .header h1 { font-family: 'Inter', sans-serif; font-size: 1.5rem; letter-spacing: 0.05em; }
     .header h1 span { color: #dc2626; }
     .header-nav { display: flex; gap: 1rem; }
-    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .header-nav a:hover { background: #fff; color: #000; }
     
     .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
@@ -36,13 +36,13 @@
     .type-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
     .type-option { position: relative; }
     .type-option input { position: absolute; opacity: 0; pointer-events: none; }
-    .type-option label { display: block; padding: 1rem 0.5rem; border: 2px solid #ddd; text-align: center; cursor: pointer; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; transition: all 0.2s; }
+    .type-option label { display: block; padding: 1rem 0.5rem; border: 2px solid #ddd; text-align: center; cursor: pointer; font-weight: 700; font-size: 0.7rem; text-transform: uppercase; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .type-option input:checked + label { background: #000; color: #fff; border-color: #000; }
     .type-option label:hover { border-color: #000; }
     .type-emoji { font-size: 1.5rem; display: block; margin-bottom: 0.25rem; }
     
     /* Image Upload */
-    .image-upload-area { border: 3px dashed #000; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; background: #fafafa; }
+    .image-upload-area { border: 3px dashed #000; padding: 2rem; text-align: center; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; background: #fafafa; }
     .image-upload-area:hover { background: #f0f0f0; }
     .image-upload-area.dragover { background: #e0e0e0; border-style: solid; }
     .image-preview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; }
@@ -62,7 +62,7 @@
     
     /* Colors */
     .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
-    .color-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; transition: all 0.2s; }
+    .color-option { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .color-option:hover { border-color: #000; }
     .color-option.selected { border-color: #000; background: #f5f5f5; }
     .color-option input { display: none; }
@@ -76,7 +76,7 @@
     .size-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; }
     .size-option { position: relative; }
     .size-option input { position: absolute; opacity: 0; pointer-events: none; }
-    .size-option label { display: block; padding: 0.75rem; border: 2px solid #ddd; text-align: center; cursor: pointer; font-weight: 700; font-size: 0.875rem; transition: all 0.2s; }
+    .size-option label { display: block; padding: 0.75rem; border: 2px solid #ddd; text-align: center; cursor: pointer; font-weight: 700; font-size: 0.875rem; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .size-option input:checked + label { background: #000; color: #fff; border-color: #000; }
     .size-option label:hover { border-color: #000; }
     
@@ -113,7 +113,7 @@
     .preview-stock.out-of-stock { background: #dc2626; color: #fff; }
     
     /* Buttons */
-    .btn { padding: 1rem 2rem; border: 2px solid #000; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.875rem; transition: all 0.2s; font-family: inherit; }
+    .btn { padding: 1rem 2rem; border: 2px solid #000; font-weight: 700; cursor: pointer; text-transform: uppercase; font-size: 0.875rem; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; font-family: inherit; }
     .btn-primary { background: #000; color: #fff; }
     .btn-primary:hover { background: #dc2626; border-color: #dc2626; }
     .btn-primary:disabled { background: #ccc; border-color: #ccc; cursor: not-allowed; }
@@ -125,7 +125,7 @@
     .submit-row .btn { flex: 1; }
     
     /* Toast */
-    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #000; color: #fff; font-weight: 700; z-index: 9999; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #000; color: #fff; font-weight: 700; z-index: 9999; transform: translateY(100px); opacity: 0; transition: background 0.3s, color 0.3s, border-color 0.3s, outline 0.3s, transform 0.3s, opacity 0.3s; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { background: #22c55e; }
     .toast.error { background: #dc2626; }

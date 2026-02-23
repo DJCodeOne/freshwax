@@ -349,7 +349,7 @@
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
   }
 
   .fs-chat-tab:hover {
@@ -474,7 +474,7 @@
     border-radius: 8px;
     font-size: 1.1rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, transform 0.2s, outline 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -561,7 +561,7 @@
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s;
   }
   
   .fs-shoutout-btn:hover {
@@ -1020,7 +1020,7 @@
     border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
     width: 100%;
@@ -1186,7 +1186,7 @@
     padding: 0.625rem 0.875rem;
     border-radius: 8px;
     text-decoration: none;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s;
     border: 1px solid #4b5563;
   }
 
@@ -1505,7 +1505,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
     white-space: nowrap;
     line-height: 1.2;
   }
@@ -1535,7 +1535,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     font-size: 0.875rem;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s;
   }
 
   .schedule-item:hover {
@@ -1821,7 +1821,7 @@
     text-decoration: none;
     font-size: 0.8rem;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: background 0.2s;
     margin-left: 0.5rem;
   }
   
@@ -1843,7 +1843,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
     margin-left: 0.5rem;
   }
   
@@ -1965,7 +1965,7 @@
     border-radius: 50%;
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
   }
   
   .shoutout-btn:hover {
@@ -2115,7 +2115,7 @@
     border-radius: 10px;
     font-size: 1.5rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2138,7 +2138,7 @@
     font-family: 'Inter', sans-serif;
     letter-spacing: 1px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   
   .send-shoutout-btn:hover:not(:disabled) {
@@ -2344,7 +2344,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, transform 0.2s ease;
     color: inherit;
     font-family: inherit;
   }
@@ -3218,11 +3218,6 @@
     border-radius: 2px;
   }
 
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
   /* DJ Info */
   .audio-dj-info {
     text-align: center;
@@ -3363,7 +3358,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
     flex-shrink: 0;
   }
 
@@ -3612,7 +3607,7 @@
     border-radius: 6px;
     color: #888;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     flex-shrink: 0;
   }
 
@@ -3766,7 +3761,7 @@
     border-radius: 8px;
     color: #888;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s ease;
     overflow: hidden;
     flex-shrink: 0;
   }
@@ -3911,7 +3906,7 @@
     font-size: 11px;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
   
   .record-btn:disabled {
@@ -3955,7 +3950,7 @@
     height: 10px;
     border-radius: 50%;
     background: #666;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
   
   .record-btn:not(:disabled):hover .record-dot {
@@ -4517,7 +4512,7 @@
     cursor: pointer;
     background: transparent;
     color: #666;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s;
   }
   
   .booking-type-btn.active {
@@ -4601,7 +4596,7 @@
     font-weight: 600;
     font-size: 0.9375rem;
     color: #111 !important;
-    transition: all 0.15s;
+    transition: background-color 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
     min-width: 36px;
     min-height: 36px;
   }
@@ -5586,7 +5581,7 @@
     height: 10px;
     border-radius: 50%;
     background: #666;
-    transition: all 0.3s;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
   }
   
   .ready-indicator.is-ready .ready-dot {
@@ -5693,7 +5688,7 @@
     color: #fff;
     font-size: 0.75rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
   .copy-key-btn:hover {
     background: #10b981;
@@ -5762,7 +5757,7 @@
     font-weight: 600;
     font-size: 0.9375rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
   }
   .takeover-request-btn:hover {
     background: linear-gradient(135deg, #fbbf24, #f59e0b);
@@ -5788,10 +5783,6 @@
   }
   .takeover-pending .pending-icon {
     animation: spin 2s linear infinite;
-  }
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
   }
   .cancel-takeover-btn {
     margin-left: auto;
@@ -6007,7 +5998,7 @@
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   
   .accept-takeover-btn {
@@ -7492,7 +7483,7 @@
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 
@@ -7575,7 +7566,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 .close-btn:hover {
@@ -7609,7 +7600,7 @@
   border-radius: 8px;
   color: #fff;
   font-size: 0.95rem;
-  transition: all 0.2s;
+  transition: outline 0.2s, background 0.2s, border-color 0.2s;
 }
 
 .playlist-url-input:focus {
@@ -7638,7 +7629,7 @@
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s;
 }
 
 .add-to-playlist-btn:hover {
@@ -7696,7 +7687,7 @@
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .clear-queue-btn:hover {
@@ -7744,7 +7735,7 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .playlist-item:hover {
@@ -7833,7 +7824,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  transition: all 0.2s;
+  transition: background 0.2s, color 0.2s;
   flex-shrink: 0;
 }
 
@@ -7890,7 +7881,7 @@
   border-radius: 50%;
   color: #fff;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
 
 .control-btn:hover {
@@ -8657,7 +8648,7 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
   font-weight: 700;
   font-size: 0.75rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }

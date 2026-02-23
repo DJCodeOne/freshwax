@@ -123,6 +123,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   src={release.coverArtUrl || '/place-holder.webp'}
                   alt={`${release.releaseName} by ${release.artistName}`}
                   class="artwork"
+                  width="256"
+                  height="256"
                   loading="lazy"
                   decoding="async"
                 />
@@ -436,7 +438,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border-radius: 10px;
     text-decoration: none;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
   }
   
   .browse-btn:hover {
@@ -458,7 +460,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border-radius: 16px;
     overflow: hidden;
     position: relative;
-    transition: all 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
   }
   
   .preorder-card:hover {
@@ -683,7 +685,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     font-size: 0.875rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
   
   .preorder-btn:hover {

@@ -640,6 +640,11 @@
   color: #000;
 }
 
+/* Shared keyframes for admin pages */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Reduced Motion — universal + admin-specific overrides */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

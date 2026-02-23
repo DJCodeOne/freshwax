@@ -291,7 +291,7 @@
     border-radius: 10px;
     font-weight: 600;
     font-size: 1.125rem;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
   }
   
   .action-btn.primary {
@@ -392,7 +392,7 @@
     padding: 0.5rem 1rem;
     border: 1px solid #666;
     border-radius: 6px;
-    transition: all 0.2s;
+    transition: color 0.2s, background-color 0.2s, border-color 0.2s;
   }
   
   .back-link:hover {
@@ -489,7 +489,7 @@
     border-radius: 8px;
     font-weight: 600;
     font-size: 0.9rem;
-    transition: all 0.2s;
+    transition: background 0.2s, opacity 0.2s, box-shadow 0.2s;
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.5), 0 0 30px rgba(16, 185, 129, 0.3);
     animation: goLiveGlow 2s ease-in-out infinite;
   }
@@ -571,7 +571,7 @@
     color: #d1d5db;
     font-size: 0.8rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
   }
   
   .sign-out-btn:hover {
@@ -621,9 +621,9 @@
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s, opacity 0.2s;
   }
-  
+
   .lobby-end-stream-btn:hover:not(.disabled) {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
@@ -790,7 +790,7 @@
     border-radius: 8px;
     text-decoration: none;
     color: #fff;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
   }
 
   .multi-stream-link:hover {
@@ -864,9 +864,9 @@
     text-decoration: none;
     color: #fff;
     font-weight: 600;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
   }
-  
+
   .setup-link-btn:hover {
     border-color: #3b82f6;
     background: linear-gradient(135deg, #1e3a5f, #1e40af);
@@ -922,7 +922,7 @@
     flex: 0 0 auto;
     display: flex;
     flex-direction: column;
-    transition: all 0.3s ease;
+    transition: flex 0.3s ease;
   }
 
   /* Expand video when stream key section is hidden (during live) */
@@ -987,7 +987,7 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
   }
 
   .indicator-dot.disconnected {
@@ -1156,7 +1156,7 @@
     border-radius: 50%;
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
   }
 
   .player-control-btn:hover {
@@ -1232,7 +1232,7 @@
     border: 2px solid #333;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease;
     min-width: 60px;
   }
 
@@ -1252,7 +1252,7 @@
   .toggle-arrow {
     font-size: 0.75rem;
     color: #444;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, text-shadow 0.2s ease;
   }
 
   .toggle-arrow.active {
@@ -1468,7 +1468,7 @@
     padding: 0.2rem 0.5rem;
     font-size: 0.7rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
     font-family: 'JetBrains Mono', monospace;
   }
 
@@ -1627,7 +1627,7 @@
     border-radius: 8px;
     padding: 0.6rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
     color: #888;
   }
 
@@ -2163,7 +2163,7 @@
     width: 0%;
     background: linear-gradient(90deg, #22c55e, #84cc16);
     border-radius: 4px;
-    transition: all 0.1s ease;
+    transition: width 0.1s ease, left 0.1s ease;
     box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
   }
 
@@ -2244,7 +2244,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   }
 
   .mute-btn-small:hover {
@@ -2912,7 +2912,7 @@
     font-size: 0.9rem;
     padding: 0.35rem 0.5rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, transform 0.2s;
   }
 
   .capture-thumb-btn:hover {
@@ -3195,7 +3195,7 @@
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
 
   .software-btn:hover {
@@ -3241,7 +3241,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     flex: 1;
     justify-content: center;
   }
@@ -3323,7 +3323,7 @@
     border: 2px solid #333;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
   }
 
   .relay-station-card:hover {
@@ -3475,7 +3475,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     flex-shrink: 0;
   }
 
@@ -3660,7 +3660,7 @@
     flex-shrink: 0;
     font-weight: 600;
     font-family: 'Inter', sans-serif;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s, opacity 0.2s;
   }
 
   .spawn-key-btn:hover {
@@ -3768,7 +3768,7 @@
     text-decoration: none;
     font-size: 0.8rem;
     font-weight: 500;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
   }
 
   .multi-stream-settings-btn:hover {
@@ -3813,7 +3813,7 @@
     color: #d1d5db;
     cursor: pointer;
     font-size: 0.75rem;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
   }
 
   .capture-thumb-btn:hover {
@@ -3916,7 +3916,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
   }
 
   .share-btn:disabled {
@@ -4106,7 +4106,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;
   }
 
   .relay-select-btn:hover {
@@ -4290,7 +4290,7 @@
     border: 2px solid #333;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
   }
 
   .relay-source-item:hover {
@@ -4358,7 +4358,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
   }
 
   .modal-btn.primary {
@@ -4840,7 +4840,7 @@
     border-radius: 8px;
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
     flex-shrink: 0;
   }
 
@@ -4980,7 +4980,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   }
 
   .toggle-visibility-btn:hover {
@@ -5537,7 +5537,7 @@
     font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s;
   }
   
   .dm-btn:hover {
@@ -6024,7 +6024,7 @@
     border: 2px solid #374151;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
     text-align: center;
   }
 
@@ -6309,7 +6309,7 @@
     border: 2px solid #374151;
     border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background-color 0.2s;
   }
   
   .dm-dj-item:hover {
@@ -7330,7 +7330,7 @@
   .bypass-form-inner textarea:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
   .bypass-form-inner textarea::placeholder { color: #777; }
   
-  .bypass-request-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+  .bypass-request-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 700; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s; }
   .bypass-request-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); }
   .bypass-request-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   
@@ -7338,10 +7338,10 @@
   .bypass-status-card.approved { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.4); }
   .bypass-status-card.denied { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.4); }
   
-  .cancel-bypass-btn, .resubmit-bypass-btn { padding: 0.75rem 1rem; background: transparent; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px; color: #fff; font-size: 1.0625rem; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 0.5rem; }
+  .cancel-bypass-btn, .resubmit-bypass-btn { padding: 0.75rem 1rem; background: transparent; border: 2px solid rgba(255,255,255,0.3); border-radius: 10px; color: #fff; font-size: 1.0625rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; width: 100%; margin-top: 0.5rem; }
   .cancel-bypass-btn:hover, .resubmit-bypass-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
   
-  .continue-bypass-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 0.5rem; }
+  .continue-bypass-btn { width: 100%; padding: 1rem 1.5rem; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border: none; border-radius: 12px; color: #fff; font-size: 1.25rem; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; margin-top: 0.5rem; }
   .continue-bypass-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); }
   
   @media (max-width: 600px) {
@@ -7413,7 +7413,7 @@
     font-size: 1.125rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
     white-space: nowrap;
   }
   .redeem-code-btn:hover:not(:disabled) {
@@ -7761,7 +7761,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   }
 
   .capture-thumb-btn:hover {
@@ -7862,7 +7862,7 @@
     font-size: 0.75rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, opacity 0.2s;
   }
 
   .share-btn:disabled {
@@ -8017,7 +8017,7 @@
     font-weight: 600;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -8037,7 +8037,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s;
   }
 
   .pro-select-btn:hover {
@@ -8085,7 +8085,7 @@
     font-weight: 600;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
     flex-shrink: 0;
   }
 
@@ -8120,7 +8120,7 @@
     font-size: 0.75rem;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
     flex-shrink: 0;
   }
 
@@ -8207,7 +8207,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
     flex-shrink: 0;
   }
 
@@ -8243,7 +8243,7 @@
     font-weight: 600;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s, color 0.2s;
   }
 
   .share-btn-main:hover {
@@ -8361,7 +8361,7 @@
     font-size: 0.8rem;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   }
 
   .share-action-btn:hover {
@@ -8452,7 +8452,7 @@
     font-weight: 600;
     font-family: 'Inter', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
   }
 
   .share-platform-btn.twitter {
@@ -9452,7 +9452,7 @@
     background: rgba(30, 30, 30, 0.8);
     border: 1px solid #374151;
     border-radius: 4px;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s;
   }
 
   .broadcast-mode-toggle .indicator.source-toggle:hover {
@@ -9639,7 +9639,7 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid #333;
   border-radius: 12px;
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
 }
 
 .init-check-item.checking {
@@ -9681,10 +9681,6 @@
   border-top-color: #dc2626;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 .init-check-item.connected .init-spinner,
@@ -9806,7 +9802,7 @@
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   position: relative;
   overflow: hidden;
 }
@@ -9991,7 +9987,7 @@
   font-weight: 700;
   font-size: 0.75rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s, transform 0.15s;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
 }

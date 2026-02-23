@@ -268,14 +268,9 @@ const releaseItemList = {
         const totalPrice = parseFloat(btn.getAttribute('data-total-price') || '0');
 
         if (releasesData.length === 0) {
-          alert('No releases found for this label');
+          showToast('No releases found for this label', 'error');
           return;
         }
-
-        // Confirm purchase
-        const confirmed = confirm(`Add all ${releasesData.length} releases from "${label}" to your cart?\n\nTotal: £${totalPrice.toFixed(2)}\n\nThis includes:\n${releasesData.slice(0, 5).map(r => '• ' + r.artist + ' - ' + r.title).join('\n')}${releasesData.length > 5 ? '\n... and ' + (releasesData.length - 5) + ' more' : ''}`);
-
-        if (!confirmed) return;
 
         // Disable button during operation
         btn.disabled = true;
@@ -406,7 +401,7 @@ const releaseItemList = {
     }
 
     .label-nav-link {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .label-nav-link:active {
@@ -427,7 +422,7 @@ const releaseItemList = {
 
     /* Buy All Discography Button */
     .buy-discography-btn {
-      transition: all 0.3s ease;
+      transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
     }
 
     .buy-discography-btn:hover {

@@ -738,8 +738,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     </div>
   </div>
 
-  <!-- JSZip for ZIP downloads -->
-  <script is:inline src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <!-- JSZip loaded dynamically on first ZIP download click (see downloadZip function) -->
 
   <Footer />
 </Layout>
@@ -4221,7 +4220,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
   }
 
   .go-plus-header-btn:hover {
@@ -4533,7 +4532,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 0.5rem;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
   }
 
   .goplus-benefits li:hover {
@@ -4571,7 +4570,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -4856,7 +4855,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: transform 0.2s, box-shadow 0.2s;
     font-size: 0.95rem;
   }
 
@@ -4972,7 +4971,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     font-weight: 700;
     color: #22c55e;
     letter-spacing: 0.05em;
-    transition: all 0.3s ease;
+    transition: color 0.3s ease, text-shadow 0.3s ease;
   }
 
   .referral-code.code-generating {
@@ -5030,7 +5029,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     border: 1px solid rgba(34, 197, 94, 0.4);
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
     display: none;
     align-items: center;
     justify-content: center;
@@ -5205,7 +5204,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     border: 2px solid transparent;
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     padding: 0;
   }
 
@@ -5237,7 +5236,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     font-weight: 600;
     font-size: 0.875rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
   }
 
   .btn-save-badge:hover:not(:disabled) {

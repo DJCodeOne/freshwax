@@ -2,7 +2,7 @@
 // Firebase REST API operations using service account authentication
 // Works in Cloudflare Workers (no Node.js dependencies)
 
-import { createLogger } from './api-utils';
+import { createLogger, fetchWithTimeout } from './api-utils';
 
 const log = createLogger('firebase-service-account');
 
@@ -149,14 +149,14 @@ export async function getServiceAccountToken(serviceAccountKey: string): Promise
   const serviceAccount: ServiceAccount = JSON.parse(serviceAccountKey);
   const jwt = await createJWT(serviceAccount);
 
-  const response = await fetch('https://oauth2.googleapis.com/token', {
+  const response = await fetchWithTimeout('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion: jwt
     })
-  });
+  }, 10000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -239,9 +239,9 @@ export async function saGetDocument(
   const token = await getServiceAccountToken(serviceAccountKey);
   const url = getFirestoreUrl(projectId, `${collection}/${docId}`);
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { 'Authorization': `Bearer ${token}` }
-  });
+  }, 15000);
 
   if (response.status === 404) return null;
 
@@ -279,14 +279,14 @@ export async function saSetDocument(
     fields[key] = toFirestoreValue(value);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -361,14 +361,14 @@ export async function saUpdateDocument(
     fields[key] = toFirestoreValue(value);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -397,10 +397,10 @@ export async function saDeleteDocument(
   const token = await getServiceAccountToken(serviceAccountKey);
   const url = getFirestoreUrl(projectId, `${collection}/${docId}`);
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${token}` }
-  });
+  }, 15000);
 
   if (!response.ok && response.status !== 404) {
     const error = await response.text();
@@ -424,14 +424,14 @@ export async function saAddDocument(
     fields[key] = toFirestoreValue(value);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ fields })
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();
@@ -531,14 +531,14 @@ export async function saQueryCollection(
       structuredQuery.limit = options.limit;
     }
 
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ structuredQuery })
-    });
+    }, 15000);
 
     if (!response.ok) {
       const error = await response.text();
@@ -577,9 +577,9 @@ export async function saQueryCollection(
     url += '?' + params.join('&');
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     headers: { 'Authorization': `Bearer ${token}` }
-  });
+  }, 15000);
 
   if (!response.ok) {
     const error = await response.text();

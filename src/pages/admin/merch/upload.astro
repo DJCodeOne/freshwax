@@ -757,8 +757,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // Use canvas.toBlob to avoid CSP issues with data: URLs
       canvas.toBlob(blob => {
-        const croppedFile = new File([blob], editorState.originalFile?.name || 'image.jpg', { type: 'image/jpeg' });
-        const croppedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        const croppedFile = new File([blob], editorState.originalFile?.name || 'image.webp', { type: 'image/webp' });
+        const croppedDataUrl = canvas.toDataURL('image/webp', 0.9);
 
         if (editorState.imageIndex === -1) {
           // New image - cropped so keepOriginal is false
@@ -779,7 +779,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         renderImagePreviews();
         updatePreview();
         closeImageEditor();
-      }, 'image/jpeg', 0.9);
+      }, 'image/webp', 0.9);
     };
 
     window.useOriginalImage = function() {

@@ -1112,7 +1112,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       try {
         const formData = new FormData();
-        formData.append('file', blob, 'cropped.jpg');
+        formData.append('file', blob, 'cropped.webp');
         formData.append('folder', `merch/${id}`);
         formData.append('filename', `${Date.now()}_cropped.webp`);
 
@@ -1148,7 +1148,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-cache, no-store, must-r
 
       uploadProgress.style.display = 'none';
       closeImageEditor();
-    }, 'image/jpeg', 0.9);
+    }, 'image/webp', 0.9);
   };
 
   window.useOriginalImage = async function() {

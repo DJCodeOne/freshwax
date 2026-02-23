@@ -92,7 +92,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <!-- LEFT: Images + Buy Button (like ReleasePlate) -->
           <div class="images-section">
             <div class="main-image" id="mainImage">
-              <img src="/place-holder.webp" alt="Vinyl" id="mainImageImg" />
+              <img src="/place-holder.webp" alt="Vinyl" id="mainImageImg" width="350" height="350" />
               <div class="sale-badge" id="saleBadge" style="display: none;">SALE</div>
             </div>
             <div class="image-thumbnails" id="imageThumbnails"></div>
@@ -248,7 +248,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     margin-bottom: 1.5rem;
     padding: 0.5rem 1rem;
     border: 2px solid #fff;
-    transition: all 0.15s;
+    transition: background 0.15s, color 0.15s;
   }
 
   .back-link:hover {
@@ -388,7 +388,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     font-weight: 900;
     text-transform: uppercase;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s;
   }
 
   .purchase-section-left .add-to-bag-btn:hover {
@@ -442,7 +442,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     border: 2px solid #fff;
     overflow: hidden;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: border-color 0.15s;
   }
 
   .thumbnail:hover, .thumbnail.active {
@@ -868,7 +868,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     padding: 0.75rem 0.5rem;
     background: linear-gradient(to right, #374151, #1f2937);
     border: 2px solid #4b5563;
-    transition: all 0.15s;
+    transition: background 0.15s, border-color 0.15s;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
 
@@ -913,7 +913,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    transition: all 0.15s;
+    transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
     padding: 0;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
   }

@@ -104,6 +104,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
                     <img
                       src={post.featuredImage}
                       alt={post.title}
+                      width="400"
+                      height="225"
                       loading="lazy"
                     />
                     {post.category && (
@@ -260,7 +262,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
   }
 
   .filter-btn:hover {
@@ -295,7 +297,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
     border-radius: 1rem;
     overflow: hidden;
     border: 1px solid #222222;
-    transition: all 0.3s;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
     opacity: 0;
     animation: fadeSlideUp 0.5s ease-out forwards;
   }

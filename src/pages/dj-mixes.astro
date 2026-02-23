@@ -277,6 +277,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               <div class="mix-artwork-container">
                 <img
                   src={mix.thumbUrl || mix.artwork_url || mix.artworkUrl || '/place-holder.webp'}
+                  srcset={mix.thumbUrl && (mix.artwork_url || mix.artworkUrl) ? `${mix.thumbUrl} 400w, ${mix.artwork_url || mix.artworkUrl} 800w` : undefined}
+                  sizes={mix.thumbUrl && (mix.artwork_url || mix.artworkUrl) ? "260px" : undefined}
                   alt={`${mix.title} by ${mix.dj_name || mix.djName}`}
                   class="mix-artwork"
                   width="260"
@@ -1064,7 +1066,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         // Check if audio URL exists
         if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
           console.error('[DJ-MIXES] No audio URL for mix:', mixId);
-          alert('This mix has no audio file available. The upload may not have completed successfully.');
+          showToast('This mix has no audio file available. The upload may not have completed successfully.', 'error');
           return;
         }
 

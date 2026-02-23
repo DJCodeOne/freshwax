@@ -212,7 +212,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
     height: 8px;
     background: #dc2626;
     border-radius: 50%;
-    transition: all 0.3s;
+    transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
   }
 
   .shuffle-status.playing .status-dot {
@@ -295,7 +295,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
     font-size: 0.75rem;
     font-weight: 600;
     text-decoration: none;
-    transition: all 0.2s;
+    transition: color 0.2s;
   }
 
   .shuffle-release-link:hover {
@@ -387,7 +387,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: background 0.2s, transform 0.2s;
   }
 
   .control-btn:hover {
@@ -527,7 +527,7 @@ const validTracks = tracks.filter(t => t.previewUrl);
     background: rgba(255, 255, 255, 0.05);
     border-radius: 0.5rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: background 0.2s, border-color 0.2s;
     border: 1px solid transparent;
   }
 

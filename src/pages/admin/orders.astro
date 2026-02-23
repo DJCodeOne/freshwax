@@ -4,7 +4,7 @@
 // Status flow: Digital = instant completed | Physical = pending → processing → shipped → delivered
 
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { queryCollection, getDocument } from '../../lib/firebase-rest';
+import { queryCollection, getDocumentsBatch } from '../../lib/firebase-rest';
 import { saQueryCollection } from '../../lib/firebase-service-account';
 import { requireAdminAuth } from '../../lib/admin';
 
@@ -36,12 +36,12 @@ const userIdsToFetch = [...new Set(ordersNeedingUserLookup.map((data: Record<str
   data.customerId || data.userId || data.customer?.userId
 ).filter(Boolean))] as string[];
 
-// Fetch all needed users in parallel (single batch instead of N individual queries)
-const userResults = await Promise.all(userIdsToFetch.map(id => getDocument('users', id).catch(() => null)));
+// Fetch all needed users in a single batch request
+const userBatchMap = await getDocumentsBatch('users', userIdsToFetch);
 const userMap: Record<string, Record<string, unknown>> = {};
-userIdsToFetch.forEach((id, i) => {
-  if (userResults[i]) userMap[id] = userResults[i]!;
-});
+for (const [id, doc] of userBatchMap) {
+  userMap[id] = doc;
+}
 
 const orders = allOrders.map((data: Record<string, unknown>) => {
   // Get customer info - check nested customer object first, then top-level fields

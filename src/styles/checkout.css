@@ -125,10 +125,6 @@
     animation: spin 1s linear infinite;
   }
   
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-  
   /* Responsive - Tablet */
   @media (max-width: 768px) {
     .checkout-main {

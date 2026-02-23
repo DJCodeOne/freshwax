@@ -5,7 +5,7 @@
     .header { background: #000; color: #fff; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
     .header h1 { font-family: 'Inter', sans-serif; font-weight: 700; font-size: 1.5rem; letter-spacing: 0.05em; }
     .header-nav { display: flex; gap: 1rem; }
-    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: all 0.2s; }
+    .header-nav a { color: #fff; text-decoration: none; padding: 0.5rem 1rem; border: 2px solid #fff; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .header-nav a:hover { background: #fff; color: #000; }
     
     .container { max-width: 1400px; margin: 0 auto; padding: 2rem; }
@@ -26,7 +26,7 @@
     .section-body { padding: 1.5rem; }
     
     .tabs { display: flex; gap: 0; border-bottom: 2px solid #000; }
-    .tab { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: none; background: #f5f5f5; transition: all 0.2s; }
+    .tab { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: none; background: #f5f5f5; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .tab:hover { background: #e5e5e5; }
     .tab.active { background: #000; color: #fff; }
     
@@ -62,13 +62,13 @@
     .selected-product-clear { background: #dc2626; color: #fff; border: none; padding: 0.5rem 1rem; cursor: pointer; font-weight: 700; font-size: 0.75rem; }
     
     .variant-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin: 1rem 0; }
-    .variant-option { padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .variant-option { padding: 0.75rem; border: 2px solid #ddd; cursor: pointer; text-align: center; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .variant-option:hover { border-color: #000; }
     .variant-option.selected { border-color: #dc2626; background: #fef2f2; }
     .variant-option-label { font-weight: 600; font-size: 0.875rem; }
     .variant-option-stock { font-size: 0.75rem; color: #666; }
     
-    .btn { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: 2px solid #000; transition: all 0.2s; }
+    .btn { padding: 1rem 2rem; font-weight: 700; font-size: 0.875rem; text-transform: uppercase; cursor: pointer; border: 2px solid #000; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .btn-primary { background: #000; color: #fff; }
     .btn-primary:hover { background: #dc2626; border-color: #dc2626; }
     .btn-success { background: #22c55e; color: #fff; border-color: #22c55e; }
@@ -92,7 +92,7 @@
     .stock-badge.out-of-stock { background: #fee2e2; color: #991b1b; }
     
     .action-btns { display: flex; gap: 0.5rem; }
-    .action-btn { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #000; background: #fff; cursor: pointer; transition: all 0.2s; }
+    .action-btn { padding: 0.5rem 0.75rem; font-size: 0.75rem; font-weight: 700; border: 2px solid #000; background: #fff; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s, outline 0.2s, transform 0.2s, opacity 0.2s; }
     .action-btn:hover { background: #000; color: #fff; }
     .action-btn.receive { border-color: #22c55e; color: #22c55e; }
     .action-btn.receive:hover { background: #22c55e; color: #fff; }
@@ -125,7 +125,7 @@
     .modal-footer { padding: 1rem 1.5rem; border-top: 2px solid #eee; display: flex; justify-content: flex-end; gap: 1rem; }
     
     /* Toast */
-    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #000; color: #fff; font-weight: 600; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 2000; }
+    .toast { position: fixed; bottom: 2rem; right: 2rem; padding: 1rem 1.5rem; background: #000; color: #fff; font-weight: 600; transform: translateY(100px); opacity: 0; transition: background 0.3s, color 0.3s, border-color 0.3s, outline 0.3s, transform 0.3s, opacity 0.3s; z-index: 2000; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { background: #22c55e; }
     .toast.error { background: #dc2626; }
