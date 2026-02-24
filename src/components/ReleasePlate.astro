@@ -145,8 +145,12 @@ const {
 } = Astro.props;
 
 // Derive thumb URL for srcset (400w thumbnail + 800w cover)
+// Encode spaces in URLs for valid srcset parsing
+const encUrl = (u: string) => u.replace(/ /g, '%20');
 const thumbSrc = thumbUrl || (coverArtUrl?.includes('/cover.webp') ? coverArtUrl.replace('/cover.webp', '/thumb.webp') : undefined);
 const hasSrcset = thumbSrc && coverArtUrl !== '/place-holder.webp';
+const srcsetThumb = thumbSrc ? encUrl(thumbSrc) : '';
+const srcsetCover = coverArtUrl ? encUrl(coverArtUrl) : '';
 
 // Use whichever label field is available
 const displayLabel = labelName || recordLabel || copyrightHolder || '';
@@ -301,7 +305,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
       <div class="w-64 h-64 bg-white rounded-md shadow-md mb-4 overflow-hidden">
         <img
           src={coverArtUrl}
-          srcset={hasSrcset ? `${thumbSrc} 400w, ${coverArtUrl} 800w` : undefined}
+          srcset={hasSrcset ? `${srcsetThumb} 400w, ${srcsetCover} 800w` : undefined}
           sizes={hasSrcset ? "256px" : undefined}
           alt={`${releaseName} by ${artistName}`}
           class="w-full h-full object-cover"
