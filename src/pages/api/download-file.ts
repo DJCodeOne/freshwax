@@ -89,15 +89,26 @@ export const GET: APIRoute = async ({ request, locals }) => {
     // Verify order ownership
     const order = await getDocument('orders', orderId);
     if (!order) {
+      log.error('[download-file] Order not found:', orderId);
       return ApiErrors.notFound('Order not found');
     }
 
-    const orderUserId = order.customer?.userId || order.userId || order.customerId;
+    // Check all possible userId field locations
+    const customerObj = order.customer as Record<string, unknown> | undefined;
+    const orderUserId = customerObj?.userId || order.userId || order.customerId;
     if (orderUserId !== userId) {
-      return ApiErrors.forbidden('Unauthorized');
+      log.error('[download-file] Ownership mismatch:', {
+        orderId,
+        orderCustomerUserId: customerObj?.userId,
+        orderUserId: order.userId,
+        orderCustomerId: order.customerId,
+        requestingUserId: userId
+      });
+      return ApiErrors.forbidden('Unauthorized: ownership mismatch');
     }
 
     if (order.paymentStatus !== 'completed') {
+      log.error('[download-file] Payment not completed:', { orderId, status: order.paymentStatus });
       return ApiErrors.forbidden('Payment not yet completed');
     }
 

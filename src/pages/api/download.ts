@@ -57,9 +57,10 @@ export const GET: APIRoute = async ({ request, url, locals }) => {
 
   // SECURITY: Verify user has purchased content containing this URL
   try {
+    // Query by customer.userId (same field used by get-orders.ts)
     const userOrders = await queryCollection('orders', {
       filters: [
-        { field: 'customerId', op: 'EQUAL', value: userId },
+        { field: 'customer.userId', op: 'EQUAL', value: userId },
         { field: 'paymentStatus', op: 'EQUAL', value: 'completed' }
       ],
       limit: 500
