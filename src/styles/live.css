@@ -3706,22 +3706,27 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* Playlist Duration Box */
-  .np-duration-box {
-    display: flex;
-    flex-direction: column;
+  /* Playlist Duration Timer — top-right of player container */
+  .np-duration-box.player-timer {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 20;
+    display: none;
+    flex-direction: row;
     align-items: center;
-    gap: 0.125rem;
-    padding: 0.25rem 0.5rem;
-    background: #222;
-    border-radius: 6px;
-    min-width: 55px;
+    gap: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .np-duration-label {
     font-size: 9px;
     font-weight: 700;
-    color: #666;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -3731,14 +3736,6 @@
     font-weight: 700;
     color: #dc2626;
     font-variant-numeric: tabular-nums;
-  }
-
-  .dj-info-bar.playlist-mode .np-duration-box {
-    background: rgba(220, 38, 38, 0.15);
-  }
-
-  .dj-info-bar.playlist-mode .np-duration-label {
-    color: #f87171;
   }
 
   /* Inline Reactions Styles */
@@ -7060,21 +7057,6 @@
     .dj-info-bar .dj-avatar {
       width: 28px;
       height: 28px;
-    }
-
-    .np-duration-box {
-      padding: 0.125rem 0.5rem;
-      min-width: 50px;
-      flex-direction: row;
-      gap: 0.25rem;
-    }
-
-    .np-duration {
-      font-size: 13px;
-    }
-
-    .np-duration-label {
-      font-size: 9px;
     }
 
     .stream-genre {

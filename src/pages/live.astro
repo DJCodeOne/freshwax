@@ -323,6 +323,11 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         </div>
         
         <div class="player-container" id="playerContainer">
+          <!-- Duration Timer (top-right corner) -->
+          <div class="np-duration-box player-timer" id="bottomDurationBox" style="display: none;">
+            <span class="np-duration-label" id="bottomDurationLabel">LEFT</span>
+            <span class="np-duration" id="bottomDuration">--:--</span>
+          </div>
           <!-- Relay Source Attribution -->
           <div class="relay-attribution" id="relayAttribution">www.theundergroundlair.fr</div>
 
@@ -586,10 +591,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
             <span class="dj-info-title" id="npTrackTitle"></span>
           </div>
           <div class="dj-info-right">
-            <div class="np-duration-box" id="bottomDurationBox" style="display: none;">
-              <span class="np-duration-label" id="bottomDurationLabel">LEFT</span>
-              <span class="np-duration" id="bottomDuration">--:--</span>
-            </div>
             <span class="stream-genre" id="streamGenre">Jungle / D&B</span>
           </div>
         </div>
