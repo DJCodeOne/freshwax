@@ -723,6 +723,19 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       </div>
     </div>
 
+    <!-- Download Status Modal -->
+    <div id="downloadStatusModal" class="dl-status-modal hidden">
+      <div class="dl-status-backdrop"></div>
+      <div class="dl-status-content">
+        <div id="dlStatusIcon" class="dl-status-icon">
+          <svg class="dl-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-3.93 7.07l-2.83-2.83M7.76 7.76L4.93 4.93"/></svg>
+        </div>
+        <h3 id="dlStatusTitle" class="dl-status-title">Preparing Download</h3>
+        <p id="dlStatusFilename" class="dl-status-filename"></p>
+        <p id="dlStatusText" class="dl-status-text">Authorizing...</p>
+      </div>
+    </div>
+
     <!-- ZIP Progress Modal -->
     <div id="zipProgressModal" class="zip-modal hidden">
       <div class="zip-modal-backdrop"></div>
@@ -1706,63 +1719,102 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (statSpentEl) statSpentEl.textContent = '£' + totalSpent.toFixed(2);
   }
 
+  // Download status modal helpers
+  function showDownloadModal(filename, status) {
+    var modal = document.getElementById('downloadStatusModal');
+    var titleEl = document.getElementById('dlStatusTitle');
+    var filenameEl = document.getElementById('dlStatusFilename');
+    var textEl = document.getElementById('dlStatusText');
+    var iconEl = document.getElementById('dlStatusIcon');
+    if (!modal) return;
+    filenameEl.textContent = filename || '';
+    if (status === 'preparing') {
+      titleEl.textContent = 'Preparing Download';
+      textEl.textContent = 'Authorizing...';
+      iconEl.innerHTML = '<svg class="dl-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-3.93 7.07l-2.83-2.83M7.76 7.76L4.93 4.93"/></svg>';
+    } else if (status === 'downloading') {
+      titleEl.textContent = 'Downloading';
+      textEl.textContent = 'Your file is downloading...';
+      iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
+    } else if (status === 'done') {
+      titleEl.textContent = 'Download Complete';
+      textEl.textContent = 'File saved successfully';
+      iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+    } else if (status === 'error') {
+      titleEl.textContent = 'Download Failed';
+      textEl.textContent = 'Please try again';
+      iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+    }
+    modal.classList.remove('hidden');
+  }
+
+  function hideDownloadModal() {
+    var modal = document.getElementById('downloadStatusModal');
+    if (modal) modal.classList.add('hidden');
+  }
+
   // Download via secure presigned URLs
   async function downloadFile(downloadInfo, filename, button) {
-    const originalText = button.innerHTML;
+    var originalText = button.innerHTML;
     button.classList.add('downloading');
     button.innerHTML = 'Downloading...';
+    showDownloadModal(filename, 'preparing');
 
     try {
-      const { orderId, releaseId, trackIndex, fileType } = downloadInfo;
+      var info = downloadInfo;
+      var orderId = info.orderId;
+      var releaseId = info.releaseId;
+      var trackIndex = info.trackIndex;
+      var fileType = info.fileType;
 
       // Get Firebase auth token
-      const user = auth?.currentUser;
+      var user = auth?.currentUser;
       if (!user) {
         throw new Error('Please sign in to download');
       }
-      const token = await user.getIdToken();
+      var token = await user.getIdToken();
 
       // Request presigned download URL
-      const presignResponse = await fetch('/api/presign-download/', {
+      var presignResponse = await fetch('/api/presign-download/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ orderId, releaseId, trackIndex, fileType })
+        body: JSON.stringify({ orderId: orderId, releaseId: releaseId, trackIndex: trackIndex, fileType: fileType, filename: filename })
       });
 
       if (!presignResponse.ok) {
-        const errorData = await presignResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to authorize download: ${presignResponse.status}`);
+        var errorData = await presignResponse.json().catch(function() { return {}; });
+        throw new Error(errorData.error || 'Failed to authorize download: ' + presignResponse.status);
       }
 
-      const { downloadUrl } = await presignResponse.json();
+      var data = await presignResponse.json();
+      var downloadUrl = data.downloadUrl;
 
-      // Download directly using presigned URL - browser handles this natively
-      // (presigned URLs don't have CORS issues when navigating directly)
-      const link = document.createElement('a');
+      showDownloadModal(filename, 'downloading');
+
+      // Download directly using presigned URL with Content-Disposition: attachment
+      // Server sets ResponseContentDisposition so browser downloads instead of playing
+      var link = document.createElement('a');
       link.href = downloadUrl;
       link.download = filename;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      button.innerHTML = '✓ Done!';
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.classList.remove('downloading');
-      }, 2000);
+      showDownloadModal(filename, 'done');
+      button.innerHTML = originalText;
+      button.classList.remove('downloading');
+      setTimeout(hideDownloadModal, 2000);
 
     } catch (error) {
       console.error('Download error:', error);
-      button.innerHTML = '✗ Error';
-      setTimeout(() => {
-        button.innerHTML = originalText;
-        button.classList.remove('downloading');
-      }, 2000);
+      showDownloadModal(filename, 'error');
+      button.innerHTML = originalText;
+      button.classList.remove('downloading');
+      setTimeout(hideDownloadModal, 3000);
     }
   }
 
@@ -5449,5 +5501,89 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
   .zip-modal-close:hover {
     background: #4b5563;
+  }
+
+  /* Download Status Modal */
+  .dl-status-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .dl-status-modal.hidden {
+    display: none;
+  }
+
+  .dl-status-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+  }
+
+  .dl-status-content {
+    position: relative;
+    background: #1a1a2e;
+    border: 1px solid #374151;
+    border-radius: 1rem;
+    padding: 2rem 1.5rem;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    animation: modalSlideIn 0.2s ease-out;
+  }
+
+  .dl-status-icon {
+    margin: 0 auto 1rem;
+    width: 48px;
+    height: 48px;
+  }
+
+  .dl-status-icon svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .dl-spinner {
+    animation: dlSpin 1s linear infinite;
+    stroke: #f97316;
+  }
+
+  @keyframes dlSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .dl-status-title {
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .dl-status-filename {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    margin: 0 0 0.5rem 0;
+    word-break: break-all;
+    max-height: 2.4em;
+    overflow: hidden;
+  }
+
+  .dl-status-text {
+    color: #d1d5db;
+    font-size: 0.875rem;
+    margin: 0;
   }
 </style>

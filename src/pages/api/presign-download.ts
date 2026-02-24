@@ -15,6 +15,7 @@ const PresignDownloadSchema = z.object({
   releaseId: z.string().max(200),
   trackIndex: z.number().int().min(0).max(999),
   fileType: z.enum(['mp3', 'wav', 'artwork']),
+  filename: z.string().max(300).optional(),
 }).passthrough();
 
 export const prerender = false;
@@ -77,7 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!parseResult.success) {
       return ApiErrors.badRequest('Invalid request');
     }
-    const { orderId, releaseId, trackIndex, fileType } = parseResult.data;
+    const { orderId, releaseId, trackIndex, fileType, filename } = parseResult.data;
 
     log.info('[presign-download] Request:', { orderId, releaseId, trackIndex, fileType, userId });
 
@@ -223,9 +224,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Generate presigned URL - valid for 30 minutes
     const expiresIn = 1800; // 30 minutes
+    // Derive download filename from client hint or object key
+    const dlFilename = filename || objectKey.split('/').pop() || 'download';
     const command = new GetObjectCommand({
       Bucket: 'freshwax-releases',
       Key: objectKey,
+      ResponseContentDisposition: `attachment; filename="${dlFilename.replace(/"/g, '_')}"`,
     });
 
     const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn });
