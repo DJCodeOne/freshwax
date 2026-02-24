@@ -2029,7 +2029,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         try {
           // Use download proxy API to bypass CORS
           const proxyUrl = `/api/download/?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
-          const fileResponse = await fetch(proxyUrl, { signal: abortController.signal });
+          const fileResponse = await fetch(proxyUrl, {
+            signal: abortController.signal,
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
           if (!fileResponse.ok) {
             throw new Error(`HTTP ${fileResponse.status}`);
           }
