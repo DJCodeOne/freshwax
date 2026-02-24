@@ -106,8 +106,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
     }
 
     // Query listings by sellerId (single read operation)
-    const projectId = import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-    const apiKey = import.meta.env.FIREBASE_API_KEY;
+    const env = locals.runtime?.env || {};
+    const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
+    const apiKey = env.FIREBASE_API_KEY || env.PUBLIC_FIREBASE_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
 
     const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
 
