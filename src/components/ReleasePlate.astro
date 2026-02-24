@@ -1216,6 +1216,11 @@ const totalDurationFormatted = totalDurationSeconds > 0
   
   /* Mobile: Further optimizations */
   @media (max-width: 640px) {
+    /* Hide tracklist on mobile — accessible from item/[id] detail page */
+    .track-list-container {
+      display: none !important;
+    }
+
     .release-plate-container {
       padding: 1rem !important;
       border-radius: 0.75rem !important;

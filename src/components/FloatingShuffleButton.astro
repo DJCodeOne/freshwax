@@ -74,9 +74,10 @@ const { nonce = '' } = Astro.props;
       bottom: 90px;
       right: 16px;
     }
-    
+
+    /* Bottom nav shifts up 70px when mini-player visible, so button must clear both */
     body:has(#mini-player.visible) .floating-shuffle-btn {
-      bottom: 160px;
+      bottom: 230px;
     }
   }
 </style>

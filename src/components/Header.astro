@@ -363,6 +363,12 @@ const firebaseConfig = {
     border-top: 2px solid #000000;
     padding: 0.5rem 0;
     padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    transition: bottom 0.3s ease-out;
+  }
+
+  /* Push bottom nav up when mini-player is visible */
+  body:has(#mini-player.visible) #fwx-mobile-nav {
+    bottom: 70px;
   }
 
   @media (max-width: 1023px) {
@@ -375,6 +381,11 @@ const firebaseConfig = {
     /* Add padding to main content to prevent bottom nav overlap */
     main {
       padding-bottom: 70px !important;
+    }
+
+    /* Extra padding when mini-player is visible */
+    body:has(#mini-player.visible) main {
+      padding-bottom: 140px !important;
     }
   }
 
