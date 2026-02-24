@@ -491,7 +491,7 @@ export class EmbedPlayerManager {
    */
   async play(): Promise<void> {
     try {
-      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         this.youtubePlayer.playVideo();
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         await this.vimeoPlayer.play();
@@ -547,7 +547,7 @@ export class EmbedPlayerManager {
     try {
       const normalizedVolume = Math.max(0, Math.min(100, volume));
 
-      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         this.youtubePlayer.setVolume(normalizedVolume);
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         this.vimeoPlayer.setVolume(normalizedVolume / 100);
@@ -568,7 +568,7 @@ export class EmbedPlayerManager {
     try {
       const position = Math.max(0, seconds);
 
-      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         // YouTube: seekTo(seconds, allowSeekAhead)
         this.youtubePlayer.seekTo(position, true);
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
@@ -591,7 +591,7 @@ export class EmbedPlayerManager {
    */
   async getCurrentTime(): Promise<number> {
     try {
-      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         return this.youtubePlayer.getCurrentTime() || 0;
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         return await this.vimeoPlayer.getCurrentTime() || 0;
@@ -615,7 +615,7 @@ export class EmbedPlayerManager {
    */
   async getDuration(): Promise<number> {
     try {
-      if (this.currentPlatform === 'youtube' && this.youtubePlayer) {
+      if (this.currentPlatform === 'youtube' && this.youtubePlayer && this.youtubePlayerReady) {
         return this.youtubePlayer.getDuration() || 0;
       } else if (this.currentPlatform === 'vimeo' && this.vimeoPlayer) {
         return await this.vimeoPlayer.getDuration() || 0;
