@@ -325,7 +325,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
 
   // Helper to get authenticated user (waits for auth to be ready)
   async function getAuthUser() {
-    if (window.authReady) await window.authReady;
+    if (window.authReady) {
+      const authTimeout = new Promise((resolve) => setTimeout(() => resolve(null), 10000));
+      await Promise.race([window.authReady, authTimeout]);
+    }
     return window.firebaseAuth?.currentUser || window.authUser || null;
   }
   
@@ -565,8 +568,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
   }
   
   // Auth state - use window.authReady from Header.astro (no Firebase SDK needed)
+  // Add timeout in case Firebase Auth SDK is blocked by tracking prevention
   if (window.authReady) {
-    const user = await window.authReady;
+    const authTimeout = new Promise((resolve) => setTimeout(() => resolve(null), 10000));
+    const user = await Promise.race([window.authReady, authTimeout]);
     currentUser = user;
     await updateAuthUI(user);
   }
