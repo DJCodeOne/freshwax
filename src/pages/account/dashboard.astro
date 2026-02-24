@@ -1929,55 +1929,37 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
       const token = await user.getIdToken();
 
-      // Verify purchase by checking one file (this validates order ownership)
-      const verifyResponse = await fetch('/api/presign-download/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          orderId,
-          releaseId,
-          trackIndex: 0,
-          fileType: tracks[0]?.mp3Url ? 'mp3' : 'wav'
-        })
-      });
-
-      if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Purchase verification failed');
-      }
-
       progressText.textContent = 'Preparing download...';
 
-      // Build list of files to download using CDN URLs directly
-      // (CDN has CORS enabled, presigned R2 URLs don't)
+      // Build list of files to download via /api/download-file/ (R2 native binding)
       const filesToDownload = [];
 
-      // Add artwork if available - detect extension from URL
+      // Add artwork if available
       if (artworkUrl) {
         const artworkExt = artworkUrl.split('.').pop()?.split('?')[0] || 'jpg';
         filesToDownload.push({
-          url: artworkUrl,
+          trackIndex: 0,
+          fileType: 'artwork',
           filename: `${releaseName} - Artwork.${artworkExt}`,
           label: 'Artwork'
         });
       }
 
-      // Add all tracks (MP3 and WAV) using their CDN URLs
+      // Add all tracks (MP3 and WAV)
       tracks.forEach((track, idx) => {
         const trackName = artistName ? `${artistName} - ${track.name}` : track.name;
         if (track.mp3Url) {
           filesToDownload.push({
-            url: track.mp3Url,
+            trackIndex: idx,
+            fileType: 'mp3',
             filename: `${trackName}.mp3`,
             label: `${track.name} (MP3)`
           });
         }
         if (track.wavUrl) {
           filesToDownload.push({
-            url: track.wavUrl,
+            trackIndex: idx,
+            fileType: 'wav',
             filename: `${trackName}.wav`,
             label: `${track.name} (WAV)`
           });
@@ -2027,9 +2009,15 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         fileList.appendChild(listItem);
 
         try {
-          // Use download proxy API to bypass CORS
-          const proxyUrl = `/api/download/?url=${encodeURIComponent(file.url)}&filename=${encodeURIComponent(file.filename)}`;
-          const fileResponse = await fetch(proxyUrl, {
+          // Use R2 native streaming endpoint (same-origin, auth via orderId)
+          const dlParams = new URLSearchParams({
+            orderId: orderId,
+            releaseId: releaseId,
+            trackIndex: String(file.trackIndex),
+            fileType: file.fileType,
+            filename: file.filename
+          });
+          const fileResponse = await fetch('/api/download-file/?' + dlParams.toString(), {
             signal: abortController.signal,
             headers: { 'Authorization': `Bearer ${token}` }
           });
