@@ -535,11 +535,18 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
     }
   }
 
-  /* Mobile: Stack columns vertically */
+  /* Mobile: Stack columns vertically, show all entries */
   @media (max-width: 768px) {
+    .schedule-grid-wrapper {
+      overflow-y: visible;
+      flex: none;
+    }
+
     .schedule-columns {
       grid-template-columns: 1fr;
       gap: 0.75rem;
+      height: auto;
+      min-height: auto;
     }
 
     .schedule-grid {

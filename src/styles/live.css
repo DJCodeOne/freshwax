@@ -6803,31 +6803,38 @@
       display: none;
     }
     
-    /* Chat section mobile */
+    /* Chat section mobile — fill available space, don't clip input */
     .chat-column.mobile-active {
       flex-direction: column;
       height: auto;
-      max-height: 50vh;
+      max-height: none;
       padding: 0.75rem;
     }
-    
+
     .chat-section {
-      flex: 1;
-      height: auto;
-      max-height: none;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 200px);
+      height: calc(100dvh - 200px);
       border-radius: 12px;
+      overflow: hidden;
     }
-    
+
     .chat-messages {
       flex: 1;
-      min-height: 200px;
+      min-height: 150px;
+      overflow-y: auto;
+    }
+
+    .chat-input-section {
+      flex-shrink: 0;
     }
     
-    /* Schedule section mobile */
+    /* Schedule section mobile — show full day, scroll entire page */
     .schedule-column.mobile-active {
       padding: 0.75rem;
-      max-height: calc(100vh - 140px);
-      overflow-y: auto;
+      max-height: none;
+      overflow-y: visible;
     }
     
     .schedule-header {
@@ -8756,19 +8763,16 @@ body:has(.playlist-modal:not(.hidden)) .playlist-player {
    CHAT MOBILE OPTIMIZATIONS
    ============================================ */
 
-/* Chat container on mobile */
+/* Chat container on mobile — let flex layout handle sizing */
 @media (max-width: 768px) {
   .chat-container,
   .chat-column,
   #chat-section {
-    max-height: 50vh;
-    max-height: 50dvh;
+    max-height: none;
   }
 
   .chat-messages,
   #chat-messages {
-    max-height: 35vh;
-    max-height: 35dvh;
     -webkit-overflow-scrolling: touch;
   }
 }
