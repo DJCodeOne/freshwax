@@ -1735,7 +1735,7 @@ function showLiveStream(stream) {
       } else {
         // Fallback to direct URL
         stream.audioStreamUrl = relayUrl;
-        console.warn('[Stream] Using direct relay URL:', relayUrl);
+        // Using direct relay URL fallback
       }
     } else if (!stream.audioStreamUrl) {
       stream.audioStreamUrl = 'https://icecast.freshwax.co.uk/live';
@@ -3258,7 +3258,7 @@ function setupEmojiPicker() {
   if (emojiBtn) {
     emojiBtn.onclick = window.toggleEmojiPicker;
   } else {
-    console.warn('[EmojiPicker] Emoji button NOT found!');
+    // Emoji button not found in DOM
   }
 
   // Initialize with default category
@@ -3383,7 +3383,7 @@ function setupGiphyPicker() {
       window.toggleGiphyPicker();
     };
   } else {
-    console.warn('[GiphyPicker] Giphy button NOT found!');
+    // Giphy button not found in DOM
   }
 
   // ESC key to close modal
