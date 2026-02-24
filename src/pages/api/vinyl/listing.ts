@@ -4,7 +4,7 @@
 
 import type { APIRoute } from 'astro';
 import { z } from 'zod';
-import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser } from '../../../lib/firebase-rest';
+import { getDocument, setDocument, updateDocument, deleteDocument, verifyRequestUser, queryCollection } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse } from '../../../lib/rate-limit';
 import { fetchWithTimeout, ApiErrors, createLogger, successResponse, jsonResponse, errorResponse} from '../../../lib/api-utils';
 
@@ -100,75 +100,19 @@ export const GET: APIRoute = async ({ request, locals }) => {
       return successResponse({ listing });
     }
 
-    // Seller's listings - use direct Firestore REST query for efficiency
+    // Seller's listings
     if (!sellerId) {
       return ApiErrors.badRequest('Seller ID or Listing ID required');
     }
 
-    // Query listings by sellerId (single read operation)
-    const env = locals.runtime?.env || {};
-    const projectId = env.FIREBASE_PROJECT_ID || import.meta.env.FIREBASE_PROJECT_ID || 'freshwax-store';
-    const apiKey = env.FIREBASE_API_KEY || env.PUBLIC_FIREBASE_API_KEY || import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g';
-
-    const queryUrl = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:runQuery?key=${apiKey}`;
-
-    const queryResponse = await fetchWithTimeout(queryUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        structuredQuery: {
-          from: [{ collectionId: 'vinylListings' }],
-          where: {
-            fieldFilter: {
-              field: { fieldPath: 'sellerId' },
-              op: 'EQUAL',
-              value: { stringValue: sellerId }
-            }
-          },
-          orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'DESCENDING' }],
-          limit: 100
-        }
-      })
-    }, 10000);
-
-    if (!queryResponse.ok) {
-      log.error('Firestore query failed:', queryResponse.status, queryResponse.statusText);
-      return errorResponse('Failed to fetch listings', 502);
-    }
-
-    const results = await queryResponse.json();
-
-    const listings = results
-      .filter((r: Record<string, unknown>) => r.document)
-      .map((r: Record<string, unknown>) => {
-        const doc = r.document as Record<string, unknown>;
-        const id = (doc.name as string).split('/').pop();
-        const fields = (doc.fields || {}) as Record<string, unknown>;
-
-        // Parse Firestore document format
-        const parseValue = (v: Record<string, unknown>): unknown => {
-          if (!v) return null;
-          if (v.stringValue !== undefined) return v.stringValue;
-          if (v.integerValue !== undefined) return parseInt(v.integerValue as string);
-          if (v.doubleValue !== undefined) return v.doubleValue;
-          if (v.booleanValue !== undefined) return v.booleanValue;
-          if (v.arrayValue) return (((v.arrayValue as Record<string, unknown>).values as Record<string, unknown>[]) || []).map(parseValue);
-          if (v.mapValue) {
-            const obj: Record<string, unknown> = {};
-            for (const [k, val] of Object.entries(((v.mapValue as Record<string, unknown>).fields as Record<string, unknown>) || {})) {
-              obj[k] = parseValue(val as Record<string, unknown>);
-            }
-            return obj;
-          }
-          return null;
-        };
-
-        const listing: Record<string, unknown> = { id };
-        for (const [key, value] of Object.entries(fields)) {
-          listing[key] = parseValue(value as Record<string, unknown>);
-        }
-        return listing;
-      });
+    // Query listings by sellerId using shared firebase-rest queryCollection
+    const listings = await queryCollection('vinylListings', {
+      filters: [{ field: 'sellerId', op: 'EQUAL', value: sellerId }],
+      orderBy: 'createdAt',
+      orderDirection: 'DESCENDING',
+      limit: 100,
+      skipCache: true
+    });
 
     return successResponse({ listings, count: listings.length });
 
