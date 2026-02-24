@@ -55,12 +55,12 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
             <span class="dot-separator" aria-hidden="true">●</span>
             <a href="/live/" class="nav-item">Live</a>
           </div>
-          <div class="animate-fade-in" style="display: flex; align-items: center; justify-content: center; gap: 1rem; animation-delay: 0.6s;">
-            <div style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
-            <div style="position: relative; height: 3px; width: 4rem; background: rgba(220, 38, 38, 0.2); border-radius: 2px; overflow: hidden;">
+          <div class="animate-fade-in scanner-wrap" style="display: flex; align-items: center; justify-content: center; gap: 1rem; animation-delay: 0.6s;">
+            <div class="scanner-line" style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+            <div class="scanner-track" style="position: relative; height: 3px; width: 4rem; background: rgba(220, 38, 38, 0.2); border-radius: 2px; overflow: hidden;">
               <div style="position: absolute; top: 0; height: 100%; width: 100%; background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.4) 20%, #dc2626 50%, rgba(220, 38, 38, 0.4) 80%, transparent); border-radius: 2px; animation: kittScanner 2.6s ease-in-out infinite; box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.6);"></div>
             </div>
-            <div style="height: 2px; width: 3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
+            <div class="scanner-line" style="height: 2px; width: 3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
           </div>
         </div>
       </div>
@@ -146,7 +146,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
         <div style="margin-top: 4rem; text-align: center;">
           <a 
             href="/releases/" 
-            class="cta-button"
+            class="cta-button cta-btn"
             style="display: inline-block; background: linear-gradient(to right, #dc2626, #991b1b); color: white; padding: 1rem 2.5rem; border-radius: 0.5rem; font-weight: 700; font-size: 1.125rem; text-transform: uppercase; letter-spacing: 0.05em; text-decoration: none; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s; position: relative; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.2);"
           >
             View All Releases →
@@ -383,6 +383,60 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   .release-item:nth-child(n+4) {
     content-visibility: auto;
     contain-intrinsic-size: auto 400px;
+  }
+
+  /* ===========================================
+     EXTRA SMALL SCREENS (320px-359px)
+     =========================================== */
+  @media (max-width: 359px) {
+    /* Fix 1: Quick-link cards overflow — reduce padding and gap */
+    .quick-link-card {
+      padding: 0.75rem 0.875rem !important;
+      gap: 0.625rem !important;
+    }
+
+    /* Fix 2: CTA button overflow — reduce padding and font-size */
+    .cta-btn {
+      padding: 0.75rem 1.5rem !important;
+      font-size: 0.95rem !important;
+    }
+
+    /* Fix 3: Glass panel nav cramped — reduce font-size and gap */
+    .glass-panel {
+      gap: 0.25rem;
+      padding: 8px 12px;
+    }
+
+    .glass-panel .nav-item {
+      font-size: 0.7rem;
+    }
+
+    /* Fix 4: Hero section excessive padding */
+    .hero-section {
+      padding: 2rem 0;
+    }
+
+    .hero-container {
+      padding: 0 0.75rem;
+    }
+
+    /* Fix 5: Scanner animation oversized — reduce widths */
+    .scanner-line {
+      width: 2rem !important;
+    }
+
+    .scanner-track {
+      width: 2.5rem !important;
+    }
+
+    .scanner-wrap {
+      gap: 0.625rem !important;
+    }
+
+    /* Fix 6: Main title too large */
+    .main-title {
+      font-size: 2rem;
+    }
   }
 
   /* ===========================================

@@ -493,6 +493,15 @@ const firebaseConfig = {
     animation: fwx-lang-fade 0.15s ease-out;
   }
 
+  /* Fix 2: Language panel overflow on small screens */
+  @media (max-width: 640px) {
+    .fwx-lang-panel {
+      width: auto;
+      min-width: 200px;
+      max-width: calc(100vw - 2rem);
+    }
+  }
+
   .fwx-lang-panel[hidden] {
     display: none;
   }
@@ -2055,6 +2064,16 @@ const firebaseConfig = {
     padding: 0.5rem 0;
     z-index: 50;
   }
+
+  /* Fix 1: Account dropdown overflow on small screens */
+  @media (max-width: 640px) {
+    #freshwax-header .fwx-dropdown {
+      width: auto;
+      min-width: 200px;
+      max-width: calc(100vw - 2rem);
+      right: 0;
+    }
+  }
   
   #freshwax-header .fwx-dropdown-link {
     display: flex;
@@ -2172,6 +2191,11 @@ const firebaseConfig = {
 
   /* Very small screens (under 360px) */
   @media (max-width: 359px) {
+    /* Fix 3: Reduce header padding on very small screens */
+    #freshwax-header .fwx-header-inner {
+      padding: 0.5rem 0.75rem;
+    }
+
     #freshwax-header .fwx-mobile-right {
       gap: 0.25rem;
     }
@@ -2233,7 +2257,7 @@ const firebaseConfig = {
     top: 0;
     right: -100%;
     width: 85%;
-    max-width: 320px;
+    max-width: min(320px, 85vw);
     height: 100vh;
     height: 100dvh;
     background: #ffffff;
