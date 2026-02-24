@@ -183,12 +183,17 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const notVendor = document.getElementById('not-vendor');
     const mainContent = document.getElementById('payment-main-content');
 
-    window.authReady.then(async (user) => {
-      if (!user) {
-        loadingState.style.display = 'none';
-        authRequired.style.display = 'block';
-        return;
-      }
+    // Race authReady against a 10s timeout so the page never hangs forever
+    var authTimeout = new Promise(function(resolve) { setTimeout(function() { resolve(null); }, 10000); });
+    var user = await Promise.race([window.authReady, authTimeout]);
+
+    if (!user) {
+      loadingState.style.display = 'none';
+      authRequired.style.display = 'block';
+      return;
+    }
+
+    try {
 
       currentUserId = user.uid;
 
@@ -271,7 +276,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         updateStripeStatus({ status: 'not_started' });
         updatePayPalStatus({ paypalLinked: false });
       }
-    });
+    } catch (outerError) {
+      console.error('Payment settings init error:', outerError);
+      loadingState.style.display = 'none';
+      authRequired.style.display = 'block';
+    }
   }
 
   function showVendorRoles() {

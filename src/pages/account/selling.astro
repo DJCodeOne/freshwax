@@ -188,18 +188,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const authRequired = document.getElementById('auth-required');
     const mainContent = document.getElementById('selling-main-content');
 
-    window.authReady.then(async (user) => {
-      if (!user) {
-        if (loadingState) loadingState.style.display = 'none';
-        if (authRequired) authRequired.style.display = 'block';
-        return;
-      }
+    // Race authReady against a 10s timeout so the page never hangs forever
+    var authTimeout = new Promise(function(resolve) { setTimeout(function() { resolve(null); }, 10000); });
+    var user = await Promise.race([window.authReady, authTimeout]);
 
-      currentUserId = user.uid;
-      const idToken = await user.getIdToken();
-      const authHeaders = { 'Authorization': `Bearer ${idToken}` };
+    if (!user) {
+      if (loadingState) loadingState.style.display = 'none';
+      if (authRequired) authRequired.style.display = 'block';
+      return;
+    }
 
-      try {
+    currentUserId = user.uid;
+    var idToken = await user.getIdToken();
+    var authHeaders = { 'Authorization': 'Bearer ' + idToken };
+
+    try {
         // Fetch Stripe status, PayPal status, and payouts in parallel
         const [stripeRes, paypalRes, payoutsRes] = await Promise.all([
           fetch(`/api/stripe/connect/user/status/?userId=${user.uid}`, { headers: authHeaders }),
@@ -291,12 +294,11 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           updatePayoutsList(payoutsData.payouts, payoutsData.pendingPayouts);
         }
 
-      } catch (error) {
-        console.error('Failed to load selling settings:', error);
-        if (loadingState) loadingState.style.display = 'none';
-        if (mainContent) mainContent.style.display = 'block';
-      }
-    });
+    } catch (error) {
+      console.error('Failed to load selling settings:', error);
+      if (loadingState) loadingState.style.display = 'none';
+      if (mainContent) mainContent.style.display = 'block';
+    }
   }
 
   function updateMethodIndicator(method, stripeActive, paypalLinked) {
