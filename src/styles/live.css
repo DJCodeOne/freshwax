@@ -971,6 +971,119 @@
     text-overflow: ellipsis;
   }
 
+  /* ---- Mobile Online Users (expandable) ---- */
+  .online-users-mobile {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .online-users-mobile {
+      display: block;
+      margin-top: 0.5rem;
+    }
+  }
+
+  .online-users-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    background: #111;
+    border: 2px solid #222;
+    border-radius: 10px;
+    color: #888;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .online-users-toggle:hover,
+  .online-users-toggle:focus-visible {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+
+  .online-users-toggle .online-count {
+    margin-left: auto;
+    margin-right: 0;
+  }
+
+  .online-chevron {
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .online-users-toggle[aria-expanded="true"] .online-chevron {
+    transform: rotate(180deg);
+  }
+
+  .online-users-mobile-list {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    background: #0a0a0a;
+    border-radius: 0 0 10px 10px;
+    margin-top: -2px;
+    border: 2px solid transparent;
+  }
+
+  .online-users-mobile-list.expanded {
+    max-height: 280px;
+    border-color: #222;
+    border-top: none;
+  }
+
+  .online-users-mobile-scroll {
+    padding: 0.5rem;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .online-users-mobile-scroll .online-user-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: background 0.15s;
+  }
+
+  .online-users-mobile-scroll .online-user-item:hover {
+    background: #1a1a1a;
+  }
+
+  .online-users-mobile-scroll .online-user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #dc2626;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .online-users-mobile-scroll .online-user-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .online-users-mobile-scroll .online-user-name {
+    font-size: 0.8rem;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .schedule-column {
     display: flex;
     flex-direction: column;

@@ -600,7 +600,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <LiveChat />
       </aside>
 
-      <!-- Online Users Sidebar -->
+      <!-- Online Users Sidebar (desktop) -->
       <aside class="online-users-column">
         <div class="online-users-header">
           <span class="online-dot"></span>
@@ -611,9 +611,40 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           <p class="no-users-msg">No users online</p>
         </div>
       </aside>
+
+      <!-- Online Users Expandable (mobile) -->
+      <div class="online-users-mobile" id="onlineUsersMobile">
+        <button class="online-users-toggle" id="onlineUsersToggle" aria-expanded="false" aria-controls="onlineUsersMobileList">
+          <span class="online-dot"></span>
+          <span class="online-toggle-label">Online</span>
+          <span class="online-count" id="onlineUserCountMobile">0</span>
+          <svg class="online-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" aria-hidden="true">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+        </button>
+        <div class="online-users-mobile-list" id="onlineUsersMobileList">
+          <div class="online-users-mobile-scroll" id="onlineUsersMobileScroll">
+            <p class="no-users-msg">No users online</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-  
+
+  <script is:inline>
+    (function() {
+      var toggle = document.getElementById('onlineUsersToggle');
+      var list = document.getElementById('onlineUsersMobileList');
+      if (!toggle || !list) return;
+
+      toggle.addEventListener('click', function() {
+        var expanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', String(!expanded));
+        list.classList.toggle('expanded');
+      });
+    })();
+  </script>
+
   <div id="bookingModal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content booking-modal-content">
@@ -2755,31 +2786,34 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         if (chatViewers) chatViewers.textContent = `${count} watching`;
         if (onlineCount) onlineCount.textContent = count;
 
-        // Update online users list
-        const usersList = document.getElementById('onlineUsersList');
-        if (usersList && channel?.members) {
-          usersList.innerHTML = '';
+        // Also update mobile count
+        var mobileCount = document.getElementById('onlineUserCountMobile');
+        if (mobileCount) mobileCount.textContent = count;
+
+        // Build user HTML once, use in both desktop and mobile lists
+        var usersHtml = '';
+        if (channel && channel.members) {
           if (count === 0) {
-            usersList.innerHTML = '<p class="no-users-msg">No users online</p>';
+            usersHtml = '<p class="no-users-msg">No users online</p>';
           } else {
-            channel.members.each((member) => {
-              const userEl = document.createElement('div');
-              userEl.className = 'online-user-item';
-              userEl.dataset.userId = member.id;
-
-              const avatar = member.info?.avatar;
-              const name = member.info?.name || 'Viewer';
-
-              if (avatar) {
-                userEl.innerHTML = `<div class="online-user-avatar"><img src="${escapeHtml(avatar)}" alt="${escapeHtml(name)}" /></div><span class="online-user-name">${escapeHtml(name)}</span>`;
-              } else {
-                userEl.innerHTML = `<div class="online-user-avatar">${escapeHtml(name.charAt(0).toUpperCase())}</div><span class="online-user-name">${escapeHtml(name)}</span>`;
-              }
-
-              usersList.appendChild(userEl);
+            channel.members.each(function(member) {
+              var avatar = member.info ? member.info.avatar : null;
+              var name = (member.info ? member.info.name : null) || 'Viewer';
+              var avatarHtml = avatar
+                ? '<div class="online-user-avatar"><img src="' + escapeHtml(avatar) + '" alt="' + escapeHtml(name) + '" /></div>'
+                : '<div class="online-user-avatar">' + escapeHtml(name.charAt(0).toUpperCase()) + '</div>';
+              usersHtml += '<div class="online-user-item" data-user-id="' + escapeHtml(member.id) + '">' + avatarHtml + '<span class="online-user-name">' + escapeHtml(name) + '</span></div>';
             });
           }
         }
+
+        // Update desktop list
+        var usersList = document.getElementById('onlineUsersList');
+        if (usersList) usersList.innerHTML = usersHtml || '<p class="no-users-msg">No users online</p>';
+
+        // Update mobile list
+        var mobileScroll = document.getElementById('onlineUsersMobileScroll');
+        if (mobileScroll) mobileScroll.innerHTML = usersHtml || '<p class="no-users-msg">No users online</p>';
       }
 
       // Expose globally for re-subscription
