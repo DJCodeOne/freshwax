@@ -576,6 +576,23 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     await updateAuthUI(user);
   }
   
+  // Re-check auth on View Transition navigation (module scripts don't re-execute)
+  document.addEventListener('astro:page-load', async () => {
+    // Only run on gift cards page
+    if (!document.getElementById('redeemForm') && !document.getElementById('loginPrompt')) return;
+    const user = await getAuthUser();
+    currentUser = user;
+    await updateAuthUI(user);
+  });
+
+  // Also listen for auth-state-ready event (dispatched by Header after auth resolves)
+  document.addEventListener('auth-state-ready', async () => {
+    if (!document.getElementById('redeemForm') && !document.getElementById('loginPrompt')) return;
+    const user = await getAuthUser();
+    currentUser = user;
+    await updateAuthUI(user);
+  });
+
   // Handle back/forward navigation (bfcache)
   window.addEventListener('pageshow', async (event) => {
     if (event.persisted) {
