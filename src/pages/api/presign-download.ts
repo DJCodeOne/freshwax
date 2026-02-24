@@ -162,7 +162,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
 
       if (fileType === 'artwork') {
-        fileUrl = releaseData.coverArtUrl || releaseData.artworkUrl || releaseData.artwork?.cover || null;
+        // Prefer original quality artwork (jpg/png) over processed WebP
+        fileUrl = releaseData.originalArtworkUrl || releaseData.coverArtUrl || releaseData.artworkUrl || releaseData.artwork?.cover || null;
       } else {
         const tracks = releaseData.tracks || [];
 

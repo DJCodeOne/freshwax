@@ -914,6 +914,8 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
             const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
             const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
             const artworkUrl = releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
+            // Prefer original quality artwork for downloads (jpg/png), fall back to processed WebP
+            const downloadArtworkUrl = releaseData?.originalArtworkUrl || artworkUrl;
 
             if (track) {
               return {
@@ -924,7 +926,7 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
                 downloads: {
                   artistName,
                   releaseName,
-                  artworkUrl,
+                  artworkUrl: downloadArtworkUrl,
                   tracks: [{
                     name: track.trackName || track.name || item.title,
                     mp3Url: track.mp3Url || null,
@@ -942,7 +944,7 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
                 downloads: {
                   artistName,
                   releaseName,
-                  artworkUrl,
+                  artworkUrl: downloadArtworkUrl,
                   tracks: (releaseData?.tracks || []).map((t: Record<string, unknown>) => ({
                     name: t.trackName || t.name,
                     mp3Url: t.mp3Url || null,
@@ -957,11 +959,13 @@ export async function processItemsWithDownloads(items: CartItem[]): Promise<Cart
           const artistName = releaseData?.artistName || item.artist || 'Unknown Artist';
           const releaseName = releaseData?.releaseName || releaseData?.title || item.title || 'Release';
           const artworkUrl = releaseData?.coverArtUrl || releaseData?.artwork?.cover || releaseData?.artwork?.artworkUrl || item.artwork || item.image || null;
+          // Prefer original quality artwork for downloads (jpg/png), fall back to processed WebP
+          const downloadArtworkUrl = releaseData?.originalArtworkUrl || artworkUrl;
 
           const downloads = {
             artistName,
             releaseName,
-            artworkUrl,
+            artworkUrl: downloadArtworkUrl,
             tracks: (releaseData?.tracks || []).map((track: Record<string, unknown>) => ({
               name: track.trackName || track.name,
               mp3Url: track.mp3Url || null,
