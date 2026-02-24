@@ -5,7 +5,7 @@
 import type { APIRoute } from 'astro';
 import { verifyRequestUser } from '../../../lib/firebase-rest';
 import { checkRateLimit, getClientId, rateLimitResponse, RateLimiters } from '../../../lib/rate-limit';
-import { errorResponse, ApiErrors, fetchWithTimeout } from '../../../lib/api-utils';
+import { errorResponse, ApiErrors, fetchWithTimeout, jsonResponse } from '../../../lib/api-utils';
 
 export const prerender = false;
 
