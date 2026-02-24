@@ -293,6 +293,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
               </button>
               <span id="recordDuration" class="record-duration hidden">00:00</span>
             </div>
+            <!-- Save to Playlist (shown in playlist mode) -->
+            <button id="nowPlayingSaveBtn" class="now-playing-save-btn" title="Save to My Playlist" aria-label="Save to my playlist">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </button>
           </div>
           <div class="stream-info-right">
             <div class="stream-stats">
@@ -574,11 +580,6 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <!-- DJ Info Bar -->
         <div class="dj-info-bar">
           <img id="djAvatar" src="/place-holder.webp" alt="DJ" class="dj-avatar" width="40" height="40" loading="lazy" decoding="async" />
-          <button id="nowPlayingSaveBtn" class="now-playing-save-btn" title="Save to My Playlist" aria-label="Save to my playlist">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-            </svg>
-          </button>
           <div class="dj-info-center">
             <span class="dj-info-label" id="controlsLabel">NOW PLAYING</span>
             <span class="dj-info-name" id="controlsDjName">--</span>
@@ -5197,6 +5198,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
     if (isPlaylistPlaying) {
       // Add playlist-mode class to show the save button
       djInfoBar?.classList.add('playlist-mode');
+      document.getElementById('streamInfoBar')?.classList.add('playlist-mode');
 
       // Store current track for saving
       const currentIndex = detail.currentIndex || 0;
@@ -5224,6 +5226,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       }
     } else {
       djInfoBar?.classList.remove('playlist-mode');
+      document.getElementById('streamInfoBar')?.classList.remove('playlist-mode');
       currentPlaylistTrack = null;
       if (controlsLabel) controlsLabel.textContent = 'NOW PLAYING';
       if (npTrackTitle) npTrackTitle.textContent = '';
