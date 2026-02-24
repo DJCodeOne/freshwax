@@ -1688,7 +1688,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
             <div class="vinyl-left-col">
               <div class="vinyl-artwork">
                 ${imageUrl
-                  ? `<img src="${imageUrl}" alt="${escapeHtml(listing.title)}" loading="lazy" data-fallback="show-next" />
+                  ? `<img src="${imageUrl}" alt="${escapeHtml(listing.title)}" width="200" height="200" loading="lazy" decoding="async" data-fallback="show-next" />
                      <div class="vinyl-artwork-placeholder" style="display:none;">📀</div>`
                   : '<div class="vinyl-artwork-placeholder">📀</div>'}
                 ${hasDiscount ? `<div class="sale-badge">${listing.discountPercent}% OFF</div>` : ''}

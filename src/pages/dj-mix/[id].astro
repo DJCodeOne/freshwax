@@ -1540,13 +1540,13 @@ Artist - Track Title
           commentContent += '<p class="text-gray-100 text-base md:text-lg leading-relaxed break-words">' + safeComment + '</p>';
         }
         if (selectedGifUrl) {
-          commentContent += '<img src="' + selectedGifUrl + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" />';
+          commentContent += '<img src="' + escapeHtml(selectedGifUrl) + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" />';
         }
-        
+
         // Avatar HTML - use image if available, fallback to initial
         let avatarHtml;
         if (currentUserAvatar) {
-          avatarHtml = '<img src="' + currentUserAvatar + '" alt="" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
+          avatarHtml = '<img src="' + escapeHtml(currentUserAvatar) + '" alt="" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
         } else {
           avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
         }
@@ -1988,12 +1988,12 @@ Artist - Track Title
         // Avatar HTML - use image if available, fallback to initial
         let avatarHtml;
         if (currentUserAvatar) {
-          avatarHtml = '<img src="' + currentUserAvatar + '" alt="" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
+          avatarHtml = '<img src="' + escapeHtml(currentUserAvatar) + '" alt="" class="w-full h-full object-cover" data-fallback="show-next" /><span class="text-white font-bold text-base hidden items-center justify-center w-full h-full">' + initial + '</span>';
         } else {
           avatarHtml = '<span class="text-white font-bold text-base">' + initial + '</span>';
         }
 
-        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-300">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span><img src="' + url + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" /></div></div></div>';
+        const newCommentHtml = '<div class="comment-item p-3 bg-gradient-to-r from-gray-600 to-gray-700 border-2 border-gray-500 hover:border-red-600 transition-all rounded shadow-md relative"><span class="absolute top-2 right-3 text-xs text-gray-300">Just now</span><div class="flex items-start gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-lg overflow-hidden">' + avatarHtml + '</div><div class="flex-1 min-w-0 pt-1"><span class="text-white text-sm uppercase block mb-1">' + safeUserName + '</span><img src="' + escapeHtml(url) + '" alt="GIF" class="mt-2 max-h-48 rounded border border-gray-500" loading="lazy" /></div></div></div>';
 
         const commentsContainer = document.getElementById('comments-list');
         if (commentsContainer) {

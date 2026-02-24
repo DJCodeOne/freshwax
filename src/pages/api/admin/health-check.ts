@@ -257,19 +257,35 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const timestamp = new Date().toISOString();
 
+  // D1 connectivity check
+  const db = locals.runtime?.env?.DB as D1Database | undefined;
+  const d1Check: Promise<ServiceStatus> = db
+    ? (async () => {
+        const start = Date.now();
+        try {
+          await db.prepare('SELECT 1 as ok').first();
+          const latency = Date.now() - start;
+          return { name: 'D1 Database', status: 'ok' as const, latency, lastChecked: new Date().toISOString() };
+        } catch (error: unknown) {
+          return { name: 'D1 Database', status: 'error' as const, message: error instanceof Error ? error.message : 'D1 unreachable', lastChecked: new Date().toISOString() };
+        }
+      })()
+    : Promise.resolve({ name: 'D1 Database', status: 'error' as const, message: 'D1 binding not available', lastChecked: new Date().toISOString() });
+
   // Run all health checks in parallel
-  const [firebase, r2, stripe, streaming, playlist, icecast, livestream, stats] = await Promise.all([
+  const [firebase, r2, stripe, streaming, playlist, icecast, d1, livestream, stats] = await Promise.all([
     checkFirebase(),
     checkR2(),
     checkStripe(),
     checkStreaming(),
     checkPlaylist(),
     checkIcecast(),
+    d1Check,
     getLivestreamInfo(),
     getQuickStats()
   ]);
 
-  const services = [firebase, r2, stripe, streaming, playlist, icecast];
+  const services = [firebase, r2, stripe, d1, streaming, playlist, icecast];
 
   const response: HealthCheckResponse = {
     success: true,

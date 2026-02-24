@@ -697,6 +697,7 @@ export function initPlaylistModal() {
       if (modal) removeFocusTrap(modal);
       modal?.classList.add('hidden');
       document.body.style.overflow = '';
+      stopRecentlyPlayedTimeUpdates();
       if (previousFocus && typeof (previousFocus as HTMLElement).focus === 'function') {
         (previousFocus as HTMLElement).focus();
         previousFocus = null;
@@ -712,6 +713,7 @@ export function initPlaylistModal() {
         document.body.style.overflow = 'hidden';
         // Update recently played when modal opens
         updateRecentlyPlayed();
+        startRecentlyPlayedTimeUpdates();
         if (modal) trapFocus(modal);
       });
     }
@@ -1500,6 +1502,13 @@ export function initPlaylistModal() {
     recentlyPlayedTimeInterval = window.setInterval(refreshRecentlyPlayedTimes, 60000);
   }
 
+  function stopRecentlyPlayedTimeUpdates() {
+    if (recentlyPlayedTimeInterval) {
+      window.clearInterval(recentlyPlayedTimeInterval);
+      recentlyPlayedTimeInterval = null;
+    }
+  }
+
   // Start the interval
   startRecentlyPlayedTimeUpdates();
 
@@ -1577,6 +1586,7 @@ export function initPlaylistModal() {
 
   // Cleanup function to properly destroy the playlist manager
   function cleanupPlaylistManager() {
+    stopRecentlyPlayedTimeUpdates();
     if (playlistManager) {
       try {
         playlistManager.destroy();

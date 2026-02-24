@@ -461,7 +461,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
         {isPreOrder && (
           <!-- Pre-order Link (only for upcoming releases) -->
           <a 
-            href={`/item/${id}`}
+            href={`/item/${id}/`}
             class="preorder-link flex items-center gap-1 text-xs font-body font-semibold text-orange-500 hover:text-orange-400 transition-colors"
             title={`Pre-order - Available ${formattedDate}`}
           >
@@ -554,7 +554,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
 
         <!-- Release Details Box -->
         <div class="mt-auto">
-          <a href={`/item/${id}`} class="details-preview block bg-gradient-to-r from-gray-800 via-gray-900 to-black border-2 border-gray-600 hover:border-red-500 rounded-lg overflow-hidden cursor-pointer transition-all group shadow-lg">
+          <a href={`/item/${id}/`} class="details-preview block bg-gradient-to-r from-gray-800 via-gray-900 to-black border-2 border-gray-600 hover:border-red-500 rounded-lg overflow-hidden cursor-pointer transition-all group shadow-lg">
             <div class="flex items-stretch">
               <div class="flex-1 p-4">
                 <div class="text-xs text-white uppercase tracking-widest mb-2 font-heading font-bold flex items-center gap-2">

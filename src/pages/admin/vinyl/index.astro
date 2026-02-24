@@ -96,7 +96,7 @@ const pendingListings = vinylListings.filter(l => l.status === 'pending');
 
 // Calculate revenue from vinyl orders
 const totalVinylRevenue = vinylOrders.reduce((sum, order) => {
-  const vinylItems = (order.items || []).filter((item: Record<string, unknown>) => item.type === 'vinyl');
+  const vinylItems = (order.items || []).filter((item: any) => item.type === 'vinyl');
   return sum + vinylItems.reduce((itemSum: number, item: Record<string, unknown>) => itemSum + ((item.price as number) || 0) * ((item.quantity as number) || 1), 0);
 }, 0);
 

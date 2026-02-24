@@ -118,7 +118,7 @@ try {
     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
   
-} catch (e) {
+} catch (e: unknown) {
   console.error('[Merch] Error fetching:', e);
 }
 
@@ -379,9 +379,9 @@ const merchItemList = {
   </div>
 
   <!-- Quick View / Buy Modal -->
-  <div id="buyModal" class="modal-overlay">
+  <div id="buyModal" class="modal-overlay" role="dialog" aria-modal="true">
     <div class="modal-box">
-      <button class="modal-close">&times;</button>
+      <button class="modal-close" aria-label="Close">&times;</button>
       
       <div class="modal-grid">
         <!-- Image -->
@@ -409,8 +409,8 @@ const merchItemList = {
             <div id="sizeGuidePopup" class="size-guide-popup">
               <div class="size-guide-content">
                 <div class="size-guide-header">
-                  <h4>Size Guide (Chest in inches)</h4>
-                  <button type="button" class="size-guide-close">&times;</button>
+                  <h3>Size Guide (Chest in inches)</h3>
+                  <button type="button" class="size-guide-close" aria-label="Close size guide">&times;</button>
                 </div>
                 <table class="size-guide-table">
                   <tr><th scope="col">Size</th><th scope="col">Chest</th></tr>

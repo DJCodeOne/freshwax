@@ -128,7 +128,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       ) : (
         <div class="chart-list">
           {releases.slice(0, 20).map((release, index) => (
-            <a href={`/item/${release.id}`} class={`chart-item ${index < 3 ? 'top-three' : ''}`}>
+            <a href={`/item/${release.id}/`} class={`chart-item ${index < 3 ? 'top-three' : ''}`}>
               <div class="rank">
                 {index === 0 && <span class="medal gold">🥇</span>}
                 {index === 1 && <span class="medal silver">🥈</span>}

@@ -121,7 +121,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               </div>
               
               <!-- Artwork -->
-              <a href={`/item/${release.id}`} class="artwork-link">
+              <a href={`/item/${release.id}/`} class="artwork-link">
                 <img
                   src={release.coverArtUrl || '/place-holder.webp'}
                   alt={`${release.releaseName} by ${release.artistName}`}
@@ -138,7 +138,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
               
               <!-- Info -->
               <div class="card-info">
-                <a href={`/item/${release.id}`} class="title-link">
+                <a href={`/item/${release.id}/`} class="title-link">
                   <h2>{release.releaseName}</h2>
                 </a>
                 <p class="artist">{release.artistName}</p>

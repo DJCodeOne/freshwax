@@ -5387,5 +5387,10 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       clearInterval(takeoverFallbackInterval);
       takeoverFallbackInterval = null;
     }
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    if (takeoverPollInterval) clearInterval(takeoverPollInterval);
+    if (countdownInterval) clearInterval(countdownInterval);
+    if (availableSlotPollInterval) clearInterval(availableSlotPollInterval);
+    if (refreshInterval) clearInterval(refreshInterval);
   });
 </script>

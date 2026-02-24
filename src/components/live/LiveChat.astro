@@ -92,6 +92,10 @@
 <script>
 function escapeHtml(s: string){if(typeof s!=='string')return '';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,"&#39;");}
 
+// WeakMaps to store per-element state without `as any` casts
+const focusTrapHandlers = new WeakMap<HTMLElement, (e: KeyboardEvent) => void>();
+const previousFocusMap = new WeakMap<HTMLElement, HTMLElement | null>();
+
 // Focus trap helper for modal dialogs
 function trapFocusOnModal(modalEl: HTMLElement) {
   const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -114,24 +118,25 @@ function trapFocusOnModal(modalEl: HTMLElement) {
       }
     }
   };
-  (modalEl as any)._focusTrapHandler = handler;
+  focusTrapHandlers.set(modalEl, handler);
   modalEl.addEventListener('keydown', handler);
   firstFocusable.focus();
 }
 
 function removeFocusTrapFromModal(modalEl: HTMLElement) {
-  const handler = (modalEl as any)._focusTrapHandler;
+  const handler = focusTrapHandlers.get(modalEl);
   if (handler) {
     modalEl.removeEventListener('keydown', handler);
-    delete (modalEl as any)._focusTrapHandler;
+    focusTrapHandlers.delete(modalEl);
   }
 }
 
-function restoreFocusFromModal(modalEl: any) {
+function restoreFocusFromModal(modalEl: HTMLElement) {
   removeFocusTrapFromModal(modalEl);
-  if (modalEl._previousFocus && typeof modalEl._previousFocus.focus === 'function') {
-    modalEl._previousFocus.focus();
-    modalEl._previousFocus = null;
+  const prev = previousFocusMap.get(modalEl);
+  if (prev && typeof prev.focus === 'function') {
+    prev.focus();
+    previousFocusMap.delete(modalEl);
   }
 }
 
@@ -206,7 +211,6 @@ function restoreFocusFromModal(modalEl: any) {
         console.error('[GIF] Server error:', response.status, err);
         // Auto-fallback to playlist-global if stream is not live
         if (err.error === 'Stream is not live' && streamId !== 'playlist-global') {
-          console.log('[GIF] Stream ended, retrying with playlist-global');
           window.currentStreamId = 'playlist-global';
           const retryResponse = await doSendGif('playlist-global');
           if (!retryResponse.ok) {
@@ -269,7 +273,7 @@ function restoreFocusFromModal(modalEl: any) {
         console.error('[Picker] GIF modal element not found!');
         return;
       }
-      gifModal._previousFocus = document.activeElement;
+      previousFocusMap.set(gifModal, document.activeElement as HTMLElement);
       gifModal.style.display = 'flex';
       document.body.style.overflow = 'hidden';
       loadGifs('trending');
@@ -469,7 +473,7 @@ function restoreFocusFromModal(modalEl: any) {
     window.openDmModal = function(userId, userName) {
       currentDmRecipient = { id: userId, name: userName };
       dmRecipientName.textContent = userName;
-      dmModal._previousFocus = document.activeElement;
+      previousFocusMap.set(dmModal, document.activeElement as HTMLElement);
       dmModal.style.display = 'flex';
       trapFocusOnModal(dmModal);
     };

@@ -51,7 +51,7 @@ try {
   // Sort by engagement score descending
   mixes.sort((a, b) => (b.engagementScore as number) - (a.engagementScore as number));
 
-} catch (e) {
+} catch (e: unknown) {
   console.error('Error fetching mixes:', e);
 }
 
@@ -93,7 +93,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       ) : (
         <div class="chart-list">
           {mixes.slice(0, 50).map((mix, index) => (
-            <a href={`/dj-mix/${mix.id}`} class={`chart-item ${index < 3 ? 'top-three' : ''}`}>
+            <a href={`/dj-mix/${mix.id}/`} class={`chart-item ${index < 3 ? 'top-three' : ''}`}>
               <div class="rank">
                 {index === 0 && <span class="medal gold">🥇</span>}
                 {index === 1 && <span class="medal silver">🥈</span>}

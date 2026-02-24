@@ -24,7 +24,7 @@ try {
   if (settings) {
     showMixCharts = settings.showMixCharts || false;
   }
-} catch (error) {
+} catch (error: unknown) {
   console.error('[DJ-MIXES PAGE] Error loading mixes:', error);
 }
 
@@ -368,8 +368,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
                   </button>
 
                   <!-- Info Button -->
-                  <a 
-                    href={`/dj-mix/${mix.id}`}
+                  <a
+                    href={`/dj-mix/${mix.id}/`}
                     class="action-btn"
                     title="View Details"
                   >
@@ -451,7 +451,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           </div>
           <div class="chart-list">
             {chartMixes.map((mix, index) => (
-              <a href={`/dj-mix/${mix.id}`} class="chart-item">
+              <a href={`/dj-mix/${mix.id}/`} class="chart-item">
                 <span class={`chart-position ${index < 3 ? 'top-3' : ''}`}>
                   {index === 0 && '🥇'}
                   {index === 1 && '🥈'}

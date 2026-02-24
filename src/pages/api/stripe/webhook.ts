@@ -965,7 +965,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           try {
             const existingCards = await queryCollection('giftCards', {
               filters: [{ field: 'paymentIntentId', op: 'EQUAL', value: paymentIntentId }],
-              limit: 1
+              limit: 1,
+              throwOnError: true
             });
 
             if (existingCards.length > 0) {
@@ -978,6 +979,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             }
           } catch (checkErr: unknown) {
             log.error('[Stripe Webhook] Gift card idempotency check failed:', checkErr);
+            return errorResponse('Gift card idempotency check failed — retry later', 500);
           }
         }
 

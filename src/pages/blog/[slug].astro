@@ -110,7 +110,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=120, s-maxage=600, 
         <!-- Featured Image -->
         {post.featuredImage && (
           <div class="featured-image">
-            <img src={post.featuredImage} alt={post.title} width="800" height="450" />
+            <img src={post.featuredImage} alt={post.title} width="800" height="450" fetchpriority="high" />
           </div>
         )}
 

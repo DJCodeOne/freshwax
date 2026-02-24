@@ -171,9 +171,8 @@ const securityHeaders: Record<string, string> = {
   'Permissions-Policy': 'camera=(), microphone=(self), geolocation=(), payment=(), interest-cohort=(), browsing-topics=(), usb=(), bluetooth=(), serial=(), hid=()',
   'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   'Cross-Origin-Resource-Policy': 'cross-origin',
-  'X-XSS-Protection': '1; mode=block',
+  'X-XSS-Protection': '0',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'Expect-CT': 'max-age=31536000, enforce',
 };
 
 export const onRequest = defineMiddleware(async ({ locals, request }, next) => {

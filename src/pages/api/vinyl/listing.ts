@@ -130,6 +130,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       })
     }, 10000);
 
+    if (!queryResponse.ok) {
+      log.error('Firestore query failed:', queryResponse.status, queryResponse.statusText);
+      return errorResponse('Failed to fetch listings', 502);
+    }
+
     const results = await queryResponse.json();
 
     const listings = results

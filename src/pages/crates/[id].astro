@@ -1344,7 +1344,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         const thumbnailsEl = document.getElementById('imageThumbnails');
         thumbnailsEl.innerHTML = listing.images.map((img, i) => `
           <div class="thumbnail ${i === 0 ? 'active' : ''}" data-index="${i}">
-            <img src="${img}" alt="Image ${i + 1}" />
+            <img src="${img}" alt="Image ${i + 1}" width="80" height="80" loading="lazy" decoding="async" />
           </div>
         `).join('');
 

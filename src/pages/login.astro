@@ -232,9 +232,9 @@ const csrfToken = Astro.locals.csrfToken || '';
         });
         
         // Clear stale cookies (will be reset on login)
-        document.cookie = 'userId=; path=/; max-age=0';
-        document.cookie = 'customerId=; path=/; max-age=0';
-        document.cookie = 'partnerId=; path=/; max-age=0';
+        document.cookie = 'userId=; path=/; max-age=0; Secure';
+        document.cookie = 'customerId=; path=/; max-age=0; Secure';
+        document.cookie = 'partnerId=; path=/; max-age=0; Secure';
         
       } catch (e) {
         console.warn('[Login] Cache clear error:', e);

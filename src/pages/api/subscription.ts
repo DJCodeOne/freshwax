@@ -347,10 +347,18 @@ export const POST: APIRoute = async ({ request, locals }) => {
             },
             body: 'grant_type=client_credentials'
           }, 10000);
+          if (!authResponse.ok) {
+            log.error('PayPal auth failed:', authResponse.status, authResponse.statusText);
+            return errorResponse('Payment verification failed', 502);
+          }
           const authData = await authResponse.json();
           const orderResponse = await fetchWithTimeout(`${paypalBase}/v2/checkout/orders/${paymentId}`, {
             headers: { 'Authorization': `Bearer ${authData.access_token}` }
           }, 10000);
+          if (!orderResponse.ok) {
+            log.error('PayPal order fetch failed:', orderResponse.status, orderResponse.statusText);
+            return errorResponse('Payment verification failed', 502);
+          }
           const orderData = await orderResponse.json();
           if (orderData.status !== 'COMPLETED') {
             return errorResponse('PayPal payment not completed', 402);
