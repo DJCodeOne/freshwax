@@ -534,11 +534,12 @@ const { nonce = '' } = Astro.props;
 
         globalAudio.addEventListener('error', function(e) {
           console.error('[MINI-PLAYER] Audio error:', e);
-          if (window.FreshWaxPlayer.isShuffleMode) {
+          if (window.FreshWaxPlayer.isShuffleMode && !_skipInProgress) {
+            _skipInProgress = true;
             // Wait a moment then try next track
             _errorRetryTimer = setTimeout(function() {
               playNextShuffleTrack();
-            }, 1000);
+            }, 1500);
           }
         });
 
@@ -772,7 +773,18 @@ const { nonce = '' } = Astro.props;
         var floatingBtn = document.getElementById('floating-shuffle-btn');
         if (shuffleBtn) shuffleBtn.classList.add('loading');
         if (floatingBtn) floatingBtn.classList.add('loading');
-        
+
+        // MOBILE FIX: Unlock audio element in the user gesture context
+        // Mobile browsers require play() to be called synchronously within a tap/click handler.
+        // After async operations (fetch, setTimeout), the gesture context is lost and play() is rejected.
+        // Playing a silent moment here "unlocks" the audio element for subsequent plays.
+        var audio = document.getElementById('global-audio');
+        if (audio) {
+          audio.volume = 0;
+          var unlockPlay = audio.play();
+          if (unlockPlay) unlockPlay.catch(function() {});
+        }
+
         // Priority 1: Pre-loaded tracks from page
         if (window.SHUFFLE_TRACKS_CACHE && window.SHUFFLE_TRACKS_CACHE.length > 0) {
           window.FreshWaxPlayer.shuffleTracks = window.SHUFFLE_TRACKS_CACHE;
@@ -781,7 +793,7 @@ const { nonce = '' } = Astro.props;
           initShufflePlayback();
           return;
         }
-        
+
         // Priority 2: Previously fetched tracks
         if (window.FreshWaxPlayer.shuffleTracks && window.FreshWaxPlayer.shuffleTracks.length > 0) {
           if (shuffleBtn) shuffleBtn.classList.remove('loading');
@@ -789,17 +801,17 @@ const { nonce = '' } = Astro.props;
           initShufflePlayback();
           return;
         }
-        
+
         // Priority 3: Fetch from API
         fetch('/api/get-shuffle-tracks/')
-          .then(function(res) { 
+          .then(function(res) {
             if (!res.ok) throw new Error('API returned status ' + res.status);
-            return res.json(); 
+            return res.json();
           })
           .then(function(data) {
             if (shuffleBtn) shuffleBtn.classList.remove('loading');
             if (floatingBtn) floatingBtn.classList.remove('loading');
-            
+
             if (data.success && data.tracks && data.tracks.length > 0) {
               window.FreshWaxPlayer.shuffleTracks = data.tracks;
               initShufflePlayback();
@@ -863,15 +875,21 @@ const { nonce = '' } = Astro.props;
         playCurrentShuffleTrack();
       }
       
+      // Guard to prevent double-skip (both error event and play().catch() firing)
+      var _skipInProgress = false;
+
       function playCurrentShuffleTrack() {
         var queue = window.FreshWaxPlayer.shuffledQueue;
         var index = window.FreshWaxPlayer.shuffleIndex;
-        
+
+        // Reset skip guard for this track
+        _skipInProgress = false;
+
         if (!queue || queue.length === 0) {
           console.error('[MINI-PLAYER] Empty shuffle queue');
           return;
         }
-        
+
         // Wrap around
         if (index >= queue.length) {
           window.FreshWaxPlayer.shuffleIndex = 0;
@@ -883,25 +901,25 @@ const { nonce = '' } = Astro.props;
             queue[j] = temp;
           }
         }
-        
+
         var track = queue[index];
         if (!track) {
           console.error('[MINI-PLAYER] No track at index', index);
           return;
         }
-        
+
         var trackTitle = track.title || track.trackName || track.name || 'Unknown Track';
         var trackArtist = track.artist || track.artistName || 'Unknown Artist';
         var trackArtwork = track.thumbUrl || track.artwork || track.coverArtUrl || track.artworkUrl || '/place-holder.webp';
         var trackAudioUrl = track.previewUrl || track.audioUrl || track.mp3Url;
         var trackReleaseId = track.releaseId || '';
-        
+
         var titleEl = document.getElementById('mini-title');
         var djEl = document.getElementById('mini-dj');
         var artworkEl = document.getElementById('mini-artwork');
         var artworkLink = document.getElementById('mini-artwork-link');
         var infoLink = document.getElementById('mini-info-link');
-        
+
         // Truncate title to 30 characters
         var displayTitle = trackTitle.length > 30 ? trackTitle.substring(0, 27) + '...' : trackTitle;
         if (titleEl) titleEl.textContent = displayTitle;
@@ -910,14 +928,16 @@ const { nonce = '' } = Astro.props;
         // Announce track change to screen readers
         var liveRegion = document.getElementById('mini-player-live');
         if (liveRegion) liveRegion.textContent = 'Now playing: ' + trackTitle + ' by ' + trackArtist;
-        
-        var releaseUrl = trackReleaseId ? '/item/' + trackReleaseId : '#';
+
+        var releaseUrl = trackReleaseId ? '/item/' + trackReleaseId + '/' : '#';
         if (artworkLink) artworkLink.href = releaseUrl;
         if (infoLink) infoLink.href = releaseUrl;
-        
+
         if (!trackAudioUrl) {
           console.error('[MINI-PLAYER] Track has no audio URL, skipping');
-          playNextShuffleTrack();
+          _shuffleRetryTimer = setTimeout(function() {
+            playNextShuffleTrack();
+          }, 200);
           return;
         }
 
@@ -928,6 +948,10 @@ const { nonce = '' } = Astro.props;
 
         var audio = document.getElementById('global-audio');
         if (audio) {
+          // Remove crossorigin for shuffle to avoid CORS issues with R2 CDN
+          // (spectrum analyser won't work without it, but audio will play)
+          audio.removeAttribute('crossorigin');
+
           // Start with volume 0 for fade in effect
           audio.volume = 0;
           audio.src = trackAudioUrl;
@@ -944,22 +968,37 @@ const { nonce = '' } = Astro.props;
               // If track is shorter than 70s, start at 30% into track
               audio.currentTime = audio.duration * 0.3;
             }
-            // Remove listener after seeking
             audio.removeEventListener('loadedmetadata', seekOnce);
           };
           audio.addEventListener('loadedmetadata', seekOnce);
 
-          audio.play().then(function() {
-            // Fade in after play starts
-            fadeInShuffleTrack();
-          }).catch(function(err) {
-            console.error('[MINI-PLAYER] Shuffle play error:', err);
-            // Reset volume on error
-            audio.volume = shuffleTargetVolume || 1.0;
-            _shuffleRetryTimer = setTimeout(function() {
+          // Wait for enough data to play before calling play()
+          var playWhenReady = function() {
+            audio.removeEventListener('canplay', playWhenReady);
+            audio.play().then(function() {
+              fadeInShuffleTrack();
+            }).catch(function(err) {
+              console.error('[MINI-PLAYER] Shuffle play error:', err);
+              audio.volume = shuffleTargetVolume || 1.0;
+              if (!_skipInProgress) {
+                _skipInProgress = true;
+                _shuffleRetryTimer = setTimeout(function() {
+                  playNextShuffleTrack();
+                }, 1500);
+              }
+            });
+          };
+          audio.addEventListener('canplay', playWhenReady);
+
+          // Fallback: if canplay doesn't fire within 8 seconds, skip
+          _shuffleRetryTimer = setTimeout(function() {
+            audio.removeEventListener('canplay', playWhenReady);
+            if (!_skipInProgress) {
+              _skipInProgress = true;
+              console.error('[MINI-PLAYER] Track load timeout, skipping');
               playNextShuffleTrack();
-            }, 500);
-          });
+            }
+          }, 8000);
         }
       }
       
@@ -1025,6 +1064,12 @@ const { nonce = '' } = Astro.props;
         if (!mixData || !mixData.audio_url) {
           console.error('[MINI-PLAYER] Invalid mixData');
           return Promise.reject('Invalid mix data');
+        }
+
+        // Restore crossorigin for DJ mixes (needed for spectrum analyser)
+        var audio = document.getElementById('global-audio');
+        if (audio && !audio.getAttribute('crossorigin')) {
+          audio.setAttribute('crossorigin', 'anonymous');
         }
 
         // Stop any preview clips first

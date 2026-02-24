@@ -593,8 +593,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
       </div>
     </div>
 
-    <!-- RIGHT: TRACKS SECTION -->
-    <div class="flex-1 flex flex-col bg-gradient-to-b from-gray-900 via-gray-800 to-black rounded-lg p-4 min-w-0 max-w-full overflow-hidden border border-gray-700">
+    <!-- RIGHT: TRACKS SECTION (hidden on mobile, accessible from item/[id]) -->
+    <div class="tracks-section flex-1 flex flex-col bg-gradient-to-b from-gray-900 via-gray-800 to-black rounded-lg p-4 min-w-0 max-w-full overflow-hidden border border-gray-700">
       <div class="mb-3 flex items-center justify-between pb-2 border-b border-gray-700">
         <h4 class="text-sm text-white uppercase tracking-wider font-heading">
           TRACKS ({tracksWithIds.length})
@@ -1216,9 +1216,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
   
   /* Mobile: Further optimizations */
   @media (max-width: 640px) {
-    /* Hide tracklist and player/waveform on mobile — accessible from item/[id] detail page */
-    .track-list-container,
-    .player-section {
+    /* Hide entire tracks section on mobile — accessible from item/[id] detail page */
+    .tracks-section {
       display: none !important;
     }
 
