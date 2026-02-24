@@ -732,6 +732,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         </div>
         <h3 id="dlStatusTitle" class="dl-status-title">Preparing Download</h3>
         <p id="dlStatusFilename" class="dl-status-filename"></p>
+        <div id="dlProgressWrap" class="dl-progress-bar" style="display:none;">
+          <div id="dlProgressFill" class="dl-progress-fill"></div>
+        </div>
         <p id="dlStatusText" class="dl-status-text">Authorizing...</p>
       </div>
     </div>
@@ -1720,29 +1723,45 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   }
 
   // Download status modal helpers
-  function showDownloadModal(filename, status) {
+  function updateDownloadModal(filename, status, progressPct) {
     var modal = document.getElementById('downloadStatusModal');
     var titleEl = document.getElementById('dlStatusTitle');
     var filenameEl = document.getElementById('dlStatusFilename');
     var textEl = document.getElementById('dlStatusText');
     var iconEl = document.getElementById('dlStatusIcon');
+    var progressWrap = document.getElementById('dlProgressWrap');
+    var progressFill = document.getElementById('dlProgressFill');
     if (!modal) return;
-    filenameEl.textContent = filename || '';
+    if (filename !== undefined) filenameEl.textContent = filename || '';
+
     if (status === 'preparing') {
       titleEl.textContent = 'Preparing Download';
       textEl.textContent = 'Authorizing...';
+      progressWrap.style.display = 'none';
       iconEl.innerHTML = '<svg class="dl-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7.07-3.93l2.83-2.83m8.48-8.48l2.83-2.83M2 12h4m12 0h4m-3.93 7.07l-2.83-2.83M7.76 7.76L4.93 4.93"/></svg>';
     } else if (status === 'downloading') {
       titleEl.textContent = 'Downloading';
-      textEl.textContent = 'Your file is downloading...';
-      iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
+      progressWrap.style.display = 'block';
+      iconEl.innerHTML = '<svg class="dl-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>';
+      if (typeof progressPct === 'number' && progressPct >= 0) {
+        progressFill.style.width = Math.min(progressPct, 100) + '%';
+        textEl.textContent = Math.round(progressPct) + '% downloaded';
+      } else {
+        progressFill.style.width = '0%';
+        progressFill.classList.add('dl-progress-indeterminate');
+        textEl.textContent = 'Downloading...';
+      }
     } else if (status === 'done') {
       titleEl.textContent = 'Download Complete';
       textEl.textContent = 'File saved successfully';
+      progressWrap.style.display = 'block';
+      progressFill.style.width = '100%';
+      progressFill.classList.remove('dl-progress-indeterminate');
       iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
     } else if (status === 'error') {
       titleEl.textContent = 'Download Failed';
       textEl.textContent = 'Please try again';
+      progressWrap.style.display = 'none';
       iconEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
     }
     modal.classList.remove('hidden');
@@ -1751,21 +1770,28 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   function hideDownloadModal() {
     var modal = document.getElementById('downloadStatusModal');
     if (modal) modal.classList.add('hidden');
+    var fill = document.getElementById('dlProgressFill');
+    if (fill) fill.classList.remove('dl-progress-indeterminate');
   }
 
-  // Download via secure presigned URLs
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+
+  // Download via secure presigned URLs — streams file with progress tracking
   async function downloadFile(downloadInfo, filename, button) {
     var originalText = button.innerHTML;
     button.classList.add('downloading');
     button.innerHTML = 'Downloading...';
-    showDownloadModal(filename, 'preparing');
+    updateDownloadModal(filename, 'preparing');
 
     try {
-      var info = downloadInfo;
-      var orderId = info.orderId;
-      var releaseId = info.releaseId;
-      var trackIndex = info.trackIndex;
-      var fileType = info.fileType;
+      var orderId = downloadInfo.orderId;
+      var releaseId = downloadInfo.releaseId;
+      var trackIndex = downloadInfo.trackIndex;
+      var fileType = downloadInfo.fileType;
 
       // Get Firebase auth token
       var user = auth?.currentUser;
@@ -1789,29 +1815,61 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         throw new Error(errorData.error || 'Failed to authorize download: ' + presignResponse.status);
       }
 
-      var data = await presignResponse.json();
-      var downloadUrl = data.downloadUrl;
+      var presignData = await presignResponse.json();
+      var downloadUrl = presignData.downloadUrl;
 
-      showDownloadModal(filename, 'downloading');
+      // Fetch the actual file with progress tracking
+      updateDownloadModal(filename, 'downloading', -1);
+      var fileResponse = await fetch(downloadUrl);
+      if (!fileResponse.ok) {
+        throw new Error('Download failed: ' + fileResponse.status);
+      }
 
-      // Download directly using presigned URL with Content-Disposition: attachment
-      // Server sets ResponseContentDisposition so browser downloads instead of playing
+      var contentLength = fileResponse.headers.get('Content-Length');
+      var totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+      if (totalBytes && fileResponse.body) {
+        // Stream with progress
+        var reader = fileResponse.body.getReader();
+        var receivedBytes = 0;
+        var chunks = [];
+
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+          chunks.push(result.value);
+          receivedBytes += result.value.length;
+          var pct = (receivedBytes / totalBytes) * 100;
+          updateDownloadModal(undefined, 'downloading', pct);
+          var dlText = document.getElementById('dlStatusText');
+          if (dlText) dlText.textContent = Math.round(pct) + '% — ' + formatBytes(receivedBytes) + ' / ' + formatBytes(totalBytes);
+        }
+
+        var blob = new Blob(chunks);
+      } else {
+        // No Content-Length — can't show progress, just download
+        var blob = await fileResponse.blob();
+      }
+
+      // Trigger save via blob URL (same-origin so download attribute works)
+      var blobUrl = URL.createObjectURL(blob);
       var link = document.createElement('a');
-      link.href = downloadUrl;
+      link.href = blobUrl;
       link.download = filename;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
 
-      showDownloadModal(filename, 'done');
+      updateDownloadModal(filename, 'done');
       button.innerHTML = originalText;
       button.classList.remove('downloading');
-      setTimeout(hideDownloadModal, 2000);
+      setTimeout(hideDownloadModal, 2500);
 
     } catch (error) {
       console.error('Download error:', error);
-      showDownloadModal(filename, 'error');
+      updateDownloadModal(filename, 'error');
       button.innerHTML = originalText;
       button.classList.remove('downloading');
       setTimeout(hideDownloadModal, 3000);
@@ -5585,5 +5643,32 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     color: #d1d5db;
     font-size: 0.875rem;
     margin: 0;
+  }
+
+  .dl-progress-bar {
+    height: 8px;
+    background: #374151;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+  }
+
+  .dl-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f97316 0%, #fb923c 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .dl-progress-indeterminate {
+    width: 30% !important;
+    animation: dlIndeterminate 1.5s ease-in-out infinite;
+  }
+
+  @keyframes dlIndeterminate {
+    0% { margin-left: 0%; }
+    50% { margin-left: 70%; }
+    100% { margin-left: 0%; }
   }
 </style>
