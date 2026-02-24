@@ -863,32 +863,10 @@
     .schedule-column { order: 2; }
     .player-column { order: 1; }
     .chat-column { order: 3; }
-    .online-users-column { display: none; }
+    /* online-users-column removed — using expandable panel only */
   }
 
-  /* Online Users Column */
-  .online-users-column {
-    display: flex;
-    flex-direction: column;
-    background: #0a0a0a;
-    border-radius: 12px;
-    border: 1px solid #222;
-    overflow: hidden;
-    height: 100%;
-  }
-
-  .online-users-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    background: #111;
-    border-bottom: 1px solid #222;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-  }
+  /* Online Users — expandable panel only (sidebar removed) */
 
   .online-dot {
     width: 8px;
@@ -913,11 +891,6 @@
     margin-left: auto;
   }
 
-  .online-users-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.5rem;
-  }
 
   .no-users-msg {
     color: #555;
@@ -971,16 +944,10 @@
     text-overflow: ellipsis;
   }
 
-  /* ---- Mobile Online Users (expandable) ---- */
+  /* ---- Online Users (expandable panel) ---- */
   .online-users-mobile {
-    display: none;
-  }
-
-  @media (max-width: 900px) {
-    .online-users-mobile {
-      display: block;
-      margin-top: 0.5rem;
-    }
+    display: block;
+    margin-top: 0.5rem;
   }
 
   .online-users-toggle {

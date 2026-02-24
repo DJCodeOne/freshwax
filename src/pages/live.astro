@@ -600,19 +600,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         <LiveChat />
       </aside>
 
-      <!-- Online Users Sidebar (desktop) -->
-      <aside class="online-users-column">
-        <div class="online-users-header">
-          <span class="online-dot"></span>
-          <span>Online</span>
-          <span class="online-count" id="onlineUserCount">0</span>
-        </div>
-        <div class="online-users-list" id="onlineUsersList">
-          <p class="no-users-msg">No users online</p>
-        </div>
-      </aside>
-
-      <!-- Online Users Expandable (mobile) -->
+      <!-- Online Users Expandable -->
       <div class="online-users-mobile" id="onlineUsersMobile">
         <button class="online-users-toggle" id="onlineUsersToggle" aria-expanded="false" aria-controls="onlineUsersMobileList">
           <span class="online-dot"></span>
@@ -2780,17 +2768,15 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
         const viewerEl = document.getElementById('viewerCount');
         const fsViewers = document.getElementById('fsViewers');
         const chatViewers = document.getElementById('chatViewers');
-        const onlineCount = document.getElementById('onlineUserCount');
         if (viewerEl) viewerEl.textContent = count;
         if (fsViewers) fsViewers.textContent = count;
         if (chatViewers) chatViewers.textContent = `${count} watching`;
-        if (onlineCount) onlineCount.textContent = count;
 
-        // Also update mobile count
+        // Update expandable panel count
         var mobileCount = document.getElementById('onlineUserCountMobile');
         if (mobileCount) mobileCount.textContent = count;
 
-        // Build user HTML once, use in both desktop and mobile lists
+        // Build user list HTML
         var usersHtml = '';
         if (channel && channel.members) {
           if (count === 0) {
@@ -2807,11 +2793,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
           }
         }
 
-        // Update desktop list
-        var usersList = document.getElementById('onlineUsersList');
-        if (usersList) usersList.innerHTML = usersHtml || '<p class="no-users-msg">No users online</p>';
-
-        // Update mobile list
+        // Update expandable user list
         var mobileScroll = document.getElementById('onlineUsersMobileScroll');
         if (mobileScroll) mobileScroll.innerHTML = usersHtml || '<p class="no-users-msg">No users online</p>';
       }
