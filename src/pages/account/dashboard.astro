@@ -1780,7 +1780,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     return (bytes / 1048576).toFixed(1) + ' MB';
   }
 
-  // Download via secure presigned URLs — streams file with progress tracking
+  // Download via same-origin streaming endpoint with progress tracking
   async function downloadFile(downloadInfo, filename, button) {
     var originalText = button.innerHTML;
     button.classList.add('downloading');
@@ -1800,36 +1800,31 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
       var token = await user.getIdToken();
 
-      // Request presigned download URL
-      var presignResponse = await fetch('/api/presign-download/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({ orderId: orderId, releaseId: releaseId, trackIndex: trackIndex, fileType: fileType, filename: filename })
+      // Stream file from same-origin API (no CORS issues, supports progress)
+      var params = new URLSearchParams({
+        orderId: orderId,
+        releaseId: releaseId,
+        trackIndex: String(trackIndex),
+        fileType: fileType,
+        filename: filename || 'download'
       });
 
-      if (!presignResponse.ok) {
-        var errorData = await presignResponse.json().catch(function() { return {}; });
-        throw new Error(errorData.error || 'Failed to authorize download: ' + presignResponse.status);
-      }
-
-      var presignData = await presignResponse.json();
-      var downloadUrl = presignData.downloadUrl;
-
-      // Fetch the actual file with progress tracking
       updateDownloadModal(filename, 'downloading', -1);
-      var fileResponse = await fetch(downloadUrl);
+
+      var fileResponse = await fetch('/api/download-file/?' + params.toString(), {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+
       if (!fileResponse.ok) {
-        throw new Error('Download failed: ' + fileResponse.status);
+        var errBody = await fileResponse.json().catch(function() { return {}; });
+        throw new Error(errBody.error || 'Download failed: ' + fileResponse.status);
       }
 
       var contentLength = fileResponse.headers.get('Content-Length');
       var totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
       if (totalBytes && fileResponse.body) {
-        // Stream with progress
+        // Stream with real progress
         var reader = fileResponse.body.getReader();
         var receivedBytes = 0;
         var chunks = [];
@@ -1847,7 +1842,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
         var blob = new Blob(chunks);
       } else {
-        // No Content-Length — can't show progress, just download
+        // No Content-Length — download without progress
         var blob = await fileResponse.blob();
       }
 
@@ -1860,7 +1855,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(blobUrl);
+      setTimeout(function() { URL.revokeObjectURL(blobUrl); }, 1000);
 
       updateDownloadModal(filename, 'done');
       button.innerHTML = originalText;
