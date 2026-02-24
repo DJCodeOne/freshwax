@@ -1636,7 +1636,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
               idToken = await window.firebaseAuth.currentUser.getIdToken();
             }
           } catch (tokenErr) {
-            console.warn('[DailySchedule] Could not get idToken:', tokenErr);
+            // Token retrieval failed — continue without auth
           }
 
           const requestBody = {
@@ -1707,7 +1707,7 @@ const { mode, id = 'dailySchedule', nonce = '' } = Astro.props;
             idToken = await window.firebaseAuth.currentUser.getIdToken();
           }
         } catch (tokenErr) {
-          console.warn('[DailySchedule] Could not get idToken for cancel:', tokenErr);
+          // Token retrieval failed — continue without auth
         }
 
         const response = await fetch('/api/livestream/slots/', {

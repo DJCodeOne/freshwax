@@ -157,12 +157,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       })
     }, 10000);
 
-    const result = await response.json();
-
     if (!response.ok) {
-      log.error('[send-approval-email] Resend error:', result);
-      return ApiErrors.serverError(result.message || 'Failed to send email');
+      const errorResult = await response.json().catch(() => ({ message: 'Failed to send email' }));
+      log.error('[send-approval-email] Resend error:', errorResult);
+      return ApiErrors.serverError(errorResult.message || 'Failed to send email');
     }
+
+    const result = await response.json();
 
     log.info('[send-approval-email] Email sent successfully to:', email);
 

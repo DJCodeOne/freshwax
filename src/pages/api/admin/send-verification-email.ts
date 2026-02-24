@@ -122,12 +122,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       })
     }, 10000);
 
-    const resendResult = await resendResponse.json();
-
     if (!resendResponse.ok) {
-      log.error('Resend error:', resendResult);
+      const resendError = await resendResponse.json().catch(() => ({}));
+      log.error('Resend error:', resendError);
       return ApiErrors.serverError('Failed to send email');
     }
+
+    const resendResult = await resendResponse.json();
 
     log.info('Email sent to:', email, 'ID:', resendResult.id);
 

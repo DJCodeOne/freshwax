@@ -544,7 +544,6 @@ const { nonce = '' } = Astro.props;
 
         // Handle stalled/waiting events with auto-recovery
         globalAudio.addEventListener('stalled', function() {
-          console.warn('[MINI-PLAYER] Audio stalled, attempting recovery...');
           // Try to resume playback after a brief pause
           _stallRecoveryTimer = setTimeout(function() {
             if (globalAudio.paused && globalAudio.src) {
@@ -805,7 +804,6 @@ const { nonce = '' } = Astro.props;
               window.FreshWaxPlayer.shuffleTracks = data.tracks;
               initShufflePlayback();
             } else {
-              console.warn('[MINI-PLAYER] No tracks returned:', data);
               alert('No preview tracks available for shuffle.');
             }
           })

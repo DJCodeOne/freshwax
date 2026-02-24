@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[PayPal]' });
 
     if (validationError) {
-      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
+      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
       return ApiErrors.badRequest(validationError);
     }
 
@@ -284,7 +284,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!createResponse.ok) {
       const error = await createResponse.text();
       log.error('[PayPal] Create order error:', error);
-      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
+      if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
       return ApiErrors.serverError('Failed to create PayPal order');
     }
 
@@ -351,7 +351,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error('[PayPal] Error:', errorMessage);
-    if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
+    if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
     return ApiErrors.serverError('An internal error occurred');
   }
 };

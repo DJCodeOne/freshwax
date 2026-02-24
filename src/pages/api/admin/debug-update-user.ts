@@ -151,11 +151,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
       body: JSON.stringify(patchBody)
     }, 10000);
 
-    const patchResult = await patchResponse.json();
-
     if (!patchResponse.ok) {
       return ApiErrors.serverError('PATCH failed');
     }
+
+    const patchResult = await patchResponse.json();
 
     // Verify by fetching again
     const verifyResponse = await fetchWithTimeout(docUrl, {

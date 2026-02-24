@@ -773,6 +773,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   let customerData = null;
   let orders = [];
   let appliedPromoCode = null; // Track applied promo code for Plus upgrade
+
+  // Timer IDs for cleanup on View Transitions navigation
+  var _dashPaypalCheckInterval = null;
+  var _dashTypewriterTimeout = null;
   let authUnsubscribe = null;
 
   // Load customer data via API (replaces Firestore SDK getDoc call)
@@ -3377,17 +3381,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             if (i < code.length) {
               referralCodeDisplay.textContent += code.charAt(i);
               i++;
-              setTimeout(typeWriter, 80);
+              _dashTypewriterTimeout = setTimeout(typeWriter, 80);
             } else {
               // Code fully revealed - show celebration
               referralCodeDisplay.classList.remove('code-generating');
               referralCodeDisplay.classList.add('code-revealed');
-              setTimeout(() => {
+              _dashTypewriterTimeout = setTimeout(() => {
                 referralCodeDisplay.style.animation = 'codeGlow 3s ease-in-out infinite';
+                _dashTypewriterTimeout = null;
               }, 500);
             }
           };
-          setTimeout(typeWriter, 300);
+          _dashTypewriterTimeout = setTimeout(typeWriter, 300);
 
           referralNote.innerHTML = '<span style="color: #22c55e;">Your exclusive, one-time use discount code is ready!</span>';
           copyReferralBtn.style.display = 'flex';
@@ -3816,9 +3821,10 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       const paypalWindow = window.open(result.approvalUrl, 'paypal_plus', 'width=500,height=700,left=200,top=100');
 
       // Poll for popup close and check for success
-      const checkClosed = setInterval(async () => {
+      _dashPaypalCheckInterval = setInterval(async () => {
         if (paypalWindow?.closed) {
-          clearInterval(checkClosed);
+          clearInterval(_dashPaypalCheckInterval);
+          _dashPaypalCheckInterval = null;
 
           // Try to capture the order
           try {
@@ -4213,6 +4219,18 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   // Run on initial load and ViewTransitions navigation
   initDashboard();
   document.addEventListener('astro:page-load', initDashboard);
+
+  // Cleanup timers on View Transitions navigation
+  document.addEventListener('astro:before-swap', () => {
+    if (_dashPaypalCheckInterval) {
+      clearInterval(_dashPaypalCheckInterval);
+      _dashPaypalCheckInterval = null;
+    }
+    if (_dashTypewriterTimeout) {
+      clearTimeout(_dashTypewriterTimeout);
+      _dashTypewriterTimeout = null;
+    }
+  }, { once: true });
 </script>
 
 <style>

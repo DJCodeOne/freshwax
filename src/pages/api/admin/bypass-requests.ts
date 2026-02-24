@@ -122,9 +122,9 @@ export const GET: APIRoute = async ({ request, locals }) => {
       // Batch fetch all user data in parallel (not N+1!)
       const [usersData, artistsData, mixesData] = await Promise.all([
         // Fetch all users at once
-        Promise.all(userIds.map(id => getDocument('users', id).catch(() => null))),
+        Promise.all(userIds.map(id => getDocument('users', id).catch(() => null /* Document fetch — non-critical */))),
         // Fetch all artists at once
-        Promise.all(userIds.map(id => getDocument('artists', id).catch(() => null))),
+        Promise.all(userIds.map(id => getDocument('artists', id).catch(() => null /* Document fetch — non-critical */))),
         // Fetch all mixes - single query with cache
         queryCollection('dj-mixes', { limit: 500, cacheTime: 60000 }).catch(() => [])
       ]);

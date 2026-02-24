@@ -95,8 +95,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Invalidate in-memory and KV caches to ensure fresh data across all edge workers
     invalidateReleasesCache();
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
     log.info('[approve-release] Cache invalidated');
 
     log.info(`[approve-release] ${action}d: ${releaseData.artistName} - ${releaseData.releaseName}`);

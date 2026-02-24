@@ -146,8 +146,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // 7. Invalidate KV cache
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
 
     const succeeded = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;

@@ -288,7 +288,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           const token = await currentUser.getIdToken();
           if (token) headers['Authorization'] = `Bearer ${token}`;
         } catch (e){
-          console.warn('[Checkout] Could not get auth token for duplicate check');
+          // Token retrieval failed — continue without auth
         }
       }
 
@@ -1143,7 +1143,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
             try {
               idToken = await currentUser.getIdToken();
             } catch (e){
-              console.warn('Could not get ID token');
+              // Token retrieval failed — continue without auth
             }
           }
 
@@ -1330,8 +1330,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
           orderData.idToken = await Promise.race([tokenPromise, timeoutPromise]);
           // Got ID token successfully
         } catch (tokenErr) {
-          console.warn('[Checkout] Could not get ID token:', tokenErr);
-          // Continue without token - API will handle unauthenticated request
+          // Token retrieval failed — API will handle unauthenticated request
         }
       }
 

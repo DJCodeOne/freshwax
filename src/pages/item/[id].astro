@@ -1817,7 +1817,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
         const data = await response.json();
 
         if (!data.gifs || data.gifs.length === 0) {
-          giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-300 py-4">No GIFs found for "' + query + '"</p>';
+          giphyResults.innerHTML = '<p class="col-span-full text-center text-gray-300 py-4">No GIFs found for "' + escapeHtml(query) + '"</p>';
         } else {
           renderGiphyResults(data.gifs);
         }
@@ -1832,8 +1832,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
     if (!giphyResults) return;
 
     giphyResults.innerHTML = gifs.map(function(gif) {
-      return '<div class="gif-item cursor-pointer rounded overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all" data-gif-url="' + gif.url + '">' +
-        '<img src="' + gif.preview + '" alt="' + (gif.title || 'GIF') + '" class="w-full h-24 object-cover" loading="lazy" />' +
+      return '<div class="gif-item cursor-pointer rounded overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all" data-gif-url="' + escapeHtml(gif.url) + '">' +
+        '<img src="' + escapeHtml(gif.preview) + '" alt="' + escapeHtml(gif.title || 'GIF') + '" class="w-full h-24 object-cover" loading="lazy" />' +
         '</div>';
     }).join('');
 

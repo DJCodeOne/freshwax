@@ -178,8 +178,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Clear in-memory and KV caches
     invalidateReleasesCache();
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ message: 'Track URLs updated and caches cleared',
       releaseId,

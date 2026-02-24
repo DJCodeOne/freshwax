@@ -146,8 +146,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     clearCache(`doc:releases:${releaseId}`);
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ newRating: releaseData.ratings.average,
       ratingsCount: releaseData.ratings.count,

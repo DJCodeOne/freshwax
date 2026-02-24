@@ -114,8 +114,8 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
     // Clear in-memory and KV caches so fresh data is served immediately
     invalidateReleasesCache();
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ message: `Synced ${results.length} releases to D1 and cleared caches`,
       results });

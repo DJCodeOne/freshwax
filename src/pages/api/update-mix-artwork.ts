@@ -128,9 +128,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Invalidate in-memory and KV caches so all edge workers serve fresh data
     invalidateMixesCache();
     const MIXES_CACHE = { prefix: 'mixes' };
-    await kvDelete('public:50', MIXES_CACHE).catch(() => {});
-    await kvDelete('public:20', MIXES_CACHE).catch(() => {});
-    await kvDelete('public:100', MIXES_CACHE).catch(() => {});
+    await kvDelete('public:50', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('public:20', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('public:100', MIXES_CACHE).catch(() => { /* KV cache invalidation — non-critical */ });
 
     return successResponse({ artworkUrl,
       message: 'Artwork updated successfully' });

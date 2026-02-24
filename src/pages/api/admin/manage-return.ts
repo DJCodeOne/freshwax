@@ -122,11 +122,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
           })
         }, 10000);
 
-        const refundResult = await refundResponse.json();
-
         if (!refundResponse.ok) {
-          return ApiErrors.badRequest(refundResult.error || 'Refund failed');
+          const refundError = await refundResponse.json().catch(() => ({ error: 'Refund failed' }));
+          return ApiErrors.badRequest(refundError.error || 'Refund failed');
         }
+
+        const refundResult = await refundResponse.json();
 
         updateData.status = 'refunded';
         updateData.refundedAt = now;

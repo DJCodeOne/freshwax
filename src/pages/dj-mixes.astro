@@ -492,8 +492,8 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           <h3 class="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
             <span class="text-red-500">Share</span> This Mix
           </h3>
-          <button id="closeShareModal" class="text-gray-300 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <button id="closeShareModal" class="text-gray-300 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg" aria-label="Close share modal">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
@@ -607,7 +607,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   <div id="floatingChart" class="floating-chart hidden">
     <div class="chart-header">
       <h3>🏆 All-Time Mix Chart</h3>
-      <button id="closeChart" class="chart-close">×</button>
+      <button id="closeChart" class="chart-close" aria-label="Close chart">×</button>
     </div>
     <div class="chart-content">
       <div id="chartList" class="chart-list">
@@ -617,7 +617,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
   </div>
 
   <!-- Chart Toggle Button (Hidden by default) -->
-  <button id="chartToggleBtn" class="chart-toggle-btn hidden" title="View All-Time Chart">
+  <button id="chartToggleBtn" class="chart-toggle-btn hidden" title="View All-Time Chart" aria-label="View all-time chart">
     🏆
   </button>
 </Layout>
@@ -713,7 +713,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
       removeNoResultsMessage();
       var msg = document.createElement('div');
       msg.className = 'no-results-message';
-      msg.innerHTML = '<p>No mixes found in "' + genre + '"</p><button class="show-all-mixes-btn">Show All Mixes</button>';
+      msg.innerHTML = '<p>No mixes found in "' + escapeHtml(genre) + '"</p><button class="show-all-mixes-btn">Show All Mixes</button>';
       var showAllBtn = msg.querySelector('.show-all-mixes-btn');
       if (showAllBtn) {
         showAllBtn.addEventListener('click', function() {
@@ -873,7 +873,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
           ts: Date.now(),
           ttl: ttl || this.TTL.STATS
         }));
-      } catch (e) { console.warn('[DJ Mixes] localStorage set failed:', e); }
+      } catch (e) { /* localStorage set failed — ignore */ }
     },
 
     update: function(key, updateFn) {
@@ -1108,8 +1108,7 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=60, s-maxage=300, s
 
         // Check if player is ready
         if (!window.playMix || !window.globalAudio) {
-          console.warn('[DJ-MIXES] Player not ready, retrying in 500ms...');
-          // Retry after a short delay
+          // Player not ready — retry after a short delay
           setTimeout(function() {
             if (window.playMix && window.globalAudio) {
               btn.click();

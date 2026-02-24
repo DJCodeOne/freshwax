@@ -329,7 +329,7 @@ async function testStream(): Promise<{ success: boolean; message?: string; error
 
     const response = await fetchWithTimeout(streamUrl, {
       method: 'HEAD'
-    }, 5000).catch(() => null);
+    }, 5000).catch(() => null /* Stream connectivity test — non-critical */);
 
     if (response && response.ok) {
       return { success: true, message: 'Stream server is reachable and responding' };

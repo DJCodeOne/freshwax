@@ -108,7 +108,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const { validatedItems, hasPriceMismatch, validationError } = await validateAndGetPrices(orderData.items, { logPrefix: '[Stripe]' });
 
     if (validationError) {
-      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
+      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
       return ApiErrors.badRequest(validationError);
     }
 
@@ -362,7 +362,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!stripeResponse.ok) {
       const errorData = await stripeResponse.json();
       log.error('[Stripe] Create session error:', errorData);
-      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
+      if (reservation.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
       return ApiErrors.serverError('Failed to create checkout session');
     }
 
@@ -375,7 +375,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     log.error('[Stripe] Error:', errorMessage);
     // Release any reservation made before the error
-    if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => {});
+    if (reservation?.reservationId) await releaseReservation(reservation.reservationId).catch(() => { /* Reservation cleanup — non-critical */ });
     return ApiErrors.serverError('An internal error occurred');
   }
 };

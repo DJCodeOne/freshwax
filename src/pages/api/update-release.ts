@@ -200,8 +200,8 @@ export async function POST({ request, locals }: { request: Request; locals: App.
     }
 
     // Invalidate KV cache for releases list so all edge workers serve fresh data
-    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => {});
-    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => {});
+    await kvDelete('live-releases-v2:20', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
+    await kvDelete('live-releases-v2:all', CACHE_CONFIG.RELEASES).catch(() => { /* KV cache invalidation — non-critical */ });
 
     log.info('[update-release] Success - Update complete');
 
