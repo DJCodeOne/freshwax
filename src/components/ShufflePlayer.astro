@@ -592,6 +592,10 @@ const validTracks = tracks.filter(t => t.previewUrl);
       isShuffleEnabled: true,
       audio: null,
       volume: 0.7,
+      CLIP_START: 30,     // Start 30 seconds in
+      CLIP_DURATION: 60,  // Play for 60 seconds
+      clipEndTime: 90,    // CLIP_START + CLIP_DURATION
+      seeked: false,
       
       // DOM Elements
       els: {},
@@ -723,12 +727,15 @@ const validTracks = tracks.filter(t => t.previewUrl);
           self.updateVolumeIcon();
         };
         
-        // Progress bar click
+        // Progress bar click — seek within clip window
         this.els.progressContainer.onclick = function(e) {
           if (!self.audio.duration || !isFinite(self.audio.duration)) return;
           var rect = self.els.progressContainer.querySelector('.shuffle-progress-bar').getBoundingClientRect();
           var progress = (e.clientX - rect.left) / rect.width;
-          self.audio.currentTime = progress * self.audio.duration;
+          var dur = self.audio.duration;
+          var clipStart = dur > self.CLIP_START ? self.CLIP_START : 0;
+          var clipLen = self.clipEndTime - clipStart;
+          self.audio.currentTime = clipStart + (progress * clipLen);
         };
         
         // Audio events
@@ -737,7 +744,31 @@ const validTracks = tracks.filter(t => t.previewUrl);
         };
         
         this.audio.onloadedmetadata = function() {
-          self.els.duration.textContent = self.formatTime(self.audio.duration);
+          var dur = self.audio.duration;
+          // Calculate clip boundaries based on track length
+          if (dur > self.CLIP_START + self.CLIP_DURATION) {
+            // Track long enough: play 60s starting at 30s
+            self.clipEndTime = self.CLIP_START + self.CLIP_DURATION;
+            self.els.duration.textContent = self.formatTime(self.CLIP_DURATION);
+          } else if (dur > self.CLIP_START) {
+            // Track shorter but > 30s: start at 30s, play to end
+            self.clipEndTime = dur;
+            self.els.duration.textContent = self.formatTime(dur - self.CLIP_START);
+          } else {
+            // Track very short: play from start, full length
+            self.clipEndTime = dur;
+            self.els.duration.textContent = self.formatTime(dur);
+          }
+        };
+
+        this.audio.oncanplay = function() {
+          if (!self.seeked) {
+            self.seeked = true;
+            var dur = self.audio.duration;
+            if (dur > self.CLIP_START) {
+              self.audio.currentTime = self.CLIP_START;
+            }
+          }
         };
         
         this.audio.onended = function() {
@@ -792,9 +823,10 @@ const validTracks = tracks.filter(t => t.previewUrl);
       },
       
       loadTrack: function(track) {
+        this.seeked = false;
         this.audio.src = track.previewUrl;
         this.audio.load();
-        
+
         // Update UI
         this.els.nowPlaying.classList.remove('hidden');
         this.els.artwork.src = track.artwork || '/place-holder.webp';
@@ -802,15 +834,14 @@ const validTracks = tracks.filter(t => t.previewUrl);
         this.els.trackArtist.textContent = track.artist;
         this.els.releaseTitle.textContent = track.releaseTitle;
         this.els.releaseLink.href = '/item/' + track.releaseId;
-        
+
         // Reset progress
         this.els.progress.style.width = '0%';
         this.els.currentTime.textContent = '0:00';
-        this.els.duration.textContent = '0:00';
-        
+        this.els.duration.textContent = '1:00';
+
         // Update queue
         this.updateQueueDisplay();
-        
       },
       
       playNext: function() {
@@ -850,9 +881,23 @@ const validTracks = tracks.filter(t => t.previewUrl);
       
       updateProgress: function() {
         if (!this.audio.duration || !isFinite(this.audio.duration)) return;
-        var progress = (this.audio.currentTime / this.audio.duration) * 100;
+        var dur = this.audio.duration;
+        var ct = this.audio.currentTime;
+        var clipStart = dur > this.CLIP_START ? this.CLIP_START : 0;
+        var clipLen = this.clipEndTime - clipStart;
+
+        // Auto-advance when clip time is up
+        if (ct >= this.clipEndTime) {
+          this.playNext();
+          return;
+        }
+
+        // Show progress relative to the clip window
+        var elapsed = ct - clipStart;
+        if (elapsed < 0) elapsed = 0;
+        var progress = clipLen > 0 ? (elapsed / clipLen) * 100 : 0;
         this.els.progress.style.width = progress + '%';
-        this.els.currentTime.textContent = this.formatTime(this.audio.currentTime);
+        this.els.currentTime.textContent = this.formatTime(elapsed);
       },
       
       updatePlayButton: function() {
