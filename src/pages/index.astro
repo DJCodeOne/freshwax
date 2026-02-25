@@ -281,9 +281,9 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     display: inline-flex;
     align-items: center;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
-    gap: 0.25rem 0.625rem;
+    gap: 0.5rem;
     padding: 10px 16px;
     background: rgba(255, 255, 255, 0.08);
     backdrop-filter: blur(20px);
@@ -292,14 +292,13 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     border-radius: 100px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1), 0 0 80px rgba(220, 38, 38, 0.1);
     margin-bottom: 1.5rem;
-    max-width: calc(100vw - 2rem);
   }
 
   .glass-panel .nav-item {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #ffffff;
     font-weight: 600;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
     text-decoration: none;
     white-space: nowrap;
@@ -314,7 +313,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
   .glass-panel .dot-separator {
     display: inline;
     color: #dc2626;
-    font-size: 0.35rem;
+    font-size: 0.3rem;
   }
 
   /* CTA Button - Mobile Base (touch-friendly) */
@@ -405,16 +404,17 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 
     /* Fix 3: Glass panel nav — compact for tiny screens */
     .glass-panel {
-      gap: 0.125rem 0.5rem;
-      padding: 8px 12px;
+      gap: 0.35rem;
+      padding: 8px 10px;
     }
 
     .glass-panel .nav-item {
-      font-size: 0.65rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.02em;
     }
 
     .glass-panel .dot-separator {
-      font-size: 0.3rem;
+      font-size: 0.25rem;
     }
 
     /* Fix 4: Hero section excessive padding */
