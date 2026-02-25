@@ -54,6 +54,28 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
             <a href="/merch/" class="nav-item">Merch</a>
             <span class="dot-separator" aria-hidden="true">●</span>
             <a href="/live/" class="nav-item">Live</a>
+            <span class="dot-separator" aria-hidden="true">●</span>
+            <button class="nav-item charts-toggle" aria-expanded="false" aria-controls="charts-dropdown">
+              Charts ▾
+            </button>
+          </div>
+          <!-- Charts Dropdown -->
+          <div id="charts-dropdown" class="charts-dropdown animate-fade-up" style="animation-delay: 0.4s;" hidden>
+            <a href="/weekly-chart/" class="chart-link">
+              <span class="chart-icon" style="background: linear-gradient(135deg, #dc2626, #991b1b);">📅</span>
+              <span class="chart-label">Weekly Chart</span>
+              <span class="chart-arrow">→</span>
+            </a>
+            <a href="/pre-orders/" class="chart-link">
+              <span class="chart-icon" style="background: linear-gradient(135deg, #f97316, #dc2626);">⏰</span>
+              <span class="chart-label">Pre-Orders</span>
+              <span class="chart-arrow">→</span>
+            </a>
+            <a href="/dj-mix-chart/" class="chart-link">
+              <span class="chart-icon" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">🏆</span>
+              <span class="chart-label">Mix Chart</span>
+              <span class="chart-arrow">→</span>
+            </a>
           </div>
           <div class="animate-fade-in scanner-wrap" style="display: flex; align-items: center; justify-content: center; gap: 1rem; animation-delay: 0.6s;">
             <div class="scanner-line" style="height: 2px; width: 3rem; background: linear-gradient(to right, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
@@ -63,50 +85,6 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
             <div class="scanner-line" style="height: 2px; width: 3rem; background: linear-gradient(to left, transparent, rgba(220, 38, 38, 0.8)); border-radius: 1px;"></div>
           </div>
         </div>
-      </div>
-    </section>
-
-    <!-- Quick Links Section -->
-    <section class="quick-links-section">
-      <h2 class="sr-only">Quick Links</h2>
-      <div class="quick-links-grid">
-
-        <!-- Weekly Chart Card -->
-        <a href="/weekly-chart/" class="animate-fade-down-delayed quick-link-card quick-link-red" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: transform 0.2s, border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s; animation-delay: 0.5s;">
-          <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #dc2626, #991b1b); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-size: 1.5rem;">📅</span>
-          </div>
-          <div>
-            <p style="font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0 0 0.25rem; letter-spacing: 0.02em; text-transform: uppercase;">WEEKLY CHART</p>
-            <p style="font-size: 0.875rem; color: #d1d5db; margin: 0;">This week's new releases ranked</p>
-          </div>
-          <span style="margin-left: auto; color: #6b7280; font-size: 1.25rem;">→</span>
-        </a>
-        
-        <!-- Pre-orders Card -->
-        <a href="/pre-orders/" class="animate-fade-down-delayed quick-link-card quick-link-orange" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: transform 0.2s, border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s; animation-delay: 0.5s;">
-          <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f97316, #dc2626); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-size: 1.5rem;">⏰</span>
-          </div>
-          <div>
-            <p style="font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0 0 0.25rem; letter-spacing: 0.02em; text-transform: uppercase;">PRE-ORDERS</p>
-            <p style="font-size: 0.875rem; color: #d1d5db; margin: 0;">Secure upcoming releases early</p>
-          </div>
-          <span style="margin-left: auto; color: #6b7280; font-size: 1.25rem;">→</span>
-        </a>
-        
-        <!-- DJ Mix Chart Card -->
-        <a href="/dj-mix-chart/" class="animate-fade-down-delayed quick-link-card quick-link-yellow" style="display: flex; align-items: center; gap: 1rem; background: linear-gradient(135deg, #1f2937, #111827); border: 2px solid #374151; border-radius: 12px; padding: 1.25rem 1.5rem; text-decoration: none; transition: transform 0.2s, border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s; animation-delay: 0.5s;">
-          <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-            <span style="font-size: 1.5rem;">🏆</span>
-          </div>
-          <div>
-            <p style="font-family: 'Inter', sans-serif; font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0 0 0.25rem; letter-spacing: 0.02em; text-transform: uppercase;">MIX CHART</p>
-            <p style="font-size: 0.875rem; color: #d1d5db; margin: 0;">Top DJ mixes by engagement</p>
-          </div>
-          <span style="margin-left: auto; color: #6b7280; font-size: 1.25rem;">→</span>
-        </a>
-        
       </div>
     </section>
 
@@ -161,11 +139,78 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
 </Layout>
 
 <style>
-  /* Quick link hover effects (replaces inline onmouseover/onmouseout) */
-  .quick-link-card:hover { transform: translateY(-2px); }
-  .quick-link-red:hover { border-color: #dc2626; }
-  .quick-link-orange:hover { border-color: #f97316; }
-  .quick-link-yellow:hover { border-color: #fbbf24; }
+  /* Charts toggle button */
+  .charts-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  /* Charts dropdown panel */
+  .charts-dropdown {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    max-width: 320px;
+    width: 100%;
+  }
+
+  .charts-dropdown[aria-hidden="false"] {
+    display: flex;
+  }
+
+  .chart-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    border-radius: 10px;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .chart-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(220, 38, 38, 0.5);
+  }
+
+  .chart-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .chart-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .chart-arrow {
+    margin-left: auto;
+    color: #6b7280;
+    font-size: 1rem;
+  }
 
   /* ===========================================
      MOBILE-FIRST DESIGN
@@ -329,38 +374,21 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
   }
 
-  /* Quick Links - Mobile Base (single column) */
-  .quick-links-section {
-    max-width: 72rem;
-    margin: 0 auto;
-    padding: 1rem 0.75rem 0;
-    overflow: hidden;
-  }
+  /* Charts dropdown responsive */
+  @media (min-width: 640px) {
+    .charts-dropdown {
+      max-width: 360px;
+      padding: 0.875rem;
+    }
 
-  .quick-links-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.625rem;
-  }
+    .chart-icon {
+      width: 36px;
+      height: 36px;
+    }
 
-  .quick-links-grid > a {
-    padding: 0.875rem 1rem;
-    min-width: 0; /* Allow shrinking */
-    overflow: hidden;
-  }
-
-  .quick-links-grid > a h3 {
-    font-size: 1rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .quick-links-grid > a p {
-    font-size: 0.75rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    .chart-label {
+      font-size: 0.9rem;
+    }
   }
 
   /* Release items animation */
@@ -390,13 +418,7 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
      EXTRA SMALL SCREENS (320px-359px)
      =========================================== */
   @media (max-width: 359px) {
-    /* Fix 1: Quick-link cards overflow — reduce padding and gap */
-    .quick-link-card {
-      padding: 0.75rem 0.875rem !important;
-      gap: 0.625rem !important;
-    }
-
-    /* Fix 2: CTA button overflow — reduce padding and font-size */
+    /* Fix 1: CTA button overflow — reduce padding and font-size */
     .cta-btn {
       padding: 0.75rem 1.5rem !important;
       font-size: 0.95rem !important;
@@ -490,23 +512,6 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       font-size: 0.5rem;
     }
 
-    .quick-links-section {
-      padding: 1.5rem 1.25rem 0;
-    }
-
-    .quick-links-grid {
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 0.875rem;
-    }
-
-    .quick-links-grid > a h3 {
-      font-size: 1.125rem;
-    }
-
-    .quick-links-grid > a p {
-      font-size: 0.8rem;
-      white-space: normal;
-    }
   }
 
   /* ===========================================
@@ -526,14 +531,6 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
       font-size: 0.95rem;
     }
 
-    .quick-links-section {
-      padding: 2rem 1.5rem 0;
-    }
-
-    .quick-links-grid {
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
   }
 
   /* ===========================================
@@ -795,3 +792,34 @@ const firstThumb = featuredReleases[0]?.thumbUrl || (firstArtwork?.includes('/co
     }
   }
 </style>
+
+<script>
+  const toggle = document.querySelector('.charts-toggle');
+  const dropdown = document.getElementById('charts-dropdown');
+
+  if (toggle && dropdown) {
+    toggle.addEventListener('click', () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!expanded));
+      dropdown.setAttribute('aria-hidden', String(expanded));
+      dropdown.hidden = expanded;
+      if (!expanded) {
+        dropdown.style.display = 'flex';
+      } else {
+        dropdown.style.display = 'none';
+      }
+      toggle.textContent = expanded ? 'Charts \u25BE' : 'Charts \u25B4';
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!toggle.contains(e.target) && !dropdown.contains(e.target)) {
+        toggle.setAttribute('aria-expanded', 'false');
+        dropdown.setAttribute('aria-hidden', 'true');
+        dropdown.hidden = true;
+        dropdown.style.display = 'none';
+        toggle.textContent = 'Charts \u25BE';
+      }
+    });
+  }
+</script>
