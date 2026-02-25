@@ -1217,6 +1217,8 @@ const totalDurationFormatted = totalDurationSeconds > 0
     .content-wrapper > div:nth-child(2) {
       align-items: center !important;
       text-align: center !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
     }
 
     .release-title,
@@ -1280,18 +1282,30 @@ const totalDurationFormatted = totalDurationSeconds > 0
       font-size: 0.875rem !important;
     }
     
-    /* Rating section - wrap on mobile */
-    .flex.items-center.gap-4.pt-4.border-t {
-      flex-wrap: wrap !important;
-      gap: 0.75rem !important;
+    /* Info section must not overflow */
+    .content-wrapper > div:nth-child(2) {
+      max-width: 100% !important;
+      min-width: 0 !important;
     }
-    
+
+    /* Rating section - wrap on mobile */
+    .flex.items-center.gap-4.py-4.border-t {
+      flex-wrap: wrap !important;
+      gap: 0.5rem !important;
+      justify-content: center !important;
+    }
+
     /* Smaller buttons on mobile */
     .comments-button,
     .share-button {
       padding: 0.5rem 0.75rem !important;
       font-size: 0.8125rem !important;
       min-height: 44px !important;
+    }
+
+    /* Details preview must not overflow card */
+    .details-preview {
+      max-width: 100% !important;
     }
     
     /* Track list section */
