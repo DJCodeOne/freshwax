@@ -331,7 +331,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-nyop-min={nyopMinPrice}
             data-nyop-suggested={nyopSuggestedPrice}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            class="nyop-open-modal w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-gradient-to-r from-gray-900 to-black hover:from-green-700 hover:to-green-800 text-white"
+            class="nyop-open-modal w-full px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm shadow-sm font-body bg-green-600 hover:bg-green-700 text-white"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
@@ -350,7 +350,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
             data-label-name={labelName}
             data-artwork={coverArtUrl}
             data-is-preorder={isPreOrder ? 'true' : 'false'}
-            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-gray-900 hover:bg-black text-white'}`}
+            class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${isPreOrder ? 'bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {isPreOrder ? (
@@ -387,7 +387,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           class={`add-to-cart px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-all font-bold text-sm flex-1 shadow-sm font-body ${
             vinylAvailable
               ? (isPreOrder ? 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white')
-              : 'bg-gray-200 text-gray-300 cursor-not-allowed'
+              : 'bg-red-900/40 text-red-300/50 cursor-not-allowed'
           }`}
         >
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -459,7 +459,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           <svg class="w-4 h-4 wishlist-icon-filled text-red-500 hidden" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
           </svg>
-          <span class="wishlist-text text-black text-xs">Wishlist</span>
+          <span class="wishlist-text text-white text-xs">Wishlist</span>
         </button>
         
         {isPreOrder && (
@@ -476,7 +476,7 @@ const totalDurationFormatted = totalDurationSeconds > 0
           </a>
         )}
         
-        <span class="text-xs font-body font-semibold text-black">{tracksWithIds.length} tracks</span>
+        <span class="text-xs font-body font-semibold text-white">{tracksWithIds.length} tracks</span>
       </div>
     </div>
 
@@ -1207,10 +1207,26 @@ const totalDurationFormatted = totalDurationSeconds > 0
       max-width: 300px !important;
       height: auto !important;
     }
-    
+
     .content-wrapper > div:first-child .flex.gap-2 {
       width: 100% !important;
       max-width: 300px !important;
+    }
+
+    /* Centre text on stacked layout */
+    .content-wrapper > div:nth-child(2) {
+      align-items: center !important;
+      text-align: center !important;
+    }
+
+    .release-title,
+    .artist-name-font,
+    .label-name-font {
+      text-align: center !important;
+    }
+
+    .content-wrapper > div:nth-child(2) .flex.items-center.gap-2 {
+      justify-content: center !important;
     }
   }
   

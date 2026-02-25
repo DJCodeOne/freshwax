@@ -1482,37 +1482,40 @@ const firebaseConfig = {
 
   // Setup Charts dropdown buttons (desktop + mobile)
   function setupChartsButtons() {
-    // Desktop
+    // Desktop - clone to remove stale listeners
     var dBtn = document.getElementById('chartsBtn');
     var dPanel = document.getElementById('chartsPanel');
     if (dBtn && dPanel) {
-      dBtn.addEventListener('click', function(e) {
+      var freshBtn = dBtn.cloneNode(true);
+      dBtn.parentNode.replaceChild(freshBtn, dBtn);
+      freshBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        var open = dBtn.getAttribute('aria-expanded') === 'true';
-        dBtn.setAttribute('aria-expanded', String(!open));
+        var open = freshBtn.getAttribute('aria-expanded') === 'true';
+        freshBtn.setAttribute('aria-expanded', String(!open));
         dPanel.classList.toggle('fwx-hidden');
+      });
+      // Close desktop panel when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!freshBtn.contains(e.target) && !dPanel.contains(e.target)) {
+          freshBtn.setAttribute('aria-expanded', 'false');
+          if (!dPanel.classList.contains('fwx-hidden')) dPanel.classList.add('fwx-hidden');
+        }
       });
     }
 
-    // Mobile
+    // Mobile - clone to remove stale listeners
     var mBtn = document.getElementById('chartsBtnMobile');
     var mPanel = document.getElementById('chartsPanelMobile');
     if (mBtn && mPanel) {
-      mBtn.addEventListener('click', function(e) {
+      var freshMBtn = mBtn.cloneNode(true);
+      mBtn.parentNode.replaceChild(freshMBtn, mBtn);
+      freshMBtn.addEventListener('click', function(e) {
         e.stopPropagation();
-        var open = mBtn.getAttribute('aria-expanded') === 'true';
-        mBtn.setAttribute('aria-expanded', String(!open));
+        var open = freshMBtn.getAttribute('aria-expanded') === 'true';
+        freshMBtn.setAttribute('aria-expanded', String(!open));
         mPanel.classList.toggle('fwx-hidden');
       });
     }
-
-    // Close desktop panel when clicking outside
-    document.addEventListener('click', function(e) {
-      if (dBtn && dPanel && !dBtn.contains(e.target) && !dPanel.contains(e.target)) {
-        dBtn.setAttribute('aria-expanded', 'false');
-        if (!dPanel.classList.contains('fwx-hidden')) dPanel.classList.add('fwx-hidden');
-      }
-    });
   }
 
   // Update auth UI without re-subscribing to onAuthStateChanged
