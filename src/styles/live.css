@@ -6699,15 +6699,18 @@
       gap: 0;
       padding: 0;
       min-height: auto;
+      height: auto;
+      max-height: none;
+      overflow: visible;
     }
-    
+
     .live-main {
       height: auto !important;
       overflow-x: hidden !important;
       overflow-y: auto !important;
       padding-bottom: 80px; /* Space for mini player */
       max-width: 100vw;
-      max-height: 100dvh !important;
+      max-height: none !important;
       box-sizing: border-box;
     }
 
@@ -6715,13 +6718,13 @@
     body.header-hidden .live-main {
       overflow-x: hidden !important;
       overflow-y: auto !important;
+      max-height: none !important;
     }
 
     body.header-hidden .live-layout {
-      overflow-x: hidden !important;
-      overflow-y: auto !important;
+      overflow: visible !important;
       height: auto !important;
-      max-height: 100dvh !important;
+      max-height: none !important;
     }
 
     /* Player takes full width */
