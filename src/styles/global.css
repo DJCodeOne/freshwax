@@ -325,12 +325,10 @@ h1, h2, h3, h4, h5, h6 {
 
 @media (max-width: 640px) {
   .glass-panel {
-    padding: 10px 20px !important;
-    flex-direction: column !important;
+    padding: 10px 16px !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     gap: 0.5rem !important;
-  }
-  .glass-panel-dot {
-    display: none !important;
   }
 }
 
