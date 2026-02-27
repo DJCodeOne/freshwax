@@ -10099,328 +10099,370 @@
 }
 
 /* ============================================
-   MOBILE BROADCAST LAYOUT
+   BROWSER BROADCAST LAYOUT
    ============================================ */
 
-/* Hidden on desktop by default */
+/* Default: browser broadcast shown, desktop OBS layout hidden */
 .mobile-broadcast-layout {
-  display: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+  min-height: 0;
 }
 
+/* When browser mode is active, hide desktop layout */
+.lobby-layout {
+  display: none !important;
+}
+
+.lobby-footer {
+  display: none !important;
+}
+
+/* Toggle to OBS mode: show desktop, hide broadcast */
+.lobby-container.obs-mode .lobby-layout {
+  display: grid !important;
+}
+
+.lobby-container.obs-mode .lobby-footer {
+  display: flex !important;
+}
+
+.lobby-container.obs-mode .mobile-broadcast-layout {
+  display: none !important;
+}
+
+/* Mode toggle link */
+.broadcast-mode-toggle {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.broadcast-mode-toggle button {
+  background: none;
+  border: 1px solid #374151;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.broadcast-mode-toggle button:hover {
+  color: #d1d5db;
+  border-color: #6b7280;
+}
+
+/* ---- Video Container ---- */
+.mobile-video-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Offline placeholder */
+.mobile-offline-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  z-index: 2;
+}
+
+.mobile-offline-brand {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 2.5rem;
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+.mobile-offline-brand .fresh {
+  color: #fff;
+}
+
+.mobile-offline-brand .wax {
+  color: #dc2626;
+}
+
+.mobile-offline-text {
+  color: #6b7280;
+  font-size: 0.875rem;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Camera preview video */
+.mobile-preview-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+  z-index: 1;
+}
+
+.mobile-preview-video.active {
+  display: block;
+}
+
+/* Live overlay (controls on top of video) */
+.mobile-live-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px;
+  pointer-events: none;
+}
+
+.mobile-live-overlay > * {
+  pointer-events: auto;
+}
+
+.mobile-live-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(220, 38, 38, 0.9);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.mobile-live-dot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  animation: mobileLivePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mobileLivePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.mobile-live-timer {
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+.mobile-live-controls {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  align-self: flex-end;
+  width: 100%;
+}
+
+.mobile-control-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  backdrop-filter: blur(4px);
+  transition: background-color 0.15s;
+}
+
+.mobile-control-btn:active {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.mobile-control-btn.muted {
+  background: rgba(220, 38, 38, 0.8);
+}
+
+/* Audio meter */
+.mobile-audio-meter {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  justify-content: center;
+  height: 20px;
+  align-self: center;
+  margin-bottom: 2px;
+}
+
+.mobile-meter-bar {
+  width: 4px;
+  height: 3px;
+  background: #22c55e;
+  border-radius: 2px;
+  transition: height 0.05s ease-out;
+}
+
+/* ---- Action Buttons ---- */
+.mobile-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-ready-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+
+.mobile-ready-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mobile-ready-btn.mobile-is-ready {
+  background: linear-gradient(135deg, #374151, #4b5563);
+  box-shadow: none;
+}
+
+.mobile-golive-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+  -webkit-tap-highlight-color: transparent;
+  animation: mobileGlowPulse 2s ease-in-out infinite;
+}
+
+.mobile-golive-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  animation: none;
+}
+
+.mobile-golive-dot {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 50%;
+}
+
+@keyframes mobileGlowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.4); }
+  50% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.7); }
+}
+
+.mobile-end-btn {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #4b5563;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #d1d5db;
+  background: rgba(55, 65, 81, 0.5);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-end-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mobile-status-text {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  text-align: center;
+  min-height: 1.2em;
+  margin: 0;
+}
+
+/* ---- Chat Container ---- */
+.mobile-chat-container {
+  flex: 1;
+  min-height: 200px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+/* Adjust chat within mobile container */
+.mobile-chat-container .chat-section {
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-chat-container .chat-messages,
+.mobile-chat-container #chat-messages {
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---- Mobile-specific tweaks ---- */
 @media (max-width: 768px) {
-  /* Hide desktop 3-column grid on mobile */
-  .lobby-layout {
-    display: none !important;
-  }
-
-  /* Hide footer on mobile to save space */
-  .lobby-footer {
-    display: none !important;
-  }
-
-  /* Show mobile layout */
   .mobile-broadcast-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
     padding: 12px;
     height: calc(100vh - 60px);
     height: calc(100dvh - 60px);
     overflow: hidden;
   }
 
-  /* ---- Video Container ---- */
-  .mobile-video-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-
-  /* Offline placeholder */
-  .mobile-offline-state {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    z-index: 2;
-  }
-
-  .mobile-offline-brand {
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: 2.5rem;
-    letter-spacing: 3px;
-    line-height: 1;
-  }
-
-  .mobile-offline-brand .fresh {
-    color: #fff;
-  }
-
-  .mobile-offline-brand .wax {
-    color: #dc2626;
-  }
-
-  .mobile-offline-text {
-    color: #6b7280;
-    font-size: 0.875rem;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-  }
-
-  /* Camera preview video */
-  .mobile-preview-video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: none;
-    z-index: 1;
-  }
-
-  .mobile-preview-video.active {
-    display: block;
-  }
-
-  /* Live overlay (controls on top of video) */
-  .mobile-live-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 10px;
-    pointer-events: none;
-  }
-
-  .mobile-live-overlay > * {
-    pointer-events: auto;
-  }
-
-  .mobile-live-top {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .mobile-live-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(220, 38, 38, 0.9);
-    color: #fff;
-    font-weight: 700;
-    font-size: 0.75rem;
-    padding: 4px 10px;
-    border-radius: 4px;
-    letter-spacing: 1px;
-  }
-
-  .mobile-live-dot {
-    width: 8px;
-    height: 8px;
-    background: #fff;
-    border-radius: 50%;
-    animation: mobileLivePulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes mobileLivePulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  .mobile-live-timer {
-    color: #fff;
-    font-size: 0.875rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-  }
-
-  .mobile-live-controls {
-    display: flex;
-    justify-content: center;
-    gap: 16px;
-    align-self: flex-end;
-    width: 100%;
-  }
-
-  .mobile-control-btn {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: none;
-    background: rgba(0, 0, 0, 0.5);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    backdrop-filter: blur(4px);
-    transition: background-color 0.15s;
-  }
-
-  .mobile-control-btn:active {
-    background: rgba(0, 0, 0, 0.7);
-  }
-
-  .mobile-control-btn.muted {
-    background: rgba(220, 38, 38, 0.8);
-  }
-
-  /* Audio meter */
-  .mobile-audio-meter {
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
-    justify-content: center;
-    height: 20px;
-    align-self: center;
-    margin-bottom: 2px;
-  }
-
-  .mobile-meter-bar {
-    width: 4px;
-    height: 3px;
-    background: #22c55e;
-    border-radius: 2px;
-    transition: height 0.05s ease-out;
-  }
-
-  /* ---- Action Buttons ---- */
-  .mobile-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    flex-shrink: 0;
-  }
-
-  .mobile-ready-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 10px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: #fff;
-    cursor: pointer;
-    background: linear-gradient(135deg, #22c55e, #16a34a);
-    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
-    -webkit-tap-highlight-color: transparent;
-    transition: opacity 0.15s;
-  }
-
-  .mobile-ready-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .mobile-ready-btn.mobile-is-ready {
-    background: linear-gradient(135deg, #374151, #4b5563);
-    box-shadow: none;
-  }
-
-  .mobile-golive-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    padding: 14px;
-    border: none;
-    border-radius: 10px;
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: #fff;
-    cursor: pointer;
-    background: linear-gradient(135deg, #dc2626, #b91c1c);
-    box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
-    -webkit-tap-highlight-color: transparent;
-    animation: mobileGlowPulse 2s ease-in-out infinite;
-  }
-
-  .mobile-golive-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    animation: none;
-  }
-
-  .mobile-golive-dot {
-    width: 10px;
-    height: 10px;
-    background: #fff;
-    border-radius: 50%;
-  }
-
-  @keyframes mobileGlowPulse {
-    0%, 100% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.4); }
-    50% { box-shadow: 0 0 30px rgba(220, 38, 38, 0.7); }
-  }
-
-  .mobile-end-btn {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #4b5563;
-    border-radius: 10px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: #d1d5db;
-    background: rgba(55, 65, 81, 0.5);
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobile-end-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .mobile-status-text {
-    font-size: 0.75rem;
-    color: #9ca3af;
-    text-align: center;
-    min-height: 1.2em;
-    margin: 0;
-  }
-
-  /* ---- Chat Container ---- */
   .mobile-chat-container {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    border-radius: 10px;
-  }
-
-  /* Adjust chat within mobile container */
-  .mobile-chat-container .chat-section {
-    height: 100%;
-    max-height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .mobile-chat-container .chat-messages,
-  .mobile-chat-container #chat-messages {
-    max-height: none;
-    flex: 1;
     min-height: 0;
   }
 
-  /* Compact lobby header on mobile */
   .lobby-header {
     padding: 8px 12px;
     gap: 8px;

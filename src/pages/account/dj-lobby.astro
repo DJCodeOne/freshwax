@@ -289,8 +289,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <p id="mobileStatusText" class="mobile-status-text"></p>
       </div>
 
-      <!-- Chat container (chat DOM node moved here on mobile via JS) -->
+      <!-- Chat container (chat DOM node moved here via JS) -->
       <div id="mobileChatContainer" class="mobile-chat-container"></div>
+
+      <!-- Toggle to OBS/Advanced mode -->
+      <div class="broadcast-mode-toggle">
+        <button id="switchToObsMode" type="button">Switch to OBS / Advanced Mode</button>
+      </div>
     </div>
 
     <div class="lobby-layout">
@@ -1362,6 +1367,8 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       <span>Fresh Wax</span>
       <span class="footer-dot">•</span>
       <span>DJ Lobby</span>
+      <span class="footer-dot">•</span>
+      <button id="switchToBrowserMode" type="button" style="background:none;border:none;color:#9ca3af;font-size:0.75rem;cursor:pointer;text-decoration:underline;">Browser Mode</button>
     </footer>
     
     <!-- DM Modal -->
@@ -6046,45 +6053,55 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   });
 
   // ============================================
-  // MOBILE BROADCAST LAYOUT
+  // BROADCAST / OBS MODE TOGGLE
   // ============================================
-  var isMobileQuery = window.matchMedia('(max-width: 768px)');
-  var chatMovedToMobile = false;
+  var chatMovedToBroadcast = false;
+  var lobbyContainer = document.getElementById('mainLobby');
 
-  function moveChatToMobile() {
-    if (chatMovedToMobile) return;
+  function moveChatToBroadcast() {
+    if (chatMovedToBroadcast) return;
     var chatSection = document.querySelector('.chat-section');
-    var mobileContainer = document.getElementById('mobileChatContainer');
-    if (chatSection && mobileContainer) {
-      mobileContainer.appendChild(chatSection);
-      chatMovedToMobile = true;
+    var broadcastContainer = document.getElementById('mobileChatContainer');
+    if (chatSection && broadcastContainer) {
+      broadcastContainer.appendChild(chatSection);
+      chatMovedToBroadcast = true;
     }
   }
 
   function moveChatToDesktop() {
-    if (!chatMovedToMobile) return;
+    if (!chatMovedToBroadcast) return;
     var chatSection = document.querySelector('.chat-section');
     var rightColumn = document.querySelector('.right-column');
     if (chatSection && rightColumn) {
       rightColumn.insertBefore(chatSection, rightColumn.firstChild);
-      chatMovedToMobile = false;
+      chatMovedToBroadcast = false;
     }
   }
 
-  function handleMobileChange(e) {
-    if (e.matches) {
-      moveChatToMobile();
-    } else {
-      moveChatToDesktop();
-    }
+  function switchToObsMode() {
+    if (lobbyContainer) lobbyContainer.classList.add('obs-mode');
+    moveChatToDesktop();
+    try { localStorage.setItem('fw_lobby_mode', 'obs'); } catch (e) { /* ignore */ }
   }
 
-  // Listen for viewport changes (orientation, resize)
-  isMobileQuery.addEventListener('change', handleMobileChange);
-  // Move chat on initial load if mobile
-  if (isMobileQuery.matches) {
-    // Defer until DOM is ready (chat-section rendered by LiveChat component)
-    setTimeout(function() { moveChatToMobile(); }, 0);
+  function switchToBrowserMode() {
+    if (lobbyContainer) lobbyContainer.classList.remove('obs-mode');
+    moveChatToBroadcast();
+    try { localStorage.setItem('fw_lobby_mode', 'browser'); } catch (e) { /* ignore */ }
+  }
+
+  // Mode toggle buttons
+  document.getElementById('switchToObsMode')?.addEventListener('click', switchToObsMode);
+  document.getElementById('switchToBrowserMode')?.addEventListener('click', switchToBrowserMode);
+
+  // Restore saved preference (default: browser mode)
+  var savedMode = null;
+  try { savedMode = localStorage.getItem('fw_lobby_mode'); } catch (e) { /* ignore */ }
+  if (savedMode === 'obs') {
+    switchToObsMode();
+  } else {
+    // Default: browser broadcast mode — move chat there
+    setTimeout(function() { moveChatToBroadcast(); }, 0);
   }
 
   // Mobile Ready button
