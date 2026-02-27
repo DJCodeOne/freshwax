@@ -482,8 +482,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
       }
 
+      // Admins bypass streaming limits
+      const bookIsAdmin = await isAdmin(djId);
+
       // Check subscription limits for streaming
-      try {
+      if (!bookIsAdmin) try {
         const usageDoc = await getDocument('userUsage', djId);
         const userDoc = await getDocument('users', djId);
         const subscription = userDoc?.subscription || { tier: 'free' };
