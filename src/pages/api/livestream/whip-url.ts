@@ -50,8 +50,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return ApiErrors.serverError('Browser streaming not configured');
     }
 
-    // Build WHIP URL: base/{streamKey}/whip
-    const whipUrl = `${whipBaseUrl.replace(/\/$/, '')}/${encodeURIComponent(streamKey)}/whip`;
+    // Build WHIP URL: base/live/{streamKey}/whip
+    // Must use live/ prefix to match HLS playback path (/live/{streamKey}/index.m3u8)
+    const whipUrl = `${whipBaseUrl.replace(/\/$/, '')}/live/${encodeURIComponent(streamKey)}/whip`;
 
     return successResponse({ whipUrl });
 
