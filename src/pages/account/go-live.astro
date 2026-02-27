@@ -1,6 +1,7 @@
 ---
 // src/pages/account/go-live.astro
 // Browser-based livestreaming — mobile-first Go Live page
+import '../../styles/go-live.css';
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
 const csrfToken = Astro.locals.csrfToken || '';
@@ -27,7 +28,6 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/src/styles/go-live.css" />
   <script define:vars={{ firebaseConfig }} nonce={nonce}>
     window.FIREBASE_CONFIG = firebaseConfig;
   </script>
