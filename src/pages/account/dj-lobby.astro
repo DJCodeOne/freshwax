@@ -234,7 +234,65 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
         <button id="signOutBtn" class="sign-out-btn">Sign Out</button>
       </div>
     </header>
-    
+
+    <!-- Mobile Broadcast Layout (visible <=768px only) -->
+    <div class="mobile-broadcast-layout" id="mobileBroadcastLayout">
+      <!-- Video: offline placeholder + camera preview + live overlay -->
+      <div class="mobile-video-container">
+        <div id="mobileOfflineState" class="mobile-offline-state">
+          <div class="mobile-offline-brand"><span class="fresh">FRESH</span><span class="wax">WAX</span></div>
+          <p class="mobile-offline-text">Offline</p>
+        </div>
+        <video id="mobilePreviewVideo" class="mobile-preview-video" autoplay muted playsinline></video>
+        <div id="mobileLiveOverlay" class="mobile-live-overlay" style="display:none">
+          <div class="mobile-live-top">
+            <div class="mobile-live-badge">
+              <span class="mobile-live-dot"></span>
+              LIVE
+            </div>
+            <span id="mobileLiveTimer" class="mobile-live-timer">00:00</span>
+          </div>
+          <div class="mobile-live-controls">
+            <button id="mobileMicBtn" class="mobile-control-btn" aria-label="Toggle microphone">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            </button>
+            <button id="mobileCameraBtn" class="mobile-control-btn" aria-label="Toggle camera">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            </button>
+            <button id="mobileFlipBtn" class="mobile-control-btn" aria-label="Flip camera">
+              <svg viewBox="0 0 24 24" fill="currentColor" width="22" height="22"><path d="M9 12c0 1.66 1.34 3 3 3s3-1.34 3-3-1.34-3-3-3-3 1.34-3 3zm13-2V7c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-3l-2-2zm-2 6H4V7h16v9z"/></svg>
+            </button>
+          </div>
+          <div id="mobileAudioMeter" class="mobile-audio-meter">
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+            <div class="mobile-meter-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons: I'm Ready -> Go Live -> End Stream -->
+      <div class="mobile-actions">
+        <button id="mobileReadyBtn" class="mobile-ready-btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+          <span id="mobileReadyBtnText">I'm Ready</span>
+        </button>
+        <button id="mobileGoLiveBtn" class="mobile-golive-btn" style="display:none">
+          <span class="mobile-golive-dot"></span>
+          <span id="mobileGoLiveBtnText">GO LIVE</span>
+        </button>
+        <button id="mobileEndStreamBtn" class="mobile-end-btn" style="display:none">
+          <span id="mobileEndBtnText">End Stream</span>
+        </button>
+        <p id="mobileStatusText" class="mobile-status-text"></p>
+      </div>
+
+      <!-- Chat container (chat DOM node moved here on mobile via JS) -->
+      <div id="mobileChatContainer" class="mobile-chat-container"></div>
+    </div>
+
     <div class="lobby-layout">
       <!-- Far Left Column: Stream Key -->
       <div class="key-column">
@@ -1472,6 +1530,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   import * as scheduling from '/dj-lobby/scheduling.js';
   import * as shareModule from '/dj-lobby/share.js';
   import * as videoPlayer from '/dj-lobby/video-player.js';
+  import * as mobileBroadcast from '/dj-lobby/mobile-broadcast.js';
 
   // ============================================
   // MODULE FUNCTION ALIASES
@@ -3041,6 +3100,7 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     scheduling.init(sharedCtx);
     shareModule.init(sharedCtx);
     videoPlayer.init(sharedCtx);
+    mobileBroadcast.init(sharedCtx);
   }
 
   async function initLobby() {
@@ -5982,6 +6042,310 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     const backBtn = document.getElementById('initBackBtn');
     if (backBtn && !backBtn.disabled) {
       hideInitModal();
+    }
+  });
+
+  // ============================================
+  // MOBILE BROADCAST LAYOUT
+  // ============================================
+  var isMobileQuery = window.matchMedia('(max-width: 768px)');
+  var chatMovedToMobile = false;
+
+  function moveChatToMobile() {
+    if (chatMovedToMobile) return;
+    var chatSection = document.querySelector('.chat-section');
+    var mobileContainer = document.getElementById('mobileChatContainer');
+    if (chatSection && mobileContainer) {
+      mobileContainer.appendChild(chatSection);
+      chatMovedToMobile = true;
+    }
+  }
+
+  function moveChatToDesktop() {
+    if (!chatMovedToMobile) return;
+    var chatSection = document.querySelector('.chat-section');
+    var rightColumn = document.querySelector('.right-column');
+    if (chatSection && rightColumn) {
+      rightColumn.insertBefore(chatSection, rightColumn.firstChild);
+      chatMovedToMobile = false;
+    }
+  }
+
+  function handleMobileChange(e) {
+    if (e.matches) {
+      moveChatToMobile();
+    } else {
+      moveChatToDesktop();
+    }
+  }
+
+  // Listen for viewport changes (orientation, resize)
+  isMobileQuery.addEventListener('change', handleMobileChange);
+  // Move chat on initial load if mobile
+  if (isMobileQuery.matches) {
+    // Defer until DOM is ready (chat-section rendered by LiveChat component)
+    setTimeout(function() { moveChatToMobile(); }, 0);
+  }
+
+  // Mobile Ready button
+  document.getElementById('mobileReadyBtn')?.addEventListener('click', async () => {
+    if (!currentUser) return;
+
+    var btn = document.getElementById('mobileReadyBtn');
+    var btnText = document.getElementById('mobileReadyBtnText');
+    var statusText = document.getElementById('mobileStatusText');
+    var goLiveBtn = document.getElementById('mobileGoLiveBtn');
+
+    if (!btn || !btnText) return;
+
+    // If already ready, ignore
+    if (btn.classList.contains('mobile-is-ready')) return;
+
+    btn.disabled = true;
+    btnText.textContent = 'Booking slot...';
+
+    try {
+      // Auto-book slot if none booked and no one is live
+      if (!mySlot && !currentStream) {
+        var token = await currentUser.getIdToken();
+        var now = new Date();
+        now.setSeconds(0, 0);
+
+        var bookResponse = await fetch('/api/livestream/slots/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            action: 'book',
+            djId: currentUser.uid,
+            djName: (userInfo ? userInfo.name : null) || (currentUser.displayName) || 'DJ',
+            djAvatar: (userInfo ? userInfo.avatar : null) || (currentUser.photoURL) || '/place-holder.webp',
+            startTime: now.toISOString(),
+            duration: 60,
+            title: 'Live Session',
+            genre: '',
+            description: ''
+          })
+        });
+
+        var bookResult = await bookResponse.json();
+        if (!bookResult.success) {
+          throw new Error(bookResult.error || 'Failed to book slot');
+        }
+
+        mySlot = bookResult.slot;
+        currentStreamKey = mySlot.streamKey;
+        scheduling.setMySlot(mySlot);
+        scheduling.setCurrentStreamKey(currentStreamKey);
+      }
+
+      // Set presence ready
+      var idToken = await currentUser.getIdToken();
+      await fetch('/api/dj-lobby/presence/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + idToken
+        },
+        body: JSON.stringify({
+          action: 'heartbeat',
+          userId: currentUser.uid,
+          isReady: true
+        })
+      });
+
+      // Sync desktop button state
+      var desktopBtn = document.getElementById('setReadyBtn');
+      var desktopBtnText = document.getElementById('readyBtnText');
+      var desktopGoLive = document.getElementById('goLiveBtn');
+      if (desktopBtn) {
+        desktopBtn.classList.add('is-ready-state');
+        desktopBtn.classList.remove('glow');
+      }
+      if (desktopBtnText) desktopBtnText.textContent = '\u2713 Ready';
+      if (desktopGoLive) desktopGoLive.classList.remove('hidden');
+
+      // Update mobile UI
+      btn.classList.add('mobile-is-ready');
+      btnText.textContent = '\u2713 Ready';
+      if (goLiveBtn) goLiveBtn.style.display = '';
+      if (statusText) statusText.textContent = 'Tap GO LIVE to start streaming from your camera';
+
+    } catch (e) {
+      btnText.textContent = "I'm Ready";
+      btn.disabled = false;
+      if (statusText) statusText.textContent = (e instanceof Error ? e.message : 'Failed. Try again.');
+    }
+  });
+
+  // Mobile Go Live button
+  document.getElementById('mobileGoLiveBtn')?.addEventListener('click', async () => {
+    if (!currentUser || !mySlot) return;
+
+    var btn = document.getElementById('mobileGoLiveBtn');
+    var btnText = document.getElementById('mobileGoLiveBtnText');
+    var statusText = document.getElementById('mobileStatusText');
+    var videoEl = document.getElementById('mobilePreviewVideo');
+    var offlineState = document.getElementById('mobileOfflineState');
+    var liveOverlay = document.getElementById('mobileLiveOverlay');
+    var endBtn = document.getElementById('mobileEndStreamBtn');
+    var readyBtn = document.getElementById('mobileReadyBtn');
+    var timerEl = document.getElementById('mobileLiveTimer');
+
+    if (!btn || !btnText) return;
+
+    btn.disabled = true;
+    btnText.textContent = 'Starting camera...';
+    if (statusText) statusText.textContent = '';
+
+    try {
+      // Start camera
+      await mobileBroadcast.startCamera(videoEl);
+
+      // Show camera feed, hide offline state
+      if (offlineState) offlineState.style.display = 'none';
+      if (videoEl) videoEl.classList.add('active');
+
+      btnText.textContent = 'Connecting...';
+
+      // Go live via WHIP
+      var token = await currentUser.getIdToken();
+      await mobileBroadcast.goLive(
+        token,
+        mySlot.id,
+        mySlot.streamKey || currentStreamKey,
+        currentUser.uid,
+        (userInfo ? userInfo.name : null) || currentUser.displayName || 'DJ',
+        (userInfo ? userInfo.avatar : null) || currentUser.photoURL || '/place-holder.webp',
+        timerEl
+      );
+
+      // Success - switch to live UI
+      btn.style.display = 'none';
+      if (readyBtn) readyBtn.style.display = 'none';
+      if (endBtn) endBtn.style.display = '';
+      if (liveOverlay) liveOverlay.style.display = '';
+
+      // Sync desktop buttons
+      var desktopReadyBtn = document.getElementById('setReadyBtn');
+      var desktopReadyText = document.getElementById('readyBtnText');
+      var desktopGoLive = document.getElementById('goLiveBtn');
+      if (desktopReadyBtn) {
+        desktopReadyBtn.classList.remove('is-ready-state');
+        desktopReadyBtn.classList.add('is-ready');
+        desktopReadyBtn.style.background = '#dc2626';
+      }
+      if (desktopReadyText) desktopReadyText.textContent = '\uD83D\uDD34 LIVE';
+      if (desktopGoLive) desktopGoLive.classList.add('hidden');
+
+      // Reload stream status so desktop reflects live state
+      if (typeof loadStreamStatus === 'function') await loadStreamStatus();
+      if (typeof updateEndStreamButton === 'function') updateEndStreamButton(true, true);
+
+    } catch (e) {
+      btnText.textContent = 'GO LIVE';
+      btn.disabled = false;
+      if (statusText) statusText.textContent = (e instanceof Error ? e.message : 'Failed to go live.');
+      // Reset video if camera started but WHIP failed
+      if (offlineState) offlineState.style.display = '';
+      if (videoEl) videoEl.classList.remove('active');
+    }
+  });
+
+  // Mobile End Stream button
+  document.getElementById('mobileEndStreamBtn')?.addEventListener('click', async () => {
+    if (!mobileBroadcast.getIsLive()) return;
+    if (!confirm('End your livestream?')) return;
+
+    var btn = document.getElementById('mobileEndStreamBtn');
+    var btnText = document.getElementById('mobileEndBtnText');
+    var statusText = document.getElementById('mobileStatusText');
+
+    if (btnText) btnText.textContent = 'Ending...';
+    if (btn) btn.disabled = true;
+
+    try {
+      var token = await currentUser.getIdToken();
+      await mobileBroadcast.endStream(token);
+    } catch (e) {
+      // Best effort
+    }
+
+    // Reset to offline state
+    resetMobileToOffline();
+
+    // Reload desktop stream status
+    if (typeof loadStreamStatus === 'function') await loadStreamStatus();
+    if (typeof updateEndStreamButton === 'function') updateEndStreamButton(false, false);
+    if (statusText) statusText.textContent = 'Stream ended';
+  });
+
+  // Mobile mic/camera/flip controls
+  document.getElementById('mobileMicBtn')?.addEventListener('click', () => {
+    var muted = mobileBroadcast.toggleMic();
+    var btn = document.getElementById('mobileMicBtn');
+    if (btn) btn.classList.toggle('muted', muted);
+    if (btn) btn.setAttribute('aria-label', muted ? 'Unmute microphone' : 'Mute microphone');
+  });
+
+  document.getElementById('mobileCameraBtn')?.addEventListener('click', () => {
+    var off = mobileBroadcast.toggleCamera();
+    var btn = document.getElementById('mobileCameraBtn');
+    if (btn) btn.classList.toggle('muted', off);
+    if (btn) btn.setAttribute('aria-label', off ? 'Enable camera' : 'Disable camera');
+  });
+
+  document.getElementById('mobileFlipBtn')?.addEventListener('click', () => {
+    var videoEl = document.getElementById('mobilePreviewVideo');
+    if (videoEl) {
+      mobileBroadcast.flipCamera(videoEl).catch(function() {
+        // Flip failed silently
+      });
+    }
+  });
+
+  function resetMobileToOffline() {
+    var offlineState = document.getElementById('mobileOfflineState');
+    var videoEl = document.getElementById('mobilePreviewVideo');
+    var liveOverlay = document.getElementById('mobileLiveOverlay');
+    var readyBtn = document.getElementById('mobileReadyBtn');
+    var readyBtnText = document.getElementById('mobileReadyBtnText');
+    var goLiveBtn = document.getElementById('mobileGoLiveBtn');
+    var endBtn = document.getElementById('mobileEndStreamBtn');
+    var endBtnText = document.getElementById('mobileEndBtnText');
+
+    if (offlineState) offlineState.style.display = '';
+    if (videoEl) { videoEl.classList.remove('active'); videoEl.srcObject = null; }
+    if (liveOverlay) liveOverlay.style.display = 'none';
+    if (readyBtn) { readyBtn.style.display = ''; readyBtn.disabled = false; readyBtn.classList.remove('mobile-is-ready'); }
+    if (readyBtnText) readyBtnText.textContent = "I'm Ready";
+    if (goLiveBtn) goLiveBtn.style.display = 'none';
+    if (endBtn) { endBtn.style.display = 'none'; endBtn.disabled = false; }
+    if (endBtnText) endBtnText.textContent = 'End Stream';
+
+    // Reset desktop buttons
+    var desktopBtn = document.getElementById('setReadyBtn');
+    var desktopBtnText = document.getElementById('readyBtnText');
+    if (desktopBtn) {
+      desktopBtn.classList.remove('is-ready-state', 'is-ready');
+      desktopBtn.style.background = '';
+      desktopBtn.disabled = false;
+      desktopBtn.classList.add('glow');
+    }
+    if (desktopBtnText) desktopBtnText.textContent = "I'm Ready!";
+  }
+
+  // pagehide cleanup for mobile broadcast
+  window.addEventListener('pagehide', function() {
+    mobileBroadcast.cleanup();
+  });
+
+  // Re-acquire wake lock on visibility change
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'visible') {
+      mobileBroadcast.reacquireWakeLock();
     }
   });
 </script>
