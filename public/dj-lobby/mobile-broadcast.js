@@ -207,7 +207,12 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
   }
 
   var goLiveData = await goLiveResp.json();
-  if (goLiveData.slotId) currentSlotId = goLiveData.slotId;
+  // API returns { slot: { id: ... } } — extract the actual live slot ID
+  if (goLiveData.slot && goLiveData.slot.id) {
+    currentSlotId = goLiveData.slot.id;
+  } else if (goLiveData.slotId) {
+    currentSlotId = goLiveData.slotId;
+  }
 
   // Success
   isLive = true;

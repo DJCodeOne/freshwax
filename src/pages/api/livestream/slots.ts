@@ -830,6 +830,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // If slotId provided, use it directly
       if (slotId) {
         slot = await getDocument('livestreamSlots', slotId);
+        // If the slot exists but isn't actually live, fall back to djId-based lookup
+        // This handles cases where the client has a stale slotId (e.g. booked slot, not live slot)
+        if (slot && slot.status !== 'live') {
+          log.warn(`endStream: slotId ${slotId} has status '${slot.status}', falling back to djId lookup`);
+          const liveSlots = await queryCollection('livestreamSlots', {
+            filters: [{ field: 'status', op: 'EQUAL', value: 'live' }],
+            skipCache: true
+          });
+          const fallbackSlot = endStreamIsAdmin ? liveSlots[0] : liveSlots.find(s => s.djId === authUserId);
+          if (fallbackSlot) {
+            slot = fallbackSlot;
+            targetSlotId = fallbackSlot.id;
+          }
+          // If no live slot found, still proceed with the original slot (it gets set to completed, which is fine)
+        }
       } else if (djId || authUserId) {
         // Otherwise find the current live slot for this DJ
         const liveSlots = await queryCollection('livestreamSlots', {
