@@ -1003,6 +1003,14 @@
     border-top: none;
   }
 
+  @media (min-width: 768px) {
+    .online-users-mobile-list {
+      max-height: 280px;
+      border-color: #222;
+      border-top: none;
+    }
+  }
+
   .online-users-mobile-scroll {
     padding: 0.5rem;
     max-height: 260px;

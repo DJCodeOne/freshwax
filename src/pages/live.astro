@@ -623,6 +623,12 @@ Astro.response.headers.set('Cache-Control', 'public, max-age=300, s-maxage=1800,
       var list = document.getElementById('onlineUsersMobileList');
       if (!toggle || !list) return;
 
+      // Expand by default on desktop
+      if (window.innerWidth >= 768) {
+        toggle.setAttribute('aria-expanded', 'true');
+        list.classList.add('expanded');
+      }
+
       toggle.addEventListener('click', function() {
         var expanded = toggle.getAttribute('aria-expanded') === 'true';
         toggle.setAttribute('aria-expanded', String(!expanded));
