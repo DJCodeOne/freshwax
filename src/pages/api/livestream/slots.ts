@@ -1156,6 +1156,30 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
       try {
         await setDocument('livestreamSlots', slotId, newSlot, idToken);
+
+        // Mark any existing scheduled/booked slots by this DJ as completed
+        // (go_live creates a new slot, so the original booking is now superseded)
+        try {
+          const djScheduledSlots = await queryCollection('livestreamSlots', {
+            filters: [
+              { field: 'djId', op: 'EQUAL', value: djId },
+              { field: 'status', op: 'EQUAL', value: 'scheduled' }
+            ],
+            skipCache: true
+          });
+          for (const oldSlot of djScheduledSlots) {
+            if (oldSlot.id !== slotId) {
+              await updateDocument('livestreamSlots', oldSlot.id, {
+                status: 'completed',
+                updatedAt: nowISO
+              });
+              syncSlotStatusToD1(db, oldSlot.id, 'completed', { updatedAt: nowISO });
+            }
+          }
+        } catch (cleanupErr: unknown) {
+          log.warn('Could not clean up scheduled slots:', cleanupErr);
+        }
+
         invalidateCache();
 
         // Sync to D1 (non-blocking)
