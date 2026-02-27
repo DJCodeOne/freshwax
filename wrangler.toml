@@ -28,6 +28,7 @@ bucket_name = "freshwax-releases"
 [vars]
 PUBLIC_RECAPTCHA_SITE_KEY = "6LfojkEsAAAAAJ9A6y9ZIzO-ZaRqdsWCGfXjU-sm"
 PUBLIC_GIPHY_API_KEY = "p0USqLUVxus8d82HAcPhQ2GqG6SfraYr"
+WHIP_BASE_URL = "https://stream.freshwax.co.uk:8889"
 
 # Cron triggers — configured in Cloudflare dashboard for Pages projects
 # (wrangler.toml [triggers] is only supported for Workers, not Pages)
