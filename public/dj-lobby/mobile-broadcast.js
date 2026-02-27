@@ -127,57 +127,77 @@ export async function goLive(token, slotId, streamKey, djId, djName, djAvatar, t
   currentStreamKey = streamKey;
 
   // Step 1: Get WHIP URL
-  var whipResp = await fetch('/api/livestream/whip-url/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({
-      slotId: slotId,
-      djId: djId,
-      streamKey: streamKey
-    })
-  });
+  var whipResp;
+  try {
+    whipResp = await fetch('/api/livestream/whip-url/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        slotId: slotId,
+        djId: djId,
+        streamKey: streamKey
+      })
+    });
+  } catch (fetchErr) {
+    throw new Error('Could not reach server. Check your connection.');
+  }
 
   if (!whipResp.ok) {
     var whipErr = {};
     try { whipErr = await whipResp.json(); } catch (e) { /* ignore */ }
-    throw new Error(whipErr.error || 'Failed to get WHIP URL');
+    throw new Error(whipErr.error || 'Failed to get WHIP URL (HTTP ' + whipResp.status + ')');
   }
 
   var whipData = await whipResp.json();
 
+  if (!whipData.whipUrl) {
+    throw new Error('Server returned empty WHIP URL');
+  }
+
   // Step 2: Connect WHIP
-  await whipConnect(whipData.whipUrl, mediaStream, {
-    onStateChange: function(state) {
-      if (state === 'failed') {
-        endStream(token, true);
+  try {
+    await whipConnect(whipData.whipUrl, mediaStream, {
+      onStateChange: function(state) {
+        if (state === 'failed') {
+          endStream(token, true);
+        }
+      },
+      onStats: function(stats) {
+        if (onStats) onStats(stats);
+      },
+      onError: function() {
+        // Handled by onStateChange
       }
-    },
-    onStats: function(stats) {
-      if (onStats) onStats(stats);
-    },
-    onError: function() {
-      // Handled by onStateChange
-    }
-  });
+    });
+  } catch (whipErr) {
+    var msg = whipErr && whipErr.message ? whipErr.message : String(whipErr);
+    throw new Error('Stream server unreachable: ' + msg);
+  }
 
   // Step 3: Wait for ICE
   await new Promise(function(resolve) { setTimeout(resolve, 1500); });
 
   // Step 4: Call go_live API
-  var goLiveResp = await fetch('/api/livestream/slots/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-    body: JSON.stringify({
-      action: 'go_live',
-      djId: djId,
-      djName: djName,
-      djAvatar: djAvatar || '/place-holder.webp',
-      streamKey: streamKey,
-      title: djName + ' - Live',
-      genre: 'Jungle / D&B',
-      broadcastMode: 'browser'
-    })
-  });
+  var goLiveResp;
+  try {
+    goLiveResp = await fetch('/api/livestream/slots/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({
+        action: 'go_live',
+        djId: djId,
+        djName: djName,
+        djAvatar: djAvatar || '/place-holder.webp',
+        streamKey: streamKey,
+        title: djName + ' - Live',
+        genre: 'Jungle / D&B',
+        broadcastMode: 'browser'
+      })
+    });
+  } catch (fetchErr) {
+    await whipDisconnect().catch(function() {});
+    throw new Error('Could not reach go-live API. Check your connection.');
+  }
 
   if (!goLiveResp.ok) {
     var goLiveErr = {};
