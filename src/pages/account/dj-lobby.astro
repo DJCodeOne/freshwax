@@ -6343,6 +6343,14 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     if (endBtn) { endBtn.style.display = 'none'; endBtn.disabled = false; }
     if (endBtnText) endBtnText.textContent = 'End Stream';
 
+    // Clear header remaining timer
+    videoPlayer.setStreamEndTime(null);
+    if (lobbyTimeRemainingInterval) { clearInterval(lobbyTimeRemainingInterval); lobbyTimeRemainingInterval = null; }
+    var headerTimeRemaining = document.getElementById('headerTimeRemaining');
+    if (headerTimeRemaining) headerTimeRemaining.classList.add('hidden');
+    var timeRemaining = document.getElementById('timeRemaining');
+    if (timeRemaining) timeRemaining.classList.add('hidden');
+
     // Reset desktop buttons
     var desktopBtn = document.getElementById('setReadyBtn');
     var desktopBtnText = document.getElementById('readyBtnText');
