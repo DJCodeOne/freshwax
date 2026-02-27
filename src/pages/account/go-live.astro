@@ -4,6 +4,14 @@
 export const prerender = false;
 const nonce = Astro.locals.nonce || '';
 const csrfToken = Astro.locals.csrfToken || '';
+const firebaseConfig = {
+  apiKey: import.meta.env.PUBLIC_FIREBASE_API_KEY || 'AIzaSyBiZGsWdvA9ESm3OsUpZ-VQpwqMjMpBY6g',
+  authDomain: "freshwax-store.firebaseapp.com",
+  projectId: "freshwax-store",
+  storageBucket: "freshwax-store.firebasestorage.app",
+  messagingSenderId: "675435782973",
+  appId: "1:675435782973:web:e8459c2ec4a5f6d683db54"
+};
 Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-revalidate, max-age=0');
 ---
 
@@ -20,6 +28,9 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/src/styles/go-live.css" />
+  <script define:vars={{ firebaseConfig }} nonce={nonce}>
+    window.FIREBASE_CONFIG = firebaseConfig;
+  </script>
 </head>
 <body class="go-live-page">
   <script is:inline src="/csrf-protect.js"></script>
@@ -139,7 +150,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
   </div>
 
   <script is:inline type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+    import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
     import { whipConnect, whipDisconnect, whipReplaceTrack, whipGetStats, whipIsConnected, whipSetBitrate } from '/whip-client.js';
+
+    var firebaseApp = initializeApp(window.FIREBASE_CONFIG);
+    var firebaseAuth = getAuth(firebaseApp);
+    var currentUser = null;
 
     // ---- State ----
     var mediaStream = null;
@@ -182,40 +199,23 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
     var streamSummary = document.getElementById('streamSummary');
     var errorMsg = document.getElementById('errorMsg');
 
-    // ---- Auth ----
+    // ---- Auth (Firebase) ----
     function getIdToken() {
-      try { return localStorage.getItem('fw_id_token') || ''; }
-      catch (e) { return ''; }
+      if (!currentUser) return '';
+      // Return cached token synchronously for non-critical uses
+      // For API calls, use currentUser.getIdToken() directly
+      return currentUser.accessToken || '';
     }
 
     function getUserInfo() {
-      try {
-        var raw = localStorage.getItem('fw_user_info');
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) { return null; }
-    }
-
-    async function checkAuth() {
-      var token = getIdToken();
-      if (!token) {
-        window.location.href = '/login/?redirect=/account/go-live/';
-        return false;
-      }
-      try {
-        var resp = await fetch('/api/auth/verify/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-          body: JSON.stringify({ idToken: token })
-        });
-        if (!resp.ok) {
-          window.location.href = '/login/?redirect=/account/go-live/';
-          return false;
-        }
-        return true;
-      } catch (e) {
-        window.location.href = '/login/?redirect=/account/go-live/';
-        return false;
-      }
+      if (!currentUser) return null;
+      return {
+        id: currentUser.uid,
+        uid: currentUser.uid,
+        displayName: currentUser.displayName || 'DJ',
+        name: currentUser.displayName || 'DJ',
+        avatar: currentUser.photoURL || null
+      };
     }
 
     // ---- Camera ----
@@ -355,20 +355,21 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       goLiveStartBtn.textContent = 'CONNECTING...';
       hideError();
 
-      var token = getIdToken();
-      var userInfo = getUserInfo();
-      if (!token || !userInfo) {
+      if (!currentUser) {
         showError('Not authenticated');
         goLiveStartBtn.disabled = false;
         goLiveStartBtn.textContent = 'GO LIVE';
         return;
       }
 
-      currentDjId = userInfo.id || userInfo.uid;
+      var userInfo = getUserInfo();
+      currentDjId = currentUser.uid;
       currentDjName = userInfo.displayName || userInfo.name || 'DJ';
       currentDjAvatar = userInfo.avatar || null;
 
       try {
+        var token = await currentUser.getIdToken();
+
         // Step 1: Get stream key
         var keyResp = await fetch('/api/livestream/slots/', {
           method: 'POST',
@@ -482,14 +483,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
       // Call endStream API
       try {
-        var token = getIdToken();
-        if (currentSlotId && token) {
+        if (currentSlotId && currentUser) {
+          var token = await currentUser.getIdToken();
           await fetch('/api/livestream/slots/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
             body: JSON.stringify({
               action: 'endStream',
-              idToken: token,
               slotId: currentSlotId,
               djId: currentDjId
             })
@@ -653,17 +653,13 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
 
     // Cleanup on page unload
     window.addEventListener('pagehide', function() {
-      if (isLive) {
-        // Best-effort end stream
-        var token = getIdToken();
-        if (currentSlotId && token) {
-          navigator.sendBeacon('/api/livestream/slots/', JSON.stringify({
-            action: 'endStream',
-            idToken: token,
-            slotId: currentSlotId,
-            djId: currentDjId
-          }));
-        }
+      if (isLive && currentSlotId) {
+        // Best-effort end stream via sendBeacon
+        navigator.sendBeacon('/api/livestream/slots/', JSON.stringify({
+          action: 'endStream',
+          slotId: currentSlotId,
+          djId: currentDjId
+        }));
       }
       releaseWakeLock();
       stopAudioMeter();
@@ -676,14 +672,16 @@ Astro.response.headers.set('Cache-Control', 'private, no-store, no-cache, must-r
       }
     });
 
-    // ---- Init ----
-    (async function init() {
-      var authed = await checkAuth();
-      if (!authed) return;
-
+    // ---- Init (Firebase auth) ----
+    onAuthStateChanged(firebaseAuth, function(user) {
+      if (!user) {
+        window.location.href = '/login/?redirect=/account/go-live/';
+        return;
+      }
+      currentUser = user;
       authGate.style.display = 'none';
       mainContent.classList.remove('go-live-hidden');
-    })();
+    });
   </script>
 </body>
 </html>
