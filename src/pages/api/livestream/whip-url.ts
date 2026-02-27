@@ -16,7 +16,7 @@ const WhipUrlSchema = z.object({
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   const clientId = getClientId(request);
   const rateLimit = checkRateLimit(`whip-url:${clientId}`, RateLimiters.standard);
   if (!rateLimit.allowed) {
@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Get WHIP base URL from environment
-    const whipBaseUrl = import.meta.env.WHIP_BASE_URL;
+    const whipBaseUrl = (locals as App.Locals).runtime?.env?.WHIP_BASE_URL || import.meta.env.WHIP_BASE_URL;
     if (!whipBaseUrl) {
       log.error('WHIP_BASE_URL not configured');
       return ApiErrors.serverError('Browser streaming not configured');
