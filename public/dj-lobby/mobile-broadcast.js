@@ -46,8 +46,6 @@ export async function startCamera(videoEl) {
 
   mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
   videoEl.srcObject = mediaStream;
-  // Mirror front camera
-  videoEl.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
 
   startAudioMeter();
   return mediaStream;
@@ -79,7 +77,6 @@ export async function flipCamera(videoEl) {
     oldVideoTrack.stop();
     mediaStream.addTrack(newVideoTrack);
     videoEl.srcObject = mediaStream;
-    videoEl.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
   } catch (err) {
     // Revert facing mode on failure
     facingMode = facingMode === 'user' ? 'environment' : 'user';
